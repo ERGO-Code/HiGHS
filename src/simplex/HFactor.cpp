@@ -2048,7 +2048,6 @@ void HFactor::addCols(const HighsInt num_new_col) {
 }
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
-  /*
   const HighsInt kExtraNz = 100;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
@@ -2216,8 +2215,6 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   for (HighsInt iCol=numRow; iCol<new_num_row; iCol++) 
     LpivotLookup[iCol] = iCol;
   // Now update the U matrix with identity rows and columns
-*/
-  /*
   // Allocate space for U factor
   this->UpivotLookup.resize(new_num_row);
   UpivotIndex.reserve(numRow + 1000);
@@ -2234,10 +2231,9 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   URindex.reserve(BlimitX * 3);
   URvalue.reserve(BlimitX * 3);
 
-  for (HighsInt iCol=numRow; iCol<new_num_row; iCol) 
+  for (HighsInt iCol=numRow; iCol<new_num_row; iCol++) 
     UpivotLookup[iCol] = iCol;
-  */
   // Increase the number of rows in HFactor
-  // numRow += num_new_row;
+  numRow += num_new_row;
 }
 
