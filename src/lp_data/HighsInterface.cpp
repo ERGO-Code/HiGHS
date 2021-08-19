@@ -133,7 +133,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   clearModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
-  ekk_instance_.addCols(local_a_matrix);
+  ekk_instance_.addCols(lp, local_a_matrix);
   return return_status;
 }
 
@@ -243,7 +243,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   // Deduce the consequences of adding new rows
   clearModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
-  ekk_instance_.addRows(local_ar_matrix);
+  ekk_instance_.addRows(lp, local_ar_matrix);
 
   return return_status;
 }

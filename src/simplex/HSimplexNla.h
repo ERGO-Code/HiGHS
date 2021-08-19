@@ -61,6 +61,10 @@ class HSimplexNla {
   void passScalePointer(const HighsScale* scale);
   void applyBasisMatrixColScale(HVector& rhs) const;
   void applyBasisMatrixRowScale(HVector& rhs) const;
+  void addCols(const HighsLp* updated_lp);
+  void addRows(const HighsLp* updated_lp,
+	       HighsInt* base_index,
+	       const HighsSparseMatrix* scaled_ar_matrix);
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
                        HighsInt& to_entry) const;
   void reportArray(const std::string message, const HVector* vector,

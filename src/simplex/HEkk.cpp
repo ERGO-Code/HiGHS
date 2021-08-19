@@ -618,7 +618,7 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   return HighsStatus::kOk;
 }
 
-void HEkk::addCols(const HighsSparseMatrix& scaled_a_matrix) {
+void HEkk::addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix) {
   // Should be extendSimplexLpRandomVectors
   //  if (valid_simplex_basis)
   //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
@@ -629,10 +629,11 @@ void HEkk::addCols(const HighsSparseMatrix& scaled_a_matrix) {
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
+  if (this->status_.has_nla) this->simplex_nla_.addCols(&lp);
   this->updateStatus(LpAction::kNewCols);
 }
 
-void HEkk::addRows(const HighsSparseMatrix& scaled_ar_matrix) {
+void HEkk::addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix) {
   // Should be extendSimplexLpRandomVectors
   //  if (valid_simplex_basis)
   //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
@@ -643,6 +644,7 @@ void HEkk::addRows(const HighsSparseMatrix& scaled_ar_matrix) {
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
+  if (this->status_.has_nla) this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
   this->updateStatus(LpAction::kNewRows);
 }
 

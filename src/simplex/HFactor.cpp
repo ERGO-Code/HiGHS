@@ -371,6 +371,84 @@ bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
   return true;
 }
 
+void HFactor::addCols(const HighsInt num_new_col) {
+  numCol += num_new_col;
+}
+
+void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
+  HighsInt num_new_row = ar_matrix->num_row_;
+  HighsInt new_num_row = numRow + num_new_row;
+  printf("Adding %" HIGHSINT_FORMAT " new rows to HFactor instance: increasing dimension from %"
+	 HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT " \n", num_new_row, numRow, new_num_row);
+  this->LpivotLookup.resize(new_num_row);
+  this->LpivotIndex.reserve(new_num_row);
+  this->Lstart.reserve(new_num_row + 1);
+  this->LRstart.reserve(new_num_row + 1);
+  this->UpivotLookup.resize(new_num_row);
+  // Need to know where (if) a column is basic
+  vector<HighsInt> in_basis;
+  in_basis.assign(numCol, -1);
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    HighsInt iVar = baseIndex[iRow];
+    printf("Basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
+    if (iVar<numCol) in_basis[iVar] = iRow;
+  }
+  for (HighsInt iRow = numRow; iRow < new_num_row; iRow++) {
+    HighsInt iVar = baseIndex[iRow];
+    printf("New basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
+    assert(iVar>=numCol);
+  }
+
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    printf("L matrix row %" HIGHSINT_FORMAT " has start %" HIGHSINT_FORMAT
+	   ", pivot index %" HIGHSINT_FORMAT " and lookup %" HIGHSINT_FORMAT "\n",
+	   iRow, Lstart[iRow], LpivotIndex[iRow], LpivotLookup[iRow]);
+    for (HighsInt iEl = Lstart[iRow]; iEl < Lstart[iRow+1]; iEl++) {
+      printf("   Index %" HIGHSINT_FORMAT " has value %g\n", Lindex[iEl], Lvalue[iEl]);
+    }
+  }
+
+  HVector rhs;
+  rhs.setup(numRow);
+  for (HighsInt inewRow = 0; inewRow < num_new_row; inewRow++) {
+    printf("For new row %" HIGHSINT_FORMAT "\n", inewRow);
+    printf("Lindex.size() = %" HIGHSINT_FORMAT "; Lindex.capacity() = %" HIGHSINT_FORMAT "\n",
+	   (HighsInt)Lindex.size(), (HighsInt)Lindex.capacity());
+    printf("Lvalue.size() = %" HIGHSINT_FORMAT "; Lvalue.capacity() = %" HIGHSINT_FORMAT "\n",
+	   (HighsInt)Lvalue.size(), (HighsInt)Lvalue.capacity());
+    // Prepare RHS for system U^T.v = r
+    rhs.clear();
+    rhs.packFlag = true;
+    for (HighsInt iEl = ar_matrix->start_[inewRow]; iEl < ar_matrix->start_[inewRow+1]; iEl++) {
+      HighsInt iCol = ar_matrix->index_[iEl];
+      HighsInt basis_index = in_basis[iCol];
+      if (basis_index>=0) {
+	rhs.array[basis_index] = ar_matrix->value_[iEl];
+	rhs.index[rhs.count++] = basis_index;
+      }
+    }
+    // Solve U^T.v = r
+    double expected_density = 1.0;
+    btranU(rhs, expected_density);
+    rhs.tight();
+    // Append v to the L matrix
+    LpivotIndex.push_back(numRow + inewRow);
+    for (HighsInt iX = 0; iX < rhs.count; iX++) {
+      HighsInt iCol = rhs.index[iX];
+      double value = rhs.array[iCol];
+      HighsInt iEl = Lstart[numRow];
+      Lindex.push_back(iCol);
+      Lvalue.push_back(value);
+      Lstart[numRow]++;
+    }
+    Lstart.push_back(Lstart[numRow]);
+    
+    
+  }
+  // Increase the number of rows in HFactor
+  numRow += num_new_row;
+}
+
 void HFactor::buildSimple() {
   /**
    * 0. Clear L and U factor

@@ -50,8 +50,8 @@ class HEkk {
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
   HighsStatus setBasis(const SimplexBasis& basis);
-  void addCols(const HighsSparseMatrix& scaled_a_matrix);
-  void addRows(const HighsSparseMatrix& scaled_ar_matrix);
+  void addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix);
+  void addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix);
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unscaleSimplex(const HighsLp& incumbent_lp);

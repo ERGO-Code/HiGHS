@@ -207,6 +207,28 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
   }
 }
 
+void HSimplexNla::addCols(const HighsLp* updated_lp) {
+  // Adding columns is easy, since they are nonbasic
+  //
+  // Set the pointers for the LP and scaling. The pointer to the
+  // vector of basic variables isn't updated, since it hasn't been
+  // resized. The HFactor matrix isn't needed until reinversion has to
+  // be performed
+  setLpAndScalePointers(updated_lp);
+}
+
+void HSimplexNla::addRows(const HighsLp* updated_lp,
+			  HighsInt* base_index,
+			  const HighsSparseMatrix* scaled_ar_matrix) {
+  // Adding rows is not so easy, since their slacks are basic
+  //
+  // Set the pointers for the LP, scaling and basic variables. The
+  // HFactor matrix isn't needed until reinversion has to be performed
+  setLpAndScalePointers(updated_lp);
+  base_index_ = base_index;
+  factor_.addRows(scaled_ar_matrix);
+}
+
 bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
                                   HighsInt& to_entry) const {
   // Parameter to decide whether to use just the values in a HVector, or

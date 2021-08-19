@@ -157,6 +157,18 @@ class HFactor {
       const double new_pivot_tolerance = kDefaultPivotTolerance);
 
   /**
+   * @brief Updates instance with respect to new columns in the
+   * constraint matrix (assuming columns are nonbasic)
+   */
+  void addCols(const HighsInt num_new_col);
+
+  /**
+   * @brief Updates instance with respect to new rows in the
+   * constraint matrix (assuming slacks are basic)
+   */
+  void addRows(const HighsSparseMatrix* ar_matrix);
+
+  /**
    * @brief Wall clock time for INVERT
    */
   double build_realTick;
