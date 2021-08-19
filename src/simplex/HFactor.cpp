@@ -2048,6 +2048,7 @@ void HFactor::addCols(const HighsInt num_new_col) {
 }
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
+  /*
   const HighsInt kExtraNz = 100;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
@@ -2064,10 +2065,6 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   assert((HighsInt)Lvalue.capacity() == l_matrix_capacity);
   assert((HighsInt)LRvalue.capacity() == lr_matrix_capacity);
 
-  this->LpivotLookup.resize(new_num_row);
-  this->LpivotIndex.reserve(new_num_row);
-  this->LRstart.reserve(new_num_row + 1);
-  this->UpivotLookup.resize(new_num_row);
   // Need to know where (if) a column is basic
   vector<HighsInt> in_basis;
   in_basis.assign(numCol, -1);
@@ -2097,10 +2094,15 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     }
   }
 
-  // Create a row-wise sparse matrix containing the new rows of L - so that the 
+  // Create a row-wise sparse matrix containing the new rows of the L
+  // matrix - so that a column-wise version can be created (after
+  // inserting the rows into the LR matrix) allowing the cew column
+  // entries to be inserted efficiently into the L matrix
   HighsSparseMatrix new_lr_rows;
   HighsInt new_lr_rows_capacity = kExtraNz + (BlimitX * num_new_row) / numRow;
-  printf("For BlimitX = %" HIGHSINT_FORMAT ", new_lr_rows_capacity = %" HIGHSINT_FORMAT "\n", BlimitX, new_lr_rows_capacity);
+  printf("For BlimitX = %"
+	 HIGHSINT_FORMAT ", new_lr_rows_capacity = %"
+	 HIGHSINT_FORMAT "\n", BlimitX, new_lr_rows_capacity);
   assert(new_lr_rows_capacity>kExtraNz);
   HighsInt new_lr_rows_num_nz = 0;
   new_lr_rows.format_ = MatrixFormat::kRowwise;
@@ -2112,6 +2114,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   
   HVector rhs;
   rhs.setup(numRow);
+  this->LRstart.reserve(new_num_row + 1);
   for (HighsInt inewRow = 0; inewRow < num_new_row; inewRow++) {
     printf("For new row %" HIGHSINT_FORMAT "\n", inewRow);
     // Prepare RHS for system U^T.v = r
@@ -2140,7 +2143,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
       new_lr_rows.index_.reserve(new_lr_rows_capacity);
       new_lr_rows.value_.reserve(new_lr_rows_capacity);
     }
-    for (HighsInt iX = 0; iX < rhs.count; iX++) {
+    for (HighsInt iX = 0; iX < rhs_num_nz; iX++) {
       HighsInt iCol = rhs.index[iX];
       double value = rhs.array[iCol];
       new_lr_rows.index_.push_back(iCol);
@@ -2159,8 +2162,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
       LRindex.reserve(lr_matrix_capacity);
       LRvalue.reserve(lr_matrix_capacity);
     }
-    //    LpivotIndex.push_back(numRow + inewRow);
-    for (HighsInt iX = 0; iX < rhs.count; iX++) {
+    for (HighsInt iX = 0; iX < rhs_num_nz; iX++) {
       HighsInt iCol = rhs.index[iX];
       double value = rhs.array[iCol];
       HighsInt iEl = LRstart[numRow];
@@ -2173,14 +2175,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // Now create a column-wise copy of the new rows
   HighsSparseMatrix new_lr_cols = new_lr_rows;
   new_lr_cols.ensureColwise();
-
-  vector<HighsInt> new_lr_cols_length;
-  new_lr_cols_length.assign(numRow, 0);
-  for (HighsInt iCol=0; iCol<numRow;iCol++) {
-    for(HighsInt iEl = new_lr_cols.start_[iCol]; iEl < new_lr_cols.start_[iCol+1]; iEl++) {
-      new_lr_cols_length[new_lr_cols.index_[iEl]]++;
-    }
-  }
+  //
   // Insert the column-wise copy into the L matrix
   //
   // Ensure that there is space for all values
@@ -2194,7 +2189,12 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   this->Lstart.resize(new_num_row + 1);
   this->Lindex.resize(l_matrix_new_num_nz);
   this->Lvalue.resize(l_matrix_new_num_nz);
-  // 
+  //
+  // Add pivot indices for the new columns
+  this->LpivotIndex.resize(new_num_row);
+  for (HighsInt iCol=new_num_row; iCol>numRow;iCol--) LpivotIndex[iCol] = iCol;
+  //
+  // Add starts for the identity columns
   HighsInt to_el = l_matrix_new_num_nz;
   for (HighsInt iCol=new_num_row; iCol>numRow;iCol--) Lstart[iCol] = to_el;
   for (HighsInt iCol=numRow-1; iCol>=0;iCol--) {
@@ -2212,9 +2212,32 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     }
   }
   assert(to_el==0);
-      
+  this->LpivotLookup.resize(new_num_row);
+  for (HighsInt iCol=numRow; iCol<new_num_row; iCol++) 
+    LpivotLookup[iCol] = iCol;
+  // Now update the U matrix with identity rows and columns
+*/
+  /*
+  // Allocate space for U factor
+  this->UpivotLookup.resize(new_num_row);
+  UpivotIndex.reserve(numRow + 1000);
+  UpivotValue.reserve(numRow + 1000);
 
+  Ustart.reserve(numRow + 1000 + 1);
+  Ulastp.reserve(numRow + 1000);
+  Uindex.reserve(BlimitX * 3);
+  Uvalue.reserve(BlimitX * 3);
+
+  URstart.reserve(numRow + 1000 + 1);
+  URlastp.reserve(numRow + 1000);
+  URspace.reserve(numRow + 1000);
+  URindex.reserve(BlimitX * 3);
+  URvalue.reserve(BlimitX * 3);
+
+  for (HighsInt iCol=numRow; iCol<new_num_row; iCol) 
+    UpivotLookup[iCol] = iCol;
+  */
   // Increase the number of rows in HFactor
-  numRow += num_new_row;
+  // numRow += num_new_row;
 }
 
