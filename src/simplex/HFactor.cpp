@@ -212,6 +212,7 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
   BlimitX += numRow;
 
   // Allocate space for basis matrix, L, U factor and Update buffer
+  Bvar.resize(numRow);
   Bstart.resize(numRow + 1, 0);
   Bindex.resize(BlimitX);
   Bvalue.resize(BlimitX);
@@ -220,6 +221,7 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
   permute.resize(numRow);
 
   // Allocate space for Markowitz matrices
+  MCvar.resize(numRow);
   MCstart.resize(numRow);
   MCcountA.resize(numRow);
   MCcountN.resize(numRow);
@@ -421,11 +423,15 @@ void HFactor::buildSimple() {
   HighsInt BcountX = 0;
   fill_n(&MRcountb4[0], numRow, 0);
   nwork = 0;
+  printf("\nFactor\n");
+  // Compile a vector iwork of the nwork non-unit structural columns
+  // in baseindex: they will be formed into the B matrix as the kernel
   for (HighsInt iCol = 0; iCol < numRow; iCol++) {
     HighsInt iMat = baseIndex[iCol];
     HighsInt iRow = -1;
     int8_t pivot_type = kPivotIllegal;
     if (iMat >= numCol) {
+      printf("Stage %d: Logical\n", (int)(Lstart.size()-1));
       // 1.1 Logical column
       pivot_type = kPivotLogical;
       // Check for double pivot
@@ -437,6 +443,8 @@ void HFactor::buildSimple() {
                     "INVERT Error: Found a logical column with pivot "
                     "already in row %" HIGHSINT_FORMAT "\n",
                     lc_iRow);
+	// Treat this as a column to be handled in the kernel, so that
+	// the rank deficiency is detected as late as possible.
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
         Bvalue[BcountX++] = 1.0;
@@ -450,6 +458,7 @@ void HFactor::buildSimple() {
       // Check for unit column with double pivot
       bool unit_col = count == 1 && Avalue[start] == 1;
       if (unit_col && MRcountb4[lc_iRow] >= 0) {
+	printf("Stage %d: Unit\n", (int)(Lstart.size()-1));
 	pivot_type = kPivotUnit;
         iRow = lc_iRow;
       } else {
@@ -481,6 +490,7 @@ void HFactor::buildSimple() {
       this->refactor_info_.pivot_type.push_back(pivot_type);
     }
     Bstart[iCol + 1] = BcountX;
+    Bvar[iCol] = iMat;
   }
   // Record the number of elements in the basis matrix
   basis_matrix_num_el = numRow - nwork + BcountX;
@@ -527,15 +537,18 @@ void HFactor::buildSimple() {
       if (found_row_singleton) {
         // 2.2 Deal with row singleton
         const double pivotX = 1 / Bvalue[pivot_k];
+	printf("Stage %d: Row singleton (%4d, %g)\n", (int)(Lstart.size()-1), (int)pivot_k, pivotX);
         for (HighsInt section = 0; section < 2; section++) {
           HighsInt p0 = section == 0 ? start : pivot_k + 1;
           HighsInt p1 = section == 0 ? pivot_k : end;
           for (HighsInt k = p0; k < p1; k++) {
             HighsInt iRow = Bindex[k];
             if (MRcountb4[iRow] > 0) {
+	      printf("Row singleton: L En (%4d, %11.4g)\n", (int)iRow, Bvalue[k] * pivotX);
               Lindex.push_back(iRow);
               Lvalue.push_back(Bvalue[k] * pivotX);
             } else {
+	      printf("Row singleton: U En (%4d, %11.4g)\n", (int)iRow, Bvalue[k]);
               Uindex.push_back(iRow);
               Uvalue.push_back(Bvalue[k]);
             }
@@ -547,19 +560,25 @@ void HFactor::buildSimple() {
         permute[iCol] = iRow;
         Lstart.push_back(Lindex.size());
 
+	printf("Row singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Bvalue[pivot_k]);
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
+	assert(Bvar[iCol] ==baseIndex[iCol]);
+
 	this->refactor_info_.pivot_row.push_back(iRow);
 	this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
 	this->refactor_info_.pivot_type.push_back(kPivotRowSingleton);
       } else if (count == 1) {
+	printf("Stage %d: Col singleton \n", (int)(Lstart.size()-1));
         // 2.3 Deal with column singleton
         for (HighsInt k = start; k < pivot_k; k++) {
+	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Bindex[k], Bvalue[k]);
           Uindex.push_back(Bindex[k]);
           Uvalue.push_back(Bvalue[k]);
         }
         for (HighsInt k = pivot_k + 1; k < end; k++) {
+	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Bindex[k], Bvalue[k]);
           Uindex.push_back(Bindex[k]);
           Uvalue.push_back(Bvalue[k]);
         }
@@ -569,9 +588,11 @@ void HFactor::buildSimple() {
         permute[iCol] = iRow;
         Lstart.push_back(Lindex.size());
 
+	printf("Col singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Bvalue[pivot_k]);
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
+	assert(Bvar[iCol] ==baseIndex[iCol]);
 	this->refactor_info_.pivot_row.push_back(iRow);
 	this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
 	this->refactor_info_.pivot_type.push_back(kPivotColSingleton);
@@ -620,6 +641,7 @@ void HFactor::buildSimple() {
   HighsInt MCcountX = 0;
   for (HighsInt i = 0; i < nwork; i++) {
     HighsInt iCol = iwork[i];
+    MCvar[iCol] = Bvar[iCol];
     MCstart[iCol] = MCcountX;
     MCspace[iCol] = (Bstart[iCol + 1] - Bstart[iCol]) * 2;
     MCcountX += MCspace[iCol];
@@ -760,8 +782,13 @@ HighsInt HFactor::buildKernel() {
     clinkDel(jColPivot);
     rlinkDel(iRowPivot);
     permute[jColPivot] = iRowPivot;
+    //    printf("Mwz pivot %3d; MCvar[%3d] = %d; baseIndex[%3d] = %d\n", (int)(numRow-nwork),
+    //	   (int)jColPivot, (int)MCvar[jColPivot],
+    //	   (int)jColPivot, (int)baseIndex[jColPivot]);
+    assert(MCvar[jColPivot]==baseIndex[jColPivot]);
+
     this->refactor_info_.pivot_row.push_back(iRowPivot);
-    this->refactor_info_.pivot_var.push_back(baseIndex[iwork[jColPivot]]);
+    this->refactor_info_.pivot_var.push_back(baseIndex[jColPivot]);
     this->refactor_info_.pivot_type.push_back(kPivotMarkowitz);
     
 
@@ -778,7 +805,7 @@ HighsInt HFactor::buildKernel() {
       Lindex.push_back(iRow);
       Lvalue.push_back(value);
       MRcountb4[iRow] = MRcount[iRow];
-      rowDelete(jColPivot, iRow);
+      rowDelete(jColPivot, (int)iRow);
     }
     Lstart.push_back(Lindex.size());
     fake_fill += 2 * MCcountA[jColPivot];

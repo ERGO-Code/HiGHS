@@ -1283,6 +1283,12 @@ HighsInt HEkk::computeFactor() {
   debugCheckInvert(simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
+  const bool test_refactor=true;
+  if (test_refactor) {
+    simplex_nla_.invert();
+    debugCheckInvert(simplex_nla_, true);
+  }
+
   if (rank_deficiency) {
     // Have an invertible representation, but of B with column(s)
     // replacements due to singularity. So no (fresh) representation of

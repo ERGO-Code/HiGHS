@@ -261,6 +261,7 @@ class HFactor {
   vector<double> dwork;
 
   // Basis matrix
+  vector<HighsInt> Bvar;//Temp
   vector<HighsInt> Bstart;
   vector<HighsInt> Bindex;
   vector<double> Bvalue;
@@ -269,6 +270,7 @@ class HFactor {
   vector<HighsInt> permute;
 
   // Kernel matrix
+  vector<HighsInt> MCvar;//Temp
   vector<HighsInt> MCstart;
   vector<HighsInt> MCcountA;
   vector<HighsInt> MCcountN;
