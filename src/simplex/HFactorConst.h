@@ -64,4 +64,10 @@ const HighsInt kSyntheticTickReinversionMinUpdateCount = 50;
 const HighsInt kMultiSyntheticTickReinversionMinUpdateCount =
     kSyntheticTickReinversionMinUpdateCount;
 
+const HighsInt kNewLRRowsExtraNz = 100;
+const HighsInt kUFactorExtraVectors = 1000;
+const HighsInt kUFactorExtraEntriesMultiplier = 3;
+const HighsInt kPFFactorExtraVectors = 2000;
+const HighsInt kPFFactorExtraEntriesMultiplier = 4;
+
 #endif /* HFACTORCONST_H_ */

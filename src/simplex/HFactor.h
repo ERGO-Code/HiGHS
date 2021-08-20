@@ -163,6 +163,12 @@ class HFactor {
   void addCols(const HighsInt num_new_col);
 
   /**
+   * @brief Updates instance with respect to nonbasic columns in the
+   * constraint matrix being deleted
+   */
+  void deleteNonbasicCols(const HighsInt num_deleted_col);
+
+  /**
    * @brief Updates instance with respect to new rows in the
    * constraint matrix (assuming slacks are basic)
    */
@@ -231,6 +237,7 @@ class HFactor {
   HighsInt numCol;
 
  private:
+  bool a_matrix_valid;
   const HighsInt* Astart;
   const HighsInt* Aindex;
   const double* Avalue;

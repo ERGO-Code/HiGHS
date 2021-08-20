@@ -180,6 +180,7 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
+  this->a_matrix_valid = true;
   Astart = Astart_;
   Aindex = Aindex_;
   Avalue = Avalue_;
@@ -283,6 +284,7 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
 
 void HFactor::setupMatrix(const HighsInt* Astart_, const HighsInt* Aindex_,
                           const double* Avalue_) {
+  this->a_matrix_valid = true;
   Astart = Astart_;
   Aindex = Aindex_;
   Avalue = Avalue_;
@@ -295,6 +297,7 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
+  assert(this->a_matrix_valid);
   FactorTimer factor_timer;
   factor_timer.start(FactorInvert, factor_timer_clock_pointer);
   build_synthetic_tick = 0;
@@ -2044,11 +2047,17 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
 }
 
 void HFactor::addCols(const HighsInt num_new_col) {
+  this->a_matrix_valid = false;
   numCol += num_new_col;
 }
 
+void HFactor::deleteNonbasicCols(const HighsInt num_deleted_col) {
+  this->a_matrix_valid = false;
+  numCol -= num_deleted_col;
+}
+
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
-  const HighsInt kExtraNz = 100;
+  this->a_matrix_valid = false;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
   printf("Adding %" HIGHSINT_FORMAT " new rows to HFactor instance: increasing dimension from %"
@@ -2098,11 +2107,11 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // inserting the rows into the LR matrix) allowing the cew column
   // entries to be inserted efficiently into the L matrix
   HighsSparseMatrix new_lr_rows;
-  HighsInt new_lr_rows_capacity = kExtraNz + (BlimitX * num_new_row) / numRow;
+  HighsInt new_lr_rows_capacity = kNewLRRowsExtraNz + (BlimitX * num_new_row) / numRow;
   printf("For BlimitX = %"
 	 HIGHSINT_FORMAT ", new_lr_rows_capacity = %"
 	 HIGHSINT_FORMAT "\n", BlimitX, new_lr_rows_capacity);
-  assert(new_lr_rows_capacity>kExtraNz);
+  assert(new_lr_rows_capacity>kNewLRRowsExtraNz);
   HighsInt new_lr_rows_num_nz = 0;
   new_lr_rows.format_ = MatrixFormat::kRowwise;
   new_lr_rows.num_col_ = numRow;
@@ -2137,7 +2146,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     HighsInt rhs_num_nz = rhs.count;
     if (new_lr_rows_capacity < new_lr_rows_num_nz + rhs_num_nz) {
       assert(1==0);
-      HighsInt extra_nz = std::max(kExtraNz, rhs_num_nz);
+      HighsInt extra_nz = std::max(kNewLRRowsExtraNz, rhs_num_nz);
       new_lr_rows_capacity += extra_nz;
       new_lr_rows.index_.reserve(new_lr_rows_capacity);
       new_lr_rows.value_.reserve(new_lr_rows_capacity);
@@ -2156,7 +2165,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     
     if (lr_matrix_capacity < lr_matrix_num_nz + rhs_num_nz) {
       assert(1==0);
-      HighsInt extra_nz = std::max(kExtraNz, rhs_num_nz);
+      HighsInt extra_nz = std::max(kNewLRRowsExtraNz, rhs_num_nz);
       lr_matrix_capacity += extra_nz;
       LRindex.reserve(lr_matrix_capacity);
       LRvalue.reserve(lr_matrix_capacity);
@@ -2181,7 +2190,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   const HighsInt l_matrix_new_num_nz = Lstart[numRow] + new_lr_rows_num_nz;
   if (l_matrix_new_num_nz > lr_matrix_capacity) {
     assert(1==0);
-    l_matrix_capacity = l_matrix_new_num_nz + kExtraNz;
+    l_matrix_capacity = l_matrix_new_num_nz + kNewLRRowsExtraNz;
     Lvalue.reserve(l_matrix_capacity);
     Lindex.reserve(l_matrix_capacity);
   }
