@@ -333,9 +333,9 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   buildFinish();
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   //
-  // Indicate that the refactorization information is known
-  assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() == numRow);
-  this->refactor_info_.valid = true;
+  // Indicate that the refactorization information is known unless the basis was rank deficient
+  assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() + rank_deficiency == numRow);
+  this->refactor_info_.valid = rank_deficiency==0;
 
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
@@ -390,10 +390,7 @@ bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
   return true;
 }
 
-void HFactor::buildSimple() {
-  /**
-   * 0. Clear L and U factor
-   */
+void HFactor::LuClear() {
   Lstart.clear();
   Lstart.push_back(0);
   Lindex.clear();
@@ -405,6 +402,13 @@ void HFactor::buildSimple() {
   Ustart.push_back(0);
   Uindex.clear();
   Uvalue.clear();
+}
+
+void HFactor::buildSimple() {
+  /**
+   * 0. Clear L and U factor
+   */
+  LuClear();
 
   // Set all values of permute to -1 so that unpermuted (rank
   // deficient) columns canm be identified

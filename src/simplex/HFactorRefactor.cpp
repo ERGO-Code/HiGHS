@@ -19,12 +19,6 @@
 #include <cmath>
 #include <iostream>
 
-HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
-  assert(refactor_info_.valid);
-  assert(1==0);
-  return 0;
-}
-
 void RefactorInfo::get(RefactorInfo& refactor_info) const {
   refactor_info.valid = !this->valid;
   if (!refactor_info.valid) return;
@@ -38,6 +32,11 @@ void RefactorInfo::set(const RefactorInfo& refactor_info) {
 }
 
 void RefactorInfo::set(const HighsInt num_col, const HighsInt num_row) {
+  const bool kill=true;
+  if (kill) {
+    this->valid = false;
+    return;
+  }
   this->valid = true;
   this->pivot_row_sequence.resize(num_row);
   this->pivot_col_sequence.resize(num_row);
@@ -52,3 +51,10 @@ void RefactorInfo::clear() {
   this->pivot_row_sequence.clear();
   this->pivot_col_sequence.clear();
 }
+
+HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
+  assert(refactor_info_.valid);
+  assert(1==0);
+  return 0;
+}
+

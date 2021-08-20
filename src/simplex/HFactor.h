@@ -342,6 +342,7 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
+  void LuClear();
   // Rebuild using refactor information
   HighsInt rebuild(HighsTimerClock* factor_timer_clock_pointer);
 
