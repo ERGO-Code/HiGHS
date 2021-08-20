@@ -51,7 +51,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
 
-  REQUIRE(highs_lp.format_ == MatrixFormat::kNone);
+  REQUIRE(highs_lp.format_ == MatrixFormat::kColwise);
 
   // Set up the LP externally
   HighsLp lp;
