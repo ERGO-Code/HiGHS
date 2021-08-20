@@ -297,8 +297,14 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
+  // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);
+  // If there is valid refactorization information use it!
   if (refactor_info_.valid) return rebuild(factor_timer_clock_pointer);
+  // Refactoring from just the list of basic variables. Initialise the
+  // refactorization information.
+  refactor_info_.clear();
+  // Start the timer
   FactorTimer factor_timer;
   factor_timer.start(FactorInvert, factor_timer_clock_pointer);
   build_synthetic_tick = 0;
@@ -326,6 +332,11 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   factor_timer.start(FactorInvertFinish, factor_timer_clock_pointer);
   buildFinish();
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
+  //
+  // Indicate that the refactorization information is known
+  assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() == numRow);
+  this->refactor_info_.valid = true;
+
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
 
@@ -458,6 +469,8 @@ void HFactor::buildSimple() {
       UpivotValue.push_back(1);
       Ustart.push_back(Uindex.size());
       MRcountb4[iRow] = -numRow;
+      this->refactor_info_.pivot_row_sequence.push_back(iRow);
+      this->refactor_info_.pivot_col_sequence.push_back(iCol);
     }
     Bstart[iCol + 1] = BcountX;
   }
@@ -529,6 +542,8 @@ void HFactor::buildSimple() {
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
+	this->refactor_info_.pivot_row_sequence.push_back(iRow);
+	this->refactor_info_.pivot_col_sequence.push_back(iCol);
       } else if (count == 1) {
         // 2.3 Deal with column singleton
         for (HighsInt k = start; k < pivot_k; k++) {
@@ -548,6 +563,8 @@ void HFactor::buildSimple() {
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
+	this->refactor_info_.pivot_row_sequence.push_back(iRow);
+	this->refactor_info_.pivot_col_sequence.push_back(iCol);
       } else {
         iwork[nwork++] = iCol;
       }
@@ -614,6 +631,8 @@ void HFactor::buildSimple() {
   build_synthetic_tick += (numRow + nwork + MCcountX) * 40 + MRcountX * 20;
   // Record the kernel dimension
   kernel_dim = nwork;
+  assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() ==
+	 numRow-nwork);
 }
 
 HighsInt HFactor::buildKernel() {
@@ -757,12 +776,16 @@ HighsInt HFactor::buildKernel() {
                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                   fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
+      assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() + rank_deficiency == numRow);
       return rank_deficiency;
     }
     rowDelete(jColPivot, iRowPivot);
     clinkDel(jColPivot);
     rlinkDel(iRowPivot);
     permute[jColPivot] = iRowPivot;
+    this->refactor_info_.pivot_row_sequence.push_back(iRowPivot);
+    this->refactor_info_.pivot_col_sequence.push_back(jColPivot);
+    
 
     // 2.2. Store active pivot column to L
     HighsInt start_A = MCstart[jColPivot];

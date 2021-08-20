@@ -36,10 +36,21 @@ struct HighsSolution {
   std::vector<double> row_dual;
 };
 
+struct RefactorInfo {
+  bool valid = false;
+  std::vector<HighsInt> pivot_row_sequence;
+  std::vector<HighsInt> pivot_col_sequence;
+  void clear();
+  void get(RefactorInfo& refactor_info) const;
+  void set(const RefactorInfo& refactor_info);
+  void set(const HighsInt num_col, const HighsInt num_row);
+};
+
 struct HighsBasis {
   bool valid = false;
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  RefactorInfo refactor_info;
 };
 
 struct HighsScale {

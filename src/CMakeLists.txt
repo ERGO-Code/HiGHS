@@ -246,7 +246,6 @@ set(headers
     simplex/HFactor.h
     simplex/HFactorConst.h
     simplex/HFactorDebug.h
-    simplex/HFactorStruct.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
@@ -681,7 +680,6 @@ set(headers_fast_build_
     simplex/HFactor.h
     simplex/HFactorConst.h
     simplex/HFactorDebug.h
-    simplex/HFactorStruct.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h

@@ -524,6 +524,7 @@ HighsStatus HEkk::setBasis() {
   }
   info_.num_basic_logicals = num_row;
   status_.has_basis = true;
+  simplex_nla_.factor_.refactor_info_.set(num_col, num_row);  
   return HighsStatus::kOk;
 }
 
@@ -598,6 +599,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
     }
   }
   status_.has_basis = true;
+  simplex_nla_.factor_.refactor_info_.set(highs_basis.refactor_info);
   return HighsStatus::kOk;
 }
 
@@ -781,6 +783,7 @@ HighsBasis HEkk::getHighsBasis() {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
+  simplex_nla_.factor_.refactor_info_.get(highs_basis.refactor_info);
   return highs_basis;
 }
 

@@ -27,7 +27,6 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
 #include "lp_data/HighsSparseMatrix.h"
-#include "simplex/HFactorStruct.h"
 
 using std::max;
 using std::min;
@@ -221,10 +220,9 @@ class HFactor {
    */
   const double* getAvalue() const { return Avalue; }
 
-  /**
-   * @brief Gets the refactorization information
-   */
-  void getRefactorInfo(RefactorInfo& refactor_info) const;
+  // Information required to perform refactorization of the current
+  // basis
+  RefactorInfo refactor_info_;
 
   // Properties of data held in HFactor.h
   HighsInt basis_matrix_num_el = 0;
@@ -256,10 +254,6 @@ class HFactor {
   bool use_original_HFactor_logic;
   HighsInt BlimitX;
   HighsInt updateMethod;
-
-  // Information required to perform refactorization of the current
-  // basis
-  RefactorInfo refactor_info_;
 
   // Working buffer
   HighsInt nwork;
