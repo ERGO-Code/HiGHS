@@ -64,10 +64,18 @@ const HighsInt kSyntheticTickReinversionMinUpdateCount = 50;
 const HighsInt kMultiSyntheticTickReinversionMinUpdateCount =
     kSyntheticTickReinversionMinUpdateCount;
 
-const HighsInt kNewLRRowsExtraNz = 100;
+// Constants defining the space available for dimension-related
+// identifiers like starts, and multipliers (of BlimitX, the basis
+// matrix limit size) for fill-related identifiers like indices/values
+// in Markowitz, and update.
+const HighsInt kMCExtraEntriesMultiplier = 2;
+const HighsInt kMRExtraEntriesMultiplier = 2;
+const HighsInt kLFactorExtraEntriesMultiplier = 3;
 const HighsInt kUFactorExtraVectors = 1000;
 const HighsInt kUFactorExtraEntriesMultiplier = 3;
-const HighsInt kPFFactorExtraVectors = 2000;
-const HighsInt kPFFactorExtraEntriesMultiplier = 4;
+const HighsInt kPFFPivotEntries = 1000;
+const HighsInt kPFVectors = 2000;
+const HighsInt kPFEntriesMultiplier = 4;
+const HighsInt kNewLRRowsExtraNz = 100;
 
 #endif /* HFACTORCONST_H_ */

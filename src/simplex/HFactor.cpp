@@ -225,14 +225,14 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
   MCcountN.resize(numRow);
   MCspace.resize(numRow);
   MCminpivot.resize(numRow);
-  MCindex.resize(BlimitX * 2);
-  MCvalue.resize(BlimitX * 2);
+  MCindex.resize(BlimitX * kMCExtraEntriesMultiplier);
+  MCvalue.resize(BlimitX * kMCExtraEntriesMultiplier);
 
   MRstart.resize(numRow);
   MRcount.resize(numRow);
   MRspace.resize(numRow);
   MRcountb4.resize(numRow);
-  MRindex.resize(BlimitX * 2);
+  MRindex.resize(BlimitX * kMRExtraEntriesMultiplier);
 
   mwz_column_mark.assign(numRow, 0);
   mwz_column_index.resize(numRow);
@@ -251,35 +251,35 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
   LpivotLookup.resize(numRow);
   LpivotIndex.reserve(numRow);
   Lstart.reserve(numRow + 1);
-  Lindex.reserve(BlimitX * 3);
-  Lvalue.reserve(BlimitX * 3);
+  Lindex.reserve(BlimitX * kLFactorExtraEntriesMultiplier);
+  Lvalue.reserve(BlimitX * kLFactorExtraEntriesMultiplier);
 
   LRstart.reserve(numRow + 1);
-  LRindex.reserve(BlimitX * 3);
-  LRvalue.reserve(BlimitX * 3);
+  LRindex.reserve(BlimitX * kLFactorExtraEntriesMultiplier);
+  LRvalue.reserve(BlimitX * kLFactorExtraEntriesMultiplier);
 
   // Allocate space for U factor
   UpivotLookup.resize(numRow);
-  UpivotIndex.reserve(numRow + 1000);
-  UpivotValue.reserve(numRow + 1000);
+  UpivotIndex.reserve(numRow + kUFactorExtraVectors);
+  UpivotValue.reserve(numRow + kUFactorExtraVectors);
 
-  Ustart.reserve(numRow + 1000 + 1);
-  Ulastp.reserve(numRow + 1000);
-  Uindex.reserve(BlimitX * 3);
-  Uvalue.reserve(BlimitX * 3);
+  Ustart.reserve(numRow + kUFactorExtraVectors + 1);
+  Ulastp.reserve(numRow + kUFactorExtraVectors);
+  Uindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
+  Uvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
 
-  URstart.reserve(numRow + 1000 + 1);
-  URlastp.reserve(numRow + 1000);
-  URspace.reserve(numRow + 1000);
-  URindex.reserve(BlimitX * 3);
-  URvalue.reserve(BlimitX * 3);
+  URstart.reserve(numRow + kUFactorExtraVectors + 1);
+  URlastp.reserve(numRow + kUFactorExtraVectors);
+  URspace.reserve(numRow + kUFactorExtraVectors);
+  URindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
+  URvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
 
   // Allocate spaces for Update buffer
-  PFpivotValue.reserve(1000);
-  PFpivotIndex.reserve(1000);
-  PFstart.reserve(2000 + 1);
-  PFindex.reserve(BlimitX * 4);
-  PFvalue.reserve(BlimitX * 4);
+  PFpivotValue.reserve(kPFFPivotEntries);
+  PFpivotIndex.reserve(kPFFPivotEntries);
+  PFstart.reserve(kPFVectors + 1);
+  PFindex.reserve(BlimitX * kPFEntriesMultiplier);
+  PFvalue.reserve(BlimitX * kPFEntriesMultiplier);
 }
 
 void HFactor::setupMatrix(const HighsInt* Astart_, const HighsInt* Aindex_,
@@ -2057,6 +2057,7 @@ void HFactor::deleteNonbasicCols(const HighsInt num_deleted_col) {
 }
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
+  return;
   this->a_matrix_valid = false;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
@@ -2226,20 +2227,21 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // Now update the U matrix with identity rows and columns
   // Allocate space for U factor
   this->UpivotLookup.resize(new_num_row);
-  UpivotIndex.reserve(numRow + 1000);
-  UpivotValue.reserve(numRow + 1000);
+  /*
+  UpivotIndex.reserve(numRow + kUFactorExtraVectors);
+  UpivotValue.reserve(numRow + kUFactorExtraVectors);
 
-  Ustart.reserve(numRow + 1000 + 1);
-  Ulastp.reserve(numRow + 1000);
-  Uindex.reserve(BlimitX * 3);
-  Uvalue.reserve(BlimitX * 3);
+  Ustart.reserve(numRow + kUFactorExtraVectors + 1);
+  Ulastp.reserve(numRow + kUFactorExtraVectors);
+  Uindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
+  Uvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
 
-  URstart.reserve(numRow + 1000 + 1);
-  URlastp.reserve(numRow + 1000);
-  URspace.reserve(numRow + 1000);
-  URindex.reserve(BlimitX * 3);
-  URvalue.reserve(BlimitX * 3);
-
+  URstart.reserve(numRow + kUFactorExtraVectors + 1);
+  URlastp.reserve(numRow + kUFactorExtraVectors);
+  URspace.reserve(numRow + kUFactorExtraVectors);
+  URindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
+  URvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
+  */
   for (HighsInt iCol=numRow; iCol<new_num_row; iCol++) 
     UpivotLookup[iCol] = iCol;
   // Increase the number of rows in HFactor
