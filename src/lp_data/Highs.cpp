@@ -680,12 +680,20 @@ HighsStatus Highs::run() {
         options_.log_options};
 
     // todo: timing. some strange compile issue.
-    HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
+    HighsStatus icrash_status = callICrash(model_.lp_, icrash_options, icrash_info_);
 
     if (icrash_status != HighsStatus::kOk) return icrash_status;
 
     // for now set the solution_.col_value
     solution_.col_value = icrash_info_.x_values;
+    crossover(solution_);
+    // loops:
+    called_return_from_run = true;
+
+    options_.icrash = false; // to avoid loop
+    run();
+
+    // todo: add "dual" values
     return HighsStatus::kOk;
   }
 
