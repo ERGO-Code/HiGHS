@@ -124,7 +124,7 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
 
 double getQuadraticObjective(const Quadratic& idata) {
   // c'x
-  double quadratic = vectorProduct(idata.lp.colCost_, idata.xk.col_value);
+  double quadratic = vectorProduct(idata.lp.col_cost_, idata.xk.col_value);
 
   // lambda'x
   quadratic += vectorProduct(idata.lambda, idata.residual);
@@ -147,7 +147,7 @@ bool initialize(Quadratic& idata, const ICrashOptions& options) {
 
 void update(Quadratic& idata) {
   // lp_objective
-  idata.lp_objective = vectorProduct(idata.lp.colCost_, idata.xk.col_value);
+  idata.lp_objective = vectorProduct(idata.lp.col_cost_, idata.xk.col_value);
 
   // residual & residual_norm_2
   calculateRowValues(idata.lp, idata.xk);
@@ -204,9 +204,9 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       if (iteration % 3 == 0) {
         idata.mu = 0.1 * idata.mu;
       } else {
-        std::vector<double> residual_ica(idata.lp.numRow_, 0);
+        std::vector<double> residual_ica(idata.lp.num_row_, 0);
         updateResidualIca(idata.lp, idata.xk, residual_ica);
-        for (int row = 0; row < idata.lp.numRow_; row++)
+        for (int row = 0; row < idata.lp.num_row_; row++)
           idata.lambda[row] = idata.mu * residual_ica[row];
       }
       break;
@@ -221,9 +221,9 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       if (iteration % 3 == 0) {
         idata.mu = 0.1 * idata.mu;
       } else {
-        std::vector<double> residual_ica(idata.lp.numRow_, 0);
+        std::vector<double> residual_ica(idata.lp.num_row_, 0);
         updateResidualIca(idata.lp, idata.xk, residual_ica);
-        for (int row = 0; row < idata.lp.numRow_; row++)
+        for (int row = 0; row < idata.lp.num_row_; row++)
           // todo: double check clp.
           idata.lambda[row] = idata.lambda[row] + idata.mu * residual_ica[row];
       }
@@ -235,15 +235,15 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
 void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 
-  std::vector<double> residual_ica(idata.lp.numRow_, 0);
+  std::vector<double> residual_ica(idata.lp.num_row_, 0);
   updateResidualIca(idata.lp, idata.xk, residual_ica);
   double objective_ica = 0;
 
   for (int k = 0; k < options.approximate_minimization_iterations; k++) {
-    for (int col = 0; col < idata.lp.numCol_; col++) {
+    for (int col = 0; col < idata.lp.num_col_; col++) {
       // determine whether to minimize for col.
       // if empty skip.
-      if (idata.lp.Astart_[col] == idata.lp.Astart_[col + 1]) continue;
+      if (idata.lp.a_start_[col] == idata.lp.a_start_[col + 1]) continue;
 
       double old_value = idata.xk.col_value[col];
       minimizeComponentIca(col, idata.mu, idata.lambda, idata.lp, objective_ica,
@@ -259,13 +259,13 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
       }
 
       assert(std::fabs(objective_ica -
-                       vectorProduct(idata.lp.colCost_, idata.xk.col_value)) <
+                       vectorProduct(idata.lp.col_cost_, idata.xk.col_value)) <
              1e08);
     }
 
     // code below just for checking. Can comment out later if speed up is
     // needed.
-    std::vector<double> residual_ica_check(idata.lp.numRow_, 0);
+    std::vector<double> residual_ica_check(idata.lp.num_row_, 0);
     updateResidualIca(idata.lp, idata.xk, residual_ica_check);
     double difference = getNorm2(residual_ica) - getNorm2(residual_ica_check);
     assert(std::fabs(difference) < 1e08);

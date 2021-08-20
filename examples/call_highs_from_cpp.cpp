@@ -73,11 +73,11 @@ int main() {
   model.lp_.num_row_ = 3;
   model.lp_.sense_ = ObjSense::kMinimize;
   model.lp_.offset_ = 3;
-  model.lp_.colCost_ = {1.0, 1.0};
-  model.lp_.colLower_ = {0.0, 1.0};
-  model.lp_.colUpper_ = {4.0, 1.0e30};
-  model.lp_.rowLower_ = {-1.0e30, 5.0, 6.0};
-  model.lp_.rowUpper_ = {7.0, 15.0, 1.0e30};
+  model.lp_.col_cost_ = {1.0, 1.0};
+  model.lp_.col_lower_ = {0.0, 1.0};
+  model.lp_.col_upper_ = {4.0, 1.0e30};
+  model.lp_.row_lower_ = {-1.0e30, 5.0, 6.0};
+  model.lp_.row_upper_ = {7.0, 15.0, 1.0e30};
   //
   // Here the orientation of the matrix is column-wise
   model.lp_.orientation_ = MatrixOrientation::kColwise;

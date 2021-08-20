@@ -26,14 +26,14 @@
 
 void convertToMinimization(HighsLp& lp) {
   if (lp.sense_ != ObjSense::kMinimize) {
-    for (int col = 0; col < lp.numCol_; col++)
-      lp.colCost_[col] = -lp.colCost_[col];
+    for (int col = 0; col < lp.num_col_; col++)
+      lp.col_cost_[col] = -lp.col_cost_[col];
   }
 }
 
 bool isEqualityProblem(const HighsLp& lp) {
-  for (int row = 0; row < lp.numRow_; row++)
-    if (lp.rowLower_[row] != lp.rowUpper_[row]) return false;
+  for (int row = 0; row < lp.num_row_; row++)
+    if (lp.row_lower_[row] != lp.row_upper_[row]) return false;
 
   return true;
 }
@@ -48,14 +48,14 @@ double vectorProduct(const std::vector<double>& v1,
 
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
                          std::vector<double>& result) {
-  assert((int)result.size() == lp.numCol_);
-  assert((int)v.size() == lp.numRow_);
+  assert((int)result.size() == lp.num_col_);
+  assert((int)v.size() == lp.num_row_);
 
-  result.assign(lp.numCol_, 0);
-  for (int col = 0; col < lp.numCol_; col++) {
-    for (int k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
-      const int row = lp.Aindex_[k];
-      result.at(col) += lp.Avalue_[k] * v[row];
+  result.assign(lp.num_col_, 0);
+  for (int col = 0; col < lp.num_col_; col++) {
+    for (int k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
+      const int row = lp.a_index_[k];
+      result.at(col) += lp.a_value_[k] * v[row];
     }
   }
 }
@@ -85,24 +85,24 @@ bool initialize(const HighsLp& lp, HighsSolution& solution,
     solution.row_value.clear();
     solution.row_dual.clear();
 
-    solution.col_value.resize(lp.numCol_);
+    solution.col_value.resize(lp.num_col_);
   }
 
-  for (int col = 0; col < lp.numCol_; col++) {
-    if (lp.colLower_[col] <= 0 && lp.colUpper_[col] >= 0)
+  for (int col = 0; col < lp.num_col_; col++) {
+    if (lp.col_lower_[col] <= 0 && lp.col_upper_[col] >= 0)
       solution.col_value[col] = 0;
-    else if (lp.colLower_[col] > 0)
-      solution.col_value[col] = lp.colLower_[col];
-    else if (lp.colUpper_[col] < 0)
-      solution.col_value[col] = lp.colUpper_[col];
+    else if (lp.col_lower_[col] > 0)
+      solution.col_value[col] = lp.col_lower_[col];
+    else if (lp.col_upper_[col] < 0)
+      solution.col_value[col] = lp.col_upper_[col];
     else {
       printf("ICrash error: setting initial value for column %d\n", col);
       return false;
     }
   }
 
-  lambda.resize(lp.numRow_);
-  lambda.assign(lp.numRow_, 0);
+  lambda.resize(lp.num_row_);
+  lambda.assign(lp.num_row_, 0);
 
   return true;
 }
@@ -121,19 +121,19 @@ double minimizeComponentIca(const int col, const double mu,
   double a = 0.0;
   double b = 0.0;
 
-  for (int k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
-    int row = lp.Aindex_[k];
-    a += lp.Avalue_[k] * lp.Avalue_[k];
+  for (int k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
+    int row = lp.a_index_[k];
+    a += lp.a_value_[k] * lp.a_value_[k];
     // matlab but with b = b / 2
-    double bracket = -residual[row] - lp.Avalue_[k] * sol.col_value[col];
+    double bracket = -residual[row] - lp.a_value_[k] * sol.col_value[col];
     bracket += lambda[row];
     // clp minimizing for delta_x
     // double bracket_clp = - residual_[row];
-    b += lp.Avalue_[k] * bracket;
+    b += lp.a_value_[k] * bracket;
   }
 
   a = (0.5 / mu) * a;
-  b = (0.5 / mu) * b + 0.5 * lp.colCost_[col];
+  b = (0.5 / mu) * b + 0.5 * lp.col_cost_[col];
 
   double theta = -b / a;
   double delta_x = 0;
@@ -141,27 +141,27 @@ double minimizeComponentIca(const int col, const double mu,
   // matlab
   double new_x;
   if (theta > 0)
-    new_x = std::min(theta, lp.colUpper_[col]);
+    new_x = std::min(theta, lp.col_upper_[col]);
   else
-    new_x = std::max(theta, lp.colLower_[col]);
+    new_x = std::max(theta, lp.col_lower_[col]);
   delta_x = new_x - sol.col_value[col];
 
   // clp minimizing for delta_x
   // if (theta > 0)
-  //   delta_x = std::min(theta, lp_.colUpper_[col] - col_value_[col]);
+  //   delta_x = std::min(theta, lp_.col_upper_[col] - col_value_[col]);
   // else
-  //   delta_x = std::max(theta, lp_.colLower_[col] - col_value_[col]);
+  //   delta_x = std::max(theta, lp_.col_lower_[col] - col_value_[col]);
 
   sol.col_value[col] += delta_x;
 
   // std::cout << "col " << col << ": " << delta_x << std::endl;
 
   // Update objective, row_value, residual after each component update.
-  objective += lp.colCost_[col] * delta_x;
-  for (int k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
-    int row = lp.Aindex_[k];
-    residual[row] -= lp.Avalue_[k] * delta_x;
-    sol.row_value[row] += lp.Avalue_[k] * delta_x;
+  objective += lp.col_cost_[col] * delta_x;
+  for (int k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
+    int row = lp.a_index_[k];
+    residual[row] -= lp.a_value_[k] * delta_x;
+    sol.row_value[row] += lp.a_value_[k] * delta_x;
   }
 
   return delta_x;
@@ -170,20 +170,20 @@ double minimizeComponentIca(const int col, const double mu,
 void updateResidual(bool piecewise, const HighsLp& lp, const HighsSolution& sol,
                     std::vector<double>& residual) {
   residual.clear();
-  residual.assign(lp.numRow_, 0);
+  residual.assign(lp.num_row_, 0);
 
   if (!piecewise) {
     assert(isEqualityProblem(lp));
-    for (int row = 0; row < lp.numRow_; row++)
-      residual[row] = std::fabs(lp.rowUpper_[row] - sol.row_value[row]);
+    for (int row = 0; row < lp.num_row_; row++)
+      residual[row] = std::fabs(lp.row_upper_[row] - sol.row_value[row]);
   } else {
     // piecewise
-    for (int row = 0; row < lp.numRow_; row++) {
+    for (int row = 0; row < lp.num_row_; row++) {
       double value = 0;
-      if (sol.row_value[row] <= lp.rowLower_[row])
-        value = lp.rowLower_[row] - sol.row_value[row];
-      else if (sol.row_value[row] >= lp.rowUpper_[row])
-        value = sol.row_value[row] - lp.rowUpper_[row];
+      if (sol.row_value[row] <= lp.row_lower_[row])
+        value = lp.row_lower_[row] - sol.row_value[row];
+      else if (sol.row_value[row] >= lp.row_upper_[row])
+        value = sol.row_value[row] - lp.row_upper_[row];
 
       residual[row] = value;
     }
@@ -194,6 +194,6 @@ void updateResidual(bool piecewise, const HighsLp& lp, const HighsSolution& sol,
 void updateResidualIca(const HighsLp& lp, const HighsSolution& sol,
                        std::vector<double>& residual) {
   assert(isEqualityProblem(lp));
-  for (int row = 0; row < lp.numRow_; row++)
-    residual[row] = lp.rowUpper_[row] - sol.row_value[row];
+  for (int row = 0; row < lp.num_row_; row++)
+    residual[row] = lp.row_upper_[row] - sol.row_value[row];
 }
