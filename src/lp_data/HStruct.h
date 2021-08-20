@@ -38,8 +38,9 @@ struct HighsSolution {
 
 struct RefactorInfo {
   bool valid = false;
-  std::vector<HighsInt> pivot_row_sequence;
-  std::vector<HighsInt> pivot_col_sequence;
+  std::vector<HighsInt> pivot_row;
+  std::vector<HighsInt> pivot_var;
+  std::vector<int8_t> pivot_type;
   void clear();
   void get(RefactorInfo& refactor_info) const;
   void set(const RefactorInfo& refactor_info);

@@ -334,7 +334,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   //
   // Indicate that the refactorization information is known unless the basis was rank deficient
-  assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() + rank_deficiency == numRow);
+  assert((HighsInt)this->refactor_info_.pivot_row.size() + rank_deficiency == numRow);
   this->refactor_info_.valid = rank_deficiency==0;
 
   // Record the number of entries in the INVERT
@@ -424,8 +424,10 @@ void HFactor::buildSimple() {
   for (HighsInt iCol = 0; iCol < numRow; iCol++) {
     HighsInt iMat = baseIndex[iCol];
     HighsInt iRow = -1;
+    int8_t pivot_type = kPivotIllegal;
     if (iMat >= numCol) {
       // 1.1 Logical column
+      pivot_type = kPivotLogical;
       // Check for double pivot
       HighsInt lc_iRow = iMat - numCol;
       if (MRcountb4[lc_iRow] >= 0) {
@@ -448,6 +450,7 @@ void HFactor::buildSimple() {
       // Check for unit column with double pivot
       bool unit_col = count == 1 && Avalue[start] == 1;
       if (unit_col && MRcountb4[lc_iRow] >= 0) {
+	pivot_type = kPivotUnit;
         iRow = lc_iRow;
       } else {
         if (unit_col)
@@ -472,8 +475,10 @@ void HFactor::buildSimple() {
       UpivotValue.push_back(1);
       Ustart.push_back(Uindex.size());
       MRcountb4[iRow] = -numRow;
-      this->refactor_info_.pivot_row_sequence.push_back(iRow);
-      this->refactor_info_.pivot_col_sequence.push_back(iCol);
+      assert(pivot_type != kPivotIllegal);
+      this->refactor_info_.pivot_row.push_back(iRow);
+      this->refactor_info_.pivot_var.push_back(iMat);
+      this->refactor_info_.pivot_type.push_back(pivot_type);
     }
     Bstart[iCol + 1] = BcountX;
   }
@@ -545,8 +550,9 @@ void HFactor::buildSimple() {
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
-	this->refactor_info_.pivot_row_sequence.push_back(iRow);
-	this->refactor_info_.pivot_col_sequence.push_back(iCol);
+	this->refactor_info_.pivot_row.push_back(iRow);
+	this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
+	this->refactor_info_.pivot_type.push_back(kPivotRowSingleton);
       } else if (count == 1) {
         // 2.3 Deal with column singleton
         for (HighsInt k = start; k < pivot_k; k++) {
@@ -566,8 +572,9 @@ void HFactor::buildSimple() {
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
-	this->refactor_info_.pivot_row_sequence.push_back(iRow);
-	this->refactor_info_.pivot_col_sequence.push_back(iCol);
+	this->refactor_info_.pivot_row.push_back(iRow);
+	this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
+	this->refactor_info_.pivot_type.push_back(kPivotColSingleton);
       } else {
         iwork[nwork++] = iCol;
       }
@@ -634,7 +641,7 @@ void HFactor::buildSimple() {
   build_synthetic_tick += (numRow + nwork + MCcountX) * 40 + MRcountX * 20;
   // Record the kernel dimension
   kernel_dim = nwork;
-  assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() ==
+  assert((HighsInt)this->refactor_info_.pivot_row.size() ==
 	 numRow-nwork);
 }
 
@@ -685,6 +692,7 @@ HighsInt HFactor::buildKernel() {
     */
     HighsInt jColPivot = -1;
     HighsInt iRowPivot = -1;
+    //    int8_t pivot_type = kPivotIllegal;
     // 1.1. Setup search merits
     HighsInt searchLimit = min(nwork, HighsInt{8});
     HighsInt searchCount = 0;
@@ -779,15 +787,16 @@ HighsInt HFactor::buildKernel() {
                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                   fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
-      assert((HighsInt)this->refactor_info_.pivot_row_sequence.size() + rank_deficiency == numRow);
+      assert((HighsInt)this->refactor_info_.pivot_row.size() + rank_deficiency == numRow);
       return rank_deficiency;
     }
     rowDelete(jColPivot, iRowPivot);
     clinkDel(jColPivot);
     rlinkDel(iRowPivot);
     permute[jColPivot] = iRowPivot;
-    this->refactor_info_.pivot_row_sequence.push_back(iRowPivot);
-    this->refactor_info_.pivot_col_sequence.push_back(jColPivot);
+    this->refactor_info_.pivot_row.push_back(iRowPivot);
+    this->refactor_info_.pivot_var.push_back(baseIndex[iwork[jColPivot]]);
+    this->refactor_info_.pivot_type.push_back(kPivotMarkowitz);
     
 
     // 2.2. Store active pivot column to L

@@ -38,18 +38,18 @@ void RefactorInfo::set(const HighsInt num_col, const HighsInt num_row) {
     return;
   }
   this->valid = true;
-  this->pivot_row_sequence.resize(num_row);
-  this->pivot_col_sequence.resize(num_row);
+  this->pivot_var.resize(num_row);
+  this->pivot_row.resize(num_row);
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    this->pivot_row_sequence[iRow] = iRow;
-    this->pivot_row_sequence[iRow] = num_col + iRow;
+    this->pivot_row[iRow] = iRow;
+    this->pivot_row[iRow] = num_col + iRow;
   }
 }
 
 void RefactorInfo::clear() {
   this->valid = false;
-  this->pivot_row_sequence.clear();
-  this->pivot_col_sequence.clear();
+  this->pivot_var.clear();
+  this->pivot_row.clear();
 }
 
 HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
@@ -59,30 +59,33 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   permute.assign(numRow, -1);
   nwork = 0;
   basis_matrix_num_el = 0;
+  HighsInt stage = -1;
   for (HighsInt iK = 0; iK < numRow; iK++) {
-    HighsInt iRow = -1;
-    HighsInt iCol = this->refactor_info_.pivot_col_sequence[iK];
-    HighsInt iVar = baseIndex[iCol];
-    if (iVar >= numCol) {
+    HighsInt iRow = this->refactor_info_.pivot_row[iK];
+    HighsInt iVar = this->refactor_info_.pivot_var[iK];
+    int8_t pivot_type = this->refactor_info_.pivot_type[iK];
+    if (pivot_type == kPivotLogical) {
       // 1.1 Logical column
-      iRow = iVar - numCol;
-      assert(iRow == this->refactor_info_.pivot_row_sequence[iK]);
+      assert(iVar>=numCol);
       basis_matrix_num_el++;
-    } else {
+    } else if (pivot_type == kPivotUnit) {
       // 1.2 Structural column
+      assert(iVar<numCol);
       assert(1==0);
       HighsInt start = Astart[iVar];
       HighsInt count = Astart[iVar + 1] - start;
-      HighsInt lc_iRow = Aindex[start];
-      bool unit_col = count == 1 && Avalue[start] == 1;
-      if (unit_col) {
-        iRow = lc_iRow;
-	basis_matrix_num_el++;
-      }
+      assert(Aindex[start]==iRow);
+      assert(count == 1 && Avalue[start] == 1);
+      basis_matrix_num_el++;
+    } else if (pivot_type == kPivotRowSingleton) {
+    } else if (pivot_type == kPivotColSingleton) {
+    } else {
+      assert(pivot_type == kPivotMarkowitz);
+      stage = iK;
+      break;
     }
     if (iRow >= 0) {
       // 1.3 Record unit column
-      permute[iCol] = iRow;
       Lstart.push_back(Lindex.size());
       UpivotIndex.push_back(iRow);
       UpivotValue.push_back(1);

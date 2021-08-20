@@ -172,4 +172,10 @@ enum class HighsBasisStatus {
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
 const double kHighsIllegalInfeasibilityMeasure = -1;
 
+const int8_t kPivotIllegal = -1;
+const int8_t kPivotLogical = 0;
+const int8_t kPivotUnit = 1;
+const int8_t kPivotRowSingleton = 2;
+const int8_t kPivotColSingleton = 3;
+const int8_t kPivotMarkowitz = 4;
 #endif /* LP_DATA_HCONST_H_ */
