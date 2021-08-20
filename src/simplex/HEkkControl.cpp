@@ -99,7 +99,7 @@ bool HEkk::switchToDevex() {
     // What if non-dual iterations have been performed: need to think about this
     HighsInt local_iteration_count =
         iteration_count_ - info_.control_iteration_count0;
-    HighsInt local_num_tot = lp_.numCol_ + lp_.numRow_;
+    HighsInt local_num_tot = lp_.num_col_ + lp_.num_row_;
     // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations
     // have been costly
     switch_to_devex =
@@ -111,15 +111,15 @@ bool HEkk::switchToDevex() {
          kCostlyDseFractionNumTotalIterationBeforeSwitch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
-                   " costly DSE iterations of %" HIGHSINT_FORMAT
-                   " with "
-                   "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
-                   "%11.4g; DSE = %11.4g\n",
-                   info_.num_costly_DSE_iteration, local_iteration_count,
-                   info_.col_aq_density, info_.row_ep_density,
-                   info_.row_ap_density, info_.row_DSE_density);
+      highsLogDev(options_.log_options, HighsLogType::kInfo,
+                  "Switch from DSE to Devex after %" HIGHSINT_FORMAT
+                  " costly DSE iterations of %" HIGHSINT_FORMAT
+                  " with "
+                  "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
+                  "%11.4g; DSE = %11.4g\n",
+                  info_.num_costly_DSE_iteration, local_iteration_count,
+                  info_.col_aq_density, info_.row_ep_density,
+                  info_.row_ap_density, info_.row_DSE_density);
     }
   }
   if (!switch_to_devex) {
@@ -131,10 +131,10 @@ bool HEkk::switchToDevex() {
     switch_to_devex = info_.allow_dual_steepest_edge_to_devex_switch &&
                       local_measure > local_threshold;
     if (switch_to_devex) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Switch from DSE to Devex with log error measure of %g > "
-                   "%g = threshold\n",
-                   local_measure, local_threshold);
+      highsLogDev(options_.log_options, HighsLogType::kInfo,
+                  "Switch from DSE to Devex with log error measure of %g > "
+                  "%g = threshold\n",
+                  local_measure, local_threshold);
     }
   }
   return switch_to_devex;

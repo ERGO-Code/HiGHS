@@ -45,7 +45,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
 #endif
-  if (!model.lp_.numRow_) {
+  if (!model.lp_.num_row_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(model);
     return_status =
@@ -76,10 +76,10 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // ToDo: This should take model.basis_ and use it if it's valid
     //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
     //    model.solution_params_);
-    getKktFailures(model.lp_, model.solution_, model.basis_,
-                   model.solution_params_);
+    getLpKktFailures(model.lp_, model.solution_, model.basis_,
+                     model.solution_params_);
     const double objective_function_value =
-        computeObjectiveValue(model.lp_, model.solution_);
+        model.lp_.objectiveValue(model.solution_.col_value);
     model.solution_params_.objective_function_value = objective_function_value;
 
     HighsSolutionParams check_solution_params;
@@ -88,8 +88,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         options.primal_feasibility_tolerance;
     check_solution_params.dual_feasibility_tolerance =
         options.dual_feasibility_tolerance;
-    getKktFailures(model.lp_, model.solution_, model.basis_,
-                   check_solution_params);
+    getLpKktFailures(model.lp_, model.solution_, model.basis_,
+                     check_solution_params);
 
     if (debugCompareSolutionParams(options, model.solution_params_,
                                    check_solution_params) !=
@@ -145,7 +145,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     }
   }
   // Analyse the HiGHS (basic) solution
-  if (debugHighsSolution(message, model) == HighsDebugStatus::kLogicalError)
+  if (debugHighsLpSolution(message, model) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   return return_status;
 }
@@ -170,17 +170,17 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   resetModelStatusAndSolutionParams(model_status, solution_params, options);
 
   // Check that the LP really is unconstrained!
-  assert(lp.numRow_ == 0);
-  if (lp.numRow_ != 0) return HighsStatus::kError;
+  assert(lp.num_row_ == 0);
+  if (lp.num_row_ != 0) return HighsStatus::kError;
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Solving an unconstrained LP with %" HIGHSINT_FORMAT
                " columns\n",
-               lp.numCol_);
+               lp.num_col_);
 
-  solution.col_value.assign(lp.numCol_, 0);
-  solution.col_dual.assign(lp.numCol_, 0);
-  basis.col_status.assign(lp.numCol_, HighsBasisStatus::kNonbasic);
+  solution.col_value.assign(lp.num_col_, 0);
+  solution.col_dual.assign(lp.num_col_, 0);
+  basis.col_status.assign(lp.num_col_, HighsBasisStatus::kNonbasic);
   // No rows for primal solution, dual solution or basis
   solution.row_value.clear();
   solution.row_dual.clear();
@@ -204,11 +204,11 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution_params.max_dual_infeasibility = 0;
   solution_params.sum_dual_infeasibility = 0;
 
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    double cost = lp.colCost_[iCol];
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double cost = lp.col_cost_[iCol];
     double dual = (HighsInt)lp.sense_ * cost;
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
     double value;
     double primal_infeasibility = 0;
     double dual_infeasibility = -1;

@@ -113,6 +113,7 @@ set(sources
     mip/HighsPathSeparator.cpp
     mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
+    mip/HighsConflictPool.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsGFkSolve.cpp
@@ -130,13 +131,10 @@ set(sources
     model/HighsModel.cpp
     presolve/ICrashX.cpp
     presolve/ICrashUtil.cpp
-    presolve/Presolve.cpp
-    presolve/PresolveComponent.cpp
-    presolve/PresolveAnalysis.cpp
-    presolve/PresolveUtils.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
+    presolve/HighsSymmetry.cpp
     presolve/HPreData.cpp
     presolve/HPresolve.cpp
     presolve/PresolveAnalysis.cpp
@@ -145,7 +143,7 @@ set(sources
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/solver.cpp
-    qpsolver/ratiotest/ratiotest.cpp
+    qpsolver/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -207,6 +205,7 @@ set(headers
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
+    mip/HighsConflictPool.h
     mip/HighsCutPool.h
     mip/HighsDebugSol.h
     mip/HighsDomainChange.h
@@ -261,6 +260,7 @@ set(headers
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
+    presolve/HighsSymmetry.h
     presolve/HPreData.h
     presolve/HPresolve.h
     presolve/PresolveAnalysis.h
@@ -272,6 +272,7 @@ set(headers
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
+    util/HighsDisjointSets.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h
@@ -302,9 +303,6 @@ if (IPX_ON)
     set(sources ${sources} ipm/IpxWrapper.cpp)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
-    if(HIGHSINT64)
-    target_compile_definitions(libbasiclu PRIVATE -DHIGHSINT64)
-    endif()
     target_link_libraries(libipx libbasiclu)
 else ()
     set(headers ${headers} ipm/IpxWrapperEmpty.h)
@@ -497,7 +495,7 @@ if (NOT ${BUILD_SHARED_LIBS})
     target_compile_options(libhighs PRIVATE "-fPIC" )
 endif()
 
-target_sources(libhighs PRIVATE 
+target_sources(libhighs PRIVATE
     ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
@@ -542,6 +540,7 @@ target_sources(libhighs PRIVATE
     mip/HighsPathSeparator.cpp
     mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
+    mip/HighsConflictPool.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsGFkSolve.cpp
@@ -560,6 +559,7 @@ target_sources(libhighs PRIVATE
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
+    presolve/HighsSymmetry.cpp
     presolve/HPreData.cpp
     presolve/HPresolve.cpp
     presolve/PresolveAnalysis.cpp
@@ -568,7 +568,7 @@ target_sources(libhighs PRIVATE
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/solver.cpp
-    qpsolver/ratiotest/ratiotest.cpp
+    qpsolver/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -644,6 +644,7 @@ set(headers_fast_build_
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
+    mip/HighsConflictPool.h
     mip/HighsCutPool.h
     mip/HighsDebugSol.h
     mip/HighsDomainChange.h
@@ -669,6 +670,9 @@ set(headers_fast_build_
     mip/HighsTransformedLp.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
+    model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -693,6 +697,7 @@ set(headers_fast_build_
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
+    presolve/HighsSymmetry.h
     presolve/HPreData.h
     presolve/HPresolve.h
     presolve/PresolveAnalysis.h
@@ -704,6 +709,7 @@ set(headers_fast_build_
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
+    util/HighsDisjointSets.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h

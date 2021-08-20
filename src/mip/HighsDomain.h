@@ -23,6 +23,7 @@
 #include "util/HighsCDouble.h"
 
 class HighsCutPool;
+class HighsConflictPool;
 
 class HighsDomain {
  public:
@@ -33,16 +34,87 @@ class HighsDomain {
     enum {
       kBranching = -1,
       kUnknown = -2,
-      kModelRow = -3,
-      kCliqueTable = -4,
+      kModelRowUpper = -3,
+      kModelRowLower = -4,
+      kCliqueTable = -5,
+      kConflictingBounds = -6,
     };
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
-    static Reason cliqueTable() { return Reason{kCliqueTable, 0}; }
-    static Reason modelRow(HighsInt row) { return Reason{kModelRow, row}; }
+    static Reason cliqueTable(HighsInt col, HighsInt val) {
+      return Reason{kCliqueTable, 2 * col + val};
+    }
+    static Reason modelRowUpper(HighsInt row) {
+      return Reason{kModelRowUpper, row};
+    }
+    static Reason modelRowLower(HighsInt row) {
+      return Reason{kModelRowLower, row};
+    }
     static Reason cut(HighsInt cutpool, HighsInt cut) {
       return Reason{cutpool, cut};
     }
+    static Reason conflictingBounds(HighsInt pos) {
+      return Reason{kConflictingBounds, pos};
+    }
+  };
+
+  class ConflictSet {
+    friend class HighsDomain;
+    HighsDomain& localdom;
+    HighsDomain& globaldom;
+    std::set<HighsInt> reasonSideFrontier;
+    std::set<HighsInt> reconvergenceFrontier;
+    std::vector<HighsInt> resolveQueue;
+    std::vector<HighsInt> resolvedDomainChanges;
+    std::vector<std::tuple<double, HighsInt, HighsInt>> resolveBuffer;
+
+   public:
+    ConflictSet(HighsDomain& localdom);
+
+    void conflictAnalysis(HighsConflictPool& conflictPool);
+    void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
+                          HighsInt prooflen, double proofrhs,
+                          HighsConflictPool& conflictPool);
+
+   private:
+    void pushQueue(HighsInt domchgPos);
+    HighsInt popQueue();
+    void clearQueue();
+    HighsInt queueSize();
+    bool resolvable(HighsInt domChgPos);
+
+    HighsInt resolveDepth(std::set<HighsInt>& frontier, HighsInt depthLevel,
+                          HighsInt stopSize, HighsInt minResolve = 0,
+                          bool increaseConflictScore = false);
+
+    HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool);
+
+    bool explainInfeasibility();
+
+    bool explainInfeasibilityConflict(const HighsDomainChange* conflict,
+                                      HighsInt len);
+
+    bool explainInfeasibilityLeq(const HighsInt* inds, const double* vals,
+                                 HighsInt len, double rhs, double minActivity);
+
+    bool explainInfeasibilityGeq(const HighsInt* inds, const double* vals,
+                                 HighsInt len, double rhs, double maxActivity);
+
+    bool explainBoundChange(HighsInt pos);
+
+    bool explainBoundChangeConflict(HighsInt domchgPos,
+                                    const HighsDomainChange* conflict,
+                                    HighsInt len);
+
+    bool explainBoundChangeLeq(const HighsDomainChange& domchg,
+                               HighsInt domchgPos, const HighsInt* inds,
+                               const double* vals, HighsInt len, double rhs,
+                               double minActivity);
+
+    bool explainBoundChangeGeq(const HighsDomainChange& domchg,
+                               HighsInt domchgPos, const HighsInt* inds,
+                               const double* vals, HighsInt len, double rhs,
+                               double maxActivity);
   };
 
   struct CutpoolPropagation {
@@ -51,9 +123,9 @@ class HighsDomain {
     HighsCutPool* cutpool;
     std::vector<HighsCDouble> activitycuts_;
     std::vector<HighsInt> activitycutsinf_;
-    std::vector<unsigned> activitycutversion_;
     std::vector<uint8_t> propagatecutflags_;
     std::vector<HighsInt> propagatecutinds_;
+    std::vector<double> capacityThreshold_;
 
     CutpoolPropagation(HighsInt cutpoolindex, HighsDomain* domain,
                        HighsCutPool& cutpool);
@@ -62,7 +134,11 @@ class HighsDomain {
 
     ~CutpoolPropagation();
 
-    void cutAdded(HighsInt cut);
+    void recomputeCapacityThreshold(HighsInt cut);
+
+    void cutAdded(HighsInt cut, bool propagate);
+
+    void cutDeleted(HighsInt cut, bool deletedOnlyForPropagation = false);
 
     void markPropagateCut(HighsInt cut);
 
@@ -71,20 +147,62 @@ class HighsDomain {
     void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
   };
 
+  struct ConflictPoolPropagation {
+    HighsInt conflictpoolindex;
+    HighsDomain* domain;
+    HighsConflictPool* conflictpool_;
+    std::vector<HighsInt> colLowerWatched_;
+    std::vector<HighsInt> colUpperWatched_;
+    std::vector<uint8_t> conflictFlag_;
+    std::vector<HighsInt> propagateConflictInds_;
+
+    struct WatchedLiteral {
+      HighsDomainChange domchg = {0.0, -1, HighsBoundType::kLower};
+      HighsInt prev = -1;
+      HighsInt next = -1;
+    };
+
+    std::vector<WatchedLiteral> watchedLiterals_;
+
+    ConflictPoolPropagation(HighsInt conflictpoolindex, HighsDomain* domain,
+                            HighsConflictPool& cutpool);
+
+    ConflictPoolPropagation(const ConflictPoolPropagation& other);
+
+    ~ConflictPoolPropagation();
+
+    void linkWatchedLiteral(HighsInt linkPos);
+
+    void unlinkWatchedLiteral(HighsInt linkPos);
+
+    void conflictAdded(HighsInt conflict);
+
+    void conflictDeleted(HighsInt conflict);
+
+    void markPropagateConflict(HighsInt conflict);
+
+    void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
+
+    void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
+
+    void propagateConflict(HighsInt conflict);
+  };
+
  private:
   std::vector<uint8_t> changedcolsflags_;
   std::vector<HighsInt> changedcols_;
 
-  std::vector<HighsInt> propRowNumChangedBounds_;
+  std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;
 
   std::vector<HighsDomainChange> domchgstack_;
   std::vector<Reason> domchgreason_;
-  std::vector<double> prevboundval_;
+  std::vector<std::pair<double, HighsInt>> prevboundval_;
 
   std::vector<HighsCDouble> activitymin_;
   std::vector<HighsCDouble> activitymax_;
   std::vector<HighsInt> activitymininf_;
   std::vector<HighsInt> activitymaxinf_;
+  std::vector<double> capacityThreshold_;
   std::vector<uint8_t> propagateflags_;
   std::vector<HighsInt> propagateinds_;
 
@@ -92,6 +210,7 @@ class HighsDomain {
 
  private:
   std::deque<CutpoolPropagation> cutpoolpropagation;
+  std::deque<ConflictPoolPropagation> conflictPoolPropagation;
 
   bool infeasible_ = 0;
   Reason infeasible_reason;
@@ -101,11 +220,23 @@ class HighsDomain {
 
   void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
 
+  void updateThresholdLbChange(HighsInt col, double newbound, double val,
+                               double& threshold);
+
+  void updateThresholdUbChange(HighsInt col, double newbound, double val,
+                               double& threshold);
+
+  void recomputeCapacityThreshold(HighsInt row);
+
   double doChangeBound(const HighsDomainChange& boundchg);
 
+  std::vector<HighsInt> colLowerPos_;
+  std::vector<HighsInt> colUpperPos_;
+  std::vector<HighsInt> branchPos_;
+
  public:
-  std::vector<double> colLower_;
-  std::vector<double> colUpper_;
+  std::vector<double> col_lower_;
+  std::vector<double> col_upper_;
 
   HighsDomain(HighsMipSolver& mipsolver);
 
@@ -119,16 +250,23 @@ class HighsDomain {
         activitymax_(other.activitymax_),
         activitymininf_(other.activitymininf_),
         activitymaxinf_(other.activitymaxinf_),
+        capacityThreshold_(other.capacityThreshold_),
         propagateflags_(other.propagateflags_),
         propagateinds_(other.propagateinds_),
         mipsolver(other.mipsolver),
         cutpoolpropagation(other.cutpoolpropagation),
+        conflictPoolPropagation(other.conflictPoolPropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
-        colLower_(other.colLower_),
-        colUpper_(other.colUpper_) {
+        colLowerPos_(other.colLowerPos_),
+        colUpperPos_(other.colUpperPos_),
+        branchPos_(other.branchPos_),
+        col_lower_(other.col_lower_),
+        col_upper_(other.col_upper_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
+    for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
+      conflictprop.domain = this;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
@@ -141,16 +279,23 @@ class HighsDomain {
     activitymax_ = other.activitymax_;
     activitymininf_ = other.activitymininf_;
     activitymaxinf_ = other.activitymaxinf_;
+    capacityThreshold_ = other.capacityThreshold_;
     propagateflags_ = other.propagateflags_;
     propagateinds_ = other.propagateinds_;
     mipsolver = other.mipsolver;
     cutpoolpropagation = other.cutpoolpropagation;
+    conflictPoolPropagation = other.conflictPoolPropagation;
     infeasible_ = other.infeasible_;
     infeasible_reason = other.infeasible_reason;
-    colLower_ = other.colLower_;
-    colUpper_ = other.colUpper_;
+    colLowerPos_ = other.colLowerPos_;
+    colUpperPos_ = other.colUpperPos_;
+    branchPos_ = other.branchPos_;
+    col_lower_ = other.col_lower_;
+    col_upper_ = other.col_upper_;
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
+    for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
+      conflictprop.domain = this;
     return *this;
   }
 
@@ -176,6 +321,8 @@ class HighsDomain {
 
   void addCutpool(HighsCutPool& cutpool);
 
+  void addConflictPool(HighsConflictPool& conflictPool);
+
   void clearChangedCols() {
     for (HighsInt i : changedcols_) changedcolsflags_[i] = 0;
     changedcols_.clear();
@@ -191,9 +338,21 @@ class HighsDomain {
 
   void markPropagate(HighsInt row);
 
+  bool isActive(const HighsDomainChange& domchg) const {
+    return domchg.boundtype == HighsBoundType::kLower
+               ? domchg.boundval <= col_lower_[domchg.column]
+               : domchg.boundval >= col_upper_[domchg.column];
+  }
+
   void markPropagateCut(Reason reason);
 
   void computeRowActivities();
+
+  void markInfeasible(Reason reason = Reason::unspecified()) {
+    infeasible_ = true;
+    infeasible_pos = domchgstack_.size();
+    infeasible_reason = reason;
+  }
 
   bool infeasible() const { return infeasible_; }
 
@@ -202,19 +361,31 @@ class HighsDomain {
 
   void changeBound(HighsBoundType boundtype, HighsInt col, double boundval,
                    Reason reason = Reason::branching()) {
-    changeBound({boundtype, col, boundval}, reason);
+    changeBound({boundval, col, boundtype}, reason);
   }
 
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
-    if (colLower_[col] < val)
-      changeBound({HighsBoundType::kLower, col, val}, reason);
+    if (col_lower_[col] < val) {
+      changeBound({val, col, HighsBoundType::kLower}, reason);
+      if (infeasible_ == 0) propagate();
+    }
 
-    if (infeasible_ == 0 && colUpper_[col] > val)
-      changeBound({HighsBoundType::kUpper, col, val}, reason);
+    if (infeasible_ == 0 && col_upper_[col] > val)
+      changeBound({val, col, HighsBoundType::kUpper}, reason);
   }
 
+  void backtrackToGlobal();
+
   HighsDomainChange backtrack();
+
+  const std::vector<HighsInt>& getBranchingPositions() const {
+    return branchPos_;
+  }
+
+  const std::vector<std::pair<double, HighsInt>>& getPreviousBounds() const {
+    return prevboundval_;
+  }
 
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {
     return domchgstack_;
@@ -224,26 +395,58 @@ class HighsDomain {
     return domchgreason_;
   }
 
-  std::vector<HighsDomainChange> getReducedDomainChangeStack() const {
+  HighsInt getNumDomainChanges() const { return domchgstack_.size(); }
+
+  bool colBoundsAreGlobal(HighsInt col) const {
+    return colLowerPos_[col] == -1 && colUpperPos_[col] == -1;
+  }
+
+  HighsInt getBranchDepth() const { return branchPos_.size(); }
+
+  std::vector<HighsDomainChange> getReducedDomainChangeStack(
+      std::vector<HighsInt>& branchingPositions) const {
     std::vector<HighsDomainChange> reducedstack;
     reducedstack.reserve(domchgstack_.size());
-    for (const HighsDomainChange& domchg : domchgstack_) {
+    branchingPositions.reserve(branchPos_.size());
+    for (HighsInt i = 0; i < (HighsInt)domchgstack_.size(); ++i) {
       // keep only the tightest bound change for each variable
-      if ((domchg.boundtype == HighsBoundType::kLower &&
-           colLower_[domchg.column] != domchg.boundval) ||
-          (domchg.boundtype == HighsBoundType::kUpper &&
-           colUpper_[domchg.column] != domchg.boundval))
+      if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
+           colLowerPos_[domchgstack_[i].column] != i) ||
+          (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
+           colUpperPos_[domchgstack_[i].column] != i))
         continue;
 
-      reducedstack.push_back(domchg);
+      if (domchgreason_[i].type == Reason::kBranching)
+        branchingPositions.push_back(reducedstack.size());
+      reducedstack.push_back(domchgstack_[i]);
     }
+
     reducedstack.shrink_to_fit();
     return reducedstack;
   }
 
   void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack);
 
+  void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack,
+                            const std::vector<HighsInt>& branchingPositions);
+
   bool propagate();
+
+  double getColLowerPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
+
+  double getColUpperPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
+
+  void conflictAnalysis(HighsConflictPool& conflictPool);
+
+  void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
+                        HighsInt prooflen, double proofrhs,
+                        HighsConflictPool& conflictPool);
+
+  void conflictAnalyzeReconvergence(const HighsDomainChange& domchg,
+                                    const HighsInt* proofinds,
+                                    const double* proofvals, HighsInt prooflen,
+                                    double proofrhs,
+                                    HighsConflictPool& conflictPool);
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;
@@ -256,20 +459,32 @@ class HighsDomain {
     return activitymaxinf_[row] == 0 ? double(activitymax_[row]) : kHighsInf;
   }
 
-  double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut);
+  double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) const;
 
   bool isBinary(HighsInt col) const {
     return mipsolver->variableType(col) != HighsVarType::kContinuous &&
-           colLower_[col] == 0.0 && colUpper_[col] == 1.0;
+           col_lower_[col] == 0.0 && col_upper_[col] == 1.0;
+  }
+
+  bool isGlobalBinary(HighsInt col) const {
+    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
+           mipsolver->model_->col_lower_[col] == 0.0 &&
+           mipsolver->model_->col_upper_[col] == 1.0;
   }
 
   HighsVarType variableType(HighsInt col) const {
     return mipsolver->variableType(col);
   }
 
-  bool isFixed(HighsInt col) const { return colLower_[col] == colUpper_[col]; }
+  bool isFixed(HighsInt col) const {
+    return col_lower_[col] == col_upper_[col];
+  }
 
   bool isFixing(const HighsDomainChange& domchg) const;
+
+  HighsDomainChange flip(const HighsDomainChange& domchg) const;
+
+  double feastol() const;
 };
 
 #endif

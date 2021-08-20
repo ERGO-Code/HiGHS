@@ -66,6 +66,13 @@ void HighsMipSolver::run() {
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     mipdata_->evaluateRootNode();
+    // age 5 times to remove stored but never violated cuts after root
+    // separation
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
   }
   if (mipdata_->nodequeue.empty()) {
     cleanupSolve();
@@ -82,8 +89,6 @@ restart:
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
 
-  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;
@@ -91,8 +96,11 @@ restart:
   int64_t numQueueLeaves = 0;
   HighsInt numHugeTreeEstim = 0;
   int64_t numNodesLastCheck = mipdata_->num_nodes;
+  int64_t nextCheck = mipdata_->num_nodes;
   double treeweightLastCheck = 0.0;
+  double upperLimLastCheck = mipdata_->upper_limit;
   while (search.hasNode()) {
+    mipdata_->conflictPool.performAging();
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
@@ -111,51 +119,50 @@ restart:
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
-          break;
+        } else {
+          heuristicsCalled = true;
+
+          if (mipdata_->incumbent.empty())
+            mipdata_->heuristics.randomizedRounding(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+
+          if (mipdata_->incumbent.empty())
+            mipdata_->heuristics.RENS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+          else
+            mipdata_->heuristics.RINS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+
+          mipdata_->heuristics.flushStatistics();
         }
-
-        heuristicsCalled = true;
-
-        if (mipdata_->incumbent.empty())
-          mipdata_->heuristics.randomizedRounding(
-              mipdata_->lp.getLpSolver().getSolution().col_value);
-
-        if (mipdata_->incumbent.empty())
-          mipdata_->heuristics.RENS(
-              mipdata_->lp.getLpSolver().getSolution().col_value);
-        else
-          mipdata_->heuristics.RINS(
-              mipdata_->lp.getLpSolver().getSolution().col_value);
-
-        mipdata_->heuristics.flushStatistics();
       }
 
       if (mipdata_->domain.infeasible()) break;
 
-      search.dive();
-      ++mipdata_->num_leaves;
+      if (!search.currentNodePruned()) {
+        search.dive();
+        ++mipdata_->num_leaves;
 
-      search.flushStatistics();
+        search.flushStatistics();
+      }
+
       if (mipdata_->checkLimits()) {
         limit_reached = true;
         break;
       }
 
-      if (!search.backtrack()) break;
+      HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
+      if (numPlungeNodes >= 100) break;
 
-      if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
+      if (!search.backtrackPlunge(mipdata_->nodequeue)) break;
 
-      if (mipdata_->num_nodes - plungestart >=
-          std::min(100., mipdata_->num_nodes * 0.1))
-        break;
+      assert(search.hasNode());
 
-      if (mipdata_->dispfreq != 0) {
-        if (mipdata_->num_leaves - mipdata_->last_displeave >=
-            std::min(mipdata_->dispfreq,
-                     1 + int64_t(0.01 * mipdata_->num_leaves)))
-          mipdata_->printDisplayLine();
-      }
+      if (mipdata_->conflictPool.getNumConflicts() >
+          options_mip_->mip_pool_soft_limit)
+        mipdata_->conflictPool.performAging();
 
+      mipdata_->printDisplayLine();
       // printf("continue plunging due to good esitmate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
@@ -164,12 +171,7 @@ restart:
 
     if (limit_reached) break;
 
-    if (mipdata_->dispfreq != 0) {
-      if (mipdata_->num_leaves - mipdata_->last_displeave >=
-          std::min(mipdata_->dispfreq,
-                   1 + int64_t(0.01 * mipdata_->num_leaves)))
-        mipdata_->printDisplayLine();
-    }
+    mipdata_->printDisplayLine();
 
     // the search datastructure should have no installed node now
     assert(!search.hasNode());
@@ -203,27 +205,66 @@ restart:
       mipdata_->removeFixedIndices();
     }
 
-    if (!submip) {
+    if (!submip && mipdata_->num_nodes >= nextCheck) {
+      auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
       double currNodeEstim =
-          numNodesLastCheck + (mipdata_->num_nodes - numNodesLastCheck) *
-                                  double(1.0 - mipdata_->pruned_treeweight) /
-                                  std::max(double(mipdata_->pruned_treeweight -
-                                                  treeweightLastCheck),
-                                           mipdata_->feastol);
+          numNodesLastCheck - mipdata_->num_nodes_before_run +
+          (mipdata_->num_nodes - numNodesLastCheck) *
+              double(1.0 - mipdata_->pruned_treeweight) /
+              std::max(
+                  double(mipdata_->pruned_treeweight - treeweightLastCheck),
+                  mipdata_->epsilon);
+      // printf(
+      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
+      //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
+      //     numHugeTreeEstim: %d, numLeavesThisRun:
+      //     "
+      //     "%ld\n",
+      //     nTreeRestarts, mipdata_->num_nodes -
+      //     mipdata_->num_nodes_before_run, numNodesLastCheck -
+      //     mipdata_->num_nodes_before_run, currNodeEstim, 100.0 *
+      //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
+      //     numHugeTreeEstim,
+      //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
 
-      if (currNodeEstim >=
-          1000 * (mipdata_->numRestarts + 1) * mipdata_->num_nodes) {
+      bool doRestart = false;
+
+      if (mipdata_->percentageInactiveIntegers() >= 10.0 &&
+          mipdata_->num_nodes - mipdata_->num_nodes_before_run <= 1000) {
+        doRestart =
+            currNodeEstim >=
+                (100.0 / mipdata_->percentageInactiveIntegers()) *
+                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run) &&
+            options_mip_->presolve != "off";
+      }
+
+      if (upperLimLastCheck == mipdata_->upper_limit &&
+          currNodeEstim >=
+              50 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+        nextCheck = mipdata_->num_nodes + 100;
         ++numHugeTreeEstim;
-        // if (!submip)
-        //   printf("%" HIGHSINT_FORMAT " (nodeestim: %.1f)\n",
-        //   numHugeTreeEstim, currNodeEstim);
       } else {
         numHugeTreeEstim = 0;
         treeweightLastCheck = double(mipdata_->pruned_treeweight);
         numNodesLastCheck = mipdata_->num_nodes;
+        upperLimLastCheck = mipdata_->upper_limit;
       }
 
-      if (numHugeTreeEstim >= 50) {
+      double minHugeTreeOffset =
+          (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
+      int64_t minHugeTreeEstim =
+          (10 + minHugeTreeOffset) * (1 << nTreeRestarts);
+
+      doRestart =
+          doRestart ||
+          numHugeTreeEstim >= ((10 + int64_t((mipdata_->num_leaves -
+                                              mipdata_->num_leaves_before_run) *
+                                             1e-3))
+                               << nTreeRestarts);
+
+      if (doRestart) {
+        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                     "\nRestarting search from the root node\n");
         mipdata_->performRestart();
         goto restart;
       }
@@ -262,12 +303,6 @@ restart:
 
       assert(search.hasNode());
 
-      // set the current basis if available
-      if (basis) {
-        mipdata_->lp.setStoredBasis(basis);
-        mipdata_->lp.recoverBasis();
-      }
-
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to
       // new global information before we perform separation rounds for the node
@@ -296,12 +331,7 @@ restart:
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
 
-        if (mipdata_->dispfreq != 0) {
-          if (mipdata_->num_leaves - mipdata_->last_displeave >=
-              std::min(mipdata_->dispfreq,
-                       1 + int64_t(0.01 * mipdata_->num_leaves)))
-            mipdata_->printDisplayLine();
-        }
+        mipdata_->printDisplayLine();
         continue;
       }
 
@@ -345,7 +375,6 @@ void HighsMipSolver::cleanupSolve() {
       modelstatus_ = HighsModelStatus::kInfeasible;
   }
 
-  model_ = orig_model_;
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
   std::string solutionstatus = "-";

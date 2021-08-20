@@ -4,6 +4,7 @@
 
 const double inf = kHighsInf;
 const bool dev_run = false;
+const double double_equal_tolerance = 1e-5;
 
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
@@ -42,17 +43,17 @@ void distillationMIP(Highs& highs) {
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
-  lp.numCol_ = 2;
-  lp.numRow_ = 3;
-  lp.colCost_ = {8, 10};
-  lp.colLower_ = {0, 0};
-  lp.colUpper_ = {inf, inf};
-  lp.rowLower_ = {7, 12, 6};
-  lp.rowUpper_ = {inf, inf, inf};
-  lp.Astart_ = {0, 3, 6};
-  lp.Aindex_ = {0, 1, 2, 0, 1, 2};
-  lp.Avalue_ = {2, 3, 2, 2, 4, 1};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12, 6};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_start_ = {0, 3, 6};
+  lp.a_index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_value_ = {2, 3, 2, 2, 4, 1};
+  lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
@@ -67,13 +68,13 @@ void rowlessMIP(Highs& highs) {
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
-  lp.numCol_ = 2;
-  lp.numRow_ = 0;
-  lp.colCost_ = {1, -1};
-  lp.colLower_ = {0, 0};
-  lp.colUpper_ = {1, 1};
-  lp.Astart_ = {0, 0, 0};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_start_ = {0, 0, 0};
+  lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
@@ -109,7 +110,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   const HighsLp& lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
   vector<HighsVarType> integrality;
-  integrality.resize(lp.numCol_);
+  integrality.resize(lp.num_col_);
   HighsInt from_col0 = 0;
   HighsInt to_col0 = 2;
   HighsInt from_col1 = 5;
@@ -123,7 +124,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   set.push_back(2);
   set.push_back(6);
   vector<HighsInt> mask;
-  mask.assign(lp.numCol_, 0);
+  mask.assign(lp.num_col_, 0);
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
     mask[iCol] = 1;
@@ -154,7 +155,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (dev_run) highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
 
-  integrality.assign(lp.numCol_, HighsVarType::kContinuous);
+  integrality.assign(lp.num_col_, HighsVarType::kContinuous);
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
     integrality[iCol] = HighsVarType::kInteger;
@@ -173,4 +174,71 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(info.mip_node_count == 1);
   REQUIRE(info.mip_dual_bound == -6);
   REQUIRE(info.mip_gap == 0);
+}
+
+TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-2};
+  lp.col_lower_ = {-inf};
+  lp.col_upper_ = {1.5};
+  lp.integrality_ = {HighsVarType::kInteger};
+  double required_objective_value = -2;
+  double required_x0_value = 1;
+
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+
+  HighsStatus return_status = highs.passModel(lp);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  if (dev_run) {
+    printf("One variable unconstrained MIP: model\n");
+    highs.writeModel("");
+  }
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  const bool pretty = true;
+  if (dev_run) {
+    printf("One variable unconstrained MIP: solution\n");
+    highs.writeSolution("", pretty);
+  }
+
+  HighsModelStatus model_status = highs.getModelStatus();
+
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
+  REQUIRE(fabs(info.objective_function_value - required_objective_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
+          double_equal_tolerance);
+
+  highs.changeColBounds(0, -2, 2);
+
+  if (dev_run) {
+    printf("After changing bounds: model\n");
+    highs.writeModel("");
+  }
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  model_status = highs.getModelStatus();
+
+  if (dev_run) {
+    printf("After changing bounds: solution\n");
+    highs.writeSolution("", pretty);
+  }
+
+  required_objective_value = -4;
+  required_x0_value = 2;
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
+  REQUIRE(fabs(info.objective_function_value - required_objective_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
+          double_equal_tolerance);
 }

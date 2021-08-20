@@ -18,31 +18,33 @@ TEST_CASE("testing the factorial function") {
 // test zero cost col sing
 HighsStatus zeroCostColSing() {
   HighsLp lp;
-  lp.numCol_ = 2;
-  lp.numRow_ = 1;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
 
-  lp.Astart_.push_back(0);
-  lp.Astart_.push_back(1);
-  lp.Astart_.push_back(2);
+  lp.a_start_.push_back(0);
+  lp.a_start_.push_back(1);
+  lp.a_start_.push_back(2);
 
-  lp.Aindex_.push_back(0);
-  lp.Avalue_.push_back(0.5);
+  lp.a_index_.push_back(0);
+  lp.a_value_.push_back(0.5);
 
-  lp.Aindex_.push_back(0);
-  lp.Avalue_.push_back(0.5);
+  lp.a_index_.push_back(0);
+  lp.a_value_.push_back(0.5);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0.1);
-  lp.rowUpper_.push_back(0.9);
+  lp.row_lower_.push_back(0.1);
+  lp.row_upper_.push_back(0.9);
 
-  lp.colCost_.push_back(0);
-  lp.colCost_.push_back(1);
+  lp.col_cost_.push_back(0);
+  lp.col_cost_.push_back(1);
 
+  lp.format_ = MatrixFormat::kColwise;
+  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
@@ -55,49 +57,51 @@ HighsStatus zeroCostColSing() {
 HighsStatus colSingDoubletonEquality() 
 {
   HighsLp lp;
-  lp.numCol_ = 4;
-  lp.numRow_ = 2;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
 
-  lp.Astart_.push_back(0);
-  lp.Astart_.push_back(2);
-  lp.Astart_.push_back(3);
-  lp.Astart_.push_back(4);
-  lp.Astart_.push_back(5);
+  lp.a_start_.push_back(0);
+  lp.a_start_.push_back(2);
+  lp.a_start_.push_back(3);
+  lp.a_start_.push_back(4);
+  lp.a_start_.push_back(5);
 
-  lp.Aindex_.push_back(0);
-  lp.Aindex_.push_back(1);
-  lp.Aindex_.push_back(0);
-  lp.Aindex_.push_back(1);
-  lp.Aindex_.push_back(1);
+  lp.a_index_.push_back(0);
+  lp.a_index_.push_back(1);
+  lp.a_index_.push_back(0);
+  lp.a_index_.push_back(1);
+  lp.a_index_.push_back(1);
 
-  lp.Avalue_.push_back(0.5);
-  lp.Avalue_.push_back(0.5);
-  lp.Avalue_.push_back(1);
-  lp.Avalue_.push_back(1);
-  lp.Avalue_.push_back(1);
+  lp.a_value_.push_back(0.5);
+  lp.a_value_.push_back(0.5);
+  lp.a_value_.push_back(1);
+  lp.a_value_.push_back(1);
+  lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(1);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
 
+  lp.format_ = MatrixFormat::kColwise;
+  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
@@ -109,49 +113,51 @@ HighsStatus colSingDoubletonEquality()
 HighsStatus colSingDoubletonInequality() 
 {
   HighsLp lp;
-  lp.numCol_ = 4;
-  lp.numRow_ = 2;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
 
-  lp.Astart_.push_back(0);
-  lp.Astart_.push_back(2);
-  lp.Astart_.push_back(3);
-  lp.Astart_.push_back(4);
-  lp.Astart_.push_back(5);
+  lp.a_start_.push_back(0);
+  lp.a_start_.push_back(2);
+  lp.a_start_.push_back(3);
+  lp.a_start_.push_back(4);
+  lp.a_start_.push_back(5);
 
-  lp.Aindex_.push_back(0);
-  lp.Aindex_.push_back(1);
-  lp.Aindex_.push_back(0);
-  lp.Aindex_.push_back(1);
-  lp.Aindex_.push_back(1);
+  lp.a_index_.push_back(0);
+  lp.a_index_.push_back(1);
+  lp.a_index_.push_back(0);
+  lp.a_index_.push_back(1);
+  lp.a_index_.push_back(1);
 
-  lp.Avalue_.push_back(0.5);
-  lp.Avalue_.push_back(0.5);
-  lp.Avalue_.push_back(1);
-  lp.Avalue_.push_back(1);
-  lp.Avalue_.push_back(1);
+  lp.a_value_.push_back(0.5);
+  lp.a_value_.push_back(0.5);
+  lp.a_value_.push_back(1);
+  lp.a_value_.push_back(1);
+  lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
 
+  lp.format_ = MatrixFormat::kColwise;
+  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
@@ -164,31 +170,33 @@ HighsStatus colSingDoubletonInequality()
 HighsStatus twoColSingDoubletonEquality() 
 {
   HighsLp lp;
-  lp.numCol_ = 2;
-  lp.numRow_ = 1;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
 
-  lp.Astart_.push_back(0);
-  lp.Astart_.push_back(1);
-  lp.Astart_.push_back(2);
+  lp.a_start_.push_back(0);
+  lp.a_start_.push_back(1);
+  lp.a_start_.push_back(2);
 
-  lp.Aindex_.push_back(0);
-  lp.Aindex_.push_back(0);
+  lp.a_index_.push_back(0);
+  lp.a_index_.push_back(0);
 
-  lp.Avalue_.push_back(1);
-  lp.Avalue_.push_back(1);
+  lp.a_value_.push_back(1);
+  lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(1);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
 
+  lp.format_ = MatrixFormat::kColwise;
+  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
@@ -201,31 +209,33 @@ HighsStatus twoColSingDoubletonEquality()
 HighsStatus twoColSingDoubletonInequality() 
 {
   HighsLp lp;
-  lp.numCol_ = 2;
-  lp.numRow_ = 1;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
 
-  lp.Astart_.push_back(0);
-  lp.Astart_.push_back(1);
-  lp.Astart_.push_back(2);
+  lp.a_start_.push_back(0);
+  lp.a_start_.push_back(1);
+  lp.a_start_.push_back(2);
 
-  lp.Aindex_.push_back(0);
-  lp.Aindex_.push_back(0);
+  lp.a_index_.push_back(0);
+  lp.a_index_.push_back(0);
 
-  lp.Avalue_.push_back(1);
-  lp.Avalue_.push_back(1);
+  lp.a_value_.push_back(1);
+  lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
 
+  lp.format_ = MatrixFormat::kColwise;
+  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);

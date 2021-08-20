@@ -20,7 +20,7 @@
 #include "mip/HighsMipSolver.h"
 
 class HighsDomain;
-class HighsCutSet;
+struct HighsCutSet;
 class HighsPseudocost;
 
 class HighsLpRelaxation {
@@ -44,6 +44,7 @@ class HighsLpRelaxation {
 
     Origin origin;
     HighsInt index;
+    HighsInt age;
 
     void get(const HighsMipSolver& mipsolver, HighsInt& len,
              const HighsInt*& inds, const double*& vals) const;
@@ -54,8 +55,8 @@ class HighsLpRelaxation {
 
     double getMaxAbsVal(const HighsMipSolver& mipsolver) const;
 
-    static LpRow cut(HighsInt index) { return LpRow{kCutPool, index}; }
-    static LpRow model(HighsInt index) { return LpRow{kModel, index}; }
+    static LpRow cut(HighsInt index) { return LpRow{kCutPool, index, 0}; }
+    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0}; }
   };
 
   const HighsMipSolver& mipsolver;
@@ -77,7 +78,7 @@ class HighsLpRelaxation {
   double avgSolveIters;
   int64_t numSolved;
   size_t epochs;
-  size_t maxNumFractional;
+  HighsInt maxNumFractional;
   Status status;
 
   void storeDualInfProof();
@@ -126,35 +127,35 @@ class HighsLpRelaxation {
   double slackLower(HighsInt row) const;
 
   double rowLower(HighsInt row) const {
-    return lpsolver.getLp().rowLower_[row];
+    return lpsolver.getLp().row_lower_[row];
   }
 
   double rowUpper(HighsInt row) const {
-    return lpsolver.getLp().rowUpper_[row];
+    return lpsolver.getLp().row_upper_[row];
   }
 
   double colLower(HighsInt col) const {
-    return col < lpsolver.getLp().numCol_
-               ? lpsolver.getLp().colLower_[col]
-               : slackLower(col - lpsolver.getLp().numCol_);
+    return col < lpsolver.getLp().num_col_
+               ? lpsolver.getLp().col_lower_[col]
+               : slackLower(col - lpsolver.getLp().num_col_);
   }
 
   double colUpper(HighsInt col) const {
-    return col < lpsolver.getLp().numCol_
-               ? lpsolver.getLp().colUpper_[col]
-               : slackUpper(col - lpsolver.getLp().numCol_);
+    return col < lpsolver.getLp().num_col_
+               ? lpsolver.getLp().col_upper_[col]
+               : slackUpper(col - lpsolver.getLp().num_col_);
   }
 
   bool isColIntegral(HighsInt col) const {
-    return col < lpsolver.getLp().numCol_
+    return col < lpsolver.getLp().num_col_
                ? mipsolver.variableType(col) != HighsVarType::kContinuous
-               : isRowIntegral(col - lpsolver.getLp().numCol_);
+               : isRowIntegral(col - lpsolver.getLp().num_col_);
   }
 
   double solutionValue(HighsInt col) const {
-    return col < lpsolver.getLp().numCol_
+    return col < lpsolver.getLp().num_col_
                ? getSolution().col_value[col]
-               : getSolution().row_value[col - lpsolver.getLp().numCol_];
+               : getSolution().row_value[col - lpsolver.getLp().num_col_];
   }
 
   Status getStatus() const { return status; }
@@ -171,6 +172,8 @@ class HighsLpRelaxation {
   }
 
   double computeBestEstimate(const HighsPseudocost& ps) const;
+
+  double computeLPDegneracy(const HighsDomain& localdomain) const;
 
   static bool scaledOptimal(Status status) {
     switch (status) {
@@ -206,9 +209,7 @@ class HighsLpRelaxation {
 
   void recoverBasis();
 
-  void setObjectiveLimit(double objlim = kHighsInf) {
-    lpsolver.setOptionValue("objective_bound", objlim + 0.5);
-  }
+  void setObjectiveLimit(double objlim = kHighsInf);
 
   void storeBasis() {
     if (!currentbasisstored && lpsolver.getBasis().valid) {
@@ -222,7 +223,7 @@ class HighsLpRelaxation {
   }
 
   void setStoredBasis(std::shared_ptr<const HighsBasis> basis) {
-    basischeckpoint = basis;
+    basischeckpoint = std::move(basis);
     currentbasisstored = false;
   }
 
@@ -239,6 +240,8 @@ class HighsLpRelaxation {
   void addCuts(HighsCutSet& cutset);
 
   void performAging(bool useBasis = true);
+
+  void resetAges();
 
   void removeObsoleteRows(bool notifyPool = true);
 
@@ -258,7 +261,7 @@ class HighsLpRelaxation {
 
   bool computeDualProof(const HighsDomain& globaldomain, double upperbound,
                         std::vector<HighsInt>& inds, std::vector<double>& vals,
-                        double& rhs) const;
+                        double& rhs, bool extractCliques = true) const;
 
   bool computeDualInfProof(const HighsDomain& globaldomain,
                            std::vector<HighsInt>& inds,

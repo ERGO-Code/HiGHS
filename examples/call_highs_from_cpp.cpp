@@ -69,8 +69,8 @@ int main() {
   // column-wise matrix.
   //
   HighsModel model;
-  model.lp_.numCol_ = 2;
-  model.lp_.numRow_ = 3;
+  model.lp_.num_col_ = 2;
+  model.lp_.num_row_ = 3;
   model.lp_.sense_ = ObjSense::kMinimize;
   model.lp_.offset_ = 3;
   model.lp_.colCost_ = {1.0, 1.0};
@@ -114,24 +114,24 @@ int main() {
   cout << "Objective function value: " << info.objective_function_value << endl;
   cout << "Primal  solution status: " << highs.solutionStatusToString(info.primal_solution_status) << endl;
   cout << "Dual    solution status: " << highs.solutionStatusToString(info.dual_solution_status) << endl;
-  cout << "Basis: " << highs.basisValidityToString(info.basis_status) << endl;
+  cout << "Basis: " << highs.basisValidityToString(info.basis_validity) << endl;
   const bool has_values = info.primal_solution_status;
   const bool has_duals = info.dual_solution_status;
-  const bool has_basis = info.basis_status;
+  const bool has_basis = info.basis_validity;
   //
   // Get the solution values and basis
   const HighsSolution& solution = highs.getSolution();
   const HighsBasis& basis = highs.getBasis();
   //
   // Report the 
-  for (int col=0; col < lp.numCol_; col++) {
+  for (int col=0; col < lp.num_col_; col++) {
     cout << "Column " << col;
     if (has_values) cout << "; value = " << solution.col_value[col];
     if (has_duals) cout << "; dual = " << solution.col_dual[col];
     if (has_basis) cout << "; status: " << highs.basisStatusToString(basis.col_status[col]);
     cout << endl;
   }
-  for (int row=0; row < lp.numRow_; row++) {
+  for (int row=0; row < lp.num_row_; row++) {
     cout << "Row    " << row;
     if (has_values) cout << "; value = " << solution.row_value[row];
     if (has_duals) cout << "; dual = " << solution.row_dual[row];

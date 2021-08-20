@@ -222,19 +222,19 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
-                               const bool report_only_non_default_values = true,
+                               const bool report_only_deviations = false,
                                const bool html = false);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_non_default_values = true,
+                   const bool report_only_deviations = true,
                    const bool html = false);
 void reportOption(FILE* file, const OptionRecordBool& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 void reportOption(FILE* file, const OptionRecordInt& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 void reportOption(FILE* file, const OptionRecordDouble& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 void reportOption(FILE* file, const OptionRecordString& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
@@ -250,6 +250,8 @@ const string kSolverString = "solver";
 const string kParallelString = "parallel";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
+const string kRandomSeedString = "random_seed";
+const string kSolutionFileString = "solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -271,7 +273,7 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   double objective_bound;
   double objective_target;
-  HighsInt highs_random_seed;
+  HighsInt random_seed;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -303,7 +305,7 @@ struct HighsOptionsStruct {
   HighsInt allowed_simplex_cost_scale_factor;
   HighsInt simplex_dualise_strategy;
   HighsInt simplex_permute_strategy;
-  bool dual_simplex_cleanup;
+  HighsInt max_dual_simplex_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
@@ -330,6 +332,7 @@ struct HighsOptionsStruct {
   bool icrash_breakpoints;
 
   // Options for MIP solver
+  bool mip_detect_symmetry;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
@@ -339,7 +342,6 @@ struct HighsOptionsStruct {
   HighsInt mip_pscost_minreliable;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
-  double mip_epsilon;
   double mip_heuristic_effort;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -481,8 +483,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int =
-        new OptionRecordInt("highs_random_seed", "random seed used in HiGHS",
-                            advanced, &highs_random_seed, 0, 0, kHighsIInf);
+        new OptionRecordInt(kRandomSeedString, "random seed used in HiGHS",
+                            advanced, &random_seed, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int =
@@ -574,7 +576,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string =
-        new OptionRecordString("solution_file", "Solution file", advanced,
+        new OptionRecordString(kSolutionFileString, "Solution file", advanced,
                                &solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
@@ -639,6 +641,9 @@ class HighsOptions : public HighsOptionsStruct {
 				     "Exact subproblem solution for iCrash",
 				     advanced, &icrash_breakpoints,
 				     false);
+    record_bool = new OptionRecordBool("mip_detect_symmetry",
+                                       "Whether symmetry should be detected",
+                                       advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",
@@ -700,15 +705,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
         &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
-
-    record_double =
-        new OptionRecordDouble("mip_epsilon", "MIP epsilon tolerance", advanced,
-                               &mip_epsilon, 1e-15, 1e-9, kHighsInf);
+    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
-
     records.push_back(record_double);
 
     // Advanced options
@@ -776,10 +777,10 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsOptionOn);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("dual_simplex_cleanup",
-                                       "Perform dual simplex cleanup", advanced,
-                                       &dual_simplex_cleanup, true);
-    records.push_back(record_bool);
+    record_int = new OptionRecordInt(
+        "max_dual_simplex_cleanup_level", "Max level of dual simplex cleanup",
+        advanced, &max_dual_simplex_cleanup_level, 0, 1, kHighsIInf);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,

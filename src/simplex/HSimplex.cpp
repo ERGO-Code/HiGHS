@@ -33,11 +33,11 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   HighsOptions& options = highs_model_object.options_;
   // Possibly scale the LP
   bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
-                  highs_model_object.lp_.numCol_ > 0;
+                  highs_model_object.lp_.num_col_ > 0;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Forcing no scaling\n");
+    highsLogDev(options.log_options, HighsLogType::kWarning,
+                "Forcing no scaling\n");
     scale_lp = false;
   }
   const bool analyse_lp_data =
@@ -83,13 +83,13 @@ void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
   }
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
-  HighsInt newNumCol = lp.numCol_ + XnumNewCol;
+  HighsInt newNumCol = lp.num_col_ + XnumNewCol;
   highs_basis.col_status.resize(newNumCol);
   // Make any new columns nonbasic
-  for (HighsInt iCol = lp.numCol_; iCol < newNumCol; iCol++) {
-    if (!highs_isInfinity(-lp.colLower_[iCol])) {
+  for (HighsInt iCol = lp.num_col_; iCol < newNumCol; iCol++) {
+    if (!highs_isInfinity(-lp.col_lower_[iCol])) {
       highs_basis.col_status[iCol] = HighsBasisStatus::kLower;
-    } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
+    } else if (!highs_isInfinity(lp.col_upper_[iCol])) {
       highs_basis.col_status[iCol] = HighsBasisStatus::kUpper;
     } else {
       highs_basis.col_status[iCol] = HighsBasisStatus::kZero;
@@ -101,28 +101,28 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
                                HighsInt XnumNewCol) {
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
-  HighsInt newNumCol = lp.numCol_ + XnumNewCol;
-  HighsInt newNumTot = newNumCol + lp.numRow_;
+  HighsInt newNumCol = lp.num_col_ + XnumNewCol;
+  HighsInt newNumTot = newNumCol + lp.num_row_;
   basis.nonbasicFlag_.resize(newNumTot);
   basis.nonbasicMove_.resize(newNumTot);
   // Shift the row data in basicIndex, nonbasicFlag and nonbasicMove if
   // necessary
-  for (HighsInt iRow = lp.numRow_ - 1; iRow >= 0; iRow--) {
+  for (HighsInt iRow = lp.num_row_ - 1; iRow >= 0; iRow--) {
     HighsInt iCol = basis.basicIndex_[iRow];
-    if (iCol >= lp.numCol_) {
+    if (iCol >= lp.num_col_) {
       // This basic variable is a row, so shift its index
       basis.basicIndex_[iRow] += XnumNewCol;
     }
     basis.nonbasicFlag_[newNumCol + iRow] =
-        basis.nonbasicFlag_[lp.numCol_ + iRow];
+        basis.nonbasicFlag_[lp.num_col_ + iRow];
     basis.nonbasicMove_[newNumCol + iRow] =
-        basis.nonbasicMove_[lp.numCol_ + iRow];
+        basis.nonbasicMove_[lp.num_col_ + iRow];
   }
   // Make any new columns nonbasic
-  for (HighsInt iCol = lp.numCol_; iCol < newNumCol; iCol++) {
+  for (HighsInt iCol = lp.num_col_; iCol < newNumCol; iCol++) {
     basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
     HighsInt move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
@@ -160,10 +160,10 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
   }
   // Add basic logicals
   if (XnumNewRow == 0) return;
-  HighsInt newNumRow = lp.numRow_ + XnumNewRow;
+  HighsInt newNumRow = lp.num_row_ + XnumNewRow;
   highs_basis.row_status.resize(newNumRow);
   // Make the new rows basic
-  for (HighsInt iRow = lp.numRow_; iRow < newNumRow; iRow++) {
+  for (HighsInt iRow = lp.num_row_; iRow < newNumRow; iRow++) {
     highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
   }
 }
@@ -173,16 +173,16 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
   // Add basic logicals
   if (XnumNewRow == 0) return;
 
-  HighsInt newNumRow = lp.numRow_ + XnumNewRow;
-  HighsInt newNumTot = lp.numCol_ + newNumRow;
+  HighsInt newNumRow = lp.num_row_ + XnumNewRow;
+  HighsInt newNumTot = lp.num_col_ + newNumRow;
   basis.nonbasicFlag_.resize(newNumTot);
   basis.nonbasicMove_.resize(newNumTot);
   basis.basicIndex_.resize(newNumRow);
   // Make the new rows basic
-  for (HighsInt iRow = lp.numRow_; iRow < newNumRow; iRow++) {
-    basis.nonbasicFlag_[lp.numCol_ + iRow] = kNonbasicFlagFalse;
-    basis.nonbasicMove_[lp.numCol_ + iRow] = 0;
-    basis.basicIndex_[iRow] = lp.numCol_ + iRow;
+  for (HighsInt iRow = lp.num_row_; iRow < newNumRow; iRow++) {
+    basis.nonbasicFlag_[lp.num_col_ + iRow] = kNonbasicFlagFalse;
+    basis.nonbasicMove_[lp.num_col_ + iRow] = 0;
+    basis.basicIndex_[iRow] = lp.num_col_ + iRow;
   }
 }
 
@@ -412,14 +412,14 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     new_dual_feasibility_tolerance = kHighsInf;
   }
 
-  assert(int(scale.col.size()) == lp.numCol_);
-  assert(int(scale.row.size()) == lp.numRow_);
-  for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+  assert(int(scale.col.size()) == lp.num_col_);
+  assert(int(scale.row.size()) == lp.num_row_);
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasiblity for fixed rows and columns
     if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
-    bool col = iVar < lp.numCol_;
+    bool col = iVar < lp.num_col_;
     double scale_mu;
     HighsInt iCol = 0;
     HighsInt iRow = 0;
@@ -428,7 +428,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       assert(int(scale.col.size()) > iCol);
       scale_mu = 1 / (scale.col[iCol] / scale.cost);
     } else {
-      iRow = iVar - lp.numCol_;
+      iRow = iVar - lp.num_col_;
       assert(int(scale.row.size()) > iRow);
       scale_mu = scale.row[iRow] * scale.cost;
     }
@@ -454,7 +454,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
         if (get_new_scaled_feasibility_tolerances) {
           double multiplier = dual_feasibility_tolerance / scale_mu;
           //          double scaled_value = info.workValue_[iVar];
-          //          highsLogUser(options.log_options, HighsLogType::kInfo,
+          //          highsLogDev(options.log_options, HighsLogType::kInfo,
           //                          "Var %6" HIGHSINT_FORMAT " (%6"
           //                          HIGHSINT_FORMAT ", %6" HIGHSINT_FORMAT "):
           //                          [%11.4g, %11.4g, %11.4g] %11.4g
@@ -471,9 +471,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     }
   }
   // Look at the primal infeasibilities of basic variables
-  for (HighsInt ix = 0; ix < lp.numRow_; ix++) {
+  for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
     HighsInt iVar = basis.basicIndex_[ix];
-    bool col = iVar < lp.numCol_;
+    bool col = iVar < lp.num_col_;
     double scale_mu;
     HighsInt iCol = 0;
     HighsInt iRow = 0;
@@ -481,7 +481,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       iCol = iVar;
       scale_mu = scale.col[iCol];
     } else {
-      iRow = iVar - lp.numCol_;
+      iRow = iVar - lp.num_col_;
       scale_mu = 1 / scale.row[iRow];
     }
     // Look at the basic primal infeasibilities
@@ -518,14 +518,14 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       if (get_new_scaled_feasibility_tolerances) {
         double multiplier = primal_feasibility_tolerance / scale_mu;
         if (report) {
-          highsLogUser(options.log_options, HighsLogType::kInfo,
-                       "Var %6" HIGHSINT_FORMAT " (%6" HIGHSINT_FORMAT
-                       ", %6" HIGHSINT_FORMAT
-                       "): [%11.4g, %11.4g, %11.4g] %11.4g "
-                       "s=%11.4g %11.4g: Mu = %g\n",
-                       iVar, iCol, iRow, scaled_lower, scaled_value,
-                       scaled_upper, scaled_primal_infeasibility, scale_mu,
-                       primal_infeasibility, multiplier);
+          highsLogDev(options.log_options, HighsLogType::kInfo,
+                      "Var %6" HIGHSINT_FORMAT " (%6" HIGHSINT_FORMAT
+                      ", %6" HIGHSINT_FORMAT
+                      "): [%11.4g, %11.4g, %11.4g] %11.4g "
+                      "s=%11.4g %11.4g: Mu = %g\n",
+                      iVar, iCol, iRow, scaled_lower, scaled_value,
+                      scaled_upper, scaled_primal_infeasibility, scale_mu,
+                      primal_infeasibility, multiplier);
         }
         new_primal_feasibility_tolerance =
             min(multiplier, new_primal_feasibility_tolerance);
@@ -544,27 +544,27 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale) {
   scale.is_scaled = false;
-  scale.col.assign(lp.numCol_, 1);
-  scale.row.assign(lp.numRow_, 1);
+  scale.col.assign(lp.num_col_, 1);
+  scale.row.assign(lp.num_row_, 1);
   scale.cost = 1;
 }
 
 void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
                     HighsScale& scale) {
   initialiseScale(lp, scale);
-  HighsInt numCol = lp.numCol_;
-  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
   // Scaling not well defined for models with no columns
   assert(numCol > 0);
   double* colScale = &scale.col[0];
   double* rowScale = &scale.row[0];
-  HighsInt* Astart = &lp.Astart_[0];
-  double* Avalue = &lp.Avalue_[0];
-  double* colCost = &lp.colCost_[0];
-  double* colLower = &lp.colLower_[0];
-  double* colUpper = &lp.colUpper_[0];
-  double* rowLower = &lp.rowLower_[0];
-  double* rowUpper = &lp.rowUpper_[0];
+  HighsInt* Astart = &lp.a_start_[0];
+  double* Avalue = &lp.a_value_[0];
+  double* colCost = &lp.col_cost_[0];
+  double* colLower = &lp.col_lower_[0];
+  double* colUpper = &lp.col_upper_[0];
+  double* rowLower = &lp.row_lower_[0];
+  double* rowUpper = &lp.row_upper_[0];
 
   // Allow a switch to/from the original scaling rules
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
@@ -592,12 +592,12 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
     if (options.highs_debug_level)
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "Scaling: Matrix has [min, max] values of [%g, %g] within "
-                   "[%g, %g] so no scaling performed\n",
-                   original_matrix_min_value, original_matrix_max_value,
-                   no_scaling_original_matrix_min_value,
-                   no_scaling_original_matrix_max_value);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Matrix has [min, max] values of [%g, %g] within "
+                  "[%g, %g] so no scaling performed\n",
+                  original_matrix_min_value, original_matrix_max_value,
+                  no_scaling_original_matrix_min_value,
+                  no_scaling_original_matrix_max_value);
   } else {
     const bool equilibration_scaling =
         simplex_scale_strategy == kSimplexScaleStrategyHighs ||
@@ -634,9 +634,9 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
   double max_allowed_cost_scale =
       pow(2.0, options.allowed_simplex_cost_scale_factor);
   double max_nonzero_cost = 0;
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (lp.colCost_[iCol]) {
-      max_nonzero_cost = max(fabs(lp.colCost_[iCol]), max_nonzero_cost);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.col_cost_[iCol]) {
+      max_nonzero_cost = max(fabs(lp.col_cost_[iCol]), max_nonzero_cost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -656,22 +656,22 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
   if (cost_scale == 1) return;
   // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
   // most max_allowed_cost_scale
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    lp.colCost_[iCol] /= cost_scale;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    lp.col_cost_[iCol] /= cost_scale;
   }
   max_nonzero_cost /= cost_scale;
 }
 
 bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                      HighsScale& scale) {
-  HighsInt numCol = lp.numCol_;
-  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
   double* colScale = &scale.col[0];
   double* rowScale = &scale.row[0];
-  HighsInt* Astart = &lp.Astart_[0];
-  HighsInt* Aindex = &lp.Aindex_[0];
-  double* Avalue = &lp.Avalue_[0];
-  double* colCost = &lp.colCost_[0];
+  HighsInt* Astart = &lp.a_start_[0];
+  HighsInt* Aindex = &lp.a_index_[0];
+  double* Avalue = &lp.a_value_[0];
+  double* colCost = &lp.col_cost_[0];
 
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
 
@@ -844,14 +844,14 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double geomean_row_equilibration =
       exp(sum_log_row_equilibration / numRow);
   if (options.highs_debug_level) {
-    highsLogUser(
+    highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
         "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
         min_original_col_equilibration, geomean_original_col_equilibration,
         max_original_col_equilibration, min_original_row_equilibration,
         geomean_original_row_equilibration, max_original_row_equilibration);
-    highsLogUser(
+    highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Final    equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
         "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
@@ -890,34 +890,34 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
   if (options.highs_debug_level) {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Scaling: Extreme equilibration improvement = ( %11.4g + "
-                 "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g\n",
-                 original_col_ratio, original_row_ratio, col_ratio, row_ratio,
-                 (original_col_ratio + original_row_ratio),
-                 (col_ratio + row_ratio), extreme_equilibration_improvement);
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Scaling:    Mean equilibration improvement = ( %11.4g * "
-                 "%11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g\n",
-                 geomean_original_col, geomean_original_row, geomean_col,
-                 geomean_row, (geomean_original_col * geomean_original_row),
-                 (geomean_col * geomean_row), mean_equilibration_improvement);
-    highsLogUser(
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Extreme equilibration improvement = ( %11.4g + "
+                "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g\n",
+                original_col_ratio, original_row_ratio, col_ratio, row_ratio,
+                (original_col_ratio + original_row_ratio),
+                (col_ratio + row_ratio), extreme_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling:    Mean equilibration improvement = ( %11.4g * "
+                "%11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g\n",
+                geomean_original_col, geomean_original_row, geomean_col,
+                geomean_row, (geomean_original_col * geomean_original_row),
+                (geomean_col * geomean_row), mean_equilibration_improvement);
+    highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
         "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
         matrix_min_value, matrix_max_value, matrix_value_ratio,
         original_matrix_min_value, original_matrix_max_value,
         original_matrix_value_ratio, matrix_value_ratio_improvement);
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Scaling: Improves    mean equilibration by a factor %0.4g\n",
-                 mean_equilibration_improvement);
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Scaling: Improves extreme equilibration by a factor %0.4g\n",
-                 extreme_equilibration_improvement);
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Scaling: Improves max/min matrix values by a factor %0.4g\n",
-                 matrix_value_ratio_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves    mean equilibration by a factor %0.4g\n",
+                mean_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves extreme equilibration by a factor %0.4g\n",
+                extreme_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves max/min matrix values by a factor %0.4g\n",
+                matrix_value_ratio_improvement);
   }
   const bool possibly_abandon_scaling =
       simplex_scale_strategy != kSimplexScaleStrategyHighsForced;
@@ -939,41 +939,40 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
       }
     }
     if (options.highs_debug_level)
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
-                   "scaling applied\n",
-                   improvement_factor, improvement_factor_required);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor %0.4g < %0.4g required, so no "
+                  "scaling applied\n",
+                  improvement_factor, improvement_factor_required);
     initialiseScale(lp, scale);
     return false;
   } else {
     if (options.highs_debug_level) {
-      highsLogUser(
-          options.log_options, HighsLogType::kInfo,
-          "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
-          improvement_factor, improvement_factor_required);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
+                  improvement_factor, improvement_factor_required);
       if (extreme_equilibration_improvement < 1.0) {
-        highsLogUser(
+        highsLogDev(
             options.log_options, HighsLogType::kWarning,
             "Scaling: Applying scaling with extreme improvement of %0.4g\n",
             extreme_equilibration_improvement);
       }
       if (mean_equilibration_improvement < 1.0) {
-        highsLogUser(
+        highsLogDev(
             options.log_options, HighsLogType::kWarning,
             "Scaling: Applying scaling with mean improvement of %0.4g\n",
             mean_equilibration_improvement);
       }
       if (matrix_value_ratio_improvement < 1.0) {
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Scaling: Applying scaling with matrix value ratio "
-                     "improvement of %0.4g\n",
-                     matrix_value_ratio_improvement);
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "Scaling: Applying scaling with matrix value ratio "
+                    "improvement of %0.4g\n",
+                    matrix_value_ratio_improvement);
       }
       if (improvement_factor < 10 * improvement_factor_required) {
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Scaling: Applying scaling with improvement factor %0.4g "
-                     "< 10*(%0.4g) improvement\n",
-                     improvement_factor, improvement_factor_required);
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "Scaling: Applying scaling with improvement factor %0.4g "
+                    "< 10*(%0.4g) improvement\n",
+                    improvement_factor, improvement_factor_required);
       }
     }
   }
@@ -982,13 +981,13 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 
 bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                 HighsScale& scale) {
-  HighsInt numCol = lp.numCol_;
-  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
   vector<double>& colScale = scale.col;
   vector<double>& rowScale = scale.row;
-  vector<HighsInt>& Astart = lp.Astart_;
-  vector<HighsInt>& Aindex = lp.Aindex_;
-  vector<double>& Avalue = lp.Avalue_;
+  vector<HighsInt>& Astart = lp.a_start_;
+  vector<HighsInt>& Aindex = lp.a_index_;
+  vector<double>& Avalue = lp.a_value_;
 
   assert(options.simplex_scale_strategy == kSimplexScaleStrategy015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategy0157);
@@ -1070,11 +1069,11 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
   if (options.highs_debug_level) {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
-                 "[%0.4g, %0.4g] for rows\n",
-                 min_col_scale, max_col_scale, min_row_scale, max_row_scale);
-    highsLogUser(
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+                "[%0.4g, %0.4g] for rows\n",
+                min_col_scale, max_col_scale, min_row_scale, max_row_scale);
+    highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
         "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
@@ -1088,12 +1087,12 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   bool right_size = true;
   right_size =
-      (HighsInt)basis.nonbasicFlag_.size() == lp.numCol_ + lp.numRow_ &&
+      (HighsInt)basis.nonbasicFlag_.size() == lp.num_col_ + lp.num_row_ &&
       right_size;
   right_size =
-      (HighsInt)basis.nonbasicMove_.size() == lp.numCol_ + lp.numRow_ &&
+      (HighsInt)basis.nonbasicMove_.size() == lp.num_col_ + lp.num_row_ &&
       right_size;
-  right_size = (HighsInt)basis.basicIndex_.size() == lp.numRow_ && right_size;
+  right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_ && right_size;
   return right_size;
 }
 
@@ -1106,7 +1105,7 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
       highs_model_object.status_;
 
   info.dual_objective_value = 0;
-  const HighsInt numTot = lp.numCol_ + lp.numRow_;
+  const HighsInt numTot = lp.num_col_ + lp.num_row_;
   for (HighsInt i = 0; i < numTot; i++) {
     if (highs_model_object.basis_.nonbasicFlag_[i]) {
       const double term =
@@ -1132,8 +1131,8 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 }
 
 double computeBasisCondition(const HighsModelObject& highs_model_object) {
-  HighsInt solver_num_row = highs_model_object.lp_.numRow_;
-  HighsInt solver_num_col = highs_model_object.lp_.numCol_;
+  HighsInt solver_num_row = highs_model_object.lp_.num_row_;
+  HighsInt solver_num_col = highs_model_object.lp_.num_col_;
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
   vector<double> bs_cond_z;
@@ -1142,8 +1141,8 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   row_ep.setup(solver_num_row);
 
   const HFactor& factor = highs_model_object.factor_;
-  const HighsInt* Astart = &highs_model_object.lp_.Astart_[0];
-  const double* Avalue = &highs_model_object.lp_.Avalue_[0];
+  const HighsInt* Astart = &highs_model_object.lp_.a_start_[0];
+  const double* Avalue = &highs_model_object.lp_.a_value_[0];
   // Compute the Hager condition number estimate for the basis matrix
   const double NoDensity = 1;
   bs_cond_x.resize(solver_num_row);

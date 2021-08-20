@@ -18,8 +18,7 @@ void testSolver(Highs& highs, const std::string solver,
   HighsModelStatus model_status;
   HighsStatus return_status;
   const bool perform_timeout_test = false;  // true;  //
-  const bool use_simplex = solver == "simplex";
-
+  bool use_simplex = solver == "simplex";
   const HighsInfo& info = highs.getInfo();
 
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -224,7 +223,10 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
     model_iteration_count.simplex = simplex_strategy_iteration_count[i];
     testSolver(highs, "simplex", model_iteration_count, i);
   }
+  // Only use IPX with 32-bit arithmetic
+#ifndef HIGHSINT64
   testSolver(highs, "ipm", model_iteration_count);
+#endif
 }
 
 // No commas in test case name.
@@ -281,7 +283,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 1);
 
-  REQUIRE(info.simplex_iteration_count == 529);
+  REQUIRE(info.simplex_iteration_count == 443);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kNotset);
@@ -297,7 +299,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 605);
+  REQUIRE(info.simplex_iteration_count == 611);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

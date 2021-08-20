@@ -31,8 +31,9 @@ using std::nth_element;
 using std::pair;
 
 void HEkkDualRHS::setup() {
-  const HighsInt numRow = ekk_instance_.lp_.numRow_;
-  const HighsInt numTot = ekk_instance_.lp_.numCol_ + ekk_instance_.lp_.numRow_;
+  const HighsInt numRow = ekk_instance_.lp_.num_row_;
+  const HighsInt numTot =
+      ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
   workMark.resize(numRow);
   workIndex.resize(numRow);
   work_infeasibility.resize(numRow);
@@ -321,7 +322,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
 void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
   analysis->simplexTimerStart(UpdatePrimalClock);
 
-  const HighsInt numRow = ekk_instance_.lp_.numRow_;
+  const HighsInt numRow = ekk_instance_.lp_.num_row_;
   const HighsInt columnCount = column->count;
   const HighsInt* variable_index = &column->index[0];
   const double* columnArray = &column->array[0];
@@ -370,7 +371,7 @@ void HEkkDualRHS::updateWeightDualSteepestEdge(
     double* dseArray) {
   analysis->simplexTimerStart(DseUpdateWeightClock);
 
-  const HighsInt numRow = ekk_instance_.lp_.numRow_;
+  const HighsInt numRow = ekk_instance_.lp_.num_row_;
   const HighsInt columnCount = column->count;
   const HighsInt* variable_index = &column->index[0];
   const double* columnArray = &column->array[0];
@@ -401,7 +402,7 @@ void HEkkDualRHS::updateWeightDevex(HVector* column,
                                     const double new_pivotal_edge_weight) {
   analysis->simplexTimerStart(DevexUpdateWeightClock);
 
-  const HighsInt numRow = ekk_instance_.lp_.numRow_;
+  const HighsInt numRow = ekk_instance_.lp_.num_row_;
   const HighsInt columnCount = column->count;
   const HighsInt* variable_index = &column->index[0];
   const double* columnArray = &column->array[0];
@@ -483,7 +484,7 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
 }
 
 void HEkkDualRHS::createArrayOfPrimalInfeasibilities() {
-  HighsInt numRow = ekk_instance_.lp_.numRow_;
+  HighsInt numRow = ekk_instance_.lp_.num_row_;
   const double* baseValue = &ekk_instance_.info_.baseValue_[0];
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
@@ -502,7 +503,7 @@ void HEkkDualRHS::createArrayOfPrimalInfeasibilities() {
 }
 
 void HEkkDualRHS::createInfeasList(double columnDensity) {
-  HighsInt numRow = ekk_instance_.lp_.numRow_;
+  HighsInt numRow = ekk_instance_.lp_.num_row_;
   double* dwork = &workEdWtFull[0];
 
   // 1. Build the full list

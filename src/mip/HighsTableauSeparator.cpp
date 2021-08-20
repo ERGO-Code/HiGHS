@@ -22,6 +22,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
+#include "pdqsort/pdqsort.h"
 
 void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                                HighsLpAggregator& lpAggregator,
@@ -46,6 +47,38 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<double> baseRowVals;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
+#if 0
+  if (mip.mipdata_->objintscale != 0.0 &&
+      std::abs(
+          std::round(mip.mipdata_->objintscale * lpRelaxation.getObjective()) /
+              mip.mipdata_->objintscale -
+          lpRelaxation.getObjective()) > 1000 * mip.mipdata_->feastol) {
+    HighsInt numRows = 0;
+    for (int j = 0; j != numrow; ++j) {
+      double weight = mip.mipdata_->objintscale * lpSolution.row_dual[j];
+      if (std::abs(weight) <= 10 * mip.mipdata_->epsilon ||
+          std::abs(weight) * lpRelaxation.getMaxAbsRowVal(j) <=
+              mip.mipdata_->feastol) {
+        continue;
+      }
+
+      lpAggregator.addRow(j, weight);
+    }
+
+    lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
+
+    if (baseRowInds.size() - numRows <= 1000 + 0.1 * mip.numCol()) {
+      double rhs = 0;
+      cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+
+      lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
+      rhs = 0;
+      cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+    }
+
+    lpAggregator.clear();
+  }
+#endif
   std::vector<std::pair<double, HighsInt>> fractionalBasisvars;
   fractionalBasisvars.reserve(basisinds.size());
   for (HighsInt i = 0; i != HighsInt(basisinds.size()); ++i) {
@@ -58,6 +91,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       double solval = lpSolution.row_value[row];
       fractionality = std::abs(std::round(solval) - solval);
+      fractionality -= lpRelaxation.getRowLen(row) * mip.mipdata_->feastol;
     } else {
       HighsInt col = basisinds[i];
       if (mip.variableType(col) == HighsVarType::kContinuous) continue;
@@ -71,20 +105,20 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     fractionalBasisvars.emplace_back(fractionality, i);
   }
 
-  std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
-            [&fractionalBasisvars](const std::pair<double, HighsInt>& a,
-                                   const std::pair<double, HighsInt>& b) {
-              return std::make_tuple(
-                         a.first,
-                         HighsHashHelpers::hash((uint64_t(a.second) << 32) +
-                                                fractionalBasisvars.size()),
-                         a.second) >
-                     std::make_tuple(
-                         b.first,
-                         HighsHashHelpers::hash((uint64_t(b.second) << 32) +
-                                                fractionalBasisvars.size()),
-                         b.second);
-            });
+  pdqsort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
+          [&fractionalBasisvars](const std::pair<double, HighsInt>& a,
+                                 const std::pair<double, HighsInt>& b) {
+            return std::make_tuple(
+                       a.first,
+                       HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                              fractionalBasisvars.size()),
+                       a.second) >
+                   std::make_tuple(
+                       b.first,
+                       HighsHashHelpers::hash((uint64_t(b.second) << 32) +
+                                              fractionalBasisvars.size()),
+                       b.second);
+          });
   HighsInt numCuts = cutpool.getNumCuts();
   for (const auto& fracvar : fractionalBasisvars) {
     HighsInt i = fracvar.second;
@@ -105,23 +139,17 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     std::frexp(maxAbsRowWeight, &expshift);
     expshift = -expshift;
 
-    HighsInt numNzs = 0;
+    HighsInt numRows = 0;
     for (int j = 0; j != numNonzeroWeights; ++j) {
       HighsInt row = nonzeroWeights[j];
       rowWeights[row] = std::ldexp(rowWeights[row], expshift);
-      if (std::abs(rowWeights[row]) <= mip.mipdata_->epsilon ||
+      if (std::abs(rowWeights[row]) <= 10 * mip.mipdata_->epsilon ||
           std::abs(rowWeights[row]) * lpRelaxation.getMaxAbsRowVal(row) <=
               mip.mipdata_->feastol) {
         rowWeights[row] = 0;
       } else
-        numNzs += lpRelaxation.getRowLen(row);
+        ++numRows;
     }
-
-    // if (numNzs > 0.5 * lpRelaxation.numNonzeros()) {
-    //   printf("%.2f%% nonzeros involved in tableau row\n",
-    //          100.0 * numNzs / (double)lpRelaxation.numNonzeros());
-    //   continue;
-    // }
 
     for (int j = 0; j != numNonzeroWeights; ++j) {
       int row = nonzeroWeights[j];
@@ -130,6 +158,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
+
+    if (baseRowInds.size() - numRows > 1000 + 0.1 * mip.numCol()) continue;
 
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
@@ -141,7 +171,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpAggregator.clear();
 
     if (cutpool.getNumCuts() - numCuts >=
-        0.1 * mip.options_mip_->mip_pool_soft_limit)
+            0.1 * mip.options_mip_->mip_pool_soft_limit ||
+        mip.mipdata_->domain.infeasible())
       break;
   }
 }

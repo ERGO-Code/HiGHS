@@ -15,7 +15,9 @@
  */
 #include "simplex/HEkkPrimal.h"
 
+#include "pdqsort/pdqsort.h"
 #include "simplex/HEkkDebug.h"
+#include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
 
@@ -32,8 +34,8 @@ HighsStatus HEkkPrimal::solve() {
   HighsSimplexStatus& status = ekk_instance_.status_;
 
   if (!status.has_invert) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "HEkkPrimal::solve called without INVERT\n");
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "HEkkPrimal::solve called without INVERT\n");
     assert(status.has_fresh_invert);
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
@@ -207,6 +209,52 @@ HighsStatus HEkkPrimal::solve() {
          solve_phase == kSolvePhaseCleanup);
   if (solve_phase == kSolvePhaseOptimal)
     ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
+
+  if (solve_phase == kSolvePhaseCleanup) {
+    highsLogDev(
+        ekk_instance_.options_.log_options, HighsLogType::kInfo,
+        "HEkkPrimal:: Using dual simplex to try to clean up %" HIGHSINT_FORMAT
+        " primal infeasibilities\n",
+        info.num_primal_infeasibility);
+    ekk_instance_.computePrimalObjectiveValue();
+    // Use dual to clean up. This almost always yields optimality,
+    // and shouldn't yield infeasiblilty - since the current point
+    // is dual feasible - but can yield
+    // unboundedness. Time/iteration limit return is, of course,
+    // possible, as are solver error
+    HighsStatus return_status = HighsStatus::kOk;
+    analysis->simplexTimerStart(SimplexDualPhase2Clock);
+    // Switch off any bound perturbation
+    double save_dual_simplex_cost_perturbation_multiplier =
+        info.dual_simplex_cost_perturbation_multiplier;
+    info.dual_simplex_cost_perturbation_multiplier = 0;
+    HighsInt simplex_strategy = info.simplex_strategy;
+    info.simplex_strategy = kSimplexStrategyDualPlain;
+    HEkkDual dual_solver(ekk_instance_);
+    HighsStatus call_status = dual_solver.solve();
+    // Restore any bound perturbation
+    info.dual_simplex_cost_perturbation_multiplier =
+        save_dual_simplex_cost_perturbation_multiplier;
+    info.simplex_strategy = simplex_strategy;
+    analysis->simplexTimerStop(SimplexDualPhase2Clock);
+    assert(ekk_instance_.called_return_from_solve_);
+    return_status =
+        interpretCallStatus(call_status, return_status, "HEkkDual::solve");
+    // Reset called_return_from_solve_ to be false, since it's
+    // called for this solve
+    ekk_instance_.called_return_from_solve_ = false;
+    if (return_status != HighsStatus::kOk)
+      return ekk_instance_.returnFromSolve(return_status);
+    if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
+        info.num_primal_infeasibility + info.num_dual_infeasibility)
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+                  "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
+                  "with %" HIGHSINT_FORMAT
+                  " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                  " (max %g) dual infeasibilities\n",
+                  info.num_primal_infeasibility, info.max_primal_infeasibility,
+                  info.num_dual_infeasibility, info.max_dual_infeasibility);
+  }
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
                          ekk_instance_.model_status_) ==
       HighsDebugStatus::kLogicalError)
@@ -217,8 +265,8 @@ HighsStatus HEkkPrimal::solve() {
 void HEkkPrimal::initialiseInstance() {
   analysis = &ekk_instance_.analysis_;
 
-  num_col = ekk_instance_.lp_.numCol_;
-  num_row = ekk_instance_.lp_.numRow_;
+  num_col = ekk_instance_.lp_.num_col_;
+  num_row = ekk_instance_.lp_.num_row_;
   num_tot = num_col + num_row;
 
   // Setup local vectors
@@ -244,9 +292,9 @@ void HEkkPrimal::initialiseInstance() {
   const bool debug =
       ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap;
   if (num_free_col) {
-    highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                 "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
-                 num_free_col);
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
+                num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot,
                                 ekk_instance_.options_.output_flag,
                                 ekk_instance_.options_.log_file_stream, debug);
@@ -274,7 +322,7 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
-  ekk_instance_.exit_algorithm = SimplexAlgorithm::kPrimal;
+  ekk_instance_.exit_algorithm_ = SimplexAlgorithm::kPrimal;
 
   rebuild_reason = kRebuildReasonNo;
 
@@ -547,8 +595,8 @@ void HEkkPrimal::rebuild() {
     assert(info.backtracking_);
     HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.matrix_.setup(lp.numCol_, lp.numRow_, &lp.Astart_[0],
-                                &lp.Aindex_[0], &lp.Avalue_[0],
+    ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
+                                &lp.a_index_[0], &lp.a_value_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
@@ -569,7 +617,7 @@ void HEkkPrimal::rebuild() {
   if (info.num_primal_infeasibility > 0) {
     // Primal infeasibilities so should be in phase 1
     if (solve_phase == kSolvePhase2) {
-      highsLogUser(
+      highsLogDev(
           ekk_instance_.options_.log_options, HighsLogType::kWarning,
           "HEkkPrimal::rebuild switching back to phase 1 from phase 2\n");
       solve_phase = kSolvePhase1;
@@ -655,8 +703,8 @@ void HEkkPrimal::iterate() {
   if (solve_phase == kSolvePhase1) {
     phase1ChooseRow();
     if (row_out < 0) {
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kError,
-                   "Primal phase 1 choose row failed\n");
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
+                  "Primal phase 1 choose row failed\n");
       solve_phase = kSolvePhaseError;
       return;
     }
@@ -975,7 +1023,7 @@ void HEkkPrimal::phase1ChooseRow() {
   // [kO(log(n))].
 
   analysis->simplexTimerStart(Chuzr2Clock);
-  std::sort(ph1SorterR.begin(), ph1SorterR.end());
+  pdqsort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
   double dGradient = fabs(theta_dual);
   for (HighsUInt i = 0; i < ph1SorterR.size(); i++) {
@@ -991,7 +1039,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   // Find out the biggest possible alpha for pivot
-  std::sort(ph1SorterT.begin(), ph1SorterT.end());
+  pdqsort(ph1SorterT.begin(), ph1SorterT.end());
   double dMaxAlpha = 0.0;
   HighsUInt iLast = ph1SorterT.size();
   for (HighsUInt i = 0; i < ph1SorterT.size(); i++) {
@@ -1658,7 +1706,8 @@ void HEkkPrimal::considerInfeasibleValueIn() {
       primal_infeasibility = value_in - upper;
     }
     info.num_primal_infeasibility++;
-    printf(
+    highsLogDev(
+        ekk_instance_.options_.log_options, HighsLogType::kWarning,
         "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
         primal_infeasibility, lower, value_in, upper);
     rebuild_reason = kRebuildReasonPrimalInfeasibleInPrimalSimplex;
@@ -1913,11 +1962,11 @@ void HEkkPrimal::basicFeasibilityChangeUpdateDual() {
 
 void HEkkPrimal::basicFeasibilityChangeBtran() {
   // Performs BTRAN on col_basic_feasibility_change. Make sure that
-  // col_basic_feasibility_change.count is large (>lp_.numRow_ to be
+  // col_basic_feasibility_change.count is large (>lp_.num_row_ to be
   // sure) rather than 0 if the indices of the RHS (and true value of
   // col_basic_feasibility_change.count) isn't known.
   analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
-  const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
+  const HighsInt solver_num_row = ekk_instance_.lp_.num_row_;
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(
         ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
@@ -2095,11 +2144,13 @@ void HEkkPrimal::updateVerify() {
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   if (numericalTrouble > numerical_trouble_tolerance)
-    printf("Numerical check: Iter %4" HIGHSINT_FORMAT
-           ": alpha_col = %12g, (From %3s alpha_row = "
-           "%12g), aDiff = %12g: measure = %12g\n",
-           ekk_instance_.iteration_count_, alpha_col, alpha_row_source.c_str(),
-           alpha_row, abs_alpha_diff, numericalTrouble);
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                "Numerical check: Iter %4" HIGHSINT_FORMAT
+                ": alpha_col = %12g, (From %3s alpha_row = "
+                "%12g), aDiff = %12g: measure = %12g\n",
+                ekk_instance_.iteration_count_, alpha_col,
+                alpha_row_source.c_str(), alpha_row, abs_alpha_diff,
+                numericalTrouble);
   assert(numericalTrouble < 1e-3);
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
@@ -2233,10 +2284,10 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
     bool removed_nonbasic_free_column =
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kError,
-                   "HEkkPrimal::phase1update failed to remove nonbasic free "
-                   "column %" HIGHSINT_FORMAT "\n",
-                   variable_in);
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
+                  "HEkkPrimal::phase1update failed to remove nonbasic free "
+                  "column %" HIGHSINT_FORMAT "\n",
+                  variable_in);
       assert(removed_nonbasic_free_column);
     }
   }
@@ -2249,11 +2300,11 @@ void HEkkPrimal::adjustPerturbedEquationOut() {
   double lp_lower;
   double lp_upper;
   if (variable_out < num_col) {
-    lp_lower = lp.colLower_[variable_out];
-    lp_upper = lp.colUpper_[variable_out];
+    lp_lower = lp.col_lower_[variable_out];
+    lp_upper = lp.col_upper_[variable_out];
   } else {
-    lp_lower = -lp.rowUpper_[variable_out - num_col];
-    lp_upper = -lp.rowLower_[variable_out - num_col];
+    lp_lower = -lp.row_upper_[variable_out - num_col];
+    lp_upper = -lp.row_lower_[variable_out - num_col];
   }
   if (lp_lower < lp_upper) return;
   // Leaving variable is fixed

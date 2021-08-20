@@ -30,21 +30,21 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   status = fillHessian();
   if (status) return FreeFormatParserReturnCode::kParserError;
 
-  lp.numRow_ = std::move(numRow);
-  lp.numCol_ = std::move(numCol);
+  lp.num_row_ = std::move(numRow);
+  lp.num_col_ = std::move(numCol);
 
   lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
-  lp.orientation_ = MatrixOrientation::kColwise;
-  lp.Astart_ = std::move(Astart);
-  lp.Aindex_ = std::move(Aindex);
-  lp.Avalue_ = std::move(Avalue);
-  lp.colCost_ = std::move(colCost);
-  lp.colLower_ = std::move(colLower);
-  lp.colUpper_ = std::move(colUpper);
-  lp.rowLower_ = std::move(rowLower);
-  lp.rowUpper_ = std::move(rowUpper);
+  lp.format_ = MatrixFormat::kColwise;
+  lp.a_start_ = std::move(Astart);
+  lp.a_index_ = std::move(Aindex);
+  lp.a_value_ = std::move(Avalue);
+  lp.col_cost_ = std::move(colCost);
+  lp.col_lower_ = std::move(colLower);
+  lp.col_upper_ = std::move(colUpper);
+  lp.row_lower_ = std::move(rowLower);
+  lp.row_upper_ = std::move(rowUpper);
 
   lp.row_names_ = std::move(rowNames);
   lp.col_names_ = std::move(colNames);
@@ -52,6 +52,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.integrality_ = std::move(col_integrality);
 
   hessian.dim_ = q_dim;
+  hessian.format_ = HessianFormat::kTriangular;
   hessian.q_start_ = std::move(q_start);
   hessian.q_index_ = std::move(q_index);
   hessian.q_value_ = std::move(q_value);
@@ -819,6 +820,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
 HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
                                      std::ifstream& file) {
+  HighsInt numWarnings = 0;
   std::string strline, word;
 
   HighsInt num_mi = 0;
@@ -956,10 +958,21 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
 
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "BOUNDS section contains col %s not in COLS section: ignored\n",
-          marker.c_str());
+      if (numWarnings < 10) {
+        ++numWarnings;
+        if (numWarnings == 10) {
+          highsLogUser(
+              log_options, HighsLogType::kWarning,
+              "BOUNDS section contains col %s not in COLS section: "
+              "ignored\nFurther warnings of this type are not printed\n",
+              marker.c_str());
+        } else {
+          highsLogUser(
+              log_options, HighsLogType::kWarning,
+              "BOUNDS section contains col %s not in COLS section: ignored\n",
+              marker.c_str());
+        }
+      }
       continue;
     };
 
@@ -997,6 +1010,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
         // Mark the column as integer and binary
         col_integrality[colidx] = HighsVarType::kInteger;
         col_binary[colidx] = true;
+        assert(colLower[colidx] == 0.0);
+        colUpper[colidx] = 1.0;
       } else {
         // continuous: MI, PL or FR
         col_binary[colidx] = false;
@@ -1250,15 +1265,17 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       double coeff = atof(coeff_name.c_str());
       if (coeff) {
         if (qmatrix) {
-          // QMATRIX has the whole Hessian, so store the entry
-          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+          // QMATRIX has the whole Hessian, so store the entry if the
+          // entry is in the lower triangle
+          if (rowidx >= colidx)
+            q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
         } else {
           // QSECTION and QUADOBJ has the lower triangle of the
-          // Hessian, so also store the transpose entry if
-          // off-diagonal
+          // Hessian
           q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
-          if (rowidx != colidx)
-            q_entries.push_back(std::make_tuple(colidx, rowidx, coeff));
+          //          if (rowidx != colidx)
+          //            q_entries.push_back(std::make_tuple(colidx, rowidx,
+          //            coeff));
         }
       }
       end = end_coeff_name;

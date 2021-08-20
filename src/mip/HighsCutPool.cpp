@@ -19,20 +19,20 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-static uint32_t support_hash(const HighsInt* Rindex, const double* Rvalue,
-                             double maxabscoef, const HighsInt Rlen) {
+static uint64_t compute_cut_hash(const HighsInt* Rindex, const double* Rvalue,
+                                 double maxabscoef, const HighsInt Rlen) {
   std::vector<uint32_t> valueHashCodes(Rlen);
 
   double scale = 1.0 / maxabscoef;
   for (HighsInt i = 0; i < Rlen; ++i)
     valueHashCodes[i] = HighsHashHelpers::double_hash_code(scale * Rvalue[i]);
 
-  return HighsHashHelpers::hash(std::make_pair(
-      HighsHashHelpers::vector_hash(Rindex, Rlen),
-      HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen)));
+  return HighsHashHelpers::vector_hash(Rindex, Rlen) ^
+         (HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen) >> 32);
 }
 
 #if 0
@@ -49,11 +49,13 @@ static void printCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen
 }
 #endif
 
-bool HighsCutPool::isDuplicate(size_t hash, double norm, HighsInt* Rindex,
-                               double* Rvalue, HighsInt Rlen, double rhs) {
-  auto range = supportmap.equal_range(hash);
+bool HighsCutPool::isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
+                               const double* Rvalue, HighsInt Rlen,
+                               double rhs) {
+  auto range = hashToCutMap.equal_range(hash);
   const double* ARvalue = matrix_.getARvalue();
   const HighsInt* ARindex = matrix_.getARindex();
+
   for (auto it = range.first; it != range.second; ++it) {
     HighsInt rowindex = it->second;
     HighsInt start = matrix_.getRowStart(rowindex);
@@ -119,6 +121,10 @@ double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2) const {
 }
 
 void HighsCutPool::lpCutRemoved(HighsInt cut) {
+  if (matrix_.columnsLinked(cut)) {
+    propRows.erase(std::make_pair(-1, cut));
+    propRows.emplace(1, cut);
+  }
   ages_[cut] = 1;
   --numLpCuts;
   ++ageDistribution[1];
@@ -129,7 +135,7 @@ void HighsCutPool::performAging() {
 
   HighsInt agelim = agelim_;
   HighsInt numActiveCuts = getNumCuts() - numLpCuts;
-  while (agelim > 1 && numActiveCuts > softlimit_) {
+  while (agelim > 5 && numActiveCuts > softlimit_) {
     numActiveCuts -= ageDistribution[agelim];
     --agelim;
   }
@@ -137,17 +143,31 @@ void HighsCutPool::performAging() {
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     if (ages_[i] < 0) continue;
 
+    bool isPropagated = matrix_.columnsLinked(i);
+    if (isPropagated) propRows.erase(std::make_pair(ages_[i], i));
     ageDistribution[ages_[i]] -= 1;
     ages_[i] += 1;
 
     if (ages_[i] > agelim) {
-      ++modification_[i];
+      for (HighsDomain::CutpoolPropagation* propagationdomain :
+           propagationDomains)
+        propagationdomain->cutDeleted(i);
+
+      if (isPropagated) {
+        --numPropRows;
+        numPropNzs -= getRowLength(i);
+      }
+
       matrix_.removeRow(i);
       ages_[i] = -1;
       rhs_[i] = kHighsInf;
-    } else
+    } else {
+      if (isPropagated) propRows.emplace(ages_[i], i);
       ageDistribution[ages_[i]] += 1;
+    }
   }
+
+  assert(propRows.size() == numPropRows);
 }
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
@@ -187,27 +207,38 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
     ageDistribution[ages_[i]] -= 1;
+    bool isPropagated = matrix_.columnsLinked(i);
+    if (isPropagated) propRows.erase(std::make_pair(ages_[i], i));
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
-        uint32_t sh = support_hash(&ARindex[start], &ARvalue[start],
-                                   maxabscoef_[i], end - start);
+        uint64_t h = compute_cut_hash(&ARindex[start], &ARvalue[start],
+                                      maxabscoef_[i], end - start);
 
-        ++modification_[i];
+        for (HighsDomain::CutpoolPropagation* propagationdomain :
+             propagationDomains)
+          propagationdomain->cutDeleted(i);
+
+        if (isPropagated) {
+          --numPropRows;
+          numPropNzs -= getRowLength(i);
+        }
 
         matrix_.removeRow(i);
         ages_[i] = -1;
         rhs_[i] = 0;
-        auto range = supportmap.equal_range(sh);
+        auto range = hashToCutMap.equal_range(h);
 
         for (auto it = range.first; it != range.second; ++it) {
           if (it->second == i) {
-            supportmap.erase(it);
+            hashToCutMap.erase(it);
             break;
           }
         }
-      } else
+      } else {
+        if (isPropagated) propRows.emplace(ages_[i], i);
         ageDistribution[ages_[i]] += 1;
+      }
       continue;
     }
 
@@ -219,43 +250,47 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     // though the cut dominates the clique cut where all those entries are
     // relaxed out.
     HighsCDouble rownorm = 0.0;
+    HighsInt numActiveNzs = 0;
     for (HighsInt j = start; j != end; ++j) {
       HighsInt col = ARindex[j];
       double solval = sol[col];
       if (ARvalue[j] > 0) {
-        if (solval - feastol > domain.colLower_[col])
+        if (solval > domain.col_lower_[col] + feastol) {
           rownorm += ARvalue[j] * ARvalue[j];
+          numActiveNzs += 1;
+        }
       } else {
-        if (solval + feastol < domain.colUpper_[col])
+        if (solval < domain.col_upper_[col] - feastol) {
           rownorm += ARvalue[j] * ARvalue[j];
+          numActiveNzs += 1;
+        }
       }
     }
 
-    double sparsity =
-        1.0000001 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
     ++ageDistribution[0];
-    double score = double((sparsity) * (1e-3 + viol / sqrt(double(rownorm))));
+    if (isPropagated) propRows.emplace(ages_[i], i);
+    double score = viol / (numActiveNzs * sqrt(double(rownorm)));
 
     efficacious_cuts.emplace_back(score, i);
   }
-
+  assert(propRows.size() == numPropRows);
   if (efficacious_cuts.empty()) return;
 
-  std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
-            [&efficacious_cuts](const std::pair<double, int>& a,
-                                const std::pair<double, int>& b) {
-              if (a.first > b.first) return true;
-              if (a.first < b.first) return false;
-              return std::make_pair(
-                         HighsHashHelpers::hash((uint64_t(a.second) << 32) +
-                                                efficacious_cuts.size()),
-                         a.second) >
-                     std::make_pair(
-                         HighsHashHelpers::hash((uint64_t(b.second) << 32) +
-                                                efficacious_cuts.size()),
-                         b.second);
-            });
+  pdqsort(efficacious_cuts.begin(), efficacious_cuts.end(),
+          [&efficacious_cuts](const std::pair<double, int>& a,
+                              const std::pair<double, int>& b) {
+            if (a.first > b.first) return true;
+            if (a.first < b.first) return false;
+            return std::make_pair(
+                       HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                              efficacious_cuts.size()),
+                       a.second) >
+                   std::make_pair(
+                       HighsHashHelpers::hash((uint64_t(b.second) << 32) +
+                                              efficacious_cuts.size()),
+                       b.second);
+          });
 
   bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
   double minScore = minScoreFactor * bestObservedScore;
@@ -299,6 +334,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     --ageDistribution[ages_[p.second]];
     ++numLpCuts;
+    if (matrix_.columnsLinked(p.second)) {
+      propRows.erase(std::make_pair(ages_[p.second], p.second));
+      propRows.emplace(-1, p.second);
+    }
     ages_[p.second] = -1;
     cutset.cutindices.push_back(p.second);
     selectednnz += matrix_.getRowEnd(p.second) - matrix_.getRowStart(p.second);
@@ -325,6 +364,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     }
   }
 
+  assert(propRows.size() == numPropRows);
   cutset.ARstart_[cutset.numCuts()] = offset;
 }
 
@@ -343,6 +383,10 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
     --ageDistribution[ages_[i]];
     ++numLpCuts;
+    if (matrix_.columnsLinked(i)) {
+      propRows.erase(std::make_pair(ages_[i], i));
+      propRows.emplace(-1, i);
+    }
     ages_[i] = -1;
     cutset.ARstart_[i] = offset;
     HighsInt cut = cutset.cutindices[i];
@@ -359,12 +403,17 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   }
 
   cutset.ARstart_[cutset.numCuts()] = offset;
+
+  assert(propRows.size() == numPropRows);
 }
 
 HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
-                              bool integral, bool extractCliques) {
+                              bool integral, bool propagate,
+                              bool extractCliques, bool isConflict) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
+
+  sortBuffer.resize(Rlen);
 
   // compute 1/||a|| for the cut
   // as it is only computed once
@@ -373,21 +422,84 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   for (HighsInt i = 0; i != Rlen; ++i) {
     norm += Rvalue[i] * Rvalue[i];
     maxabscoef = std::max(maxabscoef, std::abs(Rvalue[i]));
+    sortBuffer[i].first = Rindex[i];
+    sortBuffer[i].second = Rvalue[i];
   }
-  uint32_t sh = support_hash(Rindex, Rvalue, maxabscoef, Rlen);
+  pdqsort_branchless(
+      sortBuffer.begin(), sortBuffer.end(),
+      [](const std::pair<HighsInt, double>& a,
+         const std::pair<HighsInt, double>& b) { return a.first < b.first; });
+  for (HighsInt i = 0; i != Rlen; ++i) {
+    Rindex[i] = sortBuffer[i].first;
+    Rvalue[i] = sortBuffer[i].second;
+  }
+  uint64_t h = compute_cut_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
-  // try to replace another cut with equal support that has an age > 0
 
-  if (isDuplicate(sh, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
+  if (isDuplicate(h, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
+
+  // if (Rlen > 0.15 * matrix_.numCols())
+  //   printf("cut with len %d not propagated\n", Rlen);
+  if (propagate) {
+    HighsInt newPropNzs = numPropNzs + Rlen;
+
+    double avgModelNzs = mipsolver.numNonzero() / (double)mipsolver.numRow();
+
+    double newAvgPropNzs = newPropNzs / (double)(numPropRows + 1);
+
+    constexpr double alpha = 2.0;
+    if (isConflict) {
+      // for conflicts we allow an increased average propagation density
+      if (newAvgPropNzs > std::max(alpha * avgModelNzs, minDensityLim)) {
+        propagate = false;
+      } else {
+        ++numPropRows;
+        numPropNzs = newPropNzs;
+      }
+    } else {
+      // for cuts we do not want to accept any dense cuts and don't use the
+      // average but its actual length
+      if (Rlen >= std::max(alpha * avgModelNzs, minDensityLim)) {
+        propagate = false;
+      } else {
+        ++numPropRows;
+        numPropNzs = newPropNzs;
+      }
+    }
+  }
+
+  // if we have more than twice the number of nonzeros of the model in use for
+  // propagation we stop propagating the rows with the highest age
+  HighsInt propRowExcessNzs = numPropNzs - 2 * mipsolver.numNonzero();
+  if (propRowExcessNzs > 0) {
+    auto it = propRows.rbegin();
+
+    while (propRowExcessNzs > 0 && it != propRows.rend()) {
+      HighsInt len = getRowLength(it->second);
+      propRowExcessNzs -= len;
+      numPropNzs -= len;
+      --numPropRows;
+      ++it;
+    }
+
+    for (auto i = propRows.rbegin(); i != it; ++i) {
+      HighsInt row = i->second;
+      matrix_.unlinkColumns(row);
+      for (HighsDomain::CutpoolPropagation* propagationdomain :
+           propagationDomains)
+        propagationdomain->cutDeleted(row, true);
+    }
+
+    propRows.erase(it.base(), propRows.end());
+  }
 
   // if no such cut exists we append the new cut
-  HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
-  supportmap.emplace(sh, rowindex);
+  HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen, propagate);
+  hashToCutMap.emplace(h, rowindex);
 
   if (rowindex == int(rhs_.size())) {
     rhs_.resize(rowindex + 1);
     ages_.resize(rowindex + 1);
-    modification_.resize(rowindex + 1);
     rownormalization_.resize(rowindex + 1);
     maxabscoef_.resize(rowindex + 1);
     rowintegral.resize(rowindex + 1);
@@ -395,21 +507,24 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
-  ages_[rowindex] = 0;
-  ++ageDistribution[0];
+  ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
+  ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
-  ++modification_[rowindex];
+  if (propagate) propRows.emplace(ages_[rowindex], rowindex);
+  assert(propRows.size() == numPropRows);
 
   rownormalization_[rowindex] = normalization;
   maxabscoef_[rowindex] = maxabscoef;
 
+  // printf("density: %.2f%%\n", 100.0 * Rlen / (double)matrix_.numCols());
   for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)
-    propagationdomain->cutAdded(rowindex);
+    propagationdomain->cutAdded(rowindex, propagate);
 
   if (extractCliques && this == &mipsolver.mipdata_->cutpool) {
     // if this is the global cutpool extract cliques from the cut
-    mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,
-                                                          Rvalue, Rlen, rhs);
+    if (Rlen <= 100)
+      mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,
+                                                            Rvalue, Rlen, rhs);
   }
 
   return rowindex;

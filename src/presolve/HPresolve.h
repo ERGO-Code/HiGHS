@@ -113,6 +113,8 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
+  std::vector<uint16_t> numProbes;
+
   int64_t probingContingent;
   HighsInt probingNumDelCol;
   HighsInt numProbed;
@@ -124,6 +126,7 @@ class HPresolve {
   // store old problem sizes to compute percentage redunctions in presolve loop
   HighsInt oldNumCol;
   HighsInt oldNumRow;
+  bool probingEarlyAbort;
 
   enum class Result {
     kOk,
@@ -210,6 +213,13 @@ class HPresolve {
 
   void fixColToZero(HighsPostsolveStack& postsolveStack, HighsInt col);
 
+  void transformColumn(HighsPostsolveStack& postSolveStack, HighsInt col,
+                       double scale, double constant);
+
+  void scaleRow(HighsInt row, double scale, bool integral = false);
+
+  void scaleStoredRow(HighsInt row, double scale, bool integral = false);
+
   void substitute(HighsInt row, HighsInt col, double rhs);
 
   void changeColUpper(HighsInt col, double newUpper);
@@ -229,6 +239,8 @@ class HPresolve {
 
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
+
+  void scaleMIP(HighsPostsolveStack& postSolveStack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postSolveStack);
 
@@ -261,6 +273,8 @@ class HPresolve {
   void addToMatrix(HighsInt row, HighsInt col, double val);
 
   Result runProbing(HighsPostsolveStack& postSolveStack);
+
+  Result dominatedColumns(HighsPostsolveStack& postSolveStack);
 
   Result doubletonEq(HighsPostsolveStack& postSolveStack, HighsInt row);
 

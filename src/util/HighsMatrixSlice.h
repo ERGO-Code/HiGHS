@@ -19,6 +19,8 @@
 #include <iterator>
 #include <vector>
 
+#include "util/HighsInt.h"
+
 #ifndef UTIL_HIGHS_MATRIX_SLICE_H_
 #define UTIL_HIGHS_MATRIX_SLICE_H_
 
@@ -50,9 +52,9 @@ class HighsSliceNonzero {
 };
 
 template <>
-struct HighsMatrixSlice<HighsEmptySlice> {
+class HighsMatrixSlice<HighsEmptySlice> {
+ public:
   using iterator = const HighsSliceNonzero*;
-
   static constexpr const HighsSliceNonzero* begin() { return nullptr; }
   static constexpr const HighsSliceNonzero* end() { return nullptr; }
 };

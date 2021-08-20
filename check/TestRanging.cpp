@@ -77,8 +77,8 @@ void testRanging(Highs& highs) {
   vector<double>& row_dual = solution.row_dual;
 
   lp = highs.getLp();
-  HighsInt numRow = lp.numRow_;
-  HighsInt numCol = lp.numCol_;
+  HighsInt numRow = lp.num_row_;
+  HighsInt numCol = lp.num_col_;
 
   const double relative_error_tolerance = 1e-10;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));
@@ -122,7 +122,7 @@ void testRanging(Highs& highs) {
     double col_cost_up_objective = ranging.col_cost_up.objective_[i];
     double col_cost_dn_value = ranging.col_cost_dn.value_[i];
     double col_cost_dn_objective = ranging.col_cost_dn.objective_[i];
-    double cost = lp.colCost_[i];
+    double cost = lp.col_cost_[i];
     double solved_up = 0;
     double solved_dn = 0;
     double error;
@@ -219,8 +219,8 @@ void testRanging(Highs& highs) {
     double col_bound_up_objective = ranging.col_bound_up.objective_[i];
     double col_bound_dn_value = ranging.col_bound_dn.value_[i];
     double col_bound_dn_objective = ranging.col_bound_dn.objective_[i];
-    double lower = lp.colLower_[i];
-    double upper = lp.colUpper_[i];
+    double lower = lp.col_lower_[i];
+    double upper = lp.col_upper_[i];
     double new_lower;
     double new_upper;
     double solved_up = 0;
@@ -356,8 +356,8 @@ void testRanging(Highs& highs) {
     double row_bound_up_objective = ranging.row_bound_up.objective_[i];
     double row_bound_dn_value = ranging.row_bound_dn.value_[i];
     double row_bound_dn_objective = ranging.row_bound_dn.objective_[i];
-    double lower = lp.rowLower_[i];
-    double upper = lp.rowUpper_[i];
+    double lower = lp.row_lower_[i];
+    double upper = lp.row_upper_[i];
     double new_lower = lower;
     double new_upper = upper;
     double solved_up = 0;

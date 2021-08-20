@@ -24,6 +24,18 @@ if(OpenMP_CXX_FOUND)
     set(OPENMP ON)
 endif()
 
+if(LINUX AND NOT MSVC)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT error)
+
+    if(ipo_supported)
+        message(STATUS "IPO / LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(STATUS "IPO / LTO not supported: <${error}>")
+    endif()
+endif()
+
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
@@ -56,10 +68,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
 
 
 # uncomment for memory debugging
-# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address")
-# set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address")
-# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+# set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 
 find_package(PkgConfig)
 
@@ -247,10 +259,10 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/model
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/qpsolver
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver/feasibility
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver/pricing
-    ${HIGHS_SOURCE_DIR}/src/qpsolver/ratiotest
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver/redhes
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver
+    ${HIGHS_SOURCE_DIR}/src/qpsolver
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver
     ${HIGHS_SOURCE_DIR}/src/simplex
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)
@@ -336,31 +348,18 @@ set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
 
-option(JULIA "Build library only for Julia" OFF)
+option(JULIA "Build library and executable for Julia" OFF)
 
-if (NOT JULIA)
-    # No changes in app/ apart from a relative path
-    add_subdirectory(app)
+# No changes in app/ apart from a relative path
+add_subdirectory(app)
 
-    # Until MIP solver is in library object also and tested. Switch becayse at the 
-    # moment breaks binary builder for julia interface.
-    # set(MIP OFF)
-    target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
-    target_sources(highs PRIVATE 
-        src/mip/HighsMipSolver.cpp
-        src/mip/HighsMipSolverData.cpp
-        src/mip/HighsDomain.cpp
-        src/mip/HighsDynamicRowMatrix.cpp
-        src/mip/HighsLpRelaxation.cpp
-        src/mip/HighsSeparation.cpp
-        src/mip/HighsSearch.cpp
-        src/mip/HighsCutPool.cpp
-        src/mip/HighsCliqueTable.cpp
-        src/mip/HighsImplications.cpp
-        src/mip/HighsNodeQueue.cpp)
+if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+    target_link_libraries (libhighs "pthread")
 endif()
 
-# check/ not added here, instead define fewer tests: 
+target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
+
+# check/ not added here, instead define fewer tests:
 # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
 if (NOT JULIA)
     enable_testing()
@@ -463,7 +462,7 @@ if (NOT JULIA)
     endforeach()
 endif()
 
-if (EXP) 
+if (EXP)
     add_executable(doctest)
     #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)

@@ -36,12 +36,12 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsLp& lp = lpRelaxation.getLp();
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
-  randgen.initialise(mip.options_mip_->highs_random_seed +
+  randgen.initialise(mip.options_mip_->random_seed +
                      lpRelaxation.getNumLpIterations());
   std::vector<RowType> rowtype;
-  rowtype.resize(lp.numRow_);
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (lp.rowLower_[i] == lp.rowUpper_[i]) {
+  rowtype.resize(lp.num_row_);
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
+    if (lp.row_lower_[i] == lp.row_upper_[i]) {
       rowtype[i] = RowType::kEq;
       continue;
     }
@@ -49,11 +49,11 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     double lowerslack = kHighsInf;
     double upperslack = kHighsInf;
 
-    if (lp.rowLower_[i] != -kHighsInf)
-      lowerslack = lpSolution.row_value[i] - lp.rowLower_[i];
+    if (lp.row_lower_[i] != -kHighsInf)
+      lowerslack = lpSolution.row_value[i] - lp.row_lower_[i];
 
-    if (lp.rowUpper_[i] != kHighsInf)
-      upperslack = lp.rowUpper_[i] - lpSolution.row_value[i];
+    if (lp.row_upper_[i] != kHighsInf)
+      upperslack = lp.row_upper_[i] - lpSolution.row_value[i];
 
     if (lowerslack > mip.mipdata_->feastol &&
         upperslack > mip.mipdata_->feastol)
@@ -64,25 +64,25 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       rowtype[i] = RowType::kLeq;
   }
 
-  std::vector<HighsInt> numContinuous(lp.numRow_);
+  std::vector<HighsInt> numContinuous(lp.num_row_);
 
   size_t maxAggrRowSize = 0;
   for (HighsInt col : mip.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0.0) continue;
 
-    maxAggrRowSize += lp.Astart_[col + 1] - lp.Astart_[col];
-    for (HighsInt i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i)
-      ++numContinuous[lp.Aindex_[i]];
+    maxAggrRowSize += lp.a_start_[col + 1] - lp.a_start_[col];
+    for (HighsInt i = lp.a_start_[col]; i != lp.a_start_[col + 1]; ++i)
+      ++numContinuous[lp.a_index_[i]];
   }
 
   std::vector<std::pair<HighsInt, double>> colSubstitutions(
-      lp.numCol_, std::make_pair(-1, 0.0));
+      lp.num_col_, std::make_pair(-1, 0.0));
 
   // identify equality rows where only a single continuous variable with nonzero
   // transformed solution value is present. Mark those columns and remember the
   // rows so that we can always substitute such columns away using this equation
   // and block the equation from being used as a start row
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     if (rowtype[i] == RowType::kEq && numContinuous[i] == 1) {
       HighsInt len;
       const HighsInt* rowinds;
@@ -125,11 +125,11 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   std::vector<std::pair<HighsInt, double>> inArcRows;
   inArcRows.reserve(maxAggrRowSize);
-  std::vector<std::pair<HighsInt, int>> colInArcs(lp.numCol_);
+  std::vector<std::pair<HighsInt, int>> colInArcs(lp.num_col_);
 
   std::vector<std::pair<HighsInt, double>> outArcRows;
   outArcRows.reserve(maxAggrRowSize);
-  std::vector<std::pair<HighsInt, int>> colOutArcs(lp.numCol_);
+  std::vector<std::pair<HighsInt, int>> colOutArcs(lp.num_col_);
 
   for (HighsInt col : mip.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0.0) continue;
@@ -137,22 +137,22 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     colInArcs[col].first = inArcRows.size();
     colOutArcs[col].first = outArcRows.size();
-    for (HighsInt i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i) {
-      switch (rowtype[lp.Aindex_[i]]) {
+    for (HighsInt i = lp.a_start_[col]; i != lp.a_start_[col + 1]; ++i) {
+      switch (rowtype[lp.a_index_[i]]) {
         case RowType::kUnusuable:
           continue;
         case RowType::kLeq:
-          if (lp.Avalue_[i] < 0)
-            inArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
+          if (lp.a_value_[i] < 0)
+            inArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           else
-            outArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
+            outArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           break;
         case RowType::kGeq:
         case RowType::kEq:
-          if (lp.Avalue_[i] > 0)
-            inArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
+          if (lp.a_value_[i] > 0)
+            inArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           else
-            outArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
+            outArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           break;
       }
     }
@@ -166,7 +166,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<double> baseRowVals;
   const HighsInt maxPathLen = 6;
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     switch (rowtype[i]) {
       case RowType::kUnusuable:
         continue;
@@ -178,6 +178,13 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     HighsInt currPathLen = 1;
+    const double maxWeight = 1. / mip.mipdata_->feastol;
+    const double minWeight = mip.mipdata_->feastol;
+
+    auto checkWeight = [&](double w) {
+      w = std::abs(w);
+      return w <= maxWeight && w >= minWeight;
+    };
 
     while (currPathLen != maxPathLen) {
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
@@ -194,7 +201,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       for (HighsInt j = 0; j != baseRowLen; ++j) {
         HighsInt col = baseRowInds[j];
-        if (transLp.boundDistance(col) == 0.0 ||
+        if (col >= lp.num_col_ || transLp.boundDistance(col) == 0.0 ||
             lpRelaxation.isColIntegral(col))
           continue;
 
@@ -254,13 +261,59 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         HighsInt row = inArcRows[inArcRow].first;
         double weight = -outArcColVal / inArcRows[inArcRow].second;
 
+        if (!checkWeight(weight)) {
+          bool success = false;
+          for (HighsInt nextRow = inArcRow + 1;
+               nextRow < colInArcs[bestOutArcCol].second && !success;
+               ++nextRow) {
+            row = inArcRows[nextRow].first;
+            weight = -outArcColVal / inArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          for (HighsInt nextRow = colInArcs[bestOutArcCol].first;
+               nextRow < inArcRow && !success; ++nextRow) {
+            row = inArcRows[nextRow].first;
+            weight = -outArcColVal / inArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          if (!success) {
+            if (bestInArcCol == -1)
+              break;
+            else
+              goto check_out_arc_col;
+          }
+        }
+
         lpAggregator.addRow(row, weight);
       } else {
+      check_out_arc_col:
         HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
                                              colOutArcs[bestInArcCol].second);
 
         HighsInt row = outArcRows[outArcRow].first;
         double weight = -inArcColVal / outArcRows[outArcRow].second;
+
+        if (!checkWeight(weight)) {
+          bool success = false;
+          for (HighsInt nextRow = outArcRow + 1;
+               nextRow < colOutArcs[bestInArcCol].second && !success;
+               ++nextRow) {
+            row = outArcRows[nextRow].first;
+            weight = -inArcColVal / outArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          for (HighsInt nextRow = colOutArcs[bestInArcCol].first;
+               nextRow < outArcRow && !success; ++nextRow) {
+            row = outArcRows[nextRow].first;
+            weight = -inArcColVal / outArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          if (!success) break;
+        }
 
         lpAggregator.addRow(row, weight);
       }

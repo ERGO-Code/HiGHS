@@ -73,12 +73,13 @@ class HEkk {
 
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;
+  HighsInt dual_simplex_cleanup_level_ = 0;
 
   bool solve_bailout_;
   bool called_return_from_solve_;
-  SimplexAlgorithm exit_algorithm;
-  HighsInt return_primal_solution_status;
-  HighsInt return_dual_solution_status;
+  SimplexAlgorithm exit_algorithm_;
+  HighsInt return_primal_solution_status_;
+  HighsInt return_dual_solution_status_;
 
   HighsLp lp_;
   std::string lp_name_;

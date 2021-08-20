@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cmath>
 #include <utility>
+#include "pdqsort/pdqsort.h"
 
 namespace ipx {
 
@@ -85,11 +86,11 @@ std::vector<Int> Sortperm(Int m, const double* values, bool reverse) {
     if (!values) return perm;
 
     if (reverse)
-        std::sort(perm.begin(), perm.end(), [&](Int i, Int j) {
+        pdqsort(perm.begin(), perm.end(), [&](Int i, Int j) {
             return std::make_pair(values[i], i) > std::make_pair(values[j], j);
         });
     else
-        std::sort(perm.begin(), perm.end(), [&](Int i, Int j) {
+        pdqsort(perm.begin(), perm.end(), [&](Int i, Int j) {
             return std::make_pair(values[i], i) < std::make_pair(values[j], j);
         });
 

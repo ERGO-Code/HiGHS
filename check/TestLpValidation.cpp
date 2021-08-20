@@ -201,9 +201,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   double check_value;
   REQUIRE(highs.getCoeff(-1, 0, check_value) == HighsStatus::kError);
   REQUIRE(highs.getCoeff(0, -1, check_value) == HighsStatus::kError);
-  REQUIRE(highs.getCoeff(internal_lp.numRow_, 0, check_value) ==
+  REQUIRE(highs.getCoeff(internal_lp.num_row_, 0, check_value) ==
           HighsStatus::kError);
-  REQUIRE(highs.getCoeff(0, internal_lp.numCol_, check_value) ==
+  REQUIRE(highs.getCoeff(0, internal_lp.num_col_, check_value) ==
           HighsStatus::kError);
 
   const HighsInt check_col = 4;
@@ -234,9 +234,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   REQUIRE(highs.changeCoeff(-1, 0, check_value) == HighsStatus::kError);
   REQUIRE(highs.changeCoeff(0, -1, check_value) == HighsStatus::kError);
-  REQUIRE(highs.changeCoeff(internal_lp.numRow_, 0, check_value) ==
+  REQUIRE(highs.changeCoeff(internal_lp.num_row_, 0, check_value) ==
           HighsStatus::kError);
-  REQUIRE(highs.changeCoeff(0, internal_lp.numCol_, check_value) ==
+  REQUIRE(highs.changeCoeff(0, internal_lp.num_col_, check_value) ==
           HighsStatus::kError);
 
   const double to_value = 99;

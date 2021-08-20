@@ -162,7 +162,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kUpper};
 
     } else {
       bool accept;
@@ -187,7 +187,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kLower};
     }
   }
 
@@ -240,7 +240,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kUpper};
     } else {
       bool accept;
 
@@ -263,7 +263,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
           accept = false;
       }
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kLower};
     }
   }
 
