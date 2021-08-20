@@ -298,6 +298,7 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   assert(this->a_matrix_valid);
+  if (refactor_info_.valid) return rebuild(factor_timer_clock_pointer);
   FactorTimer factor_timer;
   factor_timer.start(FactorInvert, factor_timer_clock_pointer);
   build_synthetic_tick = 0;
@@ -355,6 +356,10 @@ void HFactor::btranCall(HVector& vector, const double expected_density,
 }
 
 void HFactor::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
+  // Updating implies a change of basis. Since the refactorizaion info
+  // no longer corresponds to the current basis, it must be
+  // invalidated
+  this->refactor_info_.clear();
   // Special case
   if (aq->next) {
     updateCFT(aq, ep, iRow);
@@ -2047,18 +2052,23 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
 }
 
 void HFactor::addCols(const HighsInt num_new_col) {
-  this->a_matrix_valid = false;
+  invalidAMatrixAction();
   numCol += num_new_col;
 }
 
 void HFactor::deleteNonbasicCols(const HighsInt num_deleted_col) {
-  this->a_matrix_valid = false;
+  invalidAMatrixAction();
   numCol -= num_deleted_col;
+}
+
+void HFactor::invalidAMatrixAction() {
+  this->a_matrix_valid = false;
+  refactor_info_.clear();
 }
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   return;
-  this->a_matrix_valid = false;
+  invalidAMatrixAction();
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
   printf("Adding %" HIGHSINT_FORMAT " new rows to HFactor instance: increasing dimension from %"

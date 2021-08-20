@@ -154,6 +154,7 @@ set(sources
     simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
+    simplex/HFactorRefactor.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
@@ -245,6 +246,7 @@ set(headers
     simplex/HFactor.h
     simplex/HFactorConst.h
     simplex/HFactorDebug.h
+    simplex/HFactorStruct.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
@@ -573,6 +575,7 @@ target_sources(libhighs PRIVATE
     simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
+    simplex/HFactorRefactor.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
@@ -678,6 +681,7 @@ set(headers_fast_build_
     simplex/HFactor.h
     simplex/HFactorConst.h
     simplex/HFactorDebug.h
+    simplex/HFactorStruct.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
