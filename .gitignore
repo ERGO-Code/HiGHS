@@ -260,3 +260,8 @@ releaseDocs
 #HiGHS options files
 *.set
 
+#ctest files
+InvalidBasis.bas
+adlittle.bas
+adlittle.lp
+qjh.mps
