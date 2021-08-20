@@ -56,7 +56,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   assert(refactor_info_.valid);
   // Set all values of permute to -1 so that unpermuted (rank
   // deficient) columns canm be identified
-  permute.assign(numRow, -1);
+  //  permute.assign(numRow, -1);
   nwork = 0;
   basis_matrix_num_el = 0;
   HighsInt stage = -1;
@@ -78,21 +78,25 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       assert(count == 1 && Avalue[start] == 1);
       basis_matrix_num_el++;
     } else if (pivot_type == kPivotRowSingleton) {
+      assert(1==0);
     } else if (pivot_type == kPivotColSingleton) {
+      assert(1==0);
     } else {
       assert(pivot_type == kPivotMarkowitz);
+      assert(1==0);
       stage = iK;
       break;
     }
-    if (iRow >= 0) {
+    if (pivot_type == kPivotLogical || pivot_type == kPivotUnit) {
       // 1.3 Record unit column
+      //      permute[iCol] = iRow;
       Lstart.push_back(Lindex.size());
       UpivotIndex.push_back(iRow);
       UpivotValue.push_back(1);
       Ustart.push_back(Uindex.size());
     }
   }
-  assert(1==0);
+  buildFinish();
   return 0;
 }
 

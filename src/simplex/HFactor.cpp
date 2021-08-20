@@ -656,40 +656,6 @@ HighsInt HFactor::buildKernel() {
     /**
      * 1. Search for the pivot
      */
-    /*
-    bool rp_r_k = false;
-    if (rp_r_k) {
-      printf("Row counts:");
-      bool f_k = true;
-      for (HighsInt k = 0; k < numRow; k++) {
-        if (rlinkFirst[k] >= 0) {
-          if (f_k) {
-            printf(" (%2" HIGHSINT_FORMAT ":", k);
-            f_k = false;
-          } else {
-            printf("; (%2" HIGHSINT_FORMAT ":", k);
-          }
-          for (HighsInt i = rlinkFirst[k]; i != -1; i = rlinkNext[i]) {
-            printf(" %2" HIGHSINT_FORMAT "", i);
-          }
-          printf(")");
-        }
-      }
-      printf("\n");
-    }
-    bool rp_permute = false;
-    if (rp_permute) {
-      printf("Permute:\n");
-      for (HighsInt i = 0; i < numRow; i++) {
-        printf(" %2" HIGHSINT_FORMAT "", i);
-      }
-      printf("\n");
-      for (HighsInt i = 0; i < numRow; i++) {
-        printf(" %2" HIGHSINT_FORMAT "", permute[i]);
-      }
-      printf("\n");
-    }
-    */
     HighsInt jColPivot = -1;
     HighsInt iRowPivot = -1;
     //    int8_t pivot_type = kPivotIllegal;
@@ -1106,10 +1072,14 @@ void HFactor::buildFinish() {
   PFindex.clear();
   PFvalue.clear();
 
-  // Finally, permute the base index
-  iwork.assign(baseIndex, baseIndex + numRow);
-  for (HighsInt i = 0; i < numRow; i++) baseIndex[permute[i]] = iwork[i];
-
+  if (this->refactor_info_.valid) {
+    // Using refactorization info, so construct baseIndex
+    for (HighsInt i = 0; i < numRow; i++) baseIndex[i] = this->refactor_info_.pivot_var[i];
+  } else {
+    // Finally, permute the base index
+    iwork.assign(baseIndex, baseIndex + numRow);
+    for (HighsInt i = 0; i < numRow; i++) baseIndex[permute[i]] = iwork[i];
+  }
   build_synthetic_tick += numRow * 80 + (LcountX + UcountX) * 60;
 }
 
