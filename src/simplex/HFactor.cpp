@@ -466,7 +466,6 @@ void HFactor::buildSimple() {
 
     if (iRow >= 0) {
       // 1.3 Record unit column
-      // Uindex.size());
       permute[iCol] = iRow;
       Lstart.push_back(Lindex.size());
       UpivotIndex.push_back(iRow);

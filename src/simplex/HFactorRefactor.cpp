@@ -54,6 +54,41 @@ void RefactorInfo::clear() {
 
 HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   assert(refactor_info_.valid);
+  // Set all values of permute to -1 so that unpermuted (rank
+  // deficient) columns canm be identified
+  permute.assign(numRow, -1);
+  nwork = 0;
+  basis_matrix_num_el = 0;
+  for (HighsInt iK = 0; iK < numRow; iK++) {
+    HighsInt iRow = -1;
+    HighsInt iCol = this->refactor_info_.pivot_col_sequence[iK];
+    HighsInt iVar = baseIndex[iCol];
+    if (iVar >= numCol) {
+      // 1.1 Logical column
+      iRow = iVar - numCol;
+      assert(iRow == this->refactor_info_.pivot_row_sequence[iK]);
+      basis_matrix_num_el++;
+    } else {
+      // 1.2 Structural column
+      assert(1==0);
+      HighsInt start = Astart[iVar];
+      HighsInt count = Astart[iVar + 1] - start;
+      HighsInt lc_iRow = Aindex[start];
+      bool unit_col = count == 1 && Avalue[start] == 1;
+      if (unit_col) {
+        iRow = lc_iRow;
+	basis_matrix_num_el++;
+      }
+    }
+    if (iRow >= 0) {
+      // 1.3 Record unit column
+      permute[iCol] = iRow;
+      Lstart.push_back(Lindex.size());
+      UpivotIndex.push_back(iRow);
+      UpivotValue.push_back(1);
+      Ustart.push_back(Uindex.size());
+    }
+  }
   assert(1==0);
   return 0;
 }
