@@ -77,7 +77,7 @@ include_directories(ipm/basiclu/src)
 include_directories(ipm/basiclu/include)
 
 set(sources
-    ../external/filereaderlp/reader.cpp
+    ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -125,6 +125,9 @@ set(sources
     mip/HighsRedcostFixing.cpp
     mip/HighsNodeQueue.cpp
     presolve/ICrash.cpp
+    model/HighsHessian.cpp
+    model/HighsHessianUtils.cpp
+    model/HighsModel.cpp
     presolve/ICrashX.cpp
     presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
@@ -140,6 +143,9 @@ set(sources
     presolve/PresolveComponent.cpp
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
+    qpsolver/basis.cpp
+    qpsolver/solver.cpp
+    qpsolver/ratiotest/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -170,9 +176,9 @@ set(sources
     interfaces/highs_c_api.cpp)
 
 set(headers
-    ../external/filereaderlp/builder.hpp
-    ../external/filereaderlp/model.hpp
-    ../external/filereaderlp/reader.hpp
+    ../extern/filereaderlp/builder.hpp
+    ../extern/filereaderlp/model.hpp
+    ../extern/filereaderlp/reader.hpp
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -224,6 +230,11 @@ set(headers
     mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    model/HighsHessian.h
+    model/HighsHessianUtils.h
+    model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -334,9 +345,9 @@ endif()
 include(CheckLanguage)
 check_language("Fortran")
 if(FORTRAN_FOUND)
-    set(fortransources interfaces/highs_lp_solver.f90)
+    set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
-    add_library(FortranHighs interfaces/highs_lp_solver.f90)
+    add_library(FortranHighs interfaces/highs_fortran_api.f90)
     target_link_libraries(FortranHighs PUBLIC libhighs)
     install(TARGETS FortranHighs
         LIBRARY DESTINATION lib
@@ -487,7 +498,7 @@ if (NOT ${BUILD_SHARED_LIBS})
 endif()
 
 target_sources(libhighs PRIVATE 
-    ../external/filereaderlp/reader.cpp
+    ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -542,6 +553,9 @@ target_sources(libhighs PRIVATE
     mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
+    model/HighsHessian.cpp
+    model/HighsHessianUtils.cpp
+    model/HighsModel.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -552,6 +566,9 @@ target_sources(libhighs PRIVATE
     presolve/PresolveComponent.cpp
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
+    qpsolver/basis.cpp
+    qpsolver/solver.cpp
+    qpsolver/ratiotest/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -581,8 +598,8 @@ target_sources(libhighs PRIVATE
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
-target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
-                           presolve/ util/ test/ interfaces/ ../external/)
+target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
+                           presolve/ util/ test/ interfaces/ ../extern/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
 # on UNIX system the 'lib' prefix is automatically added
@@ -596,9 +613,9 @@ if (UNIX)
 endif()
 
 set(headers_fast_build_
-    ../external/filereaderlp/builder.hpp
-    ../external/filereaderlp/model.hpp
-    ../external/filereaderlp/reader.hpp
+    ../extern/filereaderlp/builder.hpp
+    ../extern/filereaderlp/model.hpp
+    ../extern/filereaderlp/reader.hpp
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -650,6 +667,8 @@ set(headers_fast_build_
     mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    model/HighsHessian.h
+    model/HighsHessianUtils.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -726,12 +745,11 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
+target_include_directories(libhighs PUBLIC ipm/ipx/src
+    ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
 if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
-
-    target_include_directories(libhighs PUBLIC ipm/ipx/src
-        ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
     if (UNIX)
         target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")

@@ -13,6 +13,8 @@
  */
 #include "ipm/IpxWrapper.h"
 
+#include <cassert>
+
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 

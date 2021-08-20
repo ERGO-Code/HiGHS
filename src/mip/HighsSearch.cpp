@@ -313,6 +313,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     return best;
   };
 
+  bool resetBasis = false;
   lp->storeBasis();
   auto basis = lp->getStoredBasis();
 
@@ -324,9 +325,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
-      lp->setStoredBasis(std::move(basis));
-      lp->recoverBasis();
-      lp->run();
+      if (resetBasis) {
+        lp->setStoredBasis(std::move(basis));
+        lp->recoverBasis();
+        lp->run();
+      }
       return candidate;
     }
 
@@ -357,6 +360,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
       lp->flushDomain(localdom);
 
+      resetBasis = true;
       int64_t numiters = lp->getNumLpIterations();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
@@ -475,6 +479,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       pseudocost.addInferenceObservation(col, inferences, true);
       lp->flushDomain(localdom);
 
+      resetBasis = true;
       int64_t numiters = lp->getNumLpIterations();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
@@ -662,9 +667,9 @@ void HighsSearch::resetLocalDomain() {
 
 #ifndef NDEBUG
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    assert(lp->getLpSolver().getModel().colLower_[i] == localdom.colLower_[i] ||
+    assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
            mipsolver.variableType(i) == HighsVarType::kContinuous);
-    assert(lp->getLpSolver().getModel().colUpper_[i] == localdom.colUpper_[i] ||
+    assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
            mipsolver.variableType(i) == HighsVarType::kContinuous);
   }
 #endif
@@ -710,11 +715,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      assert(lp->getLpSolver().getModel().colLower_[i] ==
-                 localdom.colLower_[i] ||
+      assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
              mipsolver.variableType(i) == HighsVarType::kContinuous);
-      assert(lp->getLpSolver().getModel().colUpper_[i] ==
-                 localdom.colUpper_[i] ||
+      assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
              mipsolver.variableType(i) == HighsVarType::kContinuous);
     }
 #endif
@@ -974,6 +977,11 @@ HighsSearch::NodeResult HighsSearch::branch() {
       if (localdom.colUpper_[i] - localdom.colLower_[i] < 0.5) continue;
 
       double fracval;
+      if (localdom.colLower_[i] != -kHighsInf &&
+          localdom.colUpper_[i] != kHighsInf)
+        fracval = std::floor(0.5 * (localdom.colLower_[i] +
+                                    localdom.colUpper_[i] + 0.5)) +
+                  0.5;
       if (localdom.colLower_[i] != -kHighsInf)
         fracval = localdom.colLower_[i] + 0.5;
       else if (localdom.colUpper_[i] != kHighsInf)
@@ -983,13 +991,22 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
       double score = pseudocost.getScore(i, fracval);
       assert(score >= 0.0);
+
       if (score > bestscore) {
         bestscore = score;
-        double upval = std::ceil(fracval);
-        currnode.branching_point = upval;
-        currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-        currnode.branchingdecision.column = i;
-        currnode.branchingdecision.boundval = upval;
+        if (mipsolver.colCost(i) >= 0) {
+          double upval = std::ceil(fracval);
+          currnode.branching_point = upval;
+          currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+          currnode.branchingdecision.column = i;
+          currnode.branchingdecision.boundval = upval;
+        } else {
+          double downval = std::floor(fracval);
+          currnode.branching_point = downval;
+          currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+          currnode.branchingdecision.column = i;
+          currnode.branchingdecision.boundval = downval;
+        }
       }
     }
   }

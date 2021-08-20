@@ -16,6 +16,8 @@
 #ifndef UTIL_HIGHSRANDOM_H_
 #define UTIL_HIGHSRANDOM_H_
 
+#include <cassert>
+
 #include "util/HighsHash.h"
 
 /**

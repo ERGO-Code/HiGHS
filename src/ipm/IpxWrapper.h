@@ -17,15 +17,16 @@
 #define IPM_IPX_WRAPPER_H_
 
 #include <algorithm>
+#include <cassert>
 
 #include "ipm/IpxSolution.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
-#include "lp_data/HighsModelObject.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsSolution.h"
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& obj, std::vector<double>& col_lb,

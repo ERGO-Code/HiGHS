@@ -23,6 +23,7 @@
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "presolve/ICrash.h"
+#include "model/HighsModel.h"
 #include "presolve/PresolveComponent.h"
 
 /**
@@ -31,23 +32,61 @@
 class Highs {
  public:
   Highs();
-  virtual ~Highs() {}
+  virtual ~Highs() {
+    FILE* log_file_stream = options_.log_options.log_file_stream;
+    if (log_file_stream != NULL) {
+      assert(log_file_stream != stdout);
+      fclose(log_file_stream);
+    }
+  }
+
+  /**
+   * @brief Resets options and then calls clearModel()
+   */
+  HighsStatus clear();
+
+  /**
+   * @brief Clears model and then calls clearSolver()
+   */
+  HighsStatus clearModel();
+
+  /**
+   * @brief Clears solver, and creates a HiGHS model object for the LP
+   * in HiGHS
+   */
+  HighsStatus clearSolver();
 
   /**
    * Methods for model input
    */
 
   /**
-   * @brief Every model loading module eventually uses passModel to
-   * communicate the model to HiGHS. It clears the vector of
-   * HighsModelObjects (hmos), creates a HighsModelObject for this LP
-   * and makes it the first of the vector of HighsModelObjects
+   * @brief Every model loading module eventually uses
+   * passModel(HighsModel model) to communicate the model to HiGHS. It clears
+   * the vector of HighsModelObjects (hmos), creates a HighsModelObject for the
+   * LP and makes it the first of the vector of HighsModelObjects
    */
+  HighsStatus passModel(
+      HighsModel model  //!< The HighsModel instance for this model
+  );
+
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const bool rowwise,
+                        const HighsInt hessian_num_nz, const HighsInt sense,
+                        const double offset, const double* costs,
+                        const double* col_lower, const double* col_upper,
+                        const double* row_lower, const double* row_upper,
+                        const HighsInt* astart, const HighsInt* aindex,
+                        const double* avalue, const HighsInt* q_start,
+                        const HighsInt* q_index, const double* q_value,
+                        const HighsInt* integrality = NULL);
+
+  HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
+                        const HighsInt num_nz, const bool rowwise,
+                        const HighsInt sense, const double offset,
                         const double* costs, const double* col_lower,
                         const double* col_upper, const double* row_lower,
                         const double* row_upper, const HighsInt* astart,
@@ -67,14 +106,19 @@ class Highs {
   );
 
   /**
-   * @brief Clears the current model
+   * @brief Presolve the model
    */
-  HighsStatus clearModel();
+  HighsStatus presolve();
 
   /**
    * @brief Solves the model according to the specified options
    */
   HighsStatus run();
+
+  /**
+   * @brief Postsolve the model
+   */
+  HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis);
 
   /**
    * @brief writes the current solution to a file
@@ -126,7 +170,7 @@ class Highs {
   HighsStatus passOptions(const HighsOptions& options  //!< The options
   );
 
-  const HighsOptions& getOptions();
+  const HighsOptions& getOptions() const { return options_; }
 
   /**
    * @brief Gets an option value as bool/int/double/string and, for
@@ -155,8 +199,6 @@ class Highs {
                             HighsOptionType& type       //!< The option type
   );
 
-  const HighsOptions& getOptions() const;
-
   HighsStatus resetOptions();
 
   HighsStatus writeOptions(const std::string filename,  //!< The filename
@@ -167,7 +209,7 @@ class Highs {
    * type.
    */
 
-  const HighsInfo& getInfo() const;
+  const HighsInfo& getInfo() const { return info_; }
 
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            HighsInt& value           //!< The info value
@@ -183,14 +225,24 @@ class Highs {
    */
 
   /**
-   * @brief Returns the HighsLp instance in the HiGHS model
+   * @brief Returns the presolved HighsModel instance in HiGHS
    */
-  const HighsLp& getLp() const { return lp_; }
+  const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
 
   /**
-   * @brief Returns the HighsLp instance of the model in HiGHS
+   * @brief Returns the presolved HighsModel instance in HiGHS
    */
-  const HighsLp& getModel() const { return lp_; }
+  const HighsModel& getPresolvedModel() const { return presolved_model_; }
+
+  /**
+   * @brief Returns the HighsLp instance in the HiGHS model
+   */
+  const HighsLp& getLp() const { return model_.lp_; }
+
+  /**
+   * @brief Returns the model in HiGHS
+   */
+  const HighsModel& getModel() const { return model_; }
 
   /**
    * @brief Returns the HighsSolution
@@ -207,7 +259,10 @@ class Highs {
   /**
    * @brief Returns the current model status
    */
-  const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
+  const HighsModelStatus& getModelStatus(
+      const bool scaled_model = false) const {
+    return scaled_model ? scaled_model_status_ : model_status_;
+  }
 
   /**
    * @brief Indicates whether a dual unbounded ray exdists, and gets
@@ -311,55 +366,68 @@ class Highs {
   );
 
   /**
-   * @brief Get the number of columns in the LP of the (first?)
-   * HighsModelObject
+   * @brief Get the number of columns in the incumbent model
    */
-  HighsInt getNumCols() const { return lp_.numCol_; }
+  HighsInt getNumCol() const { return model_.lp_.numCol_; }
 
   /**
-   * @brief Get the number of rows in the LP of the (first?)
-   * HighsModelObject
+   * @brief Get the number of rows in the incumbent model
    */
-  HighsInt getNumRows() const { return lp_.numRow_; }
+  HighsInt getNumRow() const { return model_.lp_.numRow_; }
 
   /**
-   * @brief Get the number of entries in the LP of the (first?)
-   * HighsModelObject
+   * @brief Get the number of (constraint matrix) nonzeros in the incumbent
+   * model
    */
-  HighsInt getNumEntries() {
-    if (lp_.numCol_) return lp_.Astart_[lp_.numCol_];
+  HighsInt getNumNz() const {
+    if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
+    return 0;
+  }
+
+  /**
+   * @brief Get the number of Hessian matrix nonzeros in the incumbent model
+   */
+  HighsInt getHessianNumNz() {
+    if (model_.hessian_.dim_)
+      return model_.hessian_.q_start_[model_.hessian_.dim_];
     return 0;
   }
 
   /**
    * @brief Get the objective sense of the model
    */
-  bool getObjectiveSense(ObjSense& sense);
+  HighsStatus getObjectiveSense(ObjSense& sense);
+
+  /**
+   * @brief Get the objective offset of the model
+   */
+  HighsStatus getObjectiveOffset(double& offset);
 
   /**
    * @brief Get multiple columns from the model given by an interval
    */
-  bool getCols(const HighsInt from_col,  //!< The index of the first column to
-                                         //!< get from the model
-               const HighsInt to_col,  //!< One more than the last column to get
-                                       //!< from the model
-               HighsInt& num_col,      //!< Number of columns got from the model
-               double* costs,          //!< Array of size num_col with costs
-               double* lower,     //!< Array of size num_col with lower bounds
-               double* upper,     //!< Array of size num_col with upper bounds
-               HighsInt& num_nz,  //!< Number of nonzeros got from the model
-               HighsInt* matrix_start,  //!< Array of size num_col with start
-                                        //!< indices of the columns
-               HighsInt* matrix_index,  //!< Array of size num_nz with row
-                                        //!< indices for the columns
-               double* matrix_value  //!< Array of size num_nz with row values
-                                     //!< for the columns
+  HighsStatus getCols(
+      const HighsInt from_col,  //!< The index of the first column to
+                                //!< get from the model
+      const HighsInt to_col,    //!< One more than the last column to get
+                                //!< from the model
+      HighsInt& num_col,        //!< Number of columns got from the model
+      double* costs,            //!< Array of size num_col with costs
+      double* lower,            //!< Array of size num_col with lower bounds
+      double* upper,            //!< Array of size num_col with upper bounds
+      HighsInt& num_nz,         //!< Number of nonzeros got from the model
+      HighsInt* matrix_start,   //!< Array of size num_col with start
+                                //!< indices of the columns
+      HighsInt* matrix_index,   //!< Array of size num_nz with row
+                                //!< indices for the columns
+      double* matrix_value      //!< Array of size num_nz with row values
+                                //!< for the columns
   );
 
   /**
    * @brief Get multiple columns from the model given by a set
    */
-  bool getCols(
+  HighsStatus getCols(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set,     //!< Array of size num_set_entries with indices
                                //!< of columns to get
@@ -379,7 +447,7 @@ class Highs {
   /**
    * @brief Get multiple columns from the model given by a mask
    */
-  bool getCols(
+  HighsStatus getCols(
       const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
       HighsInt& num_col,       //!< Number of columns got from the model
       double* costs,           //!< Array of size num_col with costs
@@ -397,7 +465,7 @@ class Highs {
   /**
    * @brief Get multiple rows from the model given by an interval
    */
-  bool getRows(
+  HighsStatus getRows(
       const HighsInt
           from_row,  //!< The index of the first row to get from the model
       const HighsInt to_row,  //!< One more than the last row get from the model
@@ -416,7 +484,7 @@ class Highs {
   /**
    * @brief Get multiple rows from the model given by a set
    */
-  bool getRows(
+  HighsStatus getRows(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set,     //!< Array of size num_set_entries with indices
                                //!< of rows to get
@@ -435,7 +503,7 @@ class Highs {
   /**
    * @brief Get multiple rows from the model given by a mask
    */
-  bool getRows(
+  HighsStatus getRows(
       const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
       HighsInt& num_row,       //!< Number of rows got from the model
       double* lower,           //!< Array of size num_row with lower bounds
@@ -452,9 +520,9 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  bool getCoeff(const HighsInt row,  //!< Row of coefficient to be got
-                const HighsInt col,  //!< Column of coefficient to be got
-                double& value        //!< Coefficient
+  HighsStatus getCoeff(const HighsInt row,  //!< Row of coefficient to be got
+                       const HighsInt col,  //!< Column of coefficient to be got
+                       double& value        //!< Coefficient
   );
 
   /**
@@ -476,13 +544,21 @@ class Highs {
   /**
    * @brief Change the objective sense of the model
    */
-  bool changeObjectiveSense(const ObjSense sense  //!< New objective sense
+  HighsStatus changeObjectiveSense(
+      const ObjSense sense  //!< New objective sense
+  );
+
+  /**
+   * @brief Change the objective offset of the model
+   */
+  HighsStatus changeObjectiveOffset(
+      const double offset  //!< New objective offset
   );
 
   /**
    * @brief Change the integrality of a column
    */
-  bool changeColIntegrality(
+  HighsStatus changeColIntegrality(
       const HighsInt
           col,  //!< The index of the column whose integrality is to change
       const HighsVarType integrality  //!< The new integrality
@@ -491,7 +567,7 @@ class Highs {
   /**
    * @brief Change the integrality of multiple columns given by an interval
    */
-  bool changeColsIntegrality(
+  HighsStatus changeColsIntegrality(
       const HighsInt from_col,  //!< The index of the first column whose
                                 //!< integrality changes
       const HighsInt to_col,    //!< One more than the index of the last column
@@ -503,7 +579,7 @@ class Highs {
   /**
    * @brief Change the integrality of multiple columns given by a set of indices
    */
-  bool changeColsIntegrality(
+  HighsStatus changeColsIntegrality(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns whose integralitys change
@@ -514,7 +590,7 @@ class Highs {
   /**
    * @brief Change the integrality of multiple columns given by a mask
    */
-  bool changeColsIntegrality(
+  HighsStatus changeColsIntegrality(
       const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
       const HighsVarType* integrality  //!< Full length array of new integrality
   );
@@ -522,7 +598,7 @@ class Highs {
   /**
    * @brief Change the cost of a column
    */
-  bool changeColCost(
+  HighsStatus changeColCost(
       const HighsInt col,  //!< The index of the column whose cost is to change
       const double cost    //!< The new cost
   );
@@ -530,7 +606,7 @@ class Highs {
   /**
    * @brief Change the cost of multiple columns given by an interval
    */
-  bool changeColsCost(
+  HighsStatus changeColsCost(
       const HighsInt
           from_col,  //!< The index of the first column whose cost changes
       const HighsInt to_col,  //!< One more than the index of the last column
@@ -541,7 +617,7 @@ class Highs {
   /**
    * @brief Change the cost of multiple columns given by a set of indices
    */
-  bool changeColsCost(
+  HighsStatus changeColsCost(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns whose costs change
@@ -551,7 +627,7 @@ class Highs {
   /**
    * @brief Change the cost of multiple columns given by a mask
    */
-  bool changeColsCost(
+  HighsStatus changeColsCost(
       const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
       const double* cost     //!< Full length array of new costs
   );
@@ -559,16 +635,17 @@ class Highs {
   /**
    * @brief Change the bounds of a column
    */
-  bool changeColBounds(const HighsInt col,  //!< The index of the column whose
-                                            //!< bounds are to change
-                       const double lower,  //!< The new lower bound
-                       const double upper   //!< The new upper bound
+  HighsStatus changeColBounds(
+      const HighsInt col,  //!< The index of the column whose
+                           //!< bounds are to change
+      const double lower,  //!< The new lower bound
+      const double upper   //!< The new upper bound
   );
 
   /**
    * @brief Change the bounds of multiple columns given by an interval
    */
-  bool changeColsBounds(
+  HighsStatus changeColsBounds(
       const HighsInt
           from_col,  //!< The index of the first column whose bounds change
       const HighsInt to_col,  //!< One more than the index of the last column
@@ -582,7 +659,7 @@ class Highs {
   /**
    * @brief Change the bounds of multiple columns given by a set of indices
    */
-  bool changeColsBounds(
+  HighsStatus changeColsBounds(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns whose bounds change
@@ -595,7 +672,7 @@ class Highs {
   /**
    * @brief Change the cost of multiple columns given by a mask
    */
-  bool changeColsBounds(
+  HighsStatus changeColsBounds(
       const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
       const double* lower,   //!< Full length array of new lower bounds
       const double* upper    //!< Full length array of new upper bounds
@@ -604,7 +681,7 @@ class Highs {
   /**
    * @brief Change the bounds of a row
    */
-  bool changeRowBounds(
+  HighsStatus changeRowBounds(
       const HighsInt row,  //!< The index of the row whose bounds are to change
       const double lower,  //!< The new lower bound
       const double upper   //!< The new upper bound
@@ -613,13 +690,13 @@ class Highs {
   /**
    * @brief Change the bounds of multiple rows given by an interval
    */
-  bool changeRowsBounds(const HighsInt from_row, const HighsInt to_row,
-                        const double* lower, const double* upper);
+  HighsStatus changeRowsBounds(const HighsInt from_row, const HighsInt to_row,
+                               const double* lower, const double* upper);
 
   /**
    * @brief Change the bounds of multiple rows given by a set of indices
    */
-  bool changeRowsBounds(
+  HighsStatus changeRowsBounds(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< rows whose bounds change
@@ -632,7 +709,7 @@ class Highs {
   /**
    * @brief Change the cost of multiple rows given by a mask
    */
-  bool changeRowsBounds(
+  HighsStatus changeRowsBounds(
       const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
       const double* lower,   //!< Full length array of new lower bounds
       const double* upper    //!< Full length array of new upper bounds
@@ -641,14 +718,15 @@ class Highs {
   /**
    * @brief Change a matrix coefficient
    */
-  bool changeCoeff(const HighsInt row,  //!< Row of coefficient to be changed
-                   const HighsInt col,  //!< Column of coefficient to be changed
-                   const double value   //!< Coefficient
+  HighsStatus changeCoeff(
+      const HighsInt row,  //!< Row of coefficient to be changed
+      const HighsInt col,  //!< Column of coefficient to be changed
+      const double value   //!< Coefficient
   );
   /**
    * @brief Adds a row to the model
    */
-  bool addRow(
+  HighsStatus addRow(
       const double lower,         //!< Lower bound of the row
       const double upper,         //!< Upper bound of the row
       const HighsInt num_new_nz,  //!< Number of nonzeros in the row
@@ -660,7 +738,7 @@ class Highs {
   /**
    * @brief Adds multiple rows to the model
    */
-  bool addRows(
+  HighsStatus addRows(
       const HighsInt num_new_row,  //!< Number of new rows
       const double* lower,  //!< Array of size num_new_row with lower bounds
       const double* upper,  //!< Array of size num_new_row with upper bounds
@@ -676,7 +754,7 @@ class Highs {
   /**
    * @brief Adds a column to the model
    */
-  bool addCol(
+  HighsStatus addCol(
       const double cost,          //!< Cost of the column
       const double lower,         //!< Lower bound of the column
       const double upper,         //!< Upper bound of the column
@@ -688,7 +766,7 @@ class Highs {
   /**
    * @brief Adds multiple columns to the model
    */
-  bool addCols(
+  HighsStatus addCols(
       const HighsInt num_new_col,  //!< Number of new columns
       const double* costs,         //!< Array of size num_new_col with costs
       const double* lower,  //!< Array of size num_new_col with lower bounds
@@ -705,16 +783,17 @@ class Highs {
   /**
    * @brief Delete multiple columns from the model given by an interval
    */
-  bool deleteCols(const HighsInt from_col,  //!< The index of the first column
-                                            //!< to delete from the model
-                  const HighsInt to_col  //!< One more than the last column to
-                                         //!< delete from the model
+  HighsStatus deleteCols(
+      const HighsInt from_col,  //!< The index of the first column
+                                //!< to delete from the model
+      const HighsInt to_col     //!< One more than the last column to
+                                //!< delete from the model
   );
 
   /**
    * @brief Delete multiple columns from the model given by a set
    */
-  bool deleteCols(
+  HighsStatus deleteCols(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set  //!< Array of size num_set_entries with indices of
                            //!< columns to delete
@@ -723,7 +802,7 @@ class Highs {
   /**
    * @brief Delete multiple columns from the model given by a mask
    */
-  bool deleteCols(
+  HighsStatus deleteCols(
       HighsInt* mask  //!< Full length array with 1 => delete; !0 => not. The
                       //!< new index of any column
                       //! not deleted is returned in place of the value 0.
@@ -732,16 +811,17 @@ class Highs {
   /**
    * @brief Delete multiple rows from the model given by an interval
    */
-  bool deleteRows(const HighsInt from_row,  //!< The index of the first row to
-                                            //!< delete from the model
-                  const HighsInt to_row  //!< One more than the last row delete
-                                         //!< from the model
+  HighsStatus deleteRows(
+      const HighsInt from_row,  //!< The index of the first row to
+                                //!< delete from the model
+      const HighsInt to_row     //!< One more than the last row delete
+                                //!< from the model
   );
 
   /**
    * @brief Delete multiple rows from the model given by a set
    */
-  bool deleteRows(
+  HighsStatus deleteRows(
       const HighsInt num_set_entries,  //!< The number of indides in the set
       const HighsInt* set  //!< Array of size num_set_entries with indices of
                            //!< columns to delete
@@ -750,25 +830,26 @@ class Highs {
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
-  bool deleteRows(HighsInt* mask  //!< Full length array with 1 => delete; 0 =>
-                                  //!< not. The new index of any row not deleted
-                                  //!< is returned in place of the value 0.
+  HighsStatus deleteRows(
+      HighsInt* mask  //!< Full length array with 1 => delete; 0 =>
+                      //!< not. The new index of any row not deleted
+                      //!< is returned in place of the value 0.
   );
 
   /**
    * @brief Scale a matrix column (and cost) by a constant - flipping bounds if
    * the constant is negative
    */
-  bool scaleCol(const HighsInt col,    //!< Column to change
-                const double scaleval  //!< Scaling value
+  HighsStatus scaleCol(const HighsInt col,    //!< Column to change
+                       const double scaleval  //!< Scaling value
   );
 
   /**
    * @brief Scale a matrix row by a constant - flipping bounds if the constant
    * is negative
    */
-  bool scaleRow(const HighsInt row,    //!< Row to change
-                const double scaleval  //!< Scaling value
+  HighsStatus scaleRow(const HighsInt row,    //!< Row to change
+                       const double scaleval  //!< Scaling value
   );
 
   /**
@@ -806,17 +887,12 @@ class Highs {
   /**
    * @brief Gets the value of infinity used by HiGHS
    */
-  double getInfinity();
+  double getInfinity() { return kHighsInf; }
 
   /**
    * @brief Gets the run time of HiGHS
    */
-  double getRunTime();
-  /**
-   * @brief Clear data associated with solving the model: basis, solution and
-   * internal data etc
-   */
-  HighsStatus clearSolver();
+  double getRunTime() { return timer_.readRunHighsClock(); }
 
 #ifdef HiGHSDEV
   /**
@@ -829,15 +905,34 @@ class Highs {
 
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
-  std::string solutionStatusToString(const HighsInt solution_status);
+  std::string solutionStatusToString(const HighsInt solution_status) const;
 
-  void setMatrixOrientation(const MatrixOrientation& desired_orientation =
-                                MatrixOrientation::kColwise);
+  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
+
+  std::string basisValidityToString(const HighsInt basis_validity) const;
+
+  HighsStatus setMatrixOrientation(const MatrixOrientation desired_orientation =
+                                       MatrixOrientation::kColwise) {
+    return setOrientation(model_.lp_, desired_orientation);
+  }
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
   // Start of deprecated methods
+
+  HighsInt getNumCols() const {
+    deprecationMessage("getNumCols", "getNumCol");
+    return getNumCol();
+  }
+  HighsInt getNumRows() const {
+    deprecationMessage("getNumRows", "getNumRow");
+    return getNumRow();
+  }
+  HighsInt getNumEntries() {
+    deprecationMessage("getNumEntries", "getNumNz");
+    return getNumNz();
+  }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
@@ -920,6 +1015,7 @@ class Highs {
 
   // Runs ipx crossover and if successful loads basis into Highs::basis_
   HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
@@ -951,12 +1047,17 @@ class Highs {
   HighsLp lp_;
   ICrashInfo icrash_info_;
 
+  HighsModel model_;
+  HighsModel presolved_model_;
+  //  HighsModel presolve_;
   HighsTimer timer_;
 
   HighsOptions options_;
   HighsIterationCounts iteration_counts_;
   HighsInfo info_;
 
+  HighsPresolveStatus model_presolve_status_ =
+      HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
@@ -975,6 +1076,7 @@ class Highs {
   bool called_return_from_run = true;
 
   HighsStatus callSolveLp(const HighsInt model_index, const string message);
+  HighsStatus callSolveQp();
   HighsStatus callSolveMip();
 
   PresolveComponent presolve_;
@@ -996,18 +1098,44 @@ class Highs {
 
   bool haveHmo(const string method_name) const;
 
+  void reportModel();
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
+  //
+  // For cases where there is no solution data for the model, but its
+  // status is proved otherwise. Calls clearSolver(), then sets
+  // unscaled and scaled model status to model_status and copies in
+  // the iteration counts.
   void setHighsModelStatusAndInfo(const HighsModelStatus model_status);
+  //
+  // Sets unscaled and scaled model status, basis, solution and info
+  // from the highs_model_object
   void setHighsModelStatusBasisSolutionAndInfo();
-
-  HighsStatus reset();
-
+  //
+  // Clears the presolved model and its status
+  void clearPresolve();
+  //
+  // Methods to clear solver data for users in Highs class members
+  // before (possibly) updating them with data from trying to solve
+  // the inumcumbent model.
+  //
+  // Clears all solver data in Highs class members by calling
+  // clearModelStatus(), clearSolution(), clearBasis() and
+  // clearInfo().
+  void clearUserSolverData();
+  //
+  // Sets unscaled and scaled model status to HighsModelStatus::kNotset
   void clearModelStatus();
+  //
+  // Sets primal and dual solution status to
+  // kSolutionStatusNone, and clears solution_ vectors
   void clearSolution();
+  //
+  // Invalidates basis and clears basis_ vectors
   void clearBasis();
+  //
+  // Invalidates info_ and resets the values of its members
   void clearInfo();
-  void noSolution();
 
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
@@ -1048,6 +1176,7 @@ class Highs {
                                       double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
+  HighsStatus changeObjectiveOffsetInterface(const double Xoffset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
@@ -1076,8 +1205,6 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
-
-  friend class HighsMipSolver;
 };
 
 #endif
