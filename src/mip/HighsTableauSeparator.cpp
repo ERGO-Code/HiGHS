@@ -106,19 +106,19 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   }
 
   pdqsort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
-          [&fractionalBasisvars](const std::pair<double, HighsInt>& a,
-                                 const std::pair<double, HighsInt>& b) {
-            return std::make_tuple(
-                       a.first,
-                       HighsHashHelpers::hash((uint64_t(a.second) << 32) +
-                                              fractionalBasisvars.size()),
-                       a.second) >
-                   std::make_tuple(
-                       b.first,
-                       HighsHashHelpers::hash((uint64_t(b.second) << 32) +
-                                              fractionalBasisvars.size()),
-                       b.second);
+          [&](const std::pair<double, HighsInt>& a,
+              const std::pair<double, HighsInt>& b) {
+            return std::make_tuple(a.first,
+                                   HighsHashHelpers::hash(
+                                       std::make_pair(a.second, getNumCalls())),
+                                   a.second) >
+                   std::make_tuple(b.first,
+                                   HighsHashHelpers::hash(
+                                       std::make_pair(b.second, getNumCalls())),
+                                   b.second);
           });
+
+  fractionalBasisvars.resize(std::min(fractionalBasisvars.size(), size_t{200}));
   HighsInt numCuts = cutpool.getNumCuts();
   for (const auto& fracvar : fractionalBasisvars) {
     HighsInt i = fracvar.second;
@@ -163,16 +163,13 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+    if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
     rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+    if (mip.mipdata_->domain.infeasible()) break;
 
     lpAggregator.clear();
-
-    if (cutpool.getNumCuts() - numCuts >=
-            0.1 * mip.options_mip_->mip_pool_soft_limit ||
-        mip.mipdata_->domain.infeasible())
-      break;
   }
 }
