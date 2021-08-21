@@ -62,15 +62,13 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
    */
   LuClear();
 
-  // Set all values of permute to -1 so that unpermuted (rank
-  // deficient) columns canm be identified
-  //  permute.assign(numRow, -1);
   nwork = 0;
   basis_matrix_num_el = 0;
   HighsInt stage = numRow;
   vector<bool> has_pivot;
   has_pivot.assign(numRow, false);
-  printf("\nRefactor\n");
+  const bool report = true;
+  if (report)  printf("\nRefactor\n");
   for (HighsInt iK = 0; iK < numRow; iK++) {
     HighsInt iRow = this->refactor_info_.pivot_row[iK];
     HighsInt iVar = this->refactor_info_.pivot_var[iK];
@@ -79,19 +77,21 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     if (pivot_type == kPivotLogical) {
       //
       // 1.1 Logical column
-      printf("Stage %d: Logical\n", (int)iK);
+      //      printf("Stage %d: Logical\n", (int)iK);
       assert(iVar>=numCol);
+      baseIndex[iRow] = iVar;
       basis_matrix_num_el++;
     } else if (pivot_type == kPivotUnit) {
       //
       // 1.2 (Structural) unit column 
-      printf("Stage %d: Unit\n", (int)iK);
+      //      printf("Stage %d: Unit\n", (int)iK);
       assert(iVar<numCol);
       assert(1==0);
       HighsInt start = Astart[iVar];
       HighsInt count = Astart[iVar + 1] - start;
       assert(Aindex[start]==iRow);
       assert(count == 1 && Avalue[start] == 1);
+      baseIndex[iRow] = iVar;
       basis_matrix_num_el++;
     } else if (pivot_type == kPivotRowSingleton || pivot_type == kPivotColSingleton) {
       //
@@ -112,47 +112,49 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
 	//
 	// 2.2 Deal with row singleton
 	const double pivotX = 1 / Avalue[pivot_k];
-	printf("Stage %d: Row singleton (%4d, %g)\n", (int)iK, (int)pivot_k, pivotX);
+	if (report)	printf("Stage %d: Row singleton (%4d, %g)\n", (int)iK, (int)pivot_k, pivotX);
 	for (HighsInt section = 0; section < 2; section++) {
 	  HighsInt p0 = section == 0 ? start : pivot_k + 1;
 	  HighsInt p1 = section == 0 ? pivot_k : end;
 	  for (HighsInt k = p0; k < p1; k++) {
 	    HighsInt local_iRow = Aindex[k];
 	    if (!has_pivot[local_iRow]) {
-	      printf("Row singleton: L En (%4d, %11.4g)\n", (int)local_iRow, Avalue[k] * pivotX);
+	      if (report)	      printf("Row singleton: L En (%4d, %11.4g)\n", (int)local_iRow, Avalue[k] * pivotX);
 	      Lindex.push_back(local_iRow);
 	      Lvalue.push_back(Avalue[k] * pivotX);
 	    } else {
-	      printf("Row singleton: U En (%4d, %11.4g)\n", (int)local_iRow, Avalue[k]);
+	      if (report)	      printf("Row singleton: U En (%4d, %11.4g)\n", (int)local_iRow, Avalue[k]);
 	      Uindex.push_back(local_iRow);
 	      Uvalue.push_back(Avalue[k]);
 	    }
 	  }
 	}
 	Lstart.push_back(Lindex.size());
-	printf("Row singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Avalue[pivot_k]);
+	if (report)	printf("Row singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Avalue[pivot_k]);
 	UpivotIndex.push_back(iRow);
 	UpivotValue.push_back(Avalue[pivot_k]);
 	Ustart.push_back(Uindex.size());
+	baseIndex[iRow] = iVar;
       } else {
 	//
         // 2.3 Deal with column singleton
-	printf("Stage %d: Col singleton\n", (int)iK);
+	if (report)	printf("Stage %d: Col singleton\n", (int)iK);
         for (HighsInt k = start; k < pivot_k; k++) {
-	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Aindex[k], Avalue[k]);
+	  if (report)	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Aindex[k], Avalue[k]);
           Uindex.push_back(Aindex[k]);
           Uvalue.push_back(Avalue[k]);
         }
         for (HighsInt k = pivot_k + 1; k < end; k++) {
-	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Aindex[k], Avalue[k]);
+	  if (report)	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Aindex[k], Avalue[k]);
           Uindex.push_back(Aindex[k]);
           Uvalue.push_back(Avalue[k]);
         }
         Lstart.push_back(Lindex.size());
-	printf("Col singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Avalue[pivot_k]);
+	if (report)	printf("Col singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Avalue[pivot_k]);
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Avalue[pivot_k]);
         Ustart.push_back(Uindex.size());
+	baseIndex[iRow] = iVar;
       }
     } else {
       assert(pivot_type == kPivotMarkowitz);
@@ -162,7 +164,6 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     has_pivot[iRow] = true;
     if (pivot_type == kPivotLogical || pivot_type == kPivotUnit) {
       // 1.3 Record unit column
-      //      permute[iCol] = iRow;
       Lstart.push_back(Lindex.size());
       UpivotIndex.push_back(iRow);
       UpivotValue.push_back(1);
@@ -235,17 +236,18 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
 	  HighsInt local_iRow = column.index[k];
 	  if (!has_pivot[local_iRow]) {
 	    Lindex.push_back(local_iRow);
-	    Lvalue.push_back(column.array[k] * pivotX);
+	    Lvalue.push_back(column.array[local_iRow] * pivotX);
 	  } else {
 	    Uindex.push_back(local_iRow);
-	    Uvalue.push_back(column.array[k]);
+	    Uvalue.push_back(column.array[local_iRow]);
 	  }
 	}
       }
       Lstart[iK+1] = Lindex.size();
       UpivotIndex.push_back(iRow);
-      UpivotValue.push_back(column.array[pivot_k]);
+      UpivotValue.push_back(column.array[iRow]);
       Ustart.push_back(Uindex.size());
+      baseIndex[iRow] = iVar;
     }
   }
   buildFinish();

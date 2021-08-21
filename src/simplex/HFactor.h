@@ -347,6 +347,7 @@ class HFactor {
   void LuClear();
   // Rebuild using refactor information
   HighsInt rebuild(HighsTimerClock* factor_timer_clock_pointer);
+  void reportLu();
 
   // Action to take when pointers to the A matrix are no longer valid
   void invalidAMatrixAction();
