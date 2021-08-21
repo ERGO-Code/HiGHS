@@ -171,6 +171,22 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   }
   if (stage<numRow) {
     // Handle the remaining Markowitz pivots
+    //
+    // First of all complete the L factor with identity columns so
+    // that FtranL counts the RHS entries in rows that don't yet have
+    // picots by running to completion. In the hyper-sparse code,
+    // these will HOPEFULLY be skipped
+    //
+    // There are already Lstart entries for the first stage rows, but
+    // LpivotIndex is not assigned, as UpivotIndex gets copied into it
+    Lstart.resize(numRow);
+    for (HighsInt iK = stage; iK < numRow; iK++) 
+      Lstart[iK+1] = Lstart[iK];
+    LpivotIndex.resize(numRow);
+    for (HighsInt iK = 0; iK < numRow; iK++) 
+      LpivotIndex[iK] = this->refactor_info_.pivot_row[iK];
+    // Now that entries are not being pushed the L factor, have to
+    // track the number of nonzeros
     HVector column;
     column.setup(numRow);
     for (HighsInt iK = stage; iK < numRow; iK++) {
@@ -179,18 +195,57 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       int8_t pivot_type = this->refactor_info_.pivot_type[iK];
       assert(!has_pivot[iRow]);
       assert(pivot_type == kPivotMarkowitz);
+      // Set up the column for the FtranL. It contains the matrix
+      // entries in rows without pivots, and the remaining entries
+      // start forming the U column
       column.clear();
-      const HighsInt start = Astart[iVar];
-      const HighsInt end = Astart[iVar + 1];
+      HighsInt start = Astart[iVar];
+      HighsInt end = Astart[iVar + 1];
       for (HighsInt iEl = start; iEl < end; iEl++) {
 	HighsInt local_iRow = Aindex[iEl];
-	if (has_pivot[local_iRow]) continue;
-	column.index[column.count++] = local_iRow;
-	column.array[local_iRow] = Avalue[iEl];
+	if (!has_pivot[local_iRow]) {
+	  column.index[column.count++] = local_iRow;
+	  column.array[local_iRow] = Avalue[iEl];
+	} else {
+	  Uindex.push_back(local_iRow);
+	  Uvalue.push_back(Avalue[iEl]);
+	}
       }
-      const double expected_density = 1.0;
-      ftranL(column, expected_density, factor_timer_clock_pointer);
-      assert(1==0);
+      const double expected_density = 1.0; //ToDo make this hyper-sparse
+      // Perform FtranL, but don't time it!
+      ftranL(column, expected_density);
+      // Now form the column of L
+      //
+      // Find the pivot
+      HighsInt pivot_k = -1;
+      start = 0;
+      end = column.count;    
+      for (HighsInt k = start; k < end; k++) {
+	if (column.index[k] == iRow) {
+	  pivot_k = k;
+	  break;
+	}
+      }
+      assert(pivot_k>=0);
+      const double pivotX = 1 / column.array[iRow];
+      for (HighsInt section = 0; section < 2; section++) {
+	HighsInt p0 = section == 0 ? start : pivot_k + 1;
+	HighsInt p1 = section == 0 ? pivot_k : end;
+	for (HighsInt k = p0; k < p1; k++) {
+	  HighsInt local_iRow = column.index[k];
+	  if (!has_pivot[local_iRow]) {
+	    Lindex.push_back(local_iRow);
+	    Lvalue.push_back(column.array[k] * pivotX);
+	  } else {
+	    Uindex.push_back(local_iRow);
+	    Uvalue.push_back(column.array[k]);
+	  }
+	}
+      }
+      Lstart[iK+1] = Lindex.size();
+      UpivotIndex.push_back(iRow);
+      UpivotValue.push_back(column.array[pivot_k]);
+      Ustart.push_back(Uindex.size());
     }
   }
   buildFinish();
