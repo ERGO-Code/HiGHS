@@ -58,9 +58,31 @@ void RefactorInfo::clear() {
   this->pivot_type.clear();
 }
 
+bool RefactorInfo::isOk(const HighsInt num_col, const HighsInt num_row) const {
+  bool ok = true;
+  if (!this->valid) return ok;
+  if (this->pivot_var.size() != num_row) ok = false;
+  if (this->pivot_row.size() != num_row) ok = false;
+  if (this->pivot_type.size() != num_row) ok = false;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (0 > this->pivot_var[iRow] || this->pivot_var[iRow] >= num_col + num_row) ok = false;
+    if (0 > this->pivot_row[iRow] || this->pivot_row[iRow] >= num_row) ok = false;
+    int8_t pivot_type = this->pivot_type[iRow];
+    if (pivot_type != kPivotLogical &&
+	pivot_type != kPivotUnit &&
+	pivot_type != kPivotRowSingleton &&
+	pivot_type != kPivotColSingleton &&
+	pivot_type != kPivotMarkowitz) ok = false;
+  }
+  return ok;
+}
+
 HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   const bool report_lu=false;
+  // Check that the refactorzation information is not invalid, and
+  // consistent with the LP information known by HFactor
   assert(refactor_info_.valid);
+  assert(refactor_info_.isOk(numCol, numRow));
   /**
    * 0. Clear L and U factor
    */

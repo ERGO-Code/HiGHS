@@ -465,6 +465,8 @@ HighsStatus Highs::readBasis(const std::string filename) {
   basis_.valid = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
+  // Clear any refactorization data
+  basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
@@ -1286,6 +1288,10 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   basis_.valid = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
+  // Check that any refactorization data is consistent with the LP
+  const bool refactor_info_ok = basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
+  // If not, clear it.
+  if (!refactor_info_ok) basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
@@ -1296,6 +1302,8 @@ HighsStatus Highs::setBasis() {
   basis_.valid = false;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
+  // Clear any refactorization data
+  basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
@@ -2351,79 +2359,6 @@ HighsStatus Highs::openWriteFile(const string filename,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getUseModelStatus(
-    HighsModelStatus& use_model_status,
-    const double unscaled_primal_feasibility_tolerance,
-    const double unscaled_dual_feasibility_tolerance,
-    const bool rerun_from_logical_basis) {
-  if (model_status_ != HighsModelStatus::kNotset) {
-    use_model_status = model_status_;
-  } else {
-    // Handle the case where the status of the unscaled model is not set
-    HighsStatus return_status = HighsStatus::kOk;
-    HighsStatus call_status;
-    const double report = false;  // true;//
-    if (unscaledOptimal(unscaled_primal_feasibility_tolerance,
-                        unscaled_dual_feasibility_tolerance, report)) {
-      use_model_status = HighsModelStatus::kOptimal;
-    } else if (rerun_from_logical_basis) {
-      std::string save_presolve = options_.presolve;
-      basis_.valid = false;
-      options_.presolve = kHighsOnString;
-      call_status = run();
-      return_status = interpretCallStatus(options_.log_options, call_status,
-                                          return_status, "run()");
-      options_.presolve = save_presolve;
-      if (return_status == HighsStatus::kError) return return_status;
-
-      if (report)
-        printf(
-            "Unscaled model status was NOTSET: after running from logical "
-            "basis it is %s\n",
-            modelStatusToString(model_status_).c_str());
-
-      if (model_status_ != HighsModelStatus::kNotset) {
-        use_model_status = model_status_;
-      } else if (unscaledOptimal(unscaled_primal_feasibility_tolerance,
-                                 unscaled_dual_feasibility_tolerance, report)) {
-        use_model_status = HighsModelStatus::kOptimal;
-      }
-    } else {
-      // Nothing to be done: use original unscaled model status
-      use_model_status = model_status_;
-    }
-  }
-  return HighsStatus::kOk;
-}
-
-bool Highs::unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
-                            const double unscaled_dual_feasibility_tolerance,
-                            const bool report) {
-  if (scaled_model_status_ == HighsModelStatus::kOptimal) {
-    const double max_primal_infeasibility = info_.max_primal_infeasibility;
-    const double max_dual_infeasibility = info_.max_dual_infeasibility;
-    if (report)
-      printf(
-          "Scaled model status is OPTIMAL: max unscaled (primal / dual) "
-          "infeasibilities are (%g / %g)\n",
-          max_primal_infeasibility, max_dual_infeasibility);
-    if ((max_primal_infeasibility > unscaled_primal_feasibility_tolerance) ||
-        (max_dual_infeasibility > unscaled_dual_feasibility_tolerance)) {
-      printf(
-          "Use model status of NOTSET since max unscaled (primal / dual) "
-          "infeasibilities are (%g / %g)\n",
-          max_primal_infeasibility, max_dual_infeasibility);
-    } else {
-      if (report)
-        printf(
-            "Set unscaled model status to OPTIMAL since unscaled "
-            "infeasibilities are tolerable\n");
-      return true;
-    }
-  }
-  return false;
-}
-
 // Applies checks before returning from run()
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(!called_return_from_run);
@@ -2615,6 +2550,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
+  const bool refactor_info_ok = basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
+  if (!refactor_info_ok) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Refactorization data is inconsistent with LP\n");
+    return_status = HighsStatus::kError;
+  }
+  assert(refactor_info_ok);
   return return_status;
 }
 

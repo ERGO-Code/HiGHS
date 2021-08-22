@@ -88,7 +88,7 @@ void HEkk::clearData() {
   this->simplex_in_scaled_space_ = false;
   this->ar_matrix_.clear();
   this->scaled_a_matrix_.clear();
-  // simplex_nla_; No clear yet
+  this->simplex_nla_.clear();
 
   this->cost_scale_ = 1;
   this->iteration_count_ = 0;
@@ -654,7 +654,7 @@ void HEkk::deleteCols(const HighsIndexCollection& index_collection) {
   this->updateStatus(LpAction::kDelCols);
 }
 void HEkk::deleteRows(const HighsIndexCollection& index_collection) {
-  this->updateStatus(LpAction::kDelCols);
+  this->updateStatus(LpAction::kDelRows);
 }
 
 void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
@@ -1291,7 +1291,7 @@ HighsInt HEkk::computeFactor() {
   debugCheckInvert(simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
-  if (test_refactor) {
+  if (test_refactor && !rank_deficiency) {
     simplex_nla_.invert();
     if (full_report) {
       printf("\nRefactored INVERT\n");

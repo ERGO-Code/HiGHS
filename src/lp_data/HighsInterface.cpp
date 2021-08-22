@@ -122,9 +122,10 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
         options.allowed_simplex_matrix_scale_factor, &scale.col[lp.num_col_]);
   }
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis)
-    //    appendNonbasicColsToBasis(lp, basis, XnumNewCol);
+  if (valid_basis) {
     appendNonbasicColsToBasisInterface(XnumNewCol);
+    basis.refactor_info.clear();
+  }
   // Increase the number of columns in the LP
   lp.num_col_ += XnumNewCol;
   assert(lp.dimensionsOk("addCols"));
@@ -233,9 +234,10 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
         options.allowed_simplex_matrix_scale_factor, &scale.row[lp.num_row_]);
   }
   // Update the basis correponding to new basic rows
-  if (valid_basis)
-    //    appendBasicRowsToBasis(lp, basis, XnumNewRow);
+  if (valid_basis) {
     appendBasicRowsToBasisInterface(XnumNewRow);
+    basis.refactor_info.clear();
+  }    
   // Increase the number of rows in the LP
   lp.num_row_ += XnumNewRow;
   assert(lp.dimensionsOk("addRows"));
@@ -265,6 +267,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     scaled_model_status_ = HighsModelStatus::kNotset;
     model_status_ = scaled_model_status_;
     basis.valid = false;
+    basis.refactor_info.clear();
   }
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
@@ -310,6 +313,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     scaled_model_status_ = HighsModelStatus::kNotset;
     model_status_ = scaled_model_status_;
     basis.valid = false;
+    basis.refactor_info.clear();
   }
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
@@ -318,7 +322,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   }
   // Deduce the consequences of deleting rows
   clearModelStatusSolutionAndInfo();
-
+  
   // Determine any implications for simplex data
   ekk_instance_.deleteRows(index_collection);
   if (index_collection.is_mask_) {
@@ -1001,6 +1005,9 @@ void Highs::appendBasicRowsToBasisInterface(const HighsInt XnumNewRow) {
       simplex_basis.basicIndex_[iRow] = lp.num_col_ + iRow;
     }
   }
+  // Cannot use the refactorization information, even if no basis
+  // changes are made
+  highs_basis.refactor_info.clear();
 }
 
 // Get the basic variables, performing INVERT if necessary

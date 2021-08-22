@@ -45,6 +45,7 @@ struct RefactorInfo {
   void get(RefactorInfo& refactor_info) const;
   void set(const RefactorInfo& refactor_info);
   void set(const HighsInt num_col, const HighsInt num_row);
+  bool isOk(const HighsInt num_col, const HighsInt num_row) const;
 };
 
 struct HighsBasis {
