@@ -324,3 +324,61 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_ && right_size;
   return right_size;
 }
+
+bool refactorInfoIsOk(const HighsLp& lp, const HighsBasis& basis) {
+  bool ok = true;
+  if (!basis.valid) return ok;
+  HighsInt num_col = lp.num_col_;
+  HighsInt num_row = lp.num_row_;
+  vector<HighsInt> baseIndex;
+  baseIndex.resize(num_row);
+  HighsInt num_basic_variables = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      baseIndex[num_basic_variables++] = iCol;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      baseIndex[num_basic_variables++] = num_col + iRow;
+  assert(num_basic_variables == num_row);
+  ok = refactorInfoIsOk(basis.refactor_info, num_col, num_row, baseIndex);
+  return ok;
+}
+
+bool refactorInfoIsOk(const RefactorInfo refactor_info, const HighsInt num_col,
+                      const HighsInt num_row,
+                      const vector<HighsInt> baseIndex) {
+  bool ok = refactor_info.isOk(num_col, num_row);
+  if (!ok) return ok;
+  if (!refactor_info.valid) return ok;
+  vector<bool> should_be_true;
+  should_be_true.assign(num_col + num_row, false);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    should_be_true[baseIndex[iRow]] = true;
+  // Check that every entry in refactor_info.pivot_var is a basic variable
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = refactor_info.pivot_var[iRow];
+    if (should_be_true[iVar]) {
+      // Correctly basic, but set false to spot duplicates in
+      // refactor_info.pivot_var
+      should_be_true[iVar] = false;
+    } else {
+      // iVar is not basic or duplicate
+      ok = false;
+    }
+  }
+  // Check that every entry in refactor_info.pivot_row is a basic variable
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) should_be_true[iRow] = true;
+
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = refactor_info.pivot_row[iRow];
+    if (should_be_true[iVar]) {
+      // Correctly in 0..num_row-1, but set false to spot duplicates in
+      // refactor_info.pivot_row
+      should_be_true[iVar] = false;
+    } else {
+      // iVar is not in 0..num_row-1 or duplicate
+      ok = false;
+    }
+  }
+  return ok;
+}

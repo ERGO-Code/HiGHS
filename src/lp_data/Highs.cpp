@@ -1288,9 +1288,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   basis_.valid = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
-  // Check that any refactorization data is consistent with the LP
-  const bool refactor_info_ok =
-      basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
+  // Check that any refactorization data is consistent with the LP and basis
+  const bool refactor_info_ok = refactorInfoIsOk(model_.lp_, basis_);
   // If not, clear it.
   if (!refactor_info_ok) basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
@@ -2551,8 +2550,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
-  const bool refactor_info_ok =
-      basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
+  // Check that any refactorization data is consistent with the LP and basis
+  const bool refactor_info_ok = refactorInfoIsOk(model_.lp_, basis_);
   if (!refactor_info_ok) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Refactorization data is inconsistent with LP\n");

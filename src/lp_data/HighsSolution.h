@@ -116,5 +116,4 @@ void clearPrimalSolutionUtil(HighsSolution& solution);
 void clearDualSolutionUtil(HighsSolution& solution);
 void clearSolutionUtil(HighsSolution& solution);
 void clearBasisUtil(HighsBasis& solution);
-
 #endif  // LP_DATA_HIGHSSOLUTION_H_

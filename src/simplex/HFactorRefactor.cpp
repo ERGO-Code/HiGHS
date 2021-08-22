@@ -58,6 +58,7 @@ void RefactorInfo::clear() {
   this->pivot_type.clear();
 }
 
+// Simple check - basis needed to check everything
 bool RefactorInfo::isOk(const HighsInt num_col, const HighsInt num_row) const {
   bool ok = true;
   if (!this->valid) return ok;

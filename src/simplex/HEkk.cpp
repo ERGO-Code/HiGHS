@@ -599,7 +599,12 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
     }
   }
   status_.has_basis = true;
-  simplex_nla_.factor_.refactor_info_.set(highs_basis.refactor_info);
+  if (refactorInfoIsOk(highs_basis.refactor_info, num_col, num_row,
+                       basis_.basicIndex_)) {
+    simplex_nla_.factor_.refactor_info_.set(highs_basis.refactor_info);
+  } else {
+    simplex_nla_.factor_.refactor_info_.clear();
+  }
   return HighsStatus::kOk;
 }
 
@@ -1280,9 +1285,11 @@ HighsInt HEkk::computeFactor() {
   const bool full_report = false;
   // If the INVERT is fresh, no need to call simplex_nla_.invert()
   if (!test_refactor && status_.has_fresh_invert) return 0;
+  RefactorInfo& refactor_info = simplex_nla_.factor_.refactor_info_;
+  refactorInfoIsOk(refactor_info, lp_.num_col_, lp_.num_row_,
+                   basis_.basicIndex_);
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
-
   if (full_report) {
     printf("\nFactored INVERT\n");
     simplex_nla_.factor_.reportLu(true);

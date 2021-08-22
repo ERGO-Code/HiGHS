@@ -725,6 +725,8 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
       }
     }
   }
+  // Clear any refactorization information
+  if (basis.valid) basis.refactor_info.clear();
 
   // Deduce the consequences of a scaled column
   clearModelStatusSolutionAndInfo();
@@ -773,6 +775,8 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
       }
     }
   }
+  // Clear any refactorization information
+  if (basis.valid) basis.refactor_info.clear();
 
   // Deduce the consequences of a scaled row
   clearModelStatusSolutionAndInfo();
@@ -1029,7 +1033,10 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // The LP has no invert to use, so have to set one up
     lp.ensureColwise();
     // Consider scaling the LP
-    considerScaling(options_, lp);
+    const bool new_scaling = considerScaling(options_, lp);
+    // If there has been new scaling, clear any refactorization
+    // information.
+    if (new_scaling) ekk_instance_.simplex_nla_.factor_.refactor_info_.clear();
     // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);

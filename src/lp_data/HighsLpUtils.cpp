@@ -350,7 +350,9 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-void considerScaling(const HighsOptions& options, HighsLp& lp) {
+bool considerScaling(const HighsOptions& options, HighsLp& lp) {
+  // Indicate whether new scaling has been determined in the return value.
+  bool new_scaling = false;
   // Consider scaling the LP - either by finding new factors or by
   // applying any existing factors
   const bool allow_scaling =
@@ -369,6 +371,8 @@ void considerScaling(const HighsOptions& options, HighsLp& lp) {
         kHighsAnalysisLevelModelData & options.highs_analysis_level;
     if (analyse_lp_data) analyseLp(options.log_options, lp);
     scaleLp(options, lp);
+    // If the LP is now scaled, then the scaling is new
+    new_scaling = lp.is_scaled_;
     if (analyse_lp_data && lp.is_scaled_) analyseLp(options.log_options, lp);
   } else if (lp.scale_.has_scaling) {
     // Scaling factors are known, so ensure that they are applied
@@ -377,6 +381,7 @@ void considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Ensure that either the LP has scale factors and is scaled, or
   // it doesn't have scale factors and isn't scaled
   assert(lp.scale_.has_scaling == lp.is_scaled_);
+  return new_scaling;
 }
 
 void scaleLp(const HighsOptions& options, HighsLp& lp) {

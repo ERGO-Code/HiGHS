@@ -484,7 +484,10 @@ void HFactor::buildSimple() {
       bool unit_col = count == 1 && Avalue[start] == 1;
       if (unit_col && MRcountb4[lc_iRow] >= 0) {
         if (report_unit) printf("Stage %d: Unit\n", (int)(Lstart.size() - 1));
-        pivot_type = kPivotUnit;
+        // Don't exploit this special case in case the matrix is
+        // re-factorized after scaling has been applied, making this
+        // column non-unit.
+        pivot_type = kPivotColSingleton;  //;kPivotUnit;//
         iRow = lc_iRow;
       } else {
         if (unit_col)

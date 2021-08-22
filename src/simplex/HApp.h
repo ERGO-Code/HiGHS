@@ -137,7 +137,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Consider scaling the LP - either with any existing scaling, or by
   // considering computing scaling factors if there are none - and
   // then move to EKK
-  considerScaling(options, incumbent_lp);
+  const bool new_scaling = considerScaling(options, incumbent_lp);
+  if (new_scaling) ekk_instance.simplex_nla_.factor_.refactor_info_.clear();
   // Move the LP to EKK, updating other EKK pointers and any simplex
   // NLA pointers, since they may have moved if the LP has been
   // modified
