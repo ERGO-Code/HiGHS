@@ -220,6 +220,9 @@ class HFactor {
    */
   const double* getAvalue() const { return Avalue; }
 
+  void reportLu(const bool full) const;
+
+
   // Information required to perform refactorization of the current
   // basis
   RefactorInfo refactor_info_;
@@ -344,13 +347,17 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void LuClear();
+  void luClear();
   // Rebuild using refactor information
   HighsInt rebuild(HighsTimerClock* factor_timer_clock_pointer);
-  void reportLu();
 
   // Action to take when pointers to the A matrix are no longer valid
   void invalidAMatrixAction();
+
+  void reportIntVector(const std::string name,
+		       const vector<HighsInt> entry) const;
+  void reportDoubleVector(const std::string name,
+			  const vector<double> entry) const;
   
   void ftranL(HVector& vector, const double expected_density,
               HighsTimerClock* factor_timer_clock_pointer = NULL) const;
