@@ -65,38 +65,20 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     double value = random.fraction();
     column.array[iRow] = value;
     HighsInt iCol = base_index[iRow];
-    //    printf("base_index[%4d] = %4d: value = %11.4g\n", (int)iRow,
-    //    (int)base_index[iRow], value);
     if (iCol < num_col) {
       for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
            iEl++) {
         HighsInt index = a_matrix_index[iEl];
         rhs.array[index] += value * a_matrix_value[iEl];
-        //	printf("El %4d: rhs[%4d]=%11.4g from %11.4g = value *
-        //a_matrix_value[iEl] = %11.4g\n", 	       (int)iEl, (int)index,
-        //rhs.array[index], value, a_matrix_value[iEl]);
       }
     } else {
       HighsInt index = iCol - num_col;
       assert(index < num_row);
-      //      printf("value = %g' \n", value); fflush(stdout);
-      //      printf("index/num_row = %d/%d; \n", (int)index, (int)num_row);
-      //      fflush(stdout); printf("rhs.array[index] = %g\n",
-      //      rhs.array[index]); fflush(stdout);
       rhs.array[index] += value;
     }
   }
-  /*
-  simplex_nla.reportArray("Solution", &column, true);
-  simplex_nla.reportArray("RHS before", &rhs, true);
-  printf("a_matrix_start: %p %d\n", (void*)&a_matrix_start[0],
-  (int)a_matrix_start[0]); printf("a_matrix_index: %p %d\n",
-  (void*)&a_matrix_index[0], (int)a_matrix_index[0]); printf("a_matrix_value: %p
-  %g\n", (void*)&a_matrix_value[0], a_matrix_value[0]);
-  */
   HVector residual = rhs;
   simplex_nla.ftran(rhs, expected_density);
-  //  simplex_nla.reportArray("RHS after", &rhs, true);
 
   return_status =
       debugReportError(simplex_nla, false, column, rhs, residual, force);
@@ -116,17 +98,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       rhs.array[iRow] += column.array[iCol - num_col];
     }
   }
-  /*
-  simplex_nla.reportArray("Solution", &column, true);
-  simplex_nla.reportArray("RHS before", &rhs, true);
-  printf("a_matrix_start: %p %d\n", (void*)&a_matrix_start[0],
-  (int)a_matrix_start[0]); printf("a_matrix_index: %p %d\n",
-  (void*)&a_matrix_index[0], (int)a_matrix_index[0]); printf("a_matrix_value: %p
-  %g\n", (void*)&a_matrix_value[0], a_matrix_value[0]);
-  */
   residual = rhs;
   simplex_nla.btran(rhs, expected_density);
-  //  simplex_nla.reportArray("RHS after", &rhs, true);
 
   return_status =
       debugReportError(simplex_nla, true, column, rhs, residual, force);
