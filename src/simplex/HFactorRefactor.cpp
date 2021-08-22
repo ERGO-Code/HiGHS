@@ -19,6 +19,10 @@
 #include <cmath>
 #include <iostream>
 
+// std::max and std::min used in HFactor.h for local in-line
+// functions, so HFactor.h has #include <algorithm>
+using std::fabs;
+
 void RefactorInfo::get(RefactorInfo& refactor_info) const {
   if (this->valid) {
     refactor_info = *this;
@@ -55,7 +59,7 @@ void RefactorInfo::clear() {
 }
 
 HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
-  const bool report_lu=true;
+  const bool report_lu=false;
   assert(refactor_info_.valid);
   /**
    * 0. Clear L and U factor
@@ -65,10 +69,11 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   nwork = 0;
   basis_matrix_num_el = 0;
   HighsInt stage = numRow;
+  HighsInt rank_deficiency = 0;
   vector<bool> has_pivot;
   has_pivot.assign(numRow, false);
   const bool report_unit = false;
-  const bool report_singletons = true;
+  const bool report_singletons = false;
   const bool report_markowitz = false;
   const bool report_anything = report_unit || report_singletons || report_markowitz;
   if (report_anything)  printf("\nRefactor\n");
@@ -90,7 +95,6 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
 	// 1.2 (Structural) unit column 
 	if (report_unit) printf("Stage %d: Unit\n", (int)iK);
 	assert(iVar<numCol);
-	assert(1==0);
 	HighsInt start = Astart[iVar];
 	HighsInt count = Astart[iVar + 1] - start;
 	assert(Aindex[start]==iRow);
@@ -117,6 +121,14 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
 	}
       }
       assert(pivot_k>=0);
+      // Check that the pivot isn't too small. Shouldn't happen since
+      // this is refactorization
+      double abs_pivot = std::fabs(Avalue[pivot_k]);
+      assert(abs_pivot >= pivot_tolerance);
+      if (abs_pivot < pivot_tolerance) {
+	rank_deficiency = nwork + 1;
+	return rank_deficiency;
+      }
       if (pivot_type == kPivotRowSingleton) {
 	//
 	// 2.2 Deal with row singleton
@@ -191,10 +203,15 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     LpivotIndex.resize(numRow);
     for (HighsInt iK = 0; iK < numRow; iK++) 
       LpivotIndex[iK] = this->refactor_info_.pivot_row[iK];
+    // To do hyper-sparse FtranL operations, have to set up LpivotLookup.
+    LpivotLookup.resize(numRow);
+    for (HighsInt iRow = 0; iRow < numRow; iRow++) LpivotLookup[LpivotIndex[iRow]] = iRow;
     // Need to know whether to consider matrix entries for FtranL
     // operation. Initially these correspond to all the rows without
     // pivots
     vector<bool> not_in_bump = has_pivot;
+    // Monitor density of FtranL result to possibly switch from exploiting hyper-sparsity
+    double expected_density = 0.0;
     // Initialise a HVector in which the L and U entries of the
     // pivotal column will be formed
     HVector column;
@@ -221,9 +238,13 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
 	  column.array[local_iRow] = Avalue[iEl];
 	}
       }
-      const double expected_density = 1.0; //ToDo make this hyper-sparse
       // Perform FtranL, but don't time it!
       ftranL(column, expected_density);
+      // Update the running average density
+      double local_density = (1.0 * column.count) / numRow;
+      expected_density = kRunningAverageMultiplier*local_density + (1-kRunningAverageMultiplier)*expected_density;
+      // Strip out small values
+      column.tight();
       // Now form the column of L
       //
       // Find the pivot
@@ -237,6 +258,14 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
 	}
       }
       assert(pivot_k>=0);
+      // Check that the pivot isn't too small. Shouldn't happen since
+      // this is refactorization
+      double abs_pivot = std::fabs(column.array[iRow]);
+      assert(abs_pivot >= pivot_tolerance);
+      if (abs_pivot < pivot_tolerance) {
+        rank_deficiency = numRow-iK;
+	return rank_deficiency;
+      }
       const double pivotX = 1 / column.array[iRow];
       for (HighsInt section = 0; section < 2; section++) {
 	HighsInt p0 = section == 0 ? start : pivot_k + 1;

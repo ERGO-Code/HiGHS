@@ -56,6 +56,7 @@ enum iClockFactor {
   FactorBtranUpperHyper,   //!< BTRAN Upper part hyper-sparse
   FactorBtranUpperFT,      //!< BTRAN Upper part FT
   FactorBtranUpperMPF,     //!< BTRAN Upper part MPF
+  FactorReinvert,          //!< INVERT using refactorization information
   FactorNumClock           //!< Number of factor clocks
 };
 
@@ -149,6 +150,8 @@ class FactorTimer {
         timer_pointer->clock_def("BTRAN Upper FT", "BUF");
     clock[FactorBtranUpperMPF] =
         timer_pointer->clock_def("BTRAN Upper MPS", "BUM");
+    clock[FactorReinvert] =
+        timer_pointer->clock_def("ReINVERT", "RIV");
   };
 
   void reportFactorClockList(const char* grepStamp,

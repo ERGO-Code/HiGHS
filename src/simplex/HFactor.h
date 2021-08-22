@@ -28,6 +28,7 @@
 #include "lp_data/HighsAnalysis.h"
 #include "lp_data/HighsSparseMatrix.h"
 
+// Uses max and min for local in-line functions
 using std::max;
 using std::min;
 using std::vector;

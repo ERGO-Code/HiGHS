@@ -25,6 +25,10 @@
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
 
+// std::max and std::min used in HFactor.h for local in-line
+// functions, so HFactor.h has #include <algorithm>
+using std::fabs;
+
 using std::copy;
 using std::fill_n;
 using std::make_pair;
@@ -299,16 +303,21 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
-  const bool report_lu=true;
+  const bool report_lu=false;
   // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);
+  FactorTimer factor_timer;
   // If there is valid refactorization information use it!
-  if (refactor_info_.valid) return rebuild(factor_timer_clock_pointer);
+  if (refactor_info_.valid) {
+    factor_timer.start(FactorReinvert, factor_timer_clock_pointer);
+    rank_deficiency = rebuild(factor_timer_clock_pointer);
+    factor_timer.stop(FactorReinvert, factor_timer_clock_pointer);
+    if(!rank_deficiency) return 0;
+  }
   // Refactoring from just the list of basic variables. Initialise the
   // refactorization information.
   refactor_info_.clear();
   // Start the timer
-  FactorTimer factor_timer;
   factor_timer.start(FactorInvert, factor_timer_clock_pointer);
   build_synthetic_tick = 0;
   factor_timer.start(FactorInvertSimple, factor_timer_clock_pointer);
@@ -430,7 +439,7 @@ void HFactor::buildSimple() {
    */
 
   const bool report_unit = false;
-  const bool report_singletons = true;
+  const bool report_singletons = false;
   const bool report_markowitz = false;
   const bool report_anything = report_unit || report_singletons || report_markowitz;
   HighsInt BcountX = 0;

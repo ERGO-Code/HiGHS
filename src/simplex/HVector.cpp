@@ -72,13 +72,13 @@ void HVector::clear() {
 
 void HVector::tight() {
   /*
-   * Zero values in Vector.array that exceed kHighsTiny in magnitude
+   * Zero values in Vector.array that do not exceed kHighsTiny in magnitude
    */
   HighsInt totalCount = 0;
   for (HighsInt i = 0; i < count; i++) {
     const HighsInt my_index = index[i];
     const double value = array[my_index];
-    if (fabs(value) > kHighsTiny) {
+    if (fabs(value) >= kHighsTiny) {
       index[totalCount++] = my_index;
     } else {
       array[my_index] = 0;
