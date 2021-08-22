@@ -31,14 +31,11 @@
 HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
                                   const bool force = false);
 
-double debugResidualError(const HSimplexNla& simplex_nla,
-			  const bool transposed,
-                          const HVector& solution,
-			  HVector& residual);
+double debugResidualError(const HSimplexNla& simplex_nla, const bool transposed,
+                          const HVector& solution, HVector& residual);
 HighsDebugStatus debugReportError(const HSimplexNla& simplex_nla,
-				  const bool transposed,
-				  const HVector& true_solution,
-				  const HVector& solution,
-				  HVector& residual,
-				  const bool force);
+                                  const bool transposed,
+                                  const HVector& true_solution,
+                                  const HVector& solution, HVector& residual,
+                                  const bool force);
 #endif /* HSIMPLEXNLADEBUG_H_ */

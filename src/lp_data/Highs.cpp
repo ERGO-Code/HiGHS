@@ -854,7 +854,7 @@ HighsStatus Highs::run() {
           basis_.valid = true;
           basis_.col_status = presolve_.data_.recovered_basis_.col_status;
           basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-	  basis_.refactor_info.clear();
+          basis_.refactor_info.clear();
 
           // Possibly force debug to perform KKT check on what's
           // returned from postsolve
@@ -1289,7 +1289,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Check that any refactorization data is consistent with the LP
-  const bool refactor_info_ok = basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
+  const bool refactor_info_ok =
+      basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
   // If not, clear it.
   if (!refactor_info_ok) basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
@@ -2550,7 +2551,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
-  const bool refactor_info_ok = basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
+  const bool refactor_info_ok =
+      basis_.refactor_info.isOk(model_.lp_.num_col_, model_.lp_.num_row_);
   if (!refactor_info_ok) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Refactorization data is inconsistent with LP\n");

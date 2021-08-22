@@ -237,7 +237,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   if (valid_basis) {
     appendBasicRowsToBasisInterface(XnumNewRow);
     basis.refactor_info.clear();
-  }    
+  }
   // Increase the number of rows in the LP
   lp.num_row_ += XnumNewRow;
   assert(lp.dimensionsOk("addRows"));
@@ -322,7 +322,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   }
   // Deduce the consequences of deleting rows
   clearModelStatusSolutionAndInfo();
-  
+
   // Determine any implications for simplex data
   ekk_instance_.deleteRows(index_collection);
   if (index_collection.is_mask_) {

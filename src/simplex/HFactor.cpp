@@ -303,7 +303,7 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
-  const bool report_lu=false;
+  const bool report_lu = false;
   // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);
   FactorTimer factor_timer;
@@ -312,7 +312,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
     factor_timer.start(FactorReinvert, factor_timer_clock_pointer);
     rank_deficiency = rebuild(factor_timer_clock_pointer);
     factor_timer.stop(FactorReinvert, factor_timer_clock_pointer);
-    if(!rank_deficiency) return 0;
+    if (!rank_deficiency) return 0;
   }
   // Refactoring from just the list of basic variables. Initialise the
   // refactorization information.
@@ -353,9 +353,11 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   buildFinish();
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   //
-  // Indicate that the refactorization information is known unless the basis was rank deficient
-  assert((HighsInt)this->refactor_info_.pivot_row.size() + rank_deficiency == numRow);
-  this->refactor_info_.valid = rank_deficiency==0;
+  // Indicate that the refactorization information is known unless the basis was
+  // rank deficient
+  assert((HighsInt)this->refactor_info_.pivot_row.size() + rank_deficiency ==
+         numRow);
+  this->refactor_info_.valid = rank_deficiency == 0;
 
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
@@ -441,11 +443,12 @@ void HFactor::buildSimple() {
   const bool report_unit = false;
   const bool report_singletons = false;
   const bool report_markowitz = false;
-  const bool report_anything = report_unit || report_singletons || report_markowitz;
+  const bool report_anything =
+      report_unit || report_singletons || report_markowitz;
   HighsInt BcountX = 0;
   fill_n(&MRcountb4[0], numRow, 0);
   nwork = 0;
-  if (report_anything)  printf("\nFactor\n");
+  if (report_anything) printf("\nFactor\n");
   // Compile a vector iwork of the nwork non-unit structural columns
   // in baseindex: they will be formed into the B matrix as the kernel
   for (HighsInt iCol = 0; iCol < numRow; iCol++) {
@@ -453,7 +456,7 @@ void HFactor::buildSimple() {
     HighsInt iRow = -1;
     int8_t pivot_type = kPivotIllegal;
     if (iMat >= numCol) {
-      if (report_unit) printf("Stage %d: Logical\n", (int)(Lstart.size()-1));
+      if (report_unit) printf("Stage %d: Logical\n", (int)(Lstart.size() - 1));
       // 1.1 Logical column
       pivot_type = kPivotLogical;
       // Check for double pivot
@@ -465,8 +468,8 @@ void HFactor::buildSimple() {
                     "INVERT Error: Found a logical column with pivot "
                     "already in row %" HIGHSINT_FORMAT "\n",
                     lc_iRow);
-	// Treat this as a column to be handled in the kernel, so that
-	// the rank deficiency is detected as late as possible.
+        // Treat this as a column to be handled in the kernel, so that
+        // the rank deficiency is detected as late as possible.
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
         Bvalue[BcountX++] = 1.0;
@@ -480,8 +483,8 @@ void HFactor::buildSimple() {
       // Check for unit column with double pivot
       bool unit_col = count == 1 && Avalue[start] == 1;
       if (unit_col && MRcountb4[lc_iRow] >= 0) {
-	if (report_unit) printf("Stage %d: Unit\n", (int)(Lstart.size()-1));
-	pivot_type = kPivotUnit;
+        if (report_unit) printf("Stage %d: Unit\n", (int)(Lstart.size() - 1));
+        pivot_type = kPivotUnit;
         iRow = lc_iRow;
       } else {
         if (unit_col)
@@ -559,18 +562,24 @@ void HFactor::buildSimple() {
       if (found_row_singleton) {
         // 2.2 Deal with row singleton
         const double pivotX = 1 / Bvalue[pivot_k];
-	if (report_singletons)	printf("Stage %d: Row singleton (%4d, %g)\n", (int)(Lstart.size()-1), (int)pivot_k, pivotX);
+        if (report_singletons)
+          printf("Stage %d: Row singleton (%4d, %g)\n",
+                 (int)(Lstart.size() - 1), (int)pivot_k, pivotX);
         for (HighsInt section = 0; section < 2; section++) {
           HighsInt p0 = section == 0 ? start : pivot_k + 1;
           HighsInt p1 = section == 0 ? pivot_k : end;
           for (HighsInt k = p0; k < p1; k++) {
             HighsInt iRow = Bindex[k];
             if (MRcountb4[iRow] > 0) {
-	      if (report_singletons)	      printf("Row singleton: L En (%4d, %11.4g)\n", (int)iRow, Bvalue[k] * pivotX);
+              if (report_singletons)
+                printf("Row singleton: L En (%4d, %11.4g)\n", (int)iRow,
+                       Bvalue[k] * pivotX);
               Lindex.push_back(iRow);
               Lvalue.push_back(Bvalue[k] * pivotX);
             } else {
-	      if (report_singletons)	      printf("Row singleton: U En (%4d, %11.4g)\n", (int)iRow, Bvalue[k]);
+              if (report_singletons)
+                printf("Row singleton: U En (%4d, %11.4g)\n", (int)iRow,
+                       Bvalue[k]);
               Uindex.push_back(iRow);
               Uvalue.push_back(Bvalue[k]);
             }
@@ -582,25 +591,32 @@ void HFactor::buildSimple() {
         permute[iCol] = iRow;
         Lstart.push_back(Lindex.size());
 
-	if (report_singletons)	printf("Row singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Bvalue[pivot_k]);
+        if (report_singletons)
+          printf("Row singleton: U Pv (%4d, %11.4g)\n", (int)iRow,
+                 Bvalue[pivot_k]);
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
-	assert(Bvar[iCol] ==baseIndex[iCol]);
+        assert(Bvar[iCol] == baseIndex[iCol]);
 
-	this->refactor_info_.pivot_row.push_back(iRow);
-	this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
-	this->refactor_info_.pivot_type.push_back(kPivotRowSingleton);
+        this->refactor_info_.pivot_row.push_back(iRow);
+        this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
+        this->refactor_info_.pivot_type.push_back(kPivotRowSingleton);
       } else if (count == 1) {
-	if (report_singletons)	printf("Stage %d: Col singleton \n", (int)(Lstart.size()-1));
+        if (report_singletons)
+          printf("Stage %d: Col singleton \n", (int)(Lstart.size() - 1));
         // 2.3 Deal with column singleton
         for (HighsInt k = start; k < pivot_k; k++) {
-	  if (report_singletons)	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Bindex[k], Bvalue[k]);
+          if (report_singletons)
+            printf("Col singleton: U En (%4d, %11.4g)\n", (int)Bindex[k],
+                   Bvalue[k]);
           Uindex.push_back(Bindex[k]);
           Uvalue.push_back(Bvalue[k]);
         }
         for (HighsInt k = pivot_k + 1; k < end; k++) {
-	  if (report_singletons)	  printf("Col singleton: U En (%4d, %11.4g)\n", (int)Bindex[k], Bvalue[k]);
+          if (report_singletons)
+            printf("Col singleton: U En (%4d, %11.4g)\n", (int)Bindex[k],
+                   Bvalue[k]);
           Uindex.push_back(Bindex[k]);
           Uvalue.push_back(Bvalue[k]);
         }
@@ -610,14 +626,16 @@ void HFactor::buildSimple() {
         permute[iCol] = iRow;
         Lstart.push_back(Lindex.size());
 
-	if (report_singletons)	printf("Col singleton: U Pv (%4d, %11.4g)\n", (int)iRow, Bvalue[pivot_k]);
+        if (report_singletons)
+          printf("Col singleton: U Pv (%4d, %11.4g)\n", (int)iRow,
+                 Bvalue[pivot_k]);
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
-	assert(Bvar[iCol] ==baseIndex[iCol]);
-	this->refactor_info_.pivot_row.push_back(iRow);
-	this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
-	this->refactor_info_.pivot_type.push_back(kPivotColSingleton);
+        assert(Bvar[iCol] == baseIndex[iCol]);
+        this->refactor_info_.pivot_row.push_back(iRow);
+        this->refactor_info_.pivot_var.push_back(baseIndex[iCol]);
+        this->refactor_info_.pivot_type.push_back(kPivotColSingleton);
       } else {
         iwork[nwork++] = iCol;
       }
@@ -686,8 +704,7 @@ void HFactor::buildSimple() {
   build_synthetic_tick += (numRow + nwork + MCcountX) * 40 + MRcountX * 20;
   // Record the kernel dimension
   kernel_dim = nwork;
-  assert((HighsInt)this->refactor_info_.pivot_row.size() ==
-	 numRow-nwork);
+  assert((HighsInt)this->refactor_info_.pivot_row.size() == numRow - nwork);
 }
 
 HighsInt HFactor::buildKernel() {
@@ -798,22 +815,24 @@ HighsInt HFactor::buildKernel() {
                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                   fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
-      assert((HighsInt)this->refactor_info_.pivot_row.size() + rank_deficiency == numRow);
+      assert((HighsInt)this->refactor_info_.pivot_row.size() +
+                 rank_deficiency ==
+             numRow);
       return rank_deficiency;
     }
     rowDelete(jColPivot, iRowPivot);
     clinkDel(jColPivot);
     rlinkDel(iRowPivot);
     permute[jColPivot] = iRowPivot;
-    //    printf("Mwz pivot %3d; MCvar[%3d] = %d; baseIndex[%3d] = %d\n", (int)(numRow-nwork),
+    //    printf("Mwz pivot %3d; MCvar[%3d] = %d; baseIndex[%3d] = %d\n",
+    //    (int)(numRow-nwork),
     //	   (int)jColPivot, (int)MCvar[jColPivot],
     //	   (int)jColPivot, (int)baseIndex[jColPivot]);
-    assert(MCvar[jColPivot]==baseIndex[jColPivot]);
+    assert(MCvar[jColPivot] == baseIndex[jColPivot]);
 
     this->refactor_info_.pivot_row.push_back(iRowPivot);
     this->refactor_info_.pivot_var.push_back(baseIndex[jColPivot]);
     this->refactor_info_.pivot_type.push_back(kPivotMarkowitz);
-    
 
     // 2.2. Store active pivot column to L
     HighsInt start_A = MCstart[jColPivot];
@@ -2123,14 +2142,16 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   invalidAMatrixAction();
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
-  printf("Adding %" HIGHSINT_FORMAT " new rows to HFactor instance: increasing dimension from %"
-	 HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT " \n", num_new_row, numRow, new_num_row);
+  printf("Adding %" HIGHSINT_FORMAT
+         " new rows to HFactor instance: increasing dimension from "
+         "%" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT " \n",
+         num_new_row, numRow, new_num_row);
   HighsInt l_matrix_num_nz = Lstart[numRow];
   HighsInt lr_matrix_num_nz = LRstart[numRow];
   HighsInt l_matrix_size = Lindex.size();
   HighsInt lr_matrix_size = LRindex.size();
-  assert(l_matrix_num_nz==l_matrix_size);
-  assert(lr_matrix_num_nz==lr_matrix_size);
+  assert(l_matrix_num_nz == l_matrix_size);
+  assert(lr_matrix_num_nz == lr_matrix_size);
   HighsInt l_matrix_capacity = Lindex.capacity();
   HighsInt lr_matrix_capacity = LRindex.capacity();
   assert((HighsInt)Lvalue.capacity() == l_matrix_capacity);
@@ -2141,13 +2162,15 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   in_basis.assign(numCol, -1);
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     HighsInt iVar = baseIndex[iRow];
-    printf("Basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
-    if (iVar<numCol) in_basis[iVar] = iRow;
+    printf("Basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n",
+           iRow, iVar);
+    if (iVar < numCol) in_basis[iVar] = iRow;
   }
   for (HighsInt iRow = numRow; iRow < new_num_row; iRow++) {
     HighsInt iVar = baseIndex[iRow];
-    printf("New basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
-    assert(iVar>=numCol);
+    printf("New basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n",
+           iRow, iVar);
+    assert(iVar >= numCol);
   }
   //  reportLu(true);
 
@@ -2156,19 +2179,20 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // inserting the rows into the LR matrix) allowing the cew column
   // entries to be inserted efficiently into the L matrix
   HighsSparseMatrix new_lr_rows;
-  HighsInt new_lr_rows_capacity = kNewLRRowsExtraNz + (BlimitX * num_new_row) / numRow;
-  printf("For BlimitX = %"
-	 HIGHSINT_FORMAT ", new_lr_rows_capacity = %"
-	 HIGHSINT_FORMAT "\n", BlimitX, new_lr_rows_capacity);
-  assert(new_lr_rows_capacity>kNewLRRowsExtraNz);
+  HighsInt new_lr_rows_capacity =
+      kNewLRRowsExtraNz + (BlimitX * num_new_row) / numRow;
+  printf("For BlimitX = %" HIGHSINT_FORMAT
+         ", new_lr_rows_capacity = %" HIGHSINT_FORMAT "\n",
+         BlimitX, new_lr_rows_capacity);
+  assert(new_lr_rows_capacity > kNewLRRowsExtraNz);
   HighsInt new_lr_rows_num_nz = 0;
   new_lr_rows.format_ = MatrixFormat::kRowwise;
   new_lr_rows.num_col_ = numRow;
   new_lr_rows.num_row_ = num_new_row;
-  new_lr_rows.start_.reserve(num_new_row+1);
+  new_lr_rows.start_.reserve(num_new_row + 1);
   new_lr_rows.index_.reserve(new_lr_rows_capacity);
   new_lr_rows.value_.reserve(new_lr_rows_capacity);
-  
+
   HVector rhs;
   rhs.setup(numRow);
   this->LRstart.reserve(new_num_row + 1);
@@ -2177,12 +2201,13 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     // Prepare RHS for system U^T.v = r
     rhs.clear();
     rhs.packFlag = true;
-    for (HighsInt iEl = ar_matrix->start_[inewRow]; iEl < ar_matrix->start_[inewRow+1]; iEl++) {
+    for (HighsInt iEl = ar_matrix->start_[inewRow];
+         iEl < ar_matrix->start_[inewRow + 1]; iEl++) {
       HighsInt iCol = ar_matrix->index_[iEl];
       HighsInt basis_index = in_basis[iCol];
-      if (basis_index>=0) {
-	rhs.array[basis_index] = ar_matrix->value_[iEl];
-	rhs.index[rhs.count++] = basis_index;
+      if (basis_index >= 0) {
+        rhs.array[basis_index] = ar_matrix->value_[iEl];
+        rhs.index[rhs.count++] = basis_index;
       }
     }
     // Solve U^T.v = r
@@ -2194,7 +2219,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     // Ensure that there is space for all values
     HighsInt rhs_num_nz = rhs.count;
     if (new_lr_rows_capacity < new_lr_rows_num_nz + rhs_num_nz) {
-      assert(1==0);
+      assert(1 == 0);
       HighsInt extra_nz = std::max(kNewLRRowsExtraNz, rhs_num_nz);
       new_lr_rows_capacity += extra_nz;
       new_lr_rows.index_.reserve(new_lr_rows_capacity);
@@ -2211,9 +2236,9 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     // Append v to the L matrix
     //
     // Ensure that there is space for all values
-    
+
     if (lr_matrix_capacity < lr_matrix_num_nz + rhs_num_nz) {
-      assert(1==0);
+      assert(1 == 0);
       HighsInt extra_nz = std::max(kNewLRRowsExtraNz, rhs_num_nz);
       lr_matrix_capacity += extra_nz;
       LRindex.reserve(lr_matrix_capacity);
@@ -2238,7 +2263,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // Ensure that there is space for all values
   const HighsInt l_matrix_new_num_nz = Lstart[numRow] + new_lr_rows_num_nz;
   if (l_matrix_new_num_nz > lr_matrix_capacity) {
-    assert(1==0);
+    assert(1 == 0);
     l_matrix_capacity = l_matrix_new_num_nz + kNewLRRowsExtraNz;
     Lvalue.reserve(l_matrix_capacity);
     Lindex.reserve(l_matrix_capacity);
@@ -2249,28 +2274,30 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   //
   // Add pivot indices for the new columns
   this->LpivotIndex.resize(new_num_row);
-  for (HighsInt iCol=new_num_row; iCol>numRow;iCol--) LpivotIndex[iCol] = iCol;
+  for (HighsInt iCol = new_num_row; iCol > numRow; iCol--)
+    LpivotIndex[iCol] = iCol;
   //
   // Add starts for the identity columns
   HighsInt to_el = l_matrix_new_num_nz;
-  for (HighsInt iCol=new_num_row; iCol>numRow;iCol--) Lstart[iCol] = to_el;
-  for (HighsInt iCol=numRow-1; iCol>=0;iCol--) {
-    for(HighsInt iEl = new_lr_cols.start_[iCol+1]-1; iEl>=new_lr_cols.start_[iCol]; iEl--) {
+  for (HighsInt iCol = new_num_row; iCol > numRow; iCol--) Lstart[iCol] = to_el;
+  for (HighsInt iCol = numRow - 1; iCol >= 0; iCol--) {
+    for (HighsInt iEl = new_lr_cols.start_[iCol + 1] - 1;
+         iEl >= new_lr_cols.start_[iCol]; iEl--) {
       to_el--;
       Lindex[to_el] = new_lr_cols.index_[iEl];
       Lvalue[to_el] = new_lr_cols.value_[iEl];
     }
-    const HighsInt from_el = Lstart[iCol+1];
-    Lstart[iCol+1] = to_el;
-    for(HighsInt iEl = from_el-1; iEl>=Lstart[iCol]; iEl--) {
+    const HighsInt from_el = Lstart[iCol + 1];
+    Lstart[iCol + 1] = to_el;
+    for (HighsInt iEl = from_el - 1; iEl >= Lstart[iCol]; iEl--) {
       to_el--;
       Lindex[to_el] = Lindex[iEl];
       Lvalue[to_el] = Lvalue[iEl];
     }
   }
-  assert(to_el==0);
+  assert(to_el == 0);
   this->LpivotLookup.resize(new_num_row);
-  for (HighsInt iCol=numRow; iCol<new_num_row; iCol++) 
+  for (HighsInt iCol = numRow; iCol < new_num_row; iCol++)
     LpivotLookup[iCol] = iCol;
   // Now update the U matrix with identity rows and columns
   // Allocate space for U factor
@@ -2290,7 +2317,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   URindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
   URvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
   */
-  for (HighsInt iCol=numRow; iCol<new_num_row; iCol++) 
+  for (HighsInt iCol = numRow; iCol < new_num_row; iCol++)
     UpivotLookup[iCol] = iCol;
   // Increase the number of rows in HFactor
   numRow += num_new_row;
@@ -2301,51 +2328,54 @@ void HFactor::reportLu(const bool full) const {
   if (full) printf(" - full");
   printf(":\n");
 
-  if (full) reportIntVector("LpivotLookup", LpivotLookup); 
-  if (full) reportIntVector("LpivotIndex", LpivotIndex); 
-  reportIntVector("Lstart", Lstart); 
-  reportIntVector("Lindex", Lindex); 
-  reportDoubleVector("Lvalue", Lvalue); 
+  if (full) reportIntVector("LpivotLookup", LpivotLookup);
+  if (full) reportIntVector("LpivotIndex", LpivotIndex);
+  reportIntVector("Lstart", Lstart);
+  reportIntVector("Lindex", Lindex);
+  reportDoubleVector("Lvalue", Lvalue);
   if (full) {
-    reportIntVector("LRstart", LRstart); 
-    reportIntVector("LRindex", LRindex); 
+    reportIntVector("LRstart", LRstart);
+    reportIntVector("LRindex", LRindex);
     reportDoubleVector("LRvalue)", LRvalue);
   }
   printf("U");
   if (full) printf(" - full");
   printf(":\n");
-  if (full) reportIntVector("UpivotLookup", UpivotLookup); 
-  reportIntVector("UpivotIndex", UpivotIndex); 
-  reportDoubleVector("UpivotValue", UpivotValue); 
-  reportIntVector("Ustart", Ustart); 
-  if (full) reportIntVector("Ulastp", Ulastp); 
-  reportIntVector("Uindex", Uindex); 
-  reportDoubleVector("Uvalue", Uvalue); 
+  if (full) reportIntVector("UpivotLookup", UpivotLookup);
+  reportIntVector("UpivotIndex", UpivotIndex);
+  reportDoubleVector("UpivotValue", UpivotValue);
+  reportIntVector("Ustart", Ustart);
+  if (full) reportIntVector("Ulastp", Ulastp);
+  reportIntVector("Uindex", Uindex);
+  reportDoubleVector("Uvalue", Uvalue);
   if (full) {
-    reportIntVector("URstart", URstart); 
-    reportIntVector("URlastp", URlastp); 
-    reportIntVector("URspace", URspace); 
-    reportIntVector("URindex", URindex); 
-    reportDoubleVector("URvalue)", URvalue); 
-  }  
+    reportIntVector("URstart", URstart);
+    reportIntVector("URlastp", URlastp);
+    reportIntVector("URspace", URspace);
+    reportIntVector("URindex", URindex);
+    reportDoubleVector("URvalue)", URvalue);
+  }
 }
 
-void HFactor::reportIntVector(const std::string name, const vector<HighsInt> entry) const {
+void HFactor::reportIntVector(const std::string name,
+                              const vector<HighsInt> entry) const {
   const HighsInt num_en = entry.size();
-  printf("%s: size = %4d; capacity = %4d\n", name.c_str(),  (int)num_en, (int)entry.capacity());
+  printf("%s: size = %4d; capacity = %4d\n", name.c_str(), (int)num_en,
+         (int)entry.capacity());
   for (HighsInt iEn = 0; iEn < num_en; iEn++) {
-    if (iEn>0 && iEn % 20 == 0) printf("\n");
+    if (iEn > 0 && iEn % 20 == 0) printf("\n");
     printf("%4d ", (int)entry[iEn]);
   }
   printf("\n");
 }
-void HFactor::reportDoubleVector(const std::string name, const vector<double> entry) const {
+void HFactor::reportDoubleVector(const std::string name,
+                                 const vector<double> entry) const {
   const HighsInt num_en = entry.size();
-  printf("%s: size = %4d; capacity = %4d\n", name.c_str(),  (int)num_en, (int)entry.capacity());
+  printf("%s: size = %4d; capacity = %4d\n", name.c_str(), (int)num_en,
+         (int)entry.capacity());
   for (HighsInt iEn = 0; iEn < num_en; iEn++) {
-    if (iEn>0 && iEn % 5 == 0) printf("\n");
+    if (iEn > 0 && iEn % 5 == 0) printf("\n");
     printf("%10.4g ", entry[iEn]);
-  }  
+  }
   printf("\n");
 }
-

@@ -223,7 +223,6 @@ class HFactor {
 
   void reportLu(const bool full) const;
 
-
   // Information required to perform refactorization of the current
   // basis
   RefactorInfo refactor_info_;
@@ -265,7 +264,7 @@ class HFactor {
   vector<double> dwork;
 
   // Basis matrix
-  vector<HighsInt> Bvar;//Temp
+  vector<HighsInt> Bvar;  // Temp
   vector<HighsInt> Bstart;
   vector<HighsInt> Bindex;
   vector<double> Bvalue;
@@ -274,7 +273,7 @@ class HFactor {
   vector<HighsInt> permute;
 
   // Kernel matrix
-  vector<HighsInt> MCvar;//Temp
+  vector<HighsInt> MCvar;  // Temp
   vector<HighsInt> MCstart;
   vector<HighsInt> MCcountA;
   vector<HighsInt> MCcountN;
@@ -356,10 +355,10 @@ class HFactor {
   void invalidAMatrixAction();
 
   void reportIntVector(const std::string name,
-		       const vector<HighsInt> entry) const;
+                       const vector<HighsInt> entry) const;
   void reportDoubleVector(const std::string name,
-			  const vector<double> entry) const;
-  
+                          const vector<double> entry) const;
+
   void ftranL(HVector& vector, const double expected_density,
               HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void btranL(HVector& vector, const double expected_density,

@@ -217,9 +217,8 @@ void HSimplexNla::addCols(const HighsLp* updated_lp) {
   setLpAndScalePointers(updated_lp);
 }
 
-void HSimplexNla::addRows(const HighsLp* updated_lp,
-			  HighsInt* base_index,
-			  const HighsSparseMatrix* scaled_ar_matrix) {
+void HSimplexNla::addRows(const HighsLp* updated_lp, HighsInt* base_index,
+                          const HighsSparseMatrix* scaled_ar_matrix) {
   // Adding rows is not so easy, since their slacks are basic
   //
   // Set the pointers for the LP, scaling and basic variables. The

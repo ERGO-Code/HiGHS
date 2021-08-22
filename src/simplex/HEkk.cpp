@@ -524,7 +524,7 @@ HighsStatus HEkk::setBasis() {
   }
   info_.num_basic_logicals = num_row;
   status_.has_basis = true;
-  simplex_nla_.factor_.refactor_info_.set(num_col, num_row);  
+  simplex_nla_.factor_.refactor_info_.set(num_col, num_row);
   return HighsStatus::kOk;
 }
 
@@ -620,7 +620,8 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   return HighsStatus::kOk;
 }
 
-void HEkk::addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix) {
+void HEkk::addCols(const HighsLp& lp,
+                   const HighsSparseMatrix& scaled_a_matrix) {
   // Should be extendSimplexLpRandomVectors
   //  if (valid_simplex_basis)
   //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
@@ -635,7 +636,8 @@ void HEkk::addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix) 
   this->updateStatus(LpAction::kNewCols);
 }
 
-void HEkk::addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix) {
+void HEkk::addRows(const HighsLp& lp,
+                   const HighsSparseMatrix& scaled_ar_matrix) {
   // Should be extendSimplexLpRandomVectors
   //  if (valid_simplex_basis)
   //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
@@ -646,7 +648,8 @@ void HEkk::addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix)
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
-  if (this->status_.has_nla) this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
+  if (this->status_.has_nla)
+    this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
   this->updateStatus(LpAction::kNewRows);
 }
 
@@ -1272,8 +1275,9 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 
 HighsInt HEkk::computeFactor() {
   assert(status_.has_nla);
-  const bool test_refactor=true;
-  const bool full_report=false;
+  const bool test_refactor = false;
+  const bool test_refactor_force_debug = false;
+  const bool full_report = false;
   // If the INVERT is fresh, no need to call simplex_nla_.invert()
   if (!test_refactor && status_.has_fresh_invert) return 0;
   analysis_.simplexTimerStart(InvertClock);
@@ -1287,7 +1291,7 @@ HighsInt HEkk::computeFactor() {
   if (analysis_.analyse_factor_data)
     analysis_.updateInvertFormData(simplex_nla_.factor_);
 
-  const bool force = test_refactor || rank_deficiency;
+  const bool force = test_refactor_force_debug || rank_deficiency;
   debugCheckInvert(simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
@@ -1297,8 +1301,7 @@ HighsInt HEkk::computeFactor() {
       printf("\nRefactored INVERT\n");
       simplex_nla_.factor_.reportLu(true);
     }
-
-    debugCheckInvert(simplex_nla_, true);
+    debugCheckInvert(simplex_nla_, test_refactor_force_debug);
   }
 
   if (rank_deficiency) {

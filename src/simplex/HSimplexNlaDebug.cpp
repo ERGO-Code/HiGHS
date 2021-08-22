@@ -65,14 +65,16 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     double value = random.fraction();
     column.array[iRow] = value;
     HighsInt iCol = base_index[iRow];
-    //    printf("base_index[%4d] = %4d: value = %11.4g\n", (int)iRow, (int)base_index[iRow], value);
+    //    printf("base_index[%4d] = %4d: value = %11.4g\n", (int)iRow,
+    //    (int)base_index[iRow], value);
     if (iCol < num_col) {
       for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
            iEl++) {
         HighsInt index = a_matrix_index[iEl];
         rhs.array[index] += value * a_matrix_value[iEl];
-	//	printf("El %4d: rhs[%4d]=%11.4g from %11.4g = value * a_matrix_value[iEl] = %11.4g\n",
-	//	       (int)iEl, (int)index, rhs.array[index], value, a_matrix_value[iEl]);
+        //	printf("El %4d: rhs[%4d]=%11.4g from %11.4g = value *
+        //a_matrix_value[iEl] = %11.4g\n", 	       (int)iEl, (int)index,
+        //rhs.array[index], value, a_matrix_value[iEl]);
       }
     } else {
       HighsInt index = iCol - num_col;
@@ -87,15 +89,17 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
   /*
   simplex_nla.reportArray("Solution", &column, true);
   simplex_nla.reportArray("RHS before", &rhs, true);
-  printf("a_matrix_start: %p %d\n", (void*)&a_matrix_start[0], (int)a_matrix_start[0]);
-  printf("a_matrix_index: %p %d\n", (void*)&a_matrix_index[0], (int)a_matrix_index[0]);
-  printf("a_matrix_value: %p %g\n", (void*)&a_matrix_value[0], a_matrix_value[0]);
+  printf("a_matrix_start: %p %d\n", (void*)&a_matrix_start[0],
+  (int)a_matrix_start[0]); printf("a_matrix_index: %p %d\n",
+  (void*)&a_matrix_index[0], (int)a_matrix_index[0]); printf("a_matrix_value: %p
+  %g\n", (void*)&a_matrix_value[0], a_matrix_value[0]);
   */
   HVector residual = rhs;
   simplex_nla.ftran(rhs, expected_density);
   //  simplex_nla.reportArray("RHS after", &rhs, true);
 
-  return_status = debugReportError(simplex_nla, false, column, rhs, residual, force);
+  return_status =
+      debugReportError(simplex_nla, false, column, rhs, residual, force);
 
   // Solve B^Tx=b
   rhs.clear();
@@ -105,7 +109,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     if (iCol < num_col) {
       for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
            iEl++) {
-        rhs.array[iRow] += column.array[a_matrix_index[iEl]] * a_matrix_value[iEl];
+        rhs.array[iRow] +=
+            column.array[a_matrix_index[iEl]] * a_matrix_value[iEl];
       }
     } else {
       rhs.array[iRow] += column.array[iCol - num_col];
@@ -114,15 +119,17 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
   /*
   simplex_nla.reportArray("Solution", &column, true);
   simplex_nla.reportArray("RHS before", &rhs, true);
-  printf("a_matrix_start: %p %d\n", (void*)&a_matrix_start[0], (int)a_matrix_start[0]);
-  printf("a_matrix_index: %p %d\n", (void*)&a_matrix_index[0], (int)a_matrix_index[0]);
-  printf("a_matrix_value: %p %g\n", (void*)&a_matrix_value[0], a_matrix_value[0]);
+  printf("a_matrix_start: %p %d\n", (void*)&a_matrix_start[0],
+  (int)a_matrix_start[0]); printf("a_matrix_index: %p %d\n",
+  (void*)&a_matrix_index[0], (int)a_matrix_index[0]); printf("a_matrix_value: %p
+  %g\n", (void*)&a_matrix_value[0], a_matrix_value[0]);
   */
   residual = rhs;
   simplex_nla.btran(rhs, expected_density);
   //  simplex_nla.reportArray("RHS after", &rhs, true);
 
-  return_status = debugReportError(simplex_nla, true, column, rhs, residual, force);
+  return_status =
+      debugReportError(simplex_nla, true, column, rhs, residual, force);
 
   if (options->highs_debug_level < kHighsDebugLevelExpensive && !force)
     return return_status;
@@ -167,7 +174,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     inverse_error_norm =
         std::max(inverse_column_error_norm, inverse_error_norm);
     double residual_column_error_norm =
-      debugResidualError(simplex_nla, false, column, residual);
+        debugResidualError(simplex_nla, false, column, residual);
     residual_error_norm =
         std::max(residual_column_error_norm, residual_error_norm);
   }
@@ -207,10 +214,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
   return return_status;
 }
 
-double debugResidualError(const HSimplexNla& simplex_nla,
-			  const bool transposed,
-                          const HVector& solution,
-			  HVector& residual) {
+double debugResidualError(const HSimplexNla& simplex_nla, const bool transposed,
+                          const HVector& solution, HVector& residual) {
   const HighsInt num_row = simplex_nla.lp_->num_row_;
   const HighsInt num_col = simplex_nla.lp_->num_col_;
   const vector<HighsInt>& a_matrix_start = simplex_nla.lp_->a_matrix_.start_;
@@ -222,16 +227,16 @@ double debugResidualError(const HSimplexNla& simplex_nla,
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       HighsInt iCol = base_index[iRow];
       if (iCol < num_col) {
-	for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
-	     iEl++) {
-	  HighsInt index = a_matrix_index[iEl];
-	  double value = solution.array[index];
-	  residual.array[iRow] -= value * a_matrix_value[iEl];
-	}
+        for (HighsInt iEl = a_matrix_start[iCol];
+             iEl < a_matrix_start[iCol + 1]; iEl++) {
+          HighsInt index = a_matrix_index[iEl];
+          double value = solution.array[index];
+          residual.array[iRow] -= value * a_matrix_value[iEl];
+        }
       } else {
-	HighsInt index = iCol - num_col;
-	double value = solution.array[index];
-	residual.array[iRow] -= value;
+        HighsInt index = iCol - num_col;
+        double value = solution.array[index];
+        residual.array[iRow] -= value;
       }
     }
   } else {
@@ -239,14 +244,14 @@ double debugResidualError(const HSimplexNla& simplex_nla,
       double value = solution.array[iRow];
       HighsInt iCol = base_index[iRow];
       if (iCol < num_col) {
-	for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
-	     iEl++) {
-	  HighsInt index = a_matrix_index[iEl];
-	  residual.array[index] -= value * a_matrix_value[iEl];
-	}
+        for (HighsInt iEl = a_matrix_start[iCol];
+             iEl < a_matrix_start[iCol + 1]; iEl++) {
+          HighsInt index = a_matrix_index[iEl];
+          residual.array[index] -= value * a_matrix_value[iEl];
+        }
       } else {
-	HighsInt index = iCol - num_col;
-	residual.array[index] -= value;
+        HighsInt index = iCol - num_col;
+        residual.array[index] -= value;
       }
     }
   }
@@ -260,11 +265,10 @@ double debugResidualError(const HSimplexNla& simplex_nla,
 }
 
 HighsDebugStatus debugReportError(const HSimplexNla& simplex_nla,
-				  const bool transposed,
-				  const HVector& true_solution,
-				  const HVector& solution,
-				  HVector& residual,
-				  const bool force) {
+                                  const bool transposed,
+                                  const HVector& true_solution,
+                                  const HVector& solution, HVector& residual,
+                                  const bool force) {
   const HighsInt num_row = simplex_nla.lp_->num_row_;
   const HighsOptions* options = simplex_nla.options_;
   double solve_error_norm = 0;
@@ -272,12 +276,13 @@ HighsDebugStatus debugReportError(const HSimplexNla& simplex_nla,
     double solve_error = fabs(solution.array[iRow] - true_solution.array[iRow]);
     solve_error_norm = std::max(solve_error, solve_error_norm);
   }
-  double residual_error_norm = debugResidualError(simplex_nla, transposed, solution, residual);
-  
+  double residual_error_norm =
+      debugResidualError(simplex_nla, transposed, solution, residual);
+
   std::string value_adjective;
   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  
+
   std::string type = "";
   if (transposed) type = "transposed ";
   if (solve_error_norm) {
@@ -292,11 +297,11 @@ HighsDebugStatus debugReportError(const HSimplexNla& simplex_nla,
     }
     if (force) report_level = HighsLogType::kInfo;
     highsLogDev(
-		options->log_options, report_level,
-		"CheckINVERT:   %-9s (%9.4g) norm for %srandom solution solve error\n",
-		value_adjective.c_str(), solve_error_norm, type.c_str());
+        options->log_options, report_level,
+        "CheckINVERT:   %-9s (%9.4g) norm for %srandom solution solve error\n",
+        value_adjective.c_str(), solve_error_norm, type.c_str());
   }
-  
+
   if (residual_error_norm) {
     if (residual_error_norm > kResidualExcessiveError) {
       value_adjective = "Excessive";
@@ -310,12 +315,10 @@ HighsDebugStatus debugReportError(const HSimplexNla& simplex_nla,
       value_adjective = "Small";
     }
     if (force) report_level = HighsLogType::kInfo;
-    highsLogDev(
-		options->log_options, report_level,
-		"CheckINVERT:   %-9s (%9.4g) norm for %srandom solution residual error\n",
-		value_adjective.c_str(), residual_error_norm, type.c_str());
+    highsLogDev(options->log_options, report_level,
+                "CheckINVERT:   %-9s (%9.4g) norm for %srandom solution "
+                "residual error\n",
+                value_adjective.c_str(), residual_error_norm, type.c_str());
   }
   return return_status;
 }
-
-
