@@ -1292,7 +1292,7 @@ HighsInt HEkk::computeFactor() {
   const HighsInt rank_deficiency = simplex_nla_.invert();
   if (full_report) {
     printf("\nFactored INVERT\n");
-    simplex_nla_.factor_.reportLu(true);
+    simplex_nla_.factor_.reportLu();
   }
 
   if (analysis_.analyse_factor_data)
@@ -1306,7 +1306,7 @@ HighsInt HEkk::computeFactor() {
     simplex_nla_.invert();
     if (full_report) {
       printf("\nRefactored INVERT\n");
-      simplex_nla_.factor_.reportLu(true);
+      simplex_nla_.factor_.reportLu();
     }
     debugCheckInvert(simplex_nla_, test_refactor_force_debug);
   }

@@ -22,7 +22,7 @@
 #include <tuple>
 #include <vector>
 
-#include "HConfig.h"
+//#include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
@@ -221,7 +221,7 @@ class HFactor {
    */
   const double* getAvalue() const { return Avalue; }
 
-  void reportLu(const bool full) const;
+  void reportLu(const HighsInt l_u_or_both=kReportLuBoth, const bool full=true) const;
 
   // Information required to perform refactorization of the current
   // basis

@@ -154,7 +154,9 @@ set(sources
     simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
+    simplex/HFactorExtend.cpp
     simplex/HFactorRefactor.cpp
+    simplex/HFactorUtils.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
@@ -574,7 +576,9 @@ target_sources(libhighs PRIVATE
     simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
+    simplex/HFactorExtend.cpp
     simplex/HFactorRefactor.cpp
+    simplex/HFactorUtils.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp

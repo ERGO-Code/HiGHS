@@ -225,7 +225,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   }
   if (report_lu) {
     printf("\nAfter units and singletons\n");
-    reportLu(false);
+    reportLu(kReportLuBoth, false);
   }
   if (stage < numRow) {
     // Handle the remaining Markowitz pivots
@@ -244,8 +244,10 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       LpivotIndex[iK] = this->refactor_info_.pivot_row[iK];
     // To do hyper-sparse FtranL operations, have to set up LpivotLookup.
     LpivotLookup.resize(numRow);
-    for (HighsInt iRow = 0; iRow < numRow; iRow++)
+    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+      if (iRow<stage) assert(LpivotLookup[LpivotIndex[iRow]] == iRow);
       LpivotLookup[LpivotIndex[iRow]] = iRow;
+    }
     // Need to know whether to consider matrix entries for FtranL
     // operation. Initially these correspond to all the rows without
     // pivots
@@ -331,13 +333,13 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       has_pivot[iRow] = true;
       if (report_lu) {
         printf("\nAfter Markowitz %d\n", (int)(iK - stage));
-        reportLu(false);
+        reportLu(kReportLuBoth, false);
       }
     }
   }
   if (report_lu) {
     printf("\nRefactored INVERT\n");
-    reportLu(false);
+    reportLu(kReportLuBoth, false);
   }
   buildFinish();
   return 0;

@@ -78,4 +78,10 @@ const HighsInt kPFVectors = 2000;
 const HighsInt kPFEntriesMultiplier = 4;
 const HighsInt kNewLRRowsExtraNz = 100;
 
+enum ReportLuOption {kReportLuJustL = 1,
+		     kReportLuJustU,
+		     kReportLuBoth
+};
+		     
+
 #endif /* HFACTORCONST_H_ */
