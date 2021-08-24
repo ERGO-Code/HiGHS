@@ -2741,3 +2741,32 @@ double HEkk::computeBasisCondition() {
 void HEkk::initialiseAnalysis() {
   analysis_.setup(lp_name_, lp_, *options_, iteration_count_);
 }
+
+std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
+  std::string rebuild_reason_string;
+  if (rebuild_reason == kRebuildReasonNo) {
+    rebuild_reason_string = "No reason";
+  } else if (rebuild_reason == kRebuildReasonUpdateLimitReached) {
+    rebuild_reason_string = "Update limit reached";
+  } else if (rebuild_reason == kRebuildReasonSyntheticClockSaysInvert) {
+    rebuild_reason_string = "Synthetic clock";
+  } else if (rebuild_reason == kRebuildReasonPossiblyOptimal) {
+    rebuild_reason_string = "Possibly optimal";
+  } else if (rebuild_reason == kRebuildReasonPossiblyPhase1Feasible) {
+    rebuild_reason_string = "Possibly phase 1 feasible";
+  } else if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) {
+    rebuild_reason_string = "Possibly primal unbounded";
+  } else if (rebuild_reason == kRebuildReasonPossiblyDualUnbounded) {
+    rebuild_reason_string = "Possibly dual unbounded";
+  } else if (rebuild_reason == kRebuildReasonPossiblySingularBasis) {
+    rebuild_reason_string = "Possibly singular basis";
+  } else if (rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex) {
+    rebuild_reason_string = "Primal infeasible in primal simplex";
+  } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
+    rebuild_reason_string = "Choose column failure";
+  } else {
+    rebuild_reason_string = "Unidentified";
+    assert(1==0);
+  }
+  return rebuild_reason_string;
+}

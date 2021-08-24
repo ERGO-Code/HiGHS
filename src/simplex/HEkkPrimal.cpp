@@ -580,6 +580,19 @@ void HEkkPrimal::rebuild() {
   rebuild_reason = kRebuildReasonNo;
   // Possibly Rebuild factor
   bool reInvert = info.update_count > 0;
+  if (!ekk_instance_.options_->reinvert_when_simplex_may_terminate && (
+      reason_for_rebuild == kRebuildReasonPossiblyOptimal ||
+      reason_for_rebuild == kRebuildReasonPossiblyPhase1Feasible ||
+      reason_for_rebuild == kRebuildReasonPossiblyPrimalUnbounded ||
+      reason_for_rebuild == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
+    reInvert = false;
+  }
+
+  std::string logic = "no ";
+  if (reInvert) logic = "   ";
+  if (info.update_count) printf("HEkkPrimal: %srefactorization after %" HIGHSINT_FORMAT " updates for rebuild reason = %s\n",
+	 logic.c_str(), info.update_count, ekk_instance_.rebuildReason(reason_for_rebuild).c_str());
+     
   if (reInvert) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is
@@ -741,9 +754,12 @@ void HEkkPrimal::iterate() {
   // kRebuildReasonPrimalInfeasibleInPrimalSimplex is set if a
   // primal infeasiblility is found in phase 2
   //
-  // rebuild_reason = kRebuildReasonUpdateLimitReached is set in
+  // rebuild_reason = kRebuildReasonPossiblyPhase1Feasible is set in
   // phase 1 if the number of primal infeasiblilities is reduced to
-  // zero, or in either phase if the update count reaches the limit!
+  // zero
+  //
+  // rebuild_reason = kRebuildReasonUpdateLimitReached is set in
+  // either phase if the update count reaches the limit!
   //
   // rebuild_reason = kRebuildReasonSyntheticClockSaysInvert is
   // set in updateFactor() if it is considered to be more efficient to
@@ -752,9 +768,10 @@ void HEkkPrimal::iterate() {
   // Crude way to force rebuild if there are no infeasibilities in phase 1
   if (!ekk_instance_.info_.num_primal_infeasibilities &&
       solve_phase == kSolvePhase1)
-    rebuild_reason = kRebuildReasonUpdateLimitReached;
+    rebuild_reason = kRebuildReasonPossiblyPhase1Feasible;
 
   assert(rebuild_reason == kRebuildReasonNo ||
+         rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
          rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
          rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
          rebuild_reason == kRebuildReasonUpdateLimitReached);
@@ -1995,8 +2012,6 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   ekk_instance_.choosePriceTechnique(info.price_strategy, local_density,
                                      use_col_price, use_row_price_w_switch);
   if (analysis->analyse_simplex_data) {
-    printf("price_strategy = %d; use_col_price = %d\n",
-           (int)info.price_strategy, use_col_price);
     if (use_col_price) {
       const double expected_density = 1;
       analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange,

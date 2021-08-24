@@ -31,6 +31,7 @@ void HFactor::deleteNonbasicCols(const HighsInt num_deleted_col) {
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   invalidAMatrixAction();
+  return;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
   printf("Adding %" HIGHSINT_FORMAT

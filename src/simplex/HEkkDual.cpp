@@ -896,6 +896,12 @@ void HEkkDual::rebuild() {
   rebuild_reason = kRebuildReasonNo;
   // Possibly rebuild factored inverse
   bool reInvert = info.update_count > 0;
+
+  std::string logic = "no ";
+  if (reInvert) logic = "   ";
+  if (info.update_count) printf("HEkkDual: %srefactorization after %" HIGHSINT_FORMAT " updates for rebuild reason = %s\n",
+	 logic.c_str(), info.update_count, ekk_instance_.rebuildReason(reason_for_rebuild).c_str());
+     
   if (reInvert) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is

@@ -111,11 +111,12 @@ enum RebuildReason {
   kRebuildReasonUpdateLimitReached,               // 1
   kRebuildReasonSyntheticClockSaysInvert,         // 2
   kRebuildReasonPossiblyOptimal,                  // 3
-  kRebuildReasonPossiblyPrimalUnbounded,          // 4
-  kRebuildReasonPossiblyDualUnbounded,            // 5
-  kRebuildReasonPossiblySingularBasis,            // 6
-  kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 7
-  kRebuildReasonChooseColumnFail,                 // 8
+  kRebuildReasonPossiblyPhase1Feasible,           // 4
+  kRebuildReasonPossiblyPrimalUnbounded,          // 5
+  kRebuildReasonPossiblyDualUnbounded,            // 6
+  kRebuildReasonPossiblySingularBasis,            // 7
+  kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
+  kRebuildReasonChooseColumnFail,                 // 9
   kRebuildReasonCount
 };
 

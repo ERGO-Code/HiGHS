@@ -186,9 +186,10 @@ class HEkk {
 
   double computeBasisCondition();
   void initialiseAnalysis();
-  void initialiseControl();
+  std::string rebuildReason(const HighsInt rebuild_reason);
 
   // Methods in HEkkControl
+  void initialiseControl();
   void assessDSEWeightError(const double computed_edge_weight,
                             const double updated_edge_weight);
   void updateOperationResultDensity(const double local_density,

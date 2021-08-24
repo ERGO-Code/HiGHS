@@ -309,6 +309,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_substitution_maxfillin;
+  bool reinvert_when_simplex_may_terminate;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
@@ -742,6 +743,12 @@ class HighsOptions : public HighsOptionsStruct {
                             kSimplexUnscaledSolutionStrategyRefine,
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
+
+    record_bool =
+        new OptionRecordBool("reinvert_when_simplex_may_terminate",
+                             "Reinvert the basis matrix when the simplex algorithm may terminate",
+                             advanced, &reinvert_when_simplex_may_terminate, true);
+    records.push_back(record_bool);
 
     record_bool =
         new OptionRecordBool("simplex_initial_condition_check",

@@ -245,7 +245,11 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     // To do hyper-sparse FtranL operations, have to set up LpivotLookup.
     LpivotLookup.resize(numRow);
     for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      if (iRow<stage) assert(LpivotLookup[LpivotIndex[iRow]] == iRow);
+      if (iRow<stage) {
+	if (LpivotLookup[LpivotIndex[iRow]] != iRow) {
+	  //	  printf("Strange: Thought that LpivotLookup[LpivotIndex[iRow]] == iRow\n");
+	}
+      }
       LpivotLookup[LpivotIndex[iRow]] = iRow;
     }
     // Need to know whether to consider matrix entries for FtranL
