@@ -1298,8 +1298,10 @@ HighsInt HEkk::computeFactor() {
   if (analysis_.analyse_factor_data)
     analysis_.updateInvertFormData(simplex_nla_.factor_);
 
-  const bool force = test_refactor_force_debug || rank_deficiency;
-  debugCheckInvert(simplex_nla_, force);
+  HighsInt alt_debug_level = -1;
+  if (rank_deficiency) alt_debug_level = kHighsDebugLevelCostly;
+  if (test_refactor_force_debug) alt_debug_level = kHighsDebugLevelExpensive;
+  debugCheckInvert(simplex_nla_, alt_debug_level);
   analysis_.simplexTimerStop(InvertClock);
 
   if (test_refactor && !rank_deficiency) {
@@ -1308,7 +1310,7 @@ HighsInt HEkk::computeFactor() {
       printf("\nRefactored INVERT\n");
       simplex_nla_.factor_.reportLu();
     }
-    debugCheckInvert(simplex_nla_, test_refactor_force_debug);
+    debugCheckInvert(simplex_nla_, alt_debug_level);
   }
 
   if (rank_deficiency) {
@@ -2208,6 +2210,12 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
     *hint = kRebuildReasonSyntheticClockSaysInvert;
 
   analysis_.simplexTimerStop(UpdateFactorClock);
+  // Use the next level down for the debug level, since the cost of
+  // checking the INVERT every iteration is an order more expensive
+  // than checking after factorization.
+  const HighsInt alt_debug_level = options_->highs_debug_level-1;
+  debugCheckInvert(simplex_nla_, alt_debug_level);
+
 }
 
 void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,

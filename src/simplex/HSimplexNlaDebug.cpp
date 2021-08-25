@@ -30,13 +30,20 @@ const double kInverseLargeError = 1e-12;
 const double kInverseExcessiveError = sqrt(kInverseLargeError);
 
 HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
-                                  const bool force) {
-  if (simplex_nla.options_->highs_debug_level < kHighsDebugLevelCostly &&
-      !force)
+                                  const HighsInt alt_debug_level) {
+  // Sometimes a value other than highs_debug_level is passed as
+  // alt_debug_level, either to force debugging, or to limit
+  // debugging. If no value is passed, then alt_debug_level = -1, and
+  // highs_debug_level is used
+  HighsInt use_debug_level = alt_debug_level;
+  if (use_debug_level<0) use_debug_level = simplex_nla.options_->highs_debug_level;
+  if (use_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
-  if (force)
-    highsLogDev(simplex_nla.options_->log_options, HighsLogType::kInfo,
-                "\nCheckNlaINVERT:   Forcing debug\n");
+  // If highs_debug_level isn't being used, then indicate that it's
+  // being forced, and also force reporting of OK errors
+  const bool force = alt_debug_level > simplex_nla.options_->highs_debug_level;
+  if (force) highsLogDev(simplex_nla.options_->log_options, HighsLogType::kInfo,
+			 "CheckNlaINVERT:   Forcing debug\n");
 
   HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
   return_status = HighsDebugStatus::kOk;
@@ -104,8 +111,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
   return_status =
       debugReportError(simplex_nla, true, column, rhs, residual, force);
 
-  if (options->highs_debug_level < kHighsDebugLevelExpensive && !force)
-    return return_status;
+  if (use_debug_level < kHighsDebugLevelExpensive) return return_status;
 
   std::string value_adjective;
   HighsLogType report_level;

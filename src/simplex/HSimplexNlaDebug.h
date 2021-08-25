@@ -29,7 +29,7 @@
 // class HVector;
 
 HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
-                                  const bool force = false);
+				  const HighsInt alt_debug_level = -1);
 
 double debugResidualError(const HSimplexNla& simplex_nla, const bool transposed,
                           const HVector& solution, HVector& residual);

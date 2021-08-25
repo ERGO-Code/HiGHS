@@ -1856,8 +1856,8 @@ void HEkkDual::updatePivots() {
   ekk_instance_.transformForUpdate(&col_aq, &row_ep, variable_in, &row_out);
   //
   // Update the sets of indices of basic and nonbasic variables
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
-  //  update_pivots");
+  //
+  // debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before update_pivots");
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  update_pivots");

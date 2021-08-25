@@ -1320,8 +1320,18 @@ void HEkkPrimal::update() {
   hyperChooseColumnDualChange();
 
   // Perform pivoting
+  //
+  // Transform the vectors used in updateFactor if the simplex NLA involves
+  // scaling
+  ekk_instance_.transformForUpdate(&col_aq, &row_ep, variable_in, &row_out);
+  //
+  // Update the sets of indices of basic and nonbasic variables
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
+  //
+  // Update the invertible representation of the basis matrix
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
+  //
+  // Update the row-wise representation of the nonbasic columns
   ekk_instance_.updateMatrix(variable_in, variable_out);
   if (info.update_count >= info.update_limit)
     rebuild_reason = kRebuildReasonUpdateLimitReached;

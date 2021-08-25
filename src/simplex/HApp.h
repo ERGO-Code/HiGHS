@@ -76,12 +76,14 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
     // The LP has no scaling, so ensure that the simplex NLA has no scaling
     assert(!simplex_nla.scale_);
   }
+  // Can't set alt_debug_level to -1 since it's used to determine
+  // whether to set simplex_nla.lp_ = &incumbent_lp;
+  HighsInt alt_debug_level = simplex_nla.options_->highs_debug_level;
   // ToDo Need to switch off this forced debug
-  const bool force_debug = true;
-  if (simplex_nla.options_->highs_debug_level >= kHighsDebugLevelCostly ||
-      force_debug) {
+  alt_debug_level = kHighsDebugLevelExpensive;
+  if (alt_debug_level) {
     simplex_nla.lp_ = &incumbent_lp;
-    if (debugCheckInvert(simplex_nla, true) == HighsDebugStatus::kError) {
+    if (debugCheckInvert(simplex_nla, alt_debug_level) == HighsDebugStatus::kError) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Error in basis matrix inverse after solving the LP\n");
       return_status = HighsStatus::kError;
