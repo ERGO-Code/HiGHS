@@ -338,6 +338,14 @@ restart:
       // the node is still not fathomed, so perform separation
       sepa.separate(search.getLocalDomain());
 
+      if (mipdata_->domain.infeasible()) {
+        search.cutoffNode();
+        mipdata_->nodequeue.clear();
+        mipdata_->pruned_treeweight = 1.0;
+        mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+        break;
+      }
+
       // after separation we store the new basis and proceed with the outer loop
       // to perform a dive from this node
       if (mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kError &&
