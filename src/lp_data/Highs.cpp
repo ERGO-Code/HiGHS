@@ -508,8 +508,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  HighsInt min_highs_debug_level =  // kHighsDebugLevelMin;
-      kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level =  kHighsDebugLevelMin;
+  //      kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
   //
   //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)

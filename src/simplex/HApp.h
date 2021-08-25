@@ -80,7 +80,7 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // whether to set simplex_nla.lp_ = &incumbent_lp;
   HighsInt alt_debug_level = simplex_nla.options_->highs_debug_level;
   // ToDo Need to switch off this forced debug
-  alt_debug_level = kHighsDebugLevelExpensive;
+  //  alt_debug_level = kHighsDebugLevelExpensive;
   if (alt_debug_level) {
     simplex_nla.lp_ = &incumbent_lp;
     if (debugCheckInvert(simplex_nla, alt_debug_level) == HighsDebugStatus::kError) {
