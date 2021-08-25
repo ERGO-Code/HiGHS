@@ -576,7 +576,7 @@ void HEkkPrimal::rebuild() {
   }
 
   // Rebuild ekk_instance_.factor_ - only if we got updates
-  HighsInt reason_for_rebuild = rebuild_reason;
+  const HighsInt reason_for_rebuild = rebuild_reason;
   rebuild_reason = kRebuildReasonNo;
   // Possibly Rebuild factor
   bool reInvert = info.update_count > 0;

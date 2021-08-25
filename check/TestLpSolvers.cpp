@@ -427,5 +427,5 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   error = fabs((info.objective_function_value - max_objective_function_value) /
                max_objective_function_value);
   if (dev_run) printf("\nOptimal objective value error = %g\n", error);
-  REQUIRE(error < 1e-14);
+  REQUIRE(error < 1e-10);
 }

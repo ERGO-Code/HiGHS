@@ -892,14 +892,22 @@ void HEkkDual::rebuild() {
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
+  // Rebuild ekk_instance_.factor_ - only if we got updates
   const HighsInt reason_for_rebuild = rebuild_reason;
   rebuild_reason = kRebuildReasonNo;
-  // Possibly rebuild factored inverse
+  // Possibly Rebuild factor
   bool reInvert = info.update_count > 0;
+  if (!ekk_instance_.options_->reinvert_when_simplex_may_terminate && (
+      reason_for_rebuild == kRebuildReasonPossiblyOptimal ||
+      reason_for_rebuild == kRebuildReasonPossiblyPhase1Feasible ||
+      reason_for_rebuild == kRebuildReasonPossiblyPrimalUnbounded ||
+      reason_for_rebuild == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
+    reInvert = false;
+  }
 
   std::string logic = "no ";
   if (reInvert) logic = "   ";
-  if (info.update_count) printf("HEkkDual: %srefactorization after %" HIGHSINT_FORMAT " updates for rebuild reason = %s\n",
+  if (info.update_count) printf("HEkkDual:   %srefactorization after %" HIGHSINT_FORMAT " updates for rebuild reason = %s\n",
 	 logic.c_str(), info.update_count, ekk_instance_.rebuildReason(reason_for_rebuild).c_str());
      
   if (reInvert) {
