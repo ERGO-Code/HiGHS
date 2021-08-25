@@ -34,7 +34,10 @@
 // using std::cout;
 // using std::endl;
 
-void HEkk::clear() { this->clearData(); }
+void HEkk::clear() {
+  this->clearEkkData();
+  this->simplex_nla_.clear();
+}
 
 void HEkk::invalidate() {
   this->status_.initialised = false;
@@ -70,7 +73,9 @@ void HEkk::invalidateBasisArtifacts() {
   this->status_.has_primal_ray = false;
 }
 
-void HEkk::clearData() {
+void HEkk::clearEkkData() {
+  // Don't clear simplex NLA as part of clearing Ekk data, so that
+  // HFactor instance is maintained
   this->options_ = NULL;
   this->timer_ = NULL;
   // analysis_; No clear yet
@@ -88,7 +93,6 @@ void HEkk::clearData() {
   this->simplex_in_scaled_space_ = false;
   this->ar_matrix_.clear();
   this->scaled_a_matrix_.clear();
-  this->simplex_nla_.clear();
 
   this->cost_scale_ = 1;
   this->iteration_count_ = 0;
@@ -245,7 +249,7 @@ void HEkk::updateStatus(LpAction action) {
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
-      this->clear();
+      this->clear();//clearEkkData();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:

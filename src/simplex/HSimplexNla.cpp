@@ -32,18 +32,24 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
                         HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
-  setLpAndScalePointers(lp);
-  base_index_ = base_index;
-  options_ = options;
-  timer_ = timer;
-  analysis_ = analysis;
-  report_ = false;
-  factor_.setup(lp_->num_col_, lp_->num_row_, &factor_a_matrix->start_[0],
-                &factor_a_matrix->index_[0], &factor_a_matrix->value_[0],
-                base_index_, factor_pivot_threshold,
-                options_->factor_pivot_tolerance, options_->highs_debug_level,
-                options_->output_flag, options_->log_file_stream,
-                options_->log_to_console, options_->log_dev_level);
+  this->setLpAndScalePointers(lp);
+  this->base_index_ = base_index;
+  this->options_ = options;
+  this->timer_ = timer;
+  this->analysis_ = analysis;
+  this->report_ = false;
+  this->factor_.setup(this->lp_->num_col_, this->lp_->num_row_,
+		      &factor_a_matrix->start_[0],
+		      &factor_a_matrix->index_[0],
+		      &factor_a_matrix->value_[0],
+		      this->base_index_,
+		      factor_pivot_threshold,
+		      this->options_->factor_pivot_tolerance,
+		      this->options_->highs_debug_level,
+		      this->options_->output_flag,
+		      this->options_->log_file_stream,
+		      this->options_->log_to_console,
+		      this->options_->log_dev_level);
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 

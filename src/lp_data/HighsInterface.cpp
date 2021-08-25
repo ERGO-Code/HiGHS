@@ -17,6 +17,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HSimplexNlaDebug.h"//Just to check INVERT in addRows
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
@@ -246,7 +247,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   clearModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
-
+  if (ekk_instance_.status_.has_nla)
+    debugCheckInvert(ekk_instance_.simplex_nla_, kHighsDebugLevelCostly);
   return return_status;
 }
 

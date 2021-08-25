@@ -33,7 +33,7 @@ class HEkk {
   void invalidateBasisMatrix();
   void invalidateBasis();
   void invalidateBasisArtifacts();
-  void clearData();
+  void clearEkkData();
   void clearInfo();
   void clearStatus();
   void clearSimplexBasis(SimplexBasis& simplex_basis);
