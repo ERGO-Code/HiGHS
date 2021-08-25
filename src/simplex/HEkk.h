@@ -39,6 +39,11 @@ class HEkk {
   void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void updateStatus(LpAction action);
+  void setNlaPointersForLpAndScale(const HighsLp& lp);
+  void setNlaPointersForTrans(const HighsLp& lp);
+  void btran(HVector& rhs, const double expected_density);
+  void ftran(HVector& rhs, const double expected_density);
+
   void moveLp(HighsLpSolverObject& solver_object);
   void setPointers(HighsOptions* options, HighsTimer* timer);
   HighsSparseMatrix* getScaledAMatrixPointer();

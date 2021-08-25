@@ -1090,7 +1090,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // its LP to be refreshed so that it can use its scale factors
   assert(ekk_instance_.status_.has_invert);
   // Reset the simplex NLA LP and scale pointers for the unscaled LP
-  ekk_instance_.simplex_nla_.setLpAndScalePointers(&lp);
+  ekk_instance_.setNlaPointersForLpAndScale(lp);
   assert(!lp.is_moved_);
   // Set up solve vector with suitably scaled RHS
   HVector solve_vector;
@@ -1114,9 +1114,9 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // Get expected_density from analysis during simplex solve.
   const double expected_density = 1;
   if (transpose) {
-    ekk_instance_.simplex_nla_.btran(solve_vector, expected_density);
+    ekk_instance_.btran(solve_vector, expected_density);
   } else {
-    ekk_instance_.simplex_nla_.ftran(solve_vector, expected_density);
+    ekk_instance_.ftran(solve_vector, expected_density);
   }
   // Extract the solution
   if (solution_indices == NULL) {

@@ -36,6 +36,7 @@
 
 void HEkk::clear() {
   this->clearEkkData();
+  this->clearSimplexBasis(this->basis_);
   this->simplex_nla_.clear();
 }
 
@@ -74,8 +75,8 @@ void HEkk::invalidateBasisArtifacts() {
 }
 
 void HEkk::clearEkkData() {
-  // Don't clear simplex NLA as part of clearing Ekk data, so that
-  // HFactor instance is maintained
+  // Don't clear simplex NLA or simplex basis as part of clearing Ekk
+  // data, so that HFactor instance is maintained
   this->options_ = NULL;
   this->timer_ = NULL;
   // analysis_; No clear yet
@@ -85,7 +86,6 @@ void HEkk::clearEkkData() {
   this->clearStatus();
   this->clearInfo();
   model_status_ = HighsModelStatus::kNotset;
-  this->clearSimplexBasis(this->basis_);
   // random_; Has no data
   this->workEdWt_ = NULL;
   this->workEdWtFull_ = NULL;
@@ -279,6 +279,28 @@ void HEkk::updateStatus(LpAction action) {
     default:
       break;
   }
+}
+
+void HEkk::setNlaPointersForLpAndScale(const HighsLp& lp) {
+   assert(status_.has_nla);
+   simplex_nla_.setLpAndScalePointers(&lp);
+}
+
+void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
+   assert(status_.has_nla);
+   assert(status_.has_basis);
+   simplex_nla_.setLpAndScalePointers(&lp);
+   simplex_nla_.base_index_ = &basis_.basicIndex_[0];  
+}
+
+void HEkk::btran(HVector& rhs, const double expected_density) {
+  assert(status_.has_nla);
+  simplex_nla_.btran(rhs, expected_density);
+}
+
+void HEkk::ftran(HVector& rhs, const double expected_density) {
+  assert(status_.has_nla);
+  simplex_nla_.ftran(rhs, expected_density);
 }
 
 void HEkk::moveLp(HighsLpSolverObject& solver_object) {
@@ -840,7 +862,6 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   } else {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_->factor_pivot_threshold);
-    HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
     simplex_nla_.setup(&(this->lp_),                  //&lp_,
                        &this->basis_.basicIndex_[0],  //&basis_.basicIndex_[0],
                        this->options_,                // options_,
@@ -851,22 +872,24 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     status_.has_nla = true;
   }
 
-  const HighsInt rank_deficiency = computeFactor();
-  if (rank_deficiency) {
-    // Basis is rank deficient
-    if (only_from_known_basis) {
-      // If only this basis should be used, then return error
-      highsLogDev(options_->log_options, HighsLogType::kError,
-                  "Supposed to be a full-rank basis, but incorrect\n");
-      return rank_deficiency;
+  if (!status_.has_invert) {
+    const HighsInt rank_deficiency = computeFactor();
+    if (rank_deficiency) {
+      // Basis is rank deficient
+      if (only_from_known_basis) {
+	// If only this basis should be used, then return error
+	highsLogDev(options_->log_options, HighsLogType::kError,
+		    "Supposed to be a full-rank basis, but incorrect\n");
+	return rank_deficiency;
+      }
+      // Account for rank deficiency by correcing nonbasicFlag
+      handleRankDeficiency();
+      this->updateStatus(LpAction::kNewBasis);
+      setNonbasicMove();
+      status_.has_basis = true;
+      status_.has_invert = true;
+      status_.has_fresh_invert = true;
     }
-    // Account for rank deficiency by correcing nonbasicFlag
-    handleRankDeficiency();
-    this->updateStatus(LpAction::kNewBasis);
-    setNonbasicMove();
-    status_.has_basis = true;
-    status_.has_invert = true;
-    status_.has_fresh_invert = true;
   }
   assert(status_.has_invert);
   return 0;
