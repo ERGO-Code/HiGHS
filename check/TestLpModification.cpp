@@ -7,21 +7,12 @@
 
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
-
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
-                       HighsStatus status) {
-  if (!dev_run) return;
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "%s: HighsStatus = %" HIGHSINT_FORMAT " - %s\n", message.c_str(),
-               (int)status, HighsStatusToString(status).c_str());
-}
+                       HighsStatus status);
+
 
 void callRun(Highs& highs, const HighsLogOptions& log_options,
-             std::string message, const HighsStatus require_return_status) {
-  HighsStatus return_status = highs.run();
-  HighsStatusReport(log_options, message, return_status);
-  REQUIRE(return_status == require_return_status);
-}
+             std::string message, const HighsStatus require_return_status);
 
 bool areLpColEqual(const HighsInt num_col0, const double* colCost0,
                    const double* colLower0, const double* colUpper0,
@@ -31,81 +22,7 @@ bool areLpColEqual(const HighsInt num_col0, const double* colCost0,
                    const double* colLower1, const double* colUpper1,
                    const HighsInt num_nz1, const HighsInt* Astart1,
                    const HighsInt* Aindex1, const double* Avalue1,
-                   const double infinite_bound) {
-  if (num_col0 != num_col1) {
-    if (dev_run)
-      printf("areLpColEqual: %" HIGHSINT_FORMAT
-             " = num_col0 != num_col1 = %" HIGHSINT_FORMAT "\n",
-             num_col0, num_col1);
-    return false;
-  }
-  if (!num_col0) return true;
-  HighsInt num_col = num_col0;
-  for (HighsInt col = 0; col < num_col; col++) {
-    if (colCost0[col] != colCost1[col]) {
-      if (dev_run)
-        printf("areLpColEqual: %g = colCost0[%" HIGHSINT_FORMAT
-               "] != colCost1[%" HIGHSINT_FORMAT "] = %g\n",
-               colCost0[col], col, col, colCost1[col]);
-      return false;
-    }
-  }
-  for (HighsInt col = 0; col < num_col; col++) {
-    if (colLower0[col] <= -infinite_bound && colLower1[col] <= -infinite_bound)
-      continue;
-    if (colLower0[col] != colLower1[col]) {
-      if (dev_run)
-        printf("areLpColEqual: %g = colLower0[%" HIGHSINT_FORMAT
-               "] != colLower1[%" HIGHSINT_FORMAT "] = %g\n",
-               colLower0[col], col, col, colLower1[col]);
-      return false;
-    }
-    if (colUpper0[col] >= infinite_bound && colUpper1[col] >= infinite_bound)
-      continue;
-    if (colUpper0[col] != colUpper1[col]) {
-      if (dev_run)
-        printf("areLpColEqual: %g = colUpper0[%" HIGHSINT_FORMAT
-               "] != colUpper1[%" HIGHSINT_FORMAT "] = %g\n",
-               colUpper0[col], col, col, colUpper1[col]);
-      return false;
-    }
-  }
-  if (num_nz0 != num_nz1) {
-    if (dev_run)
-      printf("areLpColEqual: %" HIGHSINT_FORMAT
-             " = num_nz0 != num_nz1 = %" HIGHSINT_FORMAT "\n",
-             num_nz0, num_nz1);
-    return false;
-  }
-  if (!num_nz0) return true;
-  for (HighsInt col = 0; col < num_col; col++) {
-    if (Astart0[col] != Astart1[col]) {
-      if (dev_run)
-        printf("areLpColEqual: %" HIGHSINT_FORMAT " = Astart0[%" HIGHSINT_FORMAT
-               "] != Astart1[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT "\n",
-               Astart0[col], col, col, Astart1[col]);
-      return false;
-    }
-  }
-  HighsInt num_nz = num_nz0;
-  for (HighsInt nz = 0; nz < num_nz; nz++) {
-    if (Aindex0[nz] != Aindex1[nz]) {
-      if (dev_run)
-        printf("areLpColEqual: %" HIGHSINT_FORMAT " = Aindex0[%" HIGHSINT_FORMAT
-               "] != Aindex1[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT "\n",
-               Aindex0[nz], nz, nz, Aindex1[nz]);
-      return false;
-    }
-    if (Avalue0[nz] != Avalue1[nz]) {
-      if (dev_run)
-        printf("areLpColEqual: %g = Avalue0[%" HIGHSINT_FORMAT
-               "] != Avalue1[%" HIGHSINT_FORMAT "] = %g\n",
-               Avalue0[nz], nz, nz, Avalue1[nz]);
-      return false;
-    }
-  }
-  return true;
-}
+                   const double infinite_bound);
 
 bool areLpRowEqual(const HighsInt num_row0, const double* rowLower0,
                    const double* rowUpper0, const HighsInt num_nz0,
@@ -114,253 +31,20 @@ bool areLpRowEqual(const HighsInt num_row0, const double* rowLower0,
                    const double* rowLower1, const double* rowUpper1,
                    const HighsInt num_nz1, const HighsInt* ARstart1,
                    const HighsInt* ARindex1, const double* ARvalue1,
-                   const double infinite_bound) {
-  if (num_row0 != num_row1) {
-    if (dev_run)
-      printf("areLpRowEqual: %" HIGHSINT_FORMAT
-             " = num_row0 != num_row1 = %" HIGHSINT_FORMAT "\n",
-             num_row0, num_row1);
-    return false;
-  }
-  if (!num_row0) return true;
-  HighsInt num_row = num_row0;
-  for (HighsInt row = 0; row < num_row; row++) {
-    if (rowLower0[row] <= -infinite_bound && rowLower1[row] <= -infinite_bound)
-      continue;
-    if (rowLower0[row] != rowLower1[row]) {
-      if (dev_run)
-        printf("areLpRowEqual: %g = rowLower0[%" HIGHSINT_FORMAT
-               "] != rowLower1[%" HIGHSINT_FORMAT "] = %g\n",
-               rowLower0[row], row, row, rowLower1[row]);
-      return false;
-    }
-    if (rowUpper0[row] >= infinite_bound && rowUpper1[row] >= infinite_bound)
-      continue;
-    if (rowUpper0[row] != rowUpper1[row]) {
-      if (dev_run)
-        printf("areLpRowEqual: %g = rowUpper0[%" HIGHSINT_FORMAT
-               "] != rowUpper1[%" HIGHSINT_FORMAT "] = %g\n",
-               rowUpper0[row], row, row, rowUpper1[row]);
-      return false;
-    }
-  }
-  if (num_nz0 != num_nz1) {
-    if (dev_run)
-      printf("areLpRowEqual: %" HIGHSINT_FORMAT
-             " = num_nz0 != num_nz1 = %" HIGHSINT_FORMAT "\n",
-             num_nz0, num_nz1);
-    return false;
-  }
-  if (!num_nz0) return true;
-  for (HighsInt row = 0; row < num_row; row++) {
-    if (ARstart0[row] != ARstart1[row]) {
-      if (dev_run)
-        printf("areLpRowEqual: %" HIGHSINT_FORMAT
-               " = ARstart0[%" HIGHSINT_FORMAT "] != ARstart1[%" HIGHSINT_FORMAT
-               "] = %" HIGHSINT_FORMAT "\n",
-               ARstart0[row], row, row, ARstart1[row]);
-      return false;
-    }
-  }
-  HighsInt num_nz = num_nz0;
-  for (HighsInt nz = 0; nz < num_nz; nz++) {
-    if (ARindex0[nz] != ARindex1[nz]) {
-      if (dev_run)
-        printf("areLpRowEqual: %" HIGHSINT_FORMAT
-               " = ARindex0[%" HIGHSINT_FORMAT "] != ARindex1[%" HIGHSINT_FORMAT
-               "] = %" HIGHSINT_FORMAT "\n",
-               ARindex0[nz], nz, nz, ARindex1[nz]);
-      return false;
-    }
-    if (ARvalue0[nz] != ARvalue1[nz]) {
-      if (dev_run)
-        printf("areLpRowEqual: %g = ARvalue0[%" HIGHSINT_FORMAT
-               "] != ARvalue1[%" HIGHSINT_FORMAT "] = %g\n",
-               ARvalue0[nz], nz, nz, ARvalue1[nz]);
-      return false;
-    }
-  }
-  return true;
-}
+                   const double infinite_bound);
 
 bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
-                const double infinite_bound) {
-  bool return_bool;
-  if (lp0.a_matrix_.format_ != lp1.a_matrix_.format_) return false;
-  if (lp0.num_col_ > 0 && lp1.num_col_ > 0) {
-    HighsInt lp0_num_nz = lp0.a_matrix_.start_[lp0.num_col_];
-    HighsInt lp1_num_nz = lp1.a_matrix_.start_[lp1.num_col_];
-    return_bool = areLpColEqual(
-        lp0.num_col_, &lp0.col_cost_[0], &lp0.col_lower_[0], &lp0.col_upper_[0],
-        lp0_num_nz, &lp0.a_matrix_.start_[0], &lp0.a_matrix_.index_[0],
-        &lp0.a_matrix_.value_[0], lp1.num_col_, &lp1.col_cost_[0],
-        &lp1.col_lower_[0], &lp1.col_upper_[0], lp1_num_nz,
-        &lp1.a_matrix_.start_[0], &lp1.a_matrix_.index_[0],
-        &lp1.a_matrix_.value_[0], infinite_bound);
-    if (!return_bool) return return_bool;
-  }
-  if (lp0.num_row_ > 0 && lp1.num_row_ > 0) {
-    HighsInt lp0_num_nz = 0;
-    HighsInt lp1_num_nz = 0;
-    return_bool = areLpRowEqual(
-        lp0.num_row_, &lp0.row_lower_[0], &lp0.row_upper_[0], lp0_num_nz, NULL,
-        NULL, NULL, lp1.num_row_, &lp1.row_lower_[0], &lp1.row_upper_[0],
-        lp1_num_nz, NULL, NULL, NULL, infinite_bound);
-  }
-  return return_bool;
-}
+                const double infinite_bound);
 
-void testDeleteKeep(const HighsIndexCollection& index_collection) {
-  HighsInt delete_from_index;
-  HighsInt delete_to_index;
-  HighsInt keep_from_index;
-  HighsInt keep_to_index;
-  HighsInt current_set_entry;
-  const vector<HighsInt>& set = index_collection.set_;
-  const vector<HighsInt>& mask = index_collection.mask_;
-  const HighsInt dimension = index_collection.dimension_;
-  if (dev_run) {
-    if (index_collection.is_interval_) {
-      printf("With index interval [%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
-             "] in [%d, %" HIGHSINT_FORMAT "]\n",
-             index_collection.from_, index_collection.to_, 0, dimension - 1);
-    } else if (index_collection.is_set_) {
-      printf("With index set\n");
-      for (HighsInt entry = 0; entry < index_collection.set_num_entries_;
-           entry++)
-        printf(" %2" HIGHSINT_FORMAT "", entry);
-      printf("\n");
-      for (HighsInt entry = 0; entry < index_collection.set_num_entries_;
-           entry++)
-        printf(" %2" HIGHSINT_FORMAT "", set[entry]);
-      printf("\n");
-    } else {
-      printf("With index mask\n");
-      for (HighsInt index = 0; index < dimension; index++)
-        printf(" %2" HIGHSINT_FORMAT "", index);
-      printf("\n");
-      for (HighsInt index = 0; index < dimension; index++)
-        printf(" %2" HIGHSINT_FORMAT "", mask[index]);
-      printf("\n");
-    }
-  }
+void testDeleteKeep(const HighsIndexCollection& index_collection);
 
-  keep_from_index = 0;
-  if (index_collection.is_interval_) {
-    keep_to_index = index_collection.from_ - 1;
-  } else if (index_collection.is_set_) {
-    current_set_entry = 0;
-    keep_to_index = set[0] - 1;
-  } else {
-    keep_to_index = dimension;
-    for (HighsInt index = 0; index < dimension; index++) {
-      if (mask[index]) {
-        keep_to_index = index - 1;
-        break;
-      }
-    }
-  }
-  if (dev_run)
-    printf("Keep   [%2d, %2" HIGHSINT_FORMAT "]\n", 0, keep_to_index);
-  if (keep_to_index >= dimension - 1) return;
-  for (HighsInt k = 0; k < dimension; k++) {
-    updateOutInIndex(index_collection, delete_from_index, delete_to_index,
-                     keep_from_index, keep_to_index, current_set_entry);
-    if (dev_run)
-      printf("Delete [%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT
-             "]; keep [%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT "]\n",
-             delete_from_index, delete_to_index, keep_from_index,
-             keep_to_index);
-    if (delete_to_index >= dimension - 1 || keep_to_index >= dimension - 1)
-      break;
-  }
-}
+bool testAllDeleteKeep(HighsInt num_row);
 
-bool testAllDeleteKeep(HighsInt num_row) {
-  // Test the extraction of intervals from index collections
-  vector<HighsInt> set = {1, 4, 5, 8};
-  vector<HighsInt> mask = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
-
-  HighsIndexCollection index_collection;
-  index_collection.dimension_ = num_row;
-  index_collection.is_interval_ = false;
-  index_collection.from_ = 3;
-  index_collection.to_ = 6;
-  index_collection.is_set_ = false;
-  index_collection.set_num_entries_ = 4;
-  index_collection.set_ = set;
-  index_collection.is_mask_ = false;
-  index_collection.mask_ = mask;
-
-  HighsInt save_from = index_collection.from_;
-  HighsInt save_set_0 = set[0];
-  HighsInt save_mask_0 = mask[0];
-
-  HighsInt to_pass = 2;  // 2
-  for (HighsInt pass = 0; pass <= to_pass; pass++) {
-    if (dev_run)
-      printf("\nTesting delete-keep: pass %" HIGHSINT_FORMAT "\n", pass);
-    if (pass == 1) {
-      // Mods to test LH limit behaviour
-      index_collection.from_ = 0;
-      set[0] = 0;
-      mask[0] = 1;
-    } else if (pass == 2) {
-      // Mods to test RH limit behaviour
-      index_collection.from_ = save_from;
-      index_collection.to_ = 9;
-      set[0] = save_set_0;
-      set[3] = 9;
-      mask[0] = save_mask_0;
-      mask[9] = 1;
-    }
-
-    index_collection.is_interval_ = true;
-    testDeleteKeep(index_collection);
-    index_collection.is_interval_ = false;
-
-    index_collection.is_set_ = true;
-    testDeleteKeep(index_collection);
-    index_collection.is_set_ = false;
-
-    index_collection.is_mask_ = true;
-    testDeleteKeep(index_collection);
-  }
-  return true;
-}
-
-void messageReportLp(const char* message, const HighsLp& lp) {
-  HighsLogOptions log_options;
-  bool output_flag;
-  bool log_to_console;
-  HighsInt log_dev_level;
-  output_flag = dev_run;
-  log_to_console = true;
-  log_dev_level = kHighsLogDevLevelVerbose;
-  log_options.output_flag = &output_flag;
-  log_options.log_file_stream = NULL;
-  log_options.log_to_console = &log_to_console;
-  log_options.log_dev_level = &log_dev_level;
-  highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting LP: %s\n",
-              message);
-  reportLp(log_options, lp, HighsLogType::kVerbose);
-}
+void messageReportLp(const char* message, const HighsLp& lp);
 
 void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt num_nz, const HighsInt* start,
-                         const HighsInt* index, const double* value) {
-  HighsLogOptions log_options;
-  bool output_flag = true;
-  bool log_to_console = false;
-  HighsInt log_dev_level = kHighsLogDevLevelInfo;
-  log_options.log_file_stream = stdout;
-  log_options.output_flag = &output_flag;
-  log_options.log_to_console = &log_to_console;
-  log_options.log_dev_level = &log_dev_level;
-  highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting Matrix: %s\n",
-              message);
-  reportMatrix(log_options, message, num_col, num_nz, start, index, value);
-}
+                         const HighsInt* index, const double* value);
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
@@ -1328,3 +1012,358 @@ TEST_CASE("LP-delete", "[highs_data]") {
       std::fabs(objective_function_value - adlittle_objective_function_value) <
       double_equal_tolerance);
 }
+
+void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
+                       HighsStatus status) {
+  if (!dev_run) return;
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "%s: HighsStatus = %" HIGHSINT_FORMAT " - %s\n", message.c_str(),
+               (int)status, HighsStatusToString(status).c_str());
+}
+
+void callRun(Highs& highs, const HighsLogOptions& log_options,
+             std::string message, const HighsStatus require_return_status) {
+  HighsStatus return_status = highs.run();
+  HighsStatusReport(log_options, message, return_status);
+  REQUIRE(return_status == require_return_status);
+}
+
+bool areLpColEqual(const HighsInt num_col0, const double* colCost0,
+                   const double* colLower0, const double* colUpper0,
+                   const HighsInt num_nz0, const HighsInt* Astart0,
+                   const HighsInt* Aindex0, const double* Avalue0,
+                   const HighsInt num_col1, const double* colCost1,
+                   const double* colLower1, const double* colUpper1,
+                   const HighsInt num_nz1, const HighsInt* Astart1,
+                   const HighsInt* Aindex1, const double* Avalue1,
+                   const double infinite_bound) {
+  if (num_col0 != num_col1) {
+    if (dev_run)
+      printf("areLpColEqual: %" HIGHSINT_FORMAT
+             " = num_col0 != num_col1 = %" HIGHSINT_FORMAT "\n",
+             num_col0, num_col1);
+    return false;
+  }
+  if (!num_col0) return true;
+  HighsInt num_col = num_col0;
+  for (HighsInt col = 0; col < num_col; col++) {
+    if (colCost0[col] != colCost1[col]) {
+      if (dev_run)
+        printf("areLpColEqual: %g = colCost0[%" HIGHSINT_FORMAT
+               "] != colCost1[%" HIGHSINT_FORMAT "] = %g\n",
+               colCost0[col], col, col, colCost1[col]);
+      return false;
+    }
+  }
+  for (HighsInt col = 0; col < num_col; col++) {
+    if (colLower0[col] <= -infinite_bound && colLower1[col] <= -infinite_bound)
+      continue;
+    if (colLower0[col] != colLower1[col]) {
+      if (dev_run)
+        printf("areLpColEqual: %g = colLower0[%" HIGHSINT_FORMAT
+               "] != colLower1[%" HIGHSINT_FORMAT "] = %g\n",
+               colLower0[col], col, col, colLower1[col]);
+      return false;
+    }
+    if (colUpper0[col] >= infinite_bound && colUpper1[col] >= infinite_bound)
+      continue;
+    if (colUpper0[col] != colUpper1[col]) {
+      if (dev_run)
+        printf("areLpColEqual: %g = colUpper0[%" HIGHSINT_FORMAT
+               "] != colUpper1[%" HIGHSINT_FORMAT "] = %g\n",
+               colUpper0[col], col, col, colUpper1[col]);
+      return false;
+    }
+  }
+  if (num_nz0 != num_nz1) {
+    if (dev_run)
+      printf("areLpColEqual: %" HIGHSINT_FORMAT
+             " = num_nz0 != num_nz1 = %" HIGHSINT_FORMAT "\n",
+             num_nz0, num_nz1);
+    return false;
+  }
+  if (!num_nz0) return true;
+  for (HighsInt col = 0; col < num_col; col++) {
+    if (Astart0[col] != Astart1[col]) {
+      if (dev_run)
+        printf("areLpColEqual: %" HIGHSINT_FORMAT " = Astart0[%" HIGHSINT_FORMAT
+               "] != Astart1[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT "\n",
+               Astart0[col], col, col, Astart1[col]);
+      return false;
+    }
+  }
+  HighsInt num_nz = num_nz0;
+  for (HighsInt nz = 0; nz < num_nz; nz++) {
+    if (Aindex0[nz] != Aindex1[nz]) {
+      if (dev_run)
+        printf("areLpColEqual: %" HIGHSINT_FORMAT " = Aindex0[%" HIGHSINT_FORMAT
+               "] != Aindex1[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT "\n",
+               Aindex0[nz], nz, nz, Aindex1[nz]);
+      return false;
+    }
+    if (Avalue0[nz] != Avalue1[nz]) {
+      if (dev_run)
+        printf("areLpColEqual: %g = Avalue0[%" HIGHSINT_FORMAT
+               "] != Avalue1[%" HIGHSINT_FORMAT "] = %g\n",
+               Avalue0[nz], nz, nz, Avalue1[nz]);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool areLpRowEqual(const HighsInt num_row0, const double* rowLower0,
+                   const double* rowUpper0, const HighsInt num_nz0,
+                   const HighsInt* ARstart0, const HighsInt* ARindex0,
+                   const double* ARvalue0, const HighsInt num_row1,
+                   const double* rowLower1, const double* rowUpper1,
+                   const HighsInt num_nz1, const HighsInt* ARstart1,
+                   const HighsInt* ARindex1, const double* ARvalue1,
+                   const double infinite_bound) {
+  if (num_row0 != num_row1) {
+    if (dev_run)
+      printf("areLpRowEqual: %" HIGHSINT_FORMAT
+             " = num_row0 != num_row1 = %" HIGHSINT_FORMAT "\n",
+             num_row0, num_row1);
+    return false;
+  }
+  if (!num_row0) return true;
+  HighsInt num_row = num_row0;
+  for (HighsInt row = 0; row < num_row; row++) {
+    if (rowLower0[row] <= -infinite_bound && rowLower1[row] <= -infinite_bound)
+      continue;
+    if (rowLower0[row] != rowLower1[row]) {
+      if (dev_run)
+        printf("areLpRowEqual: %g = rowLower0[%" HIGHSINT_FORMAT
+               "] != rowLower1[%" HIGHSINT_FORMAT "] = %g\n",
+               rowLower0[row], row, row, rowLower1[row]);
+      return false;
+    }
+    if (rowUpper0[row] >= infinite_bound && rowUpper1[row] >= infinite_bound)
+      continue;
+    if (rowUpper0[row] != rowUpper1[row]) {
+      if (dev_run)
+        printf("areLpRowEqual: %g = rowUpper0[%" HIGHSINT_FORMAT
+               "] != rowUpper1[%" HIGHSINT_FORMAT "] = %g\n",
+               rowUpper0[row], row, row, rowUpper1[row]);
+      return false;
+    }
+  }
+  if (num_nz0 != num_nz1) {
+    if (dev_run)
+      printf("areLpRowEqual: %" HIGHSINT_FORMAT
+             " = num_nz0 != num_nz1 = %" HIGHSINT_FORMAT "\n",
+             num_nz0, num_nz1);
+    return false;
+  }
+  if (!num_nz0) return true;
+  for (HighsInt row = 0; row < num_row; row++) {
+    if (ARstart0[row] != ARstart1[row]) {
+      if (dev_run)
+        printf("areLpRowEqual: %" HIGHSINT_FORMAT
+               " = ARstart0[%" HIGHSINT_FORMAT "] != ARstart1[%" HIGHSINT_FORMAT
+               "] = %" HIGHSINT_FORMAT "\n",
+               ARstart0[row], row, row, ARstart1[row]);
+      return false;
+    }
+  }
+  HighsInt num_nz = num_nz0;
+  for (HighsInt nz = 0; nz < num_nz; nz++) {
+    if (ARindex0[nz] != ARindex1[nz]) {
+      if (dev_run)
+        printf("areLpRowEqual: %" HIGHSINT_FORMAT
+               " = ARindex0[%" HIGHSINT_FORMAT "] != ARindex1[%" HIGHSINT_FORMAT
+               "] = %" HIGHSINT_FORMAT "\n",
+               ARindex0[nz], nz, nz, ARindex1[nz]);
+      return false;
+    }
+    if (ARvalue0[nz] != ARvalue1[nz]) {
+      if (dev_run)
+        printf("areLpRowEqual: %g = ARvalue0[%" HIGHSINT_FORMAT
+               "] != ARvalue1[%" HIGHSINT_FORMAT "] = %g\n",
+               ARvalue0[nz], nz, nz, ARvalue1[nz]);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
+                const double infinite_bound) {
+  bool return_bool;
+  if (lp0.a_matrix_.format_ != lp1.a_matrix_.format_) return false;
+  if (lp0.num_col_ > 0 && lp1.num_col_ > 0) {
+    HighsInt lp0_num_nz = lp0.a_matrix_.start_[lp0.num_col_];
+    HighsInt lp1_num_nz = lp1.a_matrix_.start_[lp1.num_col_];
+    return_bool = areLpColEqual(
+        lp0.num_col_, &lp0.col_cost_[0], &lp0.col_lower_[0], &lp0.col_upper_[0],
+        lp0_num_nz, &lp0.a_matrix_.start_[0], &lp0.a_matrix_.index_[0],
+        &lp0.a_matrix_.value_[0], lp1.num_col_, &lp1.col_cost_[0],
+        &lp1.col_lower_[0], &lp1.col_upper_[0], lp1_num_nz,
+        &lp1.a_matrix_.start_[0], &lp1.a_matrix_.index_[0],
+        &lp1.a_matrix_.value_[0], infinite_bound);
+    if (!return_bool) return return_bool;
+  }
+  if (lp0.num_row_ > 0 && lp1.num_row_ > 0) {
+    HighsInt lp0_num_nz = 0;
+    HighsInt lp1_num_nz = 0;
+    return_bool = areLpRowEqual(
+        lp0.num_row_, &lp0.row_lower_[0], &lp0.row_upper_[0], lp0_num_nz, NULL,
+        NULL, NULL, lp1.num_row_, &lp1.row_lower_[0], &lp1.row_upper_[0],
+        lp1_num_nz, NULL, NULL, NULL, infinite_bound);
+  }
+  return return_bool;
+}
+
+void testDeleteKeep(const HighsIndexCollection& index_collection) {
+  HighsInt delete_from_index;
+  HighsInt delete_to_index;
+  HighsInt keep_from_index;
+  HighsInt keep_to_index;
+  HighsInt current_set_entry;
+  const vector<HighsInt>& set = index_collection.set_;
+  const vector<HighsInt>& mask = index_collection.mask_;
+  const HighsInt dimension = index_collection.dimension_;
+  if (dev_run) {
+    if (index_collection.is_interval_) {
+      printf("With index interval [%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
+             "] in [%d, %" HIGHSINT_FORMAT "]\n",
+             index_collection.from_, index_collection.to_, 0, dimension - 1);
+    } else if (index_collection.is_set_) {
+      printf("With index set\n");
+      for (HighsInt entry = 0; entry < index_collection.set_num_entries_;
+           entry++)
+        printf(" %2" HIGHSINT_FORMAT "", entry);
+      printf("\n");
+      for (HighsInt entry = 0; entry < index_collection.set_num_entries_;
+           entry++)
+        printf(" %2" HIGHSINT_FORMAT "", set[entry]);
+      printf("\n");
+    } else {
+      printf("With index mask\n");
+      for (HighsInt index = 0; index < dimension; index++)
+        printf(" %2" HIGHSINT_FORMAT "", index);
+      printf("\n");
+      for (HighsInt index = 0; index < dimension; index++)
+        printf(" %2" HIGHSINT_FORMAT "", mask[index]);
+      printf("\n");
+    }
+  }
+
+  keep_from_index = 0;
+  if (index_collection.is_interval_) {
+    keep_to_index = index_collection.from_ - 1;
+  } else if (index_collection.is_set_) {
+    current_set_entry = 0;
+    keep_to_index = set[0] - 1;
+  } else {
+    keep_to_index = dimension;
+    for (HighsInt index = 0; index < dimension; index++) {
+      if (mask[index]) {
+        keep_to_index = index - 1;
+        break;
+      }
+    }
+  }
+  if (dev_run)
+    printf("Keep   [%2d, %2" HIGHSINT_FORMAT "]\n", 0, keep_to_index);
+  if (keep_to_index >= dimension - 1) return;
+  for (HighsInt k = 0; k < dimension; k++) {
+    updateOutInIndex(index_collection, delete_from_index, delete_to_index,
+                     keep_from_index, keep_to_index, current_set_entry);
+    if (dev_run)
+      printf("Delete [%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT
+             "]; keep [%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT "]\n",
+             delete_from_index, delete_to_index, keep_from_index,
+             keep_to_index);
+    if (delete_to_index >= dimension - 1 || keep_to_index >= dimension - 1)
+      break;
+  }
+}
+
+bool testAllDeleteKeep(HighsInt num_row) {
+  // Test the extraction of intervals from index collections
+  vector<HighsInt> set = {1, 4, 5, 8};
+  vector<HighsInt> mask = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = num_row;
+  index_collection.is_interval_ = false;
+  index_collection.from_ = 3;
+  index_collection.to_ = 6;
+  index_collection.is_set_ = false;
+  index_collection.set_num_entries_ = 4;
+  index_collection.set_ = set;
+  index_collection.is_mask_ = false;
+  index_collection.mask_ = mask;
+
+  HighsInt save_from = index_collection.from_;
+  HighsInt save_set_0 = set[0];
+  HighsInt save_mask_0 = mask[0];
+
+  HighsInt to_pass = 2;  // 2
+  for (HighsInt pass = 0; pass <= to_pass; pass++) {
+    if (dev_run)
+      printf("\nTesting delete-keep: pass %" HIGHSINT_FORMAT "\n", pass);
+    if (pass == 1) {
+      // Mods to test LH limit behaviour
+      index_collection.from_ = 0;
+      set[0] = 0;
+      mask[0] = 1;
+    } else if (pass == 2) {
+      // Mods to test RH limit behaviour
+      index_collection.from_ = save_from;
+      index_collection.to_ = 9;
+      set[0] = save_set_0;
+      set[3] = 9;
+      mask[0] = save_mask_0;
+      mask[9] = 1;
+    }
+
+    index_collection.is_interval_ = true;
+    testDeleteKeep(index_collection);
+    index_collection.is_interval_ = false;
+
+    index_collection.is_set_ = true;
+    testDeleteKeep(index_collection);
+    index_collection.is_set_ = false;
+
+    index_collection.is_mask_ = true;
+    testDeleteKeep(index_collection);
+  }
+  return true;
+}
+
+void messageReportLp(const char* message, const HighsLp& lp) {
+  HighsLogOptions log_options;
+  bool output_flag;
+  bool log_to_console;
+  HighsInt log_dev_level;
+  output_flag = dev_run;
+  log_to_console = true;
+  log_dev_level = kHighsLogDevLevelVerbose;
+  log_options.output_flag = &output_flag;
+  log_options.log_file_stream = NULL;
+  log_options.log_to_console = &log_to_console;
+  log_options.log_dev_level = &log_dev_level;
+  highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting LP: %s\n",
+              message);
+  reportLp(log_options, lp, HighsLogType::kVerbose);
+}
+
+void messageReportMatrix(const char* message, const HighsInt num_col,
+                         const HighsInt num_nz, const HighsInt* start,
+                         const HighsInt* index, const double* value) {
+  HighsLogOptions log_options;
+  bool output_flag = true;
+  bool log_to_console = false;
+  HighsInt log_dev_level = kHighsLogDevLevelInfo;
+  log_options.log_file_stream = stdout;
+  log_options.output_flag = &output_flag;
+  log_options.log_to_console = &log_to_console;
+  log_options.log_dev_level = &log_dev_level;
+  highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting Matrix: %s\n",
+              message);
+  reportMatrix(log_options, message, num_col, num_nz, start, index, value);
+}
+

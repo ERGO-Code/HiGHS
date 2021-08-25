@@ -369,7 +369,6 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
     lp.unapplyScale();
     const bool analyse_lp_data =
         kHighsAnalysisLevelModelData & options.highs_analysis_level;
-    printf("considerScaling: analyse_lp_data = %d\n", analyse_lp_data);
     if (analyse_lp_data) analyseLp(options.log_options, lp);
     scaleLp(options, lp);
     // If the LP is now scaled, then the scaling is new

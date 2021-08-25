@@ -747,7 +747,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool =
         new OptionRecordBool("reinvert_when_simplex_may_terminate",
                              "Reinvert the basis matrix when the simplex algorithm may terminate",
-                             advanced, &reinvert_when_simplex_may_terminate, true);
+                             advanced, &reinvert_when_simplex_may_terminate, false);
     records.push_back(record_bool);
 
     record_bool =
