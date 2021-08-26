@@ -301,8 +301,8 @@ struct HighsOptionsStruct {
   bool use_implied_bounds_from_presolve;
   bool mps_parser_type_free;
   HighsInt keep_n_rows;
-  HighsInt allowed_simplex_matrix_scale_factor;
-  HighsInt allowed_simplex_cost_scale_factor;
+  HighsInt allowed_matrix_scale_factor;
+  HighsInt allowed_cost_scale_factor;
   HighsInt simplex_dualise_strategy;
   HighsInt simplex_permute_strategy;
   HighsInt max_dual_simplex_cleanup_level;
@@ -697,19 +697,14 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &keep_n_rows, kKeepNRowsDeleteRows,
                             kKeepNRowsDeleteRows, kKeepNRowsKeepRows);
     records.push_back(record_int);
-    record_int = new OptionRecordInt(
-        "allowed_simplex_matrix_scale_factor",
-        "Largest power-of-two factor permitted when scaling the "
-        "constraint "
-        "matrix for the simplex solver",
-        advanced, &allowed_simplex_matrix_scale_factor, 0, 10, 20);
+    record_int = new OptionRecordInt("allowed_matrix_scale_factor",
+				     "Largest power-of-two factor permitted when scaling the constraint matrix",
+				     advanced, &allowed_matrix_scale_factor, 0, 10, 20);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "allowed_simplex_cost_scale_factor",
-        "Largest power-of-two factor permitted when scaling the costs for the "
-        "simplex solver",
-        advanced, &allowed_simplex_cost_scale_factor, 0, 0, 20);
+    record_int = new OptionRecordInt("allowed_cost_scale_factor",
+				     "Largest power-of-two factor permitted when scaling the costs",
+				     advanced, &allowed_cost_scale_factor, 0, 0, 20);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

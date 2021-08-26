@@ -19,8 +19,6 @@
 #include <string>
 
 #include "lp_data/HighsDebug.h"
-//#include "simplex/HEkkDebug.h"
-//#include "simplex/HSimplexNlaDebug.h"
 
 void debugDualChuzcFailNorms(
     const HighsInt workCount,

@@ -14,7 +14,7 @@
  *
  * @brief Debugging code for simplex NLA
  */
-#include "simplex/HSimplexNlaDebug.h"
+#include "simplex/HSimplexNla.h"
 
 #include "util/HighsRandom.h"
 

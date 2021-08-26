@@ -19,7 +19,6 @@
 
 #include "HConfig.h"
 #include "simplex/FactorTimer.h"
-#include "simplex/HEkkDebug.h"
 #include "simplex/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"

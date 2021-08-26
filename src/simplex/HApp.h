@@ -32,7 +32,6 @@
 #include "simplex/HEkk.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HSimplexNlaDebug.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"

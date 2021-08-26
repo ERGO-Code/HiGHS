@@ -23,16 +23,8 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 
-//#include <algorithm>
-
-// using std::max;
-// using std::min;
-// using std::vector;
-//
-// class HVector;
-
 class HSimplexNla {
- public:
+ private:
   void setup(const HighsLp* lp, HighsInt* base_index,
              const HighsOptions* options, HighsTimer* timer,
              HighsSimplexAnalysis* analysis,
@@ -86,7 +78,6 @@ class HSimplexNla {
 
   HighsInt build_synthetic_tick_;
 
-  // private:
   // References:
   //
   // Pointers:
@@ -101,6 +92,10 @@ class HSimplexNla {
 
   HFactor factor_;
   bool report_;
+
+  friend class HEkk;
+  friend class HEkkPrimal;
+  friend class HEkkDual;
 };
 
 #endif /* HSIMPLEXNLA_H_ */

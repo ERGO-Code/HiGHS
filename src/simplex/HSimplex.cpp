@@ -269,8 +269,7 @@ void setSolutionStatus(HighsInfo& highs_info) {
 void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
                       double& cost_scale) {
   // Scale the costs by no less than minAlwCostScale
-  double max_allowed_cost_scale =
-      pow(2.0, options.allowed_simplex_cost_scale_factor);
+  double max_allowed_cost_scale = pow(2.0, options.allowed_cost_scale_factor);
   double max_nonzero_cost = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.col_cost_[iCol]) {

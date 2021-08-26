@@ -17,7 +17,6 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HSimplexNlaDebug.h"//Just to check INVERT in addRows
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
@@ -119,8 +118,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     // Apply the existing row scaling to the new columns
     local_a_matrix.applyRowScale(scale);
     // Consider applying column scaling to the new columns.
-    local_a_matrix.considerColScaling(
-        options.allowed_simplex_matrix_scale_factor, &scale.col[lp.num_col_]);
+    local_a_matrix.considerColScaling(options.allowed_matrix_scale_factor, &scale.col[lp.num_col_]);
   }
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) {
@@ -231,8 +229,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     // Apply the existing column scaling to the new rows
     local_ar_matrix.applyColScale(scale);
     // Consider applying row scaling to the new rows.
-    local_ar_matrix.considerRowScaling(
-        options.allowed_simplex_matrix_scale_factor, &scale.row[lp.num_row_]);
+    local_ar_matrix.considerRowScaling(options.allowed_matrix_scale_factor, &scale.row[lp.num_row_]);
   }
   // Update the basis correponding to new basic rows
   if (valid_basis) {

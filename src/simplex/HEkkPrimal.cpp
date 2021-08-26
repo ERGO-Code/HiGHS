@@ -16,7 +16,6 @@
 #include "simplex/HEkkPrimal.h"
 
 #include "pdqsort/pdqsort.h"
-#include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
@@ -86,9 +85,7 @@ HighsStatus HEkkPrimal::solve() {
       ekk_instance_.info_.num_primal_infeasibilities;
   solve_phase = num_primal_infeasibility > 0 ? kSolvePhase1 : kSolvePhase2;
 
-  if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
-                         ekk_instance_.model_status_) ==
-      HighsDebugStatus::kLogicalError)
+  if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
 
   // The major solving loop
@@ -256,9 +253,7 @@ HighsStatus HEkkPrimal::solve() {
                   info.max_primal_infeasibility, info.num_dual_infeasibilities,
                   info.max_dual_infeasibility);
   }
-  if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
-                         ekk_instance_.model_status_) ==
-      HighsDebugStatus::kLogicalError)
+  if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
 }
@@ -926,8 +921,7 @@ bool HEkkPrimal::useVariableIn() {
   // updated value
   double computed_theta_dual =
       ekk_instance_.computeDualForTableauColumn(variable_in, col_aq);
-  ekkDebugUpdatedDual(*ekk_instance_.options_, updated_theta_dual,
-                      computed_theta_dual);
+  ekk_instance_.debugUpdatedDual(updated_theta_dual, computed_theta_dual);
 
   // Feed in the computed dual value
   info.workDual_[variable_in] = computed_theta_dual;
@@ -2463,12 +2457,10 @@ void HEkkPrimal::savePrimalRay() {
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
                                                 const bool initialise) {
-  HighsDebugStatus return_status = ekkDebugSimplex(
-      message, ekk_instance_, algorithm, solve_phase, initialise);
+  HighsDebugStatus return_status = ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
-  return_status = ekkDebugNonbasicFreeColumnSet(ekk_instance_, num_free_col,
-                                                nonbasic_free_col_set);
+  return_status = ekk_instance_.debugNonbasicFreeColumnSet(num_free_col, nonbasic_free_col_set);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   return HighsDebugStatus::kOk;
 }

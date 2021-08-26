@@ -19,6 +19,7 @@
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HighsRandom.h"
+#include "util/HSet.h"
 
 class HighsLpSolverObject;
 
@@ -86,10 +87,6 @@ class HEkk {
                                     HighsSimplexInfo& info);
   // Debug methods
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
-  HighsDebugStatus debugBasisCorrect(const HighsLp* lp = NULL) const;
-  HighsDebugStatus debugBasisConsistent() const;
-  HighsDebugStatus debugNonbasicFlagConsistent() const;
-  HighsDebugStatus debugNonbasicMove(const HighsLp* lp = NULL) const;
   HighsDebugStatus debugNlaCheckInvert(const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
@@ -210,11 +207,38 @@ class HEkk {
                                     double& density);
   bool switchToDevex();
 
-  friend class Highs;
+  // private debug methods
+  HighsDebugStatus debugSimplex(const std::string message,
+				const SimplexAlgorithm algorithm,
+				const HighsInt phase,
+				const bool initialise = false) const;
+  void debugReportReinvertOnNumericalTrouble(const std::string method_name, 
+					     const double numerical_trouble_measure,
+					     const double alpha_from_col,
+					     const double alpha_from_row,
+					     const double numerical_trouble_tolerance,
+					     const bool reinvert) const;
+  
+  HighsDebugStatus debugUpdatedDual(const double updated_dual,
+				    const double computed_dual) const;
+  
+  HighsDebugStatus debugBasisCorrect(const HighsLp* lp = NULL) const;
+  HighsDebugStatus debugBasisConsistent() const;
+  HighsDebugStatus debugNonbasicFlagConsistent() const;
+  HighsDebugStatus debugNonbasicMove(const HighsLp* lp = NULL) const;
+  HighsDebugStatus debugOkForSolve(const SimplexAlgorithm algorithm,
+				   const HighsInt phase) const;
+  bool debugWorkArraysOk(const SimplexAlgorithm algorithm,
+			 const HighsInt phase) const;
+  bool debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const;
+
+  HighsDebugStatus debugNonbasicFreeColumnSet(const HighsInt num_free_col,
+					      const HSet nonbasic_free_col_set) const;
+  HighsDebugStatus debugRowMatrix() const;
+
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;
-  //  friend class HEkkDualRHS;
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

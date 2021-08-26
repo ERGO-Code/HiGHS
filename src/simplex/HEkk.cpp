@@ -19,11 +19,9 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
-#include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplexDebug.h"
-#include "simplex/HSimplexNlaDebug.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
 
@@ -2190,9 +2188,9 @@ bool HEkk::reinvertOnNumericalTrouble(
   const bool numerical_trouble =
       numerical_trouble_measure > numerical_trouble_tolerance;
   const bool reinvert = numerical_trouble && update_count > 0;
-  ekkDebugReportReinvertOnNumericalTrouble(
-      method_name, *this, numerical_trouble_measure, alpha_from_col,
-      alpha_from_row, numerical_trouble_tolerance, reinvert);
+  debugReportReinvertOnNumericalTrouble(method_name, numerical_trouble_measure,
+					alpha_from_col, alpha_from_row,
+					numerical_trouble_tolerance, reinvert);
   if (reinvert) {
     // Consider increasing the Markowitz multiplier
     const double current_pivot_threshold = info_.factor_pivot_threshold;

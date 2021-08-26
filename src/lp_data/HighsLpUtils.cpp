@@ -406,7 +406,7 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
     // something more intelligent
     use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
   }
-  bool allow_cost_scaling = options.allowed_simplex_cost_scale_factor > 0;
+  bool allow_cost_scaling = options.allowed_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -518,7 +518,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
   // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
   // work so, in recognition, use the old value of kHighsInf
   const double finite_infinity = 1e200;
-  max_allow_scale = pow(2.0, options.allowed_simplex_matrix_scale_factor);
+  max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
   min_allow_scale = 1 / max_allow_scale;
 
   double min_allow_col_scale = min_allow_scale;
@@ -814,8 +814,7 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
   const double log2 = log(2.0);
-  const double max_allow_scale =
-      pow(2.0, options.allowed_simplex_matrix_scale_factor);
+  const double max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
   const double min_allow_scale = 1 / max_allow_scale;
 
   const double min_allow_col_scale = min_allow_scale;

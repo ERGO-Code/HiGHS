@@ -168,7 +168,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
     matrix.collectAj(column, j, 1);
 
     const double expected_density = ekk_instance.info_.col_aq_density;
-    ekk_instance.simplex_nla_.ftran(column, expected_density);
+    ekk_instance.ftran(column, expected_density);
     HighsInt nWork = 0;
     for (HighsInt k = 0; k < column.count; k++) {
       HighsInt iRow = column.index[k];

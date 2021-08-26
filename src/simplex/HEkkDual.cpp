@@ -23,7 +23,6 @@
 #include <set>
 
 #include "lp_data/HighsLpUtils.h"
-#include "simplex/HEkkDebug.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/SimplexTimer.h"
 
@@ -196,9 +195,7 @@ HighsStatus HEkkDual::solve() {
   ekk_instance_.computeDualInfeasibleWithFlips();
   dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
-  if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
-                         ekk_instance_.model_status_) ==
-      HighsDebugStatus::kLogicalError)
+  if (ekk_instance_.debugOkForSolve(SimplexAlgorithm::kDual, solve_phase) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   //
   // The major solving loop
@@ -345,9 +342,7 @@ HighsStatus HEkkDual::solve() {
          model_status == HighsModelStatus::kInfeasible ||
          model_status == HighsModelStatus::kUnbounded ||
          model_status == HighsModelStatus::kUnboundedOrInfeasible);
-  if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
-                         ekk_instance_.model_status_) ==
-      HighsDebugStatus::kLogicalError)
+  if (ekk_instance_.debugOkForSolve(SimplexAlgorithm::kDual, solve_phase) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
 }
@@ -2325,8 +2320,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
 
 HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
                                             const bool initialise) {
-  HighsDebugStatus return_status = ekkDebugSimplex(
-      message, ekk_instance_, algorithm, solve_phase, initialise);
+  HighsDebugStatus return_status = ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
   return HighsDebugStatus::kOk;
