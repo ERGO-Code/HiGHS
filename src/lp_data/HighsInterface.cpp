@@ -247,8 +247,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   clearModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
-  if (ekk_instance_.status_.has_nla)
-    debugCheckInvert(ekk_instance_.simplex_nla_, kHighsDebugLevelCostly);
   return return_status;
 }
 
@@ -1038,7 +1036,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     const bool new_scaling = considerScaling(options_, lp);
     // If there has been new scaling, clear any refactorization
     // information.
-    if (new_scaling) ekk_instance_.simplex_nla_.factor_.refactor_info_.clear();
+    if (new_scaling) ekk_instance_.clearNlaRefactorInfo();
     // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);

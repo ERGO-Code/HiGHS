@@ -510,218 +510,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   return return_status;
 }
 
-HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
-  // Nontrivially expensive analysis of a Simplex basis, checking
-  // consistency, and then correctness of nonbasicMove
-  const HighsOptions& options = *ekk_instance.options_;
-  if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const bool consistent =
-      ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::kLogicalError;
-  if (!consistent) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "Supposed to be a Simplex basis, but not consistent\n");
-    assert(consistent);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  if (options.highs_debug_level < kHighsDebugLevelCostly) return return_status;
-  const bool correct_nonbasicMove =
-      ekkDebugNonbasicMove(ekk_instance) != HighsDebugStatus::kLogicalError;
-  if (!correct_nonbasicMove) {
-    highsLogDev(
-        options.log_options, HighsLogType::kError,
-        "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
-    assert(correct_nonbasicMove);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  return return_status;
-}
-
-HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
-  // Non-trivially expensive check of NonbasicMove
-  if (ekk_instance.options_->highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = *ekk_instance.options_;
-  const HighsLp& lp = ekk_instance.lp_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  HighsInt num_free_variable_move_errors = 0;
-  HighsInt num_lower_bounded_variable_move_errors = 0;
-  HighsInt num_upper_bounded_variable_move_errors = 0;
-  HighsInt num_boxed_variable_move_errors = 0;
-  HighsInt num_fixed_variable_move_errors = 0;
-  const HighsInt numTot = lp.num_col_ + lp.num_row_;
-  bool right_size = (HighsInt)basis.nonbasicMove_.size() == numTot;
-  // Check consistency of nonbasicMove
-  if (!right_size) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicMove size error\n");
-    assert(right_size);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  double lower;
-  double upper;
-
-  for (HighsInt iVar = 0; iVar < numTot; iVar++) {
-    if (!basis.nonbasicFlag_[iVar]) continue;
-    // Nonbasic variable
-    if (iVar < lp.num_col_) {
-      lower = lp.col_lower_[iVar];
-      upper = lp.col_upper_[iVar];
-    } else {
-      HighsInt iRow = iVar - lp.num_col_;
-      lower = -lp.row_upper_[iRow];
-      upper = -lp.row_lower_[iRow];
-    }
-
-    if (highs_isInfinity(upper)) {
-      if (highs_isInfinity(-lower)) {
-        // Free
-        if (basis.nonbasicMove_[iVar]) {
-          num_free_variable_move_errors++;
-        }
-      } else {
-        // Only lower bounded
-        if (basis.nonbasicMove_[iVar] != kNonbasicMoveUp) {
-          num_lower_bounded_variable_move_errors++;
-        }
-      }
-    } else {
-      if (highs_isInfinity(-lower)) {
-        // Only upper bounded
-        if (basis.nonbasicMove_[iVar] != kNonbasicMoveDn) {
-          num_upper_bounded_variable_move_errors++;
-        }
-      } else {
-        // Boxed or fixed
-        if (lower != upper) {
-          // Boxed
-          if (!basis.nonbasicMove_[iVar]) {
-            num_boxed_variable_move_errors++;
-          }
-        } else {
-          // Fixed
-          if (basis.nonbasicMove_[iVar]) {
-            num_fixed_variable_move_errors++;
-          }
-        }
-      }
-    }
-  }
-  HighsInt num_errors =
-      num_free_variable_move_errors + num_lower_bounded_variable_move_errors +
-      num_upper_bounded_variable_move_errors + num_boxed_variable_move_errors +
-      num_fixed_variable_move_errors;
-
-  if (num_errors) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "There are %" HIGHSINT_FORMAT
-                " nonbasicMove errors: %" HIGHSINT_FORMAT
-                " free; %" HIGHSINT_FORMAT " lower; %" HIGHSINT_FORMAT
-                " upper; %" HIGHSINT_FORMAT
-                " "
-                "boxed; %" HIGHSINT_FORMAT " fixed\n",
-                num_errors, num_free_variable_move_errors,
-                num_lower_bounded_variable_move_errors,
-                num_upper_bounded_variable_move_errors,
-                num_boxed_variable_move_errors, num_fixed_variable_move_errors);
-    assert(num_errors == 0);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  return return_status;
-}
-
-HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
-  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
-  // of basic/nonbasic variables and non-repetition of basic variables
-  if (ekk_instance.options_->highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = *ekk_instance.options_;
-  const HighsLp& lp = ekk_instance.lp_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  // Check consistency of nonbasicFlag
-  if (ekkDebugNonbasicFlagConsistent(ekk_instance) ==
-      HighsDebugStatus::kLogicalError) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicFlag inconsistent\n");
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  const bool right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_;
-  // Check consistency of basicIndex
-  if (!right_size) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "basicIndex size error\n");
-    assert(right_size);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  // Use localNonbasicFlag so that duplicate entries in basicIndex can
-  // be spotted
-  vector<int8_t> localNonbasicFlag = basis.nonbasicFlag_;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    HighsInt iCol = basis.basicIndex_[iRow];
-    HighsInt flag = localNonbasicFlag[iCol];
-    // Indicate that this column has been found in basicIndex
-    localNonbasicFlag[iCol] = -1;
-    if (flag) {
-      // Nonzero value for localNonbasicFlag entry means that column is either
-      if (flag == kNonbasicFlagTrue) {
-        // Nonbasic...
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Entry basicIndex_[%" HIGHSINT_FORMAT
-                    "] = %" HIGHSINT_FORMAT " is not basic\n",
-                    iRow, iCol);
-      } else {
-        // .. or is -1 since it has already been found in basicIndex
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Entry basicIndex_[%" HIGHSINT_FORMAT
-                    "] = %" HIGHSINT_FORMAT " is already basic\n",
-                    iRow, iCol);
-        assert(flag == -1);
-      }
-      assert(!flag);
-      return_status = HighsDebugStatus::kLogicalError;
-    }
-  }
-  return return_status;
-}
-
-HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
-  if (ekk_instance.options_->highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = *ekk_instance.options_;
-  const HighsLp& lp = ekk_instance.lp_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  HighsInt numTot = lp.num_col_ + lp.num_row_;
-  const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
-  if (!right_size) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicFlag size error\n");
-    assert(right_size);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  HighsInt num_basic_variables = 0;
-  for (HighsInt var = 0; var < numTot; var++) {
-    if (basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
-      num_basic_variables++;
-    } else {
-      assert(basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
-    }
-  }
-  bool right_num_basic_variables = num_basic_variables == lp.num_row_;
-  if (!right_num_basic_variables) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicFlag has %" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT
-                " basic variables\n",
-                num_basic_variables, lp.num_row_);
-    assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  return return_status;
-}
-
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
                                     const HighsInt phase,
@@ -769,7 +557,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
   if (ekk_instance.options_->highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Basis and data check
-  if (ekkDebugBasisConsistent(ekk_instance) == HighsDebugStatus::kLogicalError)
+  if (ekk_instance.debugBasisConsistent() == HighsDebugStatus::kLogicalError)
     return HighsDebugStatus::kLogicalError;
   // Check work cost, lower, upper and range
   if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase, model_status))
@@ -1281,3 +1069,290 @@ HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
   */
   return HighsDebugStatus::kOk;
 }
+
+// Debug methods in HEkk class
+
+HighsDebugStatus HEkk::debugRetainedDataOk(const HighsLp& lp) const {
+  if (!this->status_.valid ||
+      this->options_->highs_debug_level < kHighsDebugLevelCostly)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+
+  const HighsOptions& options = *(this->options_);
+  if (this->status_.has_basis) {
+    HighsDebugStatus call_status = this->debugBasisCorrect(&lp);
+    const bool basis_correct = debugDebugToHighsStatus(call_status) != HighsStatus::kError;
+    if (!basis_correct) {
+      highsLogDev(options.log_options, HighsLogType::kError,
+                  "Supposed to be a Simplex basis, but incorrect\n");
+      assert(basis_correct);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
+  }
+
+  if (this->status_.has_invert) {
+    HighsDebugStatus call_status = this->debugNlaCheckInvert();
+    const bool invert_ok = debugDebugToHighsStatus(call_status) != HighsStatus::kError;
+    if (!invert_ok) {
+      highsLogDev(
+          options.log_options, HighsLogType::kError,
+          "Supposed to be a simplex basis inverse, but too inaccurate\n");
+      assert(invert_ok);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugBasisCorrect(const HighsLp* lp) const {
+  // Nontrivially expensive analysis of a Simplex basis, checking
+  // consistency, and then correctness of nonbasicMove
+  const HighsOptions& options = *(this->options_);
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const bool consistent = this->debugBasisConsistent() != HighsDebugStatus::kLogicalError;
+  if (!consistent) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "Supposed to be a Simplex basis, but not consistent\n");
+    assert(consistent);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  if (options.highs_debug_level < kHighsDebugLevelCostly) return return_status;
+  const bool correct_nonbasicMove = this->debugNonbasicMove(lp) != HighsDebugStatus::kLogicalError;
+  if (!correct_nonbasicMove) {
+    highsLogDev(
+        options.log_options, HighsLogType::kError,
+        "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
+    assert(correct_nonbasicMove);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugBasisConsistent() const {
+  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
+  // of basic/nonbasic variables and non-repetition of basic variables
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const HighsOptions& options = *(this->options_);
+  const HighsLp& lp = this->lp_;
+  const SimplexBasis& basis = this->basis_;
+  // Check consistency of nonbasicFlag
+  if (this->debugNonbasicFlagConsistent() == HighsDebugStatus::kLogicalError) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicFlag inconsistent\n");
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  const bool right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_;
+  // Check consistency of basicIndex
+  if (!right_size) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "basicIndex size error\n");
+    assert(right_size);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  // Use localNonbasicFlag so that duplicate entries in basicIndex can
+  // be spotted
+  vector<int8_t> localNonbasicFlag = basis.nonbasicFlag_;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    HighsInt iCol = basis.basicIndex_[iRow];
+    HighsInt flag = localNonbasicFlag[iCol];
+    // Indicate that this column has been found in basicIndex
+    localNonbasicFlag[iCol] = -1;
+    if (flag) {
+      // Nonzero value for localNonbasicFlag entry means that column is either
+      if (flag == kNonbasicFlagTrue) {
+        // Nonbasic...
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Entry basicIndex_[%" HIGHSINT_FORMAT
+                    "] = %" HIGHSINT_FORMAT " is not basic\n",
+                    iRow, iCol);
+      } else {
+        // .. or is -1 since it has already been found in basicIndex
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Entry basicIndex_[%" HIGHSINT_FORMAT
+                    "] = %" HIGHSINT_FORMAT " is already basic\n",
+                    iRow, iCol);
+        assert(flag == -1);
+      }
+      assert(!flag);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugNonbasicFlagConsistent() const {
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const HighsOptions& options = *(this->options_);
+  const HighsLp& lp = this->lp_;
+  const SimplexBasis& basis = this->basis_;
+  HighsInt numTot = lp.num_col_ + lp.num_row_;
+  const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
+  if (!right_size) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicFlag size error\n");
+    assert(right_size);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  HighsInt num_basic_variables = 0;
+  for (HighsInt var = 0; var < numTot; var++) {
+    if (basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
+      num_basic_variables++;
+    } else {
+      assert(basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
+    }
+  }
+  bool right_num_basic_variables = num_basic_variables == lp.num_row_;
+  if (!right_num_basic_variables) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicFlag has %" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT
+                " basic variables\n",
+                num_basic_variables, lp.num_row_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugNonbasicMove(const HighsLp* pass_lp) const {
+  // Non-trivially expensive check of NonbasicMove
+  if (this->options_->highs_debug_level < kHighsDebugLevelCostly)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const HighsOptions& options = *(this->options_);
+  const SimplexBasis& basis = this->basis_;
+  HighsInt num_free_variable_move_errors = 0;
+  HighsInt num_lower_bounded_variable_move_errors = 0;
+  HighsInt num_upper_bounded_variable_move_errors = 0;
+  HighsInt num_boxed_variable_move_errors = 0;
+  HighsInt num_fixed_variable_move_errors = 0;
+  HighsInt num_col;
+  HighsInt num_row;
+  const bool use_pass_lp = pass_lp;
+  if (use_pass_lp) {
+    num_col = pass_lp->num_col_;
+    num_row = pass_lp->num_row_;
+  } else {
+    assert(1==0);
+    num_col = this->lp_.num_col_;
+    num_row = this->lp_.num_row_;
+  }
+
+  const HighsInt numTot = num_col + num_row;
+  bool right_size = (HighsInt)basis.nonbasicMove_.size() == numTot;
+  // Check consistency of nonbasicMove
+  if (!right_size) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicMove size error\n");
+    assert(right_size);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  double lower;
+  double upper;
+
+  for (HighsInt iVar = 0; iVar < numTot; iVar++) {
+    if (!basis.nonbasicFlag_[iVar]) continue;
+    // Nonbasic variable
+    if (use_pass_lp) {
+      if (iVar < num_col) {
+	lower = pass_lp->col_lower_[iVar];
+	upper = pass_lp->col_upper_[iVar];
+      } else {
+	HighsInt iRow = iVar - num_col;
+	lower = -pass_lp->row_upper_[iRow];
+	upper = -pass_lp->row_lower_[iRow];
+      }
+    } else {
+      if (iVar < num_col) {
+	lower = this->lp_.col_lower_[iVar];
+	upper = this->lp_.col_upper_[iVar];
+      } else {
+	HighsInt iRow = iVar - num_col;
+	lower = -this->lp_.row_upper_[iRow];
+	upper = -this->lp_.row_lower_[iRow];
+      }
+    }
+
+    if (highs_isInfinity(upper)) {
+      if (highs_isInfinity(-lower)) {
+        // Free
+        if (basis.nonbasicMove_[iVar]) {
+          num_free_variable_move_errors++;
+        }
+      } else {
+        // Only lower bounded
+        if (basis.nonbasicMove_[iVar] != kNonbasicMoveUp) {
+          num_lower_bounded_variable_move_errors++;
+        }
+      }
+    } else {
+      if (highs_isInfinity(-lower)) {
+        // Only upper bounded
+        if (basis.nonbasicMove_[iVar] != kNonbasicMoveDn) {
+          num_upper_bounded_variable_move_errors++;
+        }
+      } else {
+        // Boxed or fixed
+        if (lower != upper) {
+          // Boxed
+          if (!basis.nonbasicMove_[iVar]) {
+            num_boxed_variable_move_errors++;
+          }
+        } else {
+          // Fixed
+          if (basis.nonbasicMove_[iVar]) {
+            num_fixed_variable_move_errors++;
+          }
+        }
+      }
+    }
+  }
+  HighsInt num_errors =
+      num_free_variable_move_errors + num_lower_bounded_variable_move_errors +
+      num_upper_bounded_variable_move_errors + num_boxed_variable_move_errors +
+      num_fixed_variable_move_errors;
+
+  if (num_errors) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "There are %" HIGHSINT_FORMAT
+                " nonbasicMove errors: %" HIGHSINT_FORMAT
+                " free; %" HIGHSINT_FORMAT " lower; %" HIGHSINT_FORMAT
+                " upper; %" HIGHSINT_FORMAT
+                " "
+                "boxed; %" HIGHSINT_FORMAT " fixed\n",
+                num_errors, num_free_variable_move_errors,
+                num_lower_bounded_variable_move_errors,
+                num_upper_bounded_variable_move_errors,
+                num_boxed_variable_move_errors, num_fixed_variable_move_errors);
+    assert(num_errors == 0);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  return return_status;
+}
+
+bool HEkk::debugNlaScalingOk(const HighsLp& lp) const {
+  bool ok = true;
+  assert(this->status_.has_nla);
+  const HSimplexNla& simplex_nla = this->simplex_nla_;
+  if (lp.scale_.has_scaling) {
+    // The LP has scaling, so ensure that the simplex NLA has its scaling
+    void* nla_scale = (void*)simplex_nla.scale_;
+    void* lp_scale = (void*)(&lp.scale_);
+    ok = nla_scale == lp_scale;
+  } else {
+    // The LP has no scaling, so ensure that the simplex NLA has no scaling
+    ok = !simplex_nla.scale_;
+  }
+  assert(ok);
+  return ok;
+}
+HighsDebugStatus HEkk::debugNlaCheckInvert(const HighsInt alt_debug_level) const {
+  assert(this->status_.has_nla);
+  return this->simplex_nla_.debugCheckInvert(alt_debug_level);
+}
+

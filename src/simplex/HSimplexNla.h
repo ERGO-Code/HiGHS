@@ -18,6 +18,7 @@
 #ifndef HSIMPLEXNLA_H_
 #define HSIMPLEXNLA_H_
 
+#include "lp_data/HighsDebug.h"
 #include "simplex/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
@@ -72,7 +73,17 @@ class HSimplexNla {
                          const bool force = false) const;
   void reportPackValue(const std::string message, const HVector* vector,
                        const bool force = false) const;
+  // Debug methods
   HighsDebugStatus debugCheckData(const std::string message = "") const;
+  HighsDebugStatus debugCheckInvert(const HighsInt alt_debug_level = -1) const;
+  double debugResidualError(const bool transposed,
+			    const HVector& solution,
+			    HVector& residual) const;
+  HighsDebugStatus debugReportError(const bool transposed,
+				    const HVector& true_solution,
+				    const HVector& solution, HVector& residual,
+				    const bool force) const;
+
   HighsInt build_synthetic_tick_;
 
   // private:

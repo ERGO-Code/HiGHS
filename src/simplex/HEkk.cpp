@@ -293,6 +293,10 @@ void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
    simplex_nla_.base_index_ = &basis_.basicIndex_[0];  
 }
 
+void HEkk::clearNlaRefactorInfo() {
+  simplex_nla_.factor_.refactor_info_.clear();
+}
+
 void HEkk::btran(HVector& rhs, const double expected_density) {
   assert(status_.has_nla);
   simplex_nla_.btran(rhs, expected_density);
@@ -559,13 +563,14 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   //
-  // ToDo why does this not compile
-  if (debugBasisConsistent(*options_, lp_, highs_basis) ==
-      HighsDebugStatus::kLogicalError) {
+  /*
+// REINSTATE THIS ToDo!!
+  if (debugBasisConsistent(*options_, lp_, highs_basis) == HighsDebugStatus::kLogicalError) {
     highsLogDev(options_->log_options, HighsLogType::kError,
                 "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
+  */
   HighsInt num_col = lp_.num_col_;
   HighsInt num_row = lp_.num_row_;
   HighsInt num_tot = num_col + num_row;
@@ -634,22 +639,24 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   return HighsStatus::kOk;
 }
 
+/*
 HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   // Shouldn't have to check the incoming basis since this is an
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
-  if (debugBasisConsistent(*options_, lp_, basis) ==
+  if (this->debugBasisConsistent() ==
       HighsDebugStatus::kLogicalError) {
-    highsLogDev(options_->log_options, HighsLogType::kError,
+    highsLogDev(this->options_->log_options, HighsLogType::kError,
                 "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
-  basis_.nonbasicFlag_ = basis.nonbasicFlag_;
-  basis_.nonbasicMove_ = basis.nonbasicMove_;
-  basis_.basicIndex_ = basis.basicIndex_;
-  status_.has_basis = true;
+  this->basis_.nonbasicFlag_ = basis.nonbasicFlag_;
+  this->basis_.nonbasicMove_ = basis.nonbasicMove_;
+  this->basis_.basicIndex_ = basis.basicIndex_;
+  this->status_.has_basis = true;
   return HighsStatus::kOk;
 }
+*/
 
 void HEkk::addCols(const HighsLp& lp,
                    const HighsSparseMatrix& scaled_a_matrix) {
@@ -679,8 +686,10 @@ void HEkk::addRows(const HighsLp& lp,
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
-  if (this->status_.has_nla)
+  if (this->status_.has_nla) {
     this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
+    this->simplex_nla_.debugCheckInvert(kHighsDebugLevelCostly);
+  }    
   this->updateStatus(LpAction::kNewRows);
 }
 
@@ -1328,7 +1337,7 @@ HighsInt HEkk::computeFactor() {
   HighsInt alt_debug_level = -1;
   if (rank_deficiency) alt_debug_level = kHighsDebugLevelCostly;
   if (test_refactor_force_debug) alt_debug_level = kHighsDebugLevelExpensive;
-  debugCheckInvert(simplex_nla_, alt_debug_level);
+  debugNlaCheckInvert(alt_debug_level);
   analysis_.simplexTimerStop(InvertClock);
 
   if (test_refactor && !rank_deficiency) {
@@ -1337,7 +1346,7 @@ HighsInt HEkk::computeFactor() {
       printf("\nRefactored INVERT\n");
       simplex_nla_.factor_.reportLu();
     }
-    debugCheckInvert(simplex_nla_, alt_debug_level);
+    debugNlaCheckInvert(alt_debug_level);
   }
 
   if (rank_deficiency) {
@@ -2241,7 +2250,7 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   // checking the INVERT every iteration is an order more expensive
   // than checking after factorization.
   const HighsInt alt_debug_level = options_->highs_debug_level-1;
-  debugCheckInvert(simplex_nla_, alt_debug_level);
+  debugNlaCheckInvert(alt_debug_level);
 
 }
 

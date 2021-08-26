@@ -22,11 +22,6 @@
 
 // Methods for Ekk
 
-HighsDebugStatus ekkDebugSimplexLp(const HighsLpSolverObject& solver_object);
-
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp& lp,
-                                      const SimplexBasis& basis);
 void debugDualChuzcFailNorms(
     const HighsInt workCount,
     const std::vector<std::pair<HighsInt, double>>& workData,

@@ -924,13 +924,17 @@ HighsStatus Highs::run() {
     }
   }
   if (no_incumbent_lp_solution_or_basis) {
-    // In solving the presolved LP, it is found to be infeasible or unbounded,
-    // or the time/iteration limit has been reached
+    // In solving the (strictly reduced) presolved LP, it is found to
+    // be infeasible or unbounded, or the time/iteration limit has
+    // been reached
     assert(model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit);
+    // The HEkk data correspond to the (strictly reduced) presolved LP
+    // so must be cleared
+    ekk_instance_.clear();
     setHighsModelStatusAndClearSolutionAndBasis(model_status_);
   } else {
     // ToDo Eliminate setBasisValidity once ctest passes. Asserts
@@ -2536,6 +2540,14 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     assert(consistent);
     return_status = HighsStatus::kError;
   }
+  // Check that any retained Ekk data - basis and NLA - are OK
+  bool retained_ekk_data_ok = ekk_instance_.debugRetainedDataOk(model_.lp_) != HighsDebugStatus::kLogicalError;
+  if (!retained_ekk_data_ok) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "returnFromHighs: Simplex LP not OK\n");
+    assert(retained_ekk_data_ok);
+    return_status = HighsStatus::kError;
+  }
   // Check that returnFromRun() has been called
   if (!called_return_from_run) {
     highsLogDev(
@@ -2558,6 +2570,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     return_status = HighsStatus::kError;
   }
   assert(refactor_info_ok);
+  
   return return_status;
 }
 

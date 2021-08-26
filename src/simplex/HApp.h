@@ -51,7 +51,6 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   HighsOptions& options = solver_object.options_;
   HEkk& ekk_instance = solver_object.ekk_instance_;
   HighsLp& incumbent_lp = solver_object.lp_;
-  HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
   // Copy the simplex iteration count to highs_info_ from ekk_instance
   solver_object.highs_info_.simplex_iteration_count =
       ekk_instance.iteration_count_;
@@ -67,27 +66,14 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   assert(ekk_instance.status_.has_nla);
   // Set the simplex NLA scaling
   ekk_instance.setNlaPointersForLpAndScale(incumbent_lp);
-  if (incumbent_lp.scale_.has_scaling) {
-    // The LP has scaling, so ensure that the simplex NLA has its scaling
-    void* nla_scale = (void*)simplex_nla.scale_;
-    void* lp_scale = (void*)(&incumbent_lp.scale_);
-    assert(nla_scale == lp_scale);
-  } else {
-    // The LP has no scaling, so ensure that the simplex NLA has no scaling
-    assert(!simplex_nla.scale_);
-  }
-  // Can't set alt_debug_level to -1 since it's used to determine
-  // whether to set simplex_nla.lp_ = &incumbent_lp;
-  HighsInt alt_debug_level = simplex_nla.options_->highs_debug_level;
+  assert(ekk_instance.debugNlaScalingOk(incumbent_lp));
+  HighsInt alt_debug_level = -1;
   // ToDo Need to switch off this forced debug
-  //  alt_debug_level = kHighsDebugLevelExpensive;
-  if (alt_debug_level) {
-    simplex_nla.lp_ = &incumbent_lp;
-    if (debugCheckInvert(simplex_nla, alt_debug_level) == HighsDebugStatus::kError) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Error in basis matrix inverse after solving the LP\n");
-      return_status = HighsStatus::kError;
-    }
+  alt_debug_level = kHighsDebugLevelExpensive;
+  if (ekk_instance.debugNlaCheckInvert(alt_debug_level) == HighsDebugStatus::kError) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+		 "Error in basis matrix inverse after solving the LP\n");
+    return_status = HighsStatus::kError;
   }
   return return_status;
 }
@@ -109,7 +95,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsSimplexInfo& ekk_info = ekk_instance.info_;
   SimplexBasis& ekk_basis = ekk_instance.basis_;
   HighsSimplexStatus& status = ekk_instance.status_;
-  HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience
@@ -140,7 +125,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // considering computing scaling factors if there are none - and
   // then move to EKK
   const bool new_scaling = considerScaling(options, incumbent_lp);
-  if (new_scaling) ekk_instance.simplex_nla_.factor_.refactor_info_.clear();
+  if (new_scaling) ekk_instance.clearNlaRefactorInfo();
   // Move the LP to EKK, updating other EKK pointers and any simplex
   // NLA pointers, since they may have moved if the LP has been
   // modified

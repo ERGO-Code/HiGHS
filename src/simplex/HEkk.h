@@ -41,6 +41,7 @@ class HEkk {
   void updateStatus(LpAction action);
   void setNlaPointersForLpAndScale(const HighsLp& lp);
   void setNlaPointersForTrans(const HighsLp& lp);
+  void clearNlaRefactorInfo();
   void btran(HVector& rhs, const double expected_density);
   void ftran(HVector& rhs, const double expected_density);
 
@@ -54,7 +55,7 @@ class HEkk {
   HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
-  HighsStatus setBasis(const SimplexBasis& basis);
+  //  HighsStatus setBasis(const SimplexBasis& basis);
   void addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix);
   void addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix);
   void deleteCols(const HighsIndexCollection& index_collection);
@@ -83,6 +84,14 @@ class HEkk {
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
+  // Debug methods
+  HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
+  HighsDebugStatus debugBasisCorrect(const HighsLp* lp = NULL) const;
+  HighsDebugStatus debugBasisConsistent() const;
+  HighsDebugStatus debugNonbasicFlagConsistent() const;
+  HighsDebugStatus debugNonbasicMove(const HighsLp* lp = NULL) const;
+  HighsDebugStatus debugNlaCheckInvert(const HighsInt alt_debug_level = -1) const;
+  bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
   HighsOptions* options_;

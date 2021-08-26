@@ -25,11 +25,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HighsInt phase,
                                  const bool initialise = false);
 
-HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance);
-HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance);
-HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance);
-HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance);
-
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
                                     const HighsInt phase,
