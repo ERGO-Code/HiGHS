@@ -85,7 +85,8 @@ HighsStatus HEkkPrimal::solve() {
       ekk_instance_.info_.num_primal_infeasibilities;
   solve_phase = num_primal_infeasibility > 0 ? kSolvePhase1 : kSolvePhase2;
 
-  if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) == HighsDebugStatus::kLogicalError)
+  if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) ==
+      HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
 
   // The major solving loop
@@ -253,7 +254,8 @@ HighsStatus HEkkPrimal::solve() {
                   info.max_primal_infeasibility, info.num_dual_infeasibilities,
                   info.max_dual_infeasibility);
   }
-  if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) == HighsDebugStatus::kLogicalError)
+  if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) ==
+      HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
 }
@@ -575,19 +577,22 @@ void HEkkPrimal::rebuild() {
   rebuild_reason = kRebuildReasonNo;
   // Possibly Rebuild factor
   bool reInvert = info.update_count > 0;
-  if (!ekk_instance_.options_->reinvert_when_simplex_may_terminate && (
-      reason_for_rebuild == kRebuildReasonPossiblyOptimal ||
-      reason_for_rebuild == kRebuildReasonPossiblyPhase1Feasible ||
-      reason_for_rebuild == kRebuildReasonPossiblyPrimalUnbounded ||
-      reason_for_rebuild == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
+  if (!ekk_instance_.options_->reinvert_when_simplex_may_terminate &&
+      (reason_for_rebuild == kRebuildReasonPossiblyOptimal ||
+       reason_for_rebuild == kRebuildReasonPossiblyPhase1Feasible ||
+       reason_for_rebuild == kRebuildReasonPossiblyPrimalUnbounded ||
+       reason_for_rebuild == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
     reInvert = false;
   }
 
   std::string logic = "no ";
   if (reInvert) logic = "   ";
-  if (info.update_count) printf("HEkkPrimal: %srefactorization after %" HIGHSINT_FORMAT " updates for rebuild reason = %s\n",
-	 logic.c_str(), info.update_count, ekk_instance_.rebuildReason(reason_for_rebuild).c_str());
-     
+  if (info.update_count)
+    printf("HEkkPrimal: %srefactorization after %" HIGHSINT_FORMAT
+           " updates for rebuild reason = %s\n",
+           logic.c_str(), info.update_count,
+           ekk_instance_.rebuildReason(reason_for_rebuild).c_str());
+
   if (reInvert) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is
@@ -2457,10 +2462,12 @@ void HEkkPrimal::savePrimalRay() {
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
                                                 const bool initialise) {
-  HighsDebugStatus return_status = ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
+  HighsDebugStatus return_status =
+      ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
-  return_status = ekk_instance_.debugNonbasicFreeColumnSet(num_free_col, nonbasic_free_col_set);
+  return_status = ekk_instance_.debugNonbasicFreeColumnSet(
+      num_free_col, nonbasic_free_col_set);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   return HighsDebugStatus::kOk;
 }

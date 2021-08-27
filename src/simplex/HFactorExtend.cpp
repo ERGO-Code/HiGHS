@@ -13,9 +13,9 @@
 /**@file simplex/HFactorExtend.cpp
  * @brief Types of solution classes
  */
-#include "simplex/HFactor.h"
-
 #include <cassert>
+
+#include "simplex/HFactor.h"
 
 using std::fabs;
 
@@ -82,8 +82,9 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     btranU(rhs, expected_density);
     double local_density = (1.0 * rhs.count) / numRow;
     expected_density = kRunningAverageMultiplier * local_density +
-      (1 - kRunningAverageMultiplier) * expected_density;
-    //    printf("New row btranU density: local = %11.4g; expected =  %11.4g\n", local_density, expected_density);
+                       (1 - kRunningAverageMultiplier) * expected_density;
+    //    printf("New row btranU density: local = %11.4g; expected =  %11.4g\n",
+    //    local_density, expected_density);
     rhs.tight();
     //
     // Append v to the matrix containing the new rows of L
@@ -97,7 +98,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     }
     new_lr_rows.start_.push_back(new_lr_rows.index_.size());
     new_lr_rows.num_row_++;
-    
+
     //
     // Append v to the L matrix
     for (HighsInt iX = 0; iX < rhs_num_nz; iX++) {
@@ -121,10 +122,11 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   //
   // Add starts for the identity columns
   HighsInt l_matrix_new_num_nz = LRindex.size();
-  assert(l_matrix_new_num_nz == Lindex.size()+new_lr_cols.index_.size());
-  Lstart.resize(new_num_row+1);
+  assert(l_matrix_new_num_nz == Lindex.size() + new_lr_cols.index_.size());
+  Lstart.resize(new_num_row + 1);
   HighsInt to_el = l_matrix_new_num_nz;
-  for (HighsInt iCol = new_num_row; iCol > numRow; iCol--) Lstart[iCol] = l_matrix_new_num_nz;
+  for (HighsInt iCol = new_num_row; iCol > numRow; iCol--)
+    Lstart[iCol] = l_matrix_new_num_nz;
   //
   // Insert the new entries, remembering to offset the index values by
   // numRow, since new_lr_cols only has the new rows
@@ -158,21 +160,66 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // (one more than) the end of the index/value array that's applied
   // in the *tranU. Here it needs to be equal to the start since there
   // are no non-pivotal entries
-  // 
-  HighsInt u_num_nz = Uindex.size();
+  //
+
+  HighsInt UcountX = Uindex.size();
+  HighsInt u_pivot_lookup_offset = UpivotIndex.size() - numRow;
   for (HighsInt iRow = numRow; iRow < new_num_row; iRow++) {
-    UpivotLookup.push_back(LpivotLookup[iRow]);
+    UpivotLookup.push_back(u_pivot_lookup_offset + iRow);
     UpivotIndex.push_back(iRow);
     UpivotValue.push_back(1);
-    Ustart.push_back(u_num_nz);
-    Ulastp.push_back(u_num_nz);
-    URstart.push_back(u_num_nz);
-    URlastp.push_back(u_num_nz);
-    URspace.push_back(u_num_nz);
+    Ustart.push_back(UcountX);
+    Ulastp.push_back(UcountX);
+  }
+
+  // Now, to extend UR
+  //
+  // UR space
+  //
+  // Borrowing names from buildFinish()
+  HighsInt URstuffX = updateMethod == kUpdateMethodFt ? 5 : 0;
+  HighsInt ur_size = URindex.size();
+  HighsInt URcountX = ur_size + URstuffX * num_new_row;
+  URindex.resize(URcountX);
+  URvalue.resize(URcountX);
+
+  // Need to refer to just the new UR vectors
+  HighsInt ur_cur_num_vec = URstart.size();
+  HighsInt ur_new_num_vec = ur_cur_num_vec + num_new_row;
+  printf("\nUpdating UR vectors %d - %d\n", (int)ur_cur_num_vec,
+         (int)ur_new_num_vec - 1);
+  // UR pointer
+  //
+  // Allow space to the start of new rows, including the start for the
+  // fictitious ur_new_num_vec'th row
+  URstart.resize(ur_new_num_vec + 1);
+  for (HighsInt iRow = ur_cur_num_vec + 1; iRow < ur_new_num_vec + 1; iRow++) {
+    URstart[iRow] = ur_size;
+  }
+  // NB ur_temp plays the role of URlastp when it could be used as
+  // temporary storage in buildFinish()
+  vector<HighsInt> ur_temp;
+  ur_temp.assign(new_num_row, 0);
+  //
+  // URspace has its new entries assigned (to URstuffX) as in
+  // buildFinish()
+  URspace.resize(ur_new_num_vec);
+  for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++) {
+    URspace[iRow] = URstuffX;
+  }
+  // Compute ur_temp exactly as in buildFinish()
+  for (HighsInt k = 0; k < UcountX; k++) ur_temp[UpivotLookup[Uindex[k]]]++;
+  for (HighsInt iRow = ur_cur_num_vec + 1; iRow < ur_new_num_vec + 1; iRow++) {
+    HighsInt gap = URlastp[iRow - 1] + URstuffX;
+    URstart[iRow] = URstart[iRow - 1] + gap;
+  }
+  // Lose the start for the fictitious ur_new_num_vec'th row
+  URstart.resize(ur_new_num_vec);
+  for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++) {
+    URlastp[iRow] = URstart[iRow];
   }
   //
   // Increase the number of rows in HFactor
   numRow += num_new_row;
   //  reportLu(kReportLuBoth, true);
 }
-

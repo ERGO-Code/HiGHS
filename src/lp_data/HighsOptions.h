@@ -697,14 +697,17 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &keep_n_rows, kKeepNRowsDeleteRows,
                             kKeepNRowsDeleteRows, kKeepNRowsKeepRows);
     records.push_back(record_int);
-    record_int = new OptionRecordInt("allowed_matrix_scale_factor",
-				     "Largest power-of-two factor permitted when scaling the constraint matrix",
-				     advanced, &allowed_matrix_scale_factor, 0, 10, 20);
+    record_int =
+        new OptionRecordInt("allowed_matrix_scale_factor",
+                            "Largest power-of-two factor permitted when "
+                            "scaling the constraint matrix",
+                            advanced, &allowed_matrix_scale_factor, 0, 10, 20);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("allowed_cost_scale_factor",
-				     "Largest power-of-two factor permitted when scaling the costs",
-				     advanced, &allowed_cost_scale_factor, 0, 0, 20);
+    record_int = new OptionRecordInt(
+        "allowed_cost_scale_factor",
+        "Largest power-of-two factor permitted when scaling the costs",
+        advanced, &allowed_cost_scale_factor, 0, 0, 20);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -739,10 +742,10 @@ class HighsOptions : public HighsOptionsStruct {
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("reinvert_when_simplex_may_terminate",
-                             "Reinvert the basis matrix when the simplex algorithm may terminate",
-                             advanced, &reinvert_when_simplex_may_terminate, false);
+    record_bool = new OptionRecordBool(
+        "reinvert_when_simplex_may_terminate",
+        "Reinvert the basis matrix when the simplex algorithm may terminate",
+        advanced, &reinvert_when_simplex_may_terminate, false);
     records.push_back(record_bool);
 
     record_bool =

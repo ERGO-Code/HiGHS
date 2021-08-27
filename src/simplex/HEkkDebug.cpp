@@ -14,14 +14,13 @@
  * @brief
  */
 
-#include "simplex/HEkk.h"
-
 #include <cassert>
 #include <cmath>
 #include <string>
 
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
+#include "simplex/HEkk.h"
 
 using std::abs;
 using std::max;
@@ -42,8 +41,9 @@ const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
 HighsDebugStatus HEkk::debugSimplex(const std::string message,
-				    const SimplexAlgorithm algorithm,
-				    const HighsInt phase, const bool initialise) const {
+                                    const SimplexAlgorithm algorithm,
+                                    const HighsInt phase,
+                                    const bool initialise) const {
   if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   static double max_max_basic_dual;
@@ -339,8 +339,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
       return HighsDebugStatus::kLogicalError;
     }
   }
-  const double info_max_dual_infeasibility =
-      this->info_.max_dual_infeasibility;
+  const double info_max_dual_infeasibility = this->info_.max_dual_infeasibility;
   if (info_max_dual_infeasibility >= 0) {
     const bool illegal_max_dual_infeasibility =
         abs(max_dual_infeasibility - info_max_dual_infeasibility) >
@@ -396,8 +395,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
     return HighsDebugStatus::kLogicalError;
   }
   bool require_dual_feasible_in_dual_simplex =
-      algorithm == SimplexAlgorithm::kDual &&
-      this->status_.has_fresh_rebuild &&
+      algorithm == SimplexAlgorithm::kDual && this->status_.has_fresh_rebuild &&
       this->info_.allow_cost_perturbation;
 
   bool illegal_dual_infeasibility =
@@ -511,12 +509,10 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
 
 // Methods below are not called externally
 
-void HEkk::debugReportReinvertOnNumericalTrouble(const std::string method_name, 
-						 const double numerical_trouble_measure,
-						 const double alpha_from_col,
-						 const double alpha_from_row,
-						 const double numerical_trouble_tolerance,
-						 const bool reinvert) const {
+void HEkk::debugReportReinvertOnNumericalTrouble(
+    const std::string method_name, const double numerical_trouble_measure,
+    const double alpha_from_col, const double alpha_from_row,
+    const double numerical_trouble_tolerance, const bool reinvert) const {
   if (this->options_->highs_debug_level < kHighsDebugLevelCheap) return;
   const double abs_alpha_from_col = abs(alpha_from_col);
   const double abs_alpha_from_row = abs(alpha_from_row);
@@ -560,7 +556,7 @@ void HEkk::debugReportReinvertOnNumericalTrouble(const std::string method_name,
 }
 
 HighsDebugStatus HEkk::debugUpdatedDual(const double updated_dual,
-					const double computed_dual) const {
+                                        const double computed_dual) const {
   const HighsOptions& options = *(this->options_);
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
@@ -613,7 +609,7 @@ HighsDebugStatus HEkk::debugUpdatedDual(const double updated_dual,
 }
 
 HighsDebugStatus HEkk::debugRetainedDataOk(const HighsLp& lp) const {
-  if (!this->status_.valid ||
+  if (!this->status_.initialised_for_new_lp ||
       this->options_->highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -621,7 +617,8 @@ HighsDebugStatus HEkk::debugRetainedDataOk(const HighsLp& lp) const {
   const HighsOptions& options = *(this->options_);
   if (this->status_.has_basis) {
     HighsDebugStatus call_status = this->debugBasisCorrect(&lp);
-    const bool basis_correct = debugDebugToHighsStatus(call_status) != HighsStatus::kError;
+    const bool basis_correct =
+        debugDebugToHighsStatus(call_status) != HighsStatus::kError;
     if (!basis_correct) {
       highsLogDev(options.log_options, HighsLogType::kError,
                   "Supposed to be a Simplex basis, but incorrect\n");
@@ -631,8 +628,10 @@ HighsDebugStatus HEkk::debugRetainedDataOk(const HighsLp& lp) const {
   }
 
   if (this->status_.has_invert) {
-    HighsDebugStatus call_status = this->debugNlaCheckInvert();
-    const bool invert_ok = debugDebugToHighsStatus(call_status) != HighsStatus::kError;
+    HighsDebugStatus call_status =
+        this->debugNlaCheckInvert("HEkk::debugRetainedDataOk");
+    const bool invert_ok =
+        debugDebugToHighsStatus(call_status) != HighsStatus::kError;
     if (!invert_ok) {
       highsLogDev(
           options.log_options, HighsLogType::kError,
@@ -651,7 +650,8 @@ HighsDebugStatus HEkk::debugBasisCorrect(const HighsLp* lp) const {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const bool consistent = this->debugBasisConsistent() != HighsDebugStatus::kLogicalError;
+  const bool consistent =
+      this->debugBasisConsistent() != HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "Supposed to be a Simplex basis, but not consistent\n");
@@ -659,7 +659,8 @@ HighsDebugStatus HEkk::debugBasisCorrect(const HighsLp* lp) const {
     return_status = HighsDebugStatus::kLogicalError;
   }
   if (options.highs_debug_level < kHighsDebugLevelCostly) return return_status;
-  const bool correct_nonbasicMove = this->debugNonbasicMove(lp) != HighsDebugStatus::kLogicalError;
+  const bool correct_nonbasicMove =
+      this->debugNonbasicMove(lp) != HighsDebugStatus::kLogicalError;
   if (!correct_nonbasicMove) {
     highsLogDev(
         options.log_options, HighsLogType::kError,
@@ -778,7 +779,7 @@ HighsDebugStatus HEkk::debugNonbasicMove(const HighsLp* pass_lp) const {
     num_col = pass_lp->num_col_;
     num_row = pass_lp->num_row_;
   } else {
-    assert(1==0);
+    assert(1 == 0);
     num_col = this->lp_.num_col_;
     num_row = this->lp_.num_row_;
   }
@@ -800,21 +801,21 @@ HighsDebugStatus HEkk::debugNonbasicMove(const HighsLp* pass_lp) const {
     // Nonbasic variable
     if (use_pass_lp) {
       if (iVar < num_col) {
-	lower = pass_lp->col_lower_[iVar];
-	upper = pass_lp->col_upper_[iVar];
+        lower = pass_lp->col_lower_[iVar];
+        upper = pass_lp->col_upper_[iVar];
       } else {
-	HighsInt iRow = iVar - num_col;
-	lower = -pass_lp->row_upper_[iRow];
-	upper = -pass_lp->row_lower_[iRow];
+        HighsInt iRow = iVar - num_col;
+        lower = -pass_lp->row_upper_[iRow];
+        upper = -pass_lp->row_lower_[iRow];
       }
     } else {
       if (iVar < num_col) {
-	lower = this->lp_.col_lower_[iVar];
-	upper = this->lp_.col_upper_[iVar];
+        lower = this->lp_.col_lower_[iVar];
+        upper = this->lp_.col_upper_[iVar];
       } else {
-	HighsInt iRow = iVar - num_col;
-	lower = -this->lp_.row_upper_[iRow];
-	upper = -this->lp_.row_lower_[iRow];
+        HighsInt iRow = iVar - num_col;
+        lower = -this->lp_.row_upper_[iRow];
+        upper = -this->lp_.row_lower_[iRow];
       }
     }
 
@@ -891,12 +892,14 @@ bool HEkk::debugNlaScalingOk(const HighsLp& lp) const {
   assert(ok);
   return ok;
 }
-HighsDebugStatus HEkk::debugNlaCheckInvert(const HighsInt alt_debug_level) const {
+HighsDebugStatus HEkk::debugNlaCheckInvert(
+    const std::string message, const HighsInt alt_debug_level) const {
   assert(this->status_.has_nla);
-  return this->simplex_nla_.debugCheckInvert(alt_debug_level);
+  return this->simplex_nla_.debugCheckInvert(message, alt_debug_level);
 }
 
-HighsDebugStatus HEkk::debugOkForSolve(const SimplexAlgorithm algorithm, const HighsInt phase) const {
+HighsDebugStatus HEkk::debugOkForSolve(const SimplexAlgorithm algorithm,
+                                       const HighsInt phase) const {
   if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -958,7 +961,7 @@ HighsDebugStatus HEkk::debugOkForSolve(const SimplexAlgorithm algorithm, const H
 }
 
 bool HEkk::debugWorkArraysOk(const SimplexAlgorithm algorithm,
-			     const HighsInt phase) const {
+                             const HighsInt phase) const {
   const HighsLp& lp = this->lp_;
   const HighsSimplexInfo& info = this->info_;
   const HighsOptions& options = *(this->options_);
@@ -1250,7 +1253,8 @@ bool HEkk::debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const {
   return ok;
 }
 
-HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(const HighsInt num_free_col, const HSet nonbasic_free_col_set) const {
+HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
+    const HighsInt num_free_col, const HSet nonbasic_free_col_set) const {
   const HighsOptions& options = *(this->options_);
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
@@ -1345,4 +1349,3 @@ HighsDebugStatus HEkk::debugRowMatrix() const {
   */
   return HighsDebugStatus::kOk;
 }
-

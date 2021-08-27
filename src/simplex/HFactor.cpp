@@ -288,16 +288,14 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
 
 void HFactor::setupMatrix(const HighsInt* Astart_, const HighsInt* Aindex_,
                           const double* Avalue_) {
-  this->a_matrix_valid = true;
   Astart = Astart_;
   Aindex = Aindex_;
   Avalue = Avalue_;
+  this->a_matrix_valid = true;
 }
 
 void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
-  Astart = &a_matrix->start_[0];
-  Aindex = &a_matrix->index_[0];
-  Avalue = &a_matrix->value_[0];
+  setupMatrix(&a_matrix->start_[0], &a_matrix->index_[0], &a_matrix->value_[0]);
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
@@ -1108,6 +1106,8 @@ void HFactor::buildFinish() {
   URvalue.resize(URcountX);
 
   // UR pointer
+  //
+  // NB URlastp just being used as temporary storage here
   URstart.assign(numRow + 1, 0);
   URlastp.assign(numRow, 0);
   URspace.assign(numRow, URstuffX);
@@ -1117,6 +1117,8 @@ void HFactor::buildFinish() {
   URstart.resize(numRow);
 
   // UR element
+  //
+  // NB URlastp initialised here!
   URlastp = URstart;
   for (HighsInt i = 0; i < numRow; i++) {
     const HighsInt index = UpivotIndex[i];

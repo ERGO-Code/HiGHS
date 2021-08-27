@@ -33,56 +33,72 @@
 // using std::endl;
 
 void HEkk::clear() {
+  // Clears Ekk entirely. Clears all associated pointers, data scalars
+  // and vectors, and the status values.
+  this->clearEkkLp();
   this->clearEkkData();
+  this->clearEkkPointers();
   this->clearSimplexBasis(this->basis_);
   this->simplex_nla_.clear();
+  this->clearEkkAllStatus();
 }
 
-void HEkk::invalidate() {
-  this->status_.initialised = false;
-  this->status_.valid = false;
-  this->invalidateBasisMatrix();
+void HEkk::clearEkkAllStatus() {
+  // Clears the Ekk status entirely. Functionally junks all
+  // information relating to the simplex solve, but doesn't clear the
+  // associated data scalars and vectors.
+  HighsSimplexStatus& status = this->status_;
+  status.initialised_for_new_lp = false;
+  status.initialised_for_solve = false;
+  this->clearNlaStatus();
+  this->clearEkkDataStatus();
 }
 
-void HEkk::invalidateBasisMatrix() {
-  // When the constraint matrix changes - dimensions or just (basic)
-  // values, the simplex NLA becomes invalid, and the simplex basis is
-  // no longer valid.
-  this->status_.has_nla = false;
-  invalidateBasis();
+void HEkk::clearEkkDataStatus() {
+  // Just clears the Ekk status values associated with Ekk-specific
+  // data: doesn't clear "initialised_for_new_lp", "initialised_for_solve" or
+  // NLA status
+  HighsSimplexStatus& status = this->status_;
+  status.has_ar_matrix = false;
+  status.has_dual_steepest_edge_weights = false;
+  status.has_fresh_rebuild = false;
+  status.has_dual_objective_value = false;
+  status.has_primal_objective_value = false;
+  status.has_dual_ray = false;
+  status.has_primal_ray = false;
 }
 
-void HEkk::invalidateBasis() {
-  // Invalidate the basis of the simplex LP, and all its other
-  // basis-related properties
-  this->status_.has_basis = false;
-  this->invalidateBasisArtifacts();
+void HEkk::clearNlaStatus() {
+  // Clears Ekk status values associated with NLA. Functionally junks
+  // NLA, but doesn't clear the associated data scalars and vectors
+  HighsSimplexStatus& status = this->status_;
+  status.has_basis = false;
+  status.has_nla = false;
+  status.has_invert = false;
+  status.has_fresh_invert = false;
 }
 
-void HEkk::invalidateBasisArtifacts() {
-  // Invalidate the artifacts of the basis of the simplex LP
-  this->status_.has_ar_matrix = false;
-  this->status_.has_dual_steepest_edge_weights = false;
-  this->status_.has_invert = false;
-  this->status_.has_fresh_invert = false;
-  this->status_.has_fresh_rebuild = false;
-  this->status_.has_dual_objective_value = false;
-  this->status_.has_primal_objective_value = false;
-  this->status_.has_dual_ray = false;
-  this->status_.has_primal_ray = false;
+void HEkk::clearEkkPointers() {
+  this->options_ = NULL;
+  this->timer_ = NULL;
+}
+
+void HEkk::clearEkkLp() {
+  this->lp_.clear();
+  lp_name_ = "";
 }
 
 void HEkk::clearEkkData() {
-  // Don't clear simplex NLA or simplex basis as part of clearing Ekk
-  // data, so that HFactor instance is maintained
-  this->options_ = NULL;
-  this->timer_ = NULL;
+  // Clears Ekk-specific data scalars and vectors. Doesn't clear
+  // status, as this is done elsewhere
+  //
+  // Doesn't clear the LP, simplex NLA or simplex basis as part of
+  // clearing Ekk data, so that the simplex basis and HFactor instance
+  // are maintained
+
   // analysis_; No clear yet
 
-  this->lp_.clear();
-  lp_name_ = "";
-  this->clearStatus();
-  this->clearInfo();
+  this->clearEkkDataInfo();
   model_status_ = HighsModelStatus::kNotset;
   // random_; Has no data
   this->workEdWt_ = NULL;
@@ -106,24 +122,7 @@ void HEkk::clearEkkData() {
   this->total_synthetic_tick_ = 0;
 }
 
-void HEkk::clearStatus() {
-  HighsSimplexStatus& status = this->status_;
-  status.initialised = false;
-  status.valid = false;
-  status.has_basis = false;
-  status.has_ar_matrix = false;
-  status.has_nla = false;
-  status.has_dual_steepest_edge_weights = false;
-  status.has_invert = false;
-  status.has_fresh_invert = false;
-  status.has_fresh_rebuild = false;
-  status.has_dual_objective_value = false;
-  status.has_primal_objective_value = false;
-  status.has_dual_ray = false;
-  status.has_primal_ray = false;
-}
-
-void HEkk::clearInfo() {
+void HEkk::clearEkkDataInfo() {
   HighsSimplexInfo& info = this->info_;
   info.workCost_.clear();
   info.workDual_.clear();
@@ -163,25 +162,8 @@ void HEkk::clearInfo() {
   info.dual_simplex_cost_perturbation_multiplier = 1;
   info.primal_simplex_phase1_cost_perturbation_multiplier = 1;
   info.primal_simplex_bound_perturbation_multiplier = 1;
-  info.factor_pivot_threshold = 0;
-  info.update_limit = 0;
-  info.control_iteration_count0 = 0;
-  info.col_aq_density = 0.0;
-  info.row_ep_density = 0.0;
-  info.row_ap_density = 0.0;
-  info.row_DSE_density = 0.0;
-  info.col_basic_feasibility_change_density = 0.0;
-  info.row_basic_feasibility_change_density = 0.0;
-  info.col_BFRT_density = 0.0;
-  info.primal_col_density = 0.0;
-  info.dual_col_density = 0.0;
   info.allow_dual_steepest_edge_to_devex_switch = 0;
   info.dual_steepest_edge_weight_log_error_threshold = 0;
-  info.costly_DSE_frequency = 0;
-  info.num_costly_DSE_iteration = 0;
-  info.costly_DSE_measure = 0;
-  info.average_log_low_DSE_weight_error = 0;
-  info.average_log_high_DSE_weight_error = 0;
   info.run_quiet = false;
   info.store_squared_primal_infeasibility = false;
   info.report_simplex_inner_clock = false;
@@ -218,10 +200,71 @@ void HEkk::clearInfo() {
   info.num_basic_logicals = 0;
 }
 
+void HEkk::clearEkkControlInfo() {
+  HighsSimplexInfo& info = this->info_;
+  info.control_iteration_count0 = 0;
+  info.col_aq_density = 0.0;
+  info.row_ep_density = 0.0;
+  info.row_ap_density = 0.0;
+  info.row_DSE_density = 0.0;
+  info.col_basic_feasibility_change_density = 0.0;
+  info.row_basic_feasibility_change_density = 0.0;
+  info.col_BFRT_density = 0.0;
+  info.primal_col_density = 0.0;
+  info.dual_col_density = 0.0;
+  info.costly_DSE_frequency = 0;
+  info.num_costly_DSE_iteration = 0;
+  info.costly_DSE_measure = 0;
+  info.average_log_low_DSE_weight_error = 0;
+  info.average_log_high_DSE_weight_error = 0;
+}
+
+void HEkk::clearEkkNlaInfo() {
+  HighsSimplexInfo& info = this->info_;
+  info.factor_pivot_threshold = 0;
+  info.update_limit = 0;
+}
+
 void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
+  // Clear a given simplex basis. Needs an argument because it's used
+  // to clear the backtracking basis
   simplex_basis.basicIndex_.clear();
   simplex_basis.nonbasicFlag_.clear();
   simplex_basis.nonbasicMove_.clear();
+}
+
+void HEkk::invalidate() {
+  this->status_.initialised_for_new_lp = false;
+  this->status_.initialised_for_solve = false;
+  this->invalidateBasisMatrix();
+}
+
+void HEkk::invalidateBasisMatrix() {
+  // When the constraint matrix changes - dimensions or just (basic)
+  // values, the simplex NLA becomes invalid, and the simplex basis is
+  // no longer valid.
+  this->status_.has_nla = false;
+  invalidateBasis();
+}
+
+void HEkk::invalidateBasis() {
+  // Invalidate the basis of the simplex LP, and all its other
+  // basis-related properties
+  this->status_.has_basis = false;
+  this->invalidateBasisArtifacts();
+}
+
+void HEkk::invalidateBasisArtifacts() {
+  // Invalidate the artifacts of the basis of the simplex LP
+  this->status_.has_ar_matrix = false;
+  this->status_.has_dual_steepest_edge_weights = false;
+  this->status_.has_invert = false;
+  this->status_.has_fresh_invert = false;
+  this->status_.has_fresh_rebuild = false;
+  this->status_.has_dual_objective_value = false;
+  this->status_.has_primal_objective_value = false;
+  this->status_.has_dual_ray = false;
+  this->status_.has_primal_ray = false;
 }
 
 void HEkk::updateStatus(LpAction action) {
@@ -247,7 +290,7 @@ void HEkk::updateStatus(LpAction action) {
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
-      this->clear();//clearEkkData();
+      this->clearEkkData();  // clear();//
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
@@ -280,15 +323,15 @@ void HEkk::updateStatus(LpAction action) {
 }
 
 void HEkk::setNlaPointersForLpAndScale(const HighsLp& lp) {
-   assert(status_.has_nla);
-   simplex_nla_.setLpAndScalePointers(&lp);
+  assert(status_.has_nla);
+  simplex_nla_.setLpAndScalePointers(&lp);
 }
 
 void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
-   assert(status_.has_nla);
-   assert(status_.has_basis);
-   simplex_nla_.setLpAndScalePointers(&lp);
-   simplex_nla_.base_index_ = &basis_.basicIndex_[0];  
+  assert(status_.has_nla);
+  assert(status_.has_basis);
+  simplex_nla_.setLpAndScalePointers(&lp);
+  simplex_nla_.base_index_ = &basis_.basicIndex_[0];
 }
 
 void HEkk::clearNlaRefactorInfo() {
@@ -322,7 +365,9 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   // HighsOptions and HighsTimer members of the Highs class that are
   // communicated by reference via the HighsLpSolverObject instance.
   this->setPointers(&solver_object.options_, &solver_object.timer_);
-  // Ensure that the simplex instance is initialised
+  // Initialise Ekk if this has not been done. Ekk isn't initialised
+  // if moveLp hasn't been called for this instance of HiGHS, or if
+  // the Ekk instance is junked due to removing rows from the LP
   this->initialiseEkk();
 }
 
@@ -367,7 +412,7 @@ HighsStatus HEkk::solve() {
 
   assert(status_.has_basis);
   assert(status_.has_invert);
-  assert(status_.valid);
+  assert(status_.initialised_for_solve);
   if (model_status_ == HighsModelStatus::kOptimal) return HighsStatus::kOk;
 
   HighsStatus return_status = HighsStatus::kOk;
@@ -563,10 +608,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   //
   /*
 // REINSTATE THIS ToDo!!
-  if (debugBasisConsistent(*options_, lp_, highs_basis) == HighsDebugStatus::kLogicalError) {
-    highsLogDev(options_->log_options, HighsLogType::kError,
-                "Supposed to be a Highs basis, but not valid\n");
-    return HighsStatus::kError;
+  if (debugBasisConsistent(*options_, lp_, highs_basis) ==
+HighsDebugStatus::kLogicalError) { highsLogDev(options_->log_options,
+HighsLogType::kError, "Supposed to be a Highs basis, but not valid\n"); return
+HighsStatus::kError;
   }
   */
   HighsInt num_col = lp_.num_col_;
@@ -667,7 +712,7 @@ void HEkk::addCols(const HighsLp& lp,
   //    ekk_instance_.initialiseSimplexLpRandomVectors();
   //  }
   //  if (valid_simplex_lp)
-  //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
+  //    assert(ekk_instance_.lp_.dimensionsOk("addCols - simplex"));
   if (this->status_.has_nla) this->simplex_nla_.addCols(&lp);
   this->updateStatus(LpAction::kNewCols);
 }
@@ -687,8 +732,12 @@ void HEkk::addRows(const HighsLp& lp,
   if (this->status_.has_nla) {
     this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
     setNlaPointersForTrans(lp);
-    this->debugNlaCheckInvert(kHighsDebugLevelExpensive+1);
-  }    
+    this->debugNlaCheckInvert("HEkk::addRows - on entry",
+                              kHighsDebugLevelExpensive + 1);
+  }
+  // Update the number of rows in the simplex LP so that it's
+  // consistent with simplex basis information
+  this->lp_.num_row_ = lp.num_row_;
   this->updateStatus(LpAction::kNewRows);
 }
 
@@ -885,10 +934,10 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     if (rank_deficiency) {
       // Basis is rank deficient
       if (only_from_known_basis) {
-	// If only this basis should be used, then return error
-	highsLogDev(options_->log_options, HighsLogType::kError,
-		    "Supposed to be a full-rank basis, but incorrect\n");
-	return rank_deficiency;
+        // If only this basis should be used, then return error
+        highsLogDev(options_->log_options, HighsLogType::kError,
+                    "Supposed to be a full-rank basis, but incorrect\n");
+        return rank_deficiency;
       }
       // Account for rank deficiency by correcing nonbasicFlag
       handleRankDeficiency();
@@ -920,12 +969,12 @@ void HEkk::handleRankDeficiency() {
 // Private methods
 
 void HEkk::initialiseEkk() {
-  if (status_.initialised) return;
+  if (status_.initialised_for_new_lp) return;
   setSimplexOptions();
   initialiseControl();
   initialiseSimplexLpRandomVectors();
   simplex_nla_.clear();
-  status_.initialised = true;
+  status_.initialised_for_new_lp = true;
 }
 
 bool HEkk::isUnconstrainedLp() {
@@ -947,6 +996,7 @@ HighsStatus HEkk::initialiseForSolve() {
   assert(status_.has_basis);
 
   updateSimplexOptions();
+  initialiseSimplexLpRandomVectors();
   initialisePartitionedRowwiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
@@ -957,7 +1007,7 @@ HighsStatus HEkk::initialiseForSolve() {
   computeSimplexInfeasible();     // Timed
   computeDualObjectiveValue();    // Timed
   computePrimalObjectiveValue();  // Timed
-  status_.valid = true;
+  status_.initialised_for_solve = true;
 
   bool primal_feasible = info_.num_primal_infeasibilities == 0;
   bool dual_feasible = info_.num_dual_infeasibilities == 0;
@@ -1336,7 +1386,7 @@ HighsInt HEkk::computeFactor() {
   HighsInt alt_debug_level = -1;
   if (rank_deficiency) alt_debug_level = kHighsDebugLevelCostly;
   if (test_refactor_force_debug) alt_debug_level = kHighsDebugLevelExpensive;
-  debugNlaCheckInvert(alt_debug_level);
+  debugNlaCheckInvert("HEkk::computeFactor - original", alt_debug_level);
   analysis_.simplexTimerStop(InvertClock);
 
   if (test_refactor && !rank_deficiency) {
@@ -1345,7 +1395,7 @@ HighsInt HEkk::computeFactor() {
       printf("\nRefactored INVERT\n");
       simplex_nla_.factor_.reportLu();
     }
-    debugNlaCheckInvert(alt_debug_level);
+    debugNlaCheckInvert("HEkk::computeFactor - refactor test", alt_debug_level);
   }
 
   if (rank_deficiency) {
@@ -2190,8 +2240,8 @@ bool HEkk::reinvertOnNumericalTrouble(
       numerical_trouble_measure > numerical_trouble_tolerance;
   const bool reinvert = numerical_trouble && update_count > 0;
   debugReportReinvertOnNumericalTrouble(method_name, numerical_trouble_measure,
-					alpha_from_col, alpha_from_row,
-					numerical_trouble_tolerance, reinvert);
+                                        alpha_from_col, alpha_from_row,
+                                        numerical_trouble_tolerance, reinvert);
   if (reinvert) {
     // Consider increasing the Markowitz multiplier
     const double current_pivot_threshold = info_.factor_pivot_threshold;
@@ -2248,9 +2298,14 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   // Use the next level down for the debug level, since the cost of
   // checking the INVERT every iteration is an order more expensive
   // than checking after factorization.
-  const HighsInt alt_debug_level = options_->highs_debug_level-1;
-  debugNlaCheckInvert(alt_debug_level);
+  const HighsInt alt_debug_level =  // options_->highs_debug_level-1;
+      kHighsDebugLevelExpensive;
 
+  HighsDebugStatus debug_status =
+      debugNlaCheckInvert("HEkk::updateFactor", alt_debug_level);
+  if (debug_status == HighsDebugStatus::kError) {
+    *hint = kRebuildReasonPossiblySingularBasis;
+  }
 }
 
 void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
@@ -2809,7 +2864,7 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
     rebuild_reason_string = "Choose column failure";
   } else {
     rebuild_reason_string = "Unidentified";
-    assert(1==0);
+    assert(1 == 0);
   }
   return rebuild_reason_string;
 }

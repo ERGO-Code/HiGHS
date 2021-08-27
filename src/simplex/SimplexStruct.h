@@ -34,8 +34,8 @@ struct SimplexBasis {
 
 struct HighsSimplexStatus {
   // Status of LP solved by the simplex method and its data
-  bool initialised = false;
-  bool valid = false;
+  bool initialised_for_new_lp = false;
+  bool initialised_for_solve = false;
   bool has_basis = false;      // The simplex LP has a valid simplex basis
   bool has_ar_matrix = false;  // HEkk has the row-wise matrix
   bool has_nla = false;        // SimplexNla is set up

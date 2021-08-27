@@ -10,7 +10,6 @@ const double double_equal_tolerance = 1e-5;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status);
 
-
 void callRun(Highs& highs, const HighsLogOptions& log_options,
              std::string message, const HighsStatus require_return_status);
 
@@ -52,7 +51,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   testAllDeleteKeep(10);
 
   HighsOptions options;
-  options.log_dev_level = kHighsLogDevLevelVerbose;
+  //  options.log_dev_level = kHighsLogDevLevelVerbose;
 
   Avgas avgas;
   const HighsInt avgas_num_col = 8;
@@ -111,7 +110,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   Highs highs;
   highs.passOptions(options);
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  return_status = highs.setOptionValue("highs_debug_level", 2);
+  return_status = highs.setOptionValue("highs_debug_level", 3);
   REQUIRE(return_status == HighsStatus::kOk);
 
   lp.model_name_ = "Building avgas";
@@ -322,16 +321,19 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   highs.setOptionValue("log_dev_level", 2);
+  highs.setOptionValue("highs_debug_level", 3);
   highs.setOptionValue("output_flag", true);
   REQUIRE(highs.addRows(row012_num_row, row012_lower, row012_upper,
                         row012_num_nz, row012_start, row012_index,
                         row012_value) == HighsStatus::kOk);
-  highs.setOptionValue("log_dev_level", 0);
-  highs.setOptionValue("output_flag", false);
 
   //  messageReportLp("After restoring all rows", highs.getLp());
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
+
+  highs.setOptionValue("log_dev_level", 0);
+  highs.setOptionValue("highs_debug_level", 0);
+  highs.setOptionValue("output_flag", false);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -1370,4 +1372,3 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
               message);
   reportMatrix(log_options, message, num_col, num_nz, start, index, value);
 }
-

@@ -67,14 +67,14 @@ class HSimplexNla {
                        const bool force = false) const;
   // Debug methods
   HighsDebugStatus debugCheckData(const std::string message = "") const;
-  HighsDebugStatus debugCheckInvert(const HighsInt alt_debug_level = -1) const;
-  double debugResidualError(const bool transposed,
-			    const HVector& solution,
-			    HVector& residual) const;
+  HighsDebugStatus debugCheckInvert(const std::string message,
+                                    const HighsInt alt_debug_level = -1) const;
+  double debugResidualError(const bool transposed, const HVector& solution,
+                            HVector& residual) const;
   HighsDebugStatus debugReportError(const bool transposed,
-				    const HVector& true_solution,
-				    const HVector& solution, HVector& residual,
-				    const bool force) const;
+                                    const HVector& true_solution,
+                                    const HVector& solution, HVector& residual,
+                                    const bool force) const;
 
   HighsInt build_synthetic_tick_;
 

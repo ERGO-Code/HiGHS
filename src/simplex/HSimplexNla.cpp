@@ -38,18 +38,13 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   this->timer_ = timer;
   this->analysis_ = analysis;
   this->report_ = false;
-  this->factor_.setup(this->lp_->num_col_, this->lp_->num_row_,
-		      &factor_a_matrix->start_[0],
-		      &factor_a_matrix->index_[0],
-		      &factor_a_matrix->value_[0],
-		      this->base_index_,
-		      factor_pivot_threshold,
-		      this->options_->factor_pivot_tolerance,
-		      this->options_->highs_debug_level,
-		      this->options_->output_flag,
-		      this->options_->log_file_stream,
-		      this->options_->log_to_console,
-		      this->options_->log_dev_level);
+  this->factor_.setup(
+      this->lp_->num_col_, this->lp_->num_row_, &factor_a_matrix->start_[0],
+      &factor_a_matrix->index_[0], &factor_a_matrix->value_[0],
+      this->base_index_, factor_pivot_threshold,
+      this->options_->factor_pivot_tolerance, this->options_->highs_debug_level,
+      this->options_->output_flag, this->options_->log_file_stream,
+      this->options_->log_to_console, this->options_->log_dev_level);
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
@@ -258,7 +253,8 @@ void HSimplexNla::reportArray(const std::string message, const HVector* vector,
   } else {
     printf("%s", message.c_str());
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      if (iRow > 0 && iRow % 10 == 0) printf("\n                                 ");
+      if (iRow > 0 && iRow % 10 == 0)
+        printf("\n                                 ");
       printf("%11.4g ", vector->array[iRow]);
     }
     printf("\n");

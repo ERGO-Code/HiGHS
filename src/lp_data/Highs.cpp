@@ -508,8 +508,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  HighsInt min_highs_debug_level =  //kHighsDebugLevelMin;
-         kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level =  // kHighsDebugLevelMin;
+      kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
   //
   //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
@@ -716,7 +716,7 @@ HighsStatus Highs::run() {
         call_status = callSolveLp(reduced_lp, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
-        if (ekk_instance_.status_.valid) {
+        if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
           factor_pivot_threshold = ekk_instance_.info_.factor_pivot_threshold;
@@ -2541,10 +2541,11 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     return_status = HighsStatus::kError;
   }
   // Check that any retained Ekk data - basis and NLA - are OK
-  bool retained_ekk_data_ok = ekk_instance_.debugRetainedDataOk(model_.lp_) != HighsDebugStatus::kLogicalError;
+  bool retained_ekk_data_ok = ekk_instance_.debugRetainedDataOk(model_.lp_) !=
+                              HighsDebugStatus::kLogicalError;
   if (!retained_ekk_data_ok) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "returnFromHighs: Simplex LP not OK\n");
+                 "returnFromHighs: Retained Ekk data not OK\n");
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
   }
@@ -2570,7 +2571,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     return_status = HighsStatus::kError;
   }
   assert(refactor_info_ok);
-  
+
   return return_status;
 }
 

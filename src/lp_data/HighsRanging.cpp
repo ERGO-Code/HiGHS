@@ -49,7 +49,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
     return HighsStatus::kError;
   }
   HEkk& ekk_instance = solver_object.ekk_instance_;
-  if (!ekk_instance.status_.valid) {
+  if (!ekk_instance.status_.initialised_for_solve) {
     highsLogUser(solver_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without a valid Simplex instance\n");
     return HighsStatus::kError;

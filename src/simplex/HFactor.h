@@ -221,7 +221,8 @@ class HFactor {
    */
   const double* getAvalue() const { return Avalue; }
 
-  void reportLu(const HighsInt l_u_or_both=kReportLuBoth, const bool full=true) const;
+  void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
+                const bool full = true) const;
 
   // Information required to perform refactorization of the current
   // basis

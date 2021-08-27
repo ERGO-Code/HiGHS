@@ -21,7 +21,7 @@ void HFactor::invalidAMatrixAction() {
 }
 
 void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
-  if (l_u_or_both<kReportLuJustL || l_u_or_both>kReportLuBoth) return;
+  if (l_u_or_both < kReportLuJustL || l_u_or_both > kReportLuBoth) return;
   if (l_u_or_both & 1) {
     printf("L");
     if (full) printf(" - full");
@@ -57,6 +57,13 @@ void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
       reportDoubleVector("URvalue", URvalue);
     }
   }
+  if (l_u_or_both == 3 && full) {
+    reportDoubleVector("PFpivotValue", PFpivotValue);
+    reportIntVector("PFpivotIndex", PFpivotIndex);
+    reportIntVector("PFstart", PFstart);
+    reportIntVector("PFindex", PFindex);
+    reportDoubleVector("PFvalue", PFvalue);
+  }
 }
 
 void HFactor::reportIntVector(const std::string name,
@@ -65,7 +72,8 @@ void HFactor::reportIntVector(const std::string name,
   printf("%-12s: siz %4d; cap %4d: ", name.c_str(), (int)num_en,
          (int)entry.capacity());
   for (HighsInt iEn = 0; iEn < num_en; iEn++) {
-    if (iEn > 0 && iEn % 10 == 0) printf("\n                                  ");
+    if (iEn > 0 && iEn % 10 == 0)
+      printf("\n                                  ");
     printf("%11d ", (int)entry[iEn]);
   }
   printf("\n");
@@ -76,7 +84,8 @@ void HFactor::reportDoubleVector(const std::string name,
   printf("%-12s: siz %4d; cap %4d: ", name.c_str(), (int)num_en,
          (int)entry.capacity());
   for (HighsInt iEn = 0; iEn < num_en; iEn++) {
-    if (iEn > 0 && iEn % 10 == 0) printf("\n                                  ");
+    if (iEn > 0 && iEn % 10 == 0)
+      printf("\n                                  ");
     printf("%11.4g ", entry[iEn]);
   }
   printf("\n");

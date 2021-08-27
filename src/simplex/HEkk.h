@@ -18,8 +18,8 @@
 
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
-#include "util/HighsRandom.h"
 #include "util/HSet.h"
+#include "util/HighsRandom.h"
 
 class HighsLpSolverObject;
 
@@ -30,14 +30,21 @@ class HEkk {
    * @brief Interface to simplex solvers
    */
   void clear();
+  void clearEkkLp();
+  void clearEkkData();
+  void clearEkkPointers();
+  void clearEkkDataInfo();
+  void clearEkkControlInfo();
+  void clearEkkNlaInfo();
+  void clearEkkAllStatus();
+  void clearEkkDataStatus();
+  void clearNlaStatus();
+  void clearSimplexBasis(SimplexBasis& simplex_basis);
+
   void invalidate();
   void invalidateBasisMatrix();
   void invalidateBasis();
   void invalidateBasisArtifacts();
-  void clearEkkData();
-  void clearInfo();
-  void clearStatus();
-  void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void updateStatus(LpAction action);
   void setNlaPointersForLpAndScale(const HighsLp& lp);
@@ -87,7 +94,8 @@ class HEkk {
                                     HighsSimplexInfo& info);
   // Debug methods
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
-  HighsDebugStatus debugNlaCheckInvert(const HighsInt alt_debug_level = -1) const;
+  HighsDebugStatus debugNlaCheckInvert(
+      const std::string message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
@@ -209,31 +217,29 @@ class HEkk {
 
   // private debug methods
   HighsDebugStatus debugSimplex(const std::string message,
-				const SimplexAlgorithm algorithm,
-				const HighsInt phase,
-				const bool initialise = false) const;
-  void debugReportReinvertOnNumericalTrouble(const std::string method_name, 
-					     const double numerical_trouble_measure,
-					     const double alpha_from_col,
-					     const double alpha_from_row,
-					     const double numerical_trouble_tolerance,
-					     const bool reinvert) const;
-  
+                                const SimplexAlgorithm algorithm,
+                                const HighsInt phase,
+                                const bool initialise = false) const;
+  void debugReportReinvertOnNumericalTrouble(
+      const std::string method_name, const double numerical_trouble_measure,
+      const double alpha_from_col, const double alpha_from_row,
+      const double numerical_trouble_tolerance, const bool reinvert) const;
+
   HighsDebugStatus debugUpdatedDual(const double updated_dual,
-				    const double computed_dual) const;
-  
+                                    const double computed_dual) const;
+
   HighsDebugStatus debugBasisCorrect(const HighsLp* lp = NULL) const;
   HighsDebugStatus debugBasisConsistent() const;
   HighsDebugStatus debugNonbasicFlagConsistent() const;
   HighsDebugStatus debugNonbasicMove(const HighsLp* lp = NULL) const;
   HighsDebugStatus debugOkForSolve(const SimplexAlgorithm algorithm,
-				   const HighsInt phase) const;
+                                   const HighsInt phase) const;
   bool debugWorkArraysOk(const SimplexAlgorithm algorithm,
-			 const HighsInt phase) const;
+                         const HighsInt phase) const;
   bool debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const;
 
-  HighsDebugStatus debugNonbasicFreeColumnSet(const HighsInt num_free_col,
-					      const HSet nonbasic_free_col_set) const;
+  HighsDebugStatus debugNonbasicFreeColumnSet(
+      const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
 
   friend class HEkkPrimal;

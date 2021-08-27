@@ -69,9 +69,11 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   HighsInt alt_debug_level = -1;
   // ToDo Need to switch off this forced debug
   alt_debug_level = kHighsDebugLevelExpensive;
-  if (ekk_instance.debugNlaCheckInvert(alt_debug_level) == HighsDebugStatus::kError) {
+  if (ekk_instance.debugNlaCheckInvert("HApp: returnFromSolveLpSimplex",
+                                       alt_debug_level) ==
+      HighsDebugStatus::kError) {
     highsLogUser(options.log_options, HighsLogType::kError,
-		 "Error in basis matrix inverse after solving the LP\n");
+                 "Error in basis matrix inverse after solving the LP\n");
     return_status = HighsStatus::kError;
   }
   return return_status;
@@ -94,6 +96,16 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsSimplexInfo& ekk_info = ekk_instance.info_;
   SimplexBasis& ekk_basis = ekk_instance.basis_;
   HighsSimplexStatus& status = ekk_instance.status_;
+
+  // Check that any retained Ekk data - basis and NLA - are OK on entry
+  bool retained_ekk_data_ok = ekk_instance.debugRetainedDataOk(incumbent_lp) !=
+                              HighsDebugStatus::kLogicalError;
+  if (!retained_ekk_data_ok) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "solveLpSimplex: Retained Ekk data not OK on entry\n");
+    assert(retained_ekk_data_ok);
+    return_status = HighsStatus::kError;
+  }
 
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for
   // convenience

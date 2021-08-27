@@ -118,7 +118,8 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     // Apply the existing row scaling to the new columns
     local_a_matrix.applyRowScale(scale);
     // Consider applying column scaling to the new columns.
-    local_a_matrix.considerColScaling(options.allowed_matrix_scale_factor, &scale.col[lp.num_col_]);
+    local_a_matrix.considerColScaling(options.allowed_matrix_scale_factor,
+                                      &scale.col[lp.num_col_]);
   }
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) {
@@ -147,7 +148,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   // matrix data are held row-wise, so we have to insert data into the
   // column-wise matrix of the LP.
   if (ekk_instance_.status_.has_nla)
-    ekk_instance_.debugNlaCheckInvert(kHighsDebugLevelExpensive+1);
+    ekk_instance_.debugNlaCheckInvert("Start of Highs::addRowsInterface",
+                                      kHighsDebugLevelExpensive + 1);
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = options_;
   if (XnumNewRow < 0) return HighsStatus::kError;
@@ -231,7 +233,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     // Apply the existing column scaling to the new rows
     local_ar_matrix.applyColScale(scale);
     // Consider applying row scaling to the new rows.
-    local_ar_matrix.considerRowScaling(options.allowed_matrix_scale_factor, &scale.row[lp.num_row_]);
+    local_ar_matrix.considerRowScaling(options.allowed_matrix_scale_factor,
+                                       &scale.row[lp.num_row_]);
   }
   // Update the basis correponding to new basic rows
   if (valid_basis) {
@@ -713,7 +716,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
       basis.col_status[col] = HighsBasisStatus::kLower;
     }
   }
-  if (simplex_status.valid) {
+  if (simplex_status.initialised_for_solve) {
     SimplexBasis& simplex_basis = ekk_instance_.basis_;
     if (scaleval < 0 && simplex_status.has_basis) {
       // Negative, so flip any nonbasic status
@@ -762,7 +765,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
       basis.row_status[row] = HighsBasisStatus::kLower;
     }
   }
-  if (simplex_status.valid) {
+  if (simplex_status.initialised_for_solve) {
     SimplexBasis& simplex_basis = ekk_instance_.basis_;
     if (scaleval < 0 && simplex_status.has_basis) {
       // Negative, so flip any nonbasic status
