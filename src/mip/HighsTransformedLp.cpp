@@ -261,7 +261,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       continue;
     }
 
-    if (lb == -kHighsInf && ub == kHighsInf) return false;
+    if (lb == -kHighsInf && ub == kHighsInf) {
+      vectorsum.clear();
+      return false;
+    }
 
     if (lprelaxation.isColIntegral(col)) {
       if (lb == -kHighsInf || ub == kHighsInf) integersPositive = false;
@@ -355,7 +358,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     };
 
     vectorsum.cleanup(IsZero);
-    if (maxError > mip.mipdata_->feastol) return false;
+    if (maxError > mip.mipdata_->feastol){
+      vectorsum.clear();
+      return false;
+    }
 
     inds = vectorsum.getNonzeros();
     numNz = inds.size();
