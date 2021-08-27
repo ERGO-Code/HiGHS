@@ -358,7 +358,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     };
 
     vectorsum.cleanup(IsZero);
-    if (maxError > mip.mipdata_->feastol){
+    if (maxError > mip.mipdata_->feastol) {
       vectorsum.clear();
       return false;
     }
