@@ -378,6 +378,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
             assert(inds[*pos - 1] == index);
             assert(solval[*pos - 1] == tmpSolval[j]);
             assert(upper[*pos - 1] == tmpUpper[j]);
+            if (isIntegral[*pos - 1])
+              delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
           }
         }
       }
