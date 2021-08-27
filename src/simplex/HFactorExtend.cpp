@@ -31,7 +31,7 @@ void HFactor::deleteNonbasicCols(const HighsInt num_deleted_col) {
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   invalidAMatrixAction();
-  return;
+  //  return;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
   printf("Adding %" HIGHSINT_FORMAT
@@ -50,7 +50,8 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     HighsInt iVar = baseIndex[iRow];
     assert(iVar >= numCol);
   }
-  reportLu(kReportLuJustL);
+  //  reportLu(kReportLuBoth, true);
+  //  reportLu(kReportLuJustL);
 
   // Create a row-wise sparse matrix containing the new rows of the L
   // matrix - so that a column-wise version can be created (after
@@ -64,7 +65,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   rhs.setup(numRow);
   this->LRstart.reserve(new_num_row + 1);
   for (HighsInt inewRow = 0; inewRow < num_new_row; inewRow++) {
-    printf("\nFor new row %" HIGHSINT_FORMAT "\n", inewRow);
+    //    printf("\nFor new row %" HIGHSINT_FORMAT "\n", inewRow);
     // Prepare RHS for system U^T.v = r
     rhs.clear();
     rhs.packFlag = true;
@@ -87,12 +88,12 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     //
     // Append v to the matrix containing the new rows of L
     HighsInt rhs_num_nz = rhs.count;
-    printf("New row has entries:\n");
+    //    printf("New row has entries:\n");
     for (HighsInt iX = 0; iX < rhs_num_nz; iX++) {
       HighsInt iCol = rhs.index[iX];
       new_lr_rows.index_.push_back(iCol);
       new_lr_rows.value_.push_back(rhs.array[iCol]);
-      printf("   %4d, %11.4g\n", (int)iCol, rhs.array[iCol]);
+      //      printf("   %4d, %11.4g\n", (int)iCol, rhs.array[iCol]);
     }
     new_lr_rows.start_.push_back(new_lr_rows.index_.size());
     new_lr_rows.num_row_++;
@@ -105,7 +106,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
       LRvalue.push_back(rhs.array[iCol]);
     }
     LRstart.push_back(LRindex.size());
-    reportLu(kReportLuJustL);
+    //    reportLu(kReportLuJustL);
   }
   // Now create a column-wise copy of the new rows
   HighsSparseMatrix new_lr_cols = new_lr_rows;
@@ -125,7 +126,8 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   HighsInt to_el = l_matrix_new_num_nz;
   for (HighsInt iCol = new_num_row; iCol > numRow; iCol--) Lstart[iCol] = l_matrix_new_num_nz;
   //
-  // Insert the new entries
+  // Insert the new entries, remembering to offset the index values by
+  // numRow, since new_lr_cols only has the new rows
   Lindex.resize(l_matrix_new_num_nz);
   Lvalue.resize(l_matrix_new_num_nz);
   for (HighsInt iCol = numRow - 1; iCol >= 0; iCol--) {
@@ -134,7 +136,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     for (HighsInt iEl = new_lr_cols.start_[iCol + 1] - 1;
          iEl >= new_lr_cols.start_[iCol]; iEl--) {
       to_el--;
-      Lindex[to_el] = new_lr_cols.index_[iEl];
+      Lindex[to_el] = numRow + new_lr_cols.index_[iEl];
       Lvalue[to_el] = new_lr_cols.value_[iEl];
     }
     for (HighsInt iEl = from_el - 1; iEl >= Lstart[iCol]; iEl--) {
@@ -149,27 +151,28 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     LpivotLookup[LpivotIndex[iRow]] = iRow;
   // Now update the U matrix with identity rows and columns
   // Allocate space for U factor
-  reportLu(kReportLuJustL);
+  //  reportLu(kReportLuJustL);
+  //
+  // Now add pivots corresponding to identity columns in U. The use of
+  // most arrays in U is self-evident, except for U(R)lastp, which is
+  // (one more than) the end of the index/value array that's applied
+  // in the *tranU. Here it needs to be equal to the start since there
+  // are no non-pivotal entries
+  // 
+  HighsInt u_num_nz = Uindex.size();
   for (HighsInt iRow = numRow; iRow < new_num_row; iRow++) {
-    //    UpivotLookup = LpivotLookup;
-    //    UpivotIndex = LpivotIndex;
-    //    UpivotValue.reserve(numRow + kUFactorExtraVectors);
-    //    UpivotValue[iRow] = 1;
+    UpivotLookup.push_back(LpivotLookup[iRow]);
+    UpivotIndex.push_back(iRow);
+    UpivotValue.push_back(1);
+    Ustart.push_back(u_num_nz);
+    Ulastp.push_back(u_num_nz);
+    URstart.push_back(u_num_nz);
+    URlastp.push_back(u_num_nz);
+    URspace.push_back(u_num_nz);
   }
-  /*
-
-  Ustart.reserve(numRow + kUFactorExtraVectors + 1);
-  Ulastp.reserve(numRow + kUFactorExtraVectors);
-  Uindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
-  Uvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
-
-  URstart.reserve(numRow + kUFactorExtraVectors + 1);
-  URlastp.reserve(numRow + kUFactorExtraVectors);
-  URspace.reserve(numRow + kUFactorExtraVectors);
-  URindex.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
-  URvalue.reserve(BlimitX * kUFactorExtraEntriesMultiplier);
-  */
+  //
   // Increase the number of rows in HFactor
   numRow += num_new_row;
+  //  reportLu(kReportLuBoth, true);
 }
 

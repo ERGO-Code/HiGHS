@@ -146,6 +146,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   // addRows is fundamentally different from addCols, since the new
   // matrix data are held row-wise, so we have to insert data into the
   // column-wise matrix of the LP.
+  if (ekk_instance_.status_.has_nla)
+    ekk_instance_.debugNlaCheckInvert(kHighsDebugLevelExpensive+1);
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = options_;
   if (XnumNewRow < 0) return HighsStatus::kError;

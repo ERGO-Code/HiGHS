@@ -258,8 +258,8 @@ void HSimplexNla::reportArray(const std::string message, const HVector* vector,
   } else {
     printf("%s", message.c_str());
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      if (iRow % 5 == 0) printf("\n");
-      printf("%10.4g ", vector->array[iRow]);
+      if (iRow > 0 && iRow % 10 == 0) printf("\n                                 ");
+      printf("%11.4g ", vector->array[iRow]);
     }
     printf("\n");
   }

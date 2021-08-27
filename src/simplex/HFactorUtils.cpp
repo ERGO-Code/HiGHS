@@ -54,7 +54,7 @@ void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
       reportIntVector("URlastp", URlastp);
       reportIntVector("URspace", URspace);
       reportIntVector("URindex", URindex);
-      reportDoubleVector("URvalue)", URvalue);
+      reportDoubleVector("URvalue", URvalue);
     }
   }
 }
@@ -65,7 +65,7 @@ void HFactor::reportIntVector(const std::string name,
   printf("%-12s: siz %4d; cap %4d: ", name.c_str(), (int)num_en,
          (int)entry.capacity());
   for (HighsInt iEn = 0; iEn < num_en; iEn++) {
-    if (iEn > 0 && iEn % 10 == 0) printf("\n                                            ");
+    if (iEn > 0 && iEn % 10 == 0) printf("\n                                  ");
     printf("%11d ", (int)entry[iEn]);
   }
   printf("\n");
@@ -76,7 +76,7 @@ void HFactor::reportDoubleVector(const std::string name,
   printf("%-12s: siz %4d; cap %4d: ", name.c_str(), (int)num_en,
          (int)entry.capacity());
   for (HighsInt iEn = 0; iEn < num_en; iEn++) {
-    if (iEn > 0 && iEn % 10 == 0) printf("\n                                           ");
+    if (iEn > 0 && iEn % 10 == 0) printf("\n                                  ");
     printf("%11.4g ", entry[iEn]);
   }
   printf("\n");

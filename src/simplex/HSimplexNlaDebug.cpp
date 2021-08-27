@@ -54,6 +54,9 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(const HighsInt alt_debug_level) c
   const vector<double>& a_matrix_value = this->lp_->a_matrix_.value_;
   const HighsInt* base_index = this->base_index_;
   const HighsOptions* options = this->options_;
+  // Make sure that this isn't called between the matrix and LP resizing
+  assert(num_row == this->lp_->a_matrix_.num_row_);
+  assert(num_col == this->lp_->a_matrix_.num_col_);
   HVector column;
   HVector rhs;
   column.setup(num_row);
@@ -115,6 +118,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(const HighsInt alt_debug_level) c
   expected_density = 0;
   double inverse_error_norm = 0;
   double residual_error_norm = 0;
+  HighsInt check_column = -1;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iCol = base_index[iRow];
     column.clear();
@@ -132,8 +136,10 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(const HighsInt alt_debug_level) c
       column.index[column.count++] = index;
     }
 
+    if (iRow == check_column) reportArray("Col 1 before FTRAN", &column, true);
     HVector residual = column;
     this->ftran(column, expected_density);
+    if (iRow == check_column) reportArray("Col 1 after  FTRAN", &column, true);
     double inverse_column_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
       double value = column.array[lc_iRow];
@@ -147,6 +153,10 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(const HighsInt alt_debug_level) c
       inverse_column_error_norm =
           std::max(inverse_error, inverse_column_error_norm);
     }
+    // Extra printing of intermediate errors
+    if (iRow == check_column) printf(//highsLogDev(options->log_options, HighsLogType::kInfo,
+		"CheckINVERT: Basic column %2d = %2d has inverse error %11.4g\n",
+		(int)iRow, int(iCol), inverse_column_error_norm);
     inverse_error_norm =
         std::max(inverse_column_error_norm, inverse_error_norm);
     double residual_column_error_norm = debugResidualError(false, column, residual);

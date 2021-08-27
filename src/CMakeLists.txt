@@ -240,7 +240,6 @@ set(headers
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HEkk.h
-    simplex/HEkkDebug.h
     simplex/HEkkPrimal.h
     simplex/HEkkDual.h
     simplex/HEkkDualRow.h
@@ -253,7 +252,6 @@ set(headers
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
-    simplex/HSimplexNlaDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
@@ -676,7 +674,6 @@ set(headers_fast_build_
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HEkk.h
-    simplex/HEkkDebug.h
     simplex/HEkkDual.h
     simplex/HEkkDualRHS.h
     simplex/HEkkDualRow.h
@@ -689,7 +686,6 @@ set(headers_fast_build_
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
-    simplex/HSimplexNlaDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h

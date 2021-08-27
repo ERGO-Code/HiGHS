@@ -686,7 +686,8 @@ void HEkk::addRows(const HighsLp& lp,
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
   if (this->status_.has_nla) {
     this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
-    this->simplex_nla_.debugCheckInvert(kHighsDebugLevelCostly);
+    setNlaPointersForTrans(lp);
+    this->debugNlaCheckInvert(kHighsDebugLevelExpensive+1);
   }    
   this->updateStatus(LpAction::kNewRows);
 }
