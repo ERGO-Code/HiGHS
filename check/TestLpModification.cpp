@@ -320,9 +320,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  highs.setOptionValue("log_dev_level", 2);
-  highs.setOptionValue("highs_debug_level", 3);
-  highs.setOptionValue("output_flag", true);
+  //  highs.setOptionValue("log_dev_level", 2);
+  //  highs.setOptionValue("highs_debug_level", 3);
+  //  highs.setOptionValue("output_flag", true);
   REQUIRE(highs.addRows(row012_num_row, row012_lower, row012_upper,
                         row012_num_nz, row012_start, row012_index,
                         row012_value) == HighsStatus::kOk);
@@ -331,9 +331,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  highs.setOptionValue("log_dev_level", 0);
-  highs.setOptionValue("highs_debug_level", 0);
-  highs.setOptionValue("output_flag", false);
+  //  highs.setOptionValue("log_dev_level", 0);
+  //  highs.setOptionValue("highs_debug_level", 0);
+  //  highs.setOptionValue("output_flag", false);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
