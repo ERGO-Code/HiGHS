@@ -395,6 +395,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         HighsCDouble cutRhs = 0.0;
         std::vector<double> cutVals(numInds);
         std::vector<double> maxFrac(numInds);
+        std::vector<HighsCDouble> downSum(numInds);
+        std::vector<HighsCDouble> fSum(numInds);
 
         double fLast = 0;
         double scale = -1.0 / delta;
@@ -414,36 +416,19 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               case 0:
                 cutVals[i] = std::max(cutVals[i], gj);
                 break;
-              case 1:
-                if (gj < fDiff) {
-                  isIntegral[i] = 2;
-
-                  double gjdown = std::floor(gj);
-                  double hj = gj - gjdown;
-                  maxFrac[i] = std::max(maxFrac[i], hj);
-
-                  cutVals[i] = double(maxFrac[i] + fDiff * gjdown);
-                } else {
-                  isIntegral[i] = 3;
-
-                  double gjup = std::ceil(gj - mip.mipdata_->epsilon);
-
-                  cutVals[i] = double(cutVals[i] + fDiff * gjup);
-                }
-                break;
-              case 2: {
+              case 1: {
                 double gjdown = std::floor(gj);
                 double hj = gj - gjdown;
                 maxFrac[i] = std::max(maxFrac[i], hj);
+                downSum[i] += fDiff * gjdown;
+                fSum[i] += fDiff;
 
-                cutVals[i] = double(maxFrac[i] + fDiff * gjdown);
-
+                if (fSum[i] < maxFrac[i]) {
+                  cutVals[i] = double(downSum[i] + fSum[i]);
+                } else {
+                  cutVals[i] = double(downSum[i] + maxFrac[i]);
+                }
                 break;
-              }
-              case 3: {
-                double gjup = std::ceil(gj - mip.mipdata_->epsilon);
-
-                cutVals[i] = double(cutVals[i] + fDiff * gjup);
               }
             }
           }
