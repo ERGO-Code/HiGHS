@@ -339,7 +339,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
-  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+  REQUIRE(std::fabs(optimal_objective_value - avgas_optimal_objective_value) < double_equal_tolerance);
 
   // Try to delete an empty range of rows: OK
   REQUIRE(highs.deleteRows(0, -1) == HighsStatus::kOk);

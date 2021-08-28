@@ -102,7 +102,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   //  }
   this->ftran(rhs, expected_density);
 
-  return_status = debugReportError(false, column, rhs, residual, force);
+  return_status = debugReportInvertSolutionError(false, column, rhs, residual, force);
 
   // Solve B^Tx=b
   rhs.clear();
@@ -122,7 +122,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   residual = rhs;
   this->btran(rhs, expected_density);
 
-  return_status = debugReportError(true, column, rhs, residual, force);
+  return_status = debugReportInvertSolutionError(true, column, rhs, residual, force);
 
   if (use_debug_level < kHighsDebugLevelExpensive) return return_status;
 
@@ -131,7 +131,8 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   expected_density = 0;
   double inverse_error_norm = 0;
   double residual_error_norm = 0;
-  HighsInt check_column = -1;
+  // Solve BX=B
+  HighsInt check_col = -1;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iCol = base_index[iRow];
     column.clear();
@@ -148,79 +149,97 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
       column.array[index] = 1.0;
       column.index[column.count++] = index;
     }
-    const bool report_column = report && iRow == check_column;
-    if (report_column) {
+    const bool report_col = report && iRow == check_col;
+    if (report_col) {
       reportArray("Check col before FTRAN", &column, true);
-      factor_.reportLu(kReportLuBoth, true);
+      //      factor_.reportLu(kReportLuBoth, true);
     }
     HVector residual = column;
     this->ftran(column, expected_density);
-    if (report_column) reportArray("Check col after  FTRAN", &column, true);
-    double inverse_column_error_norm = 0;
+    if (report_col) reportArray("Check col after  FTRAN", &column, true);
+    double inverse_col_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
-      double value = column.array[lc_iRow];
-      double ckValue;
-      if (lc_iRow == iRow) {
-        ckValue = 1;
-      } else {
-        ckValue = 0;
-      }
-      double inverse_error = fabs(value - ckValue);
-      inverse_column_error_norm =
-          std::max(inverse_error, inverse_column_error_norm);
+      double ckValue = lc_iRow == iRow ? 1 : 0;
+      double inverse_error = fabs(column.array[lc_iRow] - ckValue);
+      inverse_col_error_norm =
+          std::max(inverse_error, inverse_col_error_norm);
     }
     // Extra printing of intermediate errors
-    if (report_column)
+    if (report_col)
       highsLogDev(
           options->log_options, HighsLogType::kInfo,
           "CheckINVERT: Basic column %2d = %2d has inverse error %11.4g\n",
-          (int)iRow, int(iCol), inverse_column_error_norm);
+          (int)iRow, int(iCol), inverse_col_error_norm);
     inverse_error_norm =
-        std::max(inverse_column_error_norm, inverse_error_norm);
-    double residual_column_error_norm =
-        debugResidualError(false, column, residual);
+        std::max(inverse_col_error_norm, inverse_error_norm);
+    double residual_col_error_norm =
+        debugInvertResidualError(false, column, residual);
     residual_error_norm =
-        std::max(residual_column_error_norm, residual_error_norm);
+        std::max(residual_col_error_norm, residual_error_norm);
   }
-  if (inverse_error_norm) {
-    if (inverse_error_norm > kInverseExcessiveError) {
-      value_adjective = "Excessive";
-      report_level = HighsLogType::kError;
-    } else if (inverse_error_norm > kInverseLargeError) {
-      value_adjective = "Large";
-      report_level = HighsLogType::kWarning;
-    } else {
-      value_adjective = "Small";
-    }
-    highsLogDev(options->log_options, report_level,
-                "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
-                value_adjective.c_str(), inverse_error_norm);
-  }
+  return_status = debugReportInvertSolutionError("inverse", false, inverse_error_norm, residual_error_norm, force);
 
-  if (residual_error_norm) {
-    if (residual_error_norm > kResidualExcessiveError) {
-      value_adjective = "Excessive";
-      report_level = HighsLogType::kError;
-      return_status = HighsDebugStatus::kError;
-    } else if (residual_error_norm > kResidualLargeError) {
-      value_adjective = "Large";
-      report_level = HighsLogType::kWarning;
-      return_status = HighsDebugStatus::kWarning;
-    } else {
-      value_adjective = "Small";
+  // Solve B^TX=B^T
+  HighsInt check_row = -1;
+  inverse_error_norm = 0;
+  residual_error_norm = 0;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    column.clear();
+    column.packFlag = true;
+    for (HighsInt iCol=0; iCol < num_row; iCol++) {
+      HighsInt iVar = base_index[iCol];
+      if (iVar < num_col) {
+	for (HighsInt k = a_matrix_start[iVar]; k < a_matrix_start[iVar + 1];
+	     k++) {
+	  if (a_matrix_index[k] == iRow) {
+	    column.array[iCol] = a_matrix_value[k];
+	    break;
+	  }
+	}
+      } else {
+	if (iVar == num_col + iRow) column.array[iCol] = 1.0;
+      }
     }
-    if (force) report_level = HighsLogType::kInfo;
-    highsLogDev(options->log_options, report_level,
-                "CheckINVERT:   %-9s (%9.4g) norm for inverse residual error\n",
-                value_adjective.c_str(), residual_error_norm);
+    for (HighsInt iCol=0; iCol < num_row; iCol++) {
+      if (column.array[iCol]) column.index[column.count++] = iCol;
+    }
+    const bool report_row = report && iRow == check_row;
+    if (report_row) {
+      reportArray("Check col before BTRAN", &column, true);
+      //      factor_.reportLu(kReportLuBoth, true);
+    }
+    HVector residual = column;
+    this->btran(column, expected_density);
+    if (report_row) reportArray("Check col after  BTRAN", &column, true);
+    double inverse_col_error_norm = 0;
+    for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
+      double value = column.array[lc_iRow];
+      double ckValue = lc_iRow == iRow ? 1 : 0;
+      double inverse_error = fabs(value - ckValue);
+      inverse_col_error_norm =
+          std::max(inverse_error, inverse_col_error_norm);
+    }
+    // Extra printing of intermediate errors
+    if (report_row)
+      highsLogDev(
+          options->log_options, HighsLogType::kInfo,
+          "CheckINVERT: Basis matrix row %2d has inverse error %11.4g\n",
+          (int)iRow, inverse_col_error_norm);
+    inverse_error_norm =
+      std::max(inverse_col_error_norm, inverse_error_norm);
+    double residual_col_error_norm =
+      debugInvertResidualError(true, column, residual);
+    residual_error_norm =
+      std::max(residual_col_error_norm, residual_error_norm);
   }
+  return_status = debugReportInvertSolutionError("inverse", true, inverse_error_norm, residual_error_norm, force);
 
   return return_status;
 }
 
-double HSimplexNla::debugResidualError(const bool transposed,
-                                       const HVector& solution,
-                                       HVector& residual) const {
+double HSimplexNla::debugInvertResidualError(const bool transposed,
+					     const HVector& solution,
+					     HVector& residual) const {
   const HighsInt num_row = this->lp_->num_row_;
   const HighsInt num_col = this->lp_->num_col_;
   const vector<HighsInt>& a_matrix_start = this->lp_->a_matrix_.start_;
@@ -269,11 +288,11 @@ double HSimplexNla::debugResidualError(const bool transposed,
   return residual_error_norm;
 }
 
-HighsDebugStatus HSimplexNla::debugReportError(const bool transposed,
-                                               const HVector& true_solution,
-                                               const HVector& solution,
-                                               HVector& residual,
-                                               const bool force) const {
+HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(const bool transposed,
+							     const HVector& true_solution,
+							     const HVector& solution,
+							     HVector& residual,
+							     const bool force) const {
   const HighsInt num_row = this->lp_->num_row_;
   const HighsOptions* options = this->options_;
   double solve_error_norm = 0;
@@ -282,15 +301,23 @@ HighsDebugStatus HSimplexNla::debugReportError(const bool transposed,
     solve_error_norm = std::max(solve_error, solve_error_norm);
   }
   double residual_error_norm =
-      debugResidualError(transposed, solution, residual);
+      debugInvertResidualError(transposed, solution, residual);
 
+  return debugReportInvertSolutionError("random solution", transposed, solve_error_norm, residual_error_norm, force);
+}
+
+HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(const std::string source,
+							     const bool transposed,
+							     const double solve_error_norm,
+							     const double residual_error_norm,
+							     const bool force) const {
+  const HighsOptions* options = this->options_;
   std::string value_adjective;
   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-
   std::string type = "";
   if (transposed) type = "transposed ";
-  if (solve_error_norm) {
+  //  if (solve_error_norm) {
     if (solve_error_norm > kSolveExcessiveError) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
@@ -301,13 +328,17 @@ HighsDebugStatus HSimplexNla::debugReportError(const bool transposed,
       value_adjective = "Small";
     }
     if (force) report_level = HighsLogType::kInfo;
+    //    printf("%s\n", value_adjective.c_str());
+    //    printf("%g\n", solve_error_norm);
+    //    printf("%s\n", type.c_str());
+    //    printf("%s\n", source.c_str());
     highsLogDev(
         options->log_options, report_level,
-        "CheckINVERT:   %-9s (%9.4g) norm for %srandom solution solve error\n",
-        value_adjective.c_str(), solve_error_norm, type.c_str());
-  }
+        "CheckINVERT:   %-9s (%9.4g) norm for %s%s solve error\n",
+        value_adjective.c_str(), solve_error_norm, type.c_str(), source.c_str());
+    //  }
 
-  if (residual_error_norm) {
+    //  if (residual_error_norm) {
     if (residual_error_norm > kResidualExcessiveError) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
@@ -321,9 +352,10 @@ HighsDebugStatus HSimplexNla::debugReportError(const bool transposed,
     }
     if (force) report_level = HighsLogType::kInfo;
     highsLogDev(options->log_options, report_level,
-                "CheckINVERT:   %-9s (%9.4g) norm for %srandom solution "
+                "CheckINVERT:   %-9s (%9.4g) norm for %s%s "
                 "residual error\n",
-                value_adjective.c_str(), residual_error_norm, type.c_str());
-  }
+                value_adjective.c_str(), residual_error_norm, type.c_str(), source.c_str());
+    //  }
   return return_status;
 }
+

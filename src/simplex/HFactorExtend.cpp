@@ -31,7 +31,6 @@ void HFactor::deleteNonbasicCols(const HighsInt num_deleted_col) {
 
 void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   invalidAMatrixAction();
-  //  return;
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = numRow + num_new_row;
   printf("Adding %" HIGHSINT_FORMAT
@@ -117,7 +116,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   //
   // Add pivot indices for the new columns
   this->LpivotIndex.resize(new_num_row);
-  for (HighsInt iCol = new_num_row; iCol >= numRow; iCol--)
+  for (HighsInt iCol = numRow; iCol< new_num_row; iCol++)
     LpivotIndex[iCol] = iCol;
   //
   // Add starts for the identity columns
@@ -125,7 +124,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   assert(l_matrix_new_num_nz == Lindex.size() + new_lr_cols.index_.size());
   Lstart.resize(new_num_row + 1);
   HighsInt to_el = l_matrix_new_num_nz;
-  for (HighsInt iCol = new_num_row; iCol > numRow; iCol--)
+  for (HighsInt iCol = numRow+1; iCol< new_num_row+1; iCol++)
     Lstart[iCol] = l_matrix_new_num_nz;
   //
   // Insert the new entries, remembering to offset the index values by
@@ -199,25 +198,30 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // NB ur_temp plays the role of URlastp when it could be used as
   // temporary storage in buildFinish()
   vector<HighsInt> ur_temp;
-  ur_temp.assign(new_num_row, 0);
+  ur_temp.assign(ur_new_num_vec, 0);
   //
   // URspace has its new entries assigned (to URstuffX) as in
   // buildFinish()
   URspace.resize(ur_new_num_vec);
-  for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++) {
-    URspace[iRow] = URstuffX;
-  }
+  for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++) URspace[iRow] = URstuffX;
   // Compute ur_temp exactly as in buildFinish()
   for (HighsInt k = 0; k < UcountX; k++) ur_temp[UpivotLookup[Uindex[k]]]++;
+  HighsInt iStart = ur_size;
+  URstart[ur_cur_num_vec] = iStart;
   for (HighsInt iRow = ur_cur_num_vec + 1; iRow < ur_new_num_vec + 1; iRow++) {
-    HighsInt gap = URlastp[iRow - 1] + URstuffX;
-    URstart[iRow] = URstart[iRow - 1] + gap;
+    HighsInt gap = ur_temp[iRow - 1] + URstuffX;
+    URstart[iRow] = iStart + gap;
+    iStart += gap;
+    printf("URstart[%d] = %d; gap = %d; iStart = %d\n", (int)iRow, (int)URstart[iRow], (int)gap, (int)iStart);
   }
+  printf("URcountX = %d; iStart%d\n", (int)URcountX, (int)iStart);
   // Lose the start for the fictitious ur_new_num_vec'th row
   URstart.resize(ur_new_num_vec);
-  for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++) {
+  // Resize URlastp and initialise its new entries to be the URstart
+  // values since the rows are empty
+  URlastp.resize(ur_new_num_vec);
+  for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++)
     URlastp[iRow] = URstart[iRow];
-  }
   //
   // Increase the number of rows in HFactor
   numRow += num_new_row;
