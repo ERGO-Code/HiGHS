@@ -1,6 +1,5 @@
 #include "Highs.h"
 #include "catch.hpp"
-#include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
 const bool dev_run = false;

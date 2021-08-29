@@ -290,7 +290,8 @@ void HEkk::updateStatus(LpAction action) {
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
-      this->clearEkkData();  // clear();//
+      this->clearEkkData();  //
+      this->clear();//
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
