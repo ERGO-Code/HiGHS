@@ -30,6 +30,7 @@ struct SimplexBasis {
   std::vector<HighsInt> basicIndex_;
   std::vector<int8_t> nonbasicFlag_;
   std::vector<int8_t> nonbasicMove_;
+  void clear();
 };
 
 struct HighsSimplexStatus {

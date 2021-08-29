@@ -162,6 +162,8 @@ set(sources
     simplex/HSimplexDebug.cpp
     simplex/HSimplexNla.cpp
     simplex/HSimplexNlaDebug.cpp
+    simplex/HSimplexNlaFreeze.cpp
+    simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/DevKkt.cpp
@@ -582,6 +584,8 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexDebug.cpp
     simplex/HSimplexNla.cpp
     simplex/HSimplexNlaDebug.cpp
+    simplex/HSimplexNlaFreeze.cpp
+    simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCh2.cpp

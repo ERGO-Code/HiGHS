@@ -76,6 +76,8 @@ void HSimplexNla::clear() {
   timer_ = NULL;
   analysis_ = NULL;
   report_ = false;
+  current_frozen_ = kIllegalFrozenId;
+  frozen_.clear();
 }
 
 HighsInt HSimplexNla::invert() {

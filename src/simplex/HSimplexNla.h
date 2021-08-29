@@ -23,6 +23,34 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 
+const HighsInt kIllegalFrozenId = -1;
+
+struct ProductFormUpdate {
+  bool valid_ = false;
+  HighsInt num_row_;
+  HighsInt update_count_;
+  vector<HighsInt> pivot_index_;
+  vector<double> pivot_value_;
+  vector<HighsInt> start_;
+  vector<HighsInt> index_;
+  vector<double> value_;
+  void clear();
+  void setup(const HighsInt num_row, const double expected_density);
+  HighsInt update(HVector* aq, HighsInt* iRow);
+  void btran(HVector& rhs);
+  void ftran(HVector& rhs);
+};
+
+struct FrozenBasis {
+  bool valid_ = false;
+  HighsInt id_;
+  HighsInt prev_;
+  HighsInt next_;
+  ProductFormUpdate update_;
+  SimplexBasis basis_;
+  void clear();
+};
+
 class HSimplexNla {
  private:
   void setup(const HighsLp* lp, HighsInt* base_index,
@@ -44,6 +72,10 @@ class HSimplexNla {
   void ftran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
+
+  void clearAllFrozen() { frozen_.clear(); }
+  HighsInt freeze(const SimplexBasis& basis);
+  HighsInt unfreeze(const HighsInt frozen_id, SimplexBasis& basis);
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
@@ -98,6 +130,10 @@ class HSimplexNla {
 
   HFactor factor_;
   bool report_;
+
+  HighsInt current_frozen_ = kIllegalFrozenId;
+  vector<FrozenBasis> frozen_;
+  ProductFormUpdate update_;
 
   friend class HEkk;
   friend class HEkkPrimal;

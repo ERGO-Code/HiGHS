@@ -172,6 +172,9 @@ enum class HighsBasisStatus {
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
 const double kHighsIllegalInfeasibilityMeasure = -1;
 
+// Termination link in linked lists
+const HighsInt kNoLink = -1;
+
 const int8_t kPivotIllegal = -1;
 const int8_t kPivotLogical = 0;
 const int8_t kPivotUnit = 1;
