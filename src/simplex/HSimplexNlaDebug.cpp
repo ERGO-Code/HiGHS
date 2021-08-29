@@ -58,6 +58,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   // Make sure that this isn't called between the matrix and LP resizing
   assert(num_row == this->lp_->a_matrix_.num_row_);
   assert(num_col == this->lp_->a_matrix_.num_col_);
+  const bool report = options->log_dev_level;
 
   highsLogDev(options->log_options, HighsLogType::kInfo, "\nCheckINVERT: %s\n",
               message.c_str());
@@ -66,63 +67,69 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   HVector rhs;
   column.setup(num_row);
   rhs.setup(num_row);
+  HVector residual;
   double expected_density = 1;
 
-  // Solve for a random solution
-  HighsRandom random(1);
-  // Solve Bx=b
-  column.clear();
-  rhs.clear();
-  column.count = -1;
-  highsLogDev(options_->log_options, HighsLogType::kInfo, "Basis:");
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    rhs.index[rhs.count++] = iRow;
-    double value = random.fraction();
-    column.array[iRow] = value;
-    HighsInt iCol = base_index[iRow];
-    highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d", (int)iCol);
-    if (iCol < num_col) {
-      for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
-           iEl++) {
-        HighsInt index = a_matrix_index[iEl];
-        rhs.array[index] += value * a_matrix_value[iEl];
+  const bool random_ftran_test = true;
+  if (random_ftran_test) {
+    // Solve for a random solution
+    HighsRandom random(1);
+    // Solve Bx=b
+    column.clear();
+    rhs.clear();
+    column.count = -1;
+    highsLogDev(options_->log_options, HighsLogType::kInfo, "Basis:");
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      rhs.index[rhs.count++] = iRow;
+      double value = random.fraction();
+      column.array[iRow] = value;
+      HighsInt iCol = base_index[iRow];
+      highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d", (int)iCol);
+      if (iCol < num_col) {
+	for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
+	     iEl++) {
+	  HighsInt index = a_matrix_index[iEl];
+	  rhs.array[index] += value * a_matrix_value[iEl];
+	}
+      } else {
+	HighsInt index = iCol - num_col;
+	assert(index < num_row);
+	rhs.array[index] += value;
       }
-    } else {
-      HighsInt index = iCol - num_col;
-      assert(index < num_row);
-      rhs.array[index] += value;
     }
+    highsLogDev(options_->log_options, HighsLogType::kInfo, "\n");
+    residual = rhs;
+    //  if (options->log_dev_level) {
+    //    reportArray("Random solution before FTRAN", &column, true);
+    //    reportArray("Random RHS      before FTRAN", &rhs, true);
+    //  }
+    this->ftran(rhs, expected_density);
+    
+    return_status = debugReportInvertSolutionError(false, column, rhs, residual, force);
   }
-  highsLogDev(options_->log_options, HighsLogType::kInfo, "\n");
-  HVector residual = rhs;
-  const bool report = options->log_dev_level;
-  //  if (options->log_dev_level) {
-  //    reportArray("Random solution before FTRAN", &column, true);
-  //    reportArray("Random RHS      before FTRAN", &rhs, true);
-  //  }
-  this->ftran(rhs, expected_density);
-
-  return_status = debugReportInvertSolutionError(false, column, rhs, residual, force);
-
-  // Solve B^Tx=b
-  rhs.clear();
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    rhs.index[rhs.count++] = iRow;
-    HighsInt iCol = base_index[iRow];
-    if (iCol < num_col) {
-      for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
-           iEl++) {
-        rhs.array[iRow] +=
+      
+  const bool random_btran_test = true;
+  if (random_btran_test) {
+    // Solve B^Tx=b
+    rhs.clear();
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      rhs.index[rhs.count++] = iRow;
+      HighsInt iCol = base_index[iRow];
+      if (iCol < num_col) {
+	for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
+	     iEl++) {
+	  rhs.array[iRow] +=
             column.array[a_matrix_index[iEl]] * a_matrix_value[iEl];
+	}
+      } else {
+	rhs.array[iRow] += column.array[iCol - num_col];
       }
-    } else {
-      rhs.array[iRow] += column.array[iCol - num_col];
     }
+    residual = rhs;
+    this->btran(rhs, expected_density);
+    
+    return_status = debugReportInvertSolutionError(true, column, rhs, residual, force);
   }
-  residual = rhs;
-  this->btran(rhs, expected_density);
-
-  return_status = debugReportInvertSolutionError(true, column, rhs, residual, force);
 
   if (use_debug_level < kHighsDebugLevelExpensive) return return_status;
 
@@ -131,108 +138,112 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   expected_density = 0;
   double inverse_error_norm = 0;
   double residual_error_norm = 0;
-  // Solve BX=B
-  HighsInt check_col = -1;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    HighsInt iCol = base_index[iRow];
-    column.clear();
-    column.packFlag = true;
-    if (iCol < num_col) {
-      for (HighsInt k = a_matrix_start[iCol]; k < a_matrix_start[iCol + 1];
-           k++) {
-        HighsInt index = a_matrix_index[k];
-        column.array[index] = a_matrix_value[k];
-        column.index[column.count++] = index;
-      }
-    } else {
-      HighsInt index = iCol - num_col;
-      column.array[index] = 1.0;
-      column.index[column.count++] = index;
-    }
-    const bool report_col = report && iRow == check_col;
-    if (report_col) {
-      reportArray("Check col before FTRAN", &column, true);
-      //      factor_.reportLu(kReportLuBoth, true);
-    }
-    HVector residual = column;
-    this->ftran(column, expected_density);
-    if (report_col) reportArray("Check col after  FTRAN", &column, true);
-    double inverse_col_error_norm = 0;
-    for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
-      double ckValue = lc_iRow == iRow ? 1 : 0;
-      double inverse_error = fabs(column.array[lc_iRow] - ckValue);
-      inverse_col_error_norm =
-          std::max(inverse_error, inverse_col_error_norm);
-    }
-    // Extra printing of intermediate errors
-    if (report_col)
-      highsLogDev(
-          options->log_options, HighsLogType::kInfo,
-          "CheckINVERT: Basic column %2d = %2d has inverse error %11.4g\n",
-          (int)iRow, int(iCol), inverse_col_error_norm);
-    inverse_error_norm =
-        std::max(inverse_col_error_norm, inverse_error_norm);
-    double residual_col_error_norm =
-        debugInvertResidualError(false, column, residual);
-    residual_error_norm =
-        std::max(residual_col_error_norm, residual_error_norm);
-  }
-  return_status = debugReportInvertSolutionError("inverse", false, inverse_error_norm, residual_error_norm, force);
-
-  // Solve B^TX=B^T
-  HighsInt check_row = -1;
-  inverse_error_norm = 0;
-  residual_error_norm = 0;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    column.clear();
-    column.packFlag = true;
-    for (HighsInt iCol=0; iCol < num_row; iCol++) {
-      HighsInt iVar = base_index[iCol];
-      if (iVar < num_col) {
-	for (HighsInt k = a_matrix_start[iVar]; k < a_matrix_start[iVar + 1];
+  const bool test_inverse_ftran = true;
+  if (test_inverse_ftran) {
+    // Solve BX=B
+    HighsInt check_col = -1;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      HighsInt iCol = base_index[iRow];
+      column.clear();
+      column.packFlag = true;
+      if (iCol < num_col) {
+	for (HighsInt k = a_matrix_start[iCol]; k < a_matrix_start[iCol + 1];
 	     k++) {
-	  if (a_matrix_index[k] == iRow) {
-	    column.array[iCol] = a_matrix_value[k];
-	    break;
-	  }
+	  HighsInt index = a_matrix_index[k];
+	  column.array[index] = a_matrix_value[k];
+	  column.index[column.count++] = index;
 	}
       } else {
-	if (iVar == num_col + iRow) column.array[iCol] = 1.0;
+	HighsInt index = iCol - num_col;
+	column.array[index] = 1.0;
+	column.index[column.count++] = index;
       }
-    }
-    for (HighsInt iCol=0; iCol < num_row; iCol++) {
-      if (column.array[iCol]) column.index[column.count++] = iCol;
-    }
-    const bool report_row = report && iRow == check_row;
-    if (report_row) {
-      reportArray("Check col before BTRAN", &column, true);
-      //      factor_.reportLu(kReportLuBoth, true);
-    }
-    HVector residual = column;
-    this->btran(column, expected_density);
-    if (report_row) reportArray("Check col after  BTRAN", &column, true);
-    double inverse_col_error_norm = 0;
-    for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
-      double value = column.array[lc_iRow];
-      double ckValue = lc_iRow == iRow ? 1 : 0;
-      double inverse_error = fabs(value - ckValue);
-      inverse_col_error_norm =
+      const bool report_col = report && iRow == check_col;
+      if (report_col) {
+	reportArray("Check col before FTRAN", &column, true);
+	//      factor_.reportLu(kReportLuBoth, true);
+      }
+      HVector residual = column;
+      this->ftran(column, expected_density);
+      if (report_col) reportArray("Check col after  FTRAN", &column, true);
+      double inverse_col_error_norm = 0;
+      for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
+	double ckValue = lc_iRow == iRow ? 1 : 0;
+	double inverse_error = fabs(column.array[lc_iRow] - ckValue);
+	inverse_col_error_norm =
           std::max(inverse_error, inverse_col_error_norm);
+      }
+      // Extra printing of intermediate errors
+          if (report_col)
+      highsLogDev(options->log_options, HighsLogType::kInfo,
+		  "CheckINVERT: Basic column %2d = %2d has inverse error %11.4g\n",
+		  (int)iRow, int(iCol), inverse_col_error_norm);
+      inverse_error_norm =
+        std::max(inverse_col_error_norm, inverse_error_norm);
+      double residual_col_error_norm =
+        debugInvertResidualError(false, column, residual);
+      residual_error_norm =
+        std::max(residual_col_error_norm, residual_error_norm);
     }
-    // Extra printing of intermediate errors
-    if (report_row)
-      highsLogDev(
-          options->log_options, HighsLogType::kInfo,
-          "CheckINVERT: Basis matrix row %2d has inverse error %11.4g\n",
-          (int)iRow, inverse_col_error_norm);
-    inverse_error_norm =
-      std::max(inverse_col_error_norm, inverse_error_norm);
-    double residual_col_error_norm =
-      debugInvertResidualError(true, column, residual);
-    residual_error_norm =
-      std::max(residual_col_error_norm, residual_error_norm);
+    return_status = debugReportInvertSolutionError("inverse", false, inverse_error_norm, residual_error_norm, force);
   }
-  return_status = debugReportInvertSolutionError("inverse", true, inverse_error_norm, residual_error_norm, force);
+
+  const bool test_inverse_btran = true;
+  if (test_inverse_btran) {
+    // Solve B^TX=B^T
+    HighsInt check_row = -2;
+    inverse_error_norm = 0;
+    residual_error_norm = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      column.clear();
+      column.packFlag = true;
+      for (HighsInt iCol=0; iCol < num_row; iCol++) {
+	HighsInt iVar = base_index[iCol];
+	if (iVar < num_col) {
+	  for (HighsInt k = a_matrix_start[iVar]; k < a_matrix_start[iVar + 1];
+	       k++) {
+	    if (a_matrix_index[k] == iRow) {
+	      column.array[iCol] = a_matrix_value[k];
+	      break;
+	    }
+	  }
+	} else {
+	  if (iVar == num_col + iRow) column.array[iCol] = 1.0;
+	}
+      }
+      for (HighsInt iCol=0; iCol < num_row; iCol++) {
+	if (column.array[iCol]) column.index[column.count++] = iCol;
+      }
+      const bool report_row = report && iRow == check_row;
+      if (report_row) {
+	reportArray("Check col before BTRAN", &column, true);
+	//      factor_.reportLu(kReportLuBoth, true);
+      }
+      HVector residual = column;
+      this->btran(column, expected_density);
+      if (report_row) reportArray("Check col after  BTRAN", &column, true);
+      double inverse_col_error_norm = 0;
+      for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
+	double value = column.array[lc_iRow];
+	double ckValue = lc_iRow == iRow ? 1 : 0;
+	double inverse_error = fabs(value - ckValue);
+	inverse_col_error_norm =
+          std::max(inverse_error, inverse_col_error_norm);
+      }
+      // Extra printing of intermediate errors
+            if (report_row)
+	highsLogDev(options->log_options, HighsLogType::kInfo,
+		    "CheckINVERT: Basis matrix row %2d has inverse error %11.4g\n",
+		    (int)iRow, inverse_col_error_norm);
+      inverse_error_norm =
+	std::max(inverse_col_error_norm, inverse_error_norm);
+      double residual_col_error_norm =
+	debugInvertResidualError(true, column, residual);
+      residual_error_norm =
+	std::max(residual_col_error_norm, residual_error_norm);
+    }
+    return_status = debugReportInvertSolutionError("inverse", true, inverse_error_norm, residual_error_norm, force);
+  }
 
   return return_status;
 }

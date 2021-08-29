@@ -63,6 +63,9 @@ class HEkk {
   HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
+  
+  void freezeBasis(HighsInt& frozen_basis_id);
+  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
   //  HighsStatus setBasis(const SimplexBasis& basis);
   void addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix);
   void addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix);

@@ -1312,6 +1312,28 @@ HighsStatus Highs::setBasis() {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::freezeBasis(HighsInt& frozen_basis_id) {
+  frozen_basis_id = kNoLink;
+  // Check that there is a simplex basis to freeze
+  if (!ekk_instance_.status_.has_invert) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "freezeBasis: no simplex factorization to freeze\n");
+    return HighsStatus::kError;
+  }
+  ekk_instance_.freezeBasis(frozen_basis_id);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
+  // Check that there is a simplex basis to unfreeze
+  if (!ekk_instance_.status_.initialised_for_new_lp) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "unfreezeBasis: no simplex information to unfreeze\n");
+    return HighsStatus::kError;
+  }
+  return ekk_instance_.unfreezeBasis(frozen_basis_id);
+}
+
 HighsStatus Highs::addRow(const double lower_bound, const double upper_bound,
                           const HighsInt num_new_nz, const HighsInt* indices,
                           const double* values) {

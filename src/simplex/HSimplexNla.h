@@ -23,8 +23,6 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 
-const HighsInt kIllegalFrozenId = -1;
-
 struct ProductFormUpdate {
   bool valid_ = false;
   HighsInt num_row_;
@@ -37,14 +35,14 @@ struct ProductFormUpdate {
   void clear();
   void setup(const HighsInt num_row, const double expected_density);
   HighsInt update(HVector* aq, HighsInt* iRow);
-  void btran(HVector& rhs);
-  void ftran(HVector& rhs);
+  void btran(HVector& rhs) const;
+  void ftran(HVector& rhs) const;
 };
 
 struct FrozenBasis {
   bool valid_ = false;
-  HighsInt id_;
   HighsInt prev_;
+  HighsInt this_;
   HighsInt next_;
   ProductFormUpdate update_;
   SimplexBasis basis_;
@@ -71,11 +69,13 @@ class HSimplexNla {
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void ftran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void frozenBtran(HVector& rhs) const;
+  void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
-  void clearAllFrozen() { frozen_.clear(); }
-  HighsInt freeze(const SimplexBasis& basis);
-  HighsInt unfreeze(const HighsInt frozen_id, SimplexBasis& basis);
+  void clearAllFrozen() { frozen_basis_.clear(); }
+  HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
+  HighsInt unfreeze(const HighsInt frozen_basis_id, SimplexBasis& basis);
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
@@ -131,8 +131,9 @@ class HSimplexNla {
   HFactor factor_;
   bool report_;
 
-  HighsInt current_frozen_ = kIllegalFrozenId;
-  vector<FrozenBasis> frozen_;
+  HighsInt first_frozen_basis_id_ = kNoLink;
+  HighsInt last_frozen_basis_id_ = kNoLink;
+  vector<FrozenBasis> frozen_basis_;
   ProductFormUpdate update_;
 
   friend class HEkk;

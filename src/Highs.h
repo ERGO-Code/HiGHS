@@ -873,6 +873,18 @@ class Highs {
   HighsStatus setBasis();
 
   /**
+   * @brief Freezes the current basis and standard NLA, returning a
+   * value to be used to recover this basis and standard NLA at
+   * minimal cost
+   */
+  HighsStatus freezeBasis(HighsInt& frozen_basis_id);
+
+  /**
+   * @brief Unfreeze a frozen basis and standard NLA (if possible)
+   */
+  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
+
+  /**
    * @brief Gets the value of infinity used by HiGHS
    */
   double getInfinity() { return kHighsInf; }

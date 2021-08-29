@@ -2869,3 +2869,12 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
   }
   return rebuild_reason_string;
 }
+
+void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
+  assert(this->status_.has_invert);
+  frozen_basis_id = this->simplex_nla_.freeze(this->basis_, info_.col_aq_density);
+}
+
+HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
+  return HighsStatus::kOk;
+}
