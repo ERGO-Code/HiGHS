@@ -360,7 +360,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           break;
         }
         rhs[k] = std::min(0., rhs[k]);
-        delta = std::max(std::abs(rhs[k]) + 1.0, delta);
+        delta = std::max(std::abs(rhs[k]), delta);
 
         HighsInt len = aggregatedPath[k].first.size();
         for (HighsInt j = 0; j < len; ++j) {
@@ -385,7 +385,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       }
 
       if (pathLen > 1) {
-        delta = std::exp2(std::ceil(std::log2(delta)));
+        delta = std::exp2(std::ceil(std::log2(delta + 1.0)));
 
         HighsInt numInds = inds.size();
 
