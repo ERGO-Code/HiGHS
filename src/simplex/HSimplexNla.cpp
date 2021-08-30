@@ -76,9 +76,7 @@ void HSimplexNla::clear() {
   timer_ = NULL;
   analysis_ = NULL;
   report_ = false;
-  first_frozen_basis_id_ = kNoLink;
-  last_frozen_basis_id_ = kNoLink;
-  frozen_basis_.clear();
+  this->frozenBasisClearAllData();
 }
 
 HighsInt HSimplexNla::invert() {
@@ -93,8 +91,8 @@ HighsInt HSimplexNla::invert() {
   }
   HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
   build_synthetic_tick_ = factor_.build_synthetic_tick;
-  // Clear any frozen basis information
-  frozen_basis_.clear();
+  // Clear any frozen basis updates 
+  frozenBasisClearAllButBasis();
   return rank_deficiency;
 }
 

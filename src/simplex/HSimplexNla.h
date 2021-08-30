@@ -47,6 +47,7 @@ struct FrozenBasis {
   ProductFormUpdate update_;
   SimplexBasis basis_;
   void clear();
+  void clearAllButBasis();
 };
 
 class HSimplexNla {
@@ -73,9 +74,10 @@ class HSimplexNla {
   void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
-  void clearAllFrozen() { frozen_basis_.clear(); }
+  void frozenBasisClearAllData();
+  void frozenBasisClearAllButBasis();
   HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
-  HighsInt unfreeze(const HighsInt frozen_basis_id, SimplexBasis& basis);
+  HighsInt unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis);
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
