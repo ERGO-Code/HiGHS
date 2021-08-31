@@ -733,7 +733,8 @@ void HEkk::addRows(const HighsLp& lp,
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
-  if (this->status_.has_nla) {
+  const bool use_simplex_nla_addRows = false;
+  if (use_simplex_nla_addRows && this->status_.has_nla) {
     this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
     setNlaPointersForTrans(lp);
     this->debugNlaCheckInvert("HEkk::addRows - on entry",
@@ -1374,16 +1375,20 @@ bool HEkk::reinvertBasisMatrix(HighsInt rebuild_reason) {
        rebuild_reason == kRebuildReasonPossiblyOptimal ||
        rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
        rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+       rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
        rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
     reinvert_basis_matrix = false;
     assert(status_.has_invert);
   }
 
-  const std::string logic = reinvert_basis_matrix ? "   " : "no ";
-  if (info_.update_count && rebuild_reason != kRebuildReasonSyntheticClockSaysInvert)
-    printf("%srefactorization after %d updates for rebuild reason = %s\n",
-           logic.c_str(), (int)info_.update_count,
-           rebuildReason(rebuild_reason).c_str());
+  const bool report_refactorization = false;
+  if (report_refactorization) {
+    const std::string logic = reinvert_basis_matrix ? "   " : "no ";
+    if (info_.update_count && rebuild_reason != kRebuildReasonSyntheticClockSaysInvert)
+      printf("%srefactorization after %d updates for rebuild reason = %s\n",
+	     logic.c_str(), (int)info_.update_count,
+	     rebuildReason(rebuild_reason).c_str());
+  }
   return reinvert_basis_matrix;
 }
 
@@ -2322,8 +2327,8 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   // Use the next level down for the debug level, since the cost of
   // checking the INVERT every iteration is an order more expensive
   // than checking after factorization.
-  const HighsInt alt_debug_level =  // options_->highs_debug_level-1;
-      kHighsDebugLevelExpensive;
+  const HighsInt alt_debug_level = options_->highs_debug_level-1;
+  //      kHighsDebugLevelExpensive;
 
   HighsDebugStatus debug_status =
       debugNlaCheckInvert("HEkk::updateFactor", alt_debug_level);
@@ -2908,9 +2913,9 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
   updateStatus(LpAction::kNewBounds);
   this->status_.has_invert = will_have_invert;
-  printf("HEkk::unfreezeBasis: basis = ");
-  for (HighsInt iRow = 0; iRow < (int)basis_.basicIndex_.size(); iRow++)
-    printf(" %d", (int)basis_.basicIndex_[iRow]);
-  printf("\n");
+  //  printf("HEkk::unfreezeBasis: basis = ");
+  //  for (HighsInt iRow = 0; iRow < (int)basis_.basicIndex_.size(); iRow++)
+  //    printf(" %d", (int)basis_.basicIndex_[iRow]);
+  //  printf("\n");
   return HighsStatus::kOk;
 }

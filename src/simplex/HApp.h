@@ -68,7 +68,7 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   assert(ekk_instance.debugNlaScalingOk(incumbent_lp));
   HighsInt alt_debug_level = -1;
   // ToDo Need to switch off this forced debug
-  alt_debug_level = kHighsDebugLevelExpensive;
+  //  alt_debug_level = kHighsDebugLevelExpensive;
   if (ekk_instance.debugNlaCheckInvert("HApp: returnFromSolveLpSimplex",
                                        alt_debug_level) ==
       HighsDebugStatus::kError) {
