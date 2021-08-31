@@ -42,7 +42,6 @@ struct ProductFormUpdate {
 struct FrozenBasis {
   bool valid_ = false;
   HighsInt prev_;
-  HighsInt this_;
   HighsInt next_;
   ProductFormUpdate update_;
   SimplexBasis basis_;
@@ -76,8 +75,10 @@ class HSimplexNla {
 
   void frozenBasisClearAllData();
   void frozenBasisClearAllButBasis();
+  bool frozenBasisIdValid(const HighsInt frozen_basis_id) const;
+  bool frozenBasisHasInvert(const HighsInt frozen_basis_id) const;
   HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
-  HighsInt unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis);
+  void unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis);
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);

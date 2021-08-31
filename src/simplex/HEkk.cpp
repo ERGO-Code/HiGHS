@@ -95,6 +95,9 @@ void HEkk::clearEkkData() {
   // Doesn't clear the LP, simplex NLA or simplex basis as part of
   // clearing Ekk data, so that the simplex basis and HFactor instance
   // are maintained
+  //
+  // Does clear any frozen basis data
+  if (this->status_.has_nla) this->simplex_nla_.frozenBasisClearAllData();
 
   // analysis_; No clear yet
 
@@ -2876,5 +2879,14 @@ void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
 }
 
 HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
+  // Check that the ID passed is valid
+  const bool valid_id =
+    this->simplex_nla_.frozenBasisIdValid(frozen_basis_id);
+  if (!valid_id) return HighsStatus::kError;
+  const bool will_have_invert =
+    this->simplex_nla_.frozenBasisHasInvert(frozen_basis_id);
+  this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
+  updateStatus(LpAction::kNewBounds);
+  this->status_.has_invert = will_have_invert;
   return HighsStatus::kOk;
 }
