@@ -889,13 +889,13 @@ void HEkkDual::rebuild() {
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
-  // Decide whether reinversion should be performed
-  const bool reinvert_basis_matrix = ekk_instance_.reinvertBasisMatrix(rebuild_reason);
+  // Decide whether refactorization should be performed
+  const bool refactor_basis_matrix = ekk_instance_.rebuildRefactor(rebuild_reason);
 
   // Take a local copy of the rebuild reason and then reset the global value
   const HighsInt local_rebuild_reason = rebuild_reason;
   rebuild_reason = kRebuildReasonNo;
-  if (reinvert_basis_matrix) {
+  if (refactor_basis_matrix) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is
     // singular and last nonsingular basis is refactorized as

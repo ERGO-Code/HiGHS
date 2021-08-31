@@ -40,6 +40,11 @@ const double updated_dual_small_absolute_error = 1e-6;
 const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
+void HEkk::debugForceLogDevLevel(const HighsInt level) {
+  this->options_->output_flag = true;
+  this->options_->log_dev_level = level;
+}
+
 HighsDebugStatus HEkk::debugSimplex(const std::string message,
                                     const SimplexAlgorithm algorithm,
                                     const HighsInt phase,

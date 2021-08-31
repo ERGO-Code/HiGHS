@@ -19,13 +19,13 @@
 
 //#include <stdio.h>
 
-const double kResidualLargeError = 1e-12;
+const double kResidualLargeError = 1e-8;
 const double kResidualExcessiveError = sqrt(kResidualLargeError);
 
-const double kSolveLargeError = 1e-12;
+const double kSolveLargeError = 1e-8;
 const double kSolveExcessiveError = sqrt(kSolveLargeError);
 
-const double kInverseLargeError = 1e-12;
+const double kInverseLargeError = 1e-8;
 const double kInverseExcessiveError = sqrt(kInverseLargeError);
 
 HighsDebugStatus HSimplexNla::debugCheckInvert(

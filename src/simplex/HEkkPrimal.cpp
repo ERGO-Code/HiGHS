@@ -572,13 +572,13 @@ void HEkkPrimal::rebuild() {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, -1, "");
   }
 
-  // Decide whether reinversion should be performed
-  const bool reinvert_basis_matrix = ekk_instance_.reinvertBasisMatrix(rebuild_reason);
+  // Decide whether refactorization should be performed
+  const bool refactor_basis_matrix = ekk_instance_.rebuildRefactor(rebuild_reason);
 
   // Take a local copy of the rebuild reason and then reset the global value
   const HighsInt local_rebuild_reason = rebuild_reason;
   rebuild_reason = kRebuildReasonNo;
-  if (reinvert_basis_matrix) {
+  if (refactor_basis_matrix) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is
     // singular and last nonsingular basis is refactorized as
@@ -912,8 +912,12 @@ bool HEkkPrimal::useVariableIn() {
   double computed_theta_dual =
       ekk_instance_.computeDualForTableauColumn(variable_in, col_aq);
   ekk_instance_.debugUpdatedDual(updated_theta_dual, computed_theta_dual);
-
-  // Feed in the computed dual value
+  // Feed in the computed dual value.
+  //
+  // The sum of dual infeasiblilities (and maybe max dual
+  // infeasiblility) will be wrong, but there's a big tolerance on
+  // this in debugSimplex. Have to be careful (below) if the computed
+  // dual value is no longer a dual infeasibility
   info.workDual_[variable_in] = computed_theta_dual;
   // Reassign theta_dual to be the computed value
   theta_dual = info.workDual_[variable_in];
@@ -922,6 +926,11 @@ bool HEkkPrimal::useVariableIn() {
   const bool theta_dual_sign_error =
       updated_theta_dual * computed_theta_dual <= 0;
 
+  // If theta_dual is small, then it's no longer a dual infeasibility,
+  // so reduce the number of dual infeasiblilities. Otherwise an error
+  // is identified in debugSimplex
+  if (theta_dual_small)
+    ekk_instance_.info_.num_dual_infeasibilities--;
   if (theta_dual_small || theta_dual_sign_error) {
     // The computed dual is small or has a sign error, so don't use it
     std::string theta_dual_size = "";

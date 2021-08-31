@@ -114,5 +114,8 @@ void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis
     // Clear the (scalar) data associated with the PF updates of the last frozen basis
     last_frozen_basis.update_.clear();
   }
+  // Clear any refactorization information in case we are unfreezing
+  // immediately after a factorization for a later basis
+  this->factor_.refactor_info_.clear();
 }
 

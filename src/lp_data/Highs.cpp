@@ -2113,13 +2113,6 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   assert(model_.lp_.a_matrix_.isColwise());
 
   // Solve the LP
-  HighsInt check_num_nz = 629;
-  if (lp.a_matrix_.numNz() == check_num_nz && lp.col_upper_[4] == 0) {
-    options_.output_flag = true;
-    options_.log_dev_level = 2;
-    options_.highs_debug_level = 3;
-    printf("Highs::callSolveLp for numnz = %d\n", (int)check_num_nz);
-  }
   return_status = solveLp(solver_object, message);
   // Extract the scaled/unscaled model status
   model_status_ = solver_object.unscaled_model_status_;

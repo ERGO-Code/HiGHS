@@ -72,7 +72,7 @@ class HEkk {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unscaleSimplex(const HighsLp& incumbent_lp);
-  double invertSolveError();
+  double factorSolveError();
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
@@ -97,6 +97,7 @@ class HEkk {
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
   // Debug methods
+  void debugForceLogDevLevel(const HighsInt level);
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
@@ -151,7 +152,7 @@ class HEkk {
       double* scattered_edge_weights);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
-  bool reinvertBasisMatrix(HighsInt rebuild_reason);
+  bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,

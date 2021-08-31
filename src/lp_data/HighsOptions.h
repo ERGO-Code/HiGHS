@@ -309,9 +309,10 @@ struct HighsOptionsStruct {
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_substitution_maxfillin;
-  bool reinvert_when_simplex_may_terminate;
   bool simplex_initial_condition_check;
+  bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
+  double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
@@ -742,22 +743,28 @@ class HighsOptions : public HighsOptionsStruct {
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool(
-        "reinvert_when_simplex_may_terminate",
-        "Reinvert the basis matrix when the simplex algorithm may terminate",
-        advanced, &reinvert_when_simplex_may_terminate, false);
-    records.push_back(record_bool);
-
     record_bool =
         new OptionRecordBool("simplex_initial_condition_check",
                              "Perform initial basis condition check in simplex",
                              advanced, &simplex_initial_condition_check, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool(
+        "no_unnecessary_rebuild_refactor",
+        "No unnecessary refactorization on simplex rebuild",
+        advanced, &no_unnecessary_rebuild_refactor, true);
+    records.push_back(record_bool);
+
     record_double = new OptionRecordDouble(
         "simplex_initial_condition_tolerance",
         "Tolerance on initial basis condition in simplex", advanced,
         &simplex_initial_condition_tolerance, 1.0, 1e14, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "rebuild_refactor_solution_error_tolerance",
+        "Tolerance on solution error when considering refactorization on simplex rebuild", advanced,
+        &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

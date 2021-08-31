@@ -237,7 +237,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
            refine_solution);
     // Solve the unscaled LP using scaled NLA. This requires pointers of
     // a scaled matrix to be passed to the HFactor instance. Use the
-    // incumbent LP for ths.
+    // incumbent LP for this.
     //
     // Check that the incumbent LP has been moved back and is unscaled
     assert(!incumbent_lp.is_moved_);

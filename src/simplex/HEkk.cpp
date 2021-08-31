@@ -1212,6 +1212,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
+  //  if (rank_deficiency) {printf("Recover from rank_deficiency of %d\n", (int)rank_deficiency);}
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
@@ -1372,30 +1373,41 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
   analysis_.simplexTimerStop(ComputeDuObjClock);
 }
 
-bool HEkk::reinvertBasisMatrix(HighsInt rebuild_reason) {
-  bool reinvert_basis_matrix = info_.update_count > 0;
-  if (!options_->reinvert_when_simplex_may_terminate &&
-      (rebuild_reason == kRebuildReasonNo ||
-       rebuild_reason == kRebuildReasonPossiblyOptimal ||
-       rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
-       rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-       rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-       rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
-    double solution_error = invertSolveError();
-    printf("HEkk::reinvertBasisMatrix = %g\n", solution_error);
-    reinvert_basis_matrix = false;
+bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
+  bool refactor = info_.update_count > 0;
+  double solution_error = 0;
+  if (options_->no_unnecessary_rebuild_refactor) {
+    // Consider whether not to refactor in rebuild
+    //
+    // Must have an INVERT just to consider this!
     assert(status_.has_invert);
+    if (rebuild_reason == kRebuildReasonNo ||
+	rebuild_reason == kRebuildReasonPossiblyOptimal ||
+	rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
+	rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+	rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+	rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex) {
+      // By default, don't refactor!
+      refactor = false;
+      // Possibly revise the decision based on accuracy when solving a
+      // test system
+      const double error_tolerance =
+	options_->rebuild_refactor_solution_error_tolerance;
+      if (error_tolerance>0) {
+	solution_error = factorSolveError();
+	refactor = solution_error < error_tolerance;
+      }
+    }
   }
-
   const bool report_refactorization = false;
-  if (report_refactorization) {
-    const std::string logic = reinvert_basis_matrix ? "   " : "no ";
+  if (report_refactorization) {// || solution_error>=1e-8) {
+    const std::string logic = refactor ? "no " : "   ";
     if (info_.update_count && rebuild_reason != kRebuildReasonSyntheticClockSaysInvert)
-      printf("%srefactorization after %d updates for rebuild reason = %s\n",
-	     logic.c_str(), (int)info_.update_count,
+      printf("%srefactorization after %4d updates and solution error = %11.4g for rebuild reason = %s\n",
+	     logic.c_str(), (int)info_.update_count, solution_error,
 	     rebuildReason(rebuild_reason).c_str());
   }
-  return reinvert_basis_matrix;
+  return refactor;
 }
 
 HighsInt HEkk::computeFactor() {
@@ -2917,8 +2929,17 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   const bool will_have_invert =
     this->simplex_nla_.frozenBasisHasInvert(frozen_basis_id);
   this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
+  // The pointers to simplex basis components have changed, so have to
+  // tell simplex NLA to refresh the use of the pointer to the basic
+  // indices  
+  this->simplex_nla_.setBasicIndexPointers(&basis_.basicIndex_[0]);
   updateStatus(LpAction::kNewBounds);
+  // Indicate whether there is a valid factorization after unfreezing
   this->status_.has_invert = will_have_invert;
+  // If there's no valid factorization, then there cannot be a fresh one
+  if (!this->status_.has_invert) this->status_.has_fresh_invert = false;
+  // Check for consistency
+  if (!this->simplex_nla_.update_.valid_) assert(!this->status_.has_invert);
   //  printf("HEkk::unfreezeBasis: basis = ");
   //  for (HighsInt iRow = 0; iRow < (int)basis_.basicIndex_.size(); iRow++)
   //    printf(" %d", (int)basis_.basicIndex_[iRow]);
@@ -2926,8 +2947,8 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   return HighsStatus::kOk;
 }
 
-double HEkk::invertSolveError() {
-  // Cheap assessment of INVERT accuracy.
+double HEkk::factorSolveError() {
+  // Cheap assessment of factor accuracy.
   //
   // Forms a random solution with at most 50 nonzeros, solves for
   // the corresponding RHS, and then checks the 50 solution values.
@@ -2935,6 +2956,7 @@ double HEkk::invertSolveError() {
   const HighsInt num_row = this->lp_.num_row_;
   const HighsSparseMatrix& a_matrix = this->lp_.a_matrix_;
   const vector<HighsInt>& base_index = this->basis_.basicIndex_;
+  const HighsSparseMatrix& ar_matrix = this->ar_matrix_;
   HVector btran_rhs;
   HVector ftran_rhs;
   btran_rhs.setup(num_row);
@@ -2954,7 +2976,7 @@ double HEkk::invertSolveError() {
     HighsInt iRow = random.integer(num_row);
     assert(iRow<num_row);
     if (solution_nonzero[iRow]) continue;
-    double value = random.fraction();
+    double value = 1;//random.fraction();
     solution_value.push_back(value);
     solution_index.push_back(iRow);
     solution_nonzero[iRow] = 1;
@@ -2983,6 +3005,34 @@ double HEkk::invertSolveError() {
       btran_rhs.index[btran_rhs.count++] = iRow;      
     }
   }
+
+  HVector alt_btran_rhs;
+  alt_btran_rhs.setup(num_row);
+  alt_btran_rhs.clear();
+
+  vector<double> btran_scattered_rhs;
+  btran_scattered_rhs.assign(num_col+num_row, 0);
+  for (HighsInt iX = 0; iX < solution_value.size(); iX++) {
+    HighsInt iRow = solution_index[iX];
+    for (HighsInt iEl = ar_matrix.p_end_[iRow]; iEl < ar_matrix.start_[iRow+1]; iEl++) {
+      HighsInt iCol = ar_matrix.index_[iEl];
+      btran_scattered_rhs[iCol] += ar_matrix.value_[iEl] * solution_value[iX];
+    }
+    HighsInt iCol = num_col+iRow;
+    if (this->basis_.nonbasicFlag_[iCol] == 0)
+      btran_scattered_rhs[iCol] = solution_value[iX];
+  }
+  for(HighsInt iRow=0; iRow<num_row;iRow++) {
+    HighsInt iCol = base_index[iRow];
+    if (btran_scattered_rhs[iCol]==0) continue;
+    alt_btran_rhs.array[iRow] = btran_scattered_rhs[iCol];
+    alt_btran_rhs.index[alt_btran_rhs.count++] = iRow;
+  }
+  for (HighsInt iRow=0; iRow<num_row;iRow++) {
+    double abs_dl = fabs(alt_btran_rhs.array[iRow] - btran_rhs.array[iRow]);
+    assert(abs_dl < 1e-12);
+  }
+
   const double expected_density = 50*info_.col_aq_density;
   ftran(ftran_rhs, expected_density);
   btran(btran_rhs, expected_density);

@@ -55,6 +55,11 @@ void HSimplexNla::setLpAndScalePointers(const HighsLp* for_lp) {
     this->scale_ = &(for_lp->scale_);
 }
 
+void HSimplexNla::setBasicIndexPointers(HighsInt* basic_index) {
+  this->base_index_ = basic_index;
+  this->factor_.baseIndex = basic_index;
+}
+
 void HSimplexNla::setPointers(const HighsLp* for_lp,
                               const HighsSparseMatrix* factor_a_matrix,
                               HighsInt* base_index, const HighsOptions* options,
