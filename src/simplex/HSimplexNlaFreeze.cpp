@@ -21,13 +21,13 @@
 
 void FrozenBasis::clear() {
   this->valid_ = false;
+  this->prev_ = kNoLink;
+  this->next_ = kNoLink;
   this->clearAllButBasis();
   this->basis_.clear();
 }
 
 void FrozenBasis::clearAllButBasis() {
-  this->prev_ = kNoLink;
-  this->next_ = kNoLink;
   this->update_.clear();
 }
 
@@ -39,8 +39,6 @@ void HSimplexNla::frozenBasisClearAllData() {
 }
 
 void HSimplexNla::frozenBasisClearAllButBasis() {
-  this->first_frozen_basis_id_ = kNoLink;
-  this->last_frozen_basis_id_ = kNoLink;
   for (HighsInt frozen_basis_id = 0; frozen_basis_id < this->frozen_basis_.size(); frozen_basis_id++) 
     this->frozen_basis_[frozen_basis_id].clearAllButBasis();
   this->update_.clear();
@@ -53,7 +51,9 @@ bool HSimplexNla::frozenBasisIdValid(const HighsInt frozen_basis_id) const {
 }
 
 bool HSimplexNla::frozenBasisHasInvert(const HighsInt frozen_basis_id) const {
-  return this->last_frozen_basis_id_ != kNoLink;
+  if (this->last_frozen_basis_id_ == kNoLink) return false;
+  assert(frozenBasisIdValid(this->last_frozen_basis_id_));
+  return this->frozen_basis_[this->last_frozen_basis_id_].update_.valid_;
 }
 
 HighsInt HSimplexNla::freeze(const SimplexBasis& basis, const double col_aq_density) {
