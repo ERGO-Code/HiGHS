@@ -1321,7 +1321,7 @@ HighsStatus Highs::freezeBasis(HighsInt& frozen_basis_id) {
     return HighsStatus::kError;
   }
   ekk_instance_.freezeBasis(frozen_basis_id);
-  return HighsStatus::kOk;
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
@@ -1331,7 +1331,15 @@ HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
                  "unfreezeBasis: no simplex information to unfreeze\n");
     return HighsStatus::kError;
   }
-  return ekk_instance_.unfreezeBasis(frozen_basis_id);
+  HighsStatus call_status = ekk_instance_.unfreezeBasis(frozen_basis_id);
+  if (call_status != HighsStatus::kOk) return call_status;
+  // Reset simplex NLA pointers
+  ekk_instance_.setNlaPointersForTrans(model_.lp_);
+  // Get the corresponding HiGHS basis
+  basis_ = ekk_instance_.getHighsBasis(model_.lp_);
+  // Clear everything else
+  clearModelStatusSolutionAndInfo();
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::addRow(const double lower_bound, const double upper_bound,

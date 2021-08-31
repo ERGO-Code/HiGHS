@@ -17,10 +17,15 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   const HighsInt num_row = lp.num_row_;
   const HighsInt from_col = 0;
   const HighsInt to_col = num_col-1;
-  //  const HighsInfo& info = highs.getInfo();
+  const HighsInfo& info = highs.getInfo();
 
   vector<double> original_col_lower = lp.col_lower_;
   vector<double> original_col_upper = lp.col_upper_;
+
+  // Get the continuous solution and iteration count from a logical basis
+  highs.run();
+  HighsInt continuous_iteration_count = info.simplex_iteration_count;
+  double continuous_objective = info.objective_function_value;
 
   // Get the integer solution to provide bound tightenings
   vector<HighsVarType> integrality;
@@ -42,7 +47,6 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   HighsBasis basis;
   for (HighsInt iCol=0; iCol<num_col; iCol++) basis.col_status.push_back(HighsBasisStatus::kLower);
   for (HighsInt iRow=0; iRow<num_row; iRow++) basis.row_status.push_back(HighsBasisStatus::kBasic);
-  
   highs.setBasis(basis);
 
   HighsInt frozen_basis_id0;
@@ -61,39 +65,77 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   highs.setOptionValue("log_dev_level", 2);
   highs.setOptionValue("highs_debug_level", 3);
   highs.run();
-  highs.setOptionValue("output_flag", false);
+  // highs.setOptionValue("output_flag", false);
 
   // Now freeze the current basis and add the integer solution as upper bounds
   HighsInt frozen_basis_id1;
-  highs.freezeBasis(frozen_basis_id1);
-
-  printf("\nSolving with frozen_basis_id0 = %d; frozen_basis_id1 = %d\n",
-	 (int)frozen_basis_id0, (int)frozen_basis_id1);
-
+  REQUIRE(highs.freezeBasis(frozen_basis_id1)==HighsStatus::kOk);
   printf("\nSolving with bounds (integer solution, upper)\n");
   local_col_lower = integer_solution;
   local_col_upper = original_col_upper;
   highs.changeColsBounds(from_col, to_col, &local_col_lower[0], &local_col_upper[0]);
   highs.setOptionValue("output_flag", true);
-  highs.setOptionValue("log_dev_level", 2);
-  highs.setOptionValue("highs_debug_level", 3);
   highs.run();
-  highs.setOptionValue("output_flag", false);
+  // highs.setOptionValue("output_flag", false);
+  double semi_continuous_objective = info.objective_function_value;
 
-  printf("\nSolving with bounds (lower, integer solution)\n");
   // Now freeze the current basis and add the integer solution as lower bounds
-  local_col_lower = original_col_lower;
+  HighsInt frozen_basis_id2;
+  REQUIRE(highs.freezeBasis(frozen_basis_id2)==HighsStatus::kOk);
+  printf("\nSolving with bounds (lower, integer solution)\n");
+  local_col_lower = integer_solution;
   local_col_upper = integer_solution;
   highs.changeColsBounds(from_col, to_col, &local_col_lower[0], &local_col_upper[0]);
   highs.setOptionValue("output_flag", true);
-  highs.setOptionValue("log_dev_level", 2);
-  highs.setOptionValue("highs_debug_level", 3);
   highs.run();
-  highs.setOptionValue("output_flag", false);
+  // highs.setOptionValue("output_flag", false);
 
-  
-
-  
+  // Now test unfreeze
+  //
+  // Restore the upper bounds and unfreeze frozen_basis_id2 (semi-continuous optimal basis)
+  printf("\nSolving with bounds (integer solution, upper) after unfreezing basis %d\n", (int)frozen_basis_id2);
+  printf("Change column bounds to (integer solution, upper)\n");
+  local_col_lower = integer_solution;
+  local_col_upper = original_col_upper;
+  highs.changeColsBounds(from_col, to_col, &local_col_lower[0], &local_col_upper[0]);
+  printf("Unfreeze basis %d\n", (int)frozen_basis_id2);
+  REQUIRE(highs.unfreezeBasis(frozen_basis_id2)==HighsStatus::kOk);
+  // Solving the LP should require no iterations
+  highs.setOptionValue("output_flag", true);
+  highs.run();
+  // highs.setOptionValue("output_flag", false);
+  REQUIRE(info.simplex_iteration_count==0);
+  double dl_objective = fabs(semi_continuous_objective-info.objective_function_value);
+  REQUIRE(dl_objective < double_equal_tolerance);
+  REQUIRE(info.simplex_iteration_count==0);
+  //
+  // Restore the lower bounds and unfreeze frozen_basis_id1 (continuous optimal basis)
+  printf("\nSolving with bounds (lower, upper) after unfreezing basis %d\n", (int)frozen_basis_id1);
+  printf("Change column bounds to (lower, upper\n");
+  local_col_lower = original_col_lower;
+  local_col_upper = original_col_upper;
+  highs.changeColsBounds(from_col, to_col, &local_col_lower[0], &local_col_upper[0]);
+  printf("Unfreeze basis %d\n", (int)frozen_basis_id1);
+  REQUIRE(highs.unfreezeBasis(frozen_basis_id1)==HighsStatus::kOk);
+  // Solving the LP should require no iterations
+  highs.setOptionValue("output_flag", true);
+  highs.run();
+  // highs.setOptionValue("output_flag", false);
+  dl_objective = fabs(continuous_objective-info.objective_function_value);
+  REQUIRE(dl_objective < double_equal_tolerance);
+  REQUIRE(info.simplex_iteration_count==0);
+  //
+  // Unfreeze frozen_basis_id0
+  printf("\nSolving with bounds (lower, upper) after unfreezing basis %d\n", (int)frozen_basis_id0);
+  printf("Unfreeze basis %d\n", (int)frozen_basis_id0);
+  REQUIRE(highs.unfreezeBasis(frozen_basis_id0)==HighsStatus::kOk);
+  // Solving the LP should require the same number of iterations as before
+  highs.setOptionValue("output_flag", true);
+  highs.run();
+  // highs.setOptionValue("output_flag", false);
+  dl_objective = fabs(continuous_objective-info.objective_function_value);
+  REQUIRE(dl_objective < double_equal_tolerance);
+  REQUIRE(info.simplex_iteration_count==continuous_iteration_count);
 }
 
 

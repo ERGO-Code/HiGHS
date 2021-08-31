@@ -889,28 +889,13 @@ void HEkkDual::rebuild() {
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
-  // Rebuild ekk_instance_.factor_ - only if we got updates
-  const HighsInt reason_for_rebuild = rebuild_reason;
+  // Decide whether reinversion should be performed
+  const bool reinvert_basis_matrix = ekk_instance_.reinvertBasisMatrix(rebuild_reason);
+
+  // Take a local copy of the rebuild reason and then reset the global value
+  const HighsInt local_rebuild_reason = rebuild_reason;
   rebuild_reason = kRebuildReasonNo;
-  // Possibly Rebuild factor
-  bool reInvert = info.update_count > 0;
-  if (!ekk_instance_.options_->reinvert_when_simplex_may_terminate &&
-      (reason_for_rebuild == kRebuildReasonPossiblyOptimal ||
-       reason_for_rebuild == kRebuildReasonPossiblyPhase1Feasible ||
-       reason_for_rebuild == kRebuildReasonPossiblyPrimalUnbounded ||
-       reason_for_rebuild == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
-    reInvert = false;
-  }
-
-  std::string logic = "no ";
-  if (reInvert) logic = "   ";
-  if (info.update_count)
-    printf("HEkkDual:   %srefactorization after %" HIGHSINT_FORMAT
-           " updates for rebuild reason = %s\n",
-           logic.c_str(), info.update_count,
-           ekk_instance_.rebuildReason(reason_for_rebuild).c_str());
-
-  if (reInvert) {
+  if (reinvert_basis_matrix) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is
     // singular and last nonsingular basis is refactorized as
@@ -1000,7 +985,7 @@ void HEkkDual::rebuild() {
       // In phase 2, report the simplex dual infeasiblities
       ekk_instance_.computeSimplexDualInfeasible();
     }
-    reportRebuild(reason_for_rebuild);
+    reportRebuild(local_rebuild_reason);
   }
 
   ekk_instance_.build_synthetic_tick_ = simplex_nla->build_synthetic_tick_;

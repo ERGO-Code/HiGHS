@@ -384,7 +384,7 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis) {
   assert(basis.valid);
   assert(isBasisRightSize(lp, basis));
-  const bool have_highs_solution = isSolutionRightSize(lp, solution);
+  const bool have_highs_solution = solution.value_valid;
 
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;

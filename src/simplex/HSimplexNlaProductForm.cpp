@@ -64,7 +64,7 @@ HighsInt ProductFormUpdate::update(HVector* aq, HighsInt* pivot_row) {
 }
 
 void ProductFormUpdate::btran(HVector& rhs) const {
-  assert(valid_);
+  if (!valid_) return;
   assert(rhs.size == num_row_);
   assert((int)start_.size() == update_count_+1);
   for (HighsInt iX = update_count_-1; iX>=0; iX--) {
@@ -79,7 +79,7 @@ void ProductFormUpdate::btran(HVector& rhs) const {
 }
 
 void ProductFormUpdate::ftran(HVector& rhs) const {
-  assert(valid_);
+  if (!valid_) return;
   assert(rhs.size == num_row_);
   assert((int)start_.size() == update_count_+1);
   // Check that rhs.cwork is zeroed so it can be used to record

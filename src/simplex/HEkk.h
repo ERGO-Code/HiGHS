@@ -74,7 +74,7 @@ class HEkk {
   void unscaleSimplex(const HighsLp& incumbent_lp);
 
   HighsSolution getSolution();
-  HighsBasis getHighsBasis();
+  HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
 
@@ -150,6 +150,7 @@ class HEkk {
       double* scattered_edge_weights);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
+  bool reinvertBasisMatrix(HighsInt rebuild_reason);
   HighsInt computeFactor();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,

@@ -183,7 +183,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       highs_info.objective_function_value = ekk_info.primal_objective_value;
       highs_info.simplex_iteration_count = ekk_instance.iteration_count_;
       solution = ekk_instance.getSolution();
-      basis = ekk_instance.getHighsBasis();
+      basis = ekk_instance.getHighsBasis(ekk_lp);
       assert(basis.valid);
       highs_info.basis_validity = kBasisValidityValid;
       incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
@@ -279,7 +279,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   highs_info.objective_function_value = ekk_info.primal_objective_value;
   highs_info.simplex_iteration_count = ekk_instance.iteration_count_;
   solution = ekk_instance.getSolution();
-  basis = ekk_instance.getHighsBasis();
+  basis = ekk_instance.getHighsBasis(ekk_lp);
   assert(basis.valid);
   highs_info.basis_validity = kBasisValidityValid;
   // Move the incumbent LP back from Ekk

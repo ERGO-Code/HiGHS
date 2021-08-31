@@ -829,9 +829,9 @@ HighsSolution HEkk::getSolution() {
   return solution;
 }
 
-HighsBasis HEkk::getHighsBasis() {
-  HighsInt num_col = lp_.num_col_;
-  HighsInt num_row = lp_.num_row_;
+HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
+  HighsInt num_col = use_lp.num_col_;
+  HighsInt num_row = use_lp.num_row_;
   HighsBasis highs_basis;
   highs_basis.col_status.resize(num_col);
   highs_basis.row_status.resize(num_row);
@@ -839,8 +839,8 @@ HighsBasis HEkk::getHighsBasis() {
   highs_basis.valid = false;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
-    const double lower = lp_.col_lower_[iCol];
-    const double upper = lp_.col_upper_[iCol];
+    const double lower = use_lp.col_lower_[iCol];
+    const double upper = use_lp.col_upper_[iCol];
     HighsBasisStatus basis_status = HighsBasisStatus::kNonbasic;
     if (!basis_.nonbasicFlag_[iVar]) {
       basis_status = HighsBasisStatus::kBasic;
@@ -859,8 +859,8 @@ HighsBasis HEkk::getHighsBasis() {
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
-    const double lower = lp_.row_lower_[iRow];
-    const double upper = lp_.row_upper_[iRow];
+    const double lower = use_lp.row_lower_[iRow];
+    const double upper = use_lp.row_upper_[iRow];
     HighsBasisStatus basis_status = HighsBasisStatus::kNonbasic;
     if (!basis_.nonbasicFlag_[iVar]) {
       basis_status = HighsBasisStatus::kBasic;
@@ -1365,6 +1365,26 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
   // Now have dual objective value
   status_.has_dual_objective_value = true;
   analysis_.simplexTimerStop(ComputeDuObjClock);
+}
+
+bool HEkk::reinvertBasisMatrix(HighsInt rebuild_reason) {
+  bool reinvert_basis_matrix = info_.update_count > 0;
+  if (!options_->reinvert_when_simplex_may_terminate &&
+      (rebuild_reason == kRebuildReasonNo ||
+       rebuild_reason == kRebuildReasonPossiblyOptimal ||
+       rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
+       rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+       rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
+    reinvert_basis_matrix = false;
+    assert(status_.has_invert);
+  }
+
+  const std::string logic = reinvert_basis_matrix ? "   " : "no ";
+  if (info_.update_count && rebuild_reason != kRebuildReasonSyntheticClockSaysInvert)
+    printf("%srefactorization after %d updates for rebuild reason = %s\n",
+           logic.c_str(), (int)info_.update_count,
+           rebuildReason(rebuild_reason).c_str());
+  return reinvert_basis_matrix;
 }
 
 HighsInt HEkk::computeFactor() {
@@ -2888,5 +2908,9 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
   updateStatus(LpAction::kNewBounds);
   this->status_.has_invert = will_have_invert;
+  printf("HEkk::unfreezeBasis: basis = ");
+  for (HighsInt iRow = 0; iRow < (int)basis_.basicIndex_.size(); iRow++)
+    printf(" %d", (int)basis_.basicIndex_[iRow]);
+  printf("\n");
   return HighsStatus::kOk;
 }

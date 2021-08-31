@@ -301,7 +301,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 650);
+  REQUIRE(info.simplex_iteration_count == 690);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

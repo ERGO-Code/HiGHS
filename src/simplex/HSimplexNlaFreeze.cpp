@@ -57,40 +57,41 @@ bool HSimplexNla::frozenBasisHasInvert(const HighsInt frozen_basis_id) const {
 }
 
 HighsInt HSimplexNla::freeze(const SimplexBasis& basis, const double col_aq_density) {
-  frozen_basis_.push_back(FrozenBasis());
-  HighsInt this_frozen_basis_id = frozen_basis_.size() - 1;
-  FrozenBasis& frozen_basis = frozen_basis_[this_frozen_basis_id];
-  frozen_basis.valid_ = false;
-  frozen_basis.prev_ = last_frozen_basis_id_;
+  this->frozen_basis_.push_back(FrozenBasis());
+  HighsInt this_frozen_basis_id = this->frozen_basis_.size() - 1;
+  FrozenBasis& frozen_basis = this->frozen_basis_[this_frozen_basis_id];
+  frozen_basis.valid_ = true;
+  frozen_basis.prev_ = this->last_frozen_basis_id_;
   frozen_basis.next_ = kNoLink;
   frozen_basis.update_.clear();
   frozen_basis.basis_ = basis;
-  if (last_frozen_basis_id_ == kNoLink) {
+  if (this->last_frozen_basis_id_ == kNoLink) {
     // There is thisly no frozen basis, so record this as the first
-    first_frozen_basis_id_ = this_frozen_basis_id;
+    this->first_frozen_basis_id_ = this_frozen_basis_id;
   } else {
     // Update the forward link from the previous last frozen basis
-    FrozenBasis& frozen_basis = frozen_basis_[last_frozen_basis_id_];
-    frozen_basis.next_ = this_frozen_basis_id;
+    FrozenBasis& last_frozen_basis = this->frozen_basis_[this->last_frozen_basis_id_];
+    last_frozen_basis.next_ = this_frozen_basis_id;
     // The PF updates held in simplex NLA now become the updates to
     // apply in order to go from the previous frozen basis to the
     // latest one
-    frozen_basis.update_ = std::move(update_);
+    last_frozen_basis.update_ = std::move(update_);
   }
-  last_frozen_basis_id_ = this_frozen_basis_id;
-  update_.setup(lp_->num_row_, col_aq_density);
+  this->last_frozen_basis_id_ = this_frozen_basis_id;
+  // Set up the structure for any PF updates that occur
+  this->update_.setup(lp_->num_row_, col_aq_density);
   return this_frozen_basis_id;
 }
 
 void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis) {
   assert(frozenBasisIdValid(unfreeze_basis_id));
-  FrozenBasis& frozen_basis = frozen_basis_[unfreeze_basis_id];
+  FrozenBasis& frozen_basis = this->frozen_basis_[unfreeze_basis_id];
   // Move the frozen basis into the return basis
   basis = std::move(frozen_basis.basis_);
   // This frozen basis, and any linked forward from it, must be
   // cleared. Any link to it must also be cleared.
-  HighsInt prev_frozen_basis_id = frozen_basis.prev_;
   HighsInt frozen_basis_id = unfreeze_basis_id;
+  HighsInt prev_frozen_basis_id = frozen_basis.prev_;
   if (prev_frozen_basis_id == kNoLink) {
     // There is no previous frozen basis linking to this one, so all
     // frozen basis data can be cleared
@@ -99,15 +100,19 @@ void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis
     // The previous frozen basis is now the last and has no link
     // forward
     this->last_frozen_basis_id_ = prev_frozen_basis_id;
-    frozen_basis_[prev_frozen_basis_id].next_ = kNoLink;
+    this->frozen_basis_[prev_frozen_basis_id].next_ = kNoLink;
+    // Now clear the unfrozen basis any further frozen basis
     for(;;) {
-      assert(frozen_basis_id != kNoLink);
-      frozen_basis_id = frozen_basis_[frozen_basis_id].next_;
+      HighsInt next_frozen_basis_id = this->frozen_basis_[frozen_basis_id].next_;
+      this->frozen_basis_[frozen_basis_id].clear();
+      frozen_basis_id = next_frozen_basis_id;
       if (frozen_basis_id == kNoLink) break;
-      frozen_basis_[frozen_basis_id].clear();
     }
-    // Clear any recent PF updates
-    this->update_.clear();
+    // Move any PF updates for the last frozen basis to the PF updates held in simplex NLA
+    FrozenBasis& last_frozen_basis = this->frozen_basis_[this->last_frozen_basis_id_];
+    this->update_ = std::move(last_frozen_basis.update_);
+    // Clear the (scalar) data associated with the PF updates of the last frozen basis
+    last_frozen_basis.update_.clear();
   }
 }
 
