@@ -72,6 +72,7 @@ class HEkk {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unscaleSimplex(const HighsLp& incumbent_lp);
+  double invertSolveError();
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;

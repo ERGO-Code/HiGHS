@@ -29,6 +29,10 @@
 #include "omp.h"
 #endif
 
+using std::fabs;
+using std::max;
+using std::min;
+
 // using std::cout;
 // using std::endl;
 
@@ -1377,6 +1381,8 @@ bool HEkk::reinvertBasisMatrix(HighsInt rebuild_reason) {
        rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
        rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
        rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex)) {
+    double solution_error = invertSolveError();
+    printf("HEkk::reinvertBasisMatrix = %g\n", solution_error);
     reinvert_basis_matrix = false;
     assert(status_.has_invert);
   }
@@ -2918,4 +2924,75 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   //    printf(" %d", (int)basis_.basicIndex_[iRow]);
   //  printf("\n");
   return HighsStatus::kOk;
+}
+
+double HEkk::invertSolveError() {
+  // Cheap assessment of INVERT accuracy.
+  //
+  // Forms a random solution with at most 50 nonzeros, solves for
+  // the corresponding RHS, and then checks the 50 solution values.
+  const HighsInt num_col = this->lp_.num_col_;
+  const HighsInt num_row = this->lp_.num_row_;
+  const HighsSparseMatrix& a_matrix = this->lp_.a_matrix_;
+  const vector<HighsInt>& base_index = this->basis_.basicIndex_;
+  HVector btran_rhs;
+  HVector ftran_rhs;
+  btran_rhs.setup(num_row);
+  ftran_rhs.setup(num_row);
+
+  // Solve for a random solution
+  HighsRandom random(1);
+
+  ftran_rhs.clear();
+  HighsInt solution_num_nz = min((HighsInt)50, (num_row+1)/2);
+  assert(solution_num_nz > 0);
+  vector<double> solution_value;
+  vector<HighsInt> solution_index;
+  vector<int8_t> solution_nonzero;
+  solution_nonzero.assign(num_row, 0);
+  for (;;) {
+    HighsInt iRow = random.integer(num_row);
+    assert(iRow<num_row);
+    if (solution_nonzero[iRow]) continue;
+    double value = random.fraction();
+    solution_value.push_back(value);
+    solution_index.push_back(iRow);
+    solution_nonzero[iRow] = 1;
+    HighsInt iCol = base_index[iRow];
+    a_matrix.collectAj(ftran_rhs, iCol, value);
+    if ((int)solution_value.size() == solution_num_nz) break;
+  }
+
+  btran_rhs.clear();
+  vector<double> btran_solution;
+  btran_solution.assign(num_row, 0);
+  for (HighsInt iX = 0; iX < solution_value.size(); iX++)
+    btran_solution[solution_index[iX]] = solution_value[iX];
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iCol = base_index[iRow];
+    double value = 0;
+    if (iCol < num_col) {
+      for (HighsInt iEl = a_matrix.start_[iCol]; iEl < a_matrix.start_[iCol+1]; iEl++) {
+	value += a_matrix.value_[iEl] * btran_solution[a_matrix.index_[iEl]];
+      }
+    } else {
+      value = btran_solution[iCol-num_col];
+    }
+    if (value) {
+      btran_rhs.array[iRow] = value;
+      btran_rhs.index[btran_rhs.count++] = iRow;      
+    }
+  }
+  const double expected_density = 50*info_.col_aq_density;
+  ftran(ftran_rhs, expected_density);
+  btran(btran_rhs, expected_density);
+  
+  double ftran_solution_error = 0;
+  for (HighsInt iX = 0; iX < solution_value.size(); iX++)
+    ftran_solution_error = max(fabs(ftran_rhs.array[solution_index[iX]]-solution_value[iX]), ftran_solution_error);
+  double btran_solution_error = 0;
+  for (HighsInt iX = 0; iX < solution_value.size(); iX++)
+    btran_solution_error = max(fabs(btran_rhs.array[solution_index[iX]]-solution_value[iX]), btran_solution_error);
+  double solution_error = max(ftran_solution_error, btran_solution_error);
+  return solution_error;
 }
