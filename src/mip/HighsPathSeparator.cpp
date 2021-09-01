@@ -243,7 +243,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       bool success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
-      aggregatedPath.emplace_back(baseRowInds, baseRowVals);
+      if (!aggregatedPath.empty() || bestOutArcCol != -1 || bestInArcCol != -1)
+        aggregatedPath.emplace_back(baseRowInds, baseRowVals);
       rhs = 0;
 
       success =
