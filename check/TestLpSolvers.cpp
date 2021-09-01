@@ -283,7 +283,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 0);
 
-  REQUIRE(info.simplex_iteration_count == 473);
+  REQUIRE(info.simplex_iteration_count == 476);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status ==
