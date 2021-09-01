@@ -155,6 +155,7 @@ class HEkk {
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
+  void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
                       const HighsInt solve_phase, const bool perturb = false);

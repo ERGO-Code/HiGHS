@@ -41,6 +41,7 @@ struct RefactorInfo {
   std::vector<HighsInt> pivot_row;
   std::vector<HighsInt> pivot_var;
   std::vector<int8_t> pivot_type;
+  double build_synthetic_tick;
   void clear();
   void get(RefactorInfo& refactor_info) const;
   void set(const RefactorInfo& refactor_info);

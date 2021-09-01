@@ -81,6 +81,7 @@ void HSimplexNla::clear() {
   timer_ = NULL;
   analysis_ = NULL;
   report_ = false;
+  build_synthetic_tick_ = 0;
   this->frozenBasisClearAllData();
 }
 

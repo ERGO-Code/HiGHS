@@ -125,8 +125,8 @@ void HEkk::clearEkkData() {
   this->return_primal_solution_status_ = 0;
   this->return_dual_solution_status_ = 0;
 
-  this->build_synthetic_tick_ = 0;
-  this->total_synthetic_tick_ = 0;
+  this->build_synthetic_tick_ = 0.0;
+  this->total_synthetic_tick_ = 0.0;
 }
 
 void HEkk::clearEkkDataInfo() {
@@ -605,6 +605,8 @@ HighsStatus HEkk::setBasis() {
   }
   info_.num_basic_logicals = num_row;
   status_.has_basis = true;
+  // Set up refactorization information for a logical basis so that
+  // when it is factorized it's done as a refactorization
   simplex_nla_.factor_.refactor_info_.set(num_col, num_row);
   return HighsStatus::kOk;
 }
@@ -955,6 +957,8 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
       status_.has_invert = true;
       status_.has_fresh_invert = true;
     }
+    // Record the synthetic clock for INVERT, and zero it for UPDATE
+    resetSyntheticClock();
   }
   assert(status_.has_invert);
   return 0;
@@ -1465,6 +1469,11 @@ HighsInt HEkk::computeFactor() {
   info_.update_count = 0;
 
   return rank_deficiency;
+}
+
+void HEkk::resetSyntheticClock() {
+  this->build_synthetic_tick_ = this->simplex_nla_.build_synthetic_tick_;
+  this->total_synthetic_tick_ = 0;
 }
 
 void HEkk::initialisePartitionedRowwiseMatrix() {
@@ -2338,7 +2347,7 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
     *hint = kRebuildReasonUpdateLimitReached;
 
   // Determine whether to reinvert based on the synthetic clock
-  bool reinvert_syntheticClock = total_synthetic_tick_ >= build_synthetic_tick_;
+  bool reinvert_syntheticClock = this->total_synthetic_tick_ >= this->build_synthetic_tick_;
   const bool performed_min_updates =
       info_.update_count >= kSyntheticTickReinversionMinUpdateCount;
   if (reinvert_syntheticClock && performed_min_updates)

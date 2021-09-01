@@ -905,6 +905,7 @@ void HEkkDual::rebuild() {
       solve_phase = kSolvePhaseError;
       return;
     }
+    ekk_instance_.resetSyntheticClock();
   }
 
   if (!ekk_instance_.status_.has_ar_matrix) {
@@ -988,9 +989,9 @@ void HEkkDual::rebuild() {
     }
     reportRebuild(local_rebuild_reason);
   }
-
-  ekk_instance_.build_synthetic_tick_ = simplex_nla->build_synthetic_tick_;
-  ekk_instance_.total_synthetic_tick_ = 0;
+  
+  // Record the synthetic clock for INVERT, and zero it for UPDATE
+  ekk_instance_.resetSyntheticClock();
 
   // Dual simplex doesn't maintain the number of primal
   // infeasiblities, so set it to an illegal value now

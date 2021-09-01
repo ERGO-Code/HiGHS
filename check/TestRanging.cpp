@@ -5,6 +5,57 @@
 
 const bool dev_run = false;
 
+HighsStatus quietRun(Highs& highs);
+void colCostColumnHeader();
+void colBoundcolumnHeader();
+void rowBoundColumnHeader();
+void assessNewBounds(double& lower, double& upper);
+bool modelStatusOk(Highs& highs);
+void testRanging(Highs& highs);
+
+
+TEST_CASE("Ranging-min", "[highs_test_ranging]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+
+  const bool from_file = true;
+  if (from_file) {
+    std::string model_file =
+        std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  } else {
+    SpecialLps special_lps;
+    special_lps.blendingLp(lp, require_model_status, optimal_objective);
+    highs.passModel(lp);
+  }
+  testRanging(highs);
+}
+
+TEST_CASE("Ranging-max", "[highs_test_ranging]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+
+  const bool from_file = true;
+  if (from_file) {
+    std::string model_file =
+        std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+    REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) ==
+            HighsStatus::kOk);
+  } else {
+    SpecialLps special_lps;
+    special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);
+    highs.passModel(lp);
+  }
+  testRanging(highs);
+}
+
 HighsStatus quietRun(Highs& highs) {
   highs.setOptionValue("output_flag", false);
   HighsStatus call_status = highs.run();
@@ -500,44 +551,3 @@ void testRanging(Highs& highs) {
   REQUIRE(max_relative_error < relative_error_tolerance);
 }
 
-TEST_CASE("Ranging-min", "[highs_test_ranging]") {
-  Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
-  HighsLp lp;
-  HighsModelStatus require_model_status;
-  double optimal_objective;
-
-  const bool from_file = true;
-  if (from_file) {
-    std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  } else {
-    SpecialLps special_lps;
-    special_lps.blendingLp(lp, require_model_status, optimal_objective);
-    highs.passModel(lp);
-  }
-  testRanging(highs);
-}
-
-TEST_CASE("Ranging-max", "[highs_test_ranging]") {
-  Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
-  HighsLp lp;
-  HighsModelStatus require_model_status;
-  double optimal_objective;
-
-  const bool from_file = true;
-  if (from_file) {
-    std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-    REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) ==
-            HighsStatus::kOk);
-  } else {
-    SpecialLps special_lps;
-    special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);
-    highs.passModel(lp);
-  }
-  testRanging(highs);
-}

@@ -41,6 +41,7 @@ void RefactorInfo::set(const RefactorInfo& refactor_info) {
 
 void RefactorInfo::set(const HighsInt num_col, const HighsInt num_row) {
   this->valid = true;
+  this->build_synthetic_tick = 0.0;
   this->pivot_var.resize(num_row);
   this->pivot_row.resize(num_row);
   this->pivot_type.resize(num_row);
@@ -53,6 +54,7 @@ void RefactorInfo::set(const HighsInt num_col, const HighsInt num_row) {
 
 void RefactorInfo::clear() {
   this->valid = false;
+  this->build_synthetic_tick = 0.0;
   this->pivot_var.clear();
   this->pivot_row.clear();
   this->pivot_type.clear();
@@ -62,6 +64,7 @@ void RefactorInfo::clear() {
 bool RefactorInfo::isOk(const HighsInt num_col, const HighsInt num_row) const {
   bool ok = true;
   if (!this->valid) return ok;
+  if (this->build_synthetic_tick < 0) ok = false;
   if (this->pivot_var.size() != num_row) ok = false;
   if (this->pivot_row.size() != num_row) ok = false;
   if (this->pivot_type.size() != num_row) ok = false;
@@ -102,6 +105,9 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   const bool report_anything =
       report_unit || report_singletons || report_markowitz;
   if (report_anything) printf("\nRefactor\n");
+  // Take build_synthetic_tick from the refactor info so that this
+  // refactorization doesn't look unrealistically cheap.
+  this->build_synthetic_tick = this->refactor_info_.build_synthetic_tick;
   for (HighsInt iK = 0; iK < numRow; iK++) {
     HighsInt iRow = this->refactor_info_.pivot_row[iK];
     HighsInt iVar = this->refactor_info_.pivot_var[iK];

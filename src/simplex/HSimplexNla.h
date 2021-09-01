@@ -118,8 +118,6 @@ class HSimplexNla {
       const double solve_error_norm, const double residual_error_norm,
       const bool force) const;
 
-  HighsInt build_synthetic_tick_;
-
   // References:
   //
   // Pointers:
@@ -133,8 +131,11 @@ class HSimplexNla {
   HighsSimplexAnalysis* analysis_;
 
   HFactor factor_;
-  bool report_;
 
+  bool report_;
+  double build_synthetic_tick_;
+
+  // Frozen basis data
   HighsInt first_frozen_basis_id_ = kNoLink;
   HighsInt last_frozen_basis_id_ = kNoLink;
   vector<FrozenBasis> frozen_basis_;
