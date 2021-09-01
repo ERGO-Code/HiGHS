@@ -537,13 +537,25 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
       if (solval[i] > feastol) {
         double delta = abs(vals[i]);
-        if (delta <= 1e-4) continue;
+        if (delta <= 1e-4 || delta == maxabsdelta) continue;
         maxabsdelta = max(maxabsdelta, delta);
         deltas.push_back(delta);
       }
     } else {
       continuouscontribution += vals[i] * solval[i];
       continuoussqrnorm += vals[i] * vals[i];
+    }
+  }
+
+  if (continuoussqrnorm == 0 && deltas.size() > 1) {
+    double intScale = HighsIntegers::integralScale(deltas, feastol, kHighsTiny);
+
+    if (intScale != 0.0 && intScale <= 1e4) {
+      double scalrhs = double(rhs) * intScale;
+      double downrhs = fast_floor(scalrhs);
+
+      double f0 = scalrhs - downrhs;
+      if (f0 >= f0min && f0 <= f0max) deltas.push_back(1.0 / intScale);
     }
   }
 
