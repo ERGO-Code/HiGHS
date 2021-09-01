@@ -358,8 +358,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   // build_synthetic_tick to use as the value of build_synthetic_tick
   // if refactorization is performed
   if (this->refactor_info_.valid)
-    this->refactor_info_.build_synthetic_tick =
-      this->build_synthetic_tick;
+    this->refactor_info_.build_synthetic_tick = this->build_synthetic_tick;
 
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
@@ -1151,12 +1150,12 @@ void HFactor::buildFinish() {
   PFvalue.clear();
 
   if (!this->refactor_info_.valid) {
-    // Finally, if not calling buildFinish after refactoring, permute the base index
+    // Finally, if not calling buildFinish after refactoring, permute the base
+    // index
     iwork.assign(baseIndex, baseIndex + numRow);
     for (HighsInt i = 0; i < numRow; i++) baseIndex[permute[i]] = iwork[i];
   }
   build_synthetic_tick += numRow * 80 + (LcountX + UcountX) * 60;
-  
 }
 
 void HFactor::ftranL(HVector& rhs, const double expected_density,

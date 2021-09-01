@@ -13,7 +13,6 @@ void assessNewBounds(double& lower, double& upper);
 bool modelStatusOk(Highs& highs);
 void testRanging(Highs& highs);
 
-
 TEST_CASE("Ranging-min", "[highs_test_ranging]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -550,4 +549,3 @@ void testRanging(Highs& highs) {
   REQUIRE(num_relative_error < 10);
   REQUIRE(max_relative_error < relative_error_tolerance);
 }
-

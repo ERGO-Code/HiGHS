@@ -989,7 +989,7 @@ void HEkkDual::rebuild() {
     }
     reportRebuild(local_rebuild_reason);
   }
-  
+
   // Record the synthetic clock for INVERT, and zero it for UPDATE
   ekk_instance_.resetSyntheticClock();
 
