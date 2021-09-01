@@ -2985,7 +2985,7 @@ double HEkk::factorSolveError() {
     HighsInt iRow = random.integer(num_row);
     assert(iRow < num_row);
     if (solution_nonzero[iRow]) continue;
-    double value = 1;  // random.fraction();
+    double value = random.fraction();
     solution_value.push_back(value);
     solution_index.push_back(iRow);
     solution_nonzero[iRow] = 1;
