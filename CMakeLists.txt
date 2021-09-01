@@ -388,7 +388,7 @@ set(successInstances
     "greenbea\;5249\;-7.2555248130\;")
 
 set(optionsInstances
-    "adlittle\;83\; 2.2549496316\;")
+    "adlittle\;74\; 2.2549496316\;")
 
 set(infeasibleInstances
     "bgetam\;        infeasible")
