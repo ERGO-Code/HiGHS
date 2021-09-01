@@ -53,15 +53,17 @@ void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
       reportIntVector("URstart", URstart);
       reportIntVector("URlastp", URlastp);
       reportIntVector("URspace", URspace);
-      for (HighsInt iRow=0; iRow<URstart.size();iRow++) {
-	const HighsInt start = URstart[iRow];
-	const HighsInt end = URlastp[iRow];
-	if (start>=end) continue;
-	printf("UR    Row %2d: ", (int)iRow);
-	for (HighsInt iEl=start; iEl<end; iEl++) printf("%11d ", (int)URindex[iEl]);
-	printf("\n              ");
-	for (HighsInt iEl=start; iEl<end; iEl++) printf("%11.4g ", URvalue[iEl]);
-	printf("\n");
+      for (HighsInt iRow = 0; iRow < URstart.size(); iRow++) {
+        const HighsInt start = URstart[iRow];
+        const HighsInt end = URlastp[iRow];
+        if (start >= end) continue;
+        printf("UR    Row %2d: ", (int)iRow);
+        for (HighsInt iEl = start; iEl < end; iEl++)
+          printf("%11d ", (int)URindex[iEl]);
+        printf("\n              ");
+        for (HighsInt iEl = start; iEl < end; iEl++)
+          printf("%11.4g ", URvalue[iEl]);
+        printf("\n");
       }
       //      reportIntVector("URindex", URindex);
       //      reportDoubleVector("URvalue", URvalue);

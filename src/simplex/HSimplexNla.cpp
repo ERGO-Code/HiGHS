@@ -96,8 +96,8 @@ HighsInt HSimplexNla::invert() {
   }
   HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
   build_synthetic_tick_ = factor_.build_synthetic_tick;
-  // Clear any frozen basis updates 
-  frozenBasisClearAllButBasis();
+  // Clear any frozen basis updates
+  frozenBasisClearAllUpdate();
   return rank_deficiency;
 }
 
@@ -125,7 +125,7 @@ void HSimplexNla::frozenBtran(HVector& rhs) const {
   // Work through any updates associated with previously frozen basis
   frozen_basis_id = frozen_basis_[frozen_basis_id].prev_;
   if (frozen_basis_id == kNoLink) return;
-  for(;;) {
+  for (;;) {
     assert(frozen_basis_id != kNoLink);
     const FrozenBasis& frozen_basis = frozen_basis_[frozen_basis_id];
     frozen_basis.update_.btran(rhs);
@@ -138,7 +138,7 @@ void HSimplexNla::frozenFtran(HVector& rhs) const {
   // Work through any updates associated with previously frozen basis
   HighsInt frozen_basis_id = first_frozen_basis_id_;
   if (frozen_basis_id == kNoLink) return;
-  for(;;) {
+  for (;;) {
     assert(frozen_basis_id != kNoLink);
     if (frozen_basis_id == last_frozen_basis_id_) break;
     const FrozenBasis& frozen_basis = frozen_basis_[frozen_basis_id];

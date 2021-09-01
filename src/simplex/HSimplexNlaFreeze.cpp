@@ -15,20 +15,24 @@
  * @brief Interface to HFactor allowing non-HFactor updates, NLA-only
  * scaling and shifting of NLA analysis below simplex level.
  */
-#include "simplex/HSimplexNla.h"
-
 #include <stdio.h>
+
+#include "simplex/HSimplexNla.h"
 
 void FrozenBasis::clear() {
   this->valid_ = false;
   this->prev_ = kNoLink;
   this->next_ = kNoLink;
-  this->clearAllButBasis();
+  this->update_.clear();
   this->basis_.clear();
 }
 
-void FrozenBasis::clearAllButBasis() {
-  this->update_.clear();
+bool HSimplexNla::frozenBasisAllDataClear() {
+  bool all_clear = this->first_frozen_basis_id_ == kNoLink;
+  all_clear = this->last_frozen_basis_id_ == kNoLink && all_clear;
+  all_clear = this->frozen_basis_.size() == 0 && all_clear;
+  all_clear = !this->update_.valid_ && all_clear;
+  return all_clear;
 }
 
 void HSimplexNla::frozenBasisClearAllData() {
@@ -38,14 +42,16 @@ void HSimplexNla::frozenBasisClearAllData() {
   this->update_.clear();
 }
 
-void HSimplexNla::frozenBasisClearAllButBasis() {
-  for (HighsInt frozen_basis_id = 0; frozen_basis_id < this->frozen_basis_.size(); frozen_basis_id++) 
-    this->frozen_basis_[frozen_basis_id].clearAllButBasis();
+void HSimplexNla::frozenBasisClearAllUpdate() {
+  for (HighsInt frozen_basis_id = 0;
+       frozen_basis_id < this->frozen_basis_.size(); frozen_basis_id++)
+    this->frozen_basis_[frozen_basis_id].update_.clear();
   this->update_.clear();
 }
 
 bool HSimplexNla::frozenBasisIdValid(const HighsInt frozen_basis_id) const {
-  bool valid_id = 0<=frozen_basis_id && frozen_basis_id < frozen_basis_.size();
+  bool valid_id =
+      0 <= frozen_basis_id && frozen_basis_id < frozen_basis_.size();
   if (valid_id) valid_id = frozen_basis_[frozen_basis_id].valid_;
   return valid_id;
 }
@@ -56,7 +62,8 @@ bool HSimplexNla::frozenBasisHasInvert(const HighsInt frozen_basis_id) const {
   return this->frozen_basis_[this->last_frozen_basis_id_].update_.valid_;
 }
 
-HighsInt HSimplexNla::freeze(const SimplexBasis& basis, const double col_aq_density) {
+HighsInt HSimplexNla::freeze(const SimplexBasis& basis,
+                             const double col_aq_density) {
   this->frozen_basis_.push_back(FrozenBasis());
   HighsInt this_frozen_basis_id = this->frozen_basis_.size() - 1;
   FrozenBasis& frozen_basis = this->frozen_basis_[this_frozen_basis_id];
@@ -70,7 +77,8 @@ HighsInt HSimplexNla::freeze(const SimplexBasis& basis, const double col_aq_dens
     this->first_frozen_basis_id_ = this_frozen_basis_id;
   } else {
     // Update the forward link from the previous last frozen basis
-    FrozenBasis& last_frozen_basis = this->frozen_basis_[this->last_frozen_basis_id_];
+    FrozenBasis& last_frozen_basis =
+        this->frozen_basis_[this->last_frozen_basis_id_];
     last_frozen_basis.next_ = this_frozen_basis_id;
     // The PF updates held in simplex NLA now become the updates to
     // apply in order to go from the previous frozen basis to the
@@ -83,7 +91,8 @@ HighsInt HSimplexNla::freeze(const SimplexBasis& basis, const double col_aq_dens
   return this_frozen_basis_id;
 }
 
-void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis) {
+void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id,
+                           SimplexBasis& basis) {
   assert(frozenBasisIdValid(unfreeze_basis_id));
   FrozenBasis& frozen_basis = this->frozen_basis_[unfreeze_basis_id];
   // Move the frozen basis into the return basis
@@ -102,20 +111,23 @@ void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis
     this->last_frozen_basis_id_ = prev_frozen_basis_id;
     this->frozen_basis_[prev_frozen_basis_id].next_ = kNoLink;
     // Now clear the unfrozen basis any further frozen basis
-    for(;;) {
-      HighsInt next_frozen_basis_id = this->frozen_basis_[frozen_basis_id].next_;
+    for (;;) {
+      HighsInt next_frozen_basis_id =
+          this->frozen_basis_[frozen_basis_id].next_;
       this->frozen_basis_[frozen_basis_id].clear();
       frozen_basis_id = next_frozen_basis_id;
       if (frozen_basis_id == kNoLink) break;
     }
-    // Move any PF updates for the last frozen basis to the PF updates held in simplex NLA
-    FrozenBasis& last_frozen_basis = this->frozen_basis_[this->last_frozen_basis_id_];
+    // Move any PF updates for the last frozen basis to the PF updates held in
+    // simplex NLA
+    FrozenBasis& last_frozen_basis =
+        this->frozen_basis_[this->last_frozen_basis_id_];
     this->update_ = std::move(last_frozen_basis.update_);
-    // Clear the (scalar) data associated with the PF updates of the last frozen basis
+    // Clear the (scalar) data associated with the PF updates of the last frozen
+    // basis
     last_frozen_basis.update_.clear();
   }
   // Clear any refactorization information in case we are unfreezing
   // immediately after a factorization for a later basis
   this->factor_.refactor_info_.clear();
 }
-

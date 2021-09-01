@@ -885,6 +885,13 @@ class Highs {
   HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
 
   /**
+   * @brief Checks that all frozen basis data has been cleared
+   */
+  HighsStatus frozenBasisAllDataClear() {
+    return ekk_instance_.frozenBasisAllDataClear();
+  }
+
+  /**
    * @brief Gets the value of infinity used by HiGHS
    */
   double getInfinity() { return kHighsInf; }

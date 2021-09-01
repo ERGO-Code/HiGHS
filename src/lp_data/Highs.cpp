@@ -508,8 +508,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  HighsInt min_highs_debug_level =  // kHighsDebugLevelMin;
-      kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+  //      kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
   //
   //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
@@ -779,7 +779,8 @@ HighsStatus Highs::run() {
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
         // ToDo Eliminate setBasisValidity once ctest passes. Asserts
-        // verify that it does nothing
+        // verify that it does nothing - other than setting
+        // info_.valid = true;
         setBasisValidity();
         assert(model_status_ == HighsModelStatus::kInfeasible ||
                model_status_ == HighsModelStatus::kUnbounded);
@@ -938,7 +939,8 @@ HighsStatus Highs::run() {
     setHighsModelStatusAndClearSolutionAndBasis(model_status_);
   } else {
     // ToDo Eliminate setBasisValidity once ctest passes. Asserts
-    // verify that it does nothing
+    // verify that it does nothing - other than setting info_.valid =
+    // true;
     setBasisValidity();
   }
   double lp_solve_final_time = timer_.readRunHighsClock();
@@ -2561,8 +2563,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 
   forceHighsSolutionBasisSize();
 
-  const bool consistent = debugBasisConsistent(options_, model_.lp_, basis_) !=
-                          HighsDebugStatus::kLogicalError;
+  const bool consistent =
+      debugHighsBasisConsistent(options_, model_.lp_, basis_) !=
+      HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogUser(
         options_.log_options, HighsLogType::kError,

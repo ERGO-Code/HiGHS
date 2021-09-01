@@ -31,7 +31,6 @@ void SimplexBasis::clear() {
   basicIndex_.clear();
   nonbasicFlag_.clear();
   nonbasicMove_.clear();
-  
 }
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,

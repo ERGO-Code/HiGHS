@@ -573,7 +573,8 @@ void HEkkPrimal::rebuild() {
   }
 
   // Decide whether refactorization should be performed
-  const bool refactor_basis_matrix = ekk_instance_.rebuildRefactor(rebuild_reason);
+  const bool refactor_basis_matrix =
+      ekk_instance_.rebuildRefactor(rebuild_reason);
 
   // Take a local copy of the rebuild reason and then reset the global value
   const HighsInt local_rebuild_reason = rebuild_reason;
@@ -929,8 +930,7 @@ bool HEkkPrimal::useVariableIn() {
   // If theta_dual is small, then it's no longer a dual infeasibility,
   // so reduce the number of dual infeasiblilities. Otherwise an error
   // is identified in debugSimplex
-  if (theta_dual_small)
-    ekk_instance_.info_.num_dual_infeasibilities--;
+  if (theta_dual_small) ekk_instance_.info_.num_dual_infeasibilities--;
   if (theta_dual_small || theta_dual_sign_error) {
     // The computed dual is small or has a sign error, so don't use it
     std::string theta_dual_size = "";

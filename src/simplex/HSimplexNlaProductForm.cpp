@@ -35,21 +35,26 @@ void ProductFormUpdate::clear() {
   value_.clear();
 }
 
-void ProductFormUpdate::setup(const HighsInt num_row, const double expected_density) {
+void ProductFormUpdate::setup(const HighsInt num_row,
+                              const double expected_density) {
   valid_ = true;
   num_row_ = num_row;
   update_count_ = 0;
   start_.push_back(0);
-  HighsInt reserve_entry_space = kProductFormExtraEntries + kProductFormMaxUpdates * num_row * expected_density;
+  HighsInt reserve_entry_space =
+      kProductFormExtraEntries +
+      kProductFormMaxUpdates * num_row * expected_density;
   index_.reserve(reserve_entry_space);
   value_.reserve(reserve_entry_space);
 }
 
 HighsInt ProductFormUpdate::update(HVector* aq, HighsInt* pivot_row) {
-  assert(0<=*pivot_row && *pivot_row <num_row_);
-  if (update_count_ >= kProductFormMaxUpdates) return kRebuildReasonUpdateLimitReached;
+  assert(0 <= *pivot_row && *pivot_row < num_row_);
+  if (update_count_ >= kProductFormMaxUpdates)
+    return kRebuildReasonUpdateLimitReached;
   double pivot = aq->array[*pivot_row];
-  if (fabs(pivot) < kProductFormPivotTolerance) return kRebuildReasonPossiblySingularBasis;
+  if (fabs(pivot) < kProductFormPivotTolerance)
+    return kRebuildReasonPossiblySingularBasis;
   pivot_index_.push_back(*pivot_row);
   pivot_value_.push_back(pivot);
   for (HighsInt iX = 0; iX < aq->count; iX++) {
@@ -66,33 +71,30 @@ HighsInt ProductFormUpdate::update(HVector* aq, HighsInt* pivot_row) {
 void ProductFormUpdate::btran(HVector& rhs) const {
   if (!valid_) return;
   assert(rhs.size == num_row_);
-  assert((int)start_.size() == update_count_+1);
-  for (HighsInt iX = update_count_-1; iX>=0; iX--) {
+  assert((int)start_.size() == update_count_ + 1);
+  for (HighsInt iX = update_count_ - 1; iX >= 0; iX--) {
     const HighsInt pivot_index = pivot_index_[iX];
     double pivot_value = rhs.array[pivot_index];
-    for (HighsInt iEl = start_[iX]; iEl < start_[iX+1]; iEl++) 
+    for (HighsInt iEl = start_[iX]; iEl < start_[iX + 1]; iEl++)
       pivot_value -= value_[iEl] * rhs.array[index_[iEl]];
     pivot_value /= pivot_value_[iX];
     if (rhs.array[pivot_index] == 0) rhs.index[rhs.count++] = pivot_index;
-    rhs.array[pivot_index] = (fabs(pivot_value) < kHighsTiny) ? 1e-100 : pivot_value;
+    rhs.array[pivot_index] =
+        (fabs(pivot_value) < kHighsTiny) ? 1e-100 : pivot_value;
   }
 }
 
 void ProductFormUpdate::ftran(HVector& rhs) const {
   if (!valid_) return;
   assert(rhs.size == num_row_);
-  assert((int)start_.size() == update_count_+1);
-  // Check that rhs.cwork is zeroed so it can be used to record
-  // whether a row is in the index list. If RHS fill-in occurs in a
-  // row, then we have to add it to the list. We're not tracking
-  // cancellation, so we don't need to know where a row appears in the
-  // list
-  // 
-  // ToDo: Remove this expensive check in time!
-  for (HighsInt iRow=0; iRow<num_row_; iRow++) assert(!rhs.cwork[iRow]);
+  assert((int)start_.size() == update_count_ + 1);
+  // Use the zeroed rhs.cwork to record whether a row is in the index
+  // list. If RHS fill-in occurs in a row, then we have to add it to
+  // the list. We're not tracking cancellation, so we don't need to
+  // know where a row appears in the list
   vector<char>& in_index = rhs.cwork;
   for (HighsInt iX = 0; iX < rhs.count; iX++) in_index[rhs.index[iX]] = 1;
-    
+
   for (HighsInt iX = 0; iX < update_count_; iX++) {
     const HighsInt pivot_index = pivot_index_[iX];
     double pivot_value = rhs.array[pivot_index];
@@ -100,12 +102,12 @@ void ProductFormUpdate::ftran(HVector& rhs) const {
       assert(in_index[pivot_index]);
       pivot_value /= pivot_value_[iX];
       rhs.array[pivot_index] = pivot_value;
-      for (HighsInt iEl = start_[iX]; iEl < start_[iX+1]; iEl++) {
-	HighsInt iRow = index_[iEl];
-	rhs.array[iRow] -= pivot_value * value_[iEl];
-	if (in_index[iRow]) continue;
-	in_index[iRow] = 1;
-	rhs.index[rhs.count++] = iRow;
+      for (HighsInt iEl = start_[iX]; iEl < start_[iX + 1]; iEl++) {
+        HighsInt iRow = index_[iEl];
+        rhs.array[iRow] -= pivot_value * value_[iEl];
+        if (in_index[iRow]) continue;
+        in_index[iRow] = 1;
+        rhs.index[rhs.count++] = iRow;
       }
     } else {
       rhs.array[pivot_index] = 0;

@@ -890,7 +890,8 @@ void HEkkDual::rebuild() {
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
   // Decide whether refactorization should be performed
-  const bool refactor_basis_matrix = ekk_instance_.rebuildRefactor(rebuild_reason);
+  const bool refactor_basis_matrix =
+      ekk_instance_.rebuildRefactor(rebuild_reason);
 
   // Take a local copy of the rebuild reason and then reset the global value
   const HighsInt local_rebuild_reason = rebuild_reason;

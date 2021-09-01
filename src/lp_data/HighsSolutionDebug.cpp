@@ -196,9 +196,9 @@ void debugReportHighsSolution(const string message,
               utilModelStatusToString(model_status).c_str());
 }
 
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp& lp,
-                                      const HighsBasis& basis) {
+HighsDebugStatus debugHighsBasisConsistent(const HighsOptions& options,
+                                           const HighsLp& lp,
+                                           const HighsBasis& basis) {
   // Cheap analysis of a HiGHS basis, checking vector sizes, numbers
   // of basic/nonbasic variables
   if (options.highs_debug_level < kHighsDebugLevelCheap)

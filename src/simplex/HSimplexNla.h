@@ -46,7 +46,6 @@ struct FrozenBasis {
   ProductFormUpdate update_;
   SimplexBasis basis_;
   void clear();
-  void clearAllButBasis();
 };
 
 class HSimplexNla {
@@ -75,7 +74,8 @@ class HSimplexNla {
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
   void frozenBasisClearAllData();
-  void frozenBasisClearAllButBasis();
+  void frozenBasisClearAllUpdate();
+  bool frozenBasisAllDataClear();
   bool frozenBasisIdValid(const HighsInt frozen_basis_id) const;
   bool frozenBasisHasInvert(const HighsInt frozen_basis_id) const;
   HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
@@ -105,18 +105,18 @@ class HSimplexNla {
   HighsDebugStatus debugCheckData(const std::string message = "") const;
   HighsDebugStatus debugCheckInvert(const std::string message,
                                     const HighsInt alt_debug_level = -1) const;
-  double debugInvertResidualError(const bool transposed, const HVector& solution,
-				  HVector& residual) const;
+  double debugInvertResidualError(const bool transposed,
+                                  const HVector& solution,
+                                  HVector& residual) const;
   HighsDebugStatus debugReportInvertSolutionError(const bool transposed,
-						  const HVector& true_solution,
-						  const HVector& solution, HVector& residual,
-						  const bool force) const;
-  HighsDebugStatus debugReportInvertSolutionError(const std::string source,
-						  const bool transposed,
-						  const double solve_error_norm,
-						  const double residual_error_norm,
-						  const bool force) const ;
-					    
+                                                  const HVector& true_solution,
+                                                  const HVector& solution,
+                                                  HVector& residual,
+                                                  const bool force) const;
+  HighsDebugStatus debugReportInvertSolutionError(
+      const std::string source, const bool transposed,
+      const double solve_error_norm, const double residual_error_norm,
+      const bool force) const;
 
   HighsInt build_synthetic_tick_;
 

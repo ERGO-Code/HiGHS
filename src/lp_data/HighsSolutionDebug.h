@@ -58,9 +58,9 @@ HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
                                             const HighsLp& lp,
                                             const HighsSolution& solution);
 
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp& lp,
-                                      const HighsBasis& basis);
+HighsDebugStatus debugHighsBasisConsistent(const HighsOptions& options,
+                                           const HighsLp& lp,
+                                           const HighsBasis& basis);
 
 // Methods below are not called externally
 

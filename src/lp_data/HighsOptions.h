@@ -751,8 +751,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "no_unnecessary_rebuild_refactor",
-        "No unnecessary refactorization on simplex rebuild",
-        advanced, &no_unnecessary_rebuild_refactor, true);
+        "No unnecessary refactorization on simplex rebuild", advanced,
+        &no_unnecessary_rebuild_refactor, true);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
@@ -763,8 +763,10 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "rebuild_refactor_solution_error_tolerance",
-        "Tolerance on solution error when considering refactorization on simplex rebuild", advanced,
-        &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8, kHighsInf);
+        "Tolerance on solution error when considering refactorization on "
+        "simplex rebuild",
+        advanced, &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

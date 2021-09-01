@@ -14,28 +14,18 @@
 #define SIMPLEX_HAPP_H_
 
 // todo: clear includes.
-#include <cstring>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <set>
-#include <vector>
+//#include <cstring>
+//#include <fstream>
+//#include <iomanip>
+//#include <iostream>
+//#include <map>
+//#include <set>
+//#include <vector>
 
-#include "HConfig.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
-#include "lp_data/HighsStatus.h"
 #include "simplex/HEkk.h"
-#include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HSimplexReport.h"
-#include "simplex/SimplexConst.h"
-#include "simplex/SimplexTimer.h"
-#include "util/HighsUtils.h"
 
 // Single method to solve an LP with the simplex method. Solves the
 // scaled LP then analyses the unscaled solution. If it doesn't satisfy
