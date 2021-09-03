@@ -735,6 +735,16 @@ void HEkkDual::solvePhase2() {
   //
   // kSolvePhaseCleanup => Continue with primal phase 2 iterations to clean up
   // dual infeasibilities
+  //
+  // Have to set multi_chooseAgain = 1 since it may come in set to 0
+  // from the end of Phase 1, implying that there is a set of
+  // attractive candidates to choose from in minorChooseRow() so
+  // majorChooseRow() is unnecessary. If there are no such candidates
+  // optimality may be declared in error. Previously, the forced
+  // reinversion in the rebuild at the start of phase 2 led to
+  // update_count == 0 causing multi_chooseAgain to be set to 1 in
+  // majorChooseRow!
+  multi_chooseAgain = 1;
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;

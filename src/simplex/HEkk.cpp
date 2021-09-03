@@ -264,7 +264,7 @@ void HEkk::invalidate() {
 void HEkk::invalidateBasisMatrix() {
   // When the constraint matrix changes - dimensions or just (basic)
   // values, the simplex NLA becomes invalid, the simplex basis is
-  // no longer valid, and 
+  // no longer valid, and
   this->status_.has_nla = false;
   invalidateBasis();
 }
@@ -1621,11 +1621,12 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
-  const bool report_cost_perturbation = options_->output_flag && analysis_.analyse_simplex_summary_data;
+  const bool report_cost_perturbation =
+      options_->output_flag && analysis_.analyse_simplex_summary_data;
   HighsInt num_original_nonzero_cost = 0;
   if (report_cost_perturbation)
     highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "Cost perturbation for %s\n", lp_.model_name_.c_str());
+                 "Cost perturbation for %s\n", lp_.model_name_.c_str());
   double bigc = 0;
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     const double abs_cost = fabs(info_.workCost_[i]);
@@ -1642,12 +1643,12 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
                    "   STRANGE initial workCost has non nonzeros\n");
     }
     highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "   Initially have %" HIGHSINT_FORMAT
-           " nonzero costs (%3" HIGHSINT_FORMAT
-           "%%) with bigc = "
-           "%g "
-           "and average = %g\n",
-           num_original_nonzero_cost, pct0, bigc, average_cost);
+                 "   Initially have %" HIGHSINT_FORMAT
+                 " nonzero costs (%3" HIGHSINT_FORMAT
+                 "%%) with bigc = "
+                 "%g "
+                 "and average = %g\n",
+                 num_original_nonzero_cost, pct0, bigc, average_cost);
   }
   if (bigc > 100) {
     bigc = sqrt(sqrt(bigc));
@@ -1666,16 +1667,16 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     bigc = min(bigc, 1.0);
     if (report_cost_perturbation)
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   
-          "   small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
-          "%g\n",
-          boxedRate, bigc);
+
+                   "   small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
+                   "%g\n",
+                   boxedRate, bigc);
   }
   // Determine the perturbation base
   double base = 5e-7 * bigc;
   if (report_cost_perturbation)
     highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "   Perturbation base = %g\n", base);
+                 "   Perturbation base = %g\n", base);
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {

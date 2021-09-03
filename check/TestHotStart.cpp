@@ -23,7 +23,7 @@ TEST_CASE("HotStart", "[highs_test_hot_start]") {
   HotStart hot_start;
   // What happens if run() has not been called?
   hot_start = highs.getHotStart();
-  
+
   // Get the continuous solution and hot start information
   if (dev_run) {
     highs.setOptionValue("output_flag", true);

@@ -87,8 +87,8 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
       column.array[iRow] = value;
       HighsInt iCol = base_index[iRow];
       if (report_basis)
-	highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d",
-		    (int)iCol);
+        highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d",
+                    (int)iCol);
       if (iCol < num_col) {
         for (HighsInt iEl = a_matrix_start[iCol];
              iEl < a_matrix_start[iCol + 1]; iEl++) {

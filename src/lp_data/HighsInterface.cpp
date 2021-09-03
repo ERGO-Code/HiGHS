@@ -1023,7 +1023,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // If new scaling is performed, the hot start information is
     // no longer valid
     if (new_scaling) ekk_instance_.clearHotStart();
-     // Create a HighsLpSolverObject, and then move its LP to EKK
+    // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);
     ekk_instance_.moveLp(solver_object);
@@ -1157,33 +1157,37 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
   if (hot_start_num_row != num_row) {
     hot_start_ok = false;
     highsLogDev(options_.log_options, HighsLogType::kError,
-		"setHotStart: refactor_info.pivot_row.size of %d and LP with %d rows are incompatible\n",
-		(int)hot_start_num_row, (int)num_row);
+                "setHotStart: refactor_info.pivot_row.size of %d and LP with "
+                "%d rows are incompatible\n",
+                (int)hot_start_num_row, (int)num_row);
   }
   hot_start_num_row = (int)hot_start.refactor_info.pivot_var.size();
   if (hot_start_num_row != num_row) {
     hot_start_ok = false;
     highsLogDev(options_.log_options, HighsLogType::kError,
-		"setHotStart: refactor_info.pivot_var.size of %d and LP with %d rows are incompatible\n",
-		(int)hot_start_num_row, (int)num_row);
+                "setHotStart: refactor_info.pivot_var.size of %d and LP with "
+                "%d rows are incompatible\n",
+                (int)hot_start_num_row, (int)num_row);
   }
   hot_start_num_row = (int)hot_start.refactor_info.pivot_type.size();
   if (hot_start_num_row != num_row) {
     hot_start_ok = false;
     highsLogDev(options_.log_options, HighsLogType::kError,
-		"setHotStart: refactor_info.pivot_type.size of %d and LP with %d rows are incompatible\n",
-		(int)hot_start_num_row, (int)num_row);
+                "setHotStart: refactor_info.pivot_type.size of %d and LP with "
+                "%d rows are incompatible\n",
+                (int)hot_start_num_row, (int)num_row);
   }
   hot_start_num_tot = (int)hot_start.nonbasicMove.size();
   if (hot_start_num_tot != num_tot) {
     hot_start_ok = false;
     highsLogDev(options_.log_options, HighsLogType::kError,
-		"setHotStart: nonbasicMove.size of %d and LP with %d columns+rows are incompatible\n",
-		(int)hot_start_num_tot, (int)num_tot);
+                "setHotStart: nonbasicMove.size of %d and LP with %d "
+                "columns+rows are incompatible\n",
+                (int)hot_start_num_tot, (int)num_tot);
   }
   if (!hot_start_ok) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		"setHotStart called with incompatible data\n");
+                 "setHotStart called with incompatible data\n");
     return HighsStatus::kError;
   }
   // Set up the HiGHS and Ekk basis
@@ -1243,7 +1247,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
   // Complete the HiGHS basis row status and adjust nonbasicMove
   // for nonbasic variables
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (nonbasicFlag[num_col+iRow] == kNonbasicFlagFalse) continue;
+    if (nonbasicFlag[num_col + iRow] == kNonbasicFlagFalse) continue;
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
@@ -1256,7 +1260,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
         // Finite upper bound so boxed: use nonbasicMove to choose
-        if (nonbasicMove[num_col+iRow] == kNonbasicMoveDn) {
+        if (nonbasicMove[num_col + iRow] == kNonbasicMoveDn) {
           status = HighsBasisStatus::kLower;
           move = kNonbasicMoveDn;
         } else {
@@ -1280,7 +1284,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
     assert(status != HighsBasisStatus::kNonbasic);
     basis_.row_status[iRow] = status;
     assert(move != kIllegalMoveValue);
-    nonbasicMove[num_col+iRow] = move;
+    nonbasicMove[num_col + iRow] = move;
   }
   ekk_instance_.status_.has_basis = true;
   ekk_instance_.setNlaRefactorInfo();

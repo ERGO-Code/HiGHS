@@ -48,7 +48,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   analyse_factor_time =
       kHighsAnalysisLevelNlaTime & options.highs_analysis_level;
-  analyse_simplex_data = analyse_simplex_summary_data || analyse_simplex_runtime_data;
+  analyse_simplex_data =
+      analyse_simplex_summary_data || analyse_simplex_runtime_data;
   last_user_log_time = -kHighsInf;
   delta_user_log_time = 5e0;
 
