@@ -58,7 +58,6 @@ struct HighsBasis {
   bool valid = false;
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  RefactorInfo refactor_info;
 };
 
 struct HighsScale {

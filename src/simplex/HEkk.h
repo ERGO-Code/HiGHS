@@ -51,6 +51,7 @@ class HEkk {
   void setNlaPointersForTrans(const HighsLp& lp);
   void setNlaRefactorInfo();
   void clearNlaRefactorInfo();
+  void clearHotStartInfo();
   void btran(HVector& rhs, const double expected_density);
   void ftran(HVector& rhs, const double expected_density);
 

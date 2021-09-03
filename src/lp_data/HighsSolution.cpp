@@ -858,5 +858,4 @@ void clearBasisUtil(HighsBasis& basis) {
   basis.row_status.clear();
   basis.col_status.clear();
   basis.valid = false;
-  basis.refactor_info.clear();
 }

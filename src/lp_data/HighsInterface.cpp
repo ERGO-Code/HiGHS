@@ -122,10 +122,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
                                       &scale.col[lp.num_col_]);
   }
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis) {
-    appendNonbasicColsToBasisInterface(XnumNewCol);
-    basis.refactor_info.clear();
-  }
+  if (valid_basis) appendNonbasicColsToBasisInterface(XnumNewCol);
   // Increase the number of columns in the LP
   lp.num_col_ += XnumNewCol;
   assert(lp.dimensionsOk("addCols"));
@@ -237,10 +234,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
                                        &scale.row[lp.num_row_]);
   }
   // Update the basis correponding to new basic rows
-  if (valid_basis) {
-    appendBasicRowsToBasisInterface(XnumNewRow);
-    basis.refactor_info.clear();
-  }
+  if (valid_basis) appendBasicRowsToBasisInterface(XnumNewRow);
+
   // Increase the number of rows in the LP
   lp.num_row_ += XnumNewRow;
   assert(lp.dimensionsOk("addRows"));
@@ -269,7 +264,6 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     scaled_model_status_ = HighsModelStatus::kNotset;
     model_status_ = scaled_model_status_;
     basis.valid = false;
-    basis.refactor_info.clear();
   }
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
@@ -315,7 +309,6 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     scaled_model_status_ = HighsModelStatus::kNotset;
     model_status_ = scaled_model_status_;
     basis.valid = false;
-    basis.refactor_info.clear();
   }
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
@@ -727,9 +720,6 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
       }
     }
   }
-  // Clear any refactorization information
-  if (basis.valid) basis.refactor_info.clear();
-
   // Deduce the consequences of a scaled column
   clearModelStatusSolutionAndInfo();
 
@@ -777,9 +767,6 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
       }
     }
   }
-  // Clear any refactorization information
-  if (basis.valid) basis.refactor_info.clear();
-
   // Deduce the consequences of a scaled row
   clearModelStatusSolutionAndInfo();
 
@@ -1011,9 +998,6 @@ void Highs::appendBasicRowsToBasisInterface(const HighsInt XnumNewRow) {
       simplex_basis.basicIndex_[iRow] = lp.num_col_ + iRow;
     }
   }
-  // Cannot use the refactorization information, even if no basis
-  // changes are made
-  highs_basis.refactor_info.clear();
 }
 
 // Get the basic variables, performing INVERT if necessary
@@ -1035,10 +1019,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // The LP has no invert to use, so have to set one up
     lp.ensureColwise();
     // Consider scaling the LP
-    const bool new_scaling = considerScaling(options_, lp);
-    // If there has been new scaling, clear any refactorization
-    // information.
-    if (new_scaling) ekk_instance_.clearNlaRefactorInfo();
+    considerScaling(options_, lp);
     // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);

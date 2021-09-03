@@ -465,8 +465,6 @@ HighsStatus Highs::readBasis(const std::string filename) {
   basis_.valid = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
-  // Clear any refactorization data
-  basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
@@ -855,7 +853,6 @@ HighsStatus Highs::run() {
           basis_.valid = true;
           basis_.col_status = presolve_.data_.recovered_basis_.col_status;
           basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-          basis_.refactor_info.clear();
 
           // Possibly force debug to perform KKT check on what's
           // returned from postsolve
@@ -1306,8 +1303,6 @@ HighsStatus Highs::setBasis() {
   basis_.valid = false;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
-  // Clear any refactorization data
-  basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
