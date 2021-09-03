@@ -1294,23 +1294,26 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   basis_.valid = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
-  // Check that any refactorization data is consistent with the LP and basis
-  const bool refactor_info_ok = refactorInfoIsOk(model_.lp_, basis_);
-  // If not, clear it.
-  if (!refactor_info_ok) basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::setBasis() {
-  // Invalidate the basis for HiGHS Don't set to logical basis since
-  // that causes presolve to be skipped
+  // Invalidate the basis for HiGHS
+  //
+  // Don't set to logical basis since that causes presolve to be
+  // skipped
   basis_.valid = false;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Clear any refactorization data
   basis_.refactor_info.clear();
   // Can't use returnFromHighs since...
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::setHotStart(const HotStart& hot_start) {
+  assert(1==0);
   return HighsStatus::kOk;
 }
 
@@ -2596,15 +2599,6 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
-  // Check that any refactorization data is consistent with the LP and basis
-  const bool refactor_info_ok = refactorInfoIsOk(model_.lp_, basis_);
-  if (!refactor_info_ok) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Refactorization data is inconsistent with LP\n");
-    return_status = HighsStatus::kError;
-  }
-  assert(refactor_info_ok);
-
   return return_status;
 }
 

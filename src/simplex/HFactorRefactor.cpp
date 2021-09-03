@@ -23,71 +23,18 @@
 // functions, so HFactor.h has #include <algorithm>
 using std::fabs;
 
-void RefactorInfo::get(RefactorInfo& refactor_info) const {
-  if (this->valid) {
-    refactor_info = *this;
-  } else {
-    refactor_info.clear();
-  }
-}
-
-void RefactorInfo::set(const RefactorInfo& refactor_info) {
-  if (refactor_info.valid) {
-    *this = refactor_info;
-  } else {
-    this->clear();
-  }
-}
-
-void RefactorInfo::set(const HighsInt num_col, const HighsInt num_row) {
-  this->valid = true;
-  this->build_synthetic_tick = 0.0;
-  this->pivot_var.resize(num_row);
-  this->pivot_row.resize(num_row);
-  this->pivot_type.resize(num_row);
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    this->pivot_var[iRow] = num_col + iRow;
-    this->pivot_row[iRow] = iRow;
-    this->pivot_type[iRow] = kPivotLogical;
-  }
-}
-
 void RefactorInfo::clear() {
-  this->valid = false;
+  this->use = false;
   this->build_synthetic_tick = 0.0;
   this->pivot_var.clear();
   this->pivot_row.clear();
   this->pivot_type.clear();
 }
 
-// Simple check - basis needed to check everything
-bool RefactorInfo::isOk(const HighsInt num_col, const HighsInt num_row) const {
-  bool ok = true;
-  if (!this->valid) return ok;
-  if (this->build_synthetic_tick < 0) ok = false;
-  if (this->pivot_var.size() != num_row) ok = false;
-  if (this->pivot_row.size() != num_row) ok = false;
-  if (this->pivot_type.size() != num_row) ok = false;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (0 > this->pivot_var[iRow] || this->pivot_var[iRow] >= num_col + num_row)
-      ok = false;
-    if (0 > this->pivot_row[iRow] || this->pivot_row[iRow] >= num_row)
-      ok = false;
-    int8_t pivot_type = this->pivot_type[iRow];
-    if (pivot_type != kPivotLogical && pivot_type != kPivotUnit &&
-        pivot_type != kPivotRowSingleton && pivot_type != kPivotColSingleton &&
-        pivot_type != kPivotMarkowitz)
-      ok = false;
-  }
-  return ok;
-}
-
 HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   const bool report_lu = false;
-  // Check that the refactorzation information is not invalid, and
-  // consistent with the LP information known by HFactor
-  assert(refactor_info_.valid);
-  assert(refactor_info_.isOk(numCol, numRow));
+  // Check that the refactorzation information should be used
+  assert(refactor_info_.use);
   /**
    * 0. Clear L and U factor
    */

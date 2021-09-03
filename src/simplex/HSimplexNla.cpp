@@ -211,10 +211,6 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
   factor_.setPivotThreshold(new_pivot_threshold);
 }
 
-void HSimplexNla::passLpPointer(const HighsLp* lp) { lp_ = lp; }
-
-void HSimplexNla::passScalePointer(const HighsScale* scale) { scale_ = scale; }
-
 void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
   if (scale_ == NULL) return;
   const vector<double>& col_scale = scale_->col;

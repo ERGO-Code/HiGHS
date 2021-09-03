@@ -47,9 +47,4 @@ void unscaleSimplexCost(HighsLp& lp, double cost_scale);
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
-bool refactorInfoIsOk(const HighsLp& lp, const HighsBasis& basis);
-
-bool refactorInfoIsOk(const RefactorInfo refactor_info, const HighsInt numCol,
-                      const HighsInt numRow, const vector<HighsInt> baseIndex);
-
 #endif  // SIMPLEX_HSIMPLEX_H_

@@ -258,6 +258,11 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
+   * @brief Sets the basis to the supplied hot start basis
+   */
+  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
+
+  /**
    * @brief Returns the current model status
    */
   const HighsModelStatus& getModelStatus(
@@ -871,6 +876,11 @@ class Highs {
    * @brief Clears basis_
    */
   HighsStatus setBasis();
+
+  /**
+   * @brief Sets the basis to the supplied hot start basis
+   */
+  HighsStatus setHotStart(const HotStart& hot_start);
 
   /**
    * @brief Freezes the current basis and standard NLA, returning a

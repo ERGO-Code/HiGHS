@@ -37,16 +37,21 @@ struct HighsSolution {
 };
 
 struct RefactorInfo {
-  bool valid = false;
+  bool use = false;
   std::vector<HighsInt> pivot_row;
   std::vector<HighsInt> pivot_var;
   std::vector<int8_t> pivot_type;
   double build_synthetic_tick;
   void clear();
-  void get(RefactorInfo& refactor_info) const;
-  void set(const RefactorInfo& refactor_info);
-  void set(const HighsInt num_col, const HighsInt num_row);
-  bool isOk(const HighsInt num_col, const HighsInt num_row) const;
+};
+
+struct HotStart {
+  bool current = false;
+  RefactorInfo refactor_info;
+  std::vector<int8_t> nonbasicMove;
+  void clear();
+  void set(const RefactorInfo& pass_refactor_info,
+	   const std::vector<int8_t>& pass_nonbasicMove);
 };
 
 struct HighsBasis {

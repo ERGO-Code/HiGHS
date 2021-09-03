@@ -163,6 +163,7 @@ set(sources
     simplex/HSimplexNla.cpp
     simplex/HSimplexNlaDebug.cpp
     simplex/HSimplexNlaFreeze.cpp
+    simplex/HSimplexNlaHotStart.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
@@ -585,6 +586,7 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexNla.cpp
     simplex/HSimplexNlaDebug.cpp
     simplex/HSimplexNlaFreeze.cpp
+    simplex/HSimplexNlaHotStart.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp

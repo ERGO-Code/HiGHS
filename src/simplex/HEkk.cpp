@@ -342,6 +342,10 @@ void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
   simplex_nla_.base_index_ = &basis_.basicIndex_[0];
 }
 
+void HEkk::setNlaRefactorInfo() {
+  simplex_nla_.factor_.refactor_info_ = this->hot_start_.refactor_info;
+}
+
 void HEkk::clearNlaRefactorInfo() {
   simplex_nla_.factor_.refactor_info_.clear();
 }
@@ -605,9 +609,6 @@ HighsStatus HEkk::setBasis() {
   }
   info_.num_basic_logicals = num_row;
   status_.has_basis = true;
-  // Set up refactorization information for a logical basis so that
-  // when it is factorized it's done as a refactorization
-  simplex_nla_.factor_.refactor_info_.set(num_col, num_row);
   return HighsStatus::kOk;
 }
 
@@ -682,12 +683,6 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
     }
   }
   status_.has_basis = true;
-  if (refactorInfoIsOk(highs_basis.refactor_info, num_col, num_row,
-                       basis_.basicIndex_)) {
-    simplex_nla_.factor_.refactor_info_.set(highs_basis.refactor_info);
-  } else {
-    simplex_nla_.factor_.refactor_info_.clear();
-  }
   return HighsStatus::kOk;
 }
 
@@ -884,7 +879,6 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
-  simplex_nla_.factor_.refactor_info_.get(highs_basis.refactor_info);
   return highs_basis;
 }
 
@@ -1404,7 +1398,7 @@ bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
     }
   }
   const bool report_refactorization = false;
-  if (report_refactorization) {  // || solution_error>=1e-8) {
+  if (report_refactorization) {
     const std::string logic = refactor ? "   " : "no   ";
     if (info_.update_count &&
         rebuild_reason != kRebuildReasonSyntheticClockSaysInvert)
@@ -1419,38 +1413,18 @@ bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
 
 HighsInt HEkk::computeFactor() {
   assert(status_.has_nla);
-  const bool test_refactor = false;
-  const bool test_refactor_force_debug = false;
-  const bool full_report = false;
   // If the INVERT is fresh, no need to call simplex_nla_.invert()
-  if (!test_refactor && status_.has_fresh_invert) return 0;
-  RefactorInfo& refactor_info = simplex_nla_.factor_.refactor_info_;
-  refactorInfoIsOk(refactor_info, lp_.num_col_, lp_.num_row_,
-                   basis_.basicIndex_);
+  if (status_.has_fresh_invert) return 0;
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
-  if (full_report) {
-    printf("\nFactored INVERT\n");
-    simplex_nla_.factor_.reportLu();
-  }
 
   if (analysis_.analyse_factor_data)
     analysis_.updateInvertFormData(simplex_nla_.factor_);
 
   HighsInt alt_debug_level = -1;
   if (rank_deficiency) alt_debug_level = kHighsDebugLevelCostly;
-  if (test_refactor_force_debug) alt_debug_level = kHighsDebugLevelExpensive;
   debugNlaCheckInvert("HEkk::computeFactor - original", alt_debug_level);
   analysis_.simplexTimerStop(InvertClock);
-
-  if (test_refactor && !rank_deficiency) {
-    simplex_nla_.invert();
-    if (full_report) {
-      printf("\nRefactored INVERT\n");
-      simplex_nla_.factor_.reportLu();
-    }
-    debugNlaCheckInvert("HEkk::computeFactor - refactor test", alt_debug_level);
-  }
 
   if (rank_deficiency) {
     // Have an invertible representation, but of B with column(s)
@@ -2353,7 +2327,6 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
       info_.update_count >= kSyntheticTickReinversionMinUpdateCount;
   if (reinvert_syntheticClock && performed_min_updates)
     *hint = kRebuildReasonSyntheticClockSaysInvert;
-
   analysis_.simplexTimerStop(UpdateFactorClock);
   // Use the next level down for the debug level, since the cost of
   // checking the INVERT every iteration is an order more expensive

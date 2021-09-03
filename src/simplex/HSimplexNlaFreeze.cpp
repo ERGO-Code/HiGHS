@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HSimplexNla.cpp
+/**@file simplex/HSimplexNlaFreeze.cpp
  *
  * @brief Interface to HFactor allowing non-HFactor updates, NLA-only
  * scaling and shifting of NLA analysis below simplex level.

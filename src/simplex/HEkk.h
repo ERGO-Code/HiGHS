@@ -49,6 +49,7 @@ class HEkk {
   void updateStatus(LpAction action);
   void setNlaPointersForLpAndScale(const HighsLp& lp);
   void setNlaPointersForTrans(const HighsLp& lp);
+  void setNlaRefactorInfo();
   void clearNlaRefactorInfo();
   void btran(HVector& rhs, const double expected_density);
   void ftran(HVector& rhs, const double expected_density);
@@ -124,6 +125,7 @@ class HEkk {
   HighsSparseMatrix ar_matrix_;
   HighsSparseMatrix scaled_a_matrix_;
   HSimplexNla simplex_nla_;
+  HotStart hot_start_;
 
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;

@@ -303,8 +303,8 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);
   FactorTimer factor_timer;
-  // If there is valid refactorization information use it!
-  if (refactor_info_.valid) {
+  // Possibly use the refactorization information!
+  if (refactor_info_.use) {
     factor_timer.start(FactorReinvert, factor_timer_clock_pointer);
     rank_deficiency = rebuild(factor_timer_clock_pointer);
     factor_timer.stop(FactorReinvert, factor_timer_clock_pointer);
@@ -351,14 +351,19 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   //
   // Indicate that the refactorization information is known unless the basis was
   // rank deficient
-  assert((HighsInt)this->refactor_info_.pivot_row.size() + rank_deficiency ==
-         numRow);
-  this->refactor_info_.valid = rank_deficiency == 0;
-  // If there is valid refactorization information, record
-  // build_synthetic_tick to use as the value of build_synthetic_tick
-  // if refactorization is performed
-  if (this->refactor_info_.valid)
+  if (rank_deficiency) {
+    this->refactor_info_.clear();
+  } else {
+    // Check that the refactorization information is not (yet) flagged
+    // to be used in a future call
+    assert(!this->refactor_info_.use);
+    // Record build_synthetic_tick to use as the value of
+    // build_synthetic_tick if refactorization is performed. Not only
+    // is there no build_synthetic_tick measure for refactorization,
+    // if there were it would give an unrealistic underestimate of the
+    // cost of factorization from scratch
     this->refactor_info_.build_synthetic_tick = this->build_synthetic_tick;
+  }
 
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
@@ -1149,13 +1154,14 @@ void HFactor::buildFinish() {
   PFindex.clear();
   PFvalue.clear();
 
-  if (!this->refactor_info_.valid) {
-    // Finally, if not calling buildFinish after refactoring, permute the base
-    // index
+  if (!this->refactor_info_.use) {
+    // Finally, if not calling buildFinish after refactorizing,
+    // permute the base index
     iwork.assign(baseIndex, baseIndex + numRow);
     for (HighsInt i = 0; i < numRow; i++) baseIndex[permute[i]] = iwork[i];
+    // Add cost of buildFinish to build_synthetic_tick
+    build_synthetic_tick += numRow * 80 + (LcountX + UcountX) * 60;
   }
-  build_synthetic_tick += numRow * 80 + (LcountX + UcountX) * 60;
 }
 
 void HFactor::ftranL(HVector& rhs, const double expected_density,
