@@ -39,6 +39,7 @@ class HEkk {
   void clearEkkAllStatus();
   void clearEkkDataStatus();
   void clearNlaStatus();
+  void clearNlaInvertStatus();
   void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void invalidate();
@@ -50,8 +51,7 @@ class HEkk {
   void setNlaPointersForLpAndScale(const HighsLp& lp);
   void setNlaPointersForTrans(const HighsLp& lp);
   void setNlaRefactorInfo();
-  void clearNlaRefactorInfo();
-  void clearHotStartInfo();
+  void clearHotStart();
   void btran(HVector& rhs, const double expected_density);
   void ftran(HVector& rhs, const double expected_density);
 

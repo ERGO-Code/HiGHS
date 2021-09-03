@@ -78,8 +78,12 @@ void HEkk::clearNlaStatus() {
   HighsSimplexStatus& status = this->status_;
   status.has_basis = false;
   status.has_nla = false;
-  status.has_invert = false;
-  status.has_fresh_invert = false;
+  clearNlaInvertStatus();
+}
+
+void HEkk::clearNlaInvertStatus() {
+  this->status_.has_invert = false;
+  this->status_.has_fresh_invert = false;
 }
 
 void HEkk::clearEkkPointers() {
@@ -240,6 +244,11 @@ void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
   simplex_basis.nonbasicMove_.clear();
 }
 
+void HEkk::clearHotStart() {
+  this->hot_start_.clear();
+  this->simplex_nla_.factor_.refactor_info_.clear();
+}
+
 void HEkk::invalidate() {
   this->status_.initialised_for_new_lp = false;
   this->status_.initialised_for_solve = false;
@@ -248,8 +257,8 @@ void HEkk::invalidate() {
 
 void HEkk::invalidateBasisMatrix() {
   // When the constraint matrix changes - dimensions or just (basic)
-  // values, the simplex NLA becomes invalid, and the simplex basis is
-  // no longer valid.
+  // values, the simplex NLA becomes invalid, the simplex basis is
+  // no longer valid, and 
   this->status_.has_nla = false;
   invalidateBasis();
 }
@@ -278,6 +287,7 @@ void HEkk::updateStatus(LpAction action) {
   switch (action) {
     case LpAction::kScale:
       this->invalidateBasisMatrix();
+      this->clearHotStart();
       break;
     case LpAction::kNewCosts:
       this->status_.has_fresh_rebuild = false;
@@ -291,33 +301,50 @@ void HEkk::updateStatus(LpAction action) {
       break;
     case LpAction::kNewBasis:
       this->invalidateBasis();
+      this->clearHotStart();
       break;
     case LpAction::kNewCols:
       this->clear();
+      this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
       this->clearEkkData();  //
       this->clear();         //
+      this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
       this->clear();
+      this->clearHotStart();
+      //    this->invalidateBasis();
+      break;
+    case LpAction::kDelNonbasicCols:
+      this->clear();
+      this->clearHotStart();
       //    this->invalidateBasis();
       break;
     case LpAction::kDelRows:
       this->clear();
+      this->clearHotStart();
       //   this->invalidateBasis();
       break;
     case LpAction::kDelRowsBasisOk:
       assert(1 == 0);
+      this->clearHotStart();
       //      info.lp_ = true;
       break;
     case LpAction::kScaledCol:
       this->invalidateBasisMatrix();
+      this->clearHotStart();
       break;
     case LpAction::kScaledRow:
       this->invalidateBasisMatrix();
+      this->clearHotStart();
+      break;
+    case LpAction::kHotStart:
+      this->clearEkkData();  //
+      this->clearNlaInvertStatus();
       break;
     case LpAction::kBacktracking:
       this->status_.has_ar_matrix = false;
@@ -344,10 +371,7 @@ void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
 
 void HEkk::setNlaRefactorInfo() {
   simplex_nla_.factor_.refactor_info_ = this->hot_start_.refactor_info;
-}
-
-void HEkk::clearNlaRefactorInfo() {
-  simplex_nla_.factor_.refactor_info_.clear();
+  simplex_nla_.factor_.refactor_info_.use = true;
 }
 
 void HEkk::btran(HVector& rhs, const double expected_density) {
@@ -1413,10 +1437,17 @@ bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
 
 HighsInt HEkk::computeFactor() {
   assert(status_.has_nla);
-  // If the INVERT is fresh, no need to call simplex_nla_.invert()
   if (status_.has_fresh_invert) return 0;
+  //
+  // Perform INVERT
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
+  analysis_.simplexTimerStop(InvertClock);
+  //
+  // Set up hot start information
+  hot_start_.refactor_info = simplex_nla_.factor_.refactor_info_;
+  hot_start_.nonbasicMove = basis_.nonbasicMove_;
+  hot_start_.valid = true;
 
   if (analysis_.analyse_factor_data)
     analysis_.updateInvertFormData(simplex_nla_.factor_);
@@ -1424,7 +1455,6 @@ HighsInt HEkk::computeFactor() {
   HighsInt alt_debug_level = -1;
   if (rank_deficiency) alt_debug_level = kHighsDebugLevelCostly;
   debugNlaCheckInvert("HEkk::computeFactor - original", alt_debug_level);
-  analysis_.simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
     // Have an invertible representation, but of B with column(s)

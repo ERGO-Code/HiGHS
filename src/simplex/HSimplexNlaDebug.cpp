@@ -71,6 +71,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   double expected_density = 1;
 
   const bool random_ftran_test = true;
+  const bool report_basis = num_row < 20;
   if (random_ftran_test) {
     // Solve for a random solution
     HighsRandom random(1);
@@ -78,14 +79,16 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
     column.clear();
     rhs.clear();
     column.count = -1;
-    highsLogDev(options_->log_options, HighsLogType::kInfo, "Basis:");
+    if (report_basis)
+      highsLogDev(options_->log_options, HighsLogType::kInfo, "Basis:");
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       rhs.index[rhs.count++] = iRow;
       double value = random.fraction();
       column.array[iRow] = value;
       HighsInt iCol = base_index[iRow];
-      highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d",
-                  (int)iCol);
+      if (report_basis)
+	highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d",
+		    (int)iCol);
       if (iCol < num_col) {
         for (HighsInt iEl = a_matrix_start[iCol];
              iEl < a_matrix_start[iCol + 1]; iEl++) {
@@ -98,7 +101,8 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
         rhs.array[index] += value;
       }
     }
-    highsLogDev(options_->log_options, HighsLogType::kInfo, "\n");
+    if (report_basis)
+      highsLogDev(options_->log_options, HighsLogType::kInfo, "\n");
     residual = rhs;
     //  if (options->log_dev_level) {
     //    reportArray("Random solution before FTRAN", &column, true);

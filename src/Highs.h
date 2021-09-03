@@ -1196,6 +1196,9 @@ class Highs {
                                   double* solution_vector,
                                   HighsInt* solution_num_nz,
                                   HighsInt* solution_indices, bool transpose);
+
+  HighsStatus setHotStartInterface(const HotStart& hot_start);
+
   void zeroIterationCounts();
 
   HighsStatus getDualRayInterface(bool& has_dual_ray, double* dual_ray_value);

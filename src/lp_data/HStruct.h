@@ -46,12 +46,10 @@ struct RefactorInfo {
 };
 
 struct HotStart {
-  bool current = false;
+  bool valid = false;
   RefactorInfo refactor_info;
   std::vector<int8_t> nonbasicMove;
   void clear();
-  void set(const RefactorInfo& pass_refactor_info,
-	   const std::vector<int8_t>& pass_nonbasicMove);
 };
 
 struct HighsBasis {
