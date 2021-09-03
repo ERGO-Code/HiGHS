@@ -1220,7 +1220,7 @@ void HEkkDual::iterationAnalysis() {
       initialiseDevexFramework();
     }
   }
-  if (analysis->analyse_simplex_data) analysis->iterationRecord();
+  if (analysis->analyse_simplex_summary_data) analysis->iterationRecord();
 }
 
 void HEkkDual::reportRebuild(const HighsInt reason_for_rebuild) {
@@ -1254,13 +1254,13 @@ void HEkkDual::chooseRow() {
     row_ep.index[0] = row_out;
     row_ep.array[row_out] = 1;
     row_ep.packFlag = true;
-    if (analysis->analyse_simplex_data)
+    if (analysis->analyse_simplex_summary_data)
       analysis->operationRecordBefore(kSimplexNlaBtranEp, row_ep,
                                       ekk_instance_.info_.row_ep_density);
     // Perform BTRAN
     simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
                        analysis->pointer_serial_factor_clocks);
-    if (analysis->analyse_simplex_data)
+    if (analysis->analyse_simplex_summary_data)
       analysis->operationRecordAfter(kSimplexNlaBtranEp, row_ep);
     analysis->simplexTimerStop(BtranClock);
     // Verify DSE weight
@@ -1315,7 +1315,7 @@ bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   // computed weight. Excessively large updated weights don't matter!
   const bool accept_weight =
       updated_edge_weight >= kAcceptDseWeightThreshold * computed_edge_weight;
-  //  if (analysis->analyse_simplex_data)
+  //  if (analysis->analyse_simplex_summary_data)
   ekk_instance_.assessDSEWeightError(computed_edge_weight, updated_edge_weight);
   analysis->dualSteepestEdgeWeightError(computed_edge_weight,
                                         updated_edge_weight);
@@ -1461,7 +1461,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   ekk_instance_.choosePriceTechnique(info.price_strategy, local_density,
                                      use_col_price, use_row_price_w_switch);
 
-  if (analysis->analyse_simplex_data) {
+  if (analysis->analyse_simplex_summary_data) {
     const HighsInt row_ep_count = row_ep->count;
     if (use_col_price) {
       analysis->operationRecordBefore(kSimplexNlaPriceAp, row_ep_count, 0.0);
@@ -1530,7 +1530,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   }
 #pragma omp taskwait
 
-  if (analysis->analyse_simplex_data) {
+  if (analysis->analyse_simplex_summary_data) {
     // Determine the nonzero count of the whole row
     HighsInt row_ap_count = 0;
     for (HighsInt i = 0; i < slice_num; i++)
@@ -1610,13 +1610,13 @@ void HEkkDual::updateFtran() {
   // Get the constraint matrix column by combining just one column
   // with unit multiplier
   a_matrix->collectAj(col_aq, variable_in, 1);
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtran, col_aq,
                                     ekk_instance_.info_.col_aq_density);
   // Perform FTRAN
   simplex_nla->ftran(col_aq, ekk_instance_.info_.col_aq_density,
                      analysis->pointer_serial_factor_clocks);
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtran, col_aq);
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   ekk_instance_.updateOperationResultDensity(
@@ -1648,12 +1648,12 @@ void HEkkDual::updateFtranBFRT() {
   //  update_flip");
 
   if (col_BFRT.count) {
-    if (analysis->analyse_simplex_data)
+    if (analysis->analyse_simplex_summary_data)
       analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT,
                                       ekk_instance_.info_.col_BFRT_density);
     simplex_nla->ftran(col_BFRT, ekk_instance_.info_.col_BFRT_density,
                        analysis->pointer_serial_factor_clocks);
-    if (analysis->analyse_simplex_data)
+    if (analysis->analyse_simplex_summary_data)
       analysis->operationRecordAfter(kSimplexNlaFtranBfrt, col_BFRT);
   }
   if (time_updateFtranBFRT) {
@@ -1671,13 +1671,13 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranDseClock);
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtranDse, *DSE_Vector,
                                     ekk_instance_.info_.row_DSE_density);
   // Perform FTRAN DSE
   simplex_nla->ftran(*DSE_Vector, ekk_instance_.info_.row_DSE_density,
                      analysis->pointer_serial_factor_clocks);
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, *DSE_Vector);
   analysis->simplexTimerStop(FtranDseClock);
   const double local_row_DSE_density =

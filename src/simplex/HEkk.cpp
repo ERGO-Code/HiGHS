@@ -244,6 +244,12 @@ void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
   simplex_basis.nonbasicMove_.clear();
 }
 
+void HotStart::clear() {
+  this->valid = false;
+  this->refactor_info.clear();
+  this->nonbasicMove.clear();
+}
+
 void HEkk::clearHotStart() {
   this->hot_start_.clear();
   this->simplex_nla_.factor_.refactor_info_.clear();
@@ -538,7 +544,7 @@ HighsStatus HEkk::solve() {
     analysis_.simplexTimerStop(SimplexTotalClock);
     analysis_.reportSimplexTimer();
   }
-  if (analysis_.analyse_simplex_data) analysis_.summaryReport();
+  if (analysis_.analyse_simplex_summary_data) analysis_.summaryReport();
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
   if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
   return return_status;
@@ -1615,24 +1621,28 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
+  const bool report_cost_perturbation = options_->output_flag && analysis_.analyse_simplex_summary_data;
   HighsInt num_original_nonzero_cost = 0;
-  if (analysis_.analyse_simplex_data)
-    printf("grep_DuPtrb: Cost perturbation for %s\n", lp_.model_name_.c_str());
+  if (report_cost_perturbation)
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "Cost perturbation for %s\n", lp_.model_name_.c_str());
   double bigc = 0;
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     const double abs_cost = fabs(info_.workCost_[i]);
     bigc = max(bigc, abs_cost);
-    if (analysis_.analyse_simplex_data && abs_cost) num_original_nonzero_cost++;
+    if (report_cost_perturbation && abs_cost) num_original_nonzero_cost++;
   }
   const HighsInt pct0 = (100 * num_original_nonzero_cost) / lp_.num_col_;
   double average_cost = 0;
-  if (analysis_.analyse_simplex_data) {
+  if (report_cost_perturbation) {
     if (num_original_nonzero_cost) {
       average_cost = bigc / num_original_nonzero_cost;
     } else {
-      printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "   STRANGE initial workCost has non nonzeros\n");
     }
-    printf("grep_DuPtrb:    Initially have %" HIGHSINT_FORMAT
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "   Initially have %" HIGHSINT_FORMAT
            " nonzero costs (%3" HIGHSINT_FORMAT
            "%%) with bigc = "
            "%g "
@@ -1641,8 +1651,9 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   }
   if (bigc > 100) {
     bigc = sqrt(sqrt(bigc));
-    if (analysis_.analyse_simplex_data)
-      printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
+    if (report_cost_perturbation)
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "   Large so set bigc = sqrt(bigc) = %g\n", bigc);
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -1653,16 +1664,18 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   boxedRate /= num_tot;
   if (boxedRate < 0.01) {
     bigc = min(bigc, 1.0);
-    if (analysis_.analyse_simplex_data)
-      printf(
-          "grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
+    if (report_cost_perturbation)
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   
+          "   small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
           "%g\n",
           boxedRate, bigc);
   }
   // Determine the perturbation base
   double base = 5e-7 * bigc;
-  if (analysis_.analyse_simplex_data)
-    printf("grep_DuPtrb:    Perturbation base = %g\n", base);
+  if (report_cost_perturbation)
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "   Perturbation base = %g\n", base);
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
@@ -1683,7 +1696,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       // Fixed - no perturb
     }
-    if (analysis_.analyse_simplex_data) {
+    if (report_cost_perturbation) {
       const double perturbation1 = fabs(info_.workCost_[i] - previous_cost);
       if (perturbation1)
         updateValueDistribution(perturbation1,
@@ -1695,7 +1708,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
                            info_.dual_simplex_cost_perturbation_multiplier *
                            1e-12;
     info_.workCost_[i] += perturbation2;
-    if (analysis_.analyse_simplex_data) {
+    if (report_cost_perturbation) {
       perturbation2 = fabs(perturbation2);
       updateValueDistribution(perturbation2,
                               analysis_.cost_perturbation2_distribution);
@@ -1903,12 +1916,12 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   col_aq.clear();
   col_aq.packFlag = true;
   lp_.a_matrix_.collectAj(col_aq, iCol, 1);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq,
                                     info_.col_aq_density);
   simplex_nla_.ftran(col_aq, info_.col_aq_density,
                      analysis_.pointer_serial_factor_clocks);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordAfter(kSimplexNlaFtran, col_aq);
   HighsInt num_row = lp_.num_row_;
   const double local_col_aq_density = (double)col_aq.count / num_row;
@@ -1923,12 +1936,12 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   row_ep.index[0] = iRow;
   row_ep.array[iRow] = 1;
   row_ep.packFlag = true;
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordBefore(kSimplexNlaBtranEp, row_ep,
                                     info_.row_ep_density);
   simplex_nla_.btran(row_ep, info_.row_ep_density,
                      analysis_.pointer_serial_factor_clocks);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordAfter(kSimplexNlaBtranEp, row_ep);
   HighsInt num_row = lp_.num_row_;
   const double local_row_ep_density = (double)row_ep.count / num_row;
@@ -1942,12 +1955,12 @@ void HEkk::fullBtran(HVector& buffer) {
   // than 0 if the indices of the RHS (and true value of buffer.count)
   // isn't known.
   analysis_.simplexTimerStart(BtranFullClock);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordBefore(kSimplexNlaBtranFull, buffer,
                                     info_.dual_col_density);
   simplex_nla_.btran(buffer, info_.dual_col_density,
                      analysis_.pointer_serial_factor_clocks);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordAfter(kSimplexNlaBtranFull, buffer);
   const double local_dual_col_density = (double)buffer.count / lp_.num_row_;
   updateOperationResultDensity(local_dual_col_density, info_.dual_col_density);
@@ -1978,7 +1991,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   bool use_row_price_w_switch;
   choosePriceTechnique(info_.price_strategy, local_density, use_col_price,
                        use_row_price_w_switch);
-  if (analysis_.analyse_simplex_data) {
+  if (analysis_.analyse_simplex_summary_data) {
     if (use_col_price) {
       const double expected_density = 1;
       analysis_.operationRecordBefore(kSimplexNlaPriceAp, row_ep,
@@ -2019,7 +2032,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   updateOperationResultDensity(local_row_ap_density, info_.row_ap_density);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordAfter(kSimplexNlaPriceAp, row_ap);
   analysis_.simplexTimerStop(PriceClock);
 }
@@ -2027,13 +2040,13 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
 void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStart(PriceFullClock);
   full_row.clear();
-  if (analysis_.analyse_simplex_data) {
+  if (analysis_.analyse_simplex_summary_data) {
     const double expected_density = 1;
     analysis_.operationRecordBefore(kSimplexNlaPriceFull, full_col,
                                     expected_density);
   }
   lp_.a_matrix_.priceByColumn(full_row, full_col);
-  if (analysis_.analyse_simplex_data)
+  if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordAfter(kSimplexNlaPriceFull, full_row);
   analysis_.simplexTimerStop(PriceFullClock);
 }

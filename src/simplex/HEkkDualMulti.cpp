@@ -192,7 +192,7 @@ void HEkkDual::majorChooseRowBtran() {
     }
   }
 
-  if (analysis->analyse_simplex_data) {
+  if (analysis->analyse_simplex_summary_data) {
     for (HighsInt i = 0; i < multi_ntasks; i++)
       analysis->operationRecordBefore(kSimplexNlaBtranEp, 1,
                                       ekk_instance_.info_.row_ep_density);
@@ -221,7 +221,7 @@ void HEkkDual::majorChooseRowBtran() {
       multi_EdWt[i] = dualRHS.workEdWt[iRow];
     }
   }
-  if (analysis->analyse_simplex_data) {
+  if (analysis->analyse_simplex_summary_data) {
     for (HighsInt i = 0; i < multi_ntasks; i++)
       analysis->operationRecordAfter(kSimplexNlaBtranEp,
                                      multi_vector[i]->count);
@@ -605,7 +605,7 @@ void HEkkDual::majorUpdateFtranParallel() {
   double multi_density[kHighsThreadLimit * 2 + 1];
   HVector_ptr multi_vector[kHighsThreadLimit * 2 + 1];
   // BFRT first
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT.count,
                                     ekk_instance_.info_.col_aq_density);
   multi_density[multi_ntasks] = ekk_instance_.info_.col_aq_density;
@@ -614,7 +614,7 @@ void HEkkDual::majorUpdateFtranParallel() {
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     // Then DSE
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
-      if (analysis->analyse_simplex_data)
+      if (analysis->analyse_simplex_summary_data)
         analysis->operationRecordBefore(kSimplexNlaFtranDse,
                                         multi_finish[iFn].row_ep->count,
                                         ekk_instance_.info_.row_DSE_density);
@@ -625,7 +625,7 @@ void HEkkDual::majorUpdateFtranParallel() {
   }
   // Then Column
   for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
-    if (analysis->analyse_simplex_data)
+    if (analysis->analyse_simplex_summary_data)
       analysis->operationRecordBefore(kSimplexNlaFtran,
                                       multi_finish[iFn].col_aq->count,
                                       ekk_instance_.info_.col_aq_density);
@@ -654,7 +654,7 @@ void HEkkDual::majorUpdateFtranParallel() {
   }
 
   // Update rates
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranBfrt, col_BFRT.count);
   for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
@@ -663,13 +663,13 @@ void HEkkDual::majorUpdateFtranParallel() {
     const double local_col_aq_density = (double)Col->count / solver_num_row;
     ekk_instance_.updateOperationResultDensity(
         local_col_aq_density, ekk_instance_.info_.col_aq_density);
-    if (analysis->analyse_simplex_data)
+    if (analysis->analyse_simplex_summary_data)
       analysis->operationRecordAfter(kSimplexNlaFtran, Col->count);
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       const double local_row_DSE_density = (double)Row->count / solver_num_row;
       ekk_instance_.updateOperationResultDensity(
           local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
-      if (analysis->analyse_simplex_data)
+      if (analysis->analyse_simplex_summary_data)
         analysis->operationRecordAfter(kSimplexNlaFtranDse, Row->count);
     }
   }
@@ -953,7 +953,7 @@ void HEkkDual::iterationAnalysisMinor() {
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();
-  if (analysis->analyse_simplex_data) analysis->iterationRecord();
+  if (analysis->analyse_simplex_summary_data) analysis->iterationRecord();
 }
 
 void HEkkDual::iterationAnalysisMajorData() {
@@ -978,7 +978,7 @@ void HEkkDual::iterationAnalysisMajor() {
       initialiseDevexFramework();
     }
   }
-  if (analysis->analyse_simplex_data) {
+  if (analysis->analyse_simplex_summary_data) {
     analysis->iterationRecord();
     analysis->iterationRecordMajor();
   }

@@ -1983,7 +1983,7 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
   // col_basic_feasibility_change.count) isn't known.
   analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
   const HighsInt solver_num_row = ekk_instance_.lp_.num_row_;
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(
         kSimplexNlaBtranBasicFeasibilityChange, col_basic_feasibility_change,
         ekk_instance_.info_.col_basic_feasibility_change_density);
@@ -1992,7 +1992,7 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
       ekk_instance_.info_.col_basic_feasibility_change_density,
       analysis->pointer_serial_factor_clocks);
 
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaBtranBasicFeasibilityChange,
                                    col_basic_feasibility_change);
   const double local_col_basic_feasibility_change_density =
@@ -2012,7 +2012,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   bool use_row_price_w_switch;
   ekk_instance_.choosePriceTechnique(info.price_strategy, local_density,
                                      use_col_price, use_row_price_w_switch);
-  if (analysis->analyse_simplex_data) {
+  if (analysis->analyse_simplex_summary_data) {
     if (use_col_price) {
       const double expected_density = 1;
       analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange,
@@ -2065,7 +2065,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   ekk_instance_.updateOperationResultDensity(
       local_row_basic_feasibility_change_density,
       ekk_instance_.info_.row_basic_feasibility_change_density);
-  if (analysis->analyse_simplex_data)
+  if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaPriceBasicFeasibilityChange,
                                    row_basic_feasibility_change);
   analysis->simplexTimerStop(PriceBasicFeasibilityChangeClock);
@@ -2220,7 +2220,7 @@ void HEkkPrimal::iterationAnalysisData() {
 void HEkkPrimal::iterationAnalysis() {
   iterationAnalysisData();
   analysis->iterationReport();
-  if (analysis->analyse_simplex_data) analysis->iterationRecord();
+  if (analysis->analyse_simplex_summary_data) analysis->iterationRecord();
 }
 
 void HEkkPrimal::localReportIterHeader() {

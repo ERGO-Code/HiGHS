@@ -152,10 +152,12 @@ class HighsSimplexAnalysis {
 
   // Interpreted shortcuts from bit settings in highs_analysis_level
   bool analyse_lp_data;
-  bool analyse_simplex_data;
+  bool analyse_simplex_summary_data;
+  bool analyse_simplex_runtime_data;
   bool analyse_simplex_time;
   bool analyse_factor_data;
   bool analyse_factor_time;
+  bool analyse_simplex_data;
 
   // Control parameters moving to info
   //  bool allow_dual_steepest_edge_to_devex_switch;
