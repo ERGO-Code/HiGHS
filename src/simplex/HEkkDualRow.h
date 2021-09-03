@@ -152,11 +152,11 @@ class HEkkDualRow {
   HighsInt workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it
                            //!< here to avoid compiler warning
   const HighsInt*
-      workNumTotPermutation = NULL;  //!< Pointer to ekk_instance_.numTotPermutation();
-  const int8_t* workMove = NULL;   //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
-  const double* workDual = NULL;   //!< Pointer to ekk_instance_.info_.workDual_;
-  const double* workRange = NULL;  //!< Pointer to ekk_instance_.info_.workRange_;
-  const HighsInt* work_devex_index = NULL;  //!< Pointer to
+      workNumTotPermutation = nullptr;  //!< Pointer to ekk_instance_.numTotPermutation();
+  const int8_t* workMove = nullptr;   //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
+  const double* workDual = nullptr;   //!< Pointer to ekk_instance_.info_.workDual_;
+  const double* workRange = nullptr;  //!< Pointer to ekk_instance_.info_.workRange_;
+  const HighsInt* work_devex_index = nullptr;  //!< Pointer to
                                      //!< ekk_instance_.info_.devex_index_;
 
   // Freelist:
@@ -188,7 +188,7 @@ class HEkkDualRow {
   std::vector<std::pair<HighsInt, double>> sorted_workData;
   std::vector<HighsInt> alt_workGroup;
 
-  HighsSimplexAnalysis* analysis = NULL;
+  HighsSimplexAnalysis* analysis = nullptr;
 };
 
 #endif /* SIMPLEX_HEKKDUALROW_H_ */
