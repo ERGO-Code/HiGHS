@@ -34,6 +34,18 @@ Documentation
 
 The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available via https://www.highs.dev.
 
+Download
+--------
+
+Precompiled executables are available for a variety of platforms at https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases
+
+Note that HiGHS is still pre-1.0, so the version numbers in the releases do not match versions of HiGHS in this repository.
+
+For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` file
+
+For Mac users: choose the `x86_64-apple-darwin.tar.gz` file.
+
+
 Compilation
 -----------
 
