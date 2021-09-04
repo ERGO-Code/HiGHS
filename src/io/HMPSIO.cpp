@@ -670,6 +670,21 @@ HighsStatus writeMps(
   // BOUNDS
   //  LO BOUND     CFOOD01           850.
   //
+  // NB d6cube has (eg)
+  // COLUMNS
+  //        1      1                   1.   4                  -1.
+  //        1      5                  -1.   1151                1.
+  // Indexed from 0
+  //           1         2         3         4         5         6
+  // 0123456789012345678901234567890123456789012345678901234567890
+  // x11x22222222xx33333333xx444444444444xxx55555555xx666666666666
+  //
+  // In fixed format the first column name is "      1 ", and its first entry is
+  // in row "1       ".
+  //
+  // The free format reader thought that it had a name of "1      1" containing
+  // spaces.
+
   fprintf(file, "NAME        %s\n", model_name.c_str());
   fprintf(file, "ROWS\n");
   fprintf(file, " N  COST\n");
