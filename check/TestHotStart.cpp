@@ -61,6 +61,9 @@ TEST_CASE("HotStart-avgas", "[highs_test_hot_start]") {
   REQUIRE(highs.setHotStart(hot_start1) == HighsStatus::kOk);
 
   highs.run();
+
+  // Cannot use an invalid hot start
+  REQUIRE(highs.setHotStart(hot_start0) == HighsStatus::kError);
 }
 
 TEST_CASE("HotStart-rgn", "[highs_test_hot_start]") {
@@ -112,4 +115,10 @@ TEST_CASE("HotStart-rgn", "[highs_test_hot_start]") {
   REQUIRE(highs.setHotStart(hot_start) == HighsStatus::kOk);
 
   highs.run();
+
+  // Add a row
+  highs.addRow(kHighsZero, kHighsInf, 0, NULL, NULL);
+
+  // Cannot use the continuous solution as a hot start now
+  REQUIRE(highs.setHotStart(hot_start) == HighsStatus::kError);
 }
