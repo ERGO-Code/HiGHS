@@ -197,7 +197,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "COLUMNS section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
-                 "  section: ignored",
+                 "  section: ignored\n",
                  num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read COLUMNS OK\n");
@@ -227,7 +227,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
         num_alien_entries++;
         highsLogUser(log_options, HighsLogType::kInfo,
                      "RHS     section contains row %-8s not in ROWS    "
-                     "section, line: %s",
+                     "section, line: %s\n",
                      name.c_str(), line);
       }
     } else {
@@ -248,7 +248,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "RHS     section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
-                 "  section: ignored",
+                 "  section: ignored\n",
                  num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RHS     OK\n");
@@ -322,7 +322,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "RANGES  section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
-                 "  section: ignored",
+                 "  section: ignored\n",
                  num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RANGES  OK\n");
@@ -388,7 +388,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "BOUNDS  section entries contain %8" HIGHSINT_FORMAT
                  " with col not in "
-                 "COLUMNS section: ignored",
+                 "COLUMNS section: ignored\n",
                  num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
@@ -513,7 +513,7 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       highsLogUser(options.log_options, HighsLogType::kWarning,
                    "Maximum name length is %" HIGHSINT_FORMAT
                    " so using free format rather "
-                   "than fixed format",
+                   "than fixed format\n",
                    max_name_length);
       use_free_format = true;
       warning_found = true;
@@ -555,7 +555,7 @@ HighsStatus writeMps(
 #endif
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
-    highsLogUser(log_options, HighsLogType::kError, "Cannot open file %s",
+    highsLogUser(log_options, HighsLogType::kError, "Cannot open file %s\n",
                  filename.c_str());
     return HighsStatus::kError;
   }
@@ -570,7 +570,7 @@ HighsStatus writeMps(
     highsLogUser(
         log_options, HighsLogType::kError,
         "Cannot write fixed MPS with names of length (up to) %" HIGHSINT_FORMAT
-        "",
+        "\n",
         max_name_length);
     return HighsStatus::kError;
   }
