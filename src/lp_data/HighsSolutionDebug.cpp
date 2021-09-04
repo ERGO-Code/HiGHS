@@ -182,17 +182,25 @@ void debugReportHighsSolution(const string message,
                               const HighsModelStatus model_status) {
   highsLogDev(log_options, HighsLogType::kInfo, "\nHiGHS solution: %s\n",
               message.c_str());
-  highsLogDev(log_options, HighsLogType::kInfo,
-              "Infeas:                Pr %" HIGHSINT_FORMAT
-              "(Max %.4g, Sum %.4g); Du %" HIGHSINT_FORMAT
-              "(Max %.4g, "
-              "Sum %.4g); Status: %s\n",
-              highs_info.num_primal_infeasibilities,
-              highs_info.max_primal_infeasibility,
-              highs_info.sum_primal_infeasibilities,
-              highs_info.num_dual_infeasibilities,
-              highs_info.max_dual_infeasibility,
-              highs_info.sum_dual_infeasibilities,
+  if (highs_info.num_primal_infeasibilities >= 0 ||
+      highs_info.num_dual_infeasibilities >= 0) {
+    highsLogDev(log_options, HighsLogType::kInfo, "Infeas:                ");
+  }
+  if (highs_info.num_primal_infeasibilities >= 0) {
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Pr %" HIGHSINT_FORMAT "(Max %.4g, Sum %.4g); ",
+                highs_info.num_primal_infeasibilities,
+                highs_info.max_primal_infeasibility,
+                highs_info.sum_primal_infeasibilities);
+  }
+  if (highs_info.num_dual_infeasibilities >= 0) {
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Du %" HIGHSINT_FORMAT "(Max %.4g, Sum %.4g); ",
+                highs_info.num_dual_infeasibilities,
+                highs_info.max_dual_infeasibility,
+                highs_info.sum_dual_infeasibilities);
+  }
+  highsLogDev(log_options, HighsLogType::kInfo, "Status: %s\n",
               utilModelStatusToString(model_status).c_str());
 }
 
@@ -271,90 +279,94 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const bool force_report = options.highs_debug_level >= kHighsDebugLevelCostly;
-  if (primal_dual_errors.num_nonzero_basic_duals) {
-    value_adjective = "Error";
-    report_level = HighsLogType::kError;
-    return_status = HighsDebugStatus::kLogicalError;
-  } else {
-    value_adjective = "";
-    report_level = HighsLogType::kVerbose;
-    return_status = HighsDebugStatus::kOk;
+  if (primal_dual_errors.num_nonzero_basic_duals >= 0) {
+    if (primal_dual_errors.num_nonzero_basic_duals > 0) {
+      value_adjective = "Error";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kLogicalError;
+    } else {
+      value_adjective = "";
+      report_level = HighsLogType::kVerbose;
+      return_status = HighsDebugStatus::kOk;
+    }
+    if (force_report) report_level = HighsLogType::kInfo;
+    highsLogDev(
+        options.log_options, report_level,
+        "PrDuErrors : %-9s Nonzero basic duals:       num = %2" HIGHSINT_FORMAT
+        "; "
+        "max = %9.4g; sum = %9.4g\n",
+        value_adjective.c_str(), primal_dual_errors.num_nonzero_basic_duals,
+        primal_dual_errors.max_nonzero_basic_dual,
+        primal_dual_errors.sum_nonzero_basic_duals);
   }
-  if (force_report) report_level = HighsLogType::kInfo;
-  highsLogDev(
-      options.log_options, report_level,
-      "PrDuErrors : %-9s Nonzero basic duals:       num = %2" HIGHSINT_FORMAT
-      "; "
-      "max = %9.4g; sum = %9.4g\n",
-      value_adjective.c_str(), primal_dual_errors.num_nonzero_basic_duals,
-      primal_dual_errors.max_nonzero_basic_dual,
-      primal_dual_errors.sum_nonzero_basic_duals);
-
-  if (primal_dual_errors.num_off_bound_nonbasic) {
-    value_adjective = "Error";
-    report_level = HighsLogType::kError;
-    return_status = HighsDebugStatus::kLogicalError;
-  } else {
-    value_adjective = "";
-    report_level = HighsLogType::kVerbose;
-    return_status = HighsDebugStatus::kOk;
+  if (primal_dual_errors.num_off_bound_nonbasic >= 0) {
+    if (primal_dual_errors.num_off_bound_nonbasic > 0) {
+      value_adjective = "Error";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kLogicalError;
+    } else {
+      value_adjective = "";
+      report_level = HighsLogType::kVerbose;
+      return_status = HighsDebugStatus::kOk;
+    }
+    if (force_report) report_level = HighsLogType::kInfo;
+    highsLogDev(
+        options.log_options, report_level,
+        "PrDuErrors : %-9s Off-bound nonbasic values: num = %2" HIGHSINT_FORMAT
+        "; "
+        "max = %9.4g; sum = %9.4g\n",
+        value_adjective.c_str(), primal_dual_errors.num_off_bound_nonbasic,
+        primal_dual_errors.max_off_bound_nonbasic,
+        primal_dual_errors.sum_off_bound_nonbasic);
   }
-  if (force_report) report_level = HighsLogType::kInfo;
-  highsLogDev(
-      options.log_options, report_level,
-      "PrDuErrors : %-9s Off-bound nonbasic values: num = %2" HIGHSINT_FORMAT
-      "; "
-      "max = %9.4g; sum = %9.4g\n",
-      value_adjective.c_str(), primal_dual_errors.num_off_bound_nonbasic,
-      primal_dual_errors.max_off_bound_nonbasic,
-      primal_dual_errors.sum_off_bound_nonbasic);
-
-  if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
-    value_adjective = "Excessive";
-    report_level = HighsLogType::kError;
-    return_status = HighsDebugStatus::kError;
-  } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
-    value_adjective = "Large";
-    report_level = HighsLogType::kDetailed;
-    return_status = HighsDebugStatus::kWarning;
-  } else {
-    value_adjective = "";
-    report_level = HighsLogType::kVerbose;
-    return_status = HighsDebugStatus::kOk;
+  if (primal_dual_errors.num_primal_residual >= 0) {
+    if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
+      value_adjective = "Excessive";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kError;
+    } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
+      value_adjective = "Large";
+      report_level = HighsLogType::kDetailed;
+      return_status = HighsDebugStatus::kWarning;
+    } else {
+      value_adjective = "";
+      report_level = HighsLogType::kVerbose;
+      return_status = HighsDebugStatus::kOk;
+    }
+    if (force_report) report_level = HighsLogType::kInfo;
+    highsLogDev(
+        options.log_options, report_level,
+        "PrDuErrors : %-9s Primal residual:           num = %2" HIGHSINT_FORMAT
+        "; "
+        "max = %9.4g; sum = %9.4g\n",
+        value_adjective.c_str(), primal_dual_errors.num_primal_residual,
+        primal_dual_errors.max_primal_residual,
+        primal_dual_errors.sum_primal_residual);
   }
-  if (force_report) report_level = HighsLogType::kInfo;
-  highsLogDev(
-      options.log_options, report_level,
-      "PrDuErrors : %-9s Primal residual:           num = %2" HIGHSINT_FORMAT
-      "; "
-      "max = %9.4g; sum = %9.4g\n",
-      value_adjective.c_str(), primal_dual_errors.num_primal_residual,
-      primal_dual_errors.max_primal_residual,
-      primal_dual_errors.sum_primal_residual);
-
-  if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
-    value_adjective = "Excessive";
-    report_level = HighsLogType::kError;
-    return_status = HighsDebugStatus::kError;
-  } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
-    value_adjective = "Large";
-    report_level = HighsLogType::kDetailed;
-    return_status = HighsDebugStatus::kWarning;
-  } else {
-    value_adjective = "";
-    report_level = HighsLogType::kVerbose;
-    return_status = HighsDebugStatus::kOk;
+  if (primal_dual_errors.num_dual_residual >= 0) {
+    if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
+      value_adjective = "Excessive";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kError;
+    } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
+      value_adjective = "Large";
+      report_level = HighsLogType::kDetailed;
+      return_status = HighsDebugStatus::kWarning;
+    } else {
+      value_adjective = "";
+      report_level = HighsLogType::kVerbose;
+      return_status = HighsDebugStatus::kOk;
+    }
+    if (force_report) report_level = HighsLogType::kInfo;
+    highsLogDev(
+        options.log_options, report_level,
+        "PrDuErrors : %-9s Dual residual:             num = %2" HIGHSINT_FORMAT
+        "; "
+        "max = %9.4g; sum = %9.4g\n",
+        value_adjective.c_str(), primal_dual_errors.num_dual_residual,
+        primal_dual_errors.max_dual_residual,
+        primal_dual_errors.sum_dual_residual);
   }
-  if (force_report) report_level = HighsLogType::kInfo;
-  highsLogDev(
-      options.log_options, report_level,
-      "PrDuErrors : %-9s Dual residual:             num = %2" HIGHSINT_FORMAT
-      "; "
-      "max = %9.4g; sum = %9.4g\n",
-      value_adjective.c_str(), primal_dual_errors.num_dual_residual,
-      primal_dual_errors.max_dual_residual,
-      primal_dual_errors.sum_dual_residual);
-
   return return_status;
 }
 

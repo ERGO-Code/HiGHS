@@ -1286,6 +1286,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
     assert(move != kIllegalMoveValue);
     nonbasicMove[num_col + iRow] = move;
   }
+  basis_.valid = true;
   ekk_instance_.status_.has_basis = true;
   ekk_instance_.setNlaRefactorInfo();
   ekk_instance_.updateStatus(LpAction::kHotStart);

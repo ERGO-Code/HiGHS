@@ -71,7 +71,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   highs.run();
   // highs.setOptionValue("output_flag", false);
 
-  // Now freeze the current basis and add the integer solution as upper bounds
+  // Now freeze the current basis and add the integer solution as lower bounds
   HighsInt frozen_basis_id1;
   REQUIRE(highs.freezeBasis(frozen_basis_id1) == HighsStatus::kOk);
   if (dev_run) printf("\nSolving with bounds (integer solution, upper)\n");
@@ -84,10 +84,11 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   // highs.setOptionValue("output_flag", false);
   double semi_continuous_objective = info.objective_function_value;
 
-  // Now freeze the current basis and add the integer solution as lower bounds
+  // Now freeze the current basis and add the integer solution as upper bounds
   HighsInt frozen_basis_id2;
   REQUIRE(highs.freezeBasis(frozen_basis_id2) == HighsStatus::kOk);
-  if (dev_run) printf("\nSolving with bounds (lower, integer solution)\n");
+  if (dev_run)
+    printf("\nSolving with bounds (integer solution, integer solution)\n");
   local_col_lower = integer_solution;
   local_col_upper = integer_solution;
   highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
