@@ -590,18 +590,40 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
       continue;
     }
-
-    // Detect if file is in fixed format.
+    // Detect whether the file is in fixed format with spaces in
+    // names, even if there are no known examples!
+    //
     // end_marker should be the end index of the row name:
-    // more than 13 minus the 4 whitespaces we have trimmed from the start so
-    // more than 9
+    //
+    // If the names are at least 8 characters, end_marker should be
+    // more than 13 minus the 4 whitespaces we have trimmed from the
+    // start so more than 9
+    //
+    // However, free format MPS can have names with only one character
+    // (pyomo.mps). Have to distinguish this from 8-character names
+    // with spaaces. Best bet is to see whether "marker" is in the set
+    // of row names. If it is, then assume that the names are short
     if (end_marker < 9) {
-      std::string name = strline.substr(0, 10);
-      name = trim(name);
-      if (name.size() > 8)
-        return HMpsFF::Parsekey::kFail;
-      else
-        return HMpsFF::Parsekey::kFixedFormat;
+      auto mit = rowname2idx.find(marker);
+      if (mit == rowname2idx.end()) {
+        // marker is not a row name, so continue to look at name
+        std::string name = strline.substr(0, 10);
+        // Delete trailing spaces
+        name = trim(name);
+        if (name.size() > 8) {
+          highsLogUser(log_options, HighsLogType::kError,
+                       "Row name |%s| with spaces exceeds fixed format name "
+                       "length of 8\n",
+                       name.c_str());
+          return HMpsFF::Parsekey::kFail;
+        } else {
+          highsLogUser(log_options, HighsLogType::kWarning,
+                       "Row name |%s| with spaces has length %1d, so assume "
+                       "fixed format\n",
+                       name.c_str(), (int)name.size());
+          return HMpsFF::Parsekey::kFixedFormat;
+        }
+      }
     }
 
     // new column?

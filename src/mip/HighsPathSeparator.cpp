@@ -171,7 +171,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<HighsInt> baseRowInds;
   std::vector<double> baseRowVals;
   const HighsInt maxPathLen = 6;
-
+  std::vector<std::pair<std::vector<HighsInt>, std::vector<double>>>
+      aggregatedPath;
   for (HighsInt i = 0; i != lp.num_row_; ++i) {
     switch (rowtype[i]) {
       case RowType::kUnusuable:
@@ -191,6 +192,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       w = std::abs(w);
       return w <= maxWeight && w >= minWeight;
     };
+
+    aggregatedPath.clear();
 
     while (currPathLen != maxPathLen) {
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
@@ -246,6 +249,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       bool success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
+      if (!aggregatedPath.empty() || bestOutArcCol != -1 || bestInArcCol != -1)
+        aggregatedPath.emplace_back(baseRowInds, baseRowVals);
       rhs = 0;
 
       success =
@@ -322,6 +327,169 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         }
 
         lpAggregator.addRow(row, weight);
+      }
+    }
+
+    // if the path has length at least 2 try to separate a path mixing cut
+    HighsInt pathLen = aggregatedPath.size();
+    if (pathLen > 1) {
+      // generate path mixing cut
+      HighsHashTable<HighsInt, HighsInt> indexPos;
+
+      std::vector<HighsInt> inds;
+      std::vector<double> solval;
+      std::vector<double> upper;
+      std::vector<uint8_t> isIntegral;
+      inds.reserve(lp.num_col_ + lp.num_row_);
+      solval.reserve(lp.num_col_ + lp.num_row_);
+      upper.reserve(lp.num_col_ + lp.num_row_);
+      isIntegral.reserve(lp.num_col_ + lp.num_row_);
+
+      std::vector<double> rhs(pathLen);
+      std::vector<double> tmpUpper;
+      std::vector<double> tmpSolval;
+
+      double delta = 1.0;
+
+      for (HighsInt k = 0; k < pathLen; ++k) {
+        bool integralPositive = false;
+
+        if (!transLp.transform(aggregatedPath[k].second, tmpUpper, tmpSolval,
+                               aggregatedPath[k].first, rhs[k],
+                               integralPositive)) {
+          pathLen = k;
+          break;
+        }
+
+        if (rhs[k] > kHighsTiny ||
+            (k > 0 && rhs[k - 1] <= rhs[k] + mip.mipdata_->feastol)) {
+          pathLen = k;
+          break;
+        }
+        rhs[k] = std::min(0., rhs[k]);
+        delta = std::max(std::abs(rhs[k]), delta);
+
+        HighsInt len = aggregatedPath[k].first.size();
+        for (HighsInt j = 0; j < len; ++j) {
+          HighsInt index = aggregatedPath[k].first[j];
+          HighsInt* pos = &indexPos[index];
+          if (*pos == 0) {
+            inds.push_back(index);
+            solval.push_back(tmpSolval[j]);
+            upper.push_back(tmpUpper[j]);
+            isIntegral.push_back(lpRelaxation.isColIntegral(index));
+            if (isIntegral.back())
+              delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
+            *pos = inds.size();
+          } else {
+            assert(inds[*pos - 1] == index);
+            assert(solval[*pos - 1] == tmpSolval[j]);
+            assert(upper[*pos - 1] == tmpUpper[j]);
+            if (isIntegral[*pos - 1])
+              delta = std::max(std::abs(aggregatedPath[k].second[j]), delta);
+          }
+        }
+      }
+
+      if (pathLen > 1) {
+        delta = std::exp2(std::ceil(std::log2(delta + 1.0)));
+
+        HighsInt numInds = inds.size();
+
+        std::vector<double> valueMatrix;
+        valueMatrix.resize(pathLen * numInds, 0.0);
+
+        HighsCDouble cutRhs = 0.0;
+        std::vector<double> cutVals(numInds);
+        std::vector<double> maxFrac(numInds);
+        std::vector<HighsCDouble> downSum(numInds);
+        std::vector<HighsCDouble> fSum(numInds);
+
+        double fLast = 0;
+        double scale = -1.0 / delta;
+
+        for (HighsInt k = 0; k < pathLen; ++k) {
+          double f = rhs[k] * scale;
+          HighsCDouble fDiff = HighsCDouble(f) - fLast;
+          HighsInt len = aggregatedPath[k].first.size();
+          cutRhs += fDiff;
+          for (HighsInt j = 0; j < len; ++j) {
+            HighsInt i = indexPos[aggregatedPath[k].first[j]] - 1;
+            assert(i >= 0);
+
+            double gj = aggregatedPath[k].second[j] * scale;
+
+            switch (isIntegral[i]) {
+              case 0:
+                cutVals[i] = std::max(cutVals[i], gj);
+                break;
+              case 1: {
+                double gjdown = std::floor(gj);
+                double hj = gj - gjdown;
+                maxFrac[i] = std::max(maxFrac[i], hj);
+                downSum[i] += fDiff * gjdown;
+                fSum[i] += fDiff;
+
+                if (fSum[i] < maxFrac[i]) {
+                  cutVals[i] = double(downSum[i] + fSum[i]);
+                } else {
+                  cutVals[i] = double(downSum[i] + maxFrac[i]);
+                }
+                break;
+              }
+            }
+          }
+
+          if (k > 0) {
+            double viol = double(cutRhs);
+            for (HighsInt j = 0; j < numInds; ++j) {
+              viol -= solval[j] * cutVals[j];
+            }
+
+            viol *= delta;
+
+            if (viol > 10 * mip.mipdata_->feastol) {
+              scale = -delta;
+              double rhs = double(cutRhs) * scale;
+              for (HighsInt j = 0; j < numInds; ++j) {
+                cutVals[j] *= scale;
+              }
+
+              for (HighsInt j = numInds - 1; j >= 0; --j) {
+                if (std::abs(cutVals[j]) <= mip.mipdata_->epsilon) {
+                  --numInds;
+                  std::swap(cutVals[j], cutVals[numInds]);
+                  std::swap(inds[j], inds[numInds]);
+                }
+              }
+
+              cutVals.resize(numInds);
+              inds.resize(numInds);
+
+              if (transLp.untransform(cutVals, inds, rhs)) {
+                HighsInt cutLen = inds.size();
+                mip.mipdata_->debugSolution.checkCut(
+                    inds.data(), cutVals.data(), cutLen, rhs);
+
+                // compute violation in untransformed space again
+                double viol = -rhs;
+                for (HighsInt j = 0; j < cutLen; ++j)
+                  viol += cutVals[j] *
+                          lpRelaxation.getSolution().col_value[inds[j]];
+
+                if (viol > 10 * mip.mipdata_->feastol) {
+                  mip.mipdata_->domain.tightenCoefficients(
+                      inds.data(), cutVals.data(), cutLen, rhs);
+                  cutpool.addCut(mip, inds.data(), cutVals.data(), inds.size(),
+                                 rhs);
+                }
+              }
+              // printf("cut is violated for k = %d\n", k);
+              break;
+            }
+          }
+          fLast = f;
+        }
       }
     }
 
