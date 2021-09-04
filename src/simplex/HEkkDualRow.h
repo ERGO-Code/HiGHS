@@ -151,29 +151,33 @@ class HEkkDualRow {
 
   HighsInt workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it
                            //!< here to avoid compiler warning
-  const HighsInt*
-      workNumTotPermutation = nullptr;  //!< Pointer to ekk_instance_.numTotPermutation();
-  const int8_t* workMove = nullptr;   //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
-  const double* workDual = nullptr;   //!< Pointer to ekk_instance_.info_.workDual_;
-  const double* workRange = nullptr;  //!< Pointer to ekk_instance_.info_.workRange_;
-  const HighsInt* work_devex_index = nullptr;  //!< Pointer to
-                                     //!< ekk_instance_.info_.devex_index_;
+  const HighsInt* workNumTotPermutation =
+      nullptr;  //!< Pointer to ekk_instance_.numTotPermutation();
+  const int8_t* workMove =
+      nullptr;  //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
+  const double* workDual =
+      nullptr;  //!< Pointer to ekk_instance_.info_.workDual_;
+  const double* workRange =
+      nullptr;  //!< Pointer to ekk_instance_.info_.workRange_;
+  const HighsInt* work_devex_index =
+      nullptr;  //!< Pointer to
+                //!< ekk_instance_.info_.devex_index_;
 
   // Freelist:
   std::set<HighsInt> freeList;  //!< Freelist itself
 
   // packed data:
-  HighsInt packCount = 0;               //!< number of packed indices/values
+  HighsInt packCount = 0;           //!< number of packed indices/values
   std::vector<HighsInt> packIndex;  //!< Packed indices
   std::vector<double> packValue;    //!< Packed values
 
   // (Local) value of computed weight
   double computed_edge_weight = 0.;
 
-  double workDelta = 0.;    //!< Local copy of dual.delta_primal
-  double workAlpha = 0.;    //!< Original copy of pivotal computed row-wise
-  double workTheta = 0.;    //!< Original copy of dual step workDual[workPivot] /
-                       //!< workAlpha;
+  double workDelta = 0.;   //!< Local copy of dual.delta_primal
+  double workAlpha = 0.;   //!< Original copy of pivotal computed row-wise
+  double workTheta = 0.;   //!< Original copy of dual step workDual[workPivot] /
+                           //!< workAlpha;
   HighsInt workPivot = 0;  //!< Index of the column entering the basis
   HighsInt workCount = 0;  //!< Number of BFRT flips
 
