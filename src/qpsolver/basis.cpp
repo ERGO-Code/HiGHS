@@ -8,6 +8,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
     : runtime(rt),
       buffer_column_aq(rt.instance.num_var),
       buffer_row_ep(rt.instance.num_var) {
+  buffer_vec2hvec.setup(rt.instance.num_var);
   for (HighsInt i = 0; i < active.size(); i++) {
     activeconstraintidx.push_back(active[i]);
     basisstatus[activeconstraintidx[i]] = lower[i];
