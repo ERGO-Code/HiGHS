@@ -40,6 +40,7 @@ void HEkk::clear() {
   // Clears Ekk entirely. Clears all associated pointers, data scalars
   // and vectors, and the status values.
   this->clearEkkLp();
+  this->clearEkkDualise();
   this->clearEkkData();
   this->clearEkkPointers();
   this->clearSimplexBasis(this->basis_);
@@ -94,6 +95,16 @@ void HEkk::clearEkkPointers() {
 void HEkk::clearEkkLp() {
   this->lp_.clear();
   lp_name_ = "";
+}
+
+void HEkk::clearEkkDualise() {
+  this->original_col_cost_.clear();
+  this->original_col_lower_.clear();
+  this->original_col_upper_.clear();
+  this->original_row_lower_.clear();
+  this->original_row_upper_.clear();
+  this->upper_bound_col_.clear();
+  this->upper_bound_row_.clear();
 }
 
 void HEkk::clearEkkData() {
@@ -604,19 +615,21 @@ HighsStatus HEkk::dualise() {
   assert((int)upper_bound_col_.size()==0);
   assert((int)upper_bound_row_.size()==0);
   assert((int)primal_bound_index.size()==0);
-  // Over-write the LP constraint matrix with a col-wise copy of
-  // dual_matrix
+  // Copy the row-wise dual LP constraint matrix and transpose it.
+  // ToDo Make this more efficient
   lp_.a_matrix_ = dual_matrix;
   lp_.a_matrix_.ensureColwise();
   // Incorporate the cost shift
 
   // Compute the objective offset
-  // Flip the scale factors
-  std::vector<double> temp_scale = lp_.scale_.row;
-  lp_.scale_.row = lp_.scale_.col;
-  lp_.scale_.col = temp_scale;
-  lp_.scale_.num_col = dual_num_col;
-  lp_.scale_.num_row = dual_num_row;
+  // Flip any scale factors
+  if (lp_.scale_.has_scaling) {
+    std::vector<double> temp_scale = lp_.scale_.row;
+    lp_.scale_.row = lp_.scale_.col;
+    lp_.scale_.col = temp_scale;
+    lp_.scale_.num_col = dual_num_col;
+    lp_.scale_.num_row = dual_num_row;
+  }
   // Change optimzation sense
   if (lp_.sense_ == ObjSense::kMinimize) {
     lp_.sense_ = ObjSense::kMaximize;
@@ -634,26 +647,9 @@ HighsStatus HEkk::dualise() {
 
 HighsStatus HEkk::undualise() {
   if (!this->status_.is_dualised) return HighsStatus::kOk;
-  
-  // The primal constraint matrix is available row-wise as the first
-  // original_num_row_ vectors of the dual constratint matrix
-  HighsSparseMatrix primal_matrix;
-  primal_matrix.start_.resize(original_num_row_+1);
-  primal_matrix.index_.resize(original_num_nz_);
-  primal_matrix.value_.resize(original_num_nz_);
-  
-  for (HighsInt iCol=0; iCol<original_num_row_; iCol++)
-    primal_matrix.start_[iCol] = lp_.a_matrix_.start_[iCol];
-  for (HighsInt iEl=0; iEl<original_num_nz_; iEl++) {
-    primal_matrix.index_[iEl] = lp_.a_matrix_.index_[iEl];
-    primal_matrix.value_[iEl] = lp_.a_matrix_.value_[iEl];
-  }
-  primal_matrix.num_col_ = original_num_row_;
-  primal_matrix.num_row_ = original_num_col_;
-  primal_matrix.format_ = MatrixFormat::kRowwise;
-  HighsInt dual_num_col_ = lp_.num_col_;
-  HighsInt dual_num_row_ = lp_.num_row_;
+  HighsInt dual_num_col = lp_.num_col_;
   HighsInt primal_num_tot = original_num_col_ + original_num_row_;
+  // These two aren't used (yet)
   vector<double>& dual_work_dual = info_.workDual_;
   vector<double>& primal_work_value = info_.workValue_;
   // Take copies of the nonbasic information for the dual LP, since
@@ -673,16 +669,13 @@ HighsStatus HEkk::undualise() {
     const double lower = original_col_lower_[iCol];
     const double upper = original_col_upper_[iCol];
     HighsInt move = kIllegalMoveValue;
-    double value = inf;
-    HighsInt dual_variable = dual_num_col_ + iCol;
+    HighsInt dual_variable = dual_num_col + iCol;
     bool dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
     if (lower == upper) {
       // Shouldn't get fixed variables, but handle them anyway
       assert(-1==0);
       if (dual_basic) {
 	move = kNonbasicMoveZe;
-	value = dual_work_dual[dual_variable];
-	assert(value==lower);
       }
     } else if (!highs_isInfinity(-lower)) {
       // Finite lower bound so boxed or lower
@@ -695,9 +688,7 @@ HighsStatus HEkk::undualise() {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) {
 	  move = kNonbasicMoveUp;
-	  value = dual_work_dual[dual_variable];
 	}
-	assert(2==0);
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
@@ -712,10 +703,8 @@ HighsStatus HEkk::undualise() {
     if (dual_basic) {
       // Primal nonbasic column from basic dual row
       assert(move != kIllegalMoveValue);
-      assert(value < inf);
       primal_nonbasic_flag[iCol] = kNonbasicFlagTrue;
       primal_nonbasic_move[iCol] = move;
-      primal_work_value[iCol] = value;
     } else {
       // Primal basic column from nonbasic dual row
       primal_basic_index.push_back(iCol);
@@ -727,7 +716,6 @@ HighsStatus HEkk::undualise() {
     double lower = original_row_lower_[iRow];
     double upper = original_row_upper_[iRow];
     HighsInt move = kIllegalMoveValue;
-    double value = inf;
     HighsInt dual_variable = iRow;
     bool dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
     if (lower == upper) {
@@ -746,9 +734,7 @@ HighsStatus HEkk::undualise() {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) {
 	  move = kNonbasicMoveUp;
-	  value = dual_work_dual[dual_variable];
 	}
-	assert(21==0);
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
@@ -761,10 +747,8 @@ HighsStatus HEkk::undualise() {
     if (dual_basic) {
       // Primal nonbasic column from basic dual row
       assert(move != kIllegalMoveValue);
-      assert(value < inf);
       primal_nonbasic_flag[original_num_col_+iRow] = kNonbasicFlagTrue;
       primal_nonbasic_move[original_num_col_+iRow] = move;
-      primal_work_value[original_num_col_+iRow] = value;
     } else {
       // Primal basic column from nonbasic dual row
       primal_basic_index.push_back(original_num_col_+iRow);
@@ -772,11 +756,61 @@ HighsStatus HEkk::undualise() {
       primal_nonbasic_move[original_num_col_+iRow] = 0;
     }
   }
-  info_.workDual_.resize(primal_num_tot);
-  info_.workValue_.resize(primal_num_tot);
-  info_.baseValue_.resize(original_num_row_);
-  assert(1==0);
-  return HighsStatus::kError;
+  // Flip any scale factors
+  if (lp_.scale_.has_scaling) {
+    std::vector<double> temp_scale = lp_.scale_.row;
+    lp_.scale_.row = lp_.scale_.col;
+    lp_.scale_.col = temp_scale;
+    lp_.scale_.col.resize(original_num_col_);
+    lp_.scale_.row.resize(original_num_row_);
+    lp_.scale_.num_col = original_num_col_;
+    lp_.scale_.num_row = original_num_row_;
+  }
+  // Change optimzation sense
+  if (lp_.sense_ == ObjSense::kMinimize) {
+    lp_.sense_ = ObjSense::kMaximize;
+  } else {
+    lp_.sense_ = ObjSense::kMinimize;
+  }
+  // Flip LP dimensions
+  lp_.num_col_ = original_num_col_;
+  lp_.num_row_ = original_num_row_;
+  // Copy back the costs and bounds
+  lp_.col_cost_ = original_col_cost_;
+  lp_.col_lower_ = original_col_lower_;
+  lp_.col_upper_ = original_col_upper_;
+  lp_.row_lower_ = original_row_lower_;
+  lp_.row_upper_ = original_row_upper_;
+  // The primal constraint matrix is available row-wise as the first
+  // original_num_row_ vectors of the dual constratint matrix
+  HighsSparseMatrix primal_matrix;
+  primal_matrix.start_.resize(original_num_row_+1);
+  primal_matrix.index_.resize(original_num_nz_);
+  primal_matrix.value_.resize(original_num_nz_);
+  
+  for (HighsInt iCol=0; iCol<original_num_row_+1; iCol++)
+    primal_matrix.start_[iCol] = lp_.a_matrix_.start_[iCol];
+  for (HighsInt iEl=0; iEl<original_num_nz_; iEl++) {
+    primal_matrix.index_[iEl] = lp_.a_matrix_.index_[iEl];
+    primal_matrix.value_[iEl] = lp_.a_matrix_.value_[iEl];
+  }
+  primal_matrix.num_col_ = original_num_col_;
+  primal_matrix.num_row_ = original_num_row_;
+  primal_matrix.format_ = MatrixFormat::kRowwise;
+  // Copy the row-wise primal LP constraint matrix and transpose it.
+  // ToDo Make this more efficient
+  lp_.a_matrix_ = primal_matrix;
+  lp_.a_matrix_.ensureColwise();
+  // Clear the data retained when solving dual LP
+  clearEkkDualise();
+  status_.is_dualised = false;
+  // Now solve with this basis. Should just be a case of reinverting
+  // and re-solving for optimal primal and dual values, but
+  // numerically marginal LPs will need clean-up
+  status_.has_basis = true;
+  status_.has_nla = false;
+  status_.has_invert = false;
+  return solve();
 }
 
 HighsStatus HEkk::permute() {

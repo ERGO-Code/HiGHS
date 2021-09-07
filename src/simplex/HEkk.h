@@ -32,6 +32,7 @@ class HEkk {
   void clear();
   void clearEkkLp();
   void clearEkkData();
+  void clearEkkDualise();
   void clearEkkPointers();
   void clearEkkDataInfo();
   void clearEkkControlInfo();
