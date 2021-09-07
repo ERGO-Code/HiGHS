@@ -630,14 +630,17 @@ void HEkkDual::solvePhase1() {
       // the final clean-up
       solve_phase = kSolvePhase2;
     } else {
-      // A negative dual objective value at an optimal solution of
-      // phase 1 means that there are dual infeasibilities. If the
+      // A nonzero dual objective value at an optimal solution of
+      // phase 1 means that there may be dual infeasibilities. If the
       // objective value is very negative, then it's clear
-      // enough. However, if it's small, it could be the sum of
-      // values, all of which are smaller than the dual deasibility
-      // tolerance. Plus there may be cost perturbations to remove
-      // before reliable conclusions on dual infeasibility of the
-      // (scaled) LP being solved can be drawn.
+      // enough. However, if it's small in magnitude, it could be the
+      // sum of values, all of which are smaller than the dual
+      // feasibility tolerance. Plus there may be cost perturbations
+      // to remove before reliable conclusions on dual infeasibility
+      // of the (scaled) LP being solved can be drawn.
+      //
+      // If assessPhase1Optimality() is happy that there are no dual
+      // infeasibilities, it will set solve_phase = kSolvePhase2;
       assessPhase1Optimality();
     }
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
@@ -1979,31 +1982,17 @@ void HEkkDual::assessPhase1Optimality() {
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
   bool& costs_perturbed = info.costs_perturbed;
-  //
-  // We still have dual infeasibilities, so clean up any perturbations
+  // There are (possibly insignificant) LP dual infeasibilities that
+  // can't be removed by dual Phase 1, so clean up any perturbations
   // before concluding dual infeasibility
   //
-  // Interesting for Devs to know if this method is called at all,
-  // particularly if the dual objective is positive
-  HighsLogType log_type;
-  if (dual_objective_value > 0) {
-    log_type = HighsLogType::kWarning;
-  } else {
-    log_type = HighsLogType::kInfo;
-  }
-  highsLogDev(ekk_instance_.options_->log_options, log_type,
+  // Interesting for Devs to know if this method is called at all
+  highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
               "Optimal in phase 1 but not jumping to phase 2 since "
               "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
-              "\n",
-              dual_objective_value, ekk_instance_.info_.costs_perturbed);
-  if (dual_objective_value > 0) {
-    // Can this happen, and what does it mean?
-    // todo@Julian: It seems it can happen, this popped up on rocI-4-11
-    fflush(stdout);
-    assert(dual_objective_value < 0);
-  }
-
-  if (ekk_instance_.info_.costs_perturbed) {
+	      "\n",
+              dual_objective_value, info.costs_perturbed);
+  if (info.costs_perturbed) {
     // Clean up perturbation
     cleanup();
     assessPhase1OptimalityUnperturbed();
@@ -2043,28 +2032,25 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
       // go to phase 2
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "LP is dual feasible wrt Phase 2 bounds after removing cost "
-                  "perturbations "
-                  "so go to phase 2\n");
+                  "perturbations so go to phase 2\n");
       solve_phase = kSolvePhase2;
     } else {
-      // Nonzero dual objective value
-      HighsLogType log_type;
-      if (dual_objective_value > 0) {
-        log_type = HighsLogType::kWarning;
-      } else {
-        log_type = HighsLogType::kInfo;
-      }
-      highsLogDev(ekk_instance_.options_->log_options, log_type,
+      // Nonzero dual objective value: could be insignificant dual infeasibilities
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "LP is dual feasible wrt Phase 1 bounds after removing cost "
                   "perturbations: "
                   "dual objective is %10.4g\n",
                   dual_objective_value);
-      if (dual_objective_value > 0) {
-        // This hasn't been considered in the code before, but could it happen
-        // and what does it mean?
-        assert(dual_objective_value < 0);
+      ekk_instance_.computeSimplexLpDualInfeasible();
+      const HighsInt num_lp_dual_infeasibilities =
+	ekk_instance_.analysis_.num_dual_phase_1_lp_dual_infeasibility;
+      if (num_lp_dual_infeasibilities == 0) {
+	highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                  "LP is dual feasible wrt Phase 2 bounds after removing cost "
+                  "perturbations so go to phase 2\n");
+	solve_phase = kSolvePhase2;
       } else {
-        // LP is dual infeasible if the dual objective is sufficiently
+	// LP is dual infeasible if the dual objective is sufficiently
         // negative, so no conclusions on the primal LP can be deduced
         // - could be primal unbounded or primal infeasible.
         //
