@@ -494,8 +494,7 @@ HighsStatus HEkk::dualise() {
     double row_lower = inf;
     double row_upper = -inf;
     if (lower == upper) {
-      // Shouldn't get fixed variables, but handle them anyway
-      assert(-1==0);
+      // Fixed
       primal_bound = lower;
       // Dual activity a^Ty is free, implying dual for primal column
       // (slack for dual row) is free
@@ -535,7 +534,7 @@ HighsStatus HEkk::dualise() {
       //
       // Dual activity a^Ty is fixed by cost, implying dual for primal
       // column (slack for dual row) is fixed at zero
-      assert(4==0);
+      primal_bound = 0;
       row_lower = cost;
       row_upper = cost;
     }
@@ -587,7 +586,6 @@ HighsStatus HEkk::dualise() {
       col_upper = 0;
     } else {
       // FREE
-      assert(14==0);
       // Shouldn't get free rows, but handle them anyway
       col_cost = 0;
       col_lower = 0;
@@ -686,11 +684,8 @@ HighsStatus HEkk::undualise() {
     HighsInt dual_variable = dual_num_col + iCol;
     bool dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
     if (lower == upper) {
-      // Shouldn't get fixed variables, but handle them anyway
-      assert(-1==0);
-      if (dual_basic) {
-	move = kNonbasicMoveZe;
-      }
+      // Fixed
+      if (dual_basic) move = kNonbasicMoveZe;
     } else if (!highs_isInfinity(-lower)) {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
@@ -700,21 +695,20 @@ HighsStatus HEkk::undualise() {
 	assert(1==0);
       } else {
 	// Lower (since upper bound is infinite)
-	if (dual_basic) {
-	  move = kNonbasicMoveUp;
-	}
+	if (dual_basic) move = kNonbasicMoveUp;
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
-      if (dual_basic) {
-	move = kNonbasicMoveDn;
-      }
+      if (dual_basic) move = kNonbasicMoveDn;
     } else {
       // FREE
       //
       // Dual activity a^Ty is fixed by cost, implying dual for primal
       // column (slack for dual row) is fixed at zero
-      assert(4==0);
+      if (dual_basic) {
+	assert(4==0);
+	move = kNonbasicMoveZe;
+      }
     }
     if (dual_basic) {
       // Primal nonbasic column from basic dual row
@@ -761,7 +755,10 @@ HighsStatus HEkk::undualise() {
       }
     } else {
       // FREE
-      assert(14==0);
+      if (dual_basic) {
+	assert(14==0);
+	move = kNonbasicMoveZe;
+      }
       // Shouldn't get free rows, but handle them anyway
     }
     if (dual_basic) {
