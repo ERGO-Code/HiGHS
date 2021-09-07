@@ -71,7 +71,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   double expected_density = 1;
 
   const bool random_ftran_test = true;
-  const bool report_basis = num_row < 20;
+  const bool report_basis = options->log_dev_level > 1 && num_row < 20;
   if (random_ftran_test) {
     // Solve for a random solution
     HighsRandom random(1);
@@ -336,45 +336,47 @@ HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   std::string type = "";
   if (transposed) type = "transposed ";
-  //  if (solve_error_norm) {
-  if (solve_error_norm > kSolveExcessiveError) {
-    value_adjective = "Excessive";
-    report_level = HighsLogType::kError;
-  } else if (solve_error_norm > kSolveLargeError) {
-    value_adjective = "Large";
-    report_level = HighsLogType::kWarning;
-  } else {
-    value_adjective = "Small";
+  if (solve_error_norm) {
+    if (solve_error_norm > kSolveExcessiveError) {
+      value_adjective = "Excessive";
+      report_level = HighsLogType::kError;
+    } else if (solve_error_norm > kSolveLargeError) {
+      value_adjective = "Large";
+      report_level = HighsLogType::kWarning;
+    } else {
+      value_adjective = "Small";
+      report_level = HighsLogType::kInfo;
+    }
+    if (force) report_level = HighsLogType::kInfo;
+    //    printf("%s\n", value_adjective.c_str());
+    //    printf("%g\n", solve_error_norm);
+    //    printf("%s\n", type.c_str());
+    //    printf("%s\n", source.c_str());
+    highsLogDev(options->log_options, report_level,
+		"CheckINVERT:   %-9s (%9.4g) norm for %s%s solve error\n",
+		value_adjective.c_str(), solve_error_norm, type.c_str(),
+		source.c_str());
   }
-  if (force) report_level = HighsLogType::kInfo;
-  //    printf("%s\n", value_adjective.c_str());
-  //    printf("%g\n", solve_error_norm);
-  //    printf("%s\n", type.c_str());
-  //    printf("%s\n", source.c_str());
-  highsLogDev(options->log_options, report_level,
-              "CheckINVERT:   %-9s (%9.4g) norm for %s%s solve error\n",
-              value_adjective.c_str(), solve_error_norm, type.c_str(),
-              source.c_str());
-  //  }
 
-  //  if (residual_error_norm) {
-  if (residual_error_norm > kResidualExcessiveError) {
-    value_adjective = "Excessive";
-    report_level = HighsLogType::kError;
-    return_status = HighsDebugStatus::kError;
-  } else if (residual_error_norm > kResidualLargeError) {
-    value_adjective = "Large";
-    report_level = HighsLogType::kWarning;
-    return_status = HighsDebugStatus::kWarning;
-  } else {
-    value_adjective = "Small";
+  if (residual_error_norm) {
+    if (residual_error_norm > kResidualExcessiveError) {
+      value_adjective = "Excessive";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kError;
+    } else if (residual_error_norm > kResidualLargeError) {
+      value_adjective = "Large";
+      report_level = HighsLogType::kWarning;
+      return_status = HighsDebugStatus::kWarning;
+    } else {
+      value_adjective = "Small";
+      report_level = HighsLogType::kInfo;
+    }
+    if (force) report_level = HighsLogType::kInfo;
+    highsLogDev(options->log_options, report_level,
+		"CheckINVERT:   %-9s (%9.4g) norm for %s%s "
+		"residual error\n",
+		value_adjective.c_str(), residual_error_norm, type.c_str(),
+		source.c_str());
   }
-  if (force) report_level = HighsLogType::kInfo;
-  highsLogDev(options->log_options, report_level,
-              "CheckINVERT:   %-9s (%9.4g) norm for %s%s "
-              "residual error\n",
-              value_adjective.c_str(), residual_error_norm, type.c_str(),
-              source.c_str());
-  //  }
   return return_status;
 }

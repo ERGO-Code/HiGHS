@@ -452,6 +452,7 @@ HighsStatus HEkk::dualise() {
   original_num_col_ = lp_.num_col_;
   original_num_row_ = lp_.num_row_;
   original_num_nz_ = lp_.a_matrix_.numNz();
+  original_offset_ = lp_.offset_;
   original_col_cost_ = lp_.col_cost_;
   original_col_lower_ = lp_.col_lower_;
   original_col_upper_ = lp_.col_upper_;
@@ -469,9 +470,6 @@ HighsStatus HEkk::dualise() {
   lp_.col_upper_.resize(0);
   lp_.row_lower_.resize(0);
   lp_.row_upper_.resize(0);
-  vector<HighsInt>& start = lp_.a_matrix_.start_;
-  vector<HighsInt>& index = lp_.a_matrix_.index_;
-  vector<double>& value = lp_.a_matrix_.value_;
   // The bulk of the constraint matrix of the dual LP is the transpose
   // of the primal constraint matrix. This is obtained row-wise by
   // copying the matrix and flipping the dimensions
@@ -527,9 +525,8 @@ HighsStatus HEkk::dualise() {
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
-      assert(3==0);
       primal_bound = upper;
-            // Dual activity a^Ty is bounded below by cost, implying dual
+      // Dual activity a^Ty is bounded below by cost, implying dual
       // for primal column (slack for dual row) is non-positive
       row_lower = cost;
       row_upper = inf;
@@ -605,6 +602,9 @@ HighsStatus HEkk::dualise() {
   }
   HighsInt dual_num_col = original_num_row_;
   HighsInt dual_num_row = original_num_col_;
+  vector<HighsInt>& start = lp_.a_matrix_.start_;
+  vector<HighsInt>& index = lp_.a_matrix_.index_;
+  vector<double>& value = lp_.a_matrix_.value_;
   // Boxed constraints yield extra columns in the dual LP
   HighsSparseMatrix extra_columns;
   extra_columns.ensureColwise();
@@ -612,14 +612,25 @@ HighsStatus HEkk::dualise() {
   // constraint matrix
   assert((int)upper_bound_col_.size()==0);
   assert((int)upper_bound_row_.size()==0);
-  assert((int)primal_bound_index.size()==0);
+  // Incorporate the cost shift by subtracting A*primal_bound from the
+  // cost vector; compute the objective offset
+  double delta_offset = 0;
+  for (HighsInt iX = 0; iX<primal_bound_index.size(); iX++) {
+    HighsInt iCol = primal_bound_index[iX];
+    double multiplier = primal_bound_value[iX];
+    delta_offset += multiplier * original_col_cost_[iCol];
+    for (HighsInt iEl = start[iCol]; iEl<start[iCol+1]; iEl++)
+      lp_.col_cost_[index[iEl]] -= multiplier * value[iEl];
+  }
+  printf("Adding %g to the LP offset\n", delta_offset);
+  lp_.offset_ += delta_offset;
   // Copy the row-wise dual LP constraint matrix and transpose it.
   // ToDo Make this more efficient
   lp_.a_matrix_ = dual_matrix;
   lp_.a_matrix_.ensureColwise();
-  // Incorporate the cost shift
 
   // Compute the objective offset
+  
   // Flip any scale factors
   if (lp_.scale_.has_scaling) {
     std::vector<double> temp_scale = lp_.scale_.row;
@@ -639,7 +650,12 @@ HighsStatus HEkk::dualise() {
   lp_.num_row_ = dual_num_row;
   status_.is_dualised = true;
   status_.has_basis = false;
+  status_.has_ar_matrix = false;
   status_.has_nla = false;
+  highsLogUser(options_->log_options, HighsLogType::kInfo,
+	       "Solving dual LP with %d columns (%d extra) and %d rows\n",
+	       (int)dual_num_col, (int)dual_num_col-original_num_row_, (int)dual_num_row);
+  //  reportLp(options_->log_options, lp_, HighsLogType::kVerbose);
   return HighsStatus::kOk;
 }
 
@@ -690,7 +706,9 @@ HighsStatus HEkk::undualise() {
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
-      assert(3==0);
+      if (dual_basic) {
+	move = kNonbasicMoveDn;
+      }
     } else {
       // FREE
       //
@@ -777,6 +795,8 @@ HighsStatus HEkk::undualise() {
   // Flip LP dimensions
   lp_.num_col_ = original_num_col_;
   lp_.num_row_ = original_num_row_;
+  // Restore the original offset
+  lp_.offset_ = original_offset_;
   // Copy back the costs and bounds
   lp_.col_cost_ = original_col_cost_;
   lp_.col_lower_ = original_col_lower_;
@@ -810,6 +830,7 @@ HighsStatus HEkk::undualise() {
   // and re-solving for optimal primal and dual values, but
   // numerically marginal LPs will need clean-up
   status_.has_basis = true;
+  status_.has_ar_matrix = false;
   status_.has_nla = false;
   status_.has_invert = false;
   return solve();

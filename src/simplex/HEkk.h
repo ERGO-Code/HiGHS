@@ -147,6 +147,7 @@ class HEkk {
   HighsInt original_num_col_;
   HighsInt original_num_row_;
   HighsInt original_num_nz_;
+  double original_offset_;
   vector<double> original_col_cost_;
   vector<double> original_col_lower_;
   vector<double> original_col_upper_;
