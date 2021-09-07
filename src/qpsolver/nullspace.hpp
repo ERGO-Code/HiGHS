@@ -21,7 +21,7 @@ struct NullspaceReductionResult {
 class Nullspace {
   bool uptodateZ = false;
 
-  const Basis& basis;
+  Basis& basis;
   Runtime& runtime;
   Matrix bufferZ;
 
@@ -73,12 +73,6 @@ class Nullspace {
     return target;
   }
 
-  void expand_appendnewcol(const Vector& newcol) {
-    if (uptodateZ) {
-      bufferZ.append(newcol);
-    }
-  }
-
   NullspaceReductionResult reduce(Runtime& rt, HighsInt newactivecon) {
     uptodateZ = false;
 
@@ -91,7 +85,7 @@ class Nullspace {
 
     // TODO: this operation is inefficient.
     Vector aq = rt.instance.A.t().extractcol(newactivecon);
-    basis.Ztprod(aq, buffer_d);
+    basis.Ztprod(aq, buffer_d, true, newactivecon);
 
     HighsInt maxabs = 0;
     for (HighsInt i = 0; i < buffer_d.num_nz; i++) {

@@ -18,6 +18,9 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
 
   Atran = rt.instance.A.t();
 
+  col_aq.setup(rt.instance.num_var);
+  row_ep.setup(rt.instance.num_var);
+
   build();
 }
 
@@ -102,7 +105,7 @@ void Basis::deactivate(HighsInt conid) {
 }
 
 void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                     HighsInt nonactivetoremove, Pricing* pricing, Vector& buffer_yp, HighsInt buffer_yp_con) {
+                     HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(activeconstraintidx, (HighsInt)conid)) {
     basisstatus[conid] = atlower;
@@ -120,7 +123,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
 
   baseindex[rowtoremove] = conid;
   remove(nonactiveconstraintsidx, nonactivetoremove);
-  updatebasis(rt, conid, nonactivetoremove, pricing, buffer_yp, buffer_yp_con);
+  updatebasis(rt, conid, nonactivetoremove, pricing);
 
   if (updatessinceinvert != 0) {
     constraintindexinbasisfactor[nonactivetoremove] = -1;
@@ -129,51 +132,26 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
 }
 
 void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
-                        Pricing* pricing, Vector& buffer_yp, HighsInt buffer_yp_con) {
+                        Pricing* pricing) {
   if (newactivecon == droppedcon) {
     return;
   }
-
-  // TODO: remove duplicate calculation of this ftran (see nullspace.hpp:)
-  Atran.extractcol(newactivecon, buffer_column_aq);
-  HVector column_aq_hvec = vec2hvec(buffer_column_aq);
-  basisfactor.ftran(column_aq_hvec, 1.0);
-
+  
   HighsInt hint = 99999;
   HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
-  
-  if (droppedcon == buffer_yp_con) {
-    // HVector row_ep_hvec2 = vec2hvec(buffer_yp);
-    // row_ep_hvec2.tight();
-    // row_ep_hvec2.pack();
-    // row_ep_hvec2.tight();
+  Vector::unit(rt.instance.num_var, droppedcon_rowindex, buffer_row_ep);
+  HVector row_ep_hvec = vec2hvec(buffer_row_ep);
 
-    Vector::unit(rt.instance.num_var, droppedcon_rowindex, buffer_row_ep);
-    HVector row_ep_hvec = vec2hvec(buffer_row_ep);
-    basisfactor.btran(row_ep_hvec, 1.0);
-
-    pricing->update_weights(hvec2vec(column_aq_hvec), buffer_yp,
+  basisfactor.btran(row_ep_hvec, 1.0);
+  pricing->update_weights(hvec2vec(col_aq), hvec2vec(row_ep_hvec),
                           droppedcon, newactivecon);
                             HighsInt row_out = droppedcon_rowindex;
 
-    basisfactor.update(&column_aq_hvec, &row_ep_hvec, &row_out, &hint);
-  } else {
-    Vector::unit(rt.instance.num_var, droppedcon_rowindex, buffer_row_ep);
-    HVector row_ep_hvec = vec2hvec(buffer_row_ep);
-
-    basisfactor.btran(row_ep_hvec, 1.0);
-    pricing->update_weights(hvec2vec(column_aq_hvec), hvec2vec(row_ep_hvec),
-                          droppedcon, newactivecon);
-                            HighsInt row_out = droppedcon_rowindex;
-
-    basisfactor.update(&column_aq_hvec, &row_ep_hvec, &row_out, &hint);
-  }
+  basisfactor.update(&col_aq, &row_ep_hvec, &row_out, &hint);
 
   updatessinceinvert++;
   if (updatessinceinvert >= rt.settings.reinvertfrequency || hint != 99999) {
     rebuild();
-    // printf("Hint: %d\n", hint);
-    // printf("reinvert\n");
   }
 }
 
@@ -190,16 +168,36 @@ Vector Basis::btran(const Vector& rhs) const {
   return hvec2vec(rhs_hvec);
 }
 
-Vector& Basis::ftran(const Vector& rhs, Vector& target) const {
+Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer, HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.ftran(rhs_hvec, 1.0);
+  if (buffer) {
+    col_aq.copy(&rhs_hvec);
+    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+      col_aq.packIndex[i] = rhs_hvec.packIndex[i];
+      col_aq.packValue[i] = rhs_hvec.packValue[i];
+    }
+    col_aq.packCount = rhs_hvec.packCount;
+    col_aq.packFlag = rhs_hvec.packFlag;
+    buffered_q = q;
+  }
 
   return hvec2vec(rhs_hvec, target);
 }
 
-Vector Basis::ftran(const Vector& rhs) const {
+Vector Basis::ftran(const Vector& rhs, bool buffer, HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.ftran(rhs_hvec, 1.0);
+  if (buffer) {
+    col_aq.copy(&rhs_hvec);
+    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+      col_aq.packIndex[i] = rhs_hvec.packIndex[i];
+      col_aq.packValue[i] = rhs_hvec.packValue[i];
+    }
+    col_aq.packCount = rhs_hvec.packCount;
+    col_aq.packFlag = rhs_hvec.packFlag;
+    buffered_q = q;
+  }
 
   return hvec2vec(rhs_hvec);
 }
@@ -240,8 +238,8 @@ Vector Basis::recomputex(const Instance& inst) {
   return hvec2vec(rhs_hvec);
 }
 
-Vector& Basis::Ztprod(const Vector& rhs, Vector& target) const {
-      Vector res_ = ftran(rhs);
+Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer, HighsInt q) {
+      Vector res_ = ftran(rhs, buffer, q);
 
       target.reset();
       for (HighsInt i = 0; i < nonactiveconstraintsidx.size(); i++) {

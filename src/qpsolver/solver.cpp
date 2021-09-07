@@ -141,7 +141,6 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Vector rowmove(runtime.instance.num_con);
 
   Vector buffer_yp(runtime.instance.num_var);
-  HighsInt buffer_yp_con = -1;
   Vector buffer_gyp(runtime.instance.num_var);
   Vector buffer_l(runtime.instance.num_var);
 
@@ -173,7 +172,6 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       }
 
       ns.expand_computenewcol(minidx, buffer_yp);
-      buffer_yp_con = minidx;
       buffer_l.dim = basis.getnuminactive();
       computesearchdirection_major(runtime, ns, basis, factor, buffer_yp,
                                    gradient, buffer_gyp, buffer_l, p);
@@ -195,7 +193,6 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         factor.expand(buffer_yp, buffer_gyp, buffer_l);
       }
       redgrad.expand(buffer_yp);
-      ns.expand_appendnewcol(buffer_yp);
     } else {
       computesearchdirection_minor(runtime, ns, basis, factor, redgrad, p);
       computerowmove(runtime, basis, p, rowmove);
@@ -223,8 +220,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         basis.activate(runtime, stepres.limitingconstraint,
                        stepres.nowactiveatlower ? BasisStatus::ActiveAtLower
                                                 : BasisStatus::ActiveAtUpper,
-                       nrr.constrainttodrop, pricing.get(), buffer_yp, buffer_yp_con);
-        buffer_yp_con = -1; // invalidate after basis update
+                       nrr.constrainttodrop, pricing.get());
         if (basis.getnumactive() != runtime.instance.num_var) {
           atfsep = false;
         }

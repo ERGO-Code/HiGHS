@@ -83,6 +83,12 @@ class Basis {
   Vector buffer_column_aq;
   Vector buffer_row_ep;
 
+  // buffers to prevent multiple btran/ftran
+  HighsInt buffered_q = -1;
+  HighsInt buffered_p = -1;
+  HVector row_ep;
+  HVector col_aq;
+
  public:
   Basis(Runtime& rt, std::vector<HighsInt> active,
         std::vector<BasisStatus> atlower, std::vector<HighsInt> inactive);
@@ -114,24 +120,24 @@ class Basis {
   void deactivate(HighsInt conid);
 
   void activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                HighsInt nonactivetoremove, Pricing* pricing,  Vector& buffer_yp, HighsInt buffer_yp_con = -1);
+                HighsInt nonactivetoremove, Pricing* pricing);
 
   void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
-                   Pricing* pricing, Vector& buffer_yp, HighsInt buffer_yp_con = -1);
+                   Pricing* pricing);
 
   Vector btran(const Vector& rhs) const;
 
-  Vector ftran(const Vector& rhs) const;
+  Vector ftran(const Vector& rhs, bool buffer=false, HighsInt q=-1);
 
   Vector& btran(const Vector& rhs, Vector& target) const;
 
-  Vector& ftran(const Vector& rhs, Vector& target) const;
+  Vector& ftran(const Vector& rhs, Vector& target, bool buffer=false, HighsInt q=-1);
 
   Vector recomputex(const Instance& inst);
 
   void write(std::string filename);
 
-  Vector& Ztprod(const Vector& rhs, Vector& target) const;
+  Vector& Ztprod(const Vector& rhs, Vector& target, bool buffer=false, HighsInt q=-1);
 
   Vector& Zprod(const Vector& rhs, Vector& target) const;
 };
