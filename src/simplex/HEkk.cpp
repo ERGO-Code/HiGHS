@@ -562,7 +562,6 @@ HighsStatus HEkk::dualise() {
       // Equality constraint
       //
       // Dual variable has primal RHS as cost and is free
-      assert(10==0);
       col_cost = lower;
       col_lower = -inf;
       col_upper = inf;
@@ -586,7 +585,6 @@ HighsStatus HEkk::dualise() {
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
-      assert(13==0);
       col_cost = upper;
       col_lower = -inf;
       col_upper = 0;
@@ -722,7 +720,9 @@ HighsStatus HEkk::undualise() {
       // Equality constraint
       //
       // Dual variable has primal RHS as cost and is free
-      assert(10==0);
+      if (dual_basic) {
+	move = kNonbasicMoveZe;
+      }
     } else if (!highs_isInfinity(-lower)) {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
@@ -738,7 +738,9 @@ HighsStatus HEkk::undualise() {
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
-      assert(13==0);
+      if (dual_basic) {
+	move = kNonbasicMoveDn;
+      }
     } else {
       // FREE
       assert(14==0);
