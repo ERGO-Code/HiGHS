@@ -30,6 +30,10 @@ inline Vector& hvec2vec(const HVector& hvec, Vector& target) {
     target.index[i] = hvec.index[i];
     target.value[target.index[i]] = hvec.array[hvec.index[i]];
   }
+  // for (HighsInt i = 0; i < hvec.size; i++) {
+  //   target.index[i] = hvec.index[i];
+  //   target.value[i] = hvec.array[i];
+  // }
   target.num_nz = hvec.count;
   return target;
 }
@@ -110,10 +114,10 @@ class Basis {
   void deactivate(HighsInt conid);
 
   void activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                HighsInt nonactivetoremove, Pricing* pricing);
+                HighsInt nonactivetoremove, Pricing* pricing,  Vector& buffer_yp, HighsInt buffer_yp_con = -1);
 
   void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
-                   Pricing* pricing);
+                   Pricing* pricing, Vector& buffer_yp, HighsInt buffer_yp_con = -1);
 
   Vector btran(const Vector& rhs) const;
 
@@ -126,6 +130,10 @@ class Basis {
   Vector recomputex(const Instance& inst);
 
   void write(std::string filename);
+
+  Vector& Ztprod(const Vector& rhs, Vector& target) const;
+
+  Vector& Zprod(const Vector& rhs, Vector& target) const;
 };
 
 #endif

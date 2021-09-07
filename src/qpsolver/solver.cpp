@@ -47,7 +47,7 @@ void Solver::loginformation(Runtime& rt, Basis& basis, Nullspace& ns,
   rt.statistics.sum_primal_infeasibilities.push_back(sm.sum);
   rt.statistics.num_primal_infeasibilities.push_back(sm.num);
   rt.statistics.density_factor.push_back(factor.density());
-  rt.statistics.density_nullspace.push_back(ns.density());
+  rt.statistics.density_nullspace.push_back(0.0);
 }
 
 void tidyup(Vector& p, Vector& rowmove, Basis& basis, Runtime& runtime) {
@@ -98,21 +98,21 @@ Vector& computesearchdirection_minor(Runtime& rt, Nullspace& ns, Basis& bas,
 
   g2.sanitize();
 
-  return ns.Zprod(g2, p);
+  return bas.Zprod(g2, p);
 }
 
 // VECTOR
 Vector& computesearchdirection_major(Runtime& runtime, Nullspace& ns,
                                      Basis& basis, NewCholeskyFactor& factor,
-                                     Vector& yp, Gradient& gradient,
+                                     const Vector& yp, Gradient& gradient,
                                      Vector& gyp, Vector& l, Vector& p) {
   runtime.instance.Q.mat_vec(yp, gyp);
   if (basis.getnumactive() < runtime.instance.num_var) {
-    ns.Ztprod(gyp, l);
+    basis.Ztprod(gyp, l);
     factor.solveL(l);
     Vector v = l;
     factor.solveLT(v);
-    ns.Zprod(v, p);
+    basis.Zprod(v, p);
     return p.saxpy(-1.0, 1.0, yp);
   } else {
     return p.repopulate(yp).scale(-gradient.getGradient().dot(yp));
@@ -131,7 +131,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Nullspace ns(runtime, basis);
   Gradient gradient(runtime);
   ReducedCosts redcosts(runtime, basis, gradient);
-  ReducedGradient redgrad(runtime, ns, gradient);
+  ReducedGradient redgrad(runtime, basis, gradient);
   NewCholeskyFactor factor(runtime, basis, ns);
   runtime.instance.A.mat_vec(runtime.primal, runtime.rowactivity);
   std::unique_ptr<Pricing> pricing =
@@ -141,6 +141,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Vector rowmove(runtime.instance.num_con);
 
   Vector buffer_yp(runtime.instance.num_var);
+  HighsInt buffer_yp_con = -1;
   Vector buffer_gyp(runtime.instance.num_var);
   Vector buffer_l(runtime.instance.num_var);
 
@@ -172,6 +173,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       }
 
       ns.expand_computenewcol(minidx, buffer_yp);
+      buffer_yp_con = minidx;
       buffer_l.dim = basis.getnuminactive();
       computesearchdirection_major(runtime, ns, basis, factor, buffer_yp,
                                    gradient, buffer_gyp, buffer_l, p);
@@ -221,7 +223,8 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         basis.activate(runtime, stepres.limitingconstraint,
                        stepres.nowactiveatlower ? BasisStatus::ActiveAtLower
                                                 : BasisStatus::ActiveAtUpper,
-                       nrr.constrainttodrop, pricing.get());
+                       nrr.constrainttodrop, pricing.get(), buffer_yp, buffer_yp_con);
+        buffer_yp_con = -1; // invalidate after basis update
         if (basis.getnumactive() != runtime.instance.num_var) {
           atfsep = false;
         }

@@ -102,7 +102,7 @@ void Basis::deactivate(HighsInt conid) {
 }
 
 void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                     HighsInt nonactivetoremove, Pricing* pricing) {
+                     HighsInt nonactivetoremove, Pricing* pricing, Vector& buffer_yp, HighsInt buffer_yp_con) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(activeconstraintidx, (HighsInt)conid)) {
     basisstatus[conid] = atlower;
@@ -120,7 +120,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
 
   baseindex[rowtoremove] = conid;
   remove(nonactiveconstraintsidx, nonactivetoremove);
-  updatebasis(rt, conid, nonactivetoremove, pricing);
+  updatebasis(rt, conid, nonactivetoremove, pricing, buffer_yp, buffer_yp_con);
 
   if (updatessinceinvert != 0) {
     constraintindexinbasisfactor[nonactivetoremove] = -1;
@@ -129,34 +129,47 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
 }
 
 void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
-                        Pricing* pricing) {
+                        Pricing* pricing, Vector& buffer_yp, HighsInt buffer_yp_con) {
   if (newactivecon == droppedcon) {
     return;
   }
 
-  HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
+  // TODO: remove duplicate calculation of this ftran (see nullspace.hpp:)
   Atran.extractcol(newactivecon, buffer_column_aq);
-  // column.report("col_pre_ftran");
-
   HVector column_aq_hvec = vec2hvec(buffer_column_aq);
   basisfactor.ftran(column_aq_hvec, 1.0);
-  // column.report("col_post_ftran");
-
-  Vector::unit(rt.instance.A.mat.num_col, droppedcon_rowindex, buffer_row_ep);
-  // row_ep.report("rowep_pre_btran");
-
-  HVector row_ep_hvec = vec2hvec(buffer_row_ep);
-  basisfactor.btran(row_ep_hvec, 1.0);
-  // row_ep.report("rowep_post_btran");
-
-  pricing->update_weights(hvec2vec(column_aq_hvec), hvec2vec(row_ep_hvec),
-                          droppedcon, newactivecon);
 
   HighsInt hint = 99999;
-  HighsInt row_out = droppedcon_rowindex;
+  HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
+  
+  if (droppedcon == buffer_yp_con) {
+    // HVector row_ep_hvec2 = vec2hvec(buffer_yp);
+    // row_ep_hvec2.tight();
+    // row_ep_hvec2.pack();
+    // row_ep_hvec2.tight();
+
+    Vector::unit(rt.instance.num_var, droppedcon_rowindex, buffer_row_ep);
+    HVector row_ep_hvec = vec2hvec(buffer_row_ep);
+    basisfactor.btran(row_ep_hvec, 1.0);
+
+    pricing->update_weights(hvec2vec(column_aq_hvec), buffer_yp,
+                          droppedcon, newactivecon);
+                            HighsInt row_out = droppedcon_rowindex;
+
+    basisfactor.update(&column_aq_hvec, &row_ep_hvec, &row_out, &hint);
+  } else {
+    Vector::unit(rt.instance.num_var, droppedcon_rowindex, buffer_row_ep);
+    HVector row_ep_hvec = vec2hvec(buffer_row_ep);
+
+    basisfactor.btran(row_ep_hvec, 1.0);
+    pricing->update_weights(hvec2vec(column_aq_hvec), hvec2vec(row_ep_hvec),
+                          droppedcon, newactivecon);
+                            HighsInt row_out = droppedcon_rowindex;
+
+    basisfactor.update(&column_aq_hvec, &row_ep_hvec, &row_out, &hint);
+  }
 
   updatessinceinvert++;
-  basisfactor.update(&column_aq_hvec, &row_ep_hvec, &row_out, &hint);
   if (updatessinceinvert >= rt.settings.reinvertfrequency || hint != 99999) {
     rebuild();
     // printf("Hint: %d\n", hint);
@@ -226,6 +239,32 @@ Vector Basis::recomputex(const Instance& inst) {
 
   return hvec2vec(rhs_hvec);
 }
+
+Vector& Basis::Ztprod(const Vector& rhs, Vector& target) const {
+      Vector res_ = ftran(rhs);
+
+      target.reset();
+      for (HighsInt i = 0; i < nonactiveconstraintsidx.size(); i++) {
+        HighsInt nonactive = nonactiveconstraintsidx[i];
+        HighsInt idx = constraintindexinbasisfactor[nonactive];
+        target.index[i] = i;
+        target.value[i] = res_.value[idx];
+      }
+      target.resparsify();
+      return target;
+  }
+
+  Vector& Basis::Zprod(const Vector& rhs, Vector& target) const {
+      Vector temp(runtime.instance.num_var);
+      for (HighsInt i = 0; i < rhs.num_nz; i++) {
+        HighsInt nonactive = nonactiveconstraintsidx[i];
+        HighsInt idx = constraintindexinbasisfactor[nonactive];
+        temp.index[i] = idx;
+        temp.value[idx] = rhs.value[i];
+      }
+      temp.num_nz = rhs.num_nz;
+      return btran(temp, target);
+  }
 
 // void Basis::write(std::string filename) {
 //    FILE* file = fopen(filename.c_str(), "w");

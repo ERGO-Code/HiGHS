@@ -1,7 +1,7 @@
 #ifndef __SRC_LIB_REDUCEDGRADIENT_HPP__
 #define __SRC_LIB_REDUCEDGRADIENT_HPP__
 
-#include "nullspace.hpp"
+#include "basis.hpp"
 #include "runtime.hpp"
 #include "vector.hpp"
 
@@ -9,17 +9,17 @@ class ReducedGradient {
   Vector rg;
   bool uptodate = false;
   Gradient& gradient;
-  Nullspace& nullspace;
+  Basis& basis;
 
   void recompute() {
-    rg.dim = nullspace.getNullspace().mat.num_col;
-    nullspace.Ztprod(gradient.getGradient(), rg);
+    rg.dim = basis.getinactive().size();
+    basis.Ztprod(gradient.getGradient(), rg);
     uptodate = true;
   }
 
  public:
-  ReducedGradient(Runtime& rt, Nullspace& ns, Gradient& grad)
-      : rg(rt.instance.num_var), gradient(grad), nullspace(ns) {}
+  ReducedGradient(Runtime& rt, Basis& bas, Gradient& grad)
+      : rg(rt.instance.num_var), gradient(grad), basis(bas) {}
 
   Vector& get() {
     if (!uptodate) {

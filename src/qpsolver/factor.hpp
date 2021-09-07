@@ -23,6 +23,7 @@ class NewCholeskyFactor {
   std::vector<double> L;
 
   void recompute() {
+    // TODO: replace calculations involving Z by BTRAN/FTRAN
     Matrix& Z = nullspace.getNullspace();
     // M = (Q' * Z)' * Z
     // Matrix m = Z.tran_mat(runtime.instance.Q).mat_mat(Z);
@@ -81,7 +82,7 @@ class NewCholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
-  void expand(Vector& yp, Vector& gyp, Vector& l) {
+  void expand(const Vector& yp, Vector& gyp, Vector& l) {
     if (!uptodate) {
       return;
     }
