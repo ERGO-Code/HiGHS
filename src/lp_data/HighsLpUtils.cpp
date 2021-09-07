@@ -425,7 +425,7 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
   bool scaled_matrix = false;
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
-    if (options.highs_debug_level)
+    if (options.highs_analysis_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Matrix has [min, max] values of [%g, %g] within "
                   "[%g, %g] so no scaling performed\n",
@@ -663,7 +663,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       exp(sum_log_col_equilibration / numCol);
   const double geomean_row_equilibration =
       exp(sum_log_row_equilibration / numRow);
-  if (options.highs_debug_level) {
+  if (options.highs_analysis_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
@@ -709,7 +709,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       original_matrix_max_value / original_matrix_min_value;
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
-  if (options.highs_debug_level) {
+  if (options.highs_analysis_level) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "Scaling: Extreme equilibration improvement = ( %11.4g + "
                 "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g\n",
@@ -758,14 +758,14 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_debug_level)
+    if (options.highs_analysis_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_debug_level) {
+    if (options.highs_analysis_level) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
                   improvement_factor, improvement_factor_required);
@@ -904,14 +904,14 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_debug_level)
+    if (options.highs_analysis_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_debug_level) {
+    if (options.highs_analysis_level) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
                   "[%0.4g, %0.4g] for rows\n",

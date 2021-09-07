@@ -61,6 +61,10 @@ class HEkk {
   HighsScale* getScalePointer();
 
   void initialiseEkk();
+  HighsStatus dualise();
+  HighsStatus undualise();
+  HighsStatus permute();
+  HighsStatus unpermute();
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
@@ -137,6 +141,26 @@ class HEkk {
   SimplexAlgorithm exit_algorithm_;
   HighsInt return_primal_solution_status_;
   HighsInt return_dual_solution_status_;
+
+  // Data to be retained when dualising
+  HighsInt original_num_col_;
+  HighsInt original_num_row_;
+  HighsInt original_num_nz_;
+  vector<double> original_col_cost_;
+  vector<double> original_col_lower_;
+  vector<double> original_col_upper_;
+  vector<double> original_row_lower_;
+  vector<double> original_row_upper_;
+  //
+  // The upper_bound_col vector accumulates the indices of boxed
+  // variables, whose upper bounds are treated as additional
+  // constraints.
+  //
+  // The upper_bound_row vector accumulates the indices of boxed
+  // constraints, whose upper bounds are treated as additional
+  // constraints.
+  vector<HighsInt> upper_bound_col_;
+  vector<HighsInt> upper_bound_row_;
 
   double build_synthetic_tick_;
   double total_synthetic_tick_;

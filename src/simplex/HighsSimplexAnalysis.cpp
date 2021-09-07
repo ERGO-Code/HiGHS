@@ -291,6 +291,14 @@ void HighsSimplexAnalysis::messaging(const HighsLogOptions& log_options_) {
 }
 
 void HighsSimplexAnalysis::iterationReport() {
+  const bool simple_report = false;
+  if (simple_report) {
+    printf("Iter %5d: (%6d; %6d) delta_primal = %11.4g; dual_step = %11.4g; primal_step = %11.4g\n",
+	   (int)simplex_iteration_count,
+	   (int)leaving_variable,
+	   (int)entering_variable,
+	   primal_delta, dual_step, primal_step);
+  }
   if ((HighsInt)kIterationReportLogType > *log_options.log_dev_level) return;
   const bool header = (num_iteration_report_since_last_header < 0) ||
                       (num_iteration_report_since_last_header > 49);
@@ -1247,7 +1255,9 @@ void HighsSimplexAnalysis::reportMulti(const bool header) {
 }
 
 void HighsSimplexAnalysis::reportOneDensity(const double density) {
-  assert(analyse_simplex_runtime_data);
+  assert(
+	 //analyse_simplex_summary_data ||
+	 analyse_simplex_runtime_data);
   const HighsInt log_10_density = intLog10(density);
   if (log_10_density > -99) {
     *analysis_log << highsFormatToString(" %4" HIGHSINT_FORMAT "",
@@ -1258,7 +1268,7 @@ void HighsSimplexAnalysis::reportOneDensity(const double density) {
 }
 
 void HighsSimplexAnalysis::printOneDensity(const double density) {
-  assert(analyse_simplex_runtime_data);
+  assert(analyse_simplex_summary_data || analyse_simplex_runtime_data);
   const HighsInt log_10_density = intLog10(density);
   if (log_10_density > -99) {
     printf(" %4" HIGHSINT_FORMAT "", log_10_density);

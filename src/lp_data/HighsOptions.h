@@ -301,6 +301,7 @@ struct HighsOptionsStruct {
   bool use_implied_bounds_from_presolve;
   bool mps_parser_type_free;
   HighsInt keep_n_rows;
+  HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
   HighsInt allowed_cost_scale_factor;
   HighsInt simplex_dualise_strategy;
@@ -691,6 +692,7 @@ class HighsOptions : public HighsOptionsStruct {
                                        "Use the free format MPS file reader",
                                        advanced, &mps_parser_type_free, true);
     records.push_back(record_bool);
+
     record_int =
         new OptionRecordInt("keep_n_rows",
                             "For multiple N-rows in MPS files: delete rows / "
@@ -698,6 +700,13 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &keep_n_rows, kKeepNRowsDeleteRows,
                             kKeepNRowsDeleteRows, kKeepNRowsKeepRows);
     records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "cost_scale_factor",
+        "Scaling factor for costs", advanced,
+        &cost_scale_factor, -20, 0, 20);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("allowed_matrix_scale_factor",
                             "Largest power-of-two factor permitted when "

@@ -199,6 +199,31 @@ void HighsSparseMatrix::ensureRowwise() {
   assert((HighsInt)this->value_.size() >= num_nz);
 }
 
+void HighsSparseMatrix::addVec(const HighsInt num_nz,
+			       const HighsInt* index,
+			       const double* value,
+			       const double multiple) {
+  HighsInt num_vec = 0;
+  if (this->isColwise()) {
+    num_vec = this->num_col_;
+  } else {
+    num_vec = this->num_row_;
+  }
+  assert((int)this->start_.size() == num_vec+1);
+  assert((int)this->index_.size() == this->numNz());
+  assert((int)this->value_.size() == this->numNz());
+  for (HighsInt iEl = 0; iEl<num_nz; iEl++) {
+    this->index_.push_back(index[iEl]);
+    this->value_.push_back(multiple*value[iEl]);
+  }
+  this->start_.push_back(this->start_[num_vec]+num_nz);
+  if (this->isColwise()) {
+    this->num_col_++;
+  } else {
+    this->num_row_++;
+  }
+}
+
 void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
                                 const int8_t* in_partition) {
   assert(new_cols.isColwise());
@@ -1117,7 +1142,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       next_index = ix + 1;
     }
   }
-  if (from_index < column.count) {
+  if (next_index < column.count) {
     // PRICE is not complete: finish without maintaining nonzeros of result
     this->priceByRowDenseResult(result, column, next_index);
   } else {

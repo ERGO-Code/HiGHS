@@ -49,9 +49,12 @@ class HighsSparseMatrix {
   void ensureColwise();
   void ensureRowwise();
 
+  void addVec(const HighsInt num_nz,
+	      const HighsInt* index,
+	      const double* value,
+	      const double multiple=1);
   void addCols(const HighsSparseMatrix new_cols,
                const int8_t* in_partition = NULL);
-
   void addRows(const HighsSparseMatrix new_rows,
                const int8_t* in_partition = NULL);
 

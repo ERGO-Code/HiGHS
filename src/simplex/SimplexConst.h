@@ -144,6 +144,7 @@ const HighsInt kDualMultiMinThreads = 1;  // 2;
 // statements by multiplication
 const HighsInt kNonbasicFlagTrue = 1;   // Nonbasic
 const HighsInt kNonbasicFlagFalse = 0;  // Basic
+const HighsInt kIllegalFlagValue = -99;  // Used to see whether valid flag value has been set
 
 // Simplex nonbasicMove status for columns and rows. Don't use enum
 // class since they are used in conditional statements
