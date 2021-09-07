@@ -138,33 +138,61 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
   }
   
   HighsInt hint = 99999;
+
   HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
-  Vector::unit(rt.instance.num_var, droppedcon_rowindex, buffer_row_ep);
-  HVector row_ep_hvec = vec2hvec(buffer_row_ep);
+  if (buffered_p != droppedcon) {
+    row_ep.clear();
+    row_ep.packFlag = true;
+    row_ep.index[0] = droppedcon_rowindex;
+    row_ep.array[droppedcon_rowindex] = 1.0;
+    row_ep.count = 1;
+    basisfactor.btran(row_ep, 1.0);
+  }
 
-  basisfactor.btran(row_ep_hvec, 1.0);
-  pricing->update_weights(hvec2vec(col_aq), hvec2vec(row_ep_hvec),
+  pricing->update_weights(hvec2vec(col_aq), hvec2vec(row_ep),
                           droppedcon, newactivecon);
-                            HighsInt row_out = droppedcon_rowindex;
+  HighsInt row_out = droppedcon_rowindex;
 
-  basisfactor.update(&col_aq, &row_ep_hvec, &row_out, &hint);
+  basisfactor.update(&col_aq, &row_ep, &row_out, &hint);
 
   updatessinceinvert++;
   if (updatessinceinvert >= rt.settings.reinvertfrequency || hint != 99999) {
     rebuild();
   }
+  // since basis changed, buffered values are no longer valid
+  buffered_p = -1;
+  buffered_q = -1;
 }
 
-Vector& Basis::btran(const Vector& rhs, Vector& target) const {
+Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer, HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.btran(rhs_hvec, 1.0);
+  if (buffer) {
+    row_ep.copy(&rhs_hvec);
+    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+      row_ep.packIndex[i] = rhs_hvec.packIndex[i];
+      row_ep.packValue[i] = rhs_hvec.packValue[i];
+    }
+    row_ep.packCount = rhs_hvec.packCount;
+    row_ep.packFlag = rhs_hvec.packFlag;
+    buffered_q = p;
+  }
   return hvec2vec(rhs_hvec, target);
 }
 
-Vector Basis::btran(const Vector& rhs) const {
+Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.btran(rhs_hvec, 1.0);
-
+  if (buffer) {
+    row_ep.copy(&rhs_hvec);
+    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+      row_ep.packIndex[i] = rhs_hvec.packIndex[i];
+      row_ep.packValue[i] = rhs_hvec.packValue[i];
+    }
+    row_ep.packCount = rhs_hvec.packCount;
+    row_ep.packFlag = rhs_hvec.packFlag;
+    buffered_q = p;
+  }
   return hvec2vec(rhs_hvec);
 }
 
@@ -252,7 +280,7 @@ Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer, HighsInt q
       return target;
   }
 
-  Vector& Basis::Zprod(const Vector& rhs, Vector& target) const {
+  Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
       Vector temp(runtime.instance.num_var);
       for (HighsInt i = 0; i < rhs.num_nz; i++) {
         HighsInt nonactive = nonactiveconstraintsidx[i];

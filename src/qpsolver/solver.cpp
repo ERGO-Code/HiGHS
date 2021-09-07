@@ -171,7 +171,11 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         break;
       }
 
-      ns.expand_computenewcol(minidx, buffer_yp);
+      HighsInt unit = basis.getindexinfactor()[minidx];
+      Vector::unit(runtime.instance.num_var, unit, buffer_yp);
+      basis.btran(buffer_yp, buffer_yp, true, minidx);
+
+
       buffer_l.dim = basis.getnuminactive();
       computesearchdirection_major(runtime, ns, basis, factor, buffer_yp,
                                    gradient, buffer_gyp, buffer_l, p);

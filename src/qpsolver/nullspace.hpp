@@ -64,15 +64,6 @@ class Nullspace {
     uptodateZ = true;
   }
 
-  Vector& expand_computenewcol(HighsInt conid, Vector& target) {
-    HighsInt unit = basis.getindexinfactor()[conid];
-    Vector::unit(runtime.instance.num_var, unit, target);
-
-    basis.btran(target, target);
-
-    return target;
-  }
-
   NullspaceReductionResult reduce(Runtime& rt, HighsInt newactivecon) {
     uptodateZ = false;
 
