@@ -1992,7 +1992,7 @@ void HEkkDual::assessPhase1Optimality() {
   // before concluding dual infeasibility
   //
   // Interesting for Devs to know if this method is called at all
-  highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+  highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
               "Optimal in phase 1 but not jumping to phase 2 since "
               "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
               "\n",
@@ -2043,7 +2043,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
     } else {
       // Nonzero dual objective value: could be insignificant dual
       // infeasibilities
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                   "LP is dual feasible wrt Phase 1 bounds after removing cost "
                   "perturbations: "
                   "dual objective is %10.4g\n",
@@ -2053,7 +2053,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
           ekk_instance_.analysis_.num_dual_phase_1_lp_dual_infeasibility;
       if (num_lp_dual_infeasibilities == 0) {
         highsLogDev(
-            ekk_instance_.options_->log_options, HighsLogType::kInfo,
+            ekk_instance_.options_.log_options, HighsLogType::kInfo,
             "LP is dual feasible wrt Phase 2 bounds after removing cost "
             "perturbations so go to phase 2\n");
         solve_phase = kSolvePhase2;
