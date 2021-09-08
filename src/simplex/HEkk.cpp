@@ -639,20 +639,21 @@ HighsStatus HEkk::dualise() {
     }
     for (HighsInt iEl=0; iEl<original_num_nz_; iEl++)
       count[indirection[index[iEl]]]++;
-    HighsInt extra_columns_num_nz = extra_columns.index_.size() + count[num_upper_bound_row-1];
     extra_columns.start_.resize(num_upper_bound_col+num_upper_bound_row+1);
-    extra_columns.index_.resize(extra_columns_num_nz);
-    extra_columns.value_.resize(extra_columns_num_nz);
     for (HighsInt iRow = 0; iRow < num_upper_bound_row; iRow++) {
       extra_columns.start_[num_upper_bound_col+iRow+1] =
 	extra_columns.start_[num_upper_bound_col+iRow] + count[iRow];
       count[iRow] = extra_columns.start_[num_upper_bound_col+iRow];
     }
+    HighsInt extra_columns_num_nz = extra_columns.start_[num_upper_bound_col+num_upper_bound_row];
+    extra_columns.index_.resize(extra_columns_num_nz);
+    extra_columns.value_.resize(extra_columns_num_nz);
     for (HighsInt iCol = 0; iCol < original_num_col_; iCol++) {
       for (HighsInt iEl = start[iCol]; iEl < start[iCol+1]; iEl++) {
 	HighsInt iRow = indirection[index[iEl]];
 	if (iRow < num_upper_bound_row) {
 	  HighsInt extra_columns_iEl = count[iRow];
+	  assert(extra_columns_iEl<extra_columns_num_nz);
 	  extra_columns.index_[extra_columns_iEl] = iCol;
 	  extra_columns.value_[extra_columns_iEl] = value[iEl];
 	  count[iRow]++;
@@ -784,13 +785,14 @@ HighsStatus HEkk::undualise() {
 	  move = kNonbasicMoveUp;
 	} else {
 	  // Look at the corresponding dual variable for the upper bound
-	  dual_variable = upper_bound_col++;
+	  dual_variable = upper_bound_col;
 	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
 	  if (dual_basic) {
 	    // Primal variable is nonbasic at its upper bound
 	    move = kNonbasicMoveDn;
 	  }
 	}
+	upper_bound_col++;
       } else {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) move = kNonbasicMoveUp;
@@ -842,13 +844,14 @@ HighsStatus HEkk::undualise() {
 	  move = kNonbasicMoveDn;
 	} else {
 	  // Look at the corresponding dual variable for the upper bound
-	  dual_variable = upper_bound_col++;
+	  dual_variable = upper_bound_col;
 	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
 	  if (dual_basic) {
 	    // Primal variable is nonbasic at its upper bound
 	    move = kNonbasicMoveUp;
 	  }
 	}
+	upper_bound_col++;
       } else {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) {
@@ -934,7 +937,11 @@ HighsStatus HEkk::undualise() {
   assert(lp_.num_col_ == original_num_col_);
   assert(lp_.num_row_ == original_num_row_);
   assert(lp_.a_matrix_.numNz() == original_num_nz_);
-  assert((int)primal_basic_index.size() == original_num_row_);
+  HighsInt num_basic_variables = primal_basic_index.size();
+  bool num_basic_variables_ok = num_basic_variables == original_num_row_;
+  if (!num_basic_variables_ok)
+    printf("HEkk::undualise: Have %d basic variables, not %d\n", (int)num_basic_variables, (int)original_num_row_);
+  assert(num_basic_variables_ok);
 
   // Clear the data retained when solving dual LP
   clearEkkDualise();

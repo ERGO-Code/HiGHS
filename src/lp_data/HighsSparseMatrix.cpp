@@ -109,9 +109,9 @@ void HighsSparseMatrix::ensureColwise() {
     //
     // Take a copy of the current matrix - that is rowwise - so that
     // the current matrix is filled colwise
-    vector<HighsInt> ARstart = this->start_;
-    vector<HighsInt> ARindex = this->index_;
-    vector<double> ARvalue = this->value_;
+    std::vector<HighsInt> ARstart = this->start_;
+    std::vector<HighsInt> ARindex = this->index_;
+    std::vector<double> ARvalue = this->value_;
     this->start_.resize(num_col + 1);
     this->index_.resize(num_nz);
     this->value_.resize(num_nz);
