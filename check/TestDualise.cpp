@@ -10,6 +10,7 @@ void dualiseTest(Highs& highs);
 void simpleTest(Highs& highs);
 void fixedColumnTest(Highs& highs);
 void freeColumnTest(Highs& highs);
+void colUpperBoundTest(Highs& highs);
 void rowUpperBoundTest(Highs& highs);
 void distillationTest(Highs& highs);
 HighsLp distillationLp();
@@ -23,7 +24,8 @@ TEST_CASE("Dualise", "[highs_test_dualise]") {
   // distillationTest(highs);
   // freeColumnTest(highs);
   // fixedColumnTest(highs);
-  rowUpperBoundTest(highs);
+  colUpperBoundTest(highs);
+  //  rowUpperBoundTest(highs);
   //afiroTest(highs);
 }
 
@@ -128,6 +130,19 @@ void fixedColumnTest(Highs& highs) {
   highs.passModel(model);
   dualiseTest(highs);
   highs.clear();
+}
+
+void colUpperBoundTest(Highs& highs) {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp = distillationLp();
+  double col1_upper = 1;
+  if (dev_run) printf("\nGive an upper bound on col 1 of %g\n", col1_upper);
+  lp.col_upper_[1] = col1_upper;
+  // Needs reduced lower bound for feasiblilty
+  //  double col2_lower = 5.7; lp.col_lower_[2] = col2_lower;
+  highs.passModel(model);
+  dualiseTest(highs);
 }
 
 void rowUpperBoundTest(Highs& highs) {

@@ -602,6 +602,7 @@ HighsStatus HEkk::dualise() {
   // Boxed variables and constraints yield extra columns in the dual LP
   HighsSparseMatrix extra_columns;
   extra_columns.ensureColwise();
+  extra_columns.num_row_ = original_num_col_;
   HighsInt num_upper_bound_col = upper_bound_col_.size();
   HighsInt num_upper_bound_row = upper_bound_row_.size();
   HighsInt num_extra_col = 0;
@@ -615,8 +616,6 @@ HighsStatus HEkk::dualise() {
     lp_.col_upper_.push_back(0);
     num_extra_col++;
   }
-  extra_columns.num_col_ += num_upper_bound_col;
-  extra_columns.num_row_ = original_num_col_;
   
   if (num_upper_bound_row) {
     // Need to identify the submatrix of constraint matrix rows
