@@ -683,13 +683,16 @@ HighsStatus HEkk::dualise() {
   HighsInt dual_num_row = original_num_col_;
   assert(dual_num_col == (int)lp_.col_cost_.size());
   assert(lp_.a_matrix_.num_col_ == dual_num_col);
-  // Flip any scale factors
-  if (lp_.scale_.has_scaling) {
-    std::vector<double> temp_scale = lp_.scale_.row;
-    lp_.scale_.row = lp_.scale_.col;
-    lp_.scale_.col = temp_scale;
-    lp_.scale_.num_col = dual_num_col;
-    lp_.scale_.num_row = dual_num_row;
+  const bool ignore_scaling = true;
+  if (!ignore_scaling) {
+    // Flip any scale factors
+    if (lp_.scale_.has_scaling) {
+      std::vector<double> temp_scale = lp_.scale_.row;
+      lp_.scale_.row = lp_.scale_.col;
+      lp_.scale_.col = temp_scale;
+      lp_.scale_.num_col = dual_num_col;
+      lp_.scale_.num_row = dual_num_row;
+    }
   }
   // Change optimzation sense
   if (lp_.sense_ == ObjSense::kMinimize) {
@@ -778,14 +781,14 @@ HighsStatus HEkk::undualise() {
 	// Finite upper bound so boxed
 	if (dual_basic) {
 	  // Primal variable is nonbasic at its lower bound
-	  move = kNonbasicMoveDn;
+	  move = kNonbasicMoveUp;
 	} else {
 	  // Look at the corresponding dual variable for the upper bound
 	  dual_variable = upper_bound_col++;
 	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
 	  if (dual_basic) {
 	    // Primal variable is nonbasic at its upper bound
-	    move = kNonbasicMoveUp;
+	    move = kNonbasicMoveDn;
 	  }
 	}
       } else {
@@ -836,26 +839,26 @@ HighsStatus HEkk::undualise() {
 	// Finite upper bound so boxed
 	if (dual_basic) {
 	  // Primal variable is nonbasic at its lower bound
-	  move = kNonbasicMoveUp;
+	  move = kNonbasicMoveDn;
 	} else {
 	  // Look at the corresponding dual variable for the upper bound
 	  dual_variable = upper_bound_col++;
 	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
 	  if (dual_basic) {
 	    // Primal variable is nonbasic at its upper bound
-	    move = kNonbasicMoveDn;
+	    move = kNonbasicMoveUp;
 	  }
 	}
       } else {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) {
-	  move = kNonbasicMoveUp;
+	  move = kNonbasicMoveDn;
 	}
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
       if (dual_basic) {
-	move = kNonbasicMoveDn;
+	move = kNonbasicMoveUp;
       }
     } else {
       // FREE
@@ -877,15 +880,18 @@ HighsStatus HEkk::undualise() {
       primal_nonbasic_move[original_num_col_+iRow] = 0;
     }
   }
-  // Flip any scale factors
-  if (lp_.scale_.has_scaling) {
-    std::vector<double> temp_scale = lp_.scale_.row;
-    lp_.scale_.row = lp_.scale_.col;
-    lp_.scale_.col = temp_scale;
-    lp_.scale_.col.resize(original_num_col_);
-    lp_.scale_.row.resize(original_num_row_);
-    lp_.scale_.num_col = original_num_col_;
-    lp_.scale_.num_row = original_num_row_;
+  const bool ignore_scaling = true;
+  if (!ignore_scaling) {
+    // Flip any scale factors
+    if (lp_.scale_.has_scaling) {
+      std::vector<double> temp_scale = lp_.scale_.row;
+      lp_.scale_.row = lp_.scale_.col;
+      lp_.scale_.col = temp_scale;
+      lp_.scale_.col.resize(original_num_col_);
+      lp_.scale_.row.resize(original_num_row_);
+      lp_.scale_.num_col = original_num_col_;
+      lp_.scale_.num_row = original_num_row_;
+    }
   }
   // Change optimzation sense
   if (lp_.sense_ == ObjSense::kMinimize) {
@@ -924,6 +930,12 @@ HighsStatus HEkk::undualise() {
   // ToDo Make this more efficient
   lp_.a_matrix_ = primal_matrix;
   lp_.a_matrix_.ensureColwise();
+  // Some sanity checks
+  assert(lp_.num_col_ == original_num_col_);
+  assert(lp_.num_row_ == original_num_row_);
+  assert(lp_.a_matrix_.numNz() == original_num_nz_);
+  assert((int)primal_basic_index.size() == original_num_row_);
+
   // Clear the data retained when solving dual LP
   clearEkkDualise();
   status_.is_dualised = false;

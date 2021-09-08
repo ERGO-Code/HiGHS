@@ -26,10 +26,10 @@ TEST_CASE("Dualise", "[highs_test_dualise]") {
   // fixedColumnTest(highs);
   //  colUpperBoundTest(highs);
   //  rowUpperBoundTest(highs);
-  instanceTest(highs, "avgas");
+  //  instanceTest(highs, "avgas");
   //  instanceTest(highs, "afiro");
   //  instanceTest(highs, "adlittle");
-  //afiroTest(highs);
+    instanceTest(highs, "25fv47");
 }
 
 void dualiseTest(Highs& highs) {
@@ -38,7 +38,7 @@ void dualiseTest(Highs& highs) {
   highs.setOptionValue("simplex_dualise_strategy", kHighsOptionOff);
   highs.setBasis();
   highs.run();
-  if (dev_run) highs.writeSolution("", true);
+  //  if (dev_run) highs.writeSolution("", true);
   double primal_objective = info.objective_function_value;
   highs.setOptionValue("simplex_dualise_strategy", kHighsOptionOn);
   highs.setBasis();
