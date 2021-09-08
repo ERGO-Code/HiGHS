@@ -133,6 +133,7 @@ void HEkk::clearEkkData() {
   this->cost_scale_ = 1;
   this->iteration_count_ = 0;
   this->dual_simplex_cleanup_level_ = 0;
+  this->dual_simplex_phase1_cleanup_level_ = 0;
 
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
@@ -959,8 +960,8 @@ HighsStatus HEkk::undualise() {
   primal_solve_iteration_count += iteration_count_;
   //  if (primal_solve_iteration_count)
     highsLogUser(options_->log_options, HighsLogType::kInfo,
-                 "Solving the primal LP using the optimal basis of its dual required %d simplex iterations\n",
-		 (int)primal_solve_iteration_count);
+                 "Solving the primal LP (%s) using the optimal basis of its dual required %d simplex iterations\n",
+		 lp_.model_name_.c_str(), (int)primal_solve_iteration_count);
   return return_status;
 }
 
@@ -982,6 +983,7 @@ HighsStatus HEkk::solve() {
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
   dual_simplex_cleanup_level_ = 0;
+  dual_simplex_phase1_cleanup_level_ = 0;
   HighsStatus call_status = initialiseForSolve();
   if (call_status == HighsStatus::kError) return HighsStatus::kError;
 

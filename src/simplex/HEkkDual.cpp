@@ -706,9 +706,14 @@ void HEkkDual::solvePhase1() {
     ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
     ekk_instance_.initialiseNonbasicValueAndMove();
     if (solve_phase == kSolvePhase2) {
-      // Moving to phase 2 so comment if cost perturbation is not permitted
-      //
-      // It may have been prevented to avoid cleanup-perturbation loops
+      // Moving to phase 2 so possibly reinstate cost perturbation
+      if (ekk_instance_.dual_simplex_phase1_cleanup_level_ <
+	  ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level) {
+	// Allow cost perturbation for now, but may have to prevent it
+	// to avoid cleanup-perturbation loops
+	info.allow_cost_perturbation = true;
+      }
+      // Comment if cost perturbation is not permitted
       if (!info.allow_cost_perturbation)
         highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                     "Moving to phase 2, but not allowing cost perturbation\n");
@@ -1018,6 +1023,20 @@ void HEkkDual::rebuild() {
 }
 
 void HEkkDual::cleanup() {
+  if (solve_phase == kSolvePhase1) {
+    // Take action to prevent infinite loop. Shouldn't get to this
+    // stage, since cost perturbation isn't permitted unless the dual
+    // simplex phase 1 cleanup level is less than the limit
+    ekk_instance_.dual_simplex_phase1_cleanup_level_++;
+    const bool excessive_cleanup_calls = ekk_instance_.dual_simplex_phase1_cleanup_level_ >
+      ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level;
+    if (excessive_cleanup_calls) {
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
+		  "Dual simplex cleanup level has exceeded limit of %d\n",
+		  (int)ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level);
+      assert(!excessive_cleanup_calls);
+    }
+  }
   highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
               "dual-cleanup-shift\n");
   HighsSimplexInfo& info = ekk_instance_.info_;

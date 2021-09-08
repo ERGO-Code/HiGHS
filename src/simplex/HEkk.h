@@ -136,6 +136,7 @@ class HEkk {
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;
   HighsInt dual_simplex_cleanup_level_ = 0;
+  HighsInt dual_simplex_phase1_cleanup_level_ = 0;
 
   bool solve_bailout_;
   bool called_return_from_solve_;

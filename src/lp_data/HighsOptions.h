@@ -307,6 +307,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_dualise_strategy;
   HighsInt simplex_permute_strategy;
   HighsInt max_dual_simplex_cleanup_level;
+  HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_substitution_maxfillin;
@@ -735,6 +736,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "max_dual_simplex_cleanup_level", "Max level of dual simplex cleanup",
         advanced, &max_dual_simplex_cleanup_level, 0, 1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "max_dual_simplex_phase1_cleanup_level", "Max level of dual simplex phase 1 cleanup",
+        advanced, &max_dual_simplex_phase1_cleanup_level, 0, 2, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
