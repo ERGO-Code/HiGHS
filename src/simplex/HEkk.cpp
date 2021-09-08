@@ -672,7 +672,6 @@ HighsStatus HEkk::dualise() {
     for (HighsInt iEl = start[iCol]; iEl<start[iCol+1]; iEl++)
       lp_.col_cost_[index[iEl]] -= multiplier * value[iEl];
   }
-  printf("Adding %g to the LP offset\n", delta_offset);
   lp_.offset_ += delta_offset;
   // Copy the row-wise dual LP constraint matrix and transpose it.
   // ToDo Make this more efficient
@@ -707,8 +706,22 @@ HighsStatus HEkk::dualise() {
   status_.has_ar_matrix = false;
   status_.has_nla = false;
   highsLogUser(options_->log_options, HighsLogType::kInfo,
-	       "Solving dual LP with %d columns (%d extra) and %d rows\n",
-	       (int)dual_num_col, (int)dual_num_col-original_num_row_, (int)dual_num_row);
+	       "Solving dual LP with %d columns", (int)dual_num_col);
+  if (num_upper_bound_col + num_upper_bound_row) {
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+		 " [%d extra from", (int)dual_num_col-original_num_row_);
+    if (num_upper_bound_col)
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+		   " %d boxed variable(s)", (int)num_upper_bound_col);
+    if (num_upper_bound_col && num_upper_bound_row)
+      highsLogUser(options_->log_options, HighsLogType::kInfo, " and");
+    if (num_upper_bound_row)
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+		   " %d boxed constraint(s)", (int)num_upper_bound_row);
+    highsLogUser(options_->log_options, HighsLogType::kInfo, "]");
+  }
+  highsLogUser(options_->log_options, HighsLogType::kInfo,
+	       " and %d rows\n", (int)dual_num_row);
   //  reportLp(options_->log_options, lp_, HighsLogType::kVerbose);
   return HighsStatus::kOk;
 }
@@ -732,6 +745,24 @@ HighsStatus HEkk::undualise() {
   basis_.nonbasicMove_.assign(primal_num_tot, kIllegalMoveValue);
   basis_.basicIndex_.resize(0);
   const double inf = kHighsInf;
+  // The number of dual rows is the number of primal columns, so all
+  // dual basic variables are nonbasic in the primal problem.
+  //
+  // If there are extra dual columns due to upper bounds on boxed
+  // primal variables/constraints, there will be an excess of dual
+  // nonbasic variables for the required primal basic variables.
+  //
+  // For each pair of dual variables associated with a boxed primal
+  // variable/constraint:
+  //
+  // * If one is basic then it yields a nonbasic primal variable, at
+  //   a bound given by the basic dual
+  //
+  // * If both are nonbasic, then they yield a basic primal variable
+  //
+  // Keep track of the dual column added to handle upper bounds on
+  // boxed variables/constraints
+  HighsInt upper_bound_col = original_num_row_;
   for (HighsInt iCol=0; iCol<original_num_col_;iCol++) {
     const double cost = original_col_cost_[iCol];
     const double lower = original_col_lower_[iCol];
@@ -746,9 +777,18 @@ HighsStatus HEkk::undualise() {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
 	// Finite upper bound so boxed
-	//
-	// Treat as lower
-	assert(1==0);
+	if (dual_basic) {
+	  // Primal variable is nonbasic at its lower bound
+	  move = kNonbasicMoveDn;
+	} else {
+	  // Look at the corresponding dual variable for the upper bound
+	  dual_variable = dual_num_col + upper_bound_col++;
+	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
+	  if (dual_basic) {
+	    // Primal variable is nonbasic at its upper bound
+	    move = kNonbasicMoveUp;
+	  }
+	}
       } else {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) move = kNonbasicMoveUp;
@@ -795,9 +835,18 @@ HighsStatus HEkk::undualise() {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
 	// Finite upper bound so boxed
-	//
-	// Treat as lower
-	assert(11==0);
+	if (dual_basic) {
+	  // Primal variable is nonbasic at its lower bound
+	  move = kNonbasicMoveUp;
+	} else {
+	  // Look at the corresponding dual variable for the upper bound
+	  dual_variable = upper_bound_col++;
+	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
+	  if (dual_basic) {
+	    // Primal variable is nonbasic at its upper bound
+	    move = kNonbasicMoveDn;
+	  }
+	}
       } else {
 	// Lower (since upper bound is infinite)
 	if (dual_basic) {
