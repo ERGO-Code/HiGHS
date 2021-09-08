@@ -248,7 +248,6 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
   if (num_new_col == 0) {
     // No columns are being added, so check that no nonzeros are being
     // added
-    assert(1 == 0);
     assert(num_new_nz == 0);
     return;
   }

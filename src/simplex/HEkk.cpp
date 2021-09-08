@@ -506,18 +506,17 @@ HighsStatus HEkk::dualise() {
 	// Finite upper bound so boxed
 	//
 	// Treat as lower
-	assert(1==0);
 	primal_bound = lower;
 	// Dual activity a^Ty is bounded above by cost, implying dual
 	// for primal column (slack for dual row) is non-negative
 	row_lower = -inf;
 	row_upper = cost;
-	// Treat upper bound treated as additional constraint
+	// Treat upper bound as additional constraint
 	upper_bound_col_.push_back(iCol);
       } else {
 	// Lower (since upper bound is infinite)
 	primal_bound = lower;
-		// Dual activity a^Ty is bounded above by cost, implying dual
+	// Dual activity a^Ty is bounded above by cost, implying dual
 	// for primal column (slack for dual row) is non-negative
 	row_lower = -inf;
 	row_upper = cost;
@@ -567,11 +566,10 @@ HighsStatus HEkk::dualise() {
 	// Finite upper bound so boxed
 	//
 	// Treat as lower
-	assert(11==0);
 	col_cost = lower;
 	col_lower = 0;
 	col_upper = inf;
-	// Treat upper bound treated as additional constraint
+	// Treat upper bound as additional constraint
 	upper_bound_row_.push_back(iRow);
       } else {
 	// Lower (since upper bound is infinite)
@@ -598,18 +596,72 @@ HighsStatus HEkk::dualise() {
     lp_.col_lower_.push_back(col_lower);
     lp_.col_upper_.push_back(col_upper);
   }
-  HighsInt dual_num_col = original_num_row_;
-  HighsInt dual_num_row = original_num_col_;
   vector<HighsInt>& start = lp_.a_matrix_.start_;
   vector<HighsInt>& index = lp_.a_matrix_.index_;
   vector<double>& value = lp_.a_matrix_.value_;
-  // Boxed constraints yield extra columns in the dual LP
+  // Boxed variables and constraints yield extra columns in the dual LP
   HighsSparseMatrix extra_columns;
   extra_columns.ensureColwise();
-  // Boxed variables yield extra identity columns in the dual LP
-  // constraint matrix
-  assert((int)upper_bound_col_.size()==0);
-  assert((int)upper_bound_row_.size()==0);
+  HighsInt num_upper_bound_col = upper_bound_col_.size();
+  HighsInt num_upper_bound_row = upper_bound_row_.size();
+  HighsInt num_extra_col = 0;
+  double one = 1;
+  for (HighsInt iX=0; iX<num_upper_bound_col; iX++) {
+    HighsInt iCol = upper_bound_col_[iX];
+    const double upper = original_col_upper_[iCol];
+    extra_columns.addVec(1, &iCol, &one);
+    lp_.col_cost_.push_back(upper);
+    lp_.col_lower_.push_back(-inf);
+    lp_.col_upper_.push_back(0);
+    num_extra_col++;
+  }
+  extra_columns.num_col_ += num_upper_bound_col;
+  extra_columns.num_row_ = original_num_col_;
+  
+  if (num_upper_bound_row) {
+    // Need to identify the submatrix of constraint matrix rows
+    // corresponding to those with a row index in
+    // upper_bound_row_. When identifying numbers of entries in each
+    // row of submatrix, use indirection to get corresponding row
+    // index, with a dummy row for rows not in the submatrix.
+    HighsInt dummy_row = num_upper_bound_row;
+    vector<HighsInt> indirection;
+    vector<HighsInt> count;
+    indirection.assign(original_num_row_, dummy_row);
+    count.assign(num_upper_bound_row+1, 0);
+    HighsInt extra_iRow = 0;
+    for (HighsInt iX=0; iX<num_upper_bound_row; iX++) {
+      HighsInt iRow = upper_bound_row_[iX];
+      indirection[iRow] = extra_iRow++;
+      double upper = original_row_upper_[iRow];
+      lp_.col_cost_.push_back(upper);
+      lp_.col_lower_.push_back(-inf);
+      lp_.col_upper_.push_back(0);
+    }
+    for (HighsInt iEl=0; iEl<original_num_nz_; iEl++)
+      count[indirection[index[iEl]]]++;
+    HighsInt extra_columns_num_nz = extra_columns.index_.size() + count[num_upper_bound_row-1];
+    extra_columns.start_.resize(num_upper_bound_col+num_upper_bound_row+1);
+    extra_columns.index_.resize(extra_columns_num_nz);
+    extra_columns.value_.resize(extra_columns_num_nz);
+    for (HighsInt iRow = 0; iRow < num_upper_bound_row; iRow++) {
+      extra_columns.start_[num_upper_bound_col+iRow+1] =
+	extra_columns.start_[num_upper_bound_col+iRow] + count[iRow];
+      count[iRow] = extra_columns.start_[num_upper_bound_col+iRow];
+    }
+    for (HighsInt iCol = 0; iCol < original_num_col_; iCol++) {
+      for (HighsInt iEl = start[iCol]; iEl < start[iCol+1]; iEl++) {
+	HighsInt iRow = indirection[index[iEl]];
+	if (iRow < num_upper_bound_row) {
+	  HighsInt extra_columns_iEl = count[iRow];
+	  extra_columns.index_[extra_columns_iEl] = iCol;
+	  extra_columns.value_[extra_columns_iEl] = value[iEl];
+	  count[iRow]++;
+	}
+      }
+    }
+    extra_columns.num_col_ += num_upper_bound_row;
+  }
   // Incorporate the cost shift by subtracting A*primal_bound from the
   // cost vector; compute the objective offset
   double delta_offset = 0;
@@ -626,9 +678,13 @@ HighsStatus HEkk::dualise() {
   // ToDo Make this more efficient
   lp_.a_matrix_ = dual_matrix;
   lp_.a_matrix_.ensureColwise();
-
-  // Compute the objective offset
+  // Add the extra columns to the dual LP constraint matrix
+  lp_.a_matrix_.addCols(extra_columns);
   
+  HighsInt dual_num_col = original_num_row_ + num_upper_bound_col + num_upper_bound_row;
+  HighsInt dual_num_row = original_num_col_;
+  assert(dual_num_col == (int)lp_.col_cost_.size());
+  assert(lp_.a_matrix_.num_col_ == dual_num_col);
   // Flip any scale factors
   if (lp_.scale_.has_scaling) {
     std::vector<double> temp_scale = lp_.scale_.row;

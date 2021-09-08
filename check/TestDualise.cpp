@@ -10,17 +10,20 @@ void dualiseTest(Highs& highs);
 void simpleTest(Highs& highs);
 void fixedColumnTest(Highs& highs);
 void freeColumnTest(Highs& highs);
+void rowUpperBoundTest(Highs& highs);
 void distillationTest(Highs& highs);
+HighsLp distillationLp();
 void afiroTest(Highs& highs);
 
 TEST_CASE("Dualise", "[highs_test_dualise]") {
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  //simpleTest(highs);
-  //fixedColumnTest(highs);
-  freeColumnTest(highs);
-  //distillationTest(highs);
+  // simpleTest(highs);
+  // distillationTest(highs);
+  // freeColumnTest(highs);
+  // fixedColumnTest(highs);
+  rowUpperBoundTest(highs);
   //afiroTest(highs);
 }
 
@@ -30,16 +33,32 @@ void dualiseTest(Highs& highs) {
   highs.setOptionValue("simplex_dualise_strategy", kHighsOptionOff);
   highs.setBasis();
   highs.run();
-  //  highs.writeSolution("", true);
+  highs.writeSolution("", true);
   double primal_objective = info.objective_function_value;
   highs.setOptionValue("simplex_dualise_strategy", kHighsOptionOn);
   highs.setBasis();
   //  detailedOutput(highs);
   highs.run();
-  //  highs.writeSolution("", true);
+  highs.writeSolution("", true);
   double dual_objective = info.objective_function_value;
   double dl = fabs(primal_objective-dual_objective);
   REQUIRE(dl < double_equal_tolerance);
+}
+
+HighsLp distillationLp() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12, 6};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  return lp;
 }
 
 void detailedOutput(Highs& highs) {
@@ -68,58 +87,9 @@ void simpleTest(Highs& highs) {
   highs.clear();
 }
 
-void fixedColumnTest(Highs& highs) {
-  HighsModel model;
-  HighsLp& lp = model.lp_;
-  lp.num_col_ = 2;
-  lp.num_row_ = 3;
-  lp.col_cost_ = {8, 10};
-  lp.col_lower_ = {1, 0};
-  lp.col_upper_ = {1, inf};
-  lp.row_lower_ = {7, 12, 6};
-  lp.row_upper_ = {inf, inf, inf};
-  lp.a_matrix_.start_ = {0, 3, 6};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  highs.passModel(model);
-  dualiseTest(highs);
-  highs.clear();
-}
-
-void freeColumnTest(Highs& highs) {
-  HighsModel model;
-  HighsLp& lp = model.lp_;
-  lp.num_col_ = 2;
-  lp.num_row_ = 3;
-  lp.col_cost_ = {8, 10};
-  lp.col_lower_ = {0, -inf};
-  lp.col_upper_ = {inf, inf};
-  lp.row_lower_ = {7, 12, 6};
-  lp.row_upper_ = {inf, inf, inf};
-  lp.a_matrix_.start_ = {0, 3, 6};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  highs.passModel(model);
-  dualiseTest(highs);
-  highs.clear();
-}
-
 void distillationTest(Highs& highs) {
   HighsModel model;
-  HighsLp& lp = model.lp_;
-  lp.num_col_ = 2;
-  lp.num_row_ = 3;
-  lp.col_cost_ = {8, 10};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {inf, inf};
-  lp.row_lower_ = {7, 12, 6};
-  lp.row_upper_ = {inf, inf, inf};
-  lp.a_matrix_.start_ = {0, 3, 6};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  model.lp_ = distillationLp();
   highs.passModel(model);
   dualiseTest(highs);
 
@@ -130,11 +100,48 @@ void distillationTest(Highs& highs) {
 
   double x1_upper = 0.5;
   if (dev_run) printf("\nGive an upper bound on x1 of %g\n", x1_upper);
-  //  optimal solution
   highs.changeColBounds(1, -inf, x1_upper);
   dualiseTest(highs);
 
   highs.clear();
+}
+
+void freeColumnTest(Highs& highs) {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp = distillationLp();
+  if (dev_run) printf("\nFree column 1 of distillation\n");
+  lp.col_lower_[1] = -inf;
+  highs.passModel(model);
+  dualiseTest(highs);
+  highs.clear();
+}
+
+void fixedColumnTest(Highs& highs) {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp = distillationLp();
+  double x0_fixed = 1;
+  if (dev_run) printf("\nFix column 0 of distillation to be %g\n", x0_fixed);
+  lp.col_lower_[0] = x0_fixed;
+  lp.col_upper_[0] = x0_fixed;
+  highs.passModel(model);
+  dualiseTest(highs);
+  highs.clear();
+}
+
+void rowUpperBoundTest(Highs& highs) {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  lp = distillationLp();
+  double row0_upper = 7.1;
+  if (dev_run) printf("\nGive an upper bound on row 0 of %g\n", row0_upper);
+  lp.row_upper_[0] = row0_upper;
+  // Needs reduced lower bound for feasiblilty
+  double row2_lower = 5.7;
+  lp.row_lower_[2] = row2_lower;
+  highs.passModel(model);
+  dualiseTest(highs);
 }
 
 void afiroTest(Highs& highs) {
