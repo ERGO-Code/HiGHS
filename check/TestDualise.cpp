@@ -14,7 +14,7 @@ void colUpperBoundTest(Highs& highs);
 void rowUpperBoundTest(Highs& highs);
 void distillationTest(Highs& highs);
 HighsLp distillationLp();
-void afiroTest(Highs& highs);
+void instanceTest(Highs& highs, const std::string model_name);
 
 TEST_CASE("Dualise", "[highs_test_dualise]") {
 
@@ -24,8 +24,11 @@ TEST_CASE("Dualise", "[highs_test_dualise]") {
   // distillationTest(highs);
   // freeColumnTest(highs);
   // fixedColumnTest(highs);
-  colUpperBoundTest(highs);
+  //  colUpperBoundTest(highs);
   //  rowUpperBoundTest(highs);
+  instanceTest(highs, "avgas");
+  //  instanceTest(highs, "afiro");
+  //  instanceTest(highs, "adlittle");
   //afiroTest(highs);
 }
 
@@ -35,13 +38,13 @@ void dualiseTest(Highs& highs) {
   highs.setOptionValue("simplex_dualise_strategy", kHighsOptionOff);
   highs.setBasis();
   highs.run();
-  highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", true);
   double primal_objective = info.objective_function_value;
   highs.setOptionValue("simplex_dualise_strategy", kHighsOptionOn);
   highs.setBasis();
   //  detailedOutput(highs);
   highs.run();
-  highs.writeSolution("", true);
+  //if (dev_run) highs.writeSolution("", true);
   double dual_objective = info.objective_function_value;
   double dl = fabs(primal_objective-dual_objective);
   REQUIRE(dl < double_equal_tolerance);
@@ -159,9 +162,11 @@ void rowUpperBoundTest(Highs& highs) {
   dualiseTest(highs);
 }
 
-void afiroTest(Highs& highs) {
+void instanceTest(Highs& highs, const std::string model_name) {
   std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+    std::string(HIGHS_DIR) + "/check/instances/" + model_name + ".mps";
+  if (dev_run) printf("\nSolving model %s\n", model_name.c_str());
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   dualiseTest(highs);
 }
+

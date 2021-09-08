@@ -781,7 +781,7 @@ HighsStatus HEkk::undualise() {
 	  move = kNonbasicMoveDn;
 	} else {
 	  // Look at the corresponding dual variable for the upper bound
-	  dual_variable = dual_num_col + upper_bound_col++;
+	  dual_variable = upper_bound_col++;
 	  dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
 	  if (dual_basic) {
 	    // Primal variable is nonbasic at its upper bound
@@ -934,7 +934,15 @@ HighsStatus HEkk::undualise() {
   status_.has_ar_matrix = false;
   status_.has_nla = false;
   status_.has_invert = false;
-  return solve();
+  HighsInt primal_solve_iteration_count = -iteration_count_;
+  printf("HEkk::undualise() Solving the primal LP using the optimal basis of its dual\n");
+  HighsStatus return_status = solve();
+  primal_solve_iteration_count += iteration_count_;
+  //  if (primal_solve_iteration_count)
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+                 "Solving the primal LP using the optimal basis of its dual required %d simplex iterations\n",
+		 (int)primal_solve_iteration_count);
+  return return_status;
 }
 
 HighsStatus HEkk::permute() {
