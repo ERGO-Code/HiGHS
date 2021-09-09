@@ -199,6 +199,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       lpAggregator.addRow(i, scales[s]);
 
       HighsInt currPathLen = 1;
+      bool haveContinuousCol = false;
       const double maxWeight = 1. / mip.mipdata_->feastol;
       const double minWeight = mip.mipdata_->feastol;
 
@@ -237,6 +238,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           if (addedSubstitutionRows) continue;
 
+          haveContinuousCol = true;
           if (baseRowVals[j] < 0) {
             if (colInArcs[col].first == colInArcs[col].second) continue;
             if (bestOutArcCol == -1 ||
@@ -273,7 +275,6 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
 
-        ++currPathLen;
         // we prefer to use an out edge if the bound distances are equal in
         // feasibility tolerance otherwise we choose an inArc. This tie breaking
         // is arbitrary, but we should direct the substitution to prefer one
@@ -343,6 +344,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           lpAggregator.addRow(row, weight);
         }
+
+        ++currPathLen;
       }
 
       // if the path has length at least 2 try to separate a path mixing cut
@@ -510,6 +513,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       }
 
       lpAggregator.clear();
+
+      if (!success && !haveContinuousCol) break;
     }
   }
 }
