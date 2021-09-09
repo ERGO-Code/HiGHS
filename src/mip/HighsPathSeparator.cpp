@@ -173,21 +173,21 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       case RowType::kUnusuable:
         continue;
       case RowType::kEq:
-        if (lpSolution.row_dual[i] < -mip.mipdata_->epsilon) {
-          scales[0] = -1.0;
-          scales[1] = 1.0;
-        } else {
+        if (lpSolution.row_dual[i] <= mip.mipdata_->epsilon) {
           scales[0] = 1.0;
           scales[1] = -1.0;
+        } else {
+          scales[0] = -1.0;
+          scales[1] = 1.0;
         }
         break;
       case RowType::kLeq:
-        scales[0] = -1.0;
-        scales[1] = 1.0;
-        break;
-      case RowType::kGeq:
         scales[0] = 1.0;
         scales[1] = -1.0;
+        break;
+      case RowType::kGeq:
+        scales[0] = -1.0;
+        scales[1] = 1.0;
         break;
       default:
         assert(false);
@@ -195,7 +195,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     bool success = false;
 
-    for (HighsInt s = 0; s != 2 && !success; ++s) {
+    for (HighsInt s = 0; s != 2; ++s) {
       lpAggregator.addRow(i, scales[s]);
 
       HighsInt currPathLen = 1;
@@ -514,7 +514,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       lpAggregator.clear();
 
-      if (!success && !haveContinuousCol) break;
+      if (success || !haveContinuousCol) break;
     }
   }
 }
