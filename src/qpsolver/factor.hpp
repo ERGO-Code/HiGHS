@@ -13,7 +13,7 @@ class NewCholeskyFactor {
   bool uptodate = false;
 
   Runtime& runtime;
-  
+
   Basis& basis;
 
   HighsInt current_k = 0;
@@ -26,22 +26,22 @@ class NewCholeskyFactor {
 
     orig.assign(dim_ns, std::vector<double>(dim_ns, 0.0));
 
-      Matrix temp(dim_ns, 0);
+    Matrix temp(dim_ns, 0);
 
-      Vector buffer_Qcol(runtime.instance.num_var);
-      Vector buffer_ZtQi(dim_ns);
-      for (HighsInt i=0; i<runtime.instance.num_var; i++) {
-        runtime.instance.Q.mat.extractcol(i, buffer_Qcol);
-        basis.Ztprod(buffer_Qcol, buffer_ZtQi);
-        temp.append(buffer_ZtQi);
+    Vector buffer_Qcol(runtime.instance.num_var);
+    Vector buffer_ZtQi(dim_ns);
+    for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
+      runtime.instance.Q.mat.extractcol(i, buffer_Qcol);
+      basis.Ztprod(buffer_Qcol, buffer_ZtQi);
+      temp.append(buffer_ZtQi);
+    }
+    MatrixBase& temp_t = temp.t();
+    for (HighsInt i = 0; i < dim_ns; i++) {
+      basis.Ztprod(temp_t.extractcol(i, buffer_Qcol), buffer_ZtQi);
+      for (HighsInt j = 0; j < buffer_ZtQi.num_nz; j++) {
+        orig[i][buffer_ZtQi.index[j]] = buffer_ZtQi.value[buffer_ZtQi.index[j]];
       }
-      MatrixBase& temp_t = temp.t();
-      for (HighsInt i=0; i<dim_ns; i++) {
-        basis.Ztprod(temp_t.extractcol(i, buffer_Qcol), buffer_ZtQi);
-        for (HighsInt j=0; j<buffer_ZtQi.num_nz; j++) {
-          orig[i][buffer_ZtQi.index[j]] = buffer_ZtQi.value[buffer_ZtQi.index[j]]; 
-        }
-      }
+    }
 
     for (size_t col = 0; col < orig.size(); col++) {
       for (size_t row = 0; row <= col; row++) {
@@ -75,8 +75,7 @@ class NewCholeskyFactor {
   }
 
  public:
-  NewCholeskyFactor(Runtime& rt, Basis& bas)
-      : runtime(rt), basis(bas) {
+  NewCholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
     uptodate = false;
     current_k_max =
         max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),

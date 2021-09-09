@@ -6,6 +6,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+
 #include "util/HighsInt.h"
 
 enum class PARALLELISM_SETTING { NONE, OMP, BUILTIN };

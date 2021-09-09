@@ -112,8 +112,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
     basisstatus[conid] = atlower;
     activeconstraintidx.push_back(conid);
   } else {
-    printf("Degeneracy? constraint %" HIGHSINT_FORMAT
-           " already in basis\n",
+    printf("Degeneracy? constraint %" HIGHSINT_FORMAT " already in basis\n",
            conid);
     exit(1);
   }
@@ -137,7 +136,7 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
   if (newactivecon == droppedcon) {
     return;
   }
-  
+
   HighsInt hint = 99999;
 
   HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
@@ -150,8 +149,8 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
     basisfactor.btran(row_ep, 1.0);
   }
 
-  pricing->update_weights(hvec2vec(col_aq), hvec2vec(row_ep),
-                          droppedcon, newactivecon);
+  pricing->update_weights(hvec2vec(col_aq), hvec2vec(row_ep), droppedcon,
+                          newactivecon);
   HighsInt row_out = droppedcon_rowindex;
 
   basisfactor.update(&col_aq, &row_ep, &row_out, &hint);
@@ -165,12 +164,13 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
   buffered_q = -1;
 }
 
-Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer, HighsInt p) {
+Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer,
+                     HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.btran(rhs_hvec, 1.0);
   if (buffer) {
     row_ep.copy(&rhs_hvec);
-    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+    for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
       row_ep.packIndex[i] = rhs_hvec.packIndex[i];
       row_ep.packValue[i] = rhs_hvec.packValue[i];
     }
@@ -186,7 +186,7 @@ Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
   basisfactor.btran(rhs_hvec, 1.0);
   if (buffer) {
     row_ep.copy(&rhs_hvec);
-    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+    for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
       row_ep.packIndex[i] = rhs_hvec.packIndex[i];
       row_ep.packValue[i] = rhs_hvec.packValue[i];
     }
@@ -197,12 +197,13 @@ Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
   return hvec2vec(rhs_hvec);
 }
 
-Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer, HighsInt q) {
+Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer,
+                     HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.ftran(rhs_hvec, 1.0);
   if (buffer) {
     col_aq.copy(&rhs_hvec);
-    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+    for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
       col_aq.packIndex[i] = rhs_hvec.packIndex[i];
       col_aq.packValue[i] = rhs_hvec.packValue[i];
     }
@@ -219,7 +220,7 @@ Vector Basis::ftran(const Vector& rhs, bool buffer, HighsInt q) {
   basisfactor.ftran(rhs_hvec, 1.0);
   if (buffer) {
     col_aq.copy(&rhs_hvec);
-    for (HighsInt i=0; i<rhs_hvec.packCount; i++) {
+    for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
       col_aq.packIndex[i] = rhs_hvec.packIndex[i];
       col_aq.packValue[i] = rhs_hvec.packValue[i];
     }
@@ -267,31 +268,32 @@ Vector Basis::recomputex(const Instance& inst) {
   return hvec2vec(rhs_hvec);
 }
 
-Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer, HighsInt q) {
-      Vector res_ = ftran(rhs, buffer, q);
+Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
+                      HighsInt q) {
+  Vector res_ = ftran(rhs, buffer, q);
 
-      target.reset();
-      for (HighsInt i = 0; i < nonactiveconstraintsidx.size(); i++) {
-        HighsInt nonactive = nonactiveconstraintsidx[i];
-        HighsInt idx = constraintindexinbasisfactor[nonactive];
-        target.index[i] = i;
-        target.value[i] = res_.value[idx];
-      }
-      target.resparsify();
-      return target;
+  target.reset();
+  for (HighsInt i = 0; i < nonactiveconstraintsidx.size(); i++) {
+    HighsInt nonactive = nonactiveconstraintsidx[i];
+    HighsInt idx = constraintindexinbasisfactor[nonactive];
+    target.index[i] = i;
+    target.value[i] = res_.value[idx];
   }
+  target.resparsify();
+  return target;
+}
 
-  Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
-      Vector temp(runtime.instance.num_var);
-      for (HighsInt i = 0; i < rhs.num_nz; i++) {
-        HighsInt nonactive = nonactiveconstraintsidx[i];
-        HighsInt idx = constraintindexinbasisfactor[nonactive];
-        temp.index[i] = idx;
-        temp.value[idx] = rhs.value[i];
-      }
-      temp.num_nz = rhs.num_nz;
-      return btran(temp, target);
+Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
+  Vector temp(runtime.instance.num_var);
+  for (HighsInt i = 0; i < rhs.num_nz; i++) {
+    HighsInt nonactive = nonactiveconstraintsidx[i];
+    HighsInt idx = constraintindexinbasisfactor[nonactive];
+    temp.index[i] = idx;
+    temp.value[idx] = rhs.value[i];
   }
+  temp.num_nz = rhs.num_nz;
+  return btran(temp, target);
+}
 
 // void Basis::write(std::string filename) {
 //    FILE* file = fopen(filename.c_str(), "w");

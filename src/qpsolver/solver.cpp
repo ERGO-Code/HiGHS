@@ -5,19 +5,19 @@
 
 #include "Highs.h"
 #include "basis.hpp"
+#include "dantzigpricing.hpp"
+#include "devexharrispricing.hpp"
+#include "devexpricing.hpp"
+#include "factor.hpp"
 #include "feasibility_highs.hpp"
 #include "gradient.hpp"
 #include "instance.hpp"
 #include "lp_data/HighsAnalysis.h"
-#include "dantzigpricing.hpp"
-#include "devexharrispricing.hpp"
-#include "devexpricing.hpp"
-#include "steepestedgepricing.hpp"
 #include "ratiotest.hpp"
-#include "factor.hpp"
 #include "reducedcosts.hpp"
 #include "reducedgradient.hpp"
 #include "snippets.hpp"
+#include "steepestedgepricing.hpp"
 
 void Solver::solve() {
   CrashSolution* crash;
@@ -31,7 +31,7 @@ void Solver::solve() {
 
 Solver::Solver(Runtime& rt) : runtime(rt) {}
 
-void Solver::loginformation(Runtime& rt, Basis& basis, 
+void Solver::loginformation(Runtime& rt, Basis& basis,
                             NewCholeskyFactor& factor) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
@@ -101,8 +101,8 @@ Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 }
 
 // VECTOR
-Vector& computesearchdirection_major(Runtime& runtime,
-                                     Basis& basis, NewCholeskyFactor& factor,
+Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
+                                     NewCholeskyFactor& factor,
                                      const Vector& yp, Gradient& gradient,
                                      Vector& gyp, Vector& l, Vector& p) {
   runtime.instance.Q.mat_vec(yp, gyp);
@@ -119,7 +119,8 @@ Vector& computesearchdirection_major(Runtime& runtime,
   }
 }
 
-double computemaxsteplength(Runtime& runtime, const Vector& p, Gradient& gradient, Vector& buffer_Qp) {
+double computemaxsteplength(Runtime& runtime, const Vector& p,
+                            Gradient& gradient, Vector& buffer_Qp) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
   if (fabs(denominator) > 10E-5) {
     double numerator = -(p * gradient.getGradient());
@@ -131,37 +132,38 @@ double computemaxsteplength(Runtime& runtime, const Vector& p, Gradient& gradien
   }
 }
 
-void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon, Vector& buffer_d, HighsInt& maxabsd, HighsInt& constrainttodrop) {
-    HighsInt idx = indexof(basis.getinactive(), newactivecon);
-    if (idx != -1) {
-      maxabsd = idx;
-      constrainttodrop = newactivecon;
-      Vector::unit(basis.getinactive().size(), idx, buffer_d);
-      return;
-      // return NullspaceReductionResult(true);
-    }
-
-    // TODO: this operation is inefficient.
-    Vector aq = rt.instance.A.t().extractcol(newactivecon);
-    basis.Ztprod(aq, buffer_d, true, newactivecon);
-
-    maxabsd = 0;
-    for (HighsInt i = 0; i < buffer_d.num_nz; i++) {
-      if (fabs(buffer_d.value[buffer_d.index[i]]) >
-          fabs(buffer_d.value[maxabsd])) {
-        maxabsd = buffer_d.index[i];
-      }
-    }
-    constrainttodrop = basis.getinactive()[maxabsd];
-    if (fabs(buffer_d.value[maxabsd]) < rt.settings.d_zero_threshold) {
-      printf(
-          "degeneracy? not possible to find non-active constraint to "
-          "leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n",
-          maxabsd, log10(fabs(buffer_d.value[maxabsd])));
-      exit(1);
-    }
+void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
+            Vector& buffer_d, HighsInt& maxabsd, HighsInt& constrainttodrop) {
+  HighsInt idx = indexof(basis.getinactive(), newactivecon);
+  if (idx != -1) {
+    maxabsd = idx;
+    constrainttodrop = newactivecon;
+    Vector::unit(basis.getinactive().size(), idx, buffer_d);
     return;
-    // return NullspaceReductionResult(idx != -1);
+    // return NullspaceReductionResult(true);
+  }
+
+  // TODO: this operation is inefficient.
+  Vector aq = rt.instance.A.t().extractcol(newactivecon);
+  basis.Ztprod(aq, buffer_d, true, newactivecon);
+
+  maxabsd = 0;
+  for (HighsInt i = 0; i < buffer_d.num_nz; i++) {
+    if (fabs(buffer_d.value[buffer_d.index[i]]) >
+        fabs(buffer_d.value[maxabsd])) {
+      maxabsd = buffer_d.index[i];
+    }
+  }
+  constrainttodrop = basis.getinactive()[maxabsd];
+  if (fabs(buffer_d.value[maxabsd]) < rt.settings.d_zero_threshold) {
+    printf(
+        "degeneracy? not possible to find non-active constraint to "
+        "leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n",
+        maxabsd, log10(fabs(buffer_d.value[maxabsd])));
+    exit(1);
+  }
+  return;
+  // return NullspaceReductionResult(idx != -1);
 }
 
 void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
@@ -221,10 +223,9 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       Vector::unit(runtime.instance.num_var, unit, buffer_yp);
       basis.btran(buffer_yp, buffer_yp, true, minidx);
 
-
       buffer_l.dim = basis.getnuminactive();
-      computesearchdirection_major(runtime, basis, factor, buffer_yp,
-                                   gradient, buffer_gyp, buffer_l, p);
+      computesearchdirection_major(runtime, basis, factor, buffer_yp, gradient,
+                                   buffer_gyp, buffer_l, p);
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
@@ -252,9 +253,12 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       if (stepres.limitingconstraint != -1) {
         HighsInt constrainttodrop;
         HighsInt maxabsd;
-        reduce(runtime, basis, stepres.limitingconstraint, buffer_d, maxabsd, constrainttodrop);
+        reduce(runtime, basis, stepres.limitingconstraint, buffer_d, maxabsd,
+               constrainttodrop);
         if (runtime.instance.Q.mat.value.size() > 0) {
-          factor.reduce(buffer_d, maxabsd, indexof(basis.getinactive(), stepres.limitingconstraint) != -1);
+          factor.reduce(
+              buffer_d, maxabsd,
+              indexof(basis.getinactive(), stepres.limitingconstraint) != -1);
         }
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);

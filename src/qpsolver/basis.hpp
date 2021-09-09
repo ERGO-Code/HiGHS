@@ -126,19 +126,22 @@ class Basis {
   void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
                    Pricing* pricing);
 
-  Vector btran(const Vector& rhs, bool buffer=false, HighsInt p=-1);
+  Vector btran(const Vector& rhs, bool buffer = false, HighsInt p = -1);
 
-  Vector ftran(const Vector& rhs, bool buffer=false, HighsInt q=-1);
+  Vector ftran(const Vector& rhs, bool buffer = false, HighsInt q = -1);
 
-  Vector& btran(const Vector& rhs, Vector& target, bool buffer=false, HighsInt p=-1);
+  Vector& btran(const Vector& rhs, Vector& target, bool buffer = false,
+                HighsInt p = -1);
 
-  Vector& ftran(const Vector& rhs, Vector& target, bool buffer=false, HighsInt q=-1);
+  Vector& ftran(const Vector& rhs, Vector& target, bool buffer = false,
+                HighsInt q = -1);
 
   Vector recomputex(const Instance& inst);
 
   void write(std::string filename);
 
-  Vector& Ztprod(const Vector& rhs, Vector& target, bool buffer=false, HighsInt q=-1);
+  Vector& Ztprod(const Vector& rhs, Vector& target, bool buffer = false,
+                 HighsInt q = -1);
 
   Vector& Zprod(const Vector& rhs, Vector& target);
 };

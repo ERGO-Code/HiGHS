@@ -20,9 +20,7 @@ class Gradient {
 
  public:
   Gradient(Runtime& rt)
-      : runtime(rt),
-        gradient(Vector(rt.instance.num_var)),
-        uptodate(false) {}
+      : runtime(rt), gradient(Vector(rt.instance.num_var)), uptodate(false) {}
 
   Vector& getGradient() {
     if (!uptodate ||
