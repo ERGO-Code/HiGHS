@@ -4,7 +4,6 @@
 #include "basis.hpp"
 #include "eventhandler.hpp"
 #include "instance.hpp"
-#include "nullspace.hpp"
 #include "factor.hpp"
 #include "runtime.hpp"
 
@@ -18,7 +17,7 @@ struct Solver {
  private:
   Runtime& runtime;
 
-  void loginformation(Runtime& rt, Basis& basis, Nullspace& ns,
+  void loginformation(Runtime& rt, Basis& basis,
                       NewCholeskyFactor& factor);
 };
 

@@ -28,7 +28,7 @@ class ReducedGradient {
     return rg;
   }
 
-  void reduce(NullspaceReductionResult& nrr) {
+  void reduce(const Vector& buffer_d, const HighsInt maxabsd) {
     if (!uptodate) {
       return;
     }
@@ -43,13 +43,13 @@ class ReducedGradient {
     // }
     // r.num_nz = rg.dim-1;
 
-    for (HighsInt i = 0; i < nrr.d.num_nz; i++) {
-      HighsInt idx = nrr.d.index[i];
-      if (idx == nrr.maxabsd) {
+    for (HighsInt i = 0; i < buffer_d.num_nz; i++) {
+      HighsInt idx = buffer_d.index[i];
+      if (idx == maxabsd) {
         continue;
       }
       rg.value[idx] -=
-          rg.value[nrr.maxabsd] * nrr.d.value[idx] / nrr.d.value[nrr.maxabsd];
+          rg.value[maxabsd] * buffer_d.value[idx] / buffer_d.value[maxabsd];
     }
 
     rg.resparsify();
