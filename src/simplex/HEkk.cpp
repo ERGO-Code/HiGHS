@@ -613,7 +613,7 @@ HighsStatus HEkk::dualise() {
     const double lower = original_col_lower_[iCol];
     const double upper = original_col_upper_[iCol];
     extra_columns.addVec(1, &iCol, &one);
-    lp_.col_cost_.push_back(upper-lower);
+    lp_.col_cost_.push_back(upper);
     lp_.col_lower_.push_back(-inf);
     lp_.col_upper_.push_back(0);
     num_extra_col++;
@@ -673,6 +673,27 @@ HighsStatus HEkk::dualise() {
     delta_offset += multiplier * original_col_cost_[iCol];
     for (HighsInt iEl = start[iCol]; iEl<start[iCol+1]; iEl++)
       lp_.col_cost_[index[iEl]] -= multiplier * value[iEl];
+  }
+  if (extra_columns.num_col_) {
+    // Incorporate the cost shift by subtracting
+    // extra_columns*primal_bound from the cost vector for the extra
+    // dual variables
+    //
+    // Have to scatter the packed primal bound values into a
+    // full-length vector
+    //
+    // ToDo Make this more efficient?
+    vector<double> primal_bound;
+    primal_bound.assign(original_num_col_, 0);
+    for (HighsInt iX = 0; iX<primal_bound_index.size(); iX++)
+      primal_bound[primal_bound_index[iX]] = primal_bound_value[iX];
+    
+    for (HighsInt iCol = 0; iCol < extra_columns.num_col_; iCol++) {
+      double cost = lp_.col_cost_[original_num_row_+iCol];
+      for (HighsInt iEl = extra_columns.start_[iCol]; iEl<extra_columns.start_[iCol+1]; iEl++) 
+	cost -= primal_bound[extra_columns.index_[iEl]] * extra_columns.value_[iEl];
+      lp_.col_cost_[original_num_row_+iCol] = cost;
+    }
   }
   lp_.offset_ += delta_offset;
   // Copy the row-wise dual LP constraint matrix and transpose it.
