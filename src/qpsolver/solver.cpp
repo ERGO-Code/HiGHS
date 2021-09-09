@@ -89,7 +89,7 @@ void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 }
 
 // VECTOR
-Vector& computesearchdirection_minor(Runtime& rt, Nullspace& ns, Basis& bas,
+Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
                                      NewCholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
   Vector g2 = -redgrad.get();
@@ -102,7 +102,7 @@ Vector& computesearchdirection_minor(Runtime& rt, Nullspace& ns, Basis& bas,
 }
 
 // VECTOR
-Vector& computesearchdirection_major(Runtime& runtime, Nullspace& ns,
+Vector& computesearchdirection_major(Runtime& runtime,
                                      Basis& basis, NewCholeskyFactor& factor,
                                      const Vector& yp, Gradient& gradient,
                                      Vector& gyp, Vector& l, Vector& p) {
@@ -117,6 +117,18 @@ Vector& computesearchdirection_major(Runtime& runtime, Nullspace& ns,
   } else {
     return p.repopulate(yp).scale(-gradient.getGradient().dot(yp));
     // return -yp;
+  }
+}
+
+double computemaxsteplength(Runtime& runtime, const Vector& p, Gradient& gradient, Vector& buffer_Qp) {
+  double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
+  if (fabs(denominator) > 10E-5) {
+    double numerator = -(p * gradient.getGradient());
+    if (numerator < 0.0) {
+      return 0.0;
+    } else {
+      return numerator / denominator;
+    }
   }
 }
 
@@ -177,7 +189,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
 
       buffer_l.dim = basis.getnuminactive();
-      computesearchdirection_major(runtime, ns, basis, factor, buffer_yp,
+      computesearchdirection_major(runtime, basis, factor, buffer_yp,
                                    gradient, buffer_gyp, buffer_l, p);
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
@@ -185,20 +197,12 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       maxsteplength = std::numeric_limits<double>::infinity();
       if (runtime.instance.Q.mat.value.size() > 0) {
         double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
-        if (fabs(denominator) > 10E-5) {
-          double numerator = -(p * gradient.getGradient());
-          if (numerator < 0.0) {
-            // printf("numerator < 0: %lf\n", numerator);
-            maxsteplength = 0.0;
-          } else {
-            maxsteplength = numerator / denominator;
-          }
-        }
+        maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp);
         factor.expand(buffer_yp, buffer_gyp, buffer_l);
       }
       redgrad.expand(buffer_yp);
     } else {
-      computesearchdirection_minor(runtime, ns, basis, factor, redgrad, p);
+      computesearchdirection_minor(runtime, basis, factor, redgrad, p);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
     }
@@ -238,7 +242,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         redgrad.update(stepres.alpha, false);
       }
 
-      gradient.update(p, stepres.alpha);
+      gradient.update(buffer_Qp, stepres.alpha);
       redcosts.update();
 
       runtime.primal.saxpy(stepres.alpha, p);

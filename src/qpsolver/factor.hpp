@@ -14,31 +14,58 @@ class NewCholeskyFactor {
   bool uptodate = false;
 
   Runtime& runtime;
+  
   Nullspace& nullspace;
-
-  std::vector<std::vector<double>> orig;
+  Basis& basis;
 
   HighsInt current_k = 0;
   HighsInt current_k_max;
   std::vector<double> L;
 
   void recompute() {
-    // TODO: replace calculations involving Z by BTRAN/FTRAN
-    Matrix& Z = nullspace.getNullspace();
-    // M = (Q' * Z)' * Z
-    // Matrix m = Z.tran_mat(runtime.instance.Q).mat_mat(Z);
-    Matrix m = Matrix(Matrix(Z.mat.tran_mat_(runtime.instance.Q.mat), false)
-                          .t()
-                          .tran_mat_(Z.mat),
-                      false);
+    std::vector<std::vector<double>> orig;
+    HighsInt dim_ns = basis.getinactive().size();
 
-    orig.assign(m.mat.num_col, std::vector<double>(m.mat.num_col, 0.0));
+    bool old = false;
+    if (old) {
+      // // TODO: replace calculations involving Z by BTRAN/FTRAN
+      // Matrix& Z = nullspace.getNullspace();
+      // // M = (Q' * Z)' * Z
+      // // Matrix m = Z.tran_mat(runtime.instance.Q).mat_mat(Z);
+      // Matrix m = Matrix(Matrix(Z.mat.tran_mat_(runtime.instance.Q.mat), false)
+      //                       .t()
+      //                       .tran_mat_(Z.mat),
+      //                   false);
 
-    for (HighsInt i = 0; i < m.mat.num_col; i++) {
-      for (HighsInt j = m.mat.start[i]; j < m.mat.start[i + 1]; j++) {
-        HighsInt row = m.mat.index[j];
-        orig[row][i] = m.mat.value[j];
+      // orig.assign(m.mat.num_col, std::vector<double>(m.mat.num_col, 0.0));
+
+      // for (HighsInt i = 0; i < m.mat.num_col; i++) {
+      //   for (HighsInt j = m.mat.start[i]; j < m.mat.start[i + 1]; j++) {
+      //     HighsInt row = m.mat.index[j];
+      //     orig[row][i] = m.mat.value[j];
+      //   }
+      // }
+    } else {
+      
+      orig.assign(dim_ns, std::vector<double>(dim_ns, 0.0));
+
+      Matrix temp(dim_ns, 0);
+
+      Vector buffer_Qcol(runtime.instance.num_var);
+      Vector buffer_ZtQi(dim_ns);
+      for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+        runtime.instance.Q.mat.extractcol(i, buffer_Qcol);
+        basis.Ztprod(buffer_Qcol, buffer_ZtQi);
+        temp.append(buffer_ZtQi);
       }
+      MatrixBase& temp_t = temp.t();
+      for (HighsInt i=0; i<dim_ns; i++) {
+        basis.Ztprod(temp_t.extractcol(i, buffer_Qcol), buffer_ZtQi);
+        for (HighsInt j=0; j<buffer_ZtQi.num_nz; j++) {
+          orig[i][buffer_ZtQi.index[j]] = buffer_ZtQi.value[buffer_ZtQi.index[j]]; 
+        }
+      }
+
     }
 
     for (size_t col = 0; col < orig.size(); col++) {
@@ -56,7 +83,7 @@ class NewCholeskyFactor {
         }
       }
     }
-    current_k = Z.mat.num_col;
+    current_k = dim_ns;
     uptodate = true;
   }
 
@@ -73,8 +100,8 @@ class NewCholeskyFactor {
   }
 
  public:
-  NewCholeskyFactor(Runtime& rt, Basis& basis, Nullspace& ns)
-      : runtime(rt), nullspace(ns) {
+  NewCholeskyFactor(Runtime& rt, Basis& bas, Nullspace& ns)
+      : runtime(rt), nullspace(ns), basis(bas) {
     uptodate = false;
     current_k_max =
         max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
