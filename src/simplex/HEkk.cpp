@@ -610,9 +610,10 @@ HighsStatus HEkk::dualise() {
   double one = 1;
   for (HighsInt iX=0; iX<num_upper_bound_col; iX++) {
     HighsInt iCol = upper_bound_col_[iX];
+    const double lower = original_col_lower_[iCol];
     const double upper = original_col_upper_[iCol];
     extra_columns.addVec(1, &iCol, &one);
-    lp_.col_cost_.push_back(upper);
+    lp_.col_cost_.push_back(upper-lower);
     lp_.col_lower_.push_back(-inf);
     lp_.col_upper_.push_back(0);
     num_extra_col++;
