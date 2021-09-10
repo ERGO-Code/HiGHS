@@ -125,11 +125,11 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   std::vector<std::pair<HighsInt, double>> inArcRows;
   inArcRows.reserve(maxAggrRowSize);
-  std::vector<std::pair<HighsInt, int>> colInArcs(lp.num_col_);
+  std::vector<std::pair<HighsInt, HighsInt>> colInArcs(lp.num_col_);
 
   std::vector<std::pair<HighsInt, double>> outArcRows;
   outArcRows.reserve(maxAggrRowSize);
-  std::vector<std::pair<HighsInt, int>> colOutArcs(lp.num_col_);
+  std::vector<std::pair<HighsInt, HighsInt>> colOutArcs(lp.num_col_);
 
   for (HighsInt col : mip.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0.0) continue;
@@ -238,8 +238,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           if (addedSubstitutionRows) continue;
 
-          haveContinuousCol = true;
           if (baseRowVals[j] < 0) {
+            haveContinuousCol = haveContinuousCol ||
+                                colOutArcs[col].first != colOutArcs[col].second;
             if (colInArcs[col].first == colInArcs[col].second) continue;
             if (bestOutArcCol == -1 ||
                 transLp.boundDistance(col) > outArcColBoundDist) {
@@ -248,6 +249,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               outArcColBoundDist = transLp.boundDistance(col);
             }
           } else {
+            haveContinuousCol = haveContinuousCol ||
+                                colInArcs[col].first != colInArcs[col].second;
             if (colOutArcs[col].first == colOutArcs[col].second) continue;
             if (bestInArcCol == -1 ||
                 transLp.boundDistance(col) > inArcColBoundDist) {
