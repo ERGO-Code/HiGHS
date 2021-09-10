@@ -182,12 +182,12 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         }
         break;
       case RowType::kLeq:
-        scales[0] = 1.0;
-        scales[1] = -1.0;
-        break;
-      case RowType::kGeq:
         scales[0] = -1.0;
         scales[1] = 1.0;
+        break;
+      case RowType::kGeq:
+        scales[0] = 1.0;
+        scales[1] = -1.0;
         break;
       default:
         assert(false);
@@ -514,7 +514,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       lpAggregator.clear();
 
-      if (success || !haveContinuousCol) break;
+      if (!haveContinuousCol) break;
     }
   }
 }
