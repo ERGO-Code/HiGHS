@@ -485,6 +485,8 @@ class HighsDomain {
   HighsDomainChange flip(const HighsDomainChange& domchg) const;
 
   double feastol() const;
+
+  HighsInt numModelNonzeros() const { return mipsolver->numNonzero(); }
 };
 
 #endif
