@@ -1315,8 +1315,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
     upper[i] = globaldomain.col_upper_[col] - globaldomain.col_lower_[col];
 
-    solval[i] =
-        vals[i] < 0 ? localdomain.col_upper_[col] : localdomain.col_lower_[col];
+    solval[i] = vals[i] < 0 ? std::min(globaldomain.col_upper_[col],
+                                       localdomain.col_upper_[col])
+                            : std::max(globaldomain.col_lower_[col],
+                                       localdomain.col_lower_[col]);
     if (vals[i] < 0 && globaldomain.col_upper_[col] != kHighsInf) {
       rhs -= globaldomain.col_upper_[col] * vals[i];
       vals[i] = -vals[i];
