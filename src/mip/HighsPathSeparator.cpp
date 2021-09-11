@@ -208,7 +208,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         return false;
       };
 
-      bool haveContinuousCol = false;
+      bool tryNegatedScale = false;
       const double maxWeight = 1. / mip.mipdata_->feastol;
       const double minWeight = mip.mipdata_->feastol;
 
@@ -248,8 +248,20 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           if (addedSubstitutionRows) continue;
 
           if (baseRowVals[j] < 0) {
-            haveContinuousCol = haveContinuousCol ||
-                                colOutArcs[col].first != colOutArcs[col].second;
+            if (currPathLen == 1 && !tryNegatedScale) {
+              if (colOutArcs[col].second - colOutArcs[col].first <=
+                  currPathLen) {
+                for (HighsInt k = colOutArcs[col].first;
+                     k < colOutArcs[col].second; ++k) {
+                  if (outArcRows[k].first != i) {
+                    tryNegatedScale = true;
+                    break;
+                  }
+                }
+              } else
+                tryNegatedScale = true;
+            }
+
             if (colInArcs[col].first == colInArcs[col].second) continue;
             if (colInArcs[col].second - colInArcs[col].first <= currPathLen) {
               bool haveRow = false;
@@ -270,8 +282,19 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               outArcColBoundDist = transLp.boundDistance(col);
             }
           } else {
-            haveContinuousCol = haveContinuousCol ||
-                                colInArcs[col].first != colInArcs[col].second;
+            if (currPathLen == 1 && !tryNegatedScale) {
+              if (colInArcs[col].second - colInArcs[col].first <= currPathLen) {
+                for (HighsInt k = colInArcs[col].first;
+                     k < colInArcs[col].second; ++k) {
+                  if (inArcRows[k].first != i) {
+                    tryNegatedScale = true;
+                    break;
+                  }
+                }
+              } else
+                tryNegatedScale = true;
+            }
+
             if (colOutArcs[col].first == colOutArcs[col].second) continue;
             if (colOutArcs[col].second - colOutArcs[col].first <= currPathLen) {
               bool haveRow = false;
@@ -552,7 +575,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       lpAggregator.clear();
 
-      if (!haveContinuousCol) break;
+      if (!tryNegatedScale) break;
     }
   }
 }
