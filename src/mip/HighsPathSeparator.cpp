@@ -148,12 +148,14 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
             outArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           break;
         case RowType::kGeq:
-        case RowType::kEq:
           if (lp.a_value_[i] > 0)
             inArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           else
             outArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
           break;
+        case RowType::kEq:
+          inArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
+          outArcRows.emplace_back(lp.a_index_[i], lp.a_value_[i]);
       }
     }
 
