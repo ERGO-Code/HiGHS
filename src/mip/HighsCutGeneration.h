@@ -88,6 +88,11 @@ class HighsCutGeneration {
   /// given local domain
   bool generateConflict(HighsDomain& localdom, std::vector<HighsInt>& proofinds,
                         std::vector<double>& proofvals, double& proofrhs);
+
+  /// applies postprocessing to an externally generated cut and adds it to the
+  /// cutpool if it is violated enough
+  bool finalizeAndAddCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
+                         double& rhs);
 };
 
 #endif

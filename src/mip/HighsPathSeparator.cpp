@@ -185,12 +185,12 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         }
         break;
       case RowType::kLeq:
-        scales[0] = -1.0;
-        scales[1] = 1.0;
-        break;
-      case RowType::kGeq:
         scales[0] = 1.0;
         scales[1] = -1.0;
+        break;
+      case RowType::kGeq:
+        scales[0] = -1.0;
+        scales[1] = 1.0;
         break;
       default:
         assert(false);
@@ -331,8 +331,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           aggregatedPath.emplace_back(baseRowInds, baseRowVals);
         rhs = 0;
 
-        success = success ||
-                  cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+        success |= cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
 
@@ -442,12 +441,17 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
             break;
           }
 
-          if (rhs[k] > kHighsTiny ||
-              (k > 0 && rhs[k - 1] <= rhs[k] + mip.mipdata_->feastol)) {
+          if (k == 0) {
+            if (rhs[k] > kHighsTiny) {
+              pathLen = k;
+              break;
+            }
+            if (rhs[k] >= -mip.mipdata_->feastol) rhs[k] = 0;
+          } else if (rhs[k] >= rhs[k - 1] - mip.mipdata_->feastol) {
             pathLen = k;
             break;
           }
-          rhs[k] = std::min(0., rhs[k]);
+
           delta = std::max(std::abs(rhs[k]), delta);
 
           HighsInt len = aggregatedPath[k].first.size();
@@ -547,25 +551,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                 cutVals.resize(numInds);
                 inds.resize(numInds);
 
-                if (transLp.untransform(cutVals, inds, rhs)) {
-                  HighsInt cutLen = inds.size();
-                  mip.mipdata_->debugSolution.checkCut(
-                      inds.data(), cutVals.data(), cutLen, rhs);
+                if (transLp.untransform(cutVals, inds, rhs))
+                  success |= cutGen.finalizeAndAddCut(inds, cutVals, rhs);
 
-                  // compute violation in untransformed space again
-                  double viol = -rhs;
-                  for (HighsInt j = 0; j < cutLen; ++j)
-                    viol += cutVals[j] *
-                            lpRelaxation.getSolution().col_value[inds[j]];
-
-                  if (viol > 10 * mip.mipdata_->feastol) {
-                    mip.mipdata_->domain.tightenCoefficients(
-                        inds.data(), cutVals.data(), cutLen, rhs);
-                    success = success ||
-                              cutpool.addCut(mip, inds.data(), cutVals.data(),
-                                             inds.size(), rhs) != -1;
-                  }
-                }
                 // printf("cut is violated for k = %d\n", k);
                 break;
               }
