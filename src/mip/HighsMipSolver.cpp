@@ -112,16 +112,14 @@ restart:
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
-    bool heuristicsCalled = false;
+    bool considerHeuristics = true;
     while (true) {
-      if (!heuristicsCalled && mipdata_->moreHeuristicsAllowed()) {
+      if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {
-          heuristicsCalled = true;
-
           if (mipdata_->incumbent.empty())
             mipdata_->heuristics.randomizedRounding(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
@@ -136,6 +134,8 @@ restart:
           mipdata_->heuristics.flushStatistics();
         }
       }
+
+      considerHeuristics = false;
 
       if (mipdata_->domain.infeasible()) break;
 
