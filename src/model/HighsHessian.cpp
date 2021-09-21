@@ -24,10 +24,13 @@ void HighsHessian::clear() {
   this->q_index_.clear();
   this->q_value_.clear();
 }
-void HighsHessian::print() {
-  HighsInt num_nz = 0;
-  if (dim_ > 0) num_nz = this->q_start_[dim_];
+HighsInt HighsHessian::numNz() const {
+  assert(0 <= this->dim_ && this->dim_ < (int)this->q_start_.size());
+  return this->q_start_[this->dim_];
+}
 
+void HighsHessian::print() const {
+  HighsInt num_nz = this->numNz();
   printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
          " nonzeros\n",
          dim_, num_nz);

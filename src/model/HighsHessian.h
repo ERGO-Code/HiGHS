@@ -34,7 +34,8 @@ class HighsHessian {
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
   void clear();
-  void print();
+  HighsInt numNz() const;
+  void print() const;
 };
 
 #endif

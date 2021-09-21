@@ -264,7 +264,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
-    if (hessian.q_start_[hessian.dim_] == 0) {
+    if (hessian.numNz() == 0) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Hessian has dimension %" HIGHSINT_FORMAT
                    " but no nonzeros, so is ignored\n",
@@ -398,7 +398,7 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
-    if (hessian.q_start_[hessian.dim_] == 0) {
+    if (hessian.numNz() == 0) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Hessian has dimension %" HIGHSINT_FORMAT
                    " but no nonzeros, so is ignored\n",

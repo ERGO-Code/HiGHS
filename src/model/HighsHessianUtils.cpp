@@ -82,14 +82,16 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
       interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsInt hessian_num_nz = hessian.q_start_[hessian.dim_];
-  // If the Hessian has nonzeros, check its diagonal entries in the
-  // context of the objective sense. It's OK to be identically zero,
-  // since it will be ignored.
-  if (hessian_num_nz)
+  HighsInt hessian_num_nz = hessian.numNz();
+  // If the Hessian has nonzeros, complete its diagonal with explicit
+  // zeros if necessary, and then check its diagonal entries in the
+  // context of the objective sense. It's OK to be semi-definite
+  if (hessian_num_nz) {
+    completeHessianDiagonal(options, hessian);
+    hessian_num_nz = hessian.numNz();
     if (!okHessianDiagonal(options, hessian, sense))
       return_status = HighsStatus::kError;
-
+  }
   // If entries have been removed from the matrix, resize the index
   // and value vectors
   if ((HighsInt)hessian.q_index_.size() > hessian_num_nz)
@@ -105,46 +107,99 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
   return return_status;
 }
 
+void completeHessianDiagonal(const HighsOptions& options,
+                             HighsHessian& hessian) {
+  // Count the number of missing diagonal entries
+  HighsInt num_missing_diagonal_entries = 0;
+  const HighsInt dim = hessian.dim_;
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    if (hessian.q_index_[hessian.q_start_[iCol]] != iCol)
+      num_missing_diagonal_entries++;
+  if (!num_missing_diagonal_entries) return;
+  // There are missing diagonal entries to be inserted as explicit zeros
+  const HighsInt new_num_nz = hessian.numNz() + num_missing_diagonal_entries;
+  HighsInt to_iEl = new_num_nz;
+  hessian.q_index_.resize(new_num_nz);
+  hessian.q_value_.resize(new_num_nz);
+  HighsInt next_start = hessian.numNz();
+  hessian.q_start_[dim] = to_iEl;
+  HighsInt num_missing_diagonal_entries_added = 0;
+  for (HighsInt iCol = dim - 1; iCol >= 0; iCol--) {
+    // Shift the entries that are sure to be off-diagonal
+    for (HighsInt iEl = next_start - 1; iEl > hessian.q_start_[iCol]; iEl--) {
+      assert(hessian.q_index_[iEl] != iCol);
+      to_iEl--;
+      hessian.q_index_[to_iEl] = hessian.q_index_[iEl];
+      hessian.q_value_[to_iEl] = hessian.q_value_[iEl];
+    }
+    // Now consider any first entry. If there is none, or if it's not
+    // the diagonal, then there is no diagonal entry for this column
+    bool no_diagonal_entry;
+    if (hessian.q_start_[iCol] < next_start) {
+      const HighsInt iEl = hessian.q_start_[iCol];
+      // Copy the first entry
+      to_iEl--;
+      hessian.q_index_[to_iEl] = hessian.q_index_[iEl];
+      hessian.q_value_[to_iEl] = hessian.q_value_[iEl];
+      // If the first entry isn't the diagonal, then there is no
+      // diagonal entry for this column
+      no_diagonal_entry = hessian.q_index_[iEl] != iCol;
+    } else {
+      no_diagonal_entry = true;
+    }
+    if (no_diagonal_entry) {
+      // There is no diagonal entry, so have insert an explicit zero
+      to_iEl--;
+      hessian.q_index_[to_iEl] = iCol;
+      hessian.q_value_[to_iEl] = 0;
+      num_missing_diagonal_entries_added++;
+      assert(num_missing_diagonal_entries_added <=
+             num_missing_diagonal_entries);
+    }
+    next_start = hessian.q_start_[iCol];
+    hessian.q_start_[iCol] = to_iEl;
+  }
+  assert(to_iEl == 0);
+}
+
 bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
                        const ObjSense sense) {
-  const double kSmallHessianDiagonalValue = options.small_matrix_value;
-  double min_illegal_diagonal_value = kHighsInf;
-  double max_illegal_diagonal_value = -kHighsInf;
+  double min_diagonal_value = kHighsInf;
+  double max_diagonal_value = -kHighsInf;
   const HighsInt dim = hessian.dim_;
   const HighsInt sense_sign = (HighsInt)sense;
-  HighsInt num_small_diagonal_value = 0;
+  HighsInt num_illegal_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     double diagonal_value = 0;
-    // Assumes that the diagonal entry is always first, unless it's
-    // zero so doesn't appear
+    // Assumes that the diagonal entry is always first, possibly with explicit
+    // zero value
     HighsInt iEl = hessian.q_start_[iCol];
-    if (hessian.q_index_[iEl] == iCol)
-      diagonal_value = sense_sign * hessian.q_value_[iEl];
-    if (diagonal_value <= kSmallHessianDiagonalValue) {
-      min_illegal_diagonal_value =
-          std::min(diagonal_value, min_illegal_diagonal_value);
-      max_illegal_diagonal_value =
-          std::max(diagonal_value, max_illegal_diagonal_value);
-      num_small_diagonal_value++;
-    }
+    assert(hessian.q_index_[iEl] == iCol);
+    diagonal_value = sense_sign * hessian.q_value_[iEl];
+    min_diagonal_value = std::min(diagonal_value, min_diagonal_value);
+    max_diagonal_value = std::max(diagonal_value, max_diagonal_value);
+    // Diagonal entries signed by sense must be non-negative
+    if (diagonal_value < 0) num_illegal_diagonal_value++;
   }
 
-  if (num_small_diagonal_value) {
+  const bool certainly_not_positive_semidefinite =
+      num_illegal_diagonal_value > 0;
+  if (certainly_not_positive_semidefinite) {
     if (sense == ObjSense::kMinimize) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Hessian has %" HIGHSINT_FORMAT
-                   " diagonal entries in [%g, %g] less than %g\n",
-                   num_small_diagonal_value, min_illegal_diagonal_value,
-                   max_illegal_diagonal_value, kSmallHessianDiagonalValue);
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "Hessian has %" HIGHSINT_FORMAT
+          " diagonal entries in [%g, 0) so is not positive semidefinite\n",
+          num_illegal_diagonal_value, min_diagonal_value);
     } else {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Hessian has %" HIGHSINT_FORMAT
-                   " diagonal entries in [%g, %g] greater than %g\n",
-                   num_small_diagonal_value, -max_illegal_diagonal_value,
-                   -min_illegal_diagonal_value, -kSmallHessianDiagonalValue);
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "Hessian has %" HIGHSINT_FORMAT
+          " diagonal entries in (0, %g] so is not negative semidefinite\n",
+          num_illegal_diagonal_value, -min_diagonal_value);
     }
   }
-  return num_small_diagonal_value == 0;
+  return !certainly_not_positive_semidefinite;
 }
 
 HighsStatus extractTriangularHessian(const HighsOptions& options,
