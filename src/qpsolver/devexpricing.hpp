@@ -2,9 +2,9 @@
 #define __SRC_LIB_PRICING_DEVEXPRICING_HPP__
 
 #include "basis.hpp"
+#include "pricing.hpp"
 #include "reducedcosts.hpp"
 #include "runtime.hpp"
-#include "pricing.hpp"
 
 // 42726, 78965776.391299, 559, 104.321553, 0.000669, 7937
 

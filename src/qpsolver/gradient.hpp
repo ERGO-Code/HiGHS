@@ -11,8 +11,6 @@ class Gradient {
   bool uptodate;
   HighsInt numupdates = 0;
 
-  Vector buffer_temp;
-
   void recompute() {
     runtime.instance.Q.vec_mat(runtime.primal, gradient);
     gradient += runtime.instance.c;
@@ -22,10 +20,7 @@ class Gradient {
 
  public:
   Gradient(Runtime& rt)
-      : runtime(rt),
-        gradient(Vector(rt.instance.num_var)),
-        uptodate(false),
-        buffer_temp(rt.instance.num_var) {}
+      : runtime(rt), gradient(Vector(rt.instance.num_var)), uptodate(false) {}
 
   Vector& getGradient() {
     if (!uptodate ||
@@ -35,9 +30,8 @@ class Gradient {
     return gradient;
   }
 
-  void update(Vector& p, double stepsize) {
-    runtime.instance.Q.mat_vec(p, buffer_temp);
-    gradient.saxpy(stepsize, buffer_temp);
+  void update(Vector& buffer_Qp, double stepsize) {
+    gradient.saxpy(stepsize, buffer_Qp);
     numupdates++;
   }
 };
