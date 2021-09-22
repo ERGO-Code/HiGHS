@@ -2,9 +2,9 @@
 #define __SRC_LIB_PRICING_DANTZIGPRICING_HPP__
 
 #include "basis.hpp"
+#include "pricing.hpp"
 #include "reducedcosts.hpp"
 #include "runtime.hpp"
-#include "pricing.hpp"
 
 // 51561, 78965838.346823, 559, 213.280772, 0.000812, 801
 
