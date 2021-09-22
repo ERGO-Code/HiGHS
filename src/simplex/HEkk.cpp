@@ -332,11 +332,11 @@ void HEkk::updateStatus(LpAction action) {
       break;
     case LpAction::kNewRows:
       if (kExtendInvertWhenAddingRows) {
-	// Just clear Ekk data
-	this->clearEkkData();
+        // Just clear Ekk data
+        this->clearEkkData();
       } else {
-	// Clear everything
-	this->clear();
+        // Clear everything
+        this->clear();
       }
       this->clearHotStart();
       //    this->invalidateBasisArtifacts();

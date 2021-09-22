@@ -147,7 +147,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   if (kExtendInvertWhenAddingRows) {
     if (ekk_instance_.status_.has_nla)
       ekk_instance_.debugNlaCheckInvert("Start of Highs::addRowsInterface",
-					kHighsDebugLevelExpensive + 1);
+                                        kHighsDebugLevelExpensive + 1);
   }
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = options_;
