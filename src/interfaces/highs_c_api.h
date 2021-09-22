@@ -40,7 +40,7 @@ HighsInt Highs_lpCall(
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
     const HighsInt*
-        astart,  //!< array of length [numcol+1] with column start indices
+        astart,  //!< array of length [numcol] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
@@ -74,7 +74,7 @@ HighsInt Highs_mipCall(
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
     const HighsInt*
-        astart,  //!< array of length [numcol+1] with column start indices
+        astart,  //!< array of length [numcol] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
@@ -107,12 +107,12 @@ HighsInt Highs_qpCall(
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
     const HighsInt*
-        astart,  //!< array of length [numcol+1] with column start indices
+        astart,  //!< array of length [numcol] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue,  //!< array of length [numnz] with value of matrix entries
-    const HighsInt* qstart,  //!< array of length [numcol+1] with Hessian column
+    const HighsInt* qstart,  //!< array of length [numcol] with Hessian column
                              //!< start indices
     const HighsInt* qindex,  //!< array of length [numnz] with row indices of
                              //!< Hessian matrix entries
@@ -154,7 +154,7 @@ HighsInt Highs_lpDataMpsRead(
     double* colupper,  //!< array of length [numcol] with upper column bounds
     double* rowlower,  //!< array of length [numrow] with lower row bounds
     double* rowupper,  //!< array of length [numrow] with upper row bounds
-    HighsInt* astart,  //!< array of length [numcol+1] with column start indices
+    HighsInt* astart,  //!< array of length [numcol] with column start indices
     HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     double* avalue  //!< array of length [numnz] with value of matrix entries
@@ -1116,7 +1116,7 @@ HighsInt Highs_setHighsBoolOptionValue(
 //     double *colupper,  //!< array of length [numcol] with upper column bounds
 //     double *rowlower,  //!< array of length [numrow] with lower row bounds
 //     double *rowupper,  //!< array of length [numrow] with upper row bounds
-//     int *astart,       //!< array of length [numcol+1] with column start
+//     int *astart,       //!< array of length [numcol] with column start
 //     indices int *
 //         aindex,  //!< array of length [numnz] with row indices of matrix
 //         entries
