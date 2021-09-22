@@ -104,8 +104,10 @@ restart:
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    HighsInt iterlimit = 10 * mipdata_->lp.getAvgSolveIters();
-    iterlimit = std::max(HighsInt{10000}, iterlimit);
+    HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
+                                       mipdata_->avgrootlpiters);
+    iterlimit = std::max({HighsInt{10000}, iterlimit,
+                          HighsInt(1.5 * mipdata_->firstrootlpiters)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
 

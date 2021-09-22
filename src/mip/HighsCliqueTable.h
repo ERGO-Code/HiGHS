@@ -126,11 +126,11 @@ class HighsCliqueTable {
     HighsInt ncalls = 0;
     HighsInt maxcalls = 10000;
     HighsInt maxcliques = 100;
-    int64_t maxSplayCalls = std::numeric_limits<int64_t>::max();
+    int64_t maxNeighborhoodQueries = std::numeric_limits<int64_t>::max();
 
-    bool stop(int64_t numSplayCalls) const {
+    bool stop(int64_t numNeighborhoodQueries) const {
       return maxcalls == ncalls || int(cliques.size()) == maxcliques ||
-             numSplayCalls > maxSplayCalls;
+             numNeighborhoodQueries > maxNeighborhoodQueries;
     }
 
     BronKerboschData(const std::vector<double>& sol) : sol(sol) {}
@@ -153,16 +153,19 @@ class HighsCliqueTable {
                    bool equality = false, HighsInt origin = kHighsIInf);
 
  public:
-  int64_t numSplayCalls;
+  int64_t numNeighborhoodQueries;
+
   HighsCliqueTable(HighsInt ncols) {
     cliquesetroot.resize(2 * ncols, -1);
     sizeTwoCliquesetRoot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     nfixings = 0;
-    numSplayCalls = 0;
+    numNeighborhoodQueries = 0;
     numEntries = 0;
   }
+
+  HighsInt getNumEntries() const { return numEntries; }
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
