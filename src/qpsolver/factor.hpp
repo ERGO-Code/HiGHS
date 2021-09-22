@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "matrix.hpp"
-#include "nullspace.hpp"
 #include "runtime.hpp"
 
 class NewCholeskyFactor {
@@ -14,29 +13,33 @@ class NewCholeskyFactor {
   bool uptodate = false;
 
   Runtime& runtime;
-  Nullspace& nullspace;
 
-  std::vector<std::vector<double>> orig;
+  Basis& basis;
 
   HighsInt current_k = 0;
   HighsInt current_k_max;
   std::vector<double> L;
 
   void recompute() {
-    Matrix& Z = nullspace.getNullspace();
-    // M = (Q' * Z)' * Z
-    // Matrix m = Z.tran_mat(runtime.instance.Q).mat_mat(Z);
-    Matrix m = Matrix(Matrix(Z.mat.tran_mat_(runtime.instance.Q.mat), false)
-                          .t()
-                          .tran_mat_(Z.mat),
-                      false);
+    std::vector<std::vector<double>> orig;
+    HighsInt dim_ns = basis.getinactive().size();
 
-    orig.assign(m.mat.num_col, std::vector<double>(m.mat.num_col, 0.0));
+    orig.assign(dim_ns, std::vector<double>(dim_ns, 0.0));
 
-    for (HighsInt i = 0; i < m.mat.num_col; i++) {
-      for (HighsInt j = m.mat.start[i]; j < m.mat.start[i + 1]; j++) {
-        HighsInt row = m.mat.index[j];
-        orig[row][i] = m.mat.value[j];
+    Matrix temp(dim_ns, 0);
+
+    Vector buffer_Qcol(runtime.instance.num_var);
+    Vector buffer_ZtQi(dim_ns);
+    for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
+      runtime.instance.Q.mat.extractcol(i, buffer_Qcol);
+      basis.Ztprod(buffer_Qcol, buffer_ZtQi);
+      temp.append(buffer_ZtQi);
+    }
+    MatrixBase& temp_t = temp.t();
+    for (HighsInt i = 0; i < dim_ns; i++) {
+      basis.Ztprod(temp_t.extractcol(i, buffer_Qcol), buffer_ZtQi);
+      for (HighsInt j = 0; j < buffer_ZtQi.num_nz; j++) {
+        orig[i][buffer_ZtQi.index[j]] = buffer_ZtQi.value[buffer_ZtQi.index[j]];
       }
     }
 
@@ -55,7 +58,7 @@ class NewCholeskyFactor {
         }
       }
     }
-    current_k = Z.mat.num_col;
+    current_k = dim_ns;
     uptodate = true;
   }
 
@@ -72,8 +75,7 @@ class NewCholeskyFactor {
   }
 
  public:
-  NewCholeskyFactor(Runtime& rt, Basis& basis, Nullspace& ns)
-      : runtime(rt), nullspace(ns) {
+  NewCholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
     uptodate = false;
     current_k_max =
         max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
@@ -81,7 +83,7 @@ class NewCholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
-  void expand(Vector& yp, Vector& gyp, Vector& l) {
+  void expand(const Vector& yp, Vector& gyp, Vector& l) {
     if (!uptodate) {
       return;
     }
@@ -199,12 +201,12 @@ class NewCholeskyFactor {
     m[j * kmax + i] = 0.0;
   }
 
-  void reduce(NullspaceReductionResult& nrr) {
+  void reduce(const Vector& buffer_d, const HighsInt maxabsd, bool p_in_v) {
     if (current_k == 0) {
       return;
     }
 
-    unsigned p = nrr.maxabsd;  // col we push to the right and remove
+    unsigned p = maxabsd;  // col we push to the right and remove
 
     // start situation: p=3, current_k = 5
     // |1 x  | |x    |       |1   | |xxxxx|
@@ -246,7 +248,7 @@ class NewCholeskyFactor {
       return;
     }
 
-    if (!nrr.p_in_v) {
+    if (!p_in_v) {
       // situation now:
       // |1   x| |x    |       |1   | |xxxxx|
       // | 1  x| |xx   |  ===  | 1  | | xxxx|
@@ -268,18 +270,18 @@ class NewCholeskyFactor {
       // new last row: old last row (first current_k-1 elements) + r *
       // R_current_k_current_k
 
-      for (HighsInt i = 0; i < nrr.d.num_nz; i++) {
-        HighsInt idx = nrr.d.index[i];
-        if (idx == nrr.maxabsd) {
+      for (HighsInt i = 0; i < buffer_d.num_nz; i++) {
+        HighsInt idx = buffer_d.index[i];
+        if (idx == maxabsd) {
           continue;
         }
-        if (idx < nrr.maxabsd) {
+        if (idx < maxabsd) {
           L[(current_k - 1) * current_k_max + idx] +=
-              -nrr.d.value[idx] / nrr.d.value[nrr.maxabsd] *
+              -buffer_d.value[idx] / buffer_d.value[maxabsd] *
               L[(current_k - 1) * current_k_max + current_k - 1];
         } else {
           L[(current_k - 1) * current_k_max + idx - 1] +=
-              -nrr.d.value[idx] / nrr.d.value[nrr.maxabsd] *
+              -buffer_d.value[idx] / buffer_d.value[maxabsd] *
               L[(current_k - 1) * current_k_max + current_k - 1];
         }
       }

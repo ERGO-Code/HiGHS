@@ -103,7 +103,7 @@ class HighsCliqueTable {
 
   HighsRandom randgen;
   HighsInt nfixings;
-
+  HighsInt numEntries;
   HighsInt splay(HighsInt cliqueid, HighsInt root);
 
   void unlink(HighsInt node);
@@ -161,6 +161,7 @@ class HighsCliqueTable {
     colsubstituted.resize(ncols);
     nfixings = 0;
     numSplayCalls = 0;
+    numEntries = 0;
   }
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);

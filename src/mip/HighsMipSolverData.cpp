@@ -1176,7 +1176,10 @@ restart:
     if (!mipsolver.submip &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
-      if (fixingRate >= 10.0) break;
+      if (fixingRate >= 10.0) {
+        stall = -1;
+        break;
+      }
     }
 
     ++nseparounds;
@@ -1352,7 +1355,7 @@ restart:
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "\n%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
-        maxSepaRounds = std::min(maxSepaRounds, nseparounds);
+        if (stall != -1) maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         performRestart();
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;

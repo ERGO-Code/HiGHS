@@ -708,10 +708,10 @@ void HEkkDual::solvePhase1() {
     if (solve_phase == kSolvePhase2) {
       // Moving to phase 2 so possibly reinstate cost perturbation
       if (ekk_instance_.dual_simplex_phase1_cleanup_level_ <
-	  ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level) {
-	// Allow cost perturbation for now, but may have to prevent it
-	// to avoid cleanup-perturbation loops
-	info.allow_cost_perturbation = true;
+          ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level) {
+        // Allow cost perturbation for now, but may have to prevent it
+        // to avoid cleanup-perturbation loops
+        info.allow_cost_perturbation = true;
       }
       // Comment if cost perturbation is not permitted
       if (!info.allow_cost_perturbation)
@@ -1028,12 +1028,14 @@ void HEkkDual::cleanup() {
     // stage, since cost perturbation isn't permitted unless the dual
     // simplex phase 1 cleanup level is less than the limit
     ekk_instance_.dual_simplex_phase1_cleanup_level_++;
-    const bool excessive_cleanup_calls = ekk_instance_.dual_simplex_phase1_cleanup_level_ >
-      ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level;
+    const bool excessive_cleanup_calls =
+        ekk_instance_.dual_simplex_phase1_cleanup_level_ >
+        ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level;
     if (excessive_cleanup_calls) {
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
-		  "Dual simplex cleanup level has exceeded limit of %d\n",
-		  (int)ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level);
+      highsLogDev(
+          ekk_instance_.options_->log_options, HighsLogType::kError,
+          "Dual simplex cleanup level has exceeded limit of %d\n",
+          (int)ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level);
       assert(!excessive_cleanup_calls);
     }
   }
@@ -1181,7 +1183,8 @@ void HEkkDual::iterateTasks() {
 }
 
 void HEkkDual::iterationAnalysisData() {
-  double cost_scale_factor = pow(2.0, -ekk_instance_.options_->cost_scale_factor);
+  double cost_scale_factor =
+      pow(2.0, -ekk_instance_.options_->cost_scale_factor);
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->simplex_strategy = info.simplex_strategy;
   analysis->edge_weight_mode = dual_edge_weight_mode;
@@ -2009,7 +2012,7 @@ void HEkkDual::assessPhase1Optimality() {
   highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
               "Optimal in phase 1 but not jumping to phase 2 since "
               "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
-	      "\n",
+              "\n",
               dual_objective_value, info.costs_perturbed);
   if (info.costs_perturbed) {
     // Clean up perturbation
@@ -2054,7 +2057,8 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
                   "perturbations so go to phase 2\n");
       solve_phase = kSolvePhase2;
     } else {
-      // Nonzero dual objective value: could be insignificant dual infeasibilities
+      // Nonzero dual objective value: could be insignificant dual
+      // infeasibilities
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "LP is dual feasible wrt Phase 1 bounds after removing cost "
                   "perturbations: "
@@ -2062,14 +2066,15 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
                   dual_objective_value);
       ekk_instance_.computeSimplexLpDualInfeasible();
       const HighsInt num_lp_dual_infeasibilities =
-	ekk_instance_.analysis_.num_dual_phase_1_lp_dual_infeasibility;
+          ekk_instance_.analysis_.num_dual_phase_1_lp_dual_infeasibility;
       if (num_lp_dual_infeasibilities == 0) {
-	highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                  "LP is dual feasible wrt Phase 2 bounds after removing cost "
-                  "perturbations so go to phase 2\n");
-	solve_phase = kSolvePhase2;
+        highsLogDev(
+            ekk_instance_.options_->log_options, HighsLogType::kInfo,
+            "LP is dual feasible wrt Phase 2 bounds after removing cost "
+            "perturbations so go to phase 2\n");
+        solve_phase = kSolvePhase2;
       } else {
-	// LP is dual infeasible if the dual objective is sufficiently
+        // LP is dual infeasible if the dual objective is sufficiently
         // negative, so no conclusions on the primal LP can be deduced
         // - could be primal unbounded or primal infeasible.
         //

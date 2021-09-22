@@ -1315,8 +1315,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
     upper[i] = globaldomain.col_upper_[col] - globaldomain.col_lower_[col];
 
-    solval[i] =
-        vals[i] < 0 ? localdomain.col_upper_[col] : localdomain.col_lower_[col];
+    solval[i] = vals[i] < 0 ? std::min(globaldomain.col_upper_[col],
+                                       localdomain.col_upper_[col])
+                            : std::max(globaldomain.col_lower_[col],
+                                       localdomain.col_lower_[col]);
     if (vals[i] < 0 && globaldomain.col_upper_[col] != kHighsInf) {
       rhs -= globaldomain.col_upper_[col] * vals[i];
       vals[i] = -vals[i];
@@ -1434,6 +1436,64 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(),
                                      proofinds.data(), proofvals.data(), rowlen,
                                      proofrhs, cutintegral, true, true, true);
+
+  // only return true if cut was accepted by the cutpool, i.e. not a duplicate
+  // of a cut already in the pool
+  return cutindex != -1;
+}
+
+bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
+                                           std::vector<double>& vals_,
+                                           double& rhs_) {
+  complementation.clear();
+  rowlen = inds_.size();
+  inds = inds_.data();
+  vals = vals_.data();
+  rhs = rhs_;
+
+  integralSupport = true;
+  integralCoefficients = false;
+  // remove zeros in place
+  for (HighsInt i = rowlen - 1; i >= 0; --i) {
+    if (vals[i] == 0.0) {
+      --rowlen;
+      inds[i] = inds[rowlen];
+      vals[i] = vals[rowlen];
+    } else {
+      integralSupport &= lpRelaxation.isColIntegral(inds[i]);
+    }
+  }
+
+  vals_.resize(rowlen);
+  inds_.resize(rowlen);
+
+  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(inds, vals,
+                                                               rowlen, rhs_);
+  // apply cut postprocessing including scaling and removal of small
+  // coeffiicents
+  if (!postprocessCut()) return false;
+  rhs_ = (double)rhs;
+  vals_.resize(rowlen);
+  inds_.resize(rowlen);
+
+  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
+      inds_.data(), vals_.data(), rowlen, rhs_);
+
+  // finally determine the violation of the cut in the original space
+  HighsCDouble violation = -rhs_;
+  const auto& sol = lpRelaxation.getSolution().col_value;
+  for (HighsInt i = 0; i != rowlen; ++i) violation += sol[inds[i]] * vals_[i];
+
+  if (violation <= 10 * feastol) return false;
+
+  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
+      inds, vals, rowlen, rhs_);
+
+  // if the cut is violated by a small factor above the feasibility
+  // tolerance, add it to the cutpool
+  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(),
+                                     vals_.data(), inds_.size(), rhs_,
+                                     integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool

@@ -81,6 +81,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   double rhs;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
+  HighsInt numNonzeroRhs = 0;
+  HighsInt maxIntRowLen = 1000 + 0.1 * lp.num_col_;
 
   for (HighsInt row = 0; row != lp.num_row_; ++row) {
     if (skipRow[row]) continue;
@@ -143,7 +145,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
-        if (transLp.boundDistance(inds[i]) > 0) {
+        if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
           intSystemValue.push_back((int64_t)std::round(intscale * vals[i]));
         }
@@ -153,23 +155,31 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       intrhs = (int64_t)std::round(rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
-        if (transLp.boundDistance(inds[i]) > 0) {
+        if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
           intSystemValue.push_back((int64_t)std::round(vals[i]));
         }
       }
     }
 
-    intSystemIndex.push_back(lp.num_col_);
-    intSystemValue.push_back(intrhs);
-    intSystemStart.push_back(intSystemValue.size());
-    if (leqRow)
-      integralScales.emplace_back(row, intscale);
-    else
-      integralScales.emplace_back(row, -intscale);
+    HighsInt intRowLen = intSystemValue.size() - intSystemStart.back();
+    if (intRowLen <= maxIntRowLen) {
+      numNonzeroRhs += (intrhs != 0);
+
+      intSystemIndex.push_back(lp.num_col_);
+      intSystemValue.push_back(intrhs);
+      intSystemStart.push_back(intSystemValue.size());
+      if (leqRow)
+        integralScales.emplace_back(row, intscale);
+      else
+        integralScales.emplace_back(row, -intscale);
+    } else {
+      intSystemIndex.resize(intSystemStart.back());
+      intSystemValue.resize(intSystemStart.back());
+    }
   }
 
-  if (integralScales.empty()) return;
+  if (integralScales.empty() || numNonzeroRhs == 0) return;
 
   std::vector<HighsInt> tmpinds;
   std::vector<double> tmpvals;

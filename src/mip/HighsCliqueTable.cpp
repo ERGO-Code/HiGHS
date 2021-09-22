@@ -524,15 +524,17 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
         case 0:
           // clique empty, so just mark it as deleted
           cliques[cliqueid].start = -1;
+          cliques[cliqueid].end = -1;
           freeslots.push_back(cliqueid);
-          break;
+          return;
         case 1:
           // size 1 clique is redundant, so unlink the single linked entry
           // and mark it as deleted
           unlink(cliques[cliqueid].start);
           cliques[cliqueid].start = -1;
+          cliques[cliqueid].end = -1;
           freeslots.push_back(cliqueid);
-          break;
+          return;
         case 2:
           // due to subsitutions the clique became smaller and is now of size
           // two as a result we need to link it to the size two cliqueset
@@ -556,7 +558,9 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     }
   }
 
-  if (cliques[cliqueid].end - cliques[cliqueid].start == 2)
+  HighsInt cliqueLen = cliques[cliqueid].end - cliques[cliqueid].start;
+  numEntries += cliqueLen;
+  if (cliqueLen == 2)
     sizeTwoCliques.insert(
         sortedEdge(cliqueentries[cliques[cliqueid].start],
                    cliqueentries[cliques[cliqueid].start + 1]),
@@ -879,6 +883,7 @@ void HighsCliqueTable::removeClique(HighsInt cliqueid) {
 
   cliques[cliqueid].start = -1;
   cliques[cliqueid].end = -1;
+  numEntries -= len;
 }
 
 void HighsCliqueTable::extractCliques(
@@ -1068,6 +1073,23 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   }
   if (nbin == 0) return;
 
+  for (HighsInt i = 0; i != len; ++i) {
+    if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous) continue;
+
+    double boundVal = double((rhs - minact) / vals[i]);
+    if (vals[i] > 0) {
+      boundVal = std::floor(boundVal + globaldom.col_lower_[inds[i]] +
+                            globaldom.feastol());
+      globaldom.changeBound(HighsBoundType::kUpper, inds[i], boundVal,
+                            HighsDomain::Reason::unspecified());
+    } else {
+      boundVal = std::ceil(boundVal + globaldom.col_upper_[inds[i]] -
+                           globaldom.feastol());
+      globaldom.changeBound(HighsBoundType::kLower, inds[i], boundVal,
+                            HighsDomain::Reason::unspecified());
+    }
+  }
+
   std::vector<HighsInt> perm;
   perm.resize(len);
   std::iota(perm.begin(), perm.end(), 0);
@@ -1075,7 +1097,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   auto binaryend = std::partition(perm.begin(), perm.end(), [&](HighsInt pos) {
     return globaldom.isBinary(inds[pos]);
   });
-  assert(nbin == binaryend - perm.begin());
+
+  nbin = binaryend - perm.begin();
 
   // if not all variables are binary, we extract variable upper and lower bounds
   // constraints on the non-binary variable for each binary variable in the
@@ -1151,6 +1174,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       double(rhs - minact + feastol))
     return;
 
+  HighsInt maxEntries = numEntries + 10 * nbin;
+
   for (HighsInt k = nbin - 1; k != 0; --k) {
     double mincliqueval =
         double(rhs - minact - std::abs(vals[perm[k]]) + feastol);
@@ -1183,7 +1208,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
 
       addClique(mipsolver, clique.data(), clique.size());
-      if (globaldom.infeasible()) return;
+      if (globaldom.infeasible() || numEntries >= maxEntries) return;
     }
 
     // further cliques are just subsets of this clique
@@ -1882,6 +1907,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   if (cliquehits.size() < cliques.size()) cliquehits.resize(cliques.size());
 
   HighsInt numcliqueslots = cliques.size();
+  const HighsInt maxEntries = numEntries + globaldomain.numModelNonzeros();
 
   for (HighsInt k = 0; k != numcliqueslots; ++k) {
     if (cliques[k].start == -1) continue;
@@ -2057,6 +2083,10 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
     extensionvars.clear();
     processInfeasibleVertices(globaldomain);
+
+    if (numEntries >= maxEntries) break;
+    // printf("nonzeroDelta: %d, maxNonzeroDelta: %d\n", nonzeroDelta,
+    // maxNonzeroDelta);
   }
 }
 

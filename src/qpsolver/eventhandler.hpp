@@ -8,7 +8,9 @@ class Eventhandler {
   std::vector<std::function<void(T)>> subscribers;
 
  public:
-  void subscribe(std::function<void(T)> subscriber) { subscribers.push_back(subscriber); }
+  void subscribe(std::function<void(T)> subscriber) {
+    subscribers.push_back(subscriber);
+  }
 
   void fire(T args) {
     for (std::function<void(T)> fun : subscribers) {

@@ -17,7 +17,6 @@ HighsLp distillationLp();
 void instanceTest(Highs& highs, const std::string model_name);
 
 TEST_CASE("Dualise", "[highs_test_dualise]") {
-
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   // simpleTest(highs);
@@ -29,7 +28,7 @@ TEST_CASE("Dualise", "[highs_test_dualise]") {
   //  instanceTest(highs, "avgas");
   //  instanceTest(highs, "afiro");
   //  instanceTest(highs, "adlittle");
-    instanceTest(highs, "25fv47");
+  instanceTest(highs, "25fv47");
 }
 
 void dualiseTest(Highs& highs) {
@@ -44,9 +43,9 @@ void dualiseTest(Highs& highs) {
   highs.setBasis();
   //  detailedOutput(highs);
   highs.run();
-  //if (dev_run) highs.writeSolution("", true);
+  // if (dev_run) highs.writeSolution("", true);
   double dual_objective = info.objective_function_value;
-  double dl = fabs(primal_objective-dual_objective);
+  double dl = fabs(primal_objective - dual_objective);
   REQUIRE(dl < double_equal_tolerance);
 }
 
@@ -164,9 +163,8 @@ void rowUpperBoundTest(Highs& highs) {
 
 void instanceTest(Highs& highs, const std::string model_name) {
   std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/" + model_name + ".mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model_name + ".mps";
   if (dev_run) printf("\nSolving model %s\n", model_name.c_str());
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   dualiseTest(highs);
 }
-

@@ -353,9 +353,9 @@ HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(
     //    printf("%s\n", type.c_str());
     //    printf("%s\n", source.c_str());
     highsLogDev(options->log_options, report_level,
-		"CheckINVERT:   %-9s (%9.4g) norm for %s%s solve error\n",
-		value_adjective.c_str(), solve_error_norm, type.c_str(),
-		source.c_str());
+                "CheckINVERT:   %-9s (%9.4g) norm for %s%s solve error\n",
+                value_adjective.c_str(), solve_error_norm, type.c_str(),
+                source.c_str());
   }
 
   if (residual_error_norm) {
@@ -373,10 +373,10 @@ HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(
     }
     if (force) report_level = HighsLogType::kInfo;
     highsLogDev(options->log_options, report_level,
-		"CheckINVERT:   %-9s (%9.4g) norm for %s%s "
-		"residual error\n",
-		value_adjective.c_str(), residual_error_norm, type.c_str(),
-		source.c_str());
+                "CheckINVERT:   %-9s (%9.4g) norm for %s%s "
+                "residual error\n",
+                value_adjective.c_str(), residual_error_norm, type.c_str(),
+                source.c_str());
   }
   return return_status;
 }

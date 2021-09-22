@@ -702,10 +702,9 @@ class HighsOptions : public HighsOptionsStruct {
                             kKeepNRowsDeleteRows, kKeepNRowsKeepRows);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "cost_scale_factor",
-        "Scaling factor for costs", advanced,
-        &cost_scale_factor, -20, 0, 20);
+    record_int =
+        new OptionRecordInt("cost_scale_factor", "Scaling factor for costs",
+                            advanced, &cost_scale_factor, -20, 0, 20);
     records.push_back(record_int);
 
     record_int =
@@ -739,8 +738,9 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "max_dual_simplex_phase1_cleanup_level", "Max level of dual simplex phase 1 cleanup",
-        advanced, &max_dual_simplex_phase1_cleanup_level, 0, 2, kHighsIInf);
+        "max_dual_simplex_phase1_cleanup_level",
+        "Max level of dual simplex phase 1 cleanup", advanced,
+        &max_dual_simplex_phase1_cleanup_level, 0, 2, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
