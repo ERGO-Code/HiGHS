@@ -331,8 +331,13 @@ void HEkk::updateStatus(LpAction action) {
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
-      this->clearEkkData();  //
-      this->clear();         //
+      if (kExtendInvertWhenAddingRows) {
+	// Just clear Ekk data
+	this->clearEkkData();
+      } else {
+	// Clear everything
+	this->clear();
+      }
       this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
@@ -1338,8 +1343,7 @@ void HEkk::addRows(const HighsLp& lp,
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
-  const bool use_simplex_nla_addRows = false;
-  if (use_simplex_nla_addRows && this->status_.has_nla) {
+  if (kExtendInvertWhenAddingRows && this->status_.has_nla) {
     this->simplex_nla_.addRows(&lp, &basis_.basicIndex_[0], &scaled_ar_matrix);
     setNlaPointersForTrans(lp);
     this->debugNlaCheckInvert("HEkk::addRows - on entry",
@@ -2952,9 +2956,9 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   // Use the next level down for the debug level, since the cost of
   // checking the INVERT every iteration is an order more expensive
   // than checking after factorization.
-  const HighsInt alt_debug_level = options_->highs_debug_level - 1;
-  //      kHighsDebugLevelExpensive;
-
+  HighsInt alt_debug_level = options_->highs_debug_level - 1;
+  // Forced expensive debug for development work
+  // alt_debug_level = kHighsDebugLevelExpensive;
   HighsDebugStatus debug_status =
       debugNlaCheckInvert("HEkk::updateFactor", alt_debug_level);
   if (debug_status == HighsDebugStatus::kError) {
