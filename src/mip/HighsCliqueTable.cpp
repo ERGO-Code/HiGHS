@@ -41,7 +41,7 @@ HighsInt HighsCliqueTable::splay(HighsInt cliqueid, HighsInt root) {
     return cliquesets[node].right;
   };
   auto get_key = [&](HighsInt node) { return cliquesets[node].cliqueid; };
-  ++numSplayCalls;
+  ++numNeighborhoodQueries;
   return highs_splay(cliqueid, root, get_left, get_right, get_key);
 }
 
@@ -86,6 +86,7 @@ void HighsCliqueTable::link(HighsInt node) {
 HighsInt HighsCliqueTable::findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
   if (sizeTwoCliquesetRoot[v1.index()] != -1 &&
       sizeTwoCliquesetRoot[v2.index()] != -1) {
+    ++numNeighborhoodQueries;
     HighsInt* sizeTwoCliqueId = sizeTwoCliques.find(sortedEdge(v1, v2));
     if (sizeTwoCliqueId != nullptr) return *sizeTwoCliqueId;
   }
@@ -303,7 +304,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
 
   ++data.ncalls;
 
-  if (data.stop(numSplayCalls)) return;
+  if (data.stop(numNeighborhoodQueries)) return;
 
   double pivweight = -1.0;
   CliqueVar pivot;
@@ -359,7 +360,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
     double wv = v.weight(data.sol);
     data.wR += wv;
     bronKerboschRecurse(data, newPlen, localX.data(), newXlen);
-    if (data.stop(numSplayCalls)) return;
+    if (data.stop(numNeighborhoodQueries)) return;
 
     // remove v from R restore the weight and continue the loop in this call
     data.R.pop_back();
@@ -1174,9 +1175,12 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       double(rhs - minact + feastol))
     return;
 
-  HighsInt maxEntries = numEntries + 10 * nbin;
+  HighsInt maxEntries =
+      std::min(mipsolver.mipdata_->numCliqueEntriesAfterPresolve + 100000 +
+                   4 * globaldom.numModelNonzeros(),
+               numEntries + 10 * nbin);
 
-  for (HighsInt k = nbin - 1; k != 0; --k) {
+  for (HighsInt k = nbin - 1; k != 0 && numEntries < maxEntries; --k) {
     double mincliqueval =
         double(rhs - minact - std::abs(vals[perm[k]]) + feastol);
     auto cliqueend = std::partition_point(
@@ -1553,9 +1557,9 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        HighsCutPool& cutpool, double feastol) {
   BronKerboschData data(sol);
   data.feastol = feastol;
-  data.maxSplayCalls = int64_t{100} * mipsolver.numNonzero() +
-                       mipsolver.mipdata_->total_lp_iterations * 1000;
-  if (numSplayCalls > data.maxSplayCalls) return;
+  data.maxNeighborhoodQueries = int64_t{100} * mipsolver.numNonzero() +
+                                mipsolver.mipdata_->total_lp_iterations * 1000;
+  if (numNeighborhoodQueries > data.maxNeighborhoodQueries) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
   assert(numcliquesvar.size() == 2 * globaldom.col_lower_.size());

@@ -52,6 +52,7 @@ struct HighsMipSolverData {
   bool detectSymmetries;
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
+  HighsInt numCliqueEntriesAfterPresolve;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
