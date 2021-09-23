@@ -3864,6 +3864,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   }
 
   if (options->presolve != "off") {
+    if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "\nPresolving model\n");
@@ -4044,6 +4045,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
   shrinkProblem(postSolveStack);
 
   if (mipsolver != nullptr) {
+    mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
     mipsolver->mipdata_->domain.addConflictPool(
         mipsolver->mipdata_->conflictPool);

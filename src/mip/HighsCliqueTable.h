@@ -55,6 +55,7 @@ class HighsCliqueTable {
     HighsInt start;
     HighsInt end;
     HighsInt origin;
+    HighsInt numZeroFixed;
     bool equality;
   };
 
@@ -86,7 +87,6 @@ class HighsCliqueTable {
   std::vector<HighsInt> cliquesetroot;
   std::vector<HighsInt> sizeTwoCliquesetRoot;
   std::vector<HighsInt> numcliquesvar;
-  std::vector<HighsInt> redundantconstraints;
   std::vector<CliqueVar> infeasvertexstack;
 
   std::vector<HighsInt> colsubstituted;
@@ -94,6 +94,7 @@ class HighsCliqueTable {
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<uint8_t> iscandidate;
+  std::vector<uint8_t> colDeleted;
   std::vector<uint16_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
   std::vector<HighsInt> stack;
@@ -104,6 +105,7 @@ class HighsCliqueTable {
   HighsRandom randgen;
   HighsInt nfixings;
   HighsInt numEntries;
+  bool inPresolve;
   HighsInt splay(HighsInt cliqueid, HighsInt root);
 
   void unlink(HighsInt node);
@@ -160,10 +162,14 @@ class HighsCliqueTable {
     sizeTwoCliquesetRoot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
+    colDeleted.resize(ncols, false);
     nfixings = 0;
     numNeighborhoodQueries = 0;
     numEntries = 0;
+    inPresolve = false;
   }
+
+  void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
 
   HighsInt getNumEntries() const { return numEntries; }
 
