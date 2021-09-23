@@ -1557,8 +1557,9 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        HighsCutPool& cutpool, double feastol) {
   BronKerboschData data(sol);
   data.feastol = feastol;
-  data.maxNeighborhoodQueries = int64_t{100} * mipsolver.numNonzero() +
-                                mipsolver.mipdata_->total_lp_iterations * 1000;
+  data.maxNeighborhoodQueries = 1000000 +
+                                int64_t{100} * mipsolver.numNonzero() +
+                                mipsolver.mipdata_->total_lp_iterations * 2000;
   if (numNeighborhoodQueries > data.maxNeighborhoodQueries) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
