@@ -99,6 +99,7 @@ restart:
   int64_t nextCheck = mipdata_->num_nodes;
   double treeweightLastCheck = 0.0;
   double upperLimLastCheck = mipdata_->upper_limit;
+  double lowerBoundLastCheck = mipdata_->lower_bound;
   while (search.hasNode()) {
     mipdata_->conflictPool.performAging();
     // set iteration limit for each lp solve during the dive to 10 times the
@@ -231,7 +232,8 @@ restart:
 
       bool doRestart = false;
 
-      if (mipdata_->percentageInactiveIntegers() >= 10.0 &&
+      double percentageInactive = mipdata_->percentageInactiveIntegers();
+      if (percentageInactive >= 2.5 && numHugeTreeEstim > 0 &&
           mipdata_->num_nodes - mipdata_->num_nodes_before_run <= 1000) {
         doRestart =
             currNodeEstim >=
@@ -240,29 +242,38 @@ restart:
             options_mip_->presolve != "off";
       }
 
-      if (upperLimLastCheck == mipdata_->upper_limit &&
-          currNodeEstim >=
-              50 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
-        nextCheck = mipdata_->num_nodes + 100;
-        ++numHugeTreeEstim;
+      if (!doRestart) {
+        double gapReduction = 1.0;
+        if (mipdata_->upper_limit != kHighsInf) {
+          double oldGap = upperLimLastCheck - lowerBoundLastCheck;
+          double newGap = mipdata_->upper_limit - mipdata_->lower_bound;
+          gapReduction = oldGap / newGap;
+        }
+
+        if (gapReduction < 1.05 &&
+            currNodeEstim >=
+                20 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+          nextCheck = mipdata_->num_nodes + 100;
+          ++numHugeTreeEstim;
+        } else {
+          numHugeTreeEstim = 0;
+          treeweightLastCheck = double(mipdata_->pruned_treeweight);
+          numNodesLastCheck = mipdata_->num_nodes;
+          upperLimLastCheck = mipdata_->upper_limit;
+          lowerBoundLastCheck = mipdata_->lower_bound;
+        }
+
+        int64_t minHugeTreeOffset =
+            (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
+        int64_t minHugeTreeEstim =
+            (10 + minHugeTreeOffset) * std::pow(1.5, nTreeRestarts);
+
+        doRestart = numHugeTreeEstim >= minHugeTreeEstim;
       } else {
-        numHugeTreeEstim = 0;
-        treeweightLastCheck = double(mipdata_->pruned_treeweight);
-        numNodesLastCheck = mipdata_->num_nodes;
-        upperLimLastCheck = mipdata_->upper_limit;
+        // count restart due to many fixings within the first 1000 nodes as
+        // root restart
+        ++mipdata_->numRestartsRoot;
       }
-
-      double minHugeTreeOffset =
-          (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
-      int64_t minHugeTreeEstim =
-          (10 + minHugeTreeOffset) * (1 << nTreeRestarts);
-
-      doRestart =
-          doRestart ||
-          numHugeTreeEstim >= ((10 + int64_t((mipdata_->num_leaves -
-                                              mipdata_->num_leaves_before_run) *
-                                             1e-3))
-                               << nTreeRestarts);
 
       if (doRestart) {
         highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
