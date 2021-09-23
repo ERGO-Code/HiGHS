@@ -112,9 +112,20 @@ void completeHessianDiagonal(const HighsOptions& options,
   // Count the number of missing diagonal entries
   HighsInt num_missing_diagonal_entries = 0;
   const HighsInt dim = hessian.dim_;
-  for (HighsInt iCol = 0; iCol < dim; iCol++)
-    if (hessian.q_index_[hessian.q_start_[iCol]] != iCol)
+  const HighsInt num_nz = hessian.numNz();
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt iEl = hessian.q_start_[iCol];
+    if (iEl < num_nz) {
+      if (hessian.q_index_[iEl] != iCol) num_missing_diagonal_entries++;
+    } else {
       num_missing_diagonal_entries++;
+    }
+  }
+  highsLogDev(options.log_options, HighsLogType::kInfo,
+              "Hessian has dimension %d and %d nonzeros: inserting %d zeros "
+              "onto the diagonal\n",
+              (int)dim, (int)num_nz, (int)num_missing_diagonal_entries);
+  assert(num_missing_diagonal_entries >= dim - num_nz);
   if (!num_missing_diagonal_entries) return;
   // There are missing diagonal entries to be inserted as explicit zeros
   const HighsInt new_num_nz = hessian.numNz() + num_missing_diagonal_entries;
