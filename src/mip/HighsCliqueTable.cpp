@@ -1579,7 +1579,8 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
               1 ||
           cliques[cliqueid].numZeroFixed >=
               std::max(
-                  10, (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
+                  HighsInt{10},
+                  (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
         cliquehitinds.push_back(cliqueid);
       }
 
