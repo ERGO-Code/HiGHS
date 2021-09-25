@@ -248,7 +248,7 @@ void analyseScaledLp(const HighsLogOptions& log_options,
                      const HighsScale& scale, const HighsLp& scaled_lp);
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty);
+                         const HighsSolution& solution, const HighsInt style);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

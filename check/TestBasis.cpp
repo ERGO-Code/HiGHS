@@ -59,7 +59,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // - so that the internal basis changes - and then restoring the
   // original LP
   HighsStatus return_status;
-  // highs.writeSolution("", true);
+  // highs.writeSolution("", kWriteSolutionStylePretty);
   // Change a bound and resolve
 
   const HighsLp& lp = highs.getLp();
@@ -87,7 +87,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
            "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
            changeCol, old_lower_bound, new_lower_bound,
            info.simplex_iteration_count, highs.getObjectiveValue());
-    //  highs.writeSolution("", true);
+    //  highs.writeSolution("", kWriteSolutionStylePretty);
   }
   // Make sure that the test requires iterations
   assert(info.simplex_iteration_count > 0);

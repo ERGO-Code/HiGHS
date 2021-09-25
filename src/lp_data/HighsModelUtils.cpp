@@ -375,13 +375,13 @@ std::string statusToString(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
-                        const std::vector<double>& lower,
-                        const std::vector<double>& upper,
-                        const std::vector<std::string>& names,
-                        const std::vector<double>& primal,
-                        const std::vector<double>& dual,
-                        const std::vector<HighsBasisStatus>& status) {
+void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
+                             const std::vector<double>& lower,
+                             const std::vector<double>& upper,
+                             const std::vector<std::string>& names,
+                             const std::vector<double>& primal,
+                             const std::vector<double>& dual,
+                             const std::vector<HighsBasisStatus>& status) {
   const bool have_names = names.size() > 0;
   const bool have_primal = primal.size() > 0;
   const bool have_dual = dual.size() > 0;
@@ -427,6 +427,25 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
     } else {
       fprintf(file, "\n");
     }
+  }
+}
+
+void writeModelSolution(FILE* file, const bool columns, const HighsInt dim,
+                        const std::vector<std::string>& names,
+                        const std::vector<double>& primal) {
+  const bool have_names = names.size() > 0;
+  const bool have_primal = primal.size() > 0;
+  if (!have_names || !have_primal) return;
+  if (have_names) assert((int)names.size() >= dim);
+  if (have_primal) assert((int)primal.size() >= dim);
+  if (columns) {
+    fprintf(file, "Columns\n");
+  } else {
+    fprintf(file, "Rows\n");
+  }
+  for (HighsInt ix = 0; ix < dim; ix++) {
+    fprintf(file, "%-s", names[ix].c_str());
+    fprintf(file, " %15g\n", primal[ix]);
   }
 }
 

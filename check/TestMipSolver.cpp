@@ -6,85 +6,14 @@ const double inf = kHighsInf;
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
-bool objectiveOk(const double optimal_objective,
-                 const double require_optimal_objective,
-                 const bool dev_run = false) {
-  double error = std::fabs(optimal_objective - require_optimal_objective) /
-                 std::max(1.0, std::fabs(require_optimal_objective));
-  bool error_ok = error < 1e-10;
-  if (!error_ok && dev_run)
-    printf("Objective is %g but require %g (error %g)\n", optimal_objective,
-           require_optimal_objective, error);
-  return error_ok;
-}
-
+void rowlessMIP(Highs& highs);
+void distillationMIP(Highs& highs);
 void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
-           const double require_iteration_count = -1) {
-  if (!dev_run) highs.setOptionValue("output_flag", false);
-  const HighsInfo& info = highs.getInfo();
-  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
-
-  REQUIRE(highs.setBasis() == HighsStatus::kOk);
-
-  REQUIRE(highs.run() == HighsStatus::kOk);
-
-  REQUIRE(highs.getModelStatus() == require_model_status);
-
-  if (require_model_status == HighsModelStatus::kOptimal) {
-    REQUIRE(objectiveOk(info.objective_function_value,
-                        require_optimal_objective, dev_run));
-  }
-  REQUIRE(highs.resetOptions() == HighsStatus::kOk);
-}
-
-void distillationMIP(Highs& highs) {
-  HighsLp lp;
-  HighsModelStatus require_model_status;
-  double optimal_objective;
-  lp.num_col_ = 2;
-  lp.num_row_ = 3;
-  lp.col_cost_ = {8, 10};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {inf, inf};
-  lp.row_lower_ = {7, 12, 6};
-  lp.row_upper_ = {inf, inf, inf};
-  lp.a_start_ = {0, 3, 6};
-  lp.a_index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_value_ = {2, 3, 2, 2, 4, 1};
-  lp.format_ = MatrixFormat::kColwise;
-  lp.sense_ = ObjSense::kMinimize;
-  lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
-  require_model_status = HighsModelStatus::kOptimal;
-  optimal_objective = 32.0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  // Presolve doesn't reduce the LP
-  solve(highs, "on", require_model_status, optimal_objective);
-}
-
-void rowlessMIP(Highs& highs) {
-  HighsLp lp;
-  HighsModelStatus require_model_status;
-  double optimal_objective;
-  lp.num_col_ = 2;
-  lp.num_row_ = 0;
-  lp.col_cost_ = {1, -1};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {1, 1};
-  lp.a_start_ = {0, 0, 0};
-  lp.format_ = MatrixFormat::kColwise;
-  lp.sense_ = ObjSense::kMinimize;
-  lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
-  require_model_status = HighsModelStatus::kOptimal;
-  optimal_objective = -1.0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  // Presolve reduces the LP to empty
-  solve(highs, "on", require_model_status, optimal_objective);
-  solve(highs, "off", require_model_status, optimal_objective);
-}
+           const double require_iteration_count = -1);
+void distillationMIP(Highs& highs);
+void rowlessMIP(Highs& highs);
 
 TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
@@ -141,7 +70,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   }
   if (dev_run) highs.writeModel("");
   highs.run();
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
   double optimal_objective = info.objective_function_value;
   if (dev_run) printf("Objective = %g\n", optimal_objective);
 
@@ -152,7 +81,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
                                       &integrality[0]) == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
   REQUIRE(info.objective_function_value == optimal_objective);
 
   integrality.assign(lp.num_col_, HighsVarType::kContinuous);
@@ -168,7 +97,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
           HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStyleMittelmann);
   REQUIRE(info.objective_function_value == optimal_objective);
 
   REQUIRE(info.mip_node_count == 1);
@@ -241,4 +171,84 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
           double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
           double_equal_tolerance);
+}
+
+bool objectiveOk(const double optimal_objective,
+                 const double require_optimal_objective,
+                 const bool dev_run = false) {
+  double error = std::fabs(optimal_objective - require_optimal_objective) /
+                 std::max(1.0, std::fabs(require_optimal_objective));
+  bool error_ok = error < 1e-10;
+  if (!error_ok && dev_run)
+    printf("Objective is %g but require %g (error %g)\n", optimal_objective,
+           require_optimal_objective, error);
+  return error_ok;
+}
+
+void solve(Highs& highs, std::string presolve,
+           const HighsModelStatus require_model_status,
+           const double require_optimal_objective,
+           const double require_iteration_count) {
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  const HighsInfo& info = highs.getInfo();
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  REQUIRE(highs.getModelStatus() == require_model_status);
+
+  if (require_model_status == HighsModelStatus::kOptimal) {
+    REQUIRE(objectiveOk(info.objective_function_value,
+                        require_optimal_objective, dev_run));
+  }
+  REQUIRE(highs.resetOptions() == HighsStatus::kOk);
+}
+
+void distillationMIP(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12, 6};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_start_ = {0, 3, 6};
+  lp.a_index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_value_ = {2, 3, 2, 2, 4, 1};
+  lp.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = 32.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve doesn't reduce the LP
+  solve(highs, "on", require_model_status, optimal_objective);
+}
+
+void rowlessMIP(Highs& highs) {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_start_ = {0, 0, 0};
+  lp.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = -1.0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve reduces the LP to empty
+  solve(highs, "on", require_model_status, optimal_objective);
+  solve(highs, "off", require_model_status, optimal_objective);
 }
