@@ -1751,7 +1751,8 @@ void analyseScaledLp(const HighsLogOptions& log_options,
   analyseLp(log_options, scaled_lp, "Scaled");
 }
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+void writeSolutionToFile(FILE* file, const HighsOptions& options,
+                         const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const HighsInt style) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
@@ -1783,7 +1784,8 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                             lp.row_upper_, lp.row_names_, use_row_value,
                             use_row_dual, use_row_status);
   } else if (style == kWriteSolutionStyleMittelmann) {
-    writeModelSolution(file, true, lp.num_col_, lp.col_names_, use_col_value);
+    writeModelSolution(file, options, true, lp.num_col_, lp.col_names_,
+                       use_col_value, lp.integrality_);
   } else {
     fprintf(file,
             "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT

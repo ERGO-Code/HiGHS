@@ -2497,7 +2497,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, model_.lp_, basis_, solution_, style);
+  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;
 }

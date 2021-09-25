@@ -46,9 +46,11 @@ void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
                              const std::vector<double>& primal,
                              const std::vector<double>& dual,
                              const std::vector<HighsBasisStatus>& status);
-void writeModelSolution(FILE* file, const bool columns, const HighsInt dim,
+void writeModelSolution(FILE* file, const HighsOptions& options,
+                        const bool columns, const HighsInt dim,
                         const std::vector<std::string>& names,
-                        const std::vector<double>& primal);
+                        const std::vector<double>& primal,
+                        const std::vector<HighsVarType>& integrality);
 bool namesWithSpaces(const HighsInt num_name,
                      const std::vector<std::string>& names,
                      const bool report = false);

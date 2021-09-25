@@ -430,14 +430,18 @@ void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
   }
 }
 
-void writeModelSolution(FILE* file, const bool columns, const HighsInt dim,
+void writeModelSolution(FILE* file, const HighsOptions& options,
+                        const bool columns, const HighsInt dim,
                         const std::vector<std::string>& names,
-                        const std::vector<double>& primal) {
+                        const std::vector<double>& primal,
+                        const std::vector<HighsVarType>& integrality) {
   const bool have_names = names.size() > 0;
   const bool have_primal = primal.size() > 0;
+  const bool have_integrality = integrality.size() > 0;
   if (!have_names || !have_primal) return;
   if (have_names) assert((int)names.size() >= dim);
   if (have_primal) assert((int)primal.size() >= dim);
+  if (have_integrality) assert((int)integrality.size() >= dim);
   if (columns) {
     fprintf(file, "Columns\n");
   } else {
@@ -445,7 +449,12 @@ void writeModelSolution(FILE* file, const bool columns, const HighsInt dim,
   }
   for (HighsInt ix = 0; ix < dim; ix++) {
     fprintf(file, "%-s", names[ix].c_str());
-    fprintf(file, " %15g\n", primal[ix]);
+    double zero_tolerance = options.primal_feasibility_tolerance;
+    if (have_integrality)
+      if (integrality[ix] != HighsVarType::kContinuous)
+        zero_tolerance = options.mip_feasibility_tolerance;
+    const double value = fabs(primal[ix]) < zero_tolerance ? 0 : primal[ix];
+    fprintf(file, " %.9g\n", value);
   }
 }
 
