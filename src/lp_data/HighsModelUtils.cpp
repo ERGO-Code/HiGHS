@@ -447,14 +447,11 @@ void writeModelSolution(FILE* file, const HighsOptions& options,
   } else {
     fprintf(file, "Rows\n");
   }
+  const double zero_tolerance = options.small_matrix_value;
   for (HighsInt ix = 0; ix < dim; ix++) {
-    fprintf(file, "%-s", names[ix].c_str());
-    double zero_tolerance = options.primal_feasibility_tolerance;
-    if (have_integrality)
-      if (integrality[ix] != HighsVarType::kContinuous)
-        zero_tolerance = options.mip_feasibility_tolerance;
-    const double value = fabs(primal[ix]) < zero_tolerance ? 0 : primal[ix];
-    fprintf(file, " %.9g\n", value);
+    std::array<char, 32> valStr =
+        highsDoubleToString(primal[ix], options.small_matrix_value);
+    fprintf(file, "%-s %s\n", names[ix].c_str(), valStr.data());
   }
 }
 
