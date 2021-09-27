@@ -196,10 +196,16 @@ void HEkk::clearEkkDataInfo() {
   info.analyse_lp = false;
   info.analyse_iterations = false;
   info.analyse_invert_form = false;
+
+  info.allow_cost_shifting = true;
+  info.allow_cost_alt_perturbation = true;
   info.allow_cost_perturbation = true;
   info.allow_bound_perturbation = true;
+  info.costs_shifted = false;
+  info.costs_alt_perturbed = false;
   info.costs_perturbed = false;
   info.bounds_perturbed = false;
+
   info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
@@ -1012,6 +1018,7 @@ HighsStatus HEkk::unpermute() {
 }
 
 HighsStatus HEkk::solve() {
+  debug_solve_call_num_++;
   initialiseAnalysis();
   initialiseControl();
 
@@ -1046,6 +1053,8 @@ HighsStatus HEkk::solve() {
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
+  info_.allow_cost_shifting = true;
+  info_.allow_cost_alt_perturbation = true;
   info_.allow_cost_perturbation = true;
   info_.allow_bound_perturbation = true;
 
@@ -2782,6 +2791,8 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
   double sum_flip = 0;
   double sum_shift = 0;
   HighsInt num_shift_skipped = 0;
+  const bool allow_cost_changes = info_.allow_cost_shifting && info_.allow_cost_alt_perturbation;
+  assert(allow_cost_changes == info_.allow_cost_perturbation);
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++) {
     if (basis_.nonbasicFlag_[i]) {

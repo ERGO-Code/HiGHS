@@ -711,6 +711,8 @@ void HEkkDual::solvePhase1() {
           ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level) {
         // Allow cost perturbation for now, but may have to prevent it
         // to avoid cleanup-perturbation loops
+	info.allow_cost_shifting = true;
+	info.allow_cost_alt_perturbation = true;
         info.allow_cost_perturbation = true;
       }
       // Comment if cost perturbation is not permitted
@@ -1044,6 +1046,8 @@ void HEkkDual::cleanup() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   // Remove perturbation and don't permit further perturbation
   ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown);
+  info.allow_cost_shifting = false;
+  info.allow_cost_alt_perturbation = false;
   info.allow_cost_perturbation = false;
   // No solve_phase term in initialiseBound is surely an omission -
   // when cleanup called in phase 1

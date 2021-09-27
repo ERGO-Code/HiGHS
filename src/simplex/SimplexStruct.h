@@ -185,8 +185,12 @@ struct HighsSimplexInfo {
   //  bool analyse_rebuild_time = false;
 
   // Simplex runtime information
+  bool allow_cost_shifting = true;
+  bool allow_cost_alt_perturbation = true;
   bool allow_cost_perturbation = true;
   bool allow_bound_perturbation = true;
+  bool costs_shifted = false;
+  bool costs_alt_perturbed = false;
   bool costs_perturbed = false;
   bool bounds_perturbed = false;
 

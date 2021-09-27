@@ -167,6 +167,7 @@ class HEkk {
 
   double build_synthetic_tick_;
   double total_synthetic_tick_;
+  HighsInt debug_solve_call_num_;
 
  private:
   bool isUnconstrainedLp();
