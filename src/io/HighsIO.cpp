@@ -29,13 +29,14 @@ static char msgbuffer[65536];
 
 std::array<char, 32> highsDoubleToString(double val, double tolerance) {
   std::array<char, 32> printString;
-  double l = std::abs(val) == kHighsInf
-                 ? 0.0
-                 : (1.0 - tolerance +
-                    std::log10(std::max(1.0, std::abs(val)) / (tolerance)));
+  double l =
+      std::abs(val) == kHighsInf
+          ? 1.0
+          : (1.0 - tolerance +
+             std::log10(std::max(tolerance, std::abs(val)) / (tolerance)));
   switch (int(l)) {
     case 0:
-      std::snprintf(printString.data(), 32, "%g", val);
+      std::snprintf(printString.data(), 32, "%c", '0');
       break;
     case 1:
       std::snprintf(printString.data(), 32, "%.1g", val);

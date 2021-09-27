@@ -443,14 +443,12 @@ void writeModelSolution(FILE* file, const HighsOptions& options,
   if (have_primal) assert((int)primal.size() >= dim);
   if (have_integrality) assert((int)integrality.size() >= dim);
   if (columns) {
-    fprintf(file, "Columns\n");
+    fprintf(file, "# Columns\n");
   } else {
-    fprintf(file, "Rows\n");
+    fprintf(file, "# Rows\n");
   }
-  const double zero_tolerance = options.small_matrix_value;
   for (HighsInt ix = 0; ix < dim; ix++) {
-    std::array<char, 32> valStr =
-        highsDoubleToString(primal[ix], options.small_matrix_value);
+    std::array<char, 32> valStr = highsDoubleToString(primal[ix], 1e-13);
     fprintf(file, "%-s %s\n", names[ix].c_str(), valStr.data());
   }
 }
