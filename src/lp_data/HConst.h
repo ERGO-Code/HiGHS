@@ -106,6 +106,12 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
+const HighsInt kWriteSolutionStyleRaw = 0;
+const HighsInt kWriteSolutionStylePretty = 1;
+const HighsInt kWriteSolutionStyleMittelmann = 2;
+const HighsInt kWriteSolutionStyleMin = kWriteSolutionStyleRaw;
+const HighsInt kWriteSolutionStyleMax = kWriteSolutionStyleMittelmann;
+
 const std::string kHighsFilenameDefault = "";
 
 // Need to allow infinite costs to pass SCIP LPI unit tests

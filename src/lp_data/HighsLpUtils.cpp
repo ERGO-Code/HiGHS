@@ -1751,8 +1751,9 @@ void analyseScaledLp(const HighsLogOptions& log_options,
   analyseLp(log_options, scaled_lp, "Scaled");
 }
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty) {
+void writeSolutionToFile(FILE* file, const HighsOptions& options,
+                         const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution, const HighsInt style) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
@@ -1775,13 +1776,19 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
     use_row_status = basis.row_status;
   }
   if (!have_value && !have_dual && !have_basis) return;
-  if (pretty) {
-    writeModelBoundSol(file, true, lp.num_col_, lp.col_lower_, lp.col_upper_,
-                       lp.col_names_, use_col_value, use_col_dual,
-                       use_col_status);
-    writeModelBoundSol(file, false, lp.num_row_, lp.row_lower_, lp.row_upper_,
-                       lp.row_names_, use_row_value, use_row_dual,
-                       use_row_status);
+  if (style == kWriteSolutionStylePretty) {
+    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
+                            lp.col_upper_, lp.col_names_, use_col_value,
+                            use_col_dual, use_col_status);
+    writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
+                            lp.row_upper_, lp.row_names_, use_row_value,
+                            use_row_dual, use_row_status);
+  } else if (style == kWriteSolutionStyleMittelmann) {
+    HighsCDouble solObj = lp.offset_;
+    for (HighsInt i = 0; i < lp.num_col_; ++i)
+      solObj += lp.col_cost_[i] * use_col_value[i];
+    writeModelSolution(file, options, double(solObj), lp.num_col_,
+                       lp.col_names_, use_col_value, lp.integrality_);
   } else {
     fprintf(file,
             "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT

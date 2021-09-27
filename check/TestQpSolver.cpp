@@ -136,11 +136,10 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  const bool pretty = true;
   if (dev_run) {
     printf("One variable unconstrained QP: objective = %g; solution:\n",
            objective_function_value);
-    highs.writeSolution("", pretty);
+    highs.writeSolution("", kWriteSolutionStylePretty);
   }
 
   required_objective_function_value = 0;
@@ -182,7 +181,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   if (dev_run) {
     printf("Two variable unconstrained QP: objective = %g; solution:\n",
            objective_function_value);
-    highs.writeSolution("", pretty);
+    highs.writeSolution("", kWriteSolutionStylePretty);
   }
 
   required_objective_function_value = -0.25;
@@ -222,7 +221,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   if (dev_run) {
     printf("Two variable constrained QP: objective = %g; solution:\n",
            objective_function_value);
-    highs.writeSolution("", pretty);
+    highs.writeSolution("", kWriteSolutionStylePretty);
   }
 
   required_objective_function_value = 0.125;
@@ -287,7 +286,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
           double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
 
   // Now with a constraint
   lp.num_row_ = 1;
@@ -308,7 +307,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
           double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
 
   // Make the problem infeasible
   return_status = highs.changeColBounds(0, 3, inf);
@@ -318,7 +317,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
   model_status = highs.getModelStatus();
   if (dev_run)
     printf("Infeasible QP status: %s\n",
