@@ -654,7 +654,11 @@ void HEkkDual::solvePhase1() {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-unbounded\n");
-    if (ekk_instance_.info_.costs_perturbed) {
+    // This use of costs_alt_perturbed is (unsurprisingly) not
+    // executed by ctest
+    //
+    // assert(99==1);
+    if (ekk_instance_.info_.costs_alt_perturbed) {
       // Clean up perturbation
       cleanup();
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
@@ -875,6 +879,8 @@ void HEkkDual::solvePhase2() {
     // There is no candidate in CHUZC, so probably dual unbounded
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-unbounded\n");
+    const bool costs_changed = ekk_instance_.info_.costs_alt_perturbed || ekk_instance_.info_.costs_shifted;
+    assert(costs_changed == ekk_instance_.info_.costs_perturbed);
     if (ekk_instance_.info_.costs_perturbed) {
       // If the costs have been perturbed, clean up and return
       cleanup();
@@ -1865,6 +1871,7 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
 // Record the shift in the cost of a particular column
 void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
   HighsSimplexInfo& info = ekk_instance_.info_;
+  info.costs_shifted = true;
   info.costs_perturbed = true;
   if (info.workShift_[iCol] != 0) {
     printf("Column %" HIGHSINT_FORMAT " already has nonzero shift of %g\n",
@@ -2007,6 +2014,8 @@ void HEkkDual::assessPhase1Optimality() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
+  const bool costs_changed = info.costs_alt_perturbed || info.costs_shifted;
+  assert(costs_changed == info.costs_perturbed);
   bool& costs_perturbed = info.costs_perturbed;
   // There are (possibly insignificant) LP dual infeasibilities that
   // can't be removed by dual Phase 1, so clean up any perturbations
@@ -2050,6 +2059,8 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
+  const bool costs_changed = info.costs_alt_perturbed || info.costs_shifted;
+  assert(costs_changed == info.costs_perturbed);
   assert(!info.costs_perturbed);
   if (dualInfeasCount == 0) {
     // No dual infeasibilities with respect to phase 1 bounds.
@@ -2103,9 +2114,10 @@ void HEkkDual::exitPhase1ResetDuals() {
   const HighsLp& lp = ekk_instance_.lp_;
   const SimplexBasis& basis = ekk_instance_.basis_;
   HighsSimplexInfo& info = ekk_instance_.info_;
-  bool& costs_perturbed = info.costs_perturbed;
-
-  if (costs_perturbed) {
+  // This use of costs_alt_perturbed is not executed by ctest
+  //
+  //  assert(99==2);
+  if (info.costs_alt_perturbed) {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "Costs are already perturbed in exitPhase1ResetDuals\n");
   } else {
@@ -2157,6 +2169,8 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   assert(solve_phase == kSolvePhase1);
   assert(row_out == -1);
   //  assert(info.dual_objective_value < 0);
+  const bool costs_changed = info.costs_alt_perturbed || info.costs_shifted;
+  assert(costs_changed == info.costs_perturbed);
   assert(!info.costs_perturbed);
   std::string lp_dual_status;
   if (analysis.num_dual_phase_1_lp_dual_infeasibility) {
