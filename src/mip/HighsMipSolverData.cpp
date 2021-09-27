@@ -193,6 +193,7 @@ void HighsMipSolverData::init() {
   sepa_lp_iterations_before_run = 0;
   sb_lp_iterations_before_run = 0;
   num_disp_lines = 0;
+  numCliqueEntriesAfterPresolve = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
@@ -368,6 +369,7 @@ void HighsMipSolverData::runSetup() {
   detectSymmetries = detectSymmetries && numBin > 0;
 
   if (numRestarts == 0) {
+    numCliqueEntriesAfterPresolve = cliquetable.getNumEntries();
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  // clang-format off
                "\nSolving MIP model with:\n"
@@ -1186,10 +1188,12 @@ restart:
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
     if (nseparounds >= 5 && !mipsolver.submip && !analyticCenterComputed) {
+      if (checkLimits()) return;
       analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
+      if (checkLimits()) return;
       status = evaluateRootLp();
       if (status == HighsLpRelaxation::Status::kInfeasible) return;
     }
@@ -1251,12 +1255,14 @@ restart:
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
   if (!analyticCenterComputed || upper_limit == kHighsInf) {
+    if (checkLimits()) return;
     analyticCenterComputed = true;
     heuristics.centralRounding();
     heuristics.flushStatistics();
 
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
+    if (checkLimits()) return;
     bool separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
@@ -1269,6 +1275,7 @@ restart:
   }
 
   printDisplayLine();
+  if (checkLimits()) return;
 
   do {
     if (rootlpsol.empty()) break;
@@ -1277,6 +1284,8 @@ restart:
     double oldLimit = upper_limit;
     heuristics.rootReducedCost();
     heuristics.flushStatistics();
+
+    if (checkLimits()) return;
 
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
@@ -1293,9 +1302,11 @@ restart:
 
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
+    if (checkLimits()) return;
     heuristics.RENS(rootlpsol);
     heuristics.flushStatistics();
 
+    if (checkLimits()) return;
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
     separate = !domain.getChangedCols().empty();
@@ -1311,9 +1322,12 @@ restart:
     }
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
+
+    if (checkLimits()) return;
     heuristics.feasibilityPump();
     heuristics.flushStatistics();
 
+    if (checkLimits()) return;
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   } while (false);
