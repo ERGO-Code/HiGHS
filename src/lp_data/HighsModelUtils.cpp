@@ -431,7 +431,7 @@ void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
 }
 
 void writeModelSolution(FILE* file, const HighsOptions& options,
-                        const bool columns, const HighsInt dim,
+                        double solutionObjective, const HighsInt dim,
                         const std::vector<std::string>& names,
                         const std::vector<double>& primal,
                         const std::vector<HighsVarType>& integrality) {
@@ -442,11 +442,10 @@ void writeModelSolution(FILE* file, const HighsOptions& options,
   if (have_names) assert((int)names.size() >= dim);
   if (have_primal) assert((int)primal.size() >= dim);
   if (have_integrality) assert((int)integrality.size() >= dim);
-  if (columns) {
-    fprintf(file, "# Columns\n");
-  } else {
-    fprintf(file, "# Rows\n");
-  }
+
+  std::array<char, 32> objStr = highsDoubleToString(solutionObjective, 1e-13);
+  fprintf(file, "=obj= %s\n", objStr.data());
+
   for (HighsInt ix = 0; ix < dim; ix++) {
     std::array<char, 32> valStr = highsDoubleToString(primal[ix], 1e-13);
     fprintf(file, "%-s %s\n", names[ix].c_str(), valStr.data());

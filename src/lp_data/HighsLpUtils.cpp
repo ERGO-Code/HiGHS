@@ -1784,8 +1784,11 @@ void writeSolutionToFile(FILE* file, const HighsOptions& options,
                             lp.row_upper_, lp.row_names_, use_row_value,
                             use_row_dual, use_row_status);
   } else if (style == kWriteSolutionStyleMittelmann) {
-    writeModelSolution(file, options, true, lp.num_col_, lp.col_names_,
-                       use_col_value, lp.integrality_);
+    HighsCDouble solObj = lp.offset_;
+    for (HighsInt i = 0; i < lp.num_col_; ++i)
+      solObj += lp.col_cost_[i] * use_col_value[i];
+    writeModelSolution(file, options, double(solObj), lp.num_col_,
+                       lp.col_names_, use_col_value, lp.integrality_);
   } else {
     fprintf(file,
             "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
