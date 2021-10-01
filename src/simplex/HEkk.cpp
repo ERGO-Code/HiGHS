@@ -198,11 +198,9 @@ void HEkk::clearEkkDataInfo() {
   info.analyse_invert_form = false;
 
   info.allow_cost_shifting = true;
-  info.allow_cost_alt_perturbation = true;
   info.allow_cost_perturbation = true;
   info.allow_bound_perturbation = true;
   info.costs_shifted = false;
-  info.costs_alt_perturbed = false;
   info.costs_perturbed = false;
   info.bounds_perturbed = false;
 
@@ -1019,6 +1017,16 @@ HighsStatus HEkk::unpermute() {
 
 HighsStatus HEkk::solve() {
   debug_solve_call_num_++;
+  const bool output_flag = options_->output_flag;
+  const HighsInt log_dev_level = options_->log_dev_level;
+  const HighsInt debug_from_solve_call_num = 0;
+  const HighsInt debug_to_solve_call_num = -1;
+  if (debug_solve_call_num_ >= debug_from_solve_call_num &&
+      debug_solve_call_num_ <= debug_to_solve_call_num) {
+    printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    options_->output_flag = true;
+    options_->log_dev_level = 2;
+  }
   initialiseAnalysis();
   initialiseControl();
 
@@ -1054,7 +1062,6 @@ HighsStatus HEkk::solve() {
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
   info_.allow_cost_shifting = true;
-  info_.allow_cost_alt_perturbation = true;
   info_.allow_cost_perturbation = true;
   info_.allow_bound_perturbation = true;
 
@@ -1136,6 +1143,8 @@ HighsStatus HEkk::solve() {
   if (analysis_.analyse_simplex_summary_data) analysis_.summaryReport();
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
   if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
+  options_->output_flag = output_flag;
+  options_->log_dev_level = log_dev_level;
   return return_status;
 }
 
@@ -2204,7 +2213,6 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   initialiseLpColCost();
   initialiseLpRowCost();
   info_.costs_perturbed = false;
-  info_.costs_alt_perturbed = false;
   info_.costs_shifted = false;
   // Primal simplex costs are either from the LP or set specially in phase 1
   if (algorithm == SimplexAlgorithm::kPrimal) return;
@@ -2306,7 +2314,6 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     }
   }
   info_.costs_perturbed = true;
-  info_.costs_alt_perturbed = true;
 }
 
 void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
@@ -2794,8 +2801,6 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
   double sum_flip = 0;
   double sum_shift = 0;
   HighsInt num_shift_skipped = 0;
-  const bool allow_cost_changes = info_.allow_cost_shifting && info_.allow_cost_alt_perturbation;
-  assert(allow_cost_changes == info_.allow_cost_perturbation);
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++) {
     if (basis_.nonbasicFlag_[i]) {
@@ -2821,10 +2826,11 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
           num_flip++;
           sum_flip += fabs(flip);
         } else {
-          if (info_.allow_cost_perturbation) {
+          // Cost shifting must always be possible
+          assert(info_.allow_cost_shifting);
+          if (info_.allow_cost_shifting) {
             // Other variable = shift
             info_.costs_shifted = true;
-            info_.costs_perturbed = true;
             std::string direction;
             double shift;
             if (basis_.nonbasicMove_[i] == 1) {
@@ -3328,8 +3334,6 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Primal simplex has identified primal infeasibility in phase 1, or
       // dual simplex has identified dual unboundedness in phase 2. In
       // both cases there should be no primal or dual perturbations
-      const bool costs_changed = info_.costs_alt_perturbed || info_.costs_shifted;
-      assert(costs_changed == info_.costs_perturbed);
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
       if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
@@ -3346,8 +3350,6 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Dual simplex has identified dual infeasibility in phase
       // 1. There should be no dual perturbations
       assert(exit_algorithm_ == SimplexAlgorithm::kDual);
-      const bool costs_changed = info_.costs_alt_perturbed || info_.costs_shifted;
-      assert(costs_changed == info_.costs_perturbed);
       assert(!info_.costs_perturbed);
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -3361,8 +3363,6 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Primal simplex has identified unboundedness in phase 2. There
       // should be no primal or dual perturbations
       assert(exit_algorithm_ == SimplexAlgorithm::kPrimal);
-      const bool costs_changed = info_.costs_alt_perturbed || info_.costs_shifted;
-      assert(costs_changed == info_.costs_perturbed);
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
       computeSimplexInfeasible();
       // Primal solution should be feasible

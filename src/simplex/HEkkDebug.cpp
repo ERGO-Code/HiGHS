@@ -1044,11 +1044,10 @@ bool HEkk::debugWorkArraysOk(const SimplexAlgorithm algorithm,
   }
   // Don't check costs against the LP, when using primal simplex in
   // primal phase 1, if the LP is primal infeasible, or if the costs
-  // have been perturbed
-  const bool costs_changed = info_.costs_alt_perturbed || info_.costs_shifted;
-  assert(costs_changed == info_.costs_perturbed);
+  // have been changed
+  const bool costs_changed = info_.costs_perturbed || info_.costs_shifted;
   if (!(primal_phase1 || this->model_status_ == HighsModelStatus::kInfeasible ||
-        info.costs_perturbed)) {
+        costs_changed)) {
     for (HighsInt col = 0; col < lp.num_col_; ++col) {
       HighsInt var = col;
       double work_cost = info.workCost_[var];

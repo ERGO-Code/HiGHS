@@ -44,14 +44,15 @@ enum SimplexUnscaledSolutionStrategy {
 
 enum SimplexSolvePhase {
   kSolvePhaseMin = -3,
-  kSolvePhaseError = kSolvePhaseMin,  // -3
-  kSolvePhaseExit,                    // -2,
-  kSolvePhaseUnknown,                 // -1
-  kSolvePhaseOptimal,                 // 0
-  kSolvePhase1,                       // 1
-  kSolvePhase2,                       // 2
-  kSolvePhaseCleanup = 4,
-  kSolvePhaseMax = kSolvePhaseCleanup
+  kSolvePhaseError = kSolvePhaseMin,   // -3
+  kSolvePhaseExit,                     // -2,
+  kSolvePhaseUnknown,                  // -1
+  kSolvePhaseOptimal,                  // 0
+  kSolvePhase1,                        // 1
+  kSolvePhase2,                        // 2
+  kSolvePhasePrimalInfeasibleCleanup,  // 3
+  kSolvePhaseOptimalCleanup,           // 4
+  kSolvePhaseMax = kSolvePhaseOptimalCleanup
 };
 
 enum SimplexCrashStrategy {

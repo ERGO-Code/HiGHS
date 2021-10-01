@@ -263,10 +263,16 @@ HighsStatus HEkkDual::solve() {
              model_status == HighsModelStatus::kInfeasible);
       break;
     }
-    if (solve_phase == kSolvePhaseCleanup) {
-      // Dual infeasibilities after phase 2 for a problem not known to
-      // be dual infeasible. Primal feasible with dual infeasibilities
-      // so use primal simplex to clean up
+    if (solve_phase == kSolvePhaseOptimalCleanup ||
+        solve_phase == kSolvePhasePrimalInfeasibleCleanup) {
+      // Dual infeasibilities after phase 2 which ends either
+      //
+      // primal feasible with dual infeasibilities, so use primal
+      // simplex to clean up expecting to identify optimality
+      //
+      // primal infeasible with dual infeasibilities so use primal
+      // simplex to clean up expecting to identify (primal)
+      // infeasibility
       break;
     }
     // If solve_phase == kSolvePhaseOptimal == 0 then major solving
@@ -277,29 +283,49 @@ HighsStatus HEkkDual::solve() {
   // Should only have these cases
   assert(solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseUnknown ||
          solve_phase == kSolvePhaseOptimal ||
-         solve_phase == kSolvePhaseCleanup);
+         solve_phase == kSolvePhaseOptimalCleanup ||
+         solve_phase == kSolvePhasePrimalInfeasibleCleanup);
   // Can't be solve_phase == kSolvePhase1 since this requires simplex
   // solver to have continued after identifying dual infeasiblility.
-  if (solve_phase == kSolvePhaseCleanup) {
+  if (solve_phase == kSolvePhaseOptimalCleanup ||
+      solve_phase == kSolvePhasePrimalInfeasibleCleanup) {
     ekk_instance_.dual_simplex_cleanup_level_++;
+    if (solve_phase == kSolvePhasePrimalInfeasibleCleanup) {
+      // Primal and dual infeasibilities aren't known when cleaning up
+      // after suspected unboundedness in dual phase 2. All that's
+      // known is that cost shifting was required to get dual
+      // feasibility after removing cost perturbations, and dual
+      // simplex iterations may also have been done. This is unlike
+      // clean-up of dual infeasiblilties after suspected optimality,
+      // when no shifting and dual simplex iterations are done after
+      // removing cost perturbations.
+      //
+      // Determine the primal and dual infeasibilities
+      ekk_instance_.computeSimplexInfeasible();
+    }
     if (ekk_instance_.dual_simplex_cleanup_level_ >
         options.max_dual_simplex_cleanup_level) {
-      // No clean up. Dual simplex was optimal with unperturbed costs,
-      // so say that the scaled LP has been solved
-      // optimally. Optimality (unlikely) for the unscaled LP will
-      // still be assessed honestly, so leave it to the user to decide
-      // whether the solution can be accepted.
+      // No clean up. Dual simplex was optimal or unbounded with
+      // unperturbed costs, so say that the scaled LP has been solved
+      // optimally. Optimality or infeasibility for the unscaled LP
+      // are unlikely but will still be assessed honestly, so leave it
+      // to the user to decide whether the solution can be accepted.
       highsLogDev(options.log_options, HighsLogType::kWarning,
                   "HEkkDual:: Cannot use level %" HIGHSINT_FORMAT
                   " primal simplex cleanup for %" HIGHSINT_FORMAT
                   " dual infeasibilities\n",
                   ekk_instance_.dual_simplex_cleanup_level_,
                   info.num_dual_infeasibilities);
-      ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
+      if (solve_phase == kSolvePhaseOptimalCleanup) {
+        ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
+      } else {
+        ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
+      }
     } else {
-      // Use primal simplex to clean up. This almost always yields
-      // optimality, and shouldn't yield infeasiblilty - since the
-      // current point is primal feasible - but can yield
+      // Use primal simplex to clean up. This usually yields
+      // optimality or infeasiblilty (according to whether solve_phase
+      // is kSolvePhaseOptimalCleanup or
+      // kSolvePhasePrimalInfeasibleCleanup) but can yield
       // unboundedness. Time/iteration limit return is, of course,
       // possible, as are solver error
       highsLogDev(
@@ -658,7 +684,7 @@ void HEkkDual::solvePhase1() {
     // executed by ctest
     //
     // assert(99==1);
-    if (ekk_instance_.info_.costs_alt_perturbed) {
+    if (ekk_instance_.info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
@@ -715,8 +741,7 @@ void HEkkDual::solvePhase1() {
           ekk_instance_.options_->max_dual_simplex_phase1_cleanup_level) {
         // Allow cost perturbation for now, but may have to prevent it
         // to avoid cleanup-perturbation loops
-	info.allow_cost_shifting = true;
-	info.allow_cost_alt_perturbation = true;
+        info.allow_cost_shifting = true;
         info.allow_cost_perturbation = true;
       }
       // Comment if cost perturbation is not permitted
@@ -747,8 +772,8 @@ void HEkkDual::solvePhase2() {
   // bailing out due to reaching time/iteration limit or dual
   // objective
   //
-  // kSolvePhaseCleanup => Continue with primal phase 2 iterations to clean up
-  // dual infeasibilities
+  // kSolvePhaseOptimalCleanup => Continue with primal phase 2 iterations to
+  // clean up dual infeasibilities
   //
   // Have to set multi_chooseAgain = 1 since it may come in set to 0
   // from the end of Phase 1, implying that there is a set of
@@ -860,7 +885,7 @@ void HEkkDual::solvePhase2() {
     if (dualInfeasCount > 0) {
       // There are dual infeasiblities, so consider performing primal
       // simplex iterations to get dual feasibility
-      solve_phase = kSolvePhaseCleanup;
+      solve_phase = kSolvePhaseOptimalCleanup;
     } else {
       // There are no dual infeasiblities so optimal!
       solve_phase = kSolvePhaseOptimal;
@@ -879,11 +904,19 @@ void HEkkDual::solvePhase2() {
     // There is no candidate in CHUZC, so probably dual unbounded
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-unbounded\n");
-    const bool costs_changed = ekk_instance_.info_.costs_alt_perturbed || ekk_instance_.info_.costs_shifted;
-    assert(costs_changed == ekk_instance_.info_.costs_perturbed);
     if (ekk_instance_.info_.costs_perturbed) {
       // If the costs have been perturbed, clean up and return
       cleanup();
+    } else if (ekk_instance_.info_.costs_shifted) {
+      // Costs have been shifted to ensure dual feasibility, so
+      // consider performing primal simplex iterations to get dual
+      // feasibility
+      //
+      // First remove any shifts and recompute the dual values
+      ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
+                                   false);
+      ekk_instance_.computeDual();
+      solve_phase = kSolvePhasePrimalInfeasibleCleanup;
     } else {
       // The costs have not been perturbed, so dual unbounded---and
       // hence primal infeasible.
@@ -898,7 +931,7 @@ void HEkkDual::solvePhase2() {
     }
   }
   // Before primal simplex clean-up there will be dual infeasibilities
-  if (solve_phase != kSolvePhaseCleanup) {
+  if (solve_phase != kSolvePhaseOptimalCleanup) {
     if (debugDualSimplex("End of solvePhase2") ==
         HighsDebugStatus::kLogicalError) {
       solve_phase = kSolvePhaseError;
@@ -1052,8 +1085,6 @@ void HEkkDual::cleanup() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   // Remove perturbation and don't permit further perturbation
   ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown);
-  info.allow_cost_shifting = false;
-  info.allow_cost_alt_perturbation = false;
   info.allow_cost_perturbation = false;
   // No solve_phase term in initialiseBound is surely an omission -
   // when cleanup called in phase 1
@@ -2014,9 +2045,6 @@ void HEkkDual::assessPhase1Optimality() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
-  const bool costs_changed = info.costs_alt_perturbed || info.costs_shifted;
-  assert(costs_changed == info.costs_perturbed);
-  bool& costs_perturbed = info.costs_perturbed;
   // There are (possibly insignificant) LP dual infeasibilities that
   // can't be removed by dual Phase 1, so clean up any perturbations
   // before concluding dual infeasibility
@@ -2059,8 +2087,6 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
-  const bool costs_changed = info.costs_alt_perturbed || info.costs_shifted;
-  assert(costs_changed == info.costs_perturbed);
   assert(!info.costs_perturbed);
   if (dualInfeasCount == 0) {
     // No dual infeasibilities with respect to phase 1 bounds.
@@ -2117,7 +2143,7 @@ void HEkkDual::exitPhase1ResetDuals() {
   // This use of costs_alt_perturbed is not executed by ctest
   //
   //  assert(99==2);
-  if (info.costs_alt_perturbed) {
+  if (info.costs_perturbed) {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "Costs are already perturbed in exitPhase1ResetDuals\n");
   } else {
@@ -2155,12 +2181,14 @@ void HEkkDual::exitPhase1ResetDuals() {
       }
     }
   }
-  if (num_shift)
+  if (num_shift) {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
                 "Performed %" HIGHSINT_FORMAT
                 " cost shift(s) for free variables to zero "
                 "dual values: total = %g\n",
                 num_shift, sum_shift);
+    info.costs_shifted = true;
+  }
 }
 
 void HEkkDual::reportOnPossibleLpDualInfeasibility() {
@@ -2169,8 +2197,6 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   assert(solve_phase == kSolvePhase1);
   assert(row_out == -1);
   //  assert(info.dual_objective_value < 0);
-  const bool costs_changed = info.costs_alt_perturbed || info.costs_shifted;
-  assert(costs_changed == info.costs_perturbed);
   assert(!info.costs_perturbed);
   std::string lp_dual_status;
   if (analysis.num_dual_phase_1_lp_dual_infeasibility) {
