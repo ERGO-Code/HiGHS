@@ -1019,8 +1019,8 @@ HighsStatus HEkk::solve() {
   debug_solve_call_num_++;
   const bool output_flag = options_->output_flag;
   const HighsInt log_dev_level = options_->log_dev_level;
-  const HighsInt debug_from_solve_call_num = 0;
-  const HighsInt debug_to_solve_call_num = -1;
+  const HighsInt debug_from_solve_call_num = 3538;
+  const HighsInt debug_to_solve_call_num = 3540;
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
     printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);

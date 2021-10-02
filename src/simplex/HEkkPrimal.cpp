@@ -486,6 +486,11 @@ void HEkkPrimal::solvePhase2() {
       ekk_instance_.computeDualObjectiveValue();  // Why?
     }
   } else {
+    if (row_out >= 0) {
+      printf("HEkkPrimal::solvePhase2 row_out = %d solve %d\n", (int)row_out,
+	     (int)ekk_instance_.debug_solve_call_num_);
+      fflush(stdout);
+    }
     assert(row_out < 0);
 
     // There is no candidate in CHUZR, so probably primal unbounded
