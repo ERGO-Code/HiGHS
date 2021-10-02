@@ -632,11 +632,14 @@ void HEkkDual::solvePhase1() {
     //
     const bool old_break_logic = status.has_fresh_rebuild;
     const bool need_rebuild =
-      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
     if (old_break_logic && need_rebuild) {
-      printf("HEkkDual::solvePhase1 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
-	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
-      assert(98==21);
+      printf(
+          "HEkkDual::solvePhase1 Rebuild due to refactorization requirement "
+          "when previously no rebuild would be performed: "
+          " solve = %d\n",
+          (int)ekk_instance_.debug_solve_call_num_);
+      assert(98 == 21);
     }
     if (!need_rebuild) break;
     //    if (old_break_logic) break;
@@ -872,11 +875,14 @@ void HEkkDual::solvePhase2() {
     // outer loop to see what's ocurred
     const bool old_break_logic = status.has_fresh_rebuild;
     const bool need_rebuild =
-      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
     if (old_break_logic && need_rebuild) {
-      printf("HEkkDual::solvePhase2 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
-	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
-      assert(98==22);
+      printf(
+          "HEkkDual::solvePhase2 Rebuild due to refactorization requirement "
+          "when previously no rebuild would be performed: "
+          " solve = %d\n",
+          (int)ekk_instance_.debug_solve_call_num_);
+      assert(98 == 22);
     }
     if (!need_rebuild) break;
     //    if (old_break_logic) break;

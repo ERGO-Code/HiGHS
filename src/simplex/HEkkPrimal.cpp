@@ -374,13 +374,17 @@ void HEkkPrimal::solvePhase1() {
     // If the data are fresh from rebuild() and no flips have
     // occurred, possibly break out of the outer loop to see what's
     // ocurred
-    const bool old_break_logic = status.has_fresh_rebuild && num_flip_since_rebuild == 0;
+    const bool old_break_logic =
+        status.has_fresh_rebuild && num_flip_since_rebuild == 0;
     const bool need_rebuild =
-      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
     if (old_break_logic && need_rebuild) {
-      printf("HEkkPrimal::solvePhase1 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
-	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
-      assert(98==11);
+      printf(
+          "HEkkPrimal::solvePhase1 Rebuild due to refactorization requirement "
+          "when previously no rebuild would be performed: "
+          " solve = %d\n",
+          (int)ekk_instance_.debug_solve_call_num_);
+      assert(98 == 11);
     }
     if (!need_rebuild) break;
     //    if (old_break_logic) break;
@@ -466,12 +470,16 @@ void HEkkPrimal::solvePhase2() {
     // If the data are fresh from rebuild() and no flips have
     // occurred, possibly break out of the outer loop to see what's
     // ocurred
-    const bool old_break_logic = status.has_fresh_rebuild && num_flip_since_rebuild == 0;
+    const bool old_break_logic =
+        status.has_fresh_rebuild && num_flip_since_rebuild == 0;
     const bool need_rebuild =
-      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
     if (old_break_logic && need_rebuild) {
-      printf("HEkkPrimal::solvePhase2 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
-	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
+      printf(
+          "HEkkPrimal::solvePhase2 Rebuild due to refactorization requirement "
+          "when previously no rebuild would be performed: "
+          " solve = %d\n",
+          (int)ekk_instance_.debug_solve_call_num_);
       //      assert(98==12);
     }
     if (!need_rebuild) break;
@@ -508,14 +516,17 @@ void HEkkPrimal::solvePhase2() {
   } else if (row_out == kNoRowSought) {
     // CHUZR has not been performed - because the chosen reduced cost
     // was unattractive when computed from scratch and no rebuild was
-    // requiredh. This is very rare and should be handled otherwise
+    // required. This is very rare and should be handled otherwise
     //
+    printf("HEkkPrimal::solvePhase2 row_out = %d solve %d\n", (int)row_out,
+           (int)ekk_instance_.debug_solve_call_num_);
+    fflush(stdout);
     assert(row_out != kNoRowSought);
   } else {
     // No candidate in CHUZR
     if (row_out >= 0) {
       printf("HEkkPrimal::solvePhase2 row_out = %d solve %d\n", (int)row_out,
-	     (int)ekk_instance_.debug_solve_call_num_);
+             (int)ekk_instance_.debug_solve_call_num_);
       fflush(stdout);
     }
     // Ensure that CHUZR was performed and found no row

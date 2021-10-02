@@ -1060,8 +1060,8 @@ HighsStatus HEkk::solve() {
 
   const bool output_flag = options_->output_flag;
   const HighsInt log_dev_level = options_->log_dev_level;
-  const HighsInt debug_from_solve_call_num = 3538;
-  const HighsInt debug_to_solve_call_num = 3540;
+  const HighsInt debug_from_solve_call_num = 0;
+  const HighsInt debug_to_solve_call_num = -1;
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
     printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
@@ -2004,7 +2004,7 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 
 bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
   // If no updates have been performed, then don't refactor!
-  if (info_.update_count==0) return false;
+  if (info_.update_count == 0) return false;
   // Otherwise, refactor by default
   bool refactor = true;
   double solution_error = 0;
