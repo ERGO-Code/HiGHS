@@ -372,8 +372,18 @@ void HEkkPrimal::solvePhase1() {
       if (rebuild_reason) break;
     }
     // If the data are fresh from rebuild() and no flips have
-    // occurred, break out of the outer loop to see what's ocurred
-    if (status.has_fresh_rebuild && num_flip_since_rebuild == 0) break;
+    // occurred, possibly break out of the outer loop to see what's
+    // ocurred
+    const bool old_break_logic = status.has_fresh_rebuild && num_flip_since_rebuild == 0;
+    const bool need_rebuild =
+      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+    if (old_break_logic && need_rebuild) {
+      printf("HEkkPrimal::solvePhase1 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
+	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
+      assert(98==11);
+    }
+    if (!need_rebuild) break;
+    //    if (old_break_logic) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
@@ -454,8 +464,18 @@ void HEkkPrimal::solvePhase2() {
       if (rebuild_reason) break;
     }
     // If the data are fresh from rebuild() and no flips have
-    // occurred, break out of the outer loop to see what's ocurred
-    if (status.has_fresh_rebuild && num_flip_since_rebuild == 0) break;
+    // occurred, possibly break out of the outer loop to see what's
+    // ocurred
+    const bool old_break_logic = status.has_fresh_rebuild && num_flip_since_rebuild == 0;
+    const bool need_rebuild =
+      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+    if (old_break_logic && need_rebuild) {
+      printf("HEkkPrimal::solvePhase2 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
+	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
+      //      assert(98==12);
+    }
+    if (!need_rebuild) break;
+    //    if (old_break_logic) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);

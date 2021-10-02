@@ -1017,16 +1017,6 @@ HighsStatus HEkk::unpermute() {
 
 HighsStatus HEkk::solve() {
   debug_solve_call_num_++;
-  const bool output_flag = options_->output_flag;
-  const HighsInt log_dev_level = options_->log_dev_level;
-  const HighsInt debug_from_solve_call_num = 3538;
-  const HighsInt debug_to_solve_call_num = 3540;
-  if (debug_solve_call_num_ >= debug_from_solve_call_num &&
-      debug_solve_call_num_ <= debug_to_solve_call_num) {
-    printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    options_->output_flag = true;
-    options_->log_dev_level = 2;
-  }
   initialiseAnalysis();
   initialiseControl();
 
@@ -1067,6 +1057,17 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
+
+  const bool output_flag = options_->output_flag;
+  const HighsInt log_dev_level = options_->log_dev_level;
+  const HighsInt debug_from_solve_call_num = 3538;
+  const HighsInt debug_to_solve_call_num = 3540;
+  if (debug_solve_call_num_ >= debug_from_solve_call_num &&
+      debug_solve_call_num_ <= debug_to_solve_call_num) {
+    printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    options_->output_flag = true;
+    options_->log_dev_level = 2;
+  }
 
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
@@ -1123,6 +1124,11 @@ HighsStatus HEkk::solve() {
                                           return_status, "HEkkPrimal::solve");
     }
   }
+
+  // Restore any modified development output settings
+  options_->output_flag = output_flag;
+  options_->log_dev_level = log_dev_level;
+
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
   highsLogDev(options_->log_options, HighsLogType::kInfo,
@@ -1143,8 +1149,6 @@ HighsStatus HEkk::solve() {
   if (analysis_.analyse_simplex_summary_data) analysis_.summaryReport();
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
   if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
-  options_->output_flag = output_flag;
-  options_->log_dev_level = log_dev_level;
   return return_status;
 }
 
@@ -1999,7 +2003,10 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 }
 
 bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
-  bool refactor = info_.update_count > 0;
+  // If no updates have been performed, then don't refactor!
+  if (info_.update_count==0) return false;
+  // Otherwise, refactor by default
+  bool refactor = true;
   double solution_error = 0;
   if (options_->no_unnecessary_rebuild_refactor) {
     // Consider whether not to refactor in rebuild

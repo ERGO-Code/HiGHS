@@ -622,12 +622,25 @@ void HEkkDual::solvePhase1() {
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
-    // If the data are fresh from rebuild(), break out of
-    // the outer loop to see what's ocurred
-    // Was:	if (info.update_count == 0) break;
-    if (status.has_fresh_rebuild) break;
+    // If the data are fresh from rebuild(), possibly break out of the
+    // outer loop to see what's ocurred
+    //
+    // Deciding whether to rebuild is now more complicated if
+    // refactorization is being avoided, since
+    // status.has_fresh_rebuild being true may not imply that there is
+    // a fresh factorization
+    //
+    const bool old_break_logic = status.has_fresh_rebuild;
+    const bool need_rebuild =
+      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+    if (old_break_logic && need_rebuild) {
+      printf("HEkkDual::solvePhase1 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
+	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
+      assert(98==21);
+    }
+    if (!need_rebuild) break;
+    //    if (old_break_logic) break;
   }
-
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
   // IterateClock
@@ -855,10 +868,18 @@ void HEkkDual::solvePhase2() {
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
-    // If the data are fresh from rebuild(), break out of
-    // the outer loop to see what's ocurred
-    // Was:	if (info.update_count == 0) break;
-    if (status.has_fresh_rebuild) break;
+    // If the data are fresh from rebuild(), possibly break out of the
+    // outer loop to see what's ocurred
+    const bool old_break_logic = status.has_fresh_rebuild;
+    const bool need_rebuild =
+      ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+    if (old_break_logic && need_rebuild) {
+      printf("HEkkDual::solvePhase2 Rebuild due to refactorization requirement when previously no rebuild would be performed: "
+	     " solve = %d\n", (int)ekk_instance_.debug_solve_call_num_);
+      assert(98==22);
+    }
+    if (!need_rebuild) break;
+    //    if (old_break_logic) break;
   }
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
