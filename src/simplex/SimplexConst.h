@@ -159,6 +159,10 @@ const HighsInt kIllegalMoveValue =
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
 
+const HighsInt kNoRowSought = -2;
+const HighsInt kNoRowChosen = -1;
+
+
 enum class LpAction {
   kScale = 0,
   kNewCosts,

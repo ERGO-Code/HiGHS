@@ -33,7 +33,7 @@ void HEkkDual::iterateMulti() {
   // Report candidate
   majorChooseRow();
   minorChooseRow();
-  if (row_out == -1) {
+  if (row_out == kNoRowChosen) {
     rebuild_reason = kRebuildReasonPossiblyOptimal;
     return;
   }
@@ -113,7 +113,7 @@ void HEkkDual::majorChooseRow() {
 
     // 3. Store the choiceIndex to buffer
     for (HighsInt ich = 0; ich < multi_num; ich++)
-      multi_choice[ich].row_out = -1;
+      multi_choice[ich].row_out = kNoRowChosen;
     for (HighsInt ich = 0; ich < choiceCount; ich++)
       multi_choice[ich].row_out = choiceIndex[ich];
 
@@ -141,7 +141,7 @@ void HEkkDual::majorChooseRow() {
             multi_choice[i].infeasEdWt;
         //      if (updated_edge_weight < 0.25 * computed_edge_weight) {
         if (!acceptDualSteepestEdgeWeight(updated_edge_weight)) {
-          multi_choice[i].row_out = -1;
+          multi_choice[i].row_out = kNoRowChosen;
           countWrongEdWt++;
         }
       }
@@ -257,7 +257,7 @@ void HEkkDual::minorChooseRow() {
   /**
    * 2. Obtain other info for current sub-optimization choice
    */
-  row_out = -1;
+  row_out = kNoRowChosen;
   if (multi_iChoice != -1) {
     MChoice* workChoice = &multi_choice[multi_iChoice];
 
@@ -281,7 +281,7 @@ void HEkkDual::minorChooseRow() {
     finish->EdWt = workChoice->infeasEdWt;
 
     // Disable current row
-    workChoice->row_out = -1;
+    workChoice->row_out = kNoRowChosen;
   }
 }
 

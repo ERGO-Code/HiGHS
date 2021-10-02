@@ -649,7 +649,7 @@ void HEkkDual::solvePhase1() {
   // If bailing out, should have done so already
   assert(!ekk_instance_.solve_bailout_);
   // Assess outcome of dual phase 1
-  if (row_out == -1) {
+  if (row_out == kNoRowChosen) {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
                 "dual-phase-1-optimal\n");
     // Optimal in phase 1
@@ -897,7 +897,7 @@ void HEkkDual::solvePhase2() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
                 "dual-phase-2-found-free\n");
     solve_phase = kSolvePhase1;
-  } else if (row_out == -1) {
+  } else if (row_out == kNoRowChosen) {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
                 "dual-phase-2-optimal\n");
@@ -1339,7 +1339,7 @@ void HEkkDual::chooseRow() {
   for (;;) {
     // Choose the index of a good row to leave the basis
     dualRHS.chooseNormal(&row_out);
-    if (row_out == -1) {
+    if (row_out == kNoRowChosen) {
       // No index found so may be dual optimal.
       rebuild_reason = kRebuildReasonPossiblyOptimal;
       return;
@@ -2055,11 +2055,11 @@ void HEkkDual::saveDualRay() {
 }
 
 void HEkkDual::assessPhase1Optimality() {
-  // Should only be called when optimal in phase 1 (row_out == -1)
+  // Should only be called when optimal in phase 1 (row_out == kNoRowChosen)
   // with nonzero dual activity, and after a fresh rebuild - so
   // "final" decisions can be made.
   assert(solve_phase == kSolvePhase1);
-  assert(row_out == -1);
+  assert(row_out == kNoRowChosen);
   assert(ekk_instance_.info_.dual_objective_value);
   assert(ekk_instance_.status_.has_fresh_rebuild);
 
@@ -2216,7 +2216,7 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexAnalysis& analysis = ekk_instance_.analysis_;
   assert(solve_phase == kSolvePhase1);
-  assert(row_out == -1);
+  assert(row_out == kNoRowChosen);
   //  assert(info.dual_objective_value < 0);
   assert(!info.costs_perturbed);
   std::string lp_dual_status;

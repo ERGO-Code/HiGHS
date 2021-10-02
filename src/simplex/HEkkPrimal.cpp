@@ -505,13 +505,21 @@ void HEkkPrimal::solvePhase2() {
       model_status = HighsModelStatus::kOptimal;
       ekk_instance_.computeDualObjectiveValue();  // Why?
     }
+  } else if (row_out == kNoRowSought) {
+    // CHUZR has not been performed - because the chosen reduced cost
+    // was unattractive when computed from scratch and no rebuild was
+    // requiredh. This is very rare and should be handled otherwise
+    //
+    assert(row_out != kNoRowSought);
   } else {
+    // No candidate in CHUZR
     if (row_out >= 0) {
       printf("HEkkPrimal::solvePhase2 row_out = %d solve %d\n", (int)row_out,
 	     (int)ekk_instance_.debug_solve_call_num_);
       fflush(stdout);
     }
-    assert(row_out < 0);
+    // Ensure that CHUZR was performed and found no row
+    assert(row_out == kNoRowChosen);
 
     // There is no candidate in CHUZR, so probably primal unbounded
     highsLogDev(options.log_options, HighsLogType::kInfo,
@@ -702,7 +710,11 @@ void HEkkPrimal::iterate() {
     solve_phase = kSolvePhaseError;
     return;
   }
-
+  // Initialise row_out so that aborting iteration before CHUZR due to
+  // numerical test of chosen reduced cost can be spotted - and
+  // eliminates the unassigned read that can occur when the first
+  // iteration is aborted in primal clean-up
+  row_out = kNoRowSought;
   // Perform CHUZC
   //
   chuzc();
@@ -726,7 +738,8 @@ void HEkkPrimal::iterate() {
   // Perform CHUZR
   if (solve_phase == kSolvePhase1) {
     phase1ChooseRow();
-    if (row_out < 0) {
+    assert(row_out != kNoRowSought);
+    if (row_out == kNoRowChosen) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
                   "Primal phase 1 choose row failed\n");
       solve_phase = kSolvePhaseError;
@@ -745,6 +758,7 @@ void HEkkPrimal::iterate() {
   // in phase 2 if there's no pivot or bound swap. In phase 1 there is
   // always a pivot at this stage since row_out < 0 is trapped (above)
   // as an error.
+  assert(solve_phase == kSolvePhase2 || row_out >= 0);
   considerBoundSwap();
   if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
@@ -1048,7 +1062,7 @@ void HEkkPrimal::phase1ChooseRow() {
   analysis->simplexTimerStop(Chuzr1Clock);
   // When there are no candidates at all, we can leave it here
   if (ph1SorterR.empty()) {
-    row_out = -1;
+    row_out = kNoRowChosen;
     variable_out = -1;
     return;
   }
@@ -1094,7 +1108,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   // Finally choose a pivot with good enough alpha, working backwards
-  row_out = -1;
+  row_out = kNoRowChosen;
   variable_out = -1;
   move_out = 0;
   for (HighsInt i = iLast - 1; i >= 0; i--) {
@@ -1117,7 +1131,7 @@ void HEkkPrimal::chooseRow() {
   const vector<double>& baseValue = info.baseValue_;
   analysis->simplexTimerStart(Chuzr1Clock);
   // Initialize
-  row_out = -1;
+  row_out = kNoRowChosen;
 
   // Choose row pass 1
   double alphaTol =
@@ -1179,12 +1193,13 @@ void HEkkPrimal::considerBoundSwap() {
 
   // Compute the primal theta and see if we should have done a bound
   // flip instead
-  if (row_out < 0) {
+  if (row_out == kNoRowChosen) {
     assert(solve_phase == kSolvePhase2);
     // No binding ratio in CHUZR, so flip or unbounded
     theta_primal = move_in * kHighsInf;
     move_out = 0;
   } else {
+    assert(row_out >= 0);
     // Determine the step to the leaving bound
     //
     alpha_col = col_aq.array[row_out];
@@ -1211,14 +1226,14 @@ void HEkkPrimal::considerBoundSwap() {
   if (move_in > 0) {
     if (value_in > upper_in + primal_feasibility_tolerance) {
       flipped = true;
-      row_out = -1;
+      row_out = kNoRowChosen;
       value_in = upper_in;
       theta_primal = upper_in - lower_in;
     }
   } else {
     if (value_in < lower_in - primal_feasibility_tolerance) {
       flipped = true;
-      row_out = -1;
+      row_out = kNoRowChosen;
       value_in = lower_in;
       theta_primal = lower_in - upper_in;
     }
@@ -1233,7 +1248,7 @@ void HEkkPrimal::considerBoundSwap() {
   }
   // Check for possible error
   assert(pivot_or_flipped);
-  assert(flipped == (row_out == -1));
+  assert(flipped == (row_out == kNoRowChosen));
 }
 
 void HEkkPrimal::assessPivot() {
