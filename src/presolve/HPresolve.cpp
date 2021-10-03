@@ -2460,12 +2460,13 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
       double abs1Val = std::abs(Avalue[nzPos1]);
       double abs2Val = std::abs(Avalue[nzPos2]);
       bool colAtPos1Better;
-      if (abs1Val > 0.5 * abs2Val)
-        colAtPos1Better = true;
-      else if (abs2Val > 0.5 * abs1Val)
-        colAtPos1Better = false;
-      else
+      double ratio = std::max(abs1Val, abs2Val) / std::min(abs1Val, abs2Val);
+      if (ratio <= 2.0)
         colAtPos1Better = colsize[Acol[nzPos1]] < colsize[Acol[nzPos2]];
+      else if (abs1Val > abs2Val)
+        colAtPos1Better = true;
+      else
+        colAtPos1Better = false;
 
       if (colAtPos1Better) {
         substcol = Acol[nzPos1];

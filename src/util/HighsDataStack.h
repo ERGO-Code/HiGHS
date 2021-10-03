@@ -53,23 +53,23 @@ class HighsDataStack {
 
   template <typename T>
   void push(const std::vector<T>& r) {
-    HighsInt offset = data.size();
-    HighsInt numData = r.size();
+    std::size_t offset = data.size();
+    std::size_t numData = r.size();
     // store the data
-    data.resize(offset + numData * sizeof(T) + sizeof(HighsInt));
+    data.resize(offset + numData * sizeof(T) + sizeof(std::size_t));
     if (!r.empty())
       std::memcpy(data.data() + offset, r.data(), numData * sizeof(T));
     // store the vector size
     offset += numData * sizeof(T);
-    std::memcpy(data.data() + offset, &numData, sizeof(HighsInt));
+    std::memcpy(data.data() + offset, &numData, sizeof(std::size_t));
   }
 
   template <typename T>
   void pop(std::vector<T>& r) {
     // pop the vector size
-    position -= sizeof(HighsInt);
-    HighsInt numData;
-    std::memcpy(&numData, &data[position], sizeof(HighsInt));
+    position -= sizeof(std::size_t);
+    std::size_t numData;
+    std::memcpy(&numData, &data[position], sizeof(std::size_t));
     // pop the data
     position -= numData * sizeof(T);
     r.resize(numData);
