@@ -112,6 +112,11 @@ struct HighsSimplexInfo {
 
   std::vector<HighsInt> devex_index_;
 
+  // Records of the row chosen by dual simplex or column chosen by
+  // primal simplex, plus the pivot values - since last revinversion
+  std::vector<HighsInt> index_chosen_;
+  std::vector<double> pivot_;
+
   // Data for backtracking in the event of a singular basis
   HighsInt phase1_backtracking_test_done = false;
   HighsInt phase2_backtracking_test_done = false;

@@ -40,9 +40,29 @@ const double updated_dual_small_absolute_error = 1e-6;
 const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
-void HEkk::debugForceLogDevLevel(const HighsInt level) {
-  this->options_->output_flag = true;
-  this->options_->log_dev_level = level;
+void HEkk::debugReporting(const HighsInt save_mod_recover,
+			  const HighsInt log_dev_level_) {
+  static bool output_flag;
+  static HighsInt log_dev_level;
+  static HighsInt highs_analysis_level;
+  static bool analyse_simplex_runtime_data;
+  if (save_mod_recover == -1) {
+    output_flag = options_->output_flag;
+    log_dev_level = options_->log_dev_level;
+    highs_analysis_level = options_->highs_analysis_level;
+    analyse_simplex_runtime_data = analysis_.analyse_simplex_runtime_data;
+  } else if (save_mod_recover == 0) {
+    this->options_->output_flag = true;
+    this->options_->log_dev_level = log_dev_level_;
+    this->options_->highs_analysis_level = 4;
+    if (log_dev_level_ == kHighsLogDevLevelVerbose)
+      this->analysis_.analyse_simplex_runtime_data = true;
+  } else {
+    options_->output_flag = output_flag;
+    options_->log_dev_level = log_dev_level;
+    options_->highs_analysis_level = highs_analysis_level;
+    analysis_.analyse_simplex_runtime_data = analyse_simplex_runtime_data;
+  }
 }
 
 HighsDebugStatus HEkk::debugSimplex(const std::string message,

@@ -163,6 +163,8 @@ void HEkk::clearEkkDataInfo() {
   info.numTotPermutation_.clear();
   info.numColPermutation_.clear();
   info.devex_index_.clear();
+  info.pivot_.clear();
+  info.index_chosen_.clear();
   info.phase1_backtracking_test_done = false;
   info.phase2_backtracking_test_done = false;
   info.backtracking_ = false;
@@ -1057,16 +1059,13 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-
-  const bool output_flag = options_->output_flag;
-  const HighsInt log_dev_level = options_->log_dev_level;
-  const HighsInt debug_from_solve_call_num = 0;
-  const HighsInt debug_to_solve_call_num = -1;
+  debugReporting(-1);
+  const HighsInt debug_from_solve_call_num = 7;
+  const HighsInt debug_to_solve_call_num = 8;
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
     printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    options_->output_flag = true;
-    options_->log_dev_level = 2;
+    debugReporting(0, kHighsLogDevLevelVerbose);  
   }
 
   // Initial solve according to strategy
@@ -1126,8 +1125,7 @@ HighsStatus HEkk::solve() {
   }
 
   // Restore any modified development output settings
-  options_->output_flag = output_flag;
-  options_->log_dev_level = log_dev_level;
+  debugReporting(1);
 
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
