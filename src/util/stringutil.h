@@ -24,7 +24,7 @@ int strIsWhitespace(const char* str);
 void strToLower(char* str);
 void strTrim(char* str);
 
-const std::string non_chars = "\t\n\v\f\r\" ";
+const std::string non_chars = "\t\n\v\f\r ";
 std::string& ltrim(std::string& str, const std::string& chars = non_chars);
 std::string& rtrim(std::string& str, const std::string& chars = non_chars);
 std::string& trim(std::string& str, const std::string& chars = non_chars);
