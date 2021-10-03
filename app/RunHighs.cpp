@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
-    highs.writeSolution(options.solution_file, options.write_solution_pretty);
+    highs.writeSolution(options.solution_file, options.write_solution_style);
 
   return (int)run_status;
 }

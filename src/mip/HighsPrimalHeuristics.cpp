@@ -787,6 +787,8 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   if (numintcols != mipsolver.numCol()) {
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
+    lprelax.setIterationLimit(
+        std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
@@ -908,11 +910,15 @@ void HighsPrimalHeuristics::randomizedRounding(
   if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
+    lprelax.setIterationLimit(
+        std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    // lprelax.getLpSolver().setHighsOptionValue("presolve", "on");
-    lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis);
+    if (intcols.size() / (double)mipsolver.numCol() >= 0.2)
+      lprelax.getLpSolver().setOptionValue("presolve", "on");
+    else
+      lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis);
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
@@ -1028,7 +1034,10 @@ void HighsPrimalHeuristics::feasibilityPump() {
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
       assert(mipsolver.variableType(i) == HighsVarType::kInteger);
 
-      if (lpsol[i] > roundedsol[i] - mipsolver.mipdata_->feastol)
+      if (mipsolver.mipdata_->uplocks[i] == 0 ||
+          mipsolver.mipdata_->downlocks[i] == 0)
+        cost[i] = 0.0;
+      else if (lpsol[i] > roundedsol[i] - mipsolver.mipdata_->feastol)
         cost[i] = -1.0 + randgen.real(-1e-4, 1e-4);
       else
         cost[i] = 1.0 + randgen.real(-1e-4, 1e-4);
@@ -1063,7 +1072,7 @@ void HighsPrimalHeuristics::centralRounding() {
   lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
   ipm.passModel(std::move(lpmodel));
 
-  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
+  if (false && mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {

@@ -143,3 +143,26 @@ double Highs::getHighsRunTime() {
   deprecationMessage("getHighsRunTime", "getRunTime");
   return getRunTime();
 }
+
+#if 0
+HighsStatus Highs::writeSolution(const std::string filename,
+                                const bool pretty) const {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writeSolution", file, html);
+  return_status =
+      interpretCallStatus(call_status, return_status, "openWriteFile");
+  if (return_status == HighsStatus::kError) return return_status;
+  HighsInt style;
+  if (pretty) {
+    style = kWriteSolutionStylePretty;
+  } else {
+    style = kWriteSolutionStyleRaw;
+  }
+  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
+  if (file != stdout) fclose(file);
+  return HighsStatus::kOk;
+}
+#endif

@@ -289,6 +289,7 @@ struct HighsOptionsStruct {
   std::string solution_file;
   std::string log_file;
   bool write_solution_to_file;
+  HighsInt write_solution_style;
   bool write_solution_pretty;
   // Control of HiGHS log
   bool output_flag;
@@ -586,11 +587,18 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("write_solution_pretty",
-                                       "Write the primal and dual solution in "
-                                       "a pretty (human-readable) format",
-                                       advanced, &write_solution_pretty, false);
+    record_bool = new OptionRecordBool(
+        "write_solution_pretty",
+        "Write the solution in a pretty (human-readable) format", advanced,
+        &write_solution_pretty, false);
     records.push_back(record_bool);
+
+    record_int = new OptionRecordInt(
+        "write_solution_style",
+        "Write the solution in style: 0=>Raw; 1=>Pretty; 2=>Mittlemann",
+        advanced, &write_solution_style, kWriteSolutionStyleMin,
+        kWriteSolutionStyleRaw, kWriteSolutionStyleMax);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool("mip_detect_symmetry",
                                        "Whether symmetry should be detected",

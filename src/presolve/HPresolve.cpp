@@ -1349,7 +1349,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
                       implications.substitutions.size() +
                       cliquetable.getSubstitutions().size();
     int64_t splayContingent =
-        cliquetable.numSplayCalls +
+        cliquetable.numNeighborhoodQueries +
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{1000000},
                  100 * numNonzeros());
     HighsInt numFail = 0;
@@ -1377,11 +1377,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
 
         // if (numProbed % 10 == 0)
         //   printf(
-        //       "numprobed=%d  numDel=%d  newcliques=%d numSplayCalls=%ld  "
-        //       "splayContingent=%ld\n",
+        //       "numprobed=%d  numDel=%d  newcliques=%d
+        //       numNeighborhoodQueries=%ld  " "splayContingent=%ld\n",
         //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
-        //       cliquetable.numSplayCalls, splayContingent);
-        if (cliquetable.numSplayCalls > splayContingent) break;
+        //       cliquetable.numNeighborhoodQueries, splayContingent);
+        if (cliquetable.numNeighborhoodQueries > splayContingent) break;
 
         if (probingContingent - numProbed < 0) break;
 
@@ -3872,6 +3872,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   }
 
   if (options->presolve != "off") {
+    if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "\nPresolving model\n");
@@ -4054,6 +4055,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
   shrinkProblem(postSolveStack);
 
   if (mipsolver != nullptr) {
+    mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
     mipsolver->mipdata_->domain.addConflictPool(
         mipsolver->mipdata_->conflictPool);

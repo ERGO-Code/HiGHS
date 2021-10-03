@@ -186,8 +186,9 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty);
+void writeSolutionToFile(FILE* file, const HighsOptions& options,
+                         const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution, const HighsInt style);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

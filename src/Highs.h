@@ -126,9 +126,9 @@ class Highs {
   /**
    * @brief writes the current solution to a file
    */
-  HighsStatus writeSolution(const std::string filename,  //!< the filename
-                            const bool pretty = false)
-      const;  //!< Write in pretty (human-readable) format
+  HighsStatus writeSolution(
+      const std::string filename,   //!< the filename
+      const HighsInt style) const;  //!< Style of solution report
 
   /**
    * Methods for HiGHS option input/output
@@ -1044,6 +1044,9 @@ class Highs {
   double getHighsInfinity();
 
   double getHighsRunTime();
+
+  HighsStatus writeSolution(const std::string filename,
+                            const bool pretty = false) const;
 
   void deprecationMessage(const std::string method_name,
                           const std::string alt_method_name) const;
