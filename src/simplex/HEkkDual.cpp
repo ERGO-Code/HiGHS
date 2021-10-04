@@ -1198,7 +1198,7 @@ void HEkkDual::iterate() {
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);
   //  ekk_instance_.info_.index_chosen_.push_back(row_out);
-					       
+
   // Update the basis representation
   analysis->simplexTimerStart(IteratePivotsClock);
   updatePivots();

@@ -1065,7 +1065,7 @@ HighsStatus HEkk::solve() {
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
     printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    debugReporting(0, kHighsLogDevLevelVerbose);  
+    debugReporting(0, kHighsLogDevLevelVerbose);
   }
 
   // Initial solve according to strategy
