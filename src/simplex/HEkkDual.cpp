@@ -1189,6 +1189,12 @@ void HEkkDual::iterate() {
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  updatePrimal");
 
+  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
+    printf("Cycling_detected\n");
+    assert(1==0);
+        exit(0);
+  }
+      
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);
   //  ekk_instance_.info_.index_chosen_.push_back(row_out);
@@ -1329,6 +1335,7 @@ void HEkkDual::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->rebuild_reason = reason_for_rebuild;
+  analysis->rebuild_reason_string = ekk_instance_.rebuildReason(reason_for_rebuild);
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }

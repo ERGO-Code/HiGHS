@@ -2332,6 +2332,7 @@ void HEkkPrimal::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->rebuild_reason = reason_for_rebuild;
+  analysis->rebuild_reason_string = ekk_instance_.rebuildReason(reason_for_rebuild);
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }

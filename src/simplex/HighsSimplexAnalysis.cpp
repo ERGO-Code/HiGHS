@@ -339,10 +339,10 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
       reportMulti(header);
     }
     reportDensity(header);
-    reportInvert(header);
     //  reportCondition(header);
   }
   reportInfeasibility(header);
+  if (analyse_simplex_runtime_data) reportInvert(header);
   highsLogDev(log_options, HighsLogType::kInfo, "%s\n",
               analysis_log->str().c_str());
   if (!header) num_invert_report_since_last_header++;
@@ -1303,11 +1303,10 @@ void HighsSimplexAnalysis::reportDensity(const bool header) {
 }
 
 void HighsSimplexAnalysis::reportInvert(const bool header) {
-  if (header) {
-    *analysis_log << highsFormatToString(" Inv");
-  } else {
-    *analysis_log << highsFormatToString("  %2" HIGHSINT_FORMAT "",
-                                         rebuild_reason);
+  if (!header) {
+    *analysis_log << " (" << highsFormatToString("  %2" HIGHSINT_FORMAT "",
+                                         rebuild_reason) << ")";
+    *analysis_log << " " << rebuild_reason_string;
   }
 }
 /*
