@@ -1060,8 +1060,8 @@ HighsStatus HEkk::solve() {
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
   debugReporting(-1);
-  const HighsInt debug_from_solve_call_num = 7;
-  const HighsInt debug_to_solve_call_num = 8;
+  const HighsInt debug_from_solve_call_num = 0;
+  const HighsInt debug_to_solve_call_num = -1;
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
     printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
