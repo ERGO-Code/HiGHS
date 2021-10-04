@@ -1195,6 +1195,7 @@ HighsStatus HEkk::setBasis() {
   const HighsInt num_col = lp_.num_col_;
   const HighsInt num_row = lp_.num_row_;
   const HighsInt num_tot = num_col + num_row;
+  basis_.hash = 0;
   basis_.nonbasicFlag_.resize(num_tot);
   basis_.nonbasicMove_.resize(num_tot);
   basis_.basicIndex_.resize(num_row);
@@ -1235,6 +1236,7 @@ HighsStatus HEkk::setBasis() {
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
     basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
+    HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     basis_.basicIndex_[iRow] = iVar;
   }
   info_.num_basic_logicals = num_row;
@@ -1262,6 +1264,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   basis_.nonbasicMove_.resize(num_tot);
   basis_.basicIndex_.resize(num_row);
 
+  basis_.hash = 0;
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
@@ -1272,6 +1275,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
       basis_.nonbasicMove_[iVar] = 0;
       basis_.basicIndex_[num_basic_variables++] = iVar;
+      HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
       if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
@@ -1296,6 +1300,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
       basis_.nonbasicMove_[iVar] = 0;
       basis_.basicIndex_[num_basic_variables++] = iVar;
+      HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
       if (highs_basis.row_status[iRow] == HighsBasisStatus::kLower) {
@@ -1330,6 +1335,7 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   this->basis_.nonbasicFlag_ = basis.nonbasicFlag_;
   this->basis_.nonbasicMove_ = basis.nonbasicMove_;
   this->basis_.basicIndex_ = basis.basicIndex_;
+  this->basis_.hash = basis.hash;
   this->status_.has_basis = true;
   return HighsStatus::kOk;
 }
@@ -1646,6 +1652,8 @@ HighsStatus HEkk::initialiseForSolve() {
 
   bool primal_feasible = info_.num_primal_infeasibilities == 0;
   bool dual_feasible = info_.num_dual_infeasibilities == 0;
+  visited_basis_.clear();
+  visited_basis_.insert(basis_.hash);
   model_status_ = HighsModelStatus::kNotset;
   if (primal_feasible && dual_feasible)
     model_status_ = HighsModelStatus::kOptimal;
@@ -1863,9 +1871,13 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     // Rank deficient basis, so backtrack to last full rank basis
     //
     // Get the last nonsingular basis - so long as there is one
+    uint64_t deficient_hash = basis_.hash;
     if (!getBacktrackingBasis(workEdWtFull_)) return false;
     // Record that backtracking is taking place
     info_.backtracking_ = true;
+    visited_basis_.clear();
+    visited_basis_.insert(basis_.hash);
+    visited_basis_.insert(deficient_hash);
     this->updateStatus(LpAction::kBacktracking);
     HighsInt backtrack_rank_deficiency = computeFactor();
     // This basis has previously been inverted successfully, so it shouldn't be
@@ -2997,6 +3009,11 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStart(UpdatePivotsClock);
   HighsInt variable_out = basis_.basicIndex_[row_out];
 
+  // update hash value of basis
+  HighsHashHelpers::sparse_inverse_combine(basis_.hash, variable_out);
+  HighsHashHelpers::sparse_combine(basis_.hash, variable_in);
+  visited_basis_.insert(basis_.hash);
+
   // Incoming variable
   basis_.basicIndex_[row_out] = variable_in;
   basis_.nonbasicFlag_[variable_in] = 0;
@@ -3032,6 +3049,17 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   // Data are no longer fresh from rebuild
   status_.has_fresh_rebuild = false;
   analysis_.simplexTimerStop(UpdatePivotsClock);
+}
+
+bool HEkk::checkForCycling(const HighsInt variable_in, const HighsInt row_out) {
+  if (variable_in == -1 || row_out == -1) return false;
+  uint64_t currhash = basis_.hash;
+  HighsInt variable_out = basis_.basicIndex_[row_out];
+
+  HighsHashHelpers::sparse_inverse_combine(currhash, variable_out);
+  HighsHashHelpers::sparse_combine(currhash, variable_in);
+
+  return visited_basis_.find(currhash) != nullptr;
 }
 
 void HEkk::updateMatrix(const HighsInt variable_in,
