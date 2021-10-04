@@ -649,7 +649,7 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
                                             double& rhs) {
   if (!hasdualproof) return false;
 
-  assert(checkDualProof());
+  // assert(checkDualProof());
 
   inds = dualproofinds;
   vals = dualproofvals;

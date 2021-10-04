@@ -41,7 +41,7 @@ const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
 void HEkk::debugReporting(const HighsInt save_mod_recover,
-			  const HighsInt log_dev_level_) {
+                          const HighsInt log_dev_level_) {
   static bool output_flag;
   static HighsInt log_dev_level;
   static HighsInt highs_analysis_level;
