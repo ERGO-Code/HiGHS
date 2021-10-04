@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include "lp_data/HConst.h"
+#include "pdqsort/pdqsort.h"
 #include "simplex/FactorTimer.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HVector.h"
@@ -1828,7 +1829,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
 
     // 8. Update the sorted ep
     sorted_pp.push_back(make_pair(pLogic[cp], cp));
-    sort(sorted_pp.begin(), sorted_pp.end());
+    pdqsort(sorted_pp.begin(), sorted_pp.end());
   }
 
   // Now modify the U matrix

@@ -20,6 +20,7 @@
 #include <iostream>
 #include <set>
 
+#include "pdqsort/pdqsort.h"
 #include "simplex/SimplexTimer.h"
 
 using std::fill_n;
@@ -165,7 +166,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
             // Shrink
             if (setP.size() >= chooseCHECK) {
-              sort(setP.begin(), setP.end());
+              pdqsort(setP.begin(), setP.end());
               setP.resize(chLimit);
               cutoffMerit = -setP.back().first;
             }
@@ -205,7 +206,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
             // Shrink
             if (setP.size() >= chooseCHECK) {
-              sort(setP.begin(), setP.end());
+              pdqsort(setP.begin(), setP.end());
               setP.resize(chLimit);
               cutoffMerit = -setP.back().first;
             }
@@ -216,7 +217,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   }
 
   // Store the setP
-  sort(setP.begin(), setP.end());
+  pdqsort(setP.begin(), setP.end());
   if ((HighsInt)(setP.size()) > chLimit) setP.resize(chLimit);
   *chCount = setP.size();
   for (unsigned i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;

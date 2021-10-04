@@ -18,6 +18,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "pdqsort/pdqsort.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
@@ -262,7 +263,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     for (HighsInt i = 0; i < workCount; i++) workData[i] = sorted_workData[i];
   }
   */
-  sort(workData.begin(), workData.begin() + workCount);
+  pdqsort(workData.begin(), workData.begin() + workCount);
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
   return 0;
