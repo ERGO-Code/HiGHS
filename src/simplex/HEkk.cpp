@@ -170,8 +170,9 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_ = false;
   info.valid_backtracking_basis_ = false;
   this->clearSimplexBasis(info.backtracking_basis_);
-  info.backtracking_basis_costs_perturbed_ = 0;
-  info.backtracking_basis_bounds_perturbed_ = 0;
+  info.backtracking_basis_costs_shifted_ = false;
+  info.backtracking_basis_costs_perturbed_ = false;
+  info.backtracking_basis_bounds_perturbed_ = false;
   info.backtracking_basis_workShift_.clear();
   info.backtracking_basis_workLowerShift_.clear();
   info.backtracking_basis_workUpperShift_.clear();
@@ -1920,6 +1921,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
   if (!info_.valid_backtracking_basis_) return false;
   basis_ = info_.backtracking_basis_;
+  info_.costs_shifted = info_.backtracking_basis_costs_shifted_;
   info_.costs_perturbed = info_.backtracking_basis_costs_perturbed_;
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
@@ -1950,7 +1952,9 @@ void HEkk::putBacktrackingBasis(
   info_.valid_backtracking_basis_ = true;
   info_.backtracking_basis_ = basis_;
   info_.backtracking_basis_.basicIndex_ = basicIndex_before_compute_factor;
+  info_.backtracking_basis_costs_shifted_ = info_.costs_shifted;
   info_.backtracking_basis_costs_perturbed_ = info_.costs_perturbed;
+  info_.backtracking_basis_bounds_perturbed_ = info_.bounds_perturbed;
   info_.backtracking_basis_workShift_ = info_.workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
@@ -2229,8 +2233,8 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Copy the cost
   initialiseLpColCost();
   initialiseLpRowCost();
-  info_.costs_perturbed = false;
   info_.costs_shifted = false;
+  info_.costs_perturbed = false;
   // Primal simplex costs are either from the LP or set specially in phase 1
   if (algorithm == SimplexAlgorithm::kPrimal) return;
   // Dual simplex costs are either from the LP or perturbed
@@ -2337,7 +2341,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
                            const HighsInt solve_phase, const bool perturb) {
   initialiseLpColBound();
   initialiseLpRowBound();
-  info_.bounds_perturbed = 0;
+  info_.bounds_perturbed = false;
   // Primal simplex bounds are either from the LP or perturbed
   if (algorithm == SimplexAlgorithm::kPrimal) {
     if (!perturb || info_.primal_simplex_bound_perturbation_multiplier == 0)
@@ -2411,7 +2415,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
       info_.baseLower_[iRow] = info_.workLower_[iVar];
       info_.baseUpper_[iRow] = info_.workUpper_[iVar];
     }
-    info_.bounds_perturbed = 1;
+    info_.bounds_perturbed = true;
     return;
   }
   // Dual simplex bounds are either from the LP or set to special values in
@@ -2807,7 +2811,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
   return dual;
 }
 
-bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
+void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   const double tau_d = options_->dual_feasibility_tolerance;
   const double inf = kHighsInf;
   HighsInt workCount = 0;
@@ -2817,7 +2821,6 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
   HighsInt num_shift = 0;
   double sum_flip = 0;
   double sum_shift = 0;
-  HighsInt num_shift_skipped = 0;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++) {
     if (basis_.nonbasicFlag_[i]) {
@@ -2845,59 +2848,34 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
         } else {
           // Cost shifting must always be possible
           assert(info_.allow_cost_shifting);
-          if (info_.allow_cost_shifting) {
-            // Other variable = shift
-            info_.costs_shifted = true;
-            std::string direction;
-            double shift;
-            if (basis_.nonbasicMove_[i] == 1) {
-              direction = "  up";
-              double dual = (1 + random_.fraction()) * tau_d;
-              shift = dual - info_.workDual_[i];
-              info_.workDual_[i] = dual;
-              info_.workCost_[i] = info_.workCost_[i] + shift;
-            } else {
-              direction = "down";
-              double dual = -(1 + random_.fraction()) * tau_d;
-              shift = dual - info_.workDual_[i];
-              info_.workDual_[i] = dual;
-              info_.workCost_[i] = info_.workCost_[i] + shift;
-            }
-            double local_dual_objective_change = shift * info_.workValue_[i];
-            local_dual_objective_change *= cost_scale_;
-            shift_dual_objective_value_change += local_dual_objective_change;
-            num_shift++;
-            sum_shift += fabs(shift);
-            highsLogDev(options_->log_options, HighsLogType::kVerbose,
-                        "Move %s: cost shift = %g; objective change = %g\n",
-                        direction.c_str(), shift, local_dual_objective_change);
-          } else {
-            // Shifting not permitted
-            //
-            // Before 07/01/20, these shifts were always done, but
-            // doing it after cost perturbation has been removed can
-            // lead to cycling when dual unboundedness (=> primal
-            // infeasibility) has been detecteed in Phase 2, since the
-            // shift removes dual infeasibilities, which are then
-            // reinstated after the dual values are recomputed.
-            //
-            // ToDo: Not shifting leads to dual infeasibilities when an
-            // LP is declared to be infeasible. Should go to
-            // phase 1 primal simplex to "prove" infeasibility.
-            //
-            num_shift_skipped++;
-          }
+	  // Other variable = shift
+	  info_.costs_shifted = true;
+	  std::string direction;
+	  double shift;
+	  if (basis_.nonbasicMove_[i] == 1) {
+	    direction = "  up";
+	    double dual = (1 + random_.fraction()) * tau_d;
+	    shift = dual - info_.workDual_[i];
+	    info_.workDual_[i] = dual;
+	    info_.workCost_[i] = info_.workCost_[i] + shift;
+	  } else {
+	    direction = "down";
+	    double dual = -(1 + random_.fraction()) * tau_d;
+	    shift = dual - info_.workDual_[i];
+	    info_.workDual_[i] = dual;
+	    info_.workCost_[i] = info_.workCost_[i] + shift;
+	  }
+	  double local_dual_objective_change = shift * info_.workValue_[i];
+	  local_dual_objective_change *= cost_scale_;
+	  shift_dual_objective_value_change += local_dual_objective_change;
+	  num_shift++;
+	  sum_shift += fabs(shift);
+	  highsLogDev(options_->log_options, HighsLogType::kVerbose,
+		      "Move %s: cost shift = %g; objective change = %g\n",
+		      direction.c_str(), shift, local_dual_objective_change);
         }
       }
     }
-  }
-  if (num_shift_skipped) {
-    highsLogDev(options_->log_options, HighsLogType::kError,
-                "correctDual: Missed %d cost shifts\n", num_shift_skipped);
-    // todo@Julian assert fails quickly on miplib2017 models momentum1, arki001,
-    // glass4, and milo-v12-6-r2-40-1
-    assert(!num_shift_skipped);
-    return false;
   }
   if (num_flip)
     highsLogDev(options_->log_options, HighsLogType::kVerbose,
@@ -2910,7 +2888,6 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
                 " cost shift(s): total = %g; objective change = %g\n",
                 num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
-  return true;
 }
 
 void HEkk::flipBound(const HighsInt iCol) {

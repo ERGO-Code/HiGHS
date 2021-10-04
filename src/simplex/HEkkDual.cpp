@@ -1029,14 +1029,8 @@ void HEkkDual::rebuild() {
     return;
   }
   analysis->simplexTimerStart(CorrectDualClock);
-  const bool correct_dual_ok = ekk_instance_.correctDual(&dualInfeasCount);
+  ekk_instance_.correctDual(&dualInfeasCount);
   analysis->simplexTimerStop(CorrectDualClock);
-
-  if (!correct_dual_ok) {
-    // Bail out if dual infeasibilities cannot be corrected
-    solve_phase = kSolvePhaseError;
-    return;
-  }
 
   // Recompute primal solution
   ekk_instance_.computePrimal();

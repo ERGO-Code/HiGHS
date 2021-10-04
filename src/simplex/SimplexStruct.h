@@ -125,6 +125,7 @@ struct HighsSimplexInfo {
   bool backtracking_ = false;
   bool valid_backtracking_basis_ = false;
   SimplexBasis backtracking_basis_;
+  HighsInt backtracking_basis_costs_shifted_;
   HighsInt backtracking_basis_costs_perturbed_;
   HighsInt backtracking_basis_bounds_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
