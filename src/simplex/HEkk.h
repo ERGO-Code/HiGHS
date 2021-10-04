@@ -19,6 +19,7 @@
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HSet.h"
+#include "util/HighsHash.h"
 #include "util/HighsRandom.h"
 
 class HighsLpSolverObject;
@@ -105,8 +106,9 @@ class HEkk {
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
   // Debug methods
-  void debugReporting(const HighsInt save_mod_recover,
-		      const HighsInt log_dev_level_ = kHighsLogDevLevelDetailed);
+  void debugReporting(
+      const HighsInt save_mod_recover,
+      const HighsInt log_dev_level_ = kHighsLogDevLevelDetailed);
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
@@ -123,6 +125,7 @@ class HEkk {
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;
   SimplexBasis basis_;
+  HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
@@ -227,6 +230,7 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
+  bool checkForCycling(const HighsInt variable_in, const HighsInt row_out);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();

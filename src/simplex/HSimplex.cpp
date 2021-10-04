@@ -28,6 +28,7 @@ using std::runtime_error;
 #endif
 
 void SimplexBasis::clear() {
+  hash = 0;
   basicIndex_.clear();
   nonbasicFlag_.clear();
   nonbasicMove_.clear();

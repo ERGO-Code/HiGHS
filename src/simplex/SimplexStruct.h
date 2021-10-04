@@ -16,6 +16,7 @@
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
 
+#include <cstdint>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -30,6 +31,7 @@ struct SimplexBasis {
   std::vector<HighsInt> basicIndex_;
   std::vector<int8_t> nonbasicFlag_;
   std::vector<int8_t> nonbasicMove_;
+  uint64_t hash;
   void clear();
 };
 
