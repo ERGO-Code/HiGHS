@@ -54,7 +54,7 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
   } else if (save_mod_recover == 0) {
     this->options_->output_flag = true;
     this->options_->log_dev_level = log_dev_level_;
-    this->options_->highs_analysis_level = 4;
+    this->options_->highs_analysis_level = 6;
     if (log_dev_level_ == kHighsLogDevLevelVerbose)
       this->analysis_.analyse_simplex_runtime_data = true;
   } else {

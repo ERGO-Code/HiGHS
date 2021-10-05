@@ -192,6 +192,7 @@ HighsStatus HEkkDual::solve() {
   // Compute the dual values
   ekk_instance_.computeDual();
   // Determine the number of dual infeasibilities, and hence the solve phase
+  info.allow_primal_flips = true;
   ekk_instance_.computeDualInfeasibleWithFlips();
   dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -215,6 +216,7 @@ HighsStatus HEkkDual::solve() {
                                     kSolvePhaseUnknown);
       ekk_instance_.initialiseNonbasicValueAndMove();
       // Determine the number of dual infeasibilities, and hence the solve phase
+      info.allow_primal_flips = true;
       ekk_instance_.computeDualInfeasibleWithFlips();
       dualInfeasCount = info.num_dual_infeasibilities;
       solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -1135,7 +1137,7 @@ void HEkkDual::cleanup() {
     // In phase 2, report the simplex dual infeasiblities (known)
     if (solve_phase == kSolvePhase1)
       ekk_instance_.computeSimplexLpDualInfeasible();
-    reportRebuild();
+    reportRebuild(kRebuildReasonCleanup);
   }
 }
 
@@ -1190,9 +1192,9 @@ void HEkkDual::iterate() {
   //  updatePrimal");
 
   if (ekk_instance_.checkForCycling(variable_in, row_out)) {
-    printf("Cycling_detected\n");
+    printf("Cycling_detected: solve %d\n", (int)ekk_instance_.debug_solve_call_num_);
     assert(1==0);
-        exit(0);
+    exit(0);
   }
       
   // Update the records of chosen rows and pivots

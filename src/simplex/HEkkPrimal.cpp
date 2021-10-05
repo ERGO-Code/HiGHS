@@ -581,7 +581,7 @@ void HEkkPrimal::cleanup() {
   // In phase 2, report the simplex dual infeasiblities (known)
   //    if (solve_phase == kSolvePhase1)
   //    computeSimplexLpDualInfeasible(ekk_instance_);
-  reportRebuild();
+  reportRebuild(kRebuildReasonCleanup);
   //  }
 }
 

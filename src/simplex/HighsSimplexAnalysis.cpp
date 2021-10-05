@@ -231,6 +231,13 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     num_col_price = 0;
     num_row_price = 0;
     num_row_price_with_switch = 0;
+    // Initialise the dual simplex flip/shift records
+    num_dual_simplex_primal_flip = 0;
+    num_cost_shift = 0;
+    min_dual_simplex_primal_flip_dual_infeasibility = kHighsInf;
+    max_dual_simplex_primal_flip = 0;
+    max_cost_shift_dual_infeasibility = 0;
+    max_cost_shift = 0;
     HighsInt last_dual_edge_weight_mode =
         (HighsInt)DualEdgeWeightMode::kSteepestEdge;
     for (HighsInt k = 0; k <= last_dual_edge_weight_mode; k++)
@@ -272,6 +279,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                 10.0, cleanup_primal_change_distribution);
     initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
                                 10.0, cleanup_dual_step_distribution);
+    
   }
 
   if (analyse_simplex_time) {
@@ -871,6 +879,15 @@ void HighsSimplexAnalysis::summaryReport() {
            AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kDevex] /
                num_devex_framework);
   }
+  printf("\nFlip/shift summary\n");
+  printf("%12" HIGHSINT_FORMAT "   dual simplex primal flips (max = %g) for min dual infeasiblity = %g\n",
+	 num_dual_simplex_primal_flip,
+	 max_dual_simplex_primal_flip,
+	 min_dual_simplex_primal_flip_dual_infeasibility);
+  printf("%12" HIGHSINT_FORMAT "   dual simplex  cost shifts (max = %g) for max dual infeasiblity = %g\n",
+	 num_cost_shift,
+	 max_cost_shift,
+	 max_cost_shift_dual_infeasibility);
   // Look for any PAMI data to summarise
   if (sum_multi_chosen > 0) {
     const HighsInt pct_minor_iterations_performed =
@@ -1303,11 +1320,8 @@ void HighsSimplexAnalysis::reportDensity(const bool header) {
 }
 
 void HighsSimplexAnalysis::reportInvert(const bool header) {
-  if (!header) {
-    *analysis_log << " (" << highsFormatToString("  %2" HIGHSINT_FORMAT "",
-                                         rebuild_reason) << ")";
-    *analysis_log << " " << rebuild_reason_string;
-  }
+  if (header) return;
+  *analysis_log << " " << rebuild_reason_string;
 }
 /*
 void HighsSimplexAnalysis::reportCondition(const bool header) {
@@ -1323,13 +1337,13 @@ void HighsSimplexAnalysis::reportCondition(const bool header) {
 
 // Primal:
 // * primal_delta - 0
-// * dual_step    - theta_dual
-// * primal_step  - theta_primal
+// * dual_step    - ThDu (theta_dual) - dual infeasibility from CHUZC
+// * primal_step  - ThPr (theta_primal_ - primal step from CHUZR
 //
 // Dual:
-// * primal_delta - delta_primal
-// * dual_step    - theta_dual
-// * primal_step  - theta_primal
+// * primal_delta - DlPr (delta_primal) - primal infeasibility from CHUZR
+// * dual_step    - ThDu (theta_dual) - dual step from CHUZC
+// * primal_step  - ThPr (theta_primal) - step to bound of leaving variable after pivoting
 void HighsSimplexAnalysis::reportIterationData(const bool header) {
   if (header) {
     *analysis_log << highsFormatToString(
@@ -1337,11 +1351,21 @@ void HighsSimplexAnalysis::reportIterationData(const bool header) {
         "DlPr       NumCk          Aa");
   } else if (pivotal_row_index >= 0) {
     *analysis_log << highsFormatToString(
-        " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT
-        " %11.4g %11.4g %11.4g %11.4g %11.4g",
-        entering_variable, leaving_variable, pivotal_row_index, dual_step,
-        primal_step, primal_delta, numerical_trouble, pivot_value_from_column);
+        " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT,
+        entering_variable, leaving_variable, pivotal_row_index);
+    if (entering_variable>=0) {
+      *analysis_log << highsFormatToString(
+           " %11.4g %11.4g %11.4g %11.4g %11.4g",
+           dual_step, primal_step, primal_delta, numerical_trouble, pivot_value_from_column);
+    } else {
+      // Unboundedness in dual simplex
+      assert(dualAlgorithm());
+      *analysis_log << highsFormatToString(
+           "                         %11.4g                        ", primal_delta);
+    }
   } else {
+    // Bound swap in primal simplex
+    assert(!dualAlgorithm());
     *analysis_log << highsFormatToString(
         " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT
         " %11.4g %11.4g                                    ",
@@ -1357,8 +1381,8 @@ void HighsSimplexAnalysis::reportRunTime(const bool header,
 }
 
 HighsInt HighsSimplexAnalysis::intLog10(const double v) {
-  HighsInt intLog10V = -99;
-  if (v > 0) intLog10V = log(v) / log(10.0);
+  double log10V = v > 0 ? -2.0 * log(v) / log(10.0) : 99;
+  HighsInt intLog10V = log10V;
   return intLog10V;
 }
 

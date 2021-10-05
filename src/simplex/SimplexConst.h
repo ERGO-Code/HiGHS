@@ -108,6 +108,7 @@ enum SimplexPrimalCorrectionStrategy {
 
 // Not an enum class since rebuild_reason is used in so many places
 enum RebuildReason {
+  kRebuildReasonCleanup = -1,
   kRebuildReasonNo = 0,
   kRebuildReasonUpdateLimitReached,               // 1
   kRebuildReasonSyntheticClockSaysInvert,         // 2
