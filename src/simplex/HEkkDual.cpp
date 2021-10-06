@@ -1937,11 +1937,6 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
 void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
   HighsSimplexInfo& info = ekk_instance_.info_;
   info.costs_shifted = true;
-  info.costs_perturbed = true;
-  if (info.workShift_[iCol] != 0) {
-    printf("Column %" HIGHSINT_FORMAT " already has nonzero shift of %g\n",
-           iCol, info.workShift_[iCol]);
-  }
   assert(info.workShift_[iCol] == 0);
   info.workShift_[iCol] = amount;
 }
