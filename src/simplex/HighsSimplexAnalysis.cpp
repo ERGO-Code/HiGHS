@@ -350,7 +350,8 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
     //  reportCondition(header);
   }
   reportInfeasibility(header);
-  if (analyse_simplex_runtime_data) reportInvert(header);
+  //  if (analyse_simplex_runtime_data)
+    reportInvert(header);
   highsLogDev(log_options, HighsLogType::kInfo, "%s\n",
               analysis_log->str().c_str());
   if (!header) num_invert_report_since_last_header++;

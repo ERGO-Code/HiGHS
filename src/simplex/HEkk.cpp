@@ -1064,10 +1064,11 @@ HighsStatus HEkk::solve() {
   HighsInt& simplex_strategy = info_.simplex_strategy;
   debugReporting(-1);
   const HighsInt debug_from_solve_call_num = 0;
-  const HighsInt debug_to_solve_call_num = 1;
+  const HighsInt debug_to_solve_call_num = -1;
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
     printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    //    info_.dual_simplex_cost_perturbation_multiplier *= 0;
     debugReporting(0, kHighsLogDevLevelDetailed);
   }
 
@@ -2243,39 +2244,46 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
   const bool report_cost_perturbation =
-      options_->output_flag && analysis_.analyse_simplex_summary_data;
+    options_->output_flag;// && analysis_.analyse_simplex_runtime_data;
   HighsInt num_original_nonzero_cost = 0;
   if (report_cost_perturbation)
-    highsLogUser(options_->log_options, HighsLogType::kInfo,
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
                  "Cost perturbation for %s\n", lp_.model_name_.c_str());
-  double bigc = 0;
+  double min_abs_cost = kHighsInf;
+  double max_abs_cost = 0;
+  double sum_abs_cost = 0;
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     const double abs_cost = fabs(info_.workCost_[i]);
-    bigc = max(bigc, abs_cost);
-    if (report_cost_perturbation && abs_cost) num_original_nonzero_cost++;
+    if (report_cost_perturbation) {
+      if (abs_cost) {
+	num_original_nonzero_cost++;
+	min_abs_cost = min(min_abs_cost, abs_cost);
+      }
+      sum_abs_cost += abs_cost;
+    }
+    max_abs_cost = max(max_abs_cost, abs_cost);
   }
   const HighsInt pct0 = (100 * num_original_nonzero_cost) / lp_.num_col_;
-  double average_cost = 0;
+  double average_abs_cost = 0;
   if (report_cost_perturbation) {
     if (num_original_nonzero_cost) {
-      average_cost = bigc / num_original_nonzero_cost;
+      average_abs_cost = sum_abs_cost / num_original_nonzero_cost;
     } else {
-      highsLogUser(options_->log_options, HighsLogType::kInfo,
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
                    "   STRANGE initial workCost has non nonzeros\n");
     }
-    highsLogUser(options_->log_options, HighsLogType::kInfo,
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
                  "   Initially have %" HIGHSINT_FORMAT
                  " nonzero costs (%3" HIGHSINT_FORMAT
-                 "%%) with bigc = "
-                 "%g "
-                 "and average = %g\n",
-                 num_original_nonzero_cost, pct0, bigc, average_cost);
+                 "%%) with min / average / max = %g / %g / %g\n",
+                 num_original_nonzero_cost, pct0,
+		min_abs_cost, average_abs_cost, max_abs_cost);
   }
-  if (bigc > 100) {
-    bigc = sqrt(sqrt(bigc));
+  if (max_abs_cost > 100) {
+    max_abs_cost = sqrt(sqrt(max_abs_cost));
     if (report_cost_perturbation)
-      highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "   Large so set bigc = sqrt(bigc) = %g\n", bigc);
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                   "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n", max_abs_cost);
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -2285,27 +2293,25 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     boxedRate += (info_.workRange_[i] < 1e30);
   boxedRate /= num_tot;
   if (boxedRate < 0.01) {
-    bigc = min(bigc, 1.0);
+    max_abs_cost = min(max_abs_cost, 1.0);
     if (report_cost_perturbation)
-      highsLogUser(options_->log_options, HighsLogType::kInfo,
-
-                   "   small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                   "   Small boxedRate (%g) so set max_abs_cost = min(max_abs_cost, 1.0) = "
                    "%g\n",
-                   boxedRate, bigc);
+                   boxedRate, max_abs_cost);
   }
   // Determine the perturbation base
-  double base = 5e-7 * bigc;
+  const double col_cost_base = info_.dual_simplex_cost_perturbation_multiplier * 5e-7 * max_abs_cost;
   if (report_cost_perturbation)
-    highsLogUser(options_->log_options, HighsLogType::kInfo,
-                 "   Perturbation base = %g\n", base);
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                 "   Perturbation column base = %g\n", col_cost_base);
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
     double lower = lp_.col_lower_[i];
     double upper = lp_.col_upper_[i];
-    double xpert = (fabs(info_.workCost_[i]) + 1) * base *
-                   info_.dual_simplex_cost_perturbation_multiplier *
-                   (1 + info_.numTotRandomValue_[i]);
+    double xpert = (1 + info_.numTotRandomValue_[i]) *
+                   (fabs(info_.workCost_[i]) + 1) * col_cost_base;
     const double previous_cost = info_.workCost_[i];
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free - no perturb
@@ -2318,23 +2324,25 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       // Fixed - no perturb
     }
-    if (report_cost_perturbation) {
-      const double perturbation1 = fabs(info_.workCost_[i] - previous_cost);
-      if (perturbation1)
-        updateValueDistribution(perturbation1,
-                                analysis_.cost_perturbation1_distribution);
-    }
+    //    if (report_cost_perturbation) {
+    //      const double perturbation1 = fabs(info_.workCost_[i] - previous_cost);
+    //      if (perturbation1)
+    //        updateValueDistribution(perturbation1,
+    //                                analysis_.cost_perturbation1_distribution);
+    //    }
   }
+  const double row_cost_base = info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
+  if (report_cost_perturbation)
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                 "   Perturbation row    base = %g\n", row_cost_base);
   for (HighsInt i = lp_.num_col_; i < num_tot; i++) {
-    double perturbation2 = (0.5 - info_.numTotRandomValue_[i]) *
-                           info_.dual_simplex_cost_perturbation_multiplier *
-                           1e-12;
+    double perturbation2 = (0.5 - info_.numTotRandomValue_[i]) * row_cost_base;
     info_.workCost_[i] += perturbation2;
-    if (report_cost_perturbation) {
-      perturbation2 = fabs(perturbation2);
-      updateValueDistribution(perturbation2,
-                              analysis_.cost_perturbation2_distribution);
-    }
+    //    if (report_cost_perturbation) {
+    //      perturbation2 = fabs(perturbation2);
+    //      updateValueDistribution(perturbation2,
+    //                              analysis_.cost_perturbation2_distribution);
+    //    }
   }
   info_.costs_perturbed = true;
 }
@@ -2853,8 +2861,9 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
           const double flip = info_.workUpper_[i] - info_.workLower_[i];
 	  const bool hall_criterion = kUseFlipMultiplier * dual_infeasibility > flip;
 	  const bool gottwald_criterion = dual_infeasibility > 1000 * tau_d;
-	  if (gottwald_criterion) {
+	  if (hall_criterion) {
 	    // Dual infeasibility is relatively large, so flip
+	    min_dual_infeasibility_for_flip = min(dual_infeasibility, min_dual_infeasibility_for_flip);
 	    sum_dual_infeasibilities_for_flip += dual_infeasibility;
 	    max_dual_infeasibility_for_flip = max(dual_infeasibility, max_dual_infeasibility_for_flip);
 	    flipBound(i);

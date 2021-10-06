@@ -1194,7 +1194,7 @@ void HEkkDual::iterate() {
   if (ekk_instance_.checkForCycling(variable_in, row_out)) {
     printf("Cycling_detected: solve %d\n", (int)ekk_instance_.debug_solve_call_num_);
     assert(1==0);
-    exit(0);
+    //    exit(0);
   }
       
   // Update the records of chosen rows and pivots
