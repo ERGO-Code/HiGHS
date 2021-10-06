@@ -2858,10 +2858,7 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
 	    //&& info_.allow_primal_flips
 	    ) {
           // Boxed variable, so could flip
-          const double flip = info_.workUpper_[i] - info_.workLower_[i];
-	  const bool hall_criterion = kUseFlipMultiplier * dual_infeasibility > flip;
-	  const bool gottwald_criterion = dual_infeasibility > 1000 * tau_d;
-	  if (hall_criterion) {
+	  if (dual_infeasibility > kUseFlipMultiplier * tau_d) {
 	    // Dual infeasibility is relatively large, so flip
 	    min_dual_infeasibility_for_flip = min(dual_infeasibility, min_dual_infeasibility_for_flip);
 	    sum_dual_infeasibilities_for_flip += dual_infeasibility;
@@ -2874,6 +2871,7 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
 	    // Positive dual at upper bound (move=-1): flip to lower
 	    // bound so objective contribution is change in value
 	    // (-flip) times dual, being move*flip*dual
+	    const double flip = info_.workUpper_[i] - info_.workLower_[i];
 	    double local_dual_objective_change = move * flip * current_dual;
 	    local_dual_objective_change *= cost_scale_;
 	    flip_dual_objective_value_change += local_dual_objective_change;
@@ -2923,7 +2921,7 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   if (num_flip)
     highsLogDev(options_->log_options, HighsLogType::kDetailed,
                 "Performed num / max / sum = %" HIGHSINT_FORMAT
-                " / %g / %g flip(s) for min / max / sum dual infeasibility of %g / %g; objective change = %g\n",
+                " / %g / %g flip(s) for min / max / sum dual infeasibility of %g / %g / %g; objective change = %g\n",
                 num_flip, max_flip, sum_flip,
 		min_dual_infeasibility_for_flip,
 		max_dual_infeasibility_for_flip,
