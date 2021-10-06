@@ -286,6 +286,8 @@ class HEkk {
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
 
+  HighsDebugStatus debugSimplexDualInfeasible();
+  HighsDebugStatus debugComputeDual(const bool initialise = false) const;
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

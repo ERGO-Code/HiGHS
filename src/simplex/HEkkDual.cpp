@@ -1180,6 +1180,8 @@ void HEkkDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
+  ekk_instance_.debugSimplexDualInfeasible();
+
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  updatePrimal");
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
@@ -1938,14 +1940,34 @@ void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
   HighsSimplexInfo& info = ekk_instance_.info_;
   info.costs_shifted = true;
   assert(info.workShift_[iCol] == 0);
-  info.workShift_[iCol] = amount;
+  if (!amount) return;
+  double use_amount = amount;
+  info.workShift_[iCol] = use_amount;
+  // Analysis
+  const double shift = fabs(use_amount);
+  analysis->net_num_single_cost_shift++;
+  analysis->num_single_cost_shift++;
+  analysis->sum_single_cost_shift += shift;
+  analysis->max_single_cost_shift = max(shift, analysis->max_single_cost_shift);
+  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted      by %11.4g: %d net shifts\n", 
+  //	 (int)ekk_instance_.iteration_count_,
+  //	 (int)iCol, shift,
+  //	 (int)analysis->net_num_single_cost_shift);
 }
 
 // Undo the shift in the cost of a particular column
 void HEkkDual::shiftBack(const HighsInt iCol) {
   HighsSimplexInfo& info = ekk_instance_.info_;
+  if (!info.workShift_[iCol]) return;
+  const double shift = fabs(info.workShift_[iCol]);
   info.workDual_[iCol] -= info.workShift_[iCol];
   info.workShift_[iCol] = 0;
+  // Analysis
+  analysis->net_num_single_cost_shift--;
+  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted back by %11.4g: %d net shifts\n", 
+  //	 (int)ekk_instance_.iteration_count_,
+  //	 (int)iCol, shift,
+  //	 (int)analysis->net_num_single_cost_shift);
 }
 
 void HEkkDual::updatePivots() {

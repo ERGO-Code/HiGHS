@@ -232,12 +232,16 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     num_row_price = 0;
     num_row_price_with_switch = 0;
     // Initialise the dual simplex flip/shift records
-    num_dual_simplex_primal_flip = 0;
-    num_cost_shift = 0;
-    min_dual_simplex_primal_flip_dual_infeasibility = kHighsInf;
-    max_dual_simplex_primal_flip = 0;
-    max_cost_shift_dual_infeasibility = 0;
-    max_cost_shift = 0;
+    num_correct_dual_primal_flip = 0;
+    min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
+    max_correct_dual_primal_flip = 0;
+    num_correct_dual_cost_shift = 0;
+    max_correct_dual_cost_shift_dual_infeasibility = 0;
+    max_correct_dual_cost_shift = 0;
+    net_num_single_cost_shift = 0;
+    num_single_cost_shift = 0;
+    max_single_cost_shift = 0;
+    sum_single_cost_shift = 0;
     HighsInt last_dual_edge_weight_mode =
         (HighsInt)DualEdgeWeightMode::kSteepestEdge;
     for (HighsInt k = 0; k <= last_dual_edge_weight_mode; k++)
@@ -881,14 +885,38 @@ void HighsSimplexAnalysis::summaryReport() {
                num_devex_framework);
   }
   printf("\nFlip/shift summary\n");
-  printf("%12" HIGHSINT_FORMAT "   dual simplex primal flips (max = %g) for min dual infeasiblity = %g\n",
-	 num_dual_simplex_primal_flip,
-	 max_dual_simplex_primal_flip,
-	 min_dual_simplex_primal_flip_dual_infeasibility);
-  printf("%12" HIGHSINT_FORMAT "   dual simplex  cost shifts (max = %g) for max dual infeasiblity = %g\n",
-	 num_cost_shift,
-	 max_cost_shift,
-	 max_cost_shift_dual_infeasibility);
+  if (num_correct_dual_primal_flip) {
+    printf("%12" HIGHSINT_FORMAT "   correct dual primal flips (max = %g) for min dual infeasiblity = %g\n",
+	   num_correct_dual_primal_flip,
+	   max_correct_dual_primal_flip,
+	   min_correct_dual_primal_flip_dual_infeasibility);
+  }
+  if (num_correct_dual_cost_shift) {
+    printf("%12" HIGHSINT_FORMAT "   correct dual  cost shifts (max = %g) for max dual infeasiblity = %g\n",
+	   num_correct_dual_cost_shift,
+	   max_correct_dual_cost_shift,
+	   max_correct_dual_cost_shift_dual_infeasibility);
+  }
+  if (num_single_cost_shift) {
+    printf("%12" HIGHSINT_FORMAT "   single        cost shifts (sum / max = %g / %g)\n",
+	   num_single_cost_shift,
+	   sum_single_cost_shift,
+	   max_single_cost_shift);
+  }
+  printf("grepFlipShift,%"
+	 HIGHSINT_FORMAT ",%g,%g,%"
+	 HIGHSINT_FORMAT ",%g,%g,%"
+	 HIGHSINT_FORMAT ",%g,%g\n",
+	 num_correct_dual_primal_flip,
+	 max_correct_dual_primal_flip,
+	 min_correct_dual_primal_flip_dual_infeasibility,
+	 num_correct_dual_cost_shift,
+	 max_correct_dual_cost_shift,
+	 max_correct_dual_cost_shift_dual_infeasibility,
+	   num_single_cost_shift,
+	   sum_single_cost_shift,
+	   max_single_cost_shift);
+
   // Look for any PAMI data to summarise
   if (sum_multi_chosen > 0) {
     const HighsInt pct_minor_iterations_performed =

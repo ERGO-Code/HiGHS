@@ -235,12 +235,17 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
 
-  HighsInt num_dual_simplex_primal_flip = 0;
-  HighsInt num_cost_shift = 0;
-  double min_dual_simplex_primal_flip_dual_infeasibility = kHighsInf;
-  double max_dual_simplex_primal_flip = 0;
-  double max_cost_shift_dual_infeasibility = 0;
-  double max_cost_shift = 0;
+  HighsInt num_correct_dual_primal_flip = 0;
+  double min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
+  double max_correct_dual_primal_flip = 0;
+  HighsInt num_correct_dual_cost_shift = 0;
+  double max_correct_dual_cost_shift_dual_infeasibility = 0;
+  double max_correct_dual_cost_shift = 0;
+  HighsInt net_num_single_cost_shift = 0;
+  HighsInt num_single_cost_shift = 0;
+  double max_single_cost_shift = 0;
+  double sum_single_cost_shift = 0;
+
 
   // Tolerances for analysis of TRAN stages - could be needed for
   // control if this is ever used again!

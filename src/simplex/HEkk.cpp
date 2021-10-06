@@ -2238,6 +2238,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   initialiseLpRowCost();
   info_.costs_shifted = false;
   info_.costs_perturbed = false;
+  analysis_.net_num_single_cost_shift=0;  
   // Primal simplex costs are either from the LP or set specially in phase 1
   if (algorithm == SimplexAlgorithm::kPrimal) return;
   // Dual simplex costs are either from the LP or perturbed
@@ -2734,6 +2735,9 @@ void HEkk::computeDual() {
       dual_col.array[iRow] = value;
     }
   }
+  // If debugging, save the current duals
+  //  debugComputeDual(true);
+  debugSimplexDualInfeasible();
   // Copy the costs in case the basic costs are all zero
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++)
@@ -2749,6 +2753,7 @@ void HEkk::computeDual() {
       info_.workDual_[i] -= dual_row.array[i];
     for (HighsInt i = lp_.num_col_; i < num_tot; i++)
       info_.workDual_[i] -= dual_col.array[i - lp_.num_col_];
+    //    debugComputeDual();
   }
   // Indicate that the dual infeasiblility information isn't known
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
@@ -2914,10 +2919,10 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
       }
     }
   }
-  analysis_.num_dual_simplex_primal_flip += num_flip;
-  analysis_.max_dual_simplex_primal_flip = max(max_flip, analysis_.max_dual_simplex_primal_flip);
-  analysis_.min_dual_simplex_primal_flip_dual_infeasibility =
-    min(min_dual_infeasibility_for_flip, analysis_.min_dual_simplex_primal_flip_dual_infeasibility);
+  analysis_.num_correct_dual_primal_flip += num_flip;
+  analysis_.max_correct_dual_primal_flip = max(max_flip, analysis_.max_correct_dual_primal_flip);
+  analysis_.min_correct_dual_primal_flip_dual_infeasibility =
+    min(min_dual_infeasibility_for_flip, analysis_.min_correct_dual_primal_flip_dual_infeasibility);
   if (num_flip)
     highsLogDev(options_->log_options, HighsLogType::kDetailed,
                 "Performed num / max / sum = %" HIGHSINT_FORMAT
@@ -2927,10 +2932,10 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
 		max_dual_infeasibility_for_flip,
 		sum_dual_infeasibilities_for_flip,
 		flip_dual_objective_value_change);
-  analysis_.num_cost_shift += num_shift;
-  analysis_.max_cost_shift = max(max_shift, analysis_.max_cost_shift);
-  analysis_.max_cost_shift_dual_infeasibility =
-    max(max_dual_infeasibility_for_shift, analysis_.max_cost_shift_dual_infeasibility);
+  analysis_.num_correct_dual_cost_shift += num_shift;
+  analysis_.max_correct_dual_cost_shift = max(max_shift, analysis_.max_correct_dual_cost_shift);
+  analysis_.max_correct_dual_cost_shift_dual_infeasibility =
+    max(max_dual_infeasibility_for_shift, analysis_.max_correct_dual_cost_shift_dual_infeasibility);
   if (num_shift)
     highsLogDev(options_->log_options, HighsLogType::kDetailed,
                 "Performed num / max / sum = %" HIGHSINT_FORMAT
