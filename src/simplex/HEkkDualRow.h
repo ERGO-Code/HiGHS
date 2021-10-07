@@ -150,6 +150,9 @@ class HEkkDualRow {
       const HighsInt iCol, const HighsInt count,
       const std::vector<std::pair<HighsInt, double>>& workData_);
   HighsInt debugChooseColumnInfeasibilities() const;
+  void debugReportBfrtVar(
+      const HighsInt ix,
+      const std::vector<std::pair<HighsInt, double>>& pass_workData) const;
   // References:
   HEkk& ekk_instance_;
 
