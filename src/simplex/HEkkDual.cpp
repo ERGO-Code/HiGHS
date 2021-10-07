@@ -1029,14 +1029,8 @@ void HEkkDual::rebuild() {
     return;
   }
   analysis->simplexTimerStart(CorrectDualClock);
-  const bool correct_dual_ok = ekk_instance_.correctDual(&dualInfeasCount);
+  ekk_instance_.correctDual(&dualInfeasCount);
   analysis->simplexTimerStop(CorrectDualClock);
-
-  if (!correct_dual_ok) {
-    // Bail out if dual infeasibilities cannot be corrected
-    solve_phase = kSolvePhaseError;
-    return;
-  }
 
   // Recompute primal solution
   ekk_instance_.computePrimal();
@@ -1141,7 +1135,7 @@ void HEkkDual::cleanup() {
     // In phase 2, report the simplex dual infeasiblities (known)
     if (solve_phase == kSolvePhase1)
       ekk_instance_.computeSimplexLpDualInfeasible();
-    reportRebuild();
+    reportRebuild(kRebuildReasonCleanup);
   }
 }
 
@@ -1154,6 +1148,7 @@ void HEkkDual::iterate() {
 
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
+
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1194,6 +1189,13 @@ void HEkkDual::iterate() {
   ekk_instance_.status_.has_primal_objective_value = false;
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  updatePrimal");
+
+  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
+    printf("Cycling_detected: solve %d\n",
+           (int)ekk_instance_.debug_solve_call_num_);
+    assert(1 == 0);
+    //    exit(0);
+  }
 
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);
@@ -1335,6 +1337,8 @@ void HEkkDual::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->rebuild_reason = reason_for_rebuild;
+  analysis->rebuild_reason_string =
+      ekk_instance_.rebuildReason(reason_for_rebuild);
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }
@@ -1934,20 +1938,37 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
 void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
   HighsSimplexInfo& info = ekk_instance_.info_;
   info.costs_shifted = true;
-  info.costs_perturbed = true;
-  if (info.workShift_[iCol] != 0) {
-    printf("Column %" HIGHSINT_FORMAT " already has nonzero shift of %g\n",
-           iCol, info.workShift_[iCol]);
-  }
   assert(info.workShift_[iCol] == 0);
-  info.workShift_[iCol] = amount;
+  if (!amount) return;
+  double use_amount = amount;
+  info.workShift_[iCol] = use_amount;
+  // Analysis
+  const double shift = fabs(use_amount);
+  analysis->net_num_single_cost_shift++;
+  analysis->num_single_cost_shift++;
+  analysis->sum_single_cost_shift += shift;
+  analysis->max_single_cost_shift = max(shift, analysis->max_single_cost_shift);
+  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted      by
+  //  %11.4g: %d net shifts\n",
+  //	 (int)ekk_instance_.iteration_count_,
+  //	 (int)iCol, shift,
+  //	 (int)analysis->net_num_single_cost_shift);
 }
 
 // Undo the shift in the cost of a particular column
 void HEkkDual::shiftBack(const HighsInt iCol) {
   HighsSimplexInfo& info = ekk_instance_.info_;
+  if (!info.workShift_[iCol]) return;
+  const double shift = fabs(info.workShift_[iCol]);
   info.workDual_[iCol] -= info.workShift_[iCol];
   info.workShift_[iCol] = 0;
+  // Analysis
+  analysis->net_num_single_cost_shift--;
+  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted back by
+  //  %11.4g: %d net shifts\n",
+  //	 (int)ekk_instance_.iteration_count_,
+  //	 (int)iCol, shift,
+  //	 (int)analysis->net_num_single_cost_shift);
 }
 
 void HEkkDual::updatePivots() {

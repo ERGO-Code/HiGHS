@@ -581,7 +581,7 @@ void HEkkPrimal::cleanup() {
   // In phase 2, report the simplex dual infeasiblities (known)
   //    if (solve_phase == kSolvePhase1)
   //    computeSimplexLpDualInfeasible(ekk_instance_);
-  reportRebuild();
+  reportRebuild(kRebuildReasonCleanup);
   //  }
 }
 
@@ -2332,6 +2332,8 @@ void HEkkPrimal::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->rebuild_reason = reason_for_rebuild;
+  analysis->rebuild_reason_string =
+      ekk_instance_.rebuildReason(reason_for_rebuild);
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }

@@ -22,9 +22,9 @@
 #include "simplex/HEkk.h"
 
 class HVector;
-const double initial_total_change = 1e-12;
-const double initial_remain_theta = 1e100;
-const double max_select_theta = 1e18;
+const double kInitialTotalChange = 1e-12;
+const double kInitialRemainTheta = 1e100;
+const double kMaxSelectTheta = 1e18;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -146,6 +146,10 @@ class HEkkDualRow {
    */
   void computeDevexWeight(const HighsInt slice = -1);
 
+  HighsInt debugFindInWorkData(
+      const HighsInt iCol, const HighsInt count,
+      const std::vector<std::pair<HighsInt, double>>& workData_);
+  HighsInt debugChooseColumnInfeasibilities() const;
   // References:
   HEkk& ekk_instance_;
 

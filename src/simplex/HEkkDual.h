@@ -167,9 +167,9 @@ class HEkkDual {
   void iterationAnalysisMajor();
 
   /**
-   * @brief Single line report after rebuild
+   * @brief Single line report after rebuild or cleanup
    */
-  void reportRebuild(const HighsInt reason_for_rebuild = -1);
+  void reportRebuild(const HighsInt reason_for_rebuild);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
