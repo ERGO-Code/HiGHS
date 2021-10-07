@@ -158,6 +158,11 @@ HighsInt HEkkDualRow::chooseFinal() {
   use_quad_sort = true;  // workCount < 100;
   use_heap_sort = !use_quad_sort;
   assert(use_heap_sort || use_quad_sort);
+  if (workCount < 100) {
+    analysis->num_quad_chuzc++;
+  } else {
+    analysis->num_heap_chuzc++;
+  }
 
   if (use_heap_sort) {
     printf("CHUZC: Using heap sort\n");

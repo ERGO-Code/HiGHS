@@ -232,6 +232,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     num_row_price = 0;
     num_row_price_with_switch = 0;
     // Initialise the dual simplex flip/shift records
+    num_quad_chuzc = 0;
+    num_heap_chuzc = 0;
     num_correct_dual_primal_flip = 0;
     min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
     max_correct_dual_primal_flip = 0;
@@ -883,6 +885,15 @@ void HighsSimplexAnalysis::summaryReport() {
            AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kDevex] /
                num_devex_framework);
   }
+  printf("\nQuad/heap CHUZC summary\n");
+  if (num_quad_chuzc)
+    printf("%12" HIGHSINT_FORMAT " quad CHUZC\n", num_quad_chuzc);
+  if (num_heap_chuzc)
+    printf("%12" HIGHSINT_FORMAT " heap CHUZC\n", num_heap_chuzc);
+  printf("\ngrepQuadHeapChuzc,%s,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
+         "\n",
+         model_name_.c_str(), lp_name_.c_str(), num_quad_chuzc, num_heap_chuzc);
+
   printf("\nFlip/shift summary\n");
   if (num_correct_dual_primal_flip) {
     printf("%12" HIGHSINT_FORMAT
@@ -903,9 +914,10 @@ void HighsSimplexAnalysis::summaryReport() {
            "   single        cost shifts (sum / max = %g / %g)\n",
            num_single_cost_shift, sum_single_cost_shift, max_single_cost_shift);
   }
-  printf("grepFlipShift,%" HIGHSINT_FORMAT ",%g,%g,%" HIGHSINT_FORMAT
+  printf("\ngrepFlipShift,%s,%s,%" HIGHSINT_FORMAT ",%g,%g,%" HIGHSINT_FORMAT
          ",%g,%g,%" HIGHSINT_FORMAT ",%g,%g\n",
-         num_correct_dual_primal_flip, max_correct_dual_primal_flip,
+         model_name_.c_str(), lp_name_.c_str(), num_correct_dual_primal_flip,
+         max_correct_dual_primal_flip,
          min_correct_dual_primal_flip_dual_infeasibility,
          num_correct_dual_cost_shift, max_correct_dual_cost_shift,
          max_correct_dual_cost_shift_dual_infeasibility, num_single_cost_shift,
