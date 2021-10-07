@@ -157,7 +157,7 @@ HighsInt HEkkDualRow::chooseFinal() {
   // otherwise use the heap-based sort
   use_quad_sort = workCount < 100;
   const HighsInt check_iter = 26;
-  if (ekk_instance_.iteration_count_ == -check_iter) {
+  if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Overruling use_quad_sort\n");
     use_quad_sort = true;
   }
