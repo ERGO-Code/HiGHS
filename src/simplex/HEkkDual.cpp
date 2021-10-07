@@ -1190,12 +1190,11 @@ void HEkkDual::iterate() {
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  updatePrimal");
 
-  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
-    printf("Cycling_detected: solve %d\n",
-           (int)ekk_instance_.debug_solve_call_num_);
-    assert(1 == 0);
-    //    exit(0);
-  }
+  //  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
+  //    printf("Cycling_detected: solve %d\n",
+  //           (int)ekk_instance_.debug_solve_call_num_);
+  //  assert(1 == 0);
+  //}
 
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);
