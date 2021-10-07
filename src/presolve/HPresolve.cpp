@@ -5682,24 +5682,26 @@ void HPresolve::setRelaxedImpliedBounds() {
       // the row it was derived from is violated if the column sits
       // at this relaxed bound in the final solution.
       HighsInt nzPos = findNonzero(colLowerSource[i], i);
-      double boundRelax = 128.0 * options->primal_feasibility_tolerance /
+      double boundRelax = 1000.0 * options->primal_feasibility_tolerance /
                           std::min(1.0, std::abs(Avalue[nzPos]));
       double newLb =
           implColLower[i] -
           std::max(boundRelax, options->primal_feasibility_tolerance *
                                    std::abs(implColLower[i]));
-      if (newLb > model->col_lower_[i]) model->col_lower_[i] = newLb;
+      if (newLb > model->col_lower_[i] + boundRelax)
+        model->col_lower_[i] = newLb;
     }
 
     if (std::abs(implColUpper[i]) <= hugeBound) {
       HighsInt nzPos = findNonzero(colUpperSource[i], i);
-      double boundRelax = 128.0 * options->primal_feasibility_tolerance /
+      double boundRelax = 1000.0 * options->primal_feasibility_tolerance /
                           std::min(1.0, std::abs(Avalue[nzPos]));
       double newUb =
           implColUpper[i] +
           std::max(boundRelax, options->primal_feasibility_tolerance *
                                    std::abs(implColUpper[i]));
-      if (newUb < model->col_upper_[i]) model->col_upper_[i] = newUb;
+      if (newUb < model->col_upper_[i] - boundRelax)
+        model->col_upper_[i] = newUb;
     }
   }
 }
