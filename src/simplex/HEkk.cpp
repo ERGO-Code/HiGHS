@@ -200,7 +200,6 @@ void HEkk::clearEkkDataInfo() {
   info.analyse_iterations = false;
   info.analyse_invert_form = false;
 
-  info.allow_primal_flips = true;
   info.allow_cost_shifting = true;
   info.allow_cost_perturbation = true;
   info.allow_bound_perturbation = true;
@@ -1055,7 +1054,6 @@ HighsStatus HEkk::solve() {
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
-  info_.allow_primal_flips = true;
   info_.allow_cost_shifting = true;
   info_.allow_cost_perturbation = true;
   info_.allow_bound_perturbation = true;
@@ -2764,7 +2762,6 @@ void HEkk::computeDual() {
 }
 
 void HEkk::computeDualInfeasibleWithFlips() {
-  assert(info_.allow_primal_flips);
   // Computes num/max/sum of dual infeasibliities according to
   // nonbasicMove, using the bounds only to identify free variables
   // and non-boxed. Fixed variables are assumed to have nonbasicMove=0
@@ -2841,83 +2838,86 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   double max_shift = 0;
   double min_dual_infeasibility_for_flip = kHighsInf;
   double max_dual_infeasibility_for_flip = 0;
+  HighsInt num_dual_infeasibilities_for_flip = 0;
   double sum_dual_infeasibilities_for_flip = 0;
+  HighsInt num_dual_infeasibilities_for_shift = 0;
   double max_dual_infeasibility_for_shift = 0;
   double sum_dual_infeasibilities_for_shift = 0;
   const double kUseFlipMultiplier = 1000;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++) {
-    if (basis_.nonbasicFlag_[i]) {
-      if (info_.workLower_[i] == -inf && info_.workUpper_[i] == inf) {
-        // FREE variable
-        workCount += (fabs(info_.workDual_[i]) >= tau_d);
+    if (!basis_.nonbasicFlag_[i]) continue;
+    // Nonbasic
+    if (info_.workLower_[i] == -inf && info_.workUpper_[i] == inf) {
+      // FREE variable
+      workCount += (fabs(info_.workDual_[i]) >= tau_d);
+      continue;
+    }
+    const HighsInt move = basis_.nonbasicMove_[i];
+    const double current_dual = info_.workDual_[i];
+    const double dual_infeasibility = -move * current_dual;
+    const double kDualInfeasibilityMargin = 1;
+    if (kDualInfeasibilityMargin*dual_infeasibility < tau_d) continue;
+    // There is a dual infeasiblity to remove so, if boxed, consider doing so via flip
+    const bool fixed = info_.workLower_[i] == info_.workUpper_[i];
+    const bool boxed = info_.workLower_[i] != -inf && info_.workUpper_[i] != inf;
+    if (boxed) {
+      // Boxed variable, so could flip
+      if (fixed || dual_infeasibility > kUseFlipMultiplier * tau_d) {
+	// Fixed, or dual infeasibility is relatively large, so flip
+	min_dual_infeasibility_for_flip = min(dual_infeasibility, min_dual_infeasibility_for_flip);
+	if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_flip++;
+	sum_dual_infeasibilities_for_flip += dual_infeasibility;
+	max_dual_infeasibility_for_flip = max(dual_infeasibility, max_dual_infeasibility_for_flip);
+	flipBound(i);
+	// Negative dual at lower bound (move=1): flip to upper
+	// bound so objective contribution is change in value (flip)
+	// times dual, being move*flip*dual
+	//
+	// Positive dual at upper bound (move=-1): flip to lower
+	// bound so objective contribution is change in value
+	// (-flip) times dual, being move*flip*dual
+	const double flip = info_.workUpper_[i] - info_.workLower_[i];
+	double local_dual_objective_change = move * flip * current_dual;
+	local_dual_objective_change *= cost_scale_;
+	flip_dual_objective_value_change += local_dual_objective_change;
+	num_flip++;
+	max_flip = max(fabs(flip), max_flip);
+	sum_flip += fabs(flip);
 	continue;
       }
-      const HighsInt move = basis_.nonbasicMove_[i];
-      const double current_dual = info_.workDual_[i];
-      const double dual_infeasibility = -move * current_dual;
-      if (dual_infeasibility >= tau_d) {
-	// There is a dual infeasiblity to remove so, if boxed, consider doing so via flip
-	const bool boxed = info_.workLower_[i] != -inf && info_.workUpper_[i] != inf;
-        if (boxed
-	    //&& info_.allow_primal_flips
-	    ) {
-          // Boxed variable, so could flip
-	  if (dual_infeasibility > kUseFlipMultiplier * tau_d) {
-	    // Dual infeasibility is relatively large, so flip
-	    min_dual_infeasibility_for_flip = min(dual_infeasibility, min_dual_infeasibility_for_flip);
-	    sum_dual_infeasibilities_for_flip += dual_infeasibility;
-	    max_dual_infeasibility_for_flip = max(dual_infeasibility, max_dual_infeasibility_for_flip);
-	    flipBound(i);
-	    // Negative dual at lower bound (move=1): flip to upper
-	    // bound so objective contribution is change in value (flip)
-	    // times dual, being move*flip*dual
-	    //
-	    // Positive dual at upper bound (move=-1): flip to lower
-	    // bound so objective contribution is change in value
-	    // (-flip) times dual, being move*flip*dual
-	    const double flip = info_.workUpper_[i] - info_.workLower_[i];
-	    double local_dual_objective_change = move * flip * current_dual;
-	    local_dual_objective_change *= cost_scale_;
-	    flip_dual_objective_value_change += local_dual_objective_change;
-	    num_flip++;
-	    max_flip = max(fabs(flip), max_flip);
-	    sum_flip += fabs(flip);
-	    continue;
-	  }
-	}
-	// Either one-sided or flip not performed, so shift
-	//
-	// Cost shifting must always be possible
-	assert(info_.allow_cost_shifting);
-	// Other variable = shift
-	sum_dual_infeasibilities_for_shift += dual_infeasibility;
-	max_dual_infeasibility_for_shift = max(dual_infeasibility, max_dual_infeasibility_for_shift);
-	info_.costs_shifted = true;
-	double shift;
-	if (move == kNonbasicMoveUp) {
-	  double new_dual = (1 + random_.fraction()) * tau_d;
-	  shift = new_dual - current_dual;
-	  info_.workDual_[i] = new_dual;
-	  info_.workCost_[i] = info_.workCost_[i] + shift;
-	} else {
-	  double new_dual = -(1 + random_.fraction()) * tau_d;
-	  shift = new_dual - current_dual;
-	  info_.workDual_[i] = new_dual;
-	  info_.workCost_[i] = info_.workCost_[i] + shift;
-	}
-	double local_dual_objective_change = shift * info_.workValue_[i];
-	local_dual_objective_change *= cost_scale_;
-	shift_dual_objective_value_change += local_dual_objective_change;
-	num_shift++;
-	max_shift = max(fabs(shift), max_shift);
-	sum_shift += fabs(shift);
-	const std::string direction = move == kNonbasicMoveUp ? "  up" : "down";
-	highsLogDev(options_->log_options, HighsLogType::kVerbose,
-		    "Move %s: cost shift = %g; objective change = %g\n",
-		    direction.c_str(), shift, local_dual_objective_change);
-      }
     }
+    // Either one-sided or flip not performed, so shift
+    //
+    // Cost shifting must always be possible
+    assert(info_.allow_cost_shifting);
+    // Other variable = shift
+    if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_shift++;
+    sum_dual_infeasibilities_for_shift += dual_infeasibility;
+    max_dual_infeasibility_for_shift = max(dual_infeasibility, max_dual_infeasibility_for_shift);
+    info_.costs_shifted = true;
+    double shift;
+    if (move == kNonbasicMoveUp) {
+      double new_dual = (1 + random_.fraction()) * tau_d;
+      shift = new_dual - current_dual;
+      info_.workDual_[i] = new_dual;
+      info_.workCost_[i] = info_.workCost_[i] + shift;
+    } else {
+      double new_dual = -(1 + random_.fraction()) * tau_d;
+      shift = new_dual - current_dual;
+      info_.workDual_[i] = new_dual;
+      info_.workCost_[i] = info_.workCost_[i] + shift;
+    }
+    double local_dual_objective_change = shift * info_.workValue_[i];
+    local_dual_objective_change *= cost_scale_;
+    shift_dual_objective_value_change += local_dual_objective_change;
+    num_shift++;
+    max_shift = max(fabs(shift), max_shift);
+    sum_shift += fabs(shift);
+    const std::string direction = move == kNonbasicMoveUp ? "  up" : "down";
+    highsLogDev(options_->log_options, HighsLogType::kVerbose,
+		"Move %s: cost shift = %g; objective change = %g\n",
+		direction.c_str(), shift, local_dual_objective_change);
   }
   analysis_.num_correct_dual_primal_flip += num_flip;
   analysis_.max_correct_dual_primal_flip = max(max_flip, analysis_.max_correct_dual_primal_flip);
@@ -2926,8 +2926,10 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   if (num_flip)
     highsLogDev(options_->log_options, HighsLogType::kDetailed,
                 "Performed num / max / sum = %" HIGHSINT_FORMAT
-                " / %g / %g flip(s) for min / max / sum dual infeasibility of %g / %g / %g; objective change = %g\n",
+                " / %g / %g flip(s) for num / min / max / sum dual infeasibility of %" HIGHSINT_FORMAT
+                " / %g / %g / %g; objective change = %g\n",
                 num_flip, max_flip, sum_flip,
+		num_dual_infeasibilities_for_flip,
 		min_dual_infeasibility_for_flip,
 		max_dual_infeasibility_for_flip,
 		sum_dual_infeasibilities_for_flip,
@@ -2939,8 +2941,10 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   if (num_shift)
     highsLogDev(options_->log_options, HighsLogType::kDetailed,
                 "Performed num / max / sum = %" HIGHSINT_FORMAT
-                " / %g / %g shift(s) for max / sum dual infeasibility of %g / %g; objective change = %g\n",
+                " / %g / %g shift(s) for num / max / sum dual infeasibility of %" HIGHSINT_FORMAT
+                " / %g / %g; objective change = %g\n",
                 num_shift, max_shift, sum_shift,
+		num_dual_infeasibilities_for_shift,
 		max_dual_infeasibility_for_shift,
 		sum_dual_infeasibilities_for_shift,
 		shift_dual_objective_value_change);
@@ -3184,6 +3188,8 @@ void HEkk::computeSimplexDualInfeasible() {
   max_dual_infeasibility = 0;
   sum_dual_infeasibility = 0;
 
+  const HighsInt check_iter = 26;
+  const bool report = true;//iteration_count_ == check_iter;
   for (HighsInt iCol = 0; iCol < lp_.num_col_ + lp_.num_row_; iCol++) {
     if (!basis_.nonbasicFlag_[iCol]) continue;
     // Nonbasic column
@@ -3200,8 +3206,10 @@ void HEkk::computeSimplexDualInfeasible() {
       dual_infeasibility = -basis_.nonbasicMove_[iCol] * dual;
     }
     if (dual_infeasibility > 0) {
-      if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
+      if (dual_infeasibility >= scaled_dual_feasibility_tolerance) {
+      if (report) printf("Dual infeasibility of %11.4g for column %d\n", dual_infeasibility, (int)iCol);
         num_dual_infeasibility++;
+      }
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;

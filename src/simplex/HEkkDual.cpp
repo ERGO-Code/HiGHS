@@ -192,7 +192,6 @@ HighsStatus HEkkDual::solve() {
   // Compute the dual values
   ekk_instance_.computeDual();
   // Determine the number of dual infeasibilities, and hence the solve phase
-  info.allow_primal_flips = true;
   ekk_instance_.computeDualInfeasibleWithFlips();
   dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -216,7 +215,6 @@ HighsStatus HEkkDual::solve() {
                                     kSolvePhaseUnknown);
       ekk_instance_.initialiseNonbasicValueAndMove();
       // Determine the number of dual infeasibilities, and hence the solve phase
-      info.allow_primal_flips = true;
       ekk_instance_.computeDualInfeasibleWithFlips();
       dualInfeasCount = info.num_dual_infeasibilities;
       solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -1150,6 +1148,11 @@ void HEkkDual::iterate() {
 
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
+  const HighsInt check_iter = 26;
+    ekk_instance_.debugSimplexDualInfeasible(true);
+  if (ekk_instance_.iteration_count_ == check_iter) {
+    printf("ekk_instance_.iteration_count == %d\n", (int)check_iter);
+  }
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1180,7 +1183,8 @@ void HEkkDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
-  ekk_instance_.debugSimplexDualInfeasible();
+  //  if (ekk_instance_.iteration_count_ == check_iter) 
+    ekk_instance_.debugSimplexDualInfeasible(true);
 
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  updatePrimal");
