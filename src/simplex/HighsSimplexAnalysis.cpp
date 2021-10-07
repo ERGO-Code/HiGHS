@@ -283,7 +283,6 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                 10.0, cleanup_primal_change_distribution);
     initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
                                 10.0, cleanup_dual_step_distribution);
-    
   }
 
   if (analyse_simplex_time) {
@@ -355,7 +354,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
   }
   reportInfeasibility(header);
   //  if (analyse_simplex_runtime_data)
-    reportInvert(header);
+  reportInvert(header);
   highsLogDev(log_options, HighsLogType::kInfo, "%s\n",
               analysis_log->str().c_str());
   if (!header) num_invert_report_since_last_header++;
@@ -886,36 +885,31 @@ void HighsSimplexAnalysis::summaryReport() {
   }
   printf("\nFlip/shift summary\n");
   if (num_correct_dual_primal_flip) {
-    printf("%12" HIGHSINT_FORMAT "   correct dual primal flips (max = %g) for min dual infeasiblity = %g\n",
-	   num_correct_dual_primal_flip,
-	   max_correct_dual_primal_flip,
-	   min_correct_dual_primal_flip_dual_infeasibility);
+    printf("%12" HIGHSINT_FORMAT
+           "   correct dual primal flips (max = %g) for min dual infeasiblity "
+           "= %g\n",
+           num_correct_dual_primal_flip, max_correct_dual_primal_flip,
+           min_correct_dual_primal_flip_dual_infeasibility);
   }
   if (num_correct_dual_cost_shift) {
-    printf("%12" HIGHSINT_FORMAT "   correct dual  cost shifts (max = %g) for max dual infeasiblity = %g\n",
-	   num_correct_dual_cost_shift,
-	   max_correct_dual_cost_shift,
-	   max_correct_dual_cost_shift_dual_infeasibility);
+    printf("%12" HIGHSINT_FORMAT
+           "   correct dual  cost shifts (max = %g) for max dual infeasiblity "
+           "= %g\n",
+           num_correct_dual_cost_shift, max_correct_dual_cost_shift,
+           max_correct_dual_cost_shift_dual_infeasibility);
   }
   if (num_single_cost_shift) {
-    printf("%12" HIGHSINT_FORMAT "   single        cost shifts (sum / max = %g / %g)\n",
-	   num_single_cost_shift,
-	   sum_single_cost_shift,
-	   max_single_cost_shift);
+    printf("%12" HIGHSINT_FORMAT
+           "   single        cost shifts (sum / max = %g / %g)\n",
+           num_single_cost_shift, sum_single_cost_shift, max_single_cost_shift);
   }
-  printf("grepFlipShift,%"
-	 HIGHSINT_FORMAT ",%g,%g,%"
-	 HIGHSINT_FORMAT ",%g,%g,%"
-	 HIGHSINT_FORMAT ",%g,%g\n",
-	 num_correct_dual_primal_flip,
-	 max_correct_dual_primal_flip,
-	 min_correct_dual_primal_flip_dual_infeasibility,
-	 num_correct_dual_cost_shift,
-	 max_correct_dual_cost_shift,
-	 max_correct_dual_cost_shift_dual_infeasibility,
-	   num_single_cost_shift,
-	   sum_single_cost_shift,
-	   max_single_cost_shift);
+  printf("grepFlipShift,%" HIGHSINT_FORMAT ",%g,%g,%" HIGHSINT_FORMAT
+         ",%g,%g,%" HIGHSINT_FORMAT ",%g,%g\n",
+         num_correct_dual_primal_flip, max_correct_dual_primal_flip,
+         min_correct_dual_primal_flip_dual_infeasibility,
+         num_correct_dual_cost_shift, max_correct_dual_cost_shift,
+         max_correct_dual_cost_shift_dual_infeasibility, num_single_cost_shift,
+         sum_single_cost_shift, max_single_cost_shift);
 
   // Look for any PAMI data to summarise
   if (sum_multi_chosen > 0) {
@@ -1372,7 +1366,8 @@ void HighsSimplexAnalysis::reportCondition(const bool header) {
 // Dual:
 // * primal_delta - DlPr (delta_primal) - primal infeasibility from CHUZR
 // * dual_step    - ThDu (theta_dual) - dual step from CHUZC
-// * primal_step  - ThPr (theta_primal) - step to bound of leaving variable after pivoting
+// * primal_step  - ThPr (theta_primal) - step to bound of leaving variable
+// after pivoting
 void HighsSimplexAnalysis::reportIterationData(const bool header) {
   if (header) {
     *analysis_log << highsFormatToString(
@@ -1382,15 +1377,16 @@ void HighsSimplexAnalysis::reportIterationData(const bool header) {
     *analysis_log << highsFormatToString(
         " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT,
         entering_variable, leaving_variable, pivotal_row_index);
-    if (entering_variable>=0) {
+    if (entering_variable >= 0) {
       *analysis_log << highsFormatToString(
-           " %11.4g %11.4g %11.4g %11.4g %11.4g",
-           dual_step, primal_step, primal_delta, numerical_trouble, pivot_value_from_column);
+          " %11.4g %11.4g %11.4g %11.4g %11.4g", dual_step, primal_step,
+          primal_delta, numerical_trouble, pivot_value_from_column);
     } else {
       // Unboundedness in dual simplex
       assert(dualAlgorithm());
       *analysis_log << highsFormatToString(
-           "                         %11.4g                        ", primal_delta);
+          "                         %11.4g                        ",
+          primal_delta);
     }
   } else {
     // Bound swap in primal simplex

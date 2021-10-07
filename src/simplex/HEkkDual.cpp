@@ -1148,11 +1148,7 @@ void HEkkDual::iterate() {
 
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
-  const HighsInt check_iter = 26;
-    ekk_instance_.debugSimplexDualInfeasible(true);
-  if (ekk_instance_.iteration_count_ == check_iter) {
-    printf("ekk_instance_.iteration_count == %d\n", (int)check_iter);
-  }
+
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1183,9 +1179,6 @@ void HEkkDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
-  //  if (ekk_instance_.iteration_count_ == check_iter) 
-    ekk_instance_.debugSimplexDualInfeasible(true);
-
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  updatePrimal");
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
@@ -1198,11 +1191,12 @@ void HEkkDual::iterate() {
   //  updatePrimal");
 
   if (ekk_instance_.checkForCycling(variable_in, row_out)) {
-    printf("Cycling_detected: solve %d\n", (int)ekk_instance_.debug_solve_call_num_);
-    assert(1==0);
+    printf("Cycling_detected: solve %d\n",
+           (int)ekk_instance_.debug_solve_call_num_);
+    assert(1 == 0);
     //    exit(0);
   }
-      
+
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);
   //  ekk_instance_.info_.index_chosen_.push_back(row_out);
@@ -1343,7 +1337,8 @@ void HEkkDual::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->rebuild_reason = reason_for_rebuild;
-  analysis->rebuild_reason_string = ekk_instance_.rebuildReason(reason_for_rebuild);
+  analysis->rebuild_reason_string =
+      ekk_instance_.rebuildReason(reason_for_rebuild);
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }
@@ -1953,7 +1948,8 @@ void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
   analysis->num_single_cost_shift++;
   analysis->sum_single_cost_shift += shift;
   analysis->max_single_cost_shift = max(shift, analysis->max_single_cost_shift);
-  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted      by %11.4g: %d net shifts\n", 
+  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted      by
+  //  %11.4g: %d net shifts\n",
   //	 (int)ekk_instance_.iteration_count_,
   //	 (int)iCol, shift,
   //	 (int)analysis->net_num_single_cost_shift);
@@ -1968,7 +1964,8 @@ void HEkkDual::shiftBack(const HighsInt iCol) {
   info.workShift_[iCol] = 0;
   // Analysis
   analysis->net_num_single_cost_shift--;
-  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted back by %11.4g: %d net shifts\n", 
+  //  printf("HEkkDual::shiftCost Iteration %6d: Cost %6d shifted back by
+  //  %11.4g: %d net shifts\n",
   //	 (int)ekk_instance_.iteration_count_,
   //	 (int)iCol, shift,
   //	 (int)analysis->net_num_single_cost_shift);

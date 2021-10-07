@@ -2236,18 +2236,18 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   initialiseLpRowCost();
   info_.costs_shifted = false;
   info_.costs_perturbed = false;
-  analysis_.net_num_single_cost_shift=0;  
+  analysis_.net_num_single_cost_shift = 0;
   // Primal simplex costs are either from the LP or set specially in phase 1
   if (algorithm == SimplexAlgorithm::kPrimal) return;
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
   const bool report_cost_perturbation =
-    options_->output_flag;// && analysis_.analyse_simplex_runtime_data;
+      options_->output_flag;  // && analysis_.analyse_simplex_runtime_data;
   HighsInt num_original_nonzero_cost = 0;
   if (report_cost_perturbation)
     highsLogDev(options_->log_options, HighsLogType::kInfo,
-                 "Cost perturbation for %s\n", lp_.model_name_.c_str());
+                "Cost perturbation for %s\n", lp_.model_name_.c_str());
   double min_abs_cost = kHighsInf;
   double max_abs_cost = 0;
   double sum_abs_cost = 0;
@@ -2255,8 +2255,8 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     const double abs_cost = fabs(info_.workCost_[i]);
     if (report_cost_perturbation) {
       if (abs_cost) {
-	num_original_nonzero_cost++;
-	min_abs_cost = min(min_abs_cost, abs_cost);
+        num_original_nonzero_cost++;
+        min_abs_cost = min(min_abs_cost, abs_cost);
       }
       sum_abs_cost += abs_cost;
     }
@@ -2269,20 +2269,22 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
       average_abs_cost = sum_abs_cost / num_original_nonzero_cost;
     } else {
       highsLogDev(options_->log_options, HighsLogType::kInfo,
-                   "   STRANGE initial workCost has non nonzeros\n");
+                  "   STRANGE initial workCost has non nonzeros\n");
     }
     highsLogDev(options_->log_options, HighsLogType::kInfo,
-                 "   Initially have %" HIGHSINT_FORMAT
-                 " nonzero costs (%3" HIGHSINT_FORMAT
-                 "%%) with min / average / max = %g / %g / %g\n",
-                 num_original_nonzero_cost, pct0,
-		min_abs_cost, average_abs_cost, max_abs_cost);
+                "   Initially have %" HIGHSINT_FORMAT
+                " nonzero costs (%3" HIGHSINT_FORMAT
+                "%%) with min / average / max = %g / %g / %g\n",
+                num_original_nonzero_cost, pct0, min_abs_cost, average_abs_cost,
+                max_abs_cost);
   }
   if (max_abs_cost > 100) {
     max_abs_cost = sqrt(sqrt(max_abs_cost));
     if (report_cost_perturbation)
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                   "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n", max_abs_cost);
+      highsLogDev(
+          options_->log_options, HighsLogType::kInfo,
+          "   Large so set max_abs_cost = sqrt(sqrt(max_abs_cost)) = %g\n",
+          max_abs_cost);
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -2295,15 +2297,17 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     max_abs_cost = min(max_abs_cost, 1.0);
     if (report_cost_perturbation)
       highsLogDev(options_->log_options, HighsLogType::kInfo,
-                   "   Small boxedRate (%g) so set max_abs_cost = min(max_abs_cost, 1.0) = "
-                   "%g\n",
-                   boxedRate, max_abs_cost);
+                  "   Small boxedRate (%g) so set max_abs_cost = "
+                  "min(max_abs_cost, 1.0) = "
+                  "%g\n",
+                  boxedRate, max_abs_cost);
   }
   // Determine the perturbation base
-  const double col_cost_base = info_.dual_simplex_cost_perturbation_multiplier * 5e-7 * max_abs_cost;
+  const double col_cost_base =
+      info_.dual_simplex_cost_perturbation_multiplier * 5e-7 * max_abs_cost;
   if (report_cost_perturbation)
     highsLogDev(options_->log_options, HighsLogType::kInfo,
-                 "   Perturbation column base = %g\n", col_cost_base);
+                "   Perturbation column base = %g\n", col_cost_base);
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
@@ -2324,16 +2328,17 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
       // Fixed - no perturb
     }
     //    if (report_cost_perturbation) {
-    //      const double perturbation1 = fabs(info_.workCost_[i] - previous_cost);
-    //      if (perturbation1)
+    //      const double perturbation1 = fabs(info_.workCost_[i] -
+    //      previous_cost); if (perturbation1)
     //        updateValueDistribution(perturbation1,
     //                                analysis_.cost_perturbation1_distribution);
     //    }
   }
-  const double row_cost_base = info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
+  const double row_cost_base =
+      info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
   if (report_cost_perturbation)
     highsLogDev(options_->log_options, HighsLogType::kInfo,
-                 "   Perturbation row    base = %g\n", row_cost_base);
+                "   Perturbation row    base = %g\n", row_cost_base);
   for (HighsInt i = lp_.num_col_; i < num_tot; i++) {
     double perturbation2 = (0.5 - info_.numTotRandomValue_[i]) * row_cost_base;
     info_.workCost_[i] += perturbation2;
@@ -2735,7 +2740,7 @@ void HEkk::computeDual() {
   }
   // If debugging, save the current duals
   //  debugComputeDual(true);
-  debugSimplexDualInfeasible();
+  //  debugSimplexDualInfeasible();
   // Copy the costs in case the basic costs are all zero
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++)
@@ -2857,34 +2862,38 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
     const double current_dual = info_.workDual_[i];
     const double dual_infeasibility = -move * current_dual;
     const double kDualInfeasibilityMargin = 1;
-    if (kDualInfeasibilityMargin*dual_infeasibility < tau_d) continue;
-    // There is a dual infeasiblity to remove so, if boxed, consider doing so via flip
+    if (kDualInfeasibilityMargin * dual_infeasibility < tau_d) continue;
+    // There is a dual infeasiblity to remove so, if boxed, consider doing so
+    // via flip
     const bool fixed = info_.workLower_[i] == info_.workUpper_[i];
-    const bool boxed = info_.workLower_[i] != -inf && info_.workUpper_[i] != inf;
+    const bool boxed =
+        info_.workLower_[i] != -inf && info_.workUpper_[i] != inf;
     if (boxed) {
       // Boxed variable, so could flip
       if (fixed || dual_infeasibility > kUseFlipMultiplier * tau_d) {
-	// Fixed, or dual infeasibility is relatively large, so flip
-	min_dual_infeasibility_for_flip = min(dual_infeasibility, min_dual_infeasibility_for_flip);
-	if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_flip++;
-	sum_dual_infeasibilities_for_flip += dual_infeasibility;
-	max_dual_infeasibility_for_flip = max(dual_infeasibility, max_dual_infeasibility_for_flip);
-	flipBound(i);
-	// Negative dual at lower bound (move=1): flip to upper
-	// bound so objective contribution is change in value (flip)
-	// times dual, being move*flip*dual
-	//
-	// Positive dual at upper bound (move=-1): flip to lower
-	// bound so objective contribution is change in value
-	// (-flip) times dual, being move*flip*dual
-	const double flip = info_.workUpper_[i] - info_.workLower_[i];
-	double local_dual_objective_change = move * flip * current_dual;
-	local_dual_objective_change *= cost_scale_;
-	flip_dual_objective_value_change += local_dual_objective_change;
-	num_flip++;
-	max_flip = max(fabs(flip), max_flip);
-	sum_flip += fabs(flip);
-	continue;
+        // Fixed, or dual infeasibility is relatively large, so flip
+        min_dual_infeasibility_for_flip =
+            min(dual_infeasibility, min_dual_infeasibility_for_flip);
+        if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_flip++;
+        sum_dual_infeasibilities_for_flip += dual_infeasibility;
+        max_dual_infeasibility_for_flip =
+            max(dual_infeasibility, max_dual_infeasibility_for_flip);
+        flipBound(i);
+        // Negative dual at lower bound (move=1): flip to upper
+        // bound so objective contribution is change in value (flip)
+        // times dual, being move*flip*dual
+        //
+        // Positive dual at upper bound (move=-1): flip to lower
+        // bound so objective contribution is change in value
+        // (-flip) times dual, being move*flip*dual
+        const double flip = info_.workUpper_[i] - info_.workLower_[i];
+        double local_dual_objective_change = move * flip * current_dual;
+        local_dual_objective_change *= cost_scale_;
+        flip_dual_objective_value_change += local_dual_objective_change;
+        num_flip++;
+        max_flip = max(fabs(flip), max_flip);
+        sum_flip += fabs(flip);
+        continue;
       }
     }
     // Either one-sided or flip not performed, so shift
@@ -2894,7 +2903,8 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
     // Other variable = shift
     if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_shift++;
     sum_dual_infeasibilities_for_shift += dual_infeasibility;
-    max_dual_infeasibility_for_shift = max(dual_infeasibility, max_dual_infeasibility_for_shift);
+    max_dual_infeasibility_for_shift =
+        max(dual_infeasibility, max_dual_infeasibility_for_shift);
     info_.costs_shifted = true;
     double shift;
     if (move == kNonbasicMoveUp) {
@@ -2916,38 +2926,39 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
     sum_shift += fabs(shift);
     const std::string direction = move == kNonbasicMoveUp ? "  up" : "down";
     highsLogDev(options_->log_options, HighsLogType::kVerbose,
-		"Move %s: cost shift = %g; objective change = %g\n",
-		direction.c_str(), shift, local_dual_objective_change);
+                "Move %s: cost shift = %g; objective change = %g\n",
+                direction.c_str(), shift, local_dual_objective_change);
   }
   analysis_.num_correct_dual_primal_flip += num_flip;
-  analysis_.max_correct_dual_primal_flip = max(max_flip, analysis_.max_correct_dual_primal_flip);
+  analysis_.max_correct_dual_primal_flip =
+      max(max_flip, analysis_.max_correct_dual_primal_flip);
   analysis_.min_correct_dual_primal_flip_dual_infeasibility =
-    min(min_dual_infeasibility_for_flip, analysis_.min_correct_dual_primal_flip_dual_infeasibility);
+      min(min_dual_infeasibility_for_flip,
+          analysis_.min_correct_dual_primal_flip_dual_infeasibility);
   if (num_flip)
-    highsLogDev(options_->log_options, HighsLogType::kDetailed,
-                "Performed num / max / sum = %" HIGHSINT_FORMAT
-                " / %g / %g flip(s) for num / min / max / sum dual infeasibility of %" HIGHSINT_FORMAT
-                " / %g / %g / %g; objective change = %g\n",
-                num_flip, max_flip, sum_flip,
-		num_dual_infeasibilities_for_flip,
-		min_dual_infeasibility_for_flip,
-		max_dual_infeasibility_for_flip,
-		sum_dual_infeasibilities_for_flip,
-		flip_dual_objective_value_change);
+    highsLogDev(
+        options_->log_options, HighsLogType::kDetailed,
+        "Performed num / max / sum = %" HIGHSINT_FORMAT
+        " / %g / %g flip(s) for num / min / max / sum dual infeasibility of "
+        "%" HIGHSINT_FORMAT " / %g / %g / %g; objective change = %g\n",
+        num_flip, max_flip, sum_flip, num_dual_infeasibilities_for_flip,
+        min_dual_infeasibility_for_flip, max_dual_infeasibility_for_flip,
+        sum_dual_infeasibilities_for_flip, flip_dual_objective_value_change);
   analysis_.num_correct_dual_cost_shift += num_shift;
-  analysis_.max_correct_dual_cost_shift = max(max_shift, analysis_.max_correct_dual_cost_shift);
+  analysis_.max_correct_dual_cost_shift =
+      max(max_shift, analysis_.max_correct_dual_cost_shift);
   analysis_.max_correct_dual_cost_shift_dual_infeasibility =
-    max(max_dual_infeasibility_for_shift, analysis_.max_correct_dual_cost_shift_dual_infeasibility);
+      max(max_dual_infeasibility_for_shift,
+          analysis_.max_correct_dual_cost_shift_dual_infeasibility);
   if (num_shift)
-    highsLogDev(options_->log_options, HighsLogType::kDetailed,
-                "Performed num / max / sum = %" HIGHSINT_FORMAT
-                " / %g / %g shift(s) for num / max / sum dual infeasibility of %" HIGHSINT_FORMAT
-                " / %g / %g; objective change = %g\n",
-                num_shift, max_shift, sum_shift,
-		num_dual_infeasibilities_for_shift,
-		max_dual_infeasibility_for_shift,
-		sum_dual_infeasibilities_for_shift,
-		shift_dual_objective_value_change);
+    highsLogDev(
+        options_->log_options, HighsLogType::kDetailed,
+        "Performed num / max / sum = %" HIGHSINT_FORMAT
+        " / %g / %g shift(s) for num / max / sum dual infeasibility of "
+        "%" HIGHSINT_FORMAT " / %g / %g; objective change = %g\n",
+        num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
+        max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
+        shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }
 
@@ -3188,8 +3199,6 @@ void HEkk::computeSimplexDualInfeasible() {
   max_dual_infeasibility = 0;
   sum_dual_infeasibility = 0;
 
-  const HighsInt check_iter = 26;
-  const bool report = true;//iteration_count_ == check_iter;
   for (HighsInt iCol = 0; iCol < lp_.num_col_ + lp_.num_row_; iCol++) {
     if (!basis_.nonbasicFlag_[iCol]) continue;
     // Nonbasic column
@@ -3207,7 +3216,6 @@ void HEkk::computeSimplexDualInfeasible() {
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance) {
-      if (report) printf("Dual infeasibility of %11.4g for column %d\n", dual_infeasibility, (int)iCol);
         num_dual_infeasibility++;
       }
       max_dual_infeasibility =
@@ -3649,10 +3657,6 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   if (!this->status_.has_invert) this->status_.has_fresh_invert = false;
   // Check for consistency
   if (!this->simplex_nla_.update_.valid_) assert(!this->status_.has_invert);
-  //  printf("HEkk::unfreezeBasis: basis = ");
-  //  for (HighsInt iRow = 0; iRow < (int)basis_.basicIndex_.size(); iRow++)
-  //    printf(" %d", (int)basis_.basicIndex_[iRow]);
-  //  printf("\n");
   return HighsStatus::kOk;
 }
 

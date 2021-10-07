@@ -146,9 +146,9 @@ class HEkkDualRow {
    */
   void computeDevexWeight(const HighsInt slice = -1);
 
-  HighsInt findInWorkData(const HighsInt iCol,
-			  const HighsInt count,
-			  const std::vector<std::pair<HighsInt, double>>& workData_);
+  HighsInt debugFindInWorkData(
+      const HighsInt iCol, const HighsInt count,
+      const std::vector<std::pair<HighsInt, double>>& workData_);
   HighsInt debugChooseColumnInfeasibilities() const;
   // References:
   HEkk& ekk_instance_;

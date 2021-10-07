@@ -246,7 +246,6 @@ class HighsSimplexAnalysis {
   double max_single_cost_shift = 0;
   double sum_single_cost_shift = 0;
 
-
   // Tolerances for analysis of TRAN stages - could be needed for
   // control if this is ever used again!
   vector<double> original_start_density_tolerance;

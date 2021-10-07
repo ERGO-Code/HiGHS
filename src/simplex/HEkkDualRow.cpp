@@ -148,7 +148,6 @@ HighsInt HEkkDualRow::chooseFinal() {
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
   analysis->simplexTimerStop(Chuzc2Clock);
-  HighsInt i109 = findInWorkData(109, fullCount, workData);
   // 2. Choose by small step BFRT
 
   bool use_quad_sort = false;
@@ -156,12 +155,6 @@ HighsInt HEkkDualRow::chooseFinal() {
   // Use the quadratic cost sort for smaller values of workCount,
   // otherwise use the heap-based sort
   use_quad_sort = workCount < 100;
-  const HighsInt check_iter = 26;
-  if (ekk_instance_.iteration_count_ == check_iter) {
-    printf("Overruling use_quad_sort\n");
-    use_quad_sort = true;
-  }
-  
   use_heap_sort = !use_quad_sort;
   assert(use_heap_sort || use_quad_sort);
 
@@ -230,38 +223,32 @@ HighsInt HEkkDualRow::chooseFinal() {
   } else {
     workTheta = 0;
   }
-  printf("breakIndex = %3d: workPivot = %4d; workAlpha = %11.4g; Dual = %11.4g; workTheta = %11.4g\n",
-	 (int)breakIndex, (int)workPivot, workAlpha, workDual[workPivot], workTheta);
   analysis->simplexTimerStop(Chuzc3cClock);
 
   analysis->simplexTimerStart(Chuzc3dClock);
 
   // 4. Determine BFRT flip index: flip all
-  fullCount = breakIndex;// Not used
+  fullCount = breakIndex;  // Not used
   workCount = 0;
-  const bool report = true;//ekk_instance_.iteration_count_ == check_iter;
+  const bool report = true;  // ekk_instance_.iteration_count_ == check_iter;
   if (use_quad_sort) {
     for (HighsInt i = 0; i < workGroup[breakGroup]; i++) {
       const HighsInt iCol = workData[i].first;
       const HighsInt move = workMove[iCol];
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
-    if (report) printf("Final(quad): workGroup[%d] = %d with workCount = %d\n",
-		       (int)breakGroup, (int)workGroup[breakGroup], (int)workCount);
   } else {
     for (HighsInt i = 0; i < alt_workGroup[breakGroup]; i++) {
       const HighsInt iCol = sorted_workData[i].first;
       const HighsInt move = workMove[iCol];
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
-    if (report) printf("Final(heap): workGroup[%d] = %d with workCount = %d\n",
-		       (int)breakGroup, (int)alt_workGroup[breakGroup], (int)workCount);
     // Look at all entries of final group to see what dual
     // infeasibilities might be created
-    assert(breakGroup+1 < (int)alt_workGroup.size());
-    const HighsInt to_i = alt_workGroup[breakGroup+1];
+    assert(breakGroup + 1 < (int)alt_workGroup.size());
+    const HighsInt to_i = alt_workGroup[breakGroup + 1];
     assert(to_i <= (int)sorted_workData.size());
-    HighsInt num_infeasibility = 0;
+    //    HighsInt num_infeasibility = 0;
     const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
     for (HighsInt i = alt_workGroup[breakGroup]; i < to_i; i++) {
       const HighsInt iCol = sorted_workData[i].first;
@@ -269,14 +256,13 @@ HighsInt HEkkDualRow::chooseFinal() {
       const HighsInt move = workMove[iCol];
       const double dual = workDual[iCol];
       const double new_dual = dual - move_out * move * workTheta * value;
-      const double new_dual_infeasibility = move*new_dual;
+      const double new_dual_infeasibility = move * new_dual;
       const bool infeasible = new_dual_infeasibility < -Td;
-      if (infeasible) num_infeasibility++;
-      printf("%3d: iCol = %4d; dual = %11.4g; value = %11.4g; move = %2d; new_dual = %11.4g; infeasibility = %11.4g: %d\n",
-	     (int)i, (int)iCol, dual, value, (int)move, new_dual, new_dual_infeasibility, infeasible);
-      if (infeasible) workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
+      if (infeasible) {
+        //	num_infeasibility++;
+        workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
+      }
     }
-    if (num_infeasibility) printf("Would create %d dual infeasibilities\n", (int)num_infeasibility);
   }
   if (workTheta == 0) workCount = 0;
   analysis->simplexTimerStop(Chuzc3dClock);
@@ -286,14 +272,14 @@ HighsInt HEkkDualRow::chooseFinal() {
   sort(workData.begin(), workData.begin() + workCount);
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
-  
+
   HighsInt num_infeasibility = debugChooseColumnInfeasibilities();
-  if (num_infeasibility) printf("CHUZC creates %d dual infeasibilities\n", (int)num_infeasibility);
-  
-  if (ekk_instance_.iteration_count_ == check_iter) {
-    printf("breakIndex = %d; workCount = %d; workTheta = %g; workAlpha = %g\n",
-	   (int)breakIndex, (int)workCount,
-	   workTheta, workAlpha);
+  if (num_infeasibility) {
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
+                "Heap-based chooseFinal would create %d dual infeasibilities\n",
+                (int)num_infeasibility);
+    analysis->simplexTimerStop(Chuzc3dClock);
+    return -1;
   }
   return 0;
 }
@@ -350,21 +336,6 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
     prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  const HighsInt check_iter = 26;
-  if (ekk_instance_.iteration_count_ == check_iter) {
-    printf("Quad search: workCount = %d\n", (int)workCount);
-    HighsInt from_ix = 0;
-    for (HighsInt iGroup=0; iGroup<workGroup.size(); iGroup++) {
-      printf("Group %d\n", (int)iGroup);
-      for(HighsInt ix=from_ix; ix<workGroup[iGroup]; ix++) {
-	HighsInt iCol = workData[ix].first;
-	double value = workData[ix].second;
-	printf("%4d: iCol = %4d: value = %11.4g; workDual = %11.4g; ratio = %17.10g\n",
-	       (int)ix, (int)iCol, value, workDual[iCol], fabs(workDual[iCol]/value));
-      }
-      from_ix = workGroup[iGroup];
-    }
-  }
   // Check that at least one group has been identified
   if ((HighsInt)workGroup.size() <= 1) {
     HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
@@ -386,8 +357,6 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
   std::vector<double> heap_v;
   heap_i.resize(fullCount + 1);
   heap_v.resize(fullCount + 1);
-  HighsInt check_iCol = 109;
-  HighsInt check_i = findInWorkData(check_iCol, fullCount, original_workData);
   for (HighsInt i = 0; i < fullCount; i++) {
     HighsInt iCol = original_workData[i].first;
     double value = original_workData[i].second;
@@ -414,18 +383,11 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
   }
   HighsInt this_group_first_entry = alt_workCount;
   sorted_workData.resize(heap_num_en);
-  const HighsInt check_iter = 26;
-  const bool report = true;//ekk_instance_.iteration_count_ == check_iter;
   for (HighsInt en = 1; en <= heap_num_en; en++) {
     HighsInt i = heap_i[en];
     HighsInt iCol = original_workData[i].first;
     double value = original_workData[i].second;
     double dual = workMove[iCol] * workDual[iCol];
-    if (iCol == check_iCol) {
-      if (report) printf("Found %d as entry %d\n", (int)check_iCol, (int)i);
-      if (report) printf("dual = %g; selectTheta = %g; value = %g; selectTheta * value = %g; dual/value = %g\n",
-	     dual,selectTheta,value,selectTheta * value, dual/value);
-    }
     if (dual > selectTheta * value) {
       // Breakpoint is in the next group, so record the pointer to its
       // first entry
@@ -433,8 +395,6 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
       this_group_first_entry = alt_workCount;
       HighsInt alt_workGroup_size = alt_workGroup.size();
       selectTheta = (dual + Td) / value;
-      if (report) printf("Next group (%2d) begins at %2d: selectTheta = %g; totalChange = %g; totalDelta = %g\n",
-	     (int)(alt_workGroup_size-1), (int)alt_workCount, selectTheta, totalChange, totalDelta);
       // End loop if all permitted groups have been identified
       if (totalChange >= totalDelta) break;
     }
@@ -443,26 +403,9 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
     sorted_workData[alt_workCount].second = value;
     totalChange += value * (workRange[iCol]);
     alt_workCount++;
-    if (report) printf("alt_workCount = %d: iCol = %3d; totalChange = %g \n",
-						   (int)alt_workCount, (int)iCol, totalChange);
   }
-  if (report) printf("alt_workCount = %d, this_group_first_entry = %d\n", (int)alt_workCount, (int)this_group_first_entry);
   if (alt_workCount > this_group_first_entry)
     alt_workGroup.push_back(alt_workCount);
-  if (report) {
-    printf("Quad search: workCount = %d\n", (int)workCount);
-    HighsInt from_ix = 0;
-    for (HighsInt iGroup=0; iGroup<alt_workGroup.size(); iGroup++) {
-      printf("Group %d\n", (int)iGroup);
-      for(HighsInt ix=from_ix; ix<alt_workGroup[iGroup]; ix++) {
-	HighsInt iCol = sorted_workData[ix].first;
-	double value = sorted_workData[ix].second;
-	printf("%4d: iCol = %4d: value = %11.4g; workDual = %11.4g; ratio = %17.10g\n",
-	       (int)ix, (int)iCol, value, workDual[iCol], fabs(workDual[iCol]/value));
-      }
-      from_ix = alt_workGroup[iGroup];
-    }
-  }
   return true;
 }
 
@@ -506,17 +449,12 @@ void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
   double* workDual = &ekk_instance_.info_.workDual_[0];
   double dual_objective_value_change = 0;
   bfrtColumn->clear();
-  const HighsInt check_iter = 26;
-  const bool report = false;//ekk_instance_.iteration_count_ == check_iter;
-  if (report) printf("HEkkDualRow::updateFlip workCount = %d\n", (int)workCount);
   for (HighsInt i = 0; i < workCount; i++) {
     const HighsInt iCol = workData[i].first;
     const double change = workData[i].second;
     double local_dual_objective_change = change * workDual[iCol];
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
-    if (report) printf("Flip bound %5d with dual %11.4g (%2d)\n", (int)iCol, workDual[iCol],
-		       ekk_instance_.basis_.nonbasicMove_[iCol]);
     ekk_instance_.flipBound(iCol);
     ekk_instance_.lp_.a_matrix_.collectAj(*bfrtColumn, iCol, change);
   }
@@ -539,9 +477,6 @@ void HEkkDualRow::updateDual(double theta) {
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
   }
-  const HighsInt check_col = 2529;
-  printf("Dual for workDual[%d] = %g; move[2529] = %d\n",
-	 (int)check_col, workDual[check_col], (int)ekk_instance_.basis_.nonbasicMove_[check_col]);
   ekk_instance_.info_.updated_dual_objective_value +=
       dual_objective_value_change;
   analysis->simplexTimerStop(UpdateDualClock);
@@ -602,11 +537,7 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
   computed_edge_weight = 0;
   for (HighsInt el_n = 0; el_n < packCount; el_n++) {
     HighsInt vr_n = packIndex[el_n];
-    if (!ekk_instance_.basis_.nonbasicFlag_[vr_n]) {
-      //      printf("Basic variable %" HIGHSINT_FORMAT " in packIndex is
-      //      skipped\n", vr_n);
-      continue;
-    }
+    if (!ekk_instance_.basis_.nonbasicFlag_[vr_n]) continue;
     double pv = work_devex_index[vr_n] * packValue[el_n];
     if (pv) {
       computed_edge_weight += pv * pv;
@@ -621,25 +552,26 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
   }
 }
 
-HighsInt HEkkDualRow::findInWorkData(const HighsInt iCol,
-				     const HighsInt count,
-				     const std::vector<std::pair<HighsInt, double>>& workData_) {
-  for(HighsInt Ix=0; Ix<count; Ix++) 
+HighsInt HEkkDualRow::debugFindInWorkData(
+    const HighsInt iCol, const HighsInt count,
+    const std::vector<std::pair<HighsInt, double>>& workData_) {
+  for (HighsInt Ix = 0; Ix < count; Ix++)
     if (workData_[Ix].first == iCol) return Ix;
   return -1;
 }
 
 HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
+  HighsInt num_infeasibility = 0;
+  if (ekk_instance_.options_->highs_debug_level < kHighsDebugLevelCheap)
+    return num_infeasibility;
+  printf("HEkkDualRow::debugChooseColumnInfeasibilities\n");
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   std::vector<double> unpack_value;
   HighsLp& lp = ekk_instance_.lp_;
   unpack_value.resize(lp.num_col_ + lp.num_row_);
-  for (HighsInt ix = 0; ix < packCount; ix++) 
+  for (HighsInt ix = 0; ix < packCount; ix++)
     unpack_value[packIndex[ix]] = packValue[ix];
-  HighsInt num_infeasibility = 0;
   const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
-  printf("HEkkDualRow::debugChooseColumnInfeasibilities: workCount = %d; move_out = %d; workTheta = %g\n",
-	 (int)workCount, (int)move_out, workTheta);
   for (HighsInt i = 0; i < workCount; i++) {
     const HighsInt iCol = workData[i].first;
     const double delta = workData[i].second;
@@ -648,11 +580,14 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
     const double dual = workDual[iCol];
     const double delta_dual = fabs(workTheta * value);
     const double new_dual = dual - workTheta * value;
-    const double infeasibility_after_flip = -move*new_dual;
+    const double infeasibility_after_flip = -move * new_dual;
     const bool infeasible = infeasibility_after_flip < -Td;
     if (infeasible) {
-      printf("%3d: iCol = %4d; dual = %11.4g; value = %11.4g; move = %2d; delta = %11.4g; new_dual = %11.4g; infeasibility = %11.4g: %d\n",
-	     (int)i, (int)iCol, dual, value, (int)move, delta_dual, new_dual, infeasibility_after_flip, infeasible);
+      printf(
+          "%3d: iCol = %4d; dual = %11.4g; value = %11.4g; move = %2d; delta = "
+          "%11.4g; new_dual = %11.4g; infeasibility = %11.4g: %d\n",
+          (int)i, (int)iCol, dual, value, (int)move, delta_dual, new_dual,
+          infeasibility_after_flip, infeasible);
 
       num_infeasibility++;
     }
@@ -660,4 +595,3 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
   assert(!num_infeasibility);
   return num_infeasibility;
 }
-
