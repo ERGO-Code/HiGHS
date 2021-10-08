@@ -283,6 +283,7 @@ set(headers
     util/HighsMatrixSlice.h
     util/HighsMatrixUtils.h
     util/HighsRandom.h
+    util/HighsRbTree.h
     util/HighsSort.h
     util/HighsSplay.h
     util/HighsTimer.h
@@ -719,6 +720,7 @@ set(headers_fast_build_
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
     util/HighsRandom.h
+    util/HighsRbTree.h
     util/HighsSort.h
     util/HighsSplay.h
     util/HighsTimer.h
