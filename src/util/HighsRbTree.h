@@ -189,7 +189,7 @@ class RbTree {
     else
       setChild(p, Dir(u != getChild(p, RbTreeLinks::kLeft)), v);
 
-    if (v != -1)
+    if (v == -1)
       nilParent = p;
     else
       setParent(v, p);

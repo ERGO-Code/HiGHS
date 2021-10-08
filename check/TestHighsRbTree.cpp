@@ -44,10 +44,8 @@ class MyRbTree : public RbTree<MyRbTree> {
     return true;
   }
 
-  void erase(HighsInt x) {
-    std::pair<HighsInt, bool> p = find(x);
-
-    if (p.second) unlink(p.first);
+  void erase(HighsInt node) {
+    unlink(node);
   }
 
   bool contains(HighsInt x) { return find(x).second; }
@@ -92,5 +90,17 @@ TEST_CASE("HighsRbTree", "[util]") {
     bool inserted = rbTree.insert(x);
     REQUIRE(inserted);
     checkRbTree(rbTree, keys.data(), i + 1);
+  }
+
+  // randomly delete half of the elements and check the tree after each deletion
+
+  for (size_t i = keys.size() - 1; i > keys.size()/2; --i) {
+    HighsInt k = rand.integer(i+1);
+    std::swap(keys[k], keys[i]);
+    HighsInt x = keys[i];
+    std::pair<HighsInt,bool> node = rbTree.find(x);
+    REQUIRE(node.second);
+    rbTree.erase(node.first);
+    checkRbTree(rbTree, keys.data(), i);
   }
 }
