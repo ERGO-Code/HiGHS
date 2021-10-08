@@ -685,6 +685,12 @@ void HEkkDual::solvePhase1() {
       // infeasibilities, it will set solve_phase = kSolvePhase2;
       assessPhase1Optimality();
     }
+  } else if (rebuild_reason == kRebuildReasonCycling) {
+    // Cycling has occurred after rebuild
+    solve_phase = kSolvePhaseError;
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                "dual-phase-1-not-solved\n");
+    model_status = HighsModelStatus::kSolveError;
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
@@ -920,6 +926,12 @@ void HEkkDual::solvePhase2() {
                   "problem-optimal\n");
       model_status = HighsModelStatus::kOptimal;
     }
+  } else if (rebuild_reason == kRebuildReasonCycling) {
+    // Cycling has occurred after rebuild
+    solve_phase = kSolvePhaseError;
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                "dual-phase-2-not-solved\n");
+    model_status = HighsModelStatus::kSolveError;
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
@@ -1190,11 +1202,22 @@ void HEkkDual::iterate() {
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  updatePrimal");
 
-  //  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
-  //    printf("Cycling_detected: solve %d\n",
-  //           (int)ekk_instance_.debug_solve_call_num_);
-  //  assert(1 == 0);
-  //}
+  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
+    analysis->num_dual_cycling_detections++;
+    if (ekk_instance_.iteration_count_ ==
+        ekk_instance_.previous_iteration_cycling_detected + 1) {
+      // Cycling detected on successive iterations suggests infinite cycling
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+                  "Cycling in dual simplex: rebuild\n");
+      rebuild_reason = kRebuildReasonCycling;
+    } else {
+      ekk_instance_.previous_iteration_cycling_detected =
+          ekk_instance_.iteration_count_;
+    }
+    //    printf("Cycling_detected: solve %d\n",
+    //           (int)ekk_instance_.debug_solve_call_num_);
+    //  assert(1 == 0);
+  }
 
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);

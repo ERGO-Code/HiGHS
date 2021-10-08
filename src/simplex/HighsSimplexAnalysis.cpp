@@ -231,9 +231,13 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     num_col_price = 0;
     num_row_price = 0;
     num_row_price_with_switch = 0;
+    num_primal_cycling_detections = 0;
+    num_dual_cycling_detections = 0;
     // Initialise the dual simplex flip/shift records
     num_quad_chuzc = 0;
     num_heap_chuzc = 0;
+    sum_heap_chuzc_size = 0;
+    max_heap_chuzc_size = 0;
     num_correct_dual_primal_flip = 0;
     min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
     max_correct_dual_primal_flip = 0;
@@ -885,34 +889,62 @@ void HighsSimplexAnalysis::summaryReport() {
            AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kDevex] /
                num_devex_framework);
   }
-  printf("\nQuad/heap CHUZC summary\n");
-  if (num_quad_chuzc)
-    printf("%12" HIGHSINT_FORMAT " quad CHUZC\n", num_quad_chuzc);
-  if (num_heap_chuzc)
-    printf("%12" HIGHSINT_FORMAT " heap CHUZC\n", num_heap_chuzc);
-  printf("\ngrepQuadHeapChuzc,%s,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
-         "\n",
-         model_name_.c_str(), lp_name_.c_str(), num_quad_chuzc, num_heap_chuzc);
 
-  printf("\nFlip/shift summary\n");
-  if (num_correct_dual_primal_flip) {
-    printf("%12" HIGHSINT_FORMAT
-           "   correct dual primal flips (max = %g) for min dual infeasiblity "
-           "= %g\n",
-           num_correct_dual_primal_flip, max_correct_dual_primal_flip,
-           min_correct_dual_primal_flip_dual_infeasibility);
+  if (num_primal_cycling_detections + num_dual_cycling_detections) {
+    printf("\nCycling detected %" HIGHSINT_FORMAT " times:",
+           num_primal_cycling_detections + num_dual_cycling_detections);
+    if (num_primal_cycling_detections) {
+      printf("%" HIGHSINT_FORMAT " in primal simplex",
+             num_primal_cycling_detections);
+      if (num_dual_cycling_detections) printf("; ");
+    }
+    if (num_dual_cycling_detections)
+      printf("%" HIGHSINT_FORMAT " in dual simplex",
+             num_dual_cycling_detections);
+    printf("\n");
   }
-  if (num_correct_dual_cost_shift) {
-    printf("%12" HIGHSINT_FORMAT
-           "   correct dual  cost shifts (max = %g) for max dual infeasiblity "
-           "= %g\n",
-           num_correct_dual_cost_shift, max_correct_dual_cost_shift,
-           max_correct_dual_cost_shift_dual_infeasibility);
+
+  const double average_heap_chuzc_size =
+      num_heap_chuzc ? sum_heap_chuzc_size / num_heap_chuzc : 0;
+  if (num_quad_chuzc + num_heap_chuzc) {
+    printf("\nQuad/heap CHUZC summary\n");
+    if (num_quad_chuzc)
+      printf("%12" HIGHSINT_FORMAT " quad CHUZC\n", num_quad_chuzc);
+    if (num_heap_chuzc)
+      printf("%12" HIGHSINT_FORMAT
+             " heap CHUZC: average / max = %d / %" HIGHSINT_FORMAT "\n",
+             num_heap_chuzc, (int)average_heap_chuzc_size, max_heap_chuzc_size);
   }
-  if (num_single_cost_shift) {
-    printf("%12" HIGHSINT_FORMAT
-           "   single        cost shifts (sum / max = %g / %g)\n",
-           num_single_cost_shift, sum_single_cost_shift, max_single_cost_shift);
+  printf("\ngrepQuadHeapChuzc,%s,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
+         ",%d,%" HIGHSINT_FORMAT "\n",
+         model_name_.c_str(), lp_name_.c_str(), num_quad_chuzc, num_heap_chuzc,
+         (int)average_heap_chuzc_size, max_heap_chuzc_size);
+
+  if (num_correct_dual_primal_flip + num_correct_dual_cost_shift +
+      num_single_cost_shift) {
+    printf("\nFlip/shift summary\n");
+    if (num_correct_dual_primal_flip) {
+      printf(
+          "%12" HIGHSINT_FORMAT
+          "   correct dual primal flips (max = %g) for min dual infeasiblity "
+          "= %g\n",
+          num_correct_dual_primal_flip, max_correct_dual_primal_flip,
+          min_correct_dual_primal_flip_dual_infeasibility);
+    }
+    if (num_correct_dual_cost_shift) {
+      printf(
+          "%12" HIGHSINT_FORMAT
+          "   correct dual  cost shifts (max = %g) for max dual infeasiblity "
+          "= %g\n",
+          num_correct_dual_cost_shift, max_correct_dual_cost_shift,
+          max_correct_dual_cost_shift_dual_infeasibility);
+    }
+    if (num_single_cost_shift) {
+      printf("%12" HIGHSINT_FORMAT
+             "   single        cost shifts (sum / max = %g / %g)\n",
+             num_single_cost_shift, sum_single_cost_shift,
+             max_single_cost_shift);
+    }
   }
   printf("\ngrepFlipShift,%s,%s,%" HIGHSINT_FORMAT ",%g,%g,%" HIGHSINT_FORMAT
          ",%g,%g,%" HIGHSINT_FORMAT ",%g,%g\n",

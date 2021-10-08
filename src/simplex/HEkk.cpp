@@ -135,6 +135,8 @@ void HEkk::clearEkkData() {
   this->dual_simplex_cleanup_level_ = 0;
   this->dual_simplex_phase1_cleanup_level_ = 0;
 
+  this->previous_iteration_cycling_detected = -kHighsIInf;
+
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
   this->exit_algorithm_ = SimplexAlgorithm::kPrimal;
@@ -1027,6 +1029,9 @@ HighsStatus HEkk::solve() {
     analysis_.simplexTimerStart(SimplexTotalClock);
   dual_simplex_cleanup_level_ = 0;
   dual_simplex_phase1_cleanup_level_ = 0;
+
+  previous_iteration_cycling_detected = -kHighsIInf;
+
   HighsStatus call_status = initialiseForSolve();
   if (call_status == HighsStatus::kError) return HighsStatus::kError;
 
@@ -3626,6 +3631,8 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
     rebuild_reason_string = "Primal infeasible in primal simplex";
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     rebuild_reason_string = "Choose column failure";
+  } else if (rebuild_reason == kRebuildReasonCycling) {
+    rebuild_reason_string = "Cycling detected";
   } else {
     rebuild_reason_string = "Unidentified";
     assert(1 == 0);

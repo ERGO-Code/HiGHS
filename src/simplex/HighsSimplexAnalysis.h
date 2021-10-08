@@ -235,8 +235,13 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
 
+  HighsInt num_primal_cycling_detections = 0;
+  HighsInt num_dual_cycling_detections = 0;
+
   HighsInt num_quad_chuzc = 0;
   HighsInt num_heap_chuzc = 0;
+  double sum_heap_chuzc_size = 0;
+  HighsInt max_heap_chuzc_size = 0;
 
   HighsInt num_correct_dual_primal_flip = 0;
   double min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;

@@ -142,6 +142,8 @@ class HEkk {
   HighsInt dual_simplex_cleanup_level_ = 0;
   HighsInt dual_simplex_phase1_cleanup_level_ = 0;
 
+  HighsInt previous_iteration_cycling_detected = -kHighsIInf;
+
   bool solve_bailout_;
   bool called_return_from_solve_;
   SimplexAlgorithm exit_algorithm_;

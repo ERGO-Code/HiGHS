@@ -1332,6 +1332,24 @@ void HEkkPrimal::update() {
   }
 
   assert(row_out >= 0);
+
+  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
+    analysis->num_primal_cycling_detections++;
+    if (ekk_instance_.iteration_count_ ==
+        ekk_instance_.previous_iteration_cycling_detected + 1) {
+      // Cycling detected on successive iterations suggests infinite cycling
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+                  "Cycling in primal simplex: rebuild\n");
+      rebuild_reason = kRebuildReasonCycling;
+    } else {
+      ekk_instance_.previous_iteration_cycling_detected =
+          ekk_instance_.iteration_count_;
+    }
+    //    printf("Cycling_detected: solve %d\n",
+    //           (int)ekk_instance_.debug_solve_call_num_);
+    //  assert(1 == 0);
+  }
+
   // Now set the value of the entering variable
   info.baseValue_[row_out] = value_in;
   // Consider whether the entering value is feasible and, if not, take

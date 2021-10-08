@@ -162,6 +162,9 @@ HighsInt HEkkDualRow::chooseFinal() {
     analysis->num_quad_chuzc++;
   } else {
     analysis->num_heap_chuzc++;
+    analysis->sum_heap_chuzc_size += workCount;
+    analysis->max_heap_chuzc_size =
+        max(workCount, analysis->max_heap_chuzc_size);
   }
 
   if (use_heap_sort) {
