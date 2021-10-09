@@ -236,6 +236,11 @@ class RbTree {
     if (x != -1) makeBlack(x);
   }
 
+ public:
+  RbTree(HighsInt& rootNode) : rootNode(rootNode) {}
+
+  bool empty() const { return rootNode == -1; }
+
   HighsInt first(HighsInt x) const {
     if (x == -1) return -1;
 
@@ -255,9 +260,6 @@ class RbTree {
       x = rX;
     }
   }
-
- public:
-  RbTree(HighsInt& rootNode) : rootNode(rootNode) {}
 
   HighsInt first() const { return first(rootNode); }
 
@@ -289,9 +291,9 @@ class RbTree {
     return y;
   }
 
-  std::pair<HighsInt, bool> find(const KeyType& key) {
+  std::pair<HighsInt, bool> find(const KeyType& key, HighsInt treeRoot) {
     HighsInt y = -1;
-    HighsInt x = rootNode;
+    HighsInt x = treeRoot;
     while (x != -1) {
       HighsInt cmp = 1 - (getKey(x) < key) + (key < getKey(x));
       switch (cmp) {
@@ -308,6 +310,10 @@ class RbTree {
     }
 
     return std::make_pair(y, false);
+  }
+
+  std::pair<HighsInt, bool> find(const KeyType& key) {
+    return find(key, rootNode);
   }
 
   void link(HighsInt z, HighsInt parent) {
@@ -328,7 +334,7 @@ class RbTree {
     HighsInt x = rootNode;
     while (x != -1) {
       y = x;
-      x = getChild(y, getKey(x) < getKey(z));
+      x = getChild(y, Dir(getKey(x) < getKey(z)));
     }
 
     link(z, y);
