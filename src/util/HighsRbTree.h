@@ -337,7 +337,7 @@ class RbTree {
       x = getChild(y, Dir(getKey(x) < getKey(z)));
     }
 
-    link(z, y);
+    static_cast<Impl*>(this)->link(z, y);
   }
 
   void unlink(HighsInt z) {
@@ -375,6 +375,34 @@ class RbTree {
     }
 
     if (yWasBlack) deleteFixup(x, nilParent);
+  }
+};
+
+template <typename Impl>
+class CacheMinRbTree : public RbTree<Impl> {
+  HighsInt& first_;
+
+ public:
+  CacheMinRbTree(HighsInt& rootNode, HighsInt& first)
+      : RbTree<Impl>(rootNode), first_(first) {}
+
+  HighsInt first() const { return first_; };
+  using RbTree<Impl>::first;
+
+  void link(HighsInt z, HighsInt parent) {
+    if (first_ == parent) {
+      if (parent == -1 || static_cast<const Impl*>(this)->getKey(z) <
+                              static_cast<const Impl*>(this)->getKey(parent))
+        first_ = z;
+    }
+
+    RbTree<Impl>::link(z, parent);
+  }
+  using RbTree<Impl>::link;
+
+  void unlink(HighsInt z) {
+    if (z == first_) first_ = this->successor(first_);
+    RbTree<Impl>::unlink(z);
   }
 };
 
