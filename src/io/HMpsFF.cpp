@@ -359,6 +359,24 @@ HMpsFF::Parsekey HMpsFF::parseDefault(std::ifstream& file) {
       }
       return HMpsFF::Parsekey::kNone;
     }
+
+    if (key == HMpsFF::Parsekey::kObjsense) {
+      // Look for Gurobi-style definition of MAX/MIN on OBJSENSE line
+      if (e < (HighsInt)strline.length()) {
+        std::string sense = first_word(strline, e);
+        if (sense.compare("MAX") == 0) {
+          // Found MAX sense on OBJSENSE line
+          objSense = ObjSense::kMaximize;
+        } else if (sense.compare("MIN") == 0) {
+          // Found MIN sense on OBJSENSE line
+          objSense = ObjSense::kMinimize;
+        }
+        // Don't return HMpsFF::Parsekey::kNone; in case there's a
+        // redefinition of OBJSENSE on the "proper" line. If there's
+        // no such line, the ROWS keyword is read OK
+      }
+    }
+
     return key;
   }
   return HMpsFF::Parsekey::kFail;
