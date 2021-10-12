@@ -1386,10 +1386,10 @@ restart:
   }
 }
 
-bool HighsMipSolverData::checkLimits() const {
+bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != kHighsIInf &&
-      num_nodes >= options.mip_max_nodes) {
+      num_nodes + nodeOffset >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached node limit\n");

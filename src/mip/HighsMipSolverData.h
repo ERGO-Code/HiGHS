@@ -158,7 +158,7 @@ struct HighsMipSolverData {
     rowvals = ARvalue_.data() + start;
   }
 
-  bool checkLimits() const;
+  bool checkLimits(int64_t nodeOffset = 0) const;
 };
 
 #endif
