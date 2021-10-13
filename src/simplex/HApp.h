@@ -254,7 +254,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
           options.simplex_unscaled_solution_strategy ==
               kSimplexUnscaledSolutionStrategyRefine &&
           (scaled_optimality_but_unscaled_infeasibilities ||
-           scaled_model_status == HighsModelStatus::kInfeasible ||
+           (scaled_model_status == HighsModelStatus::kInfeasible &&
+            ekk_instance.simplex_in_scaled_space_) ||
            scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
            scaled_model_status == HighsModelStatus::kUnbounded ||
            scaled_model_status == HighsModelStatus::kObjectiveBound ||

@@ -1037,13 +1037,19 @@ void HEkkDual::solvePhase2() {
                   "problem-primal-infeasible\n");
       model_status = HighsModelStatus::kInfeasible;
 
-      if( ekk_instance_.info_.costs_perturbed || ekk_instance_.info_.costs_shifted )
-      {
+      if (ekk_instance_.info_.costs_perturbed ||
+          ekk_instance_.info_.costs_shifted) {
         // todo, prevents assertion failure but is probably not necessary?
         ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseExit,
-                                    false);
+                                     false);
         ekk_instance_.computeDual();
       }
+
+      // todo: I call unscale simplex so that
+      // ekk_instance_simplex_in_scaled_space_ is false so that the HApp code
+      // knows that it does not need to call the simplex again in the unscaled
+      // space to determine infeasibility. Probably this should be cleaned up.
+      ekk_instance_.unscaleSimplex(ekk_instance_.lp_);
     } else {
       // assert(false);
       // if(ekk_instance_.ha)

@@ -3422,7 +3422,9 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // Primal simplex has identified primal infeasibility in phase 1, or
       // dual simplex has identified dual unboundedness in phase 2. In
       // both cases there should be no primal or dual perturbations
-      assert(!info_.costs_perturbed && !info_.bounds_perturbed);
+      assert(!info_.costs_perturbed &&
+             !info_.bounds_perturbed);  // todo: with the new code in dual phase
+                                        // 2 there may be perturbations
       if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
         // phase 1
