@@ -60,7 +60,6 @@ class HEkk {
   void moveLp(HighsLpSolverObject& solver_object);
   void setPointers(HighsOptions* options, HighsTimer* timer);
   HighsSparseMatrix* getScaledAMatrixPointer();
-  HighsScale* getScalePointer();
 
   void initialiseEkk();
   HighsStatus dualise();

@@ -19,6 +19,8 @@
 #include <cassert>
 #include <cmath>
 
+#include "mip/HighsSparseVectorSum.h"
+#include "util/HighsCDouble.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
@@ -974,6 +976,41 @@ void HighsSparseMatrix::product(vector<double>& result,
            iEl++)
         result[iRow] += row[this->index_[iEl]] * this->value_[iEl];
     }
+  }
+}
+
+void HighsSparseMatrix::productTran(vector<double>& result,
+                                    vector<HighsInt>& index,
+                                    const HVector& rowWeights) const {
+  if (this->isColwise()) {
+    result.reserve(num_col_);
+    index.reserve(num_col_);
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      HighsCDouble colSum = 0.0;
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        colSum += rowWeights.array[this->index_[iEl]] * this->value_[iEl];
+
+      if (abs(colSum) - kHighsTiny > 0.0) {
+        result.push_back(double(colSum));
+        index.push_back(iCol);
+      }
+    }
+  } else {
+    HighsSparseVectorSum sum(num_col_);
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      double scale = rowWeights.array[iRow];
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
+        sum.add(this->index_[iEl], scale * this->value_[iEl]);
+    }
+
+    sum.cleanup([](HighsInt, double x) { return std::abs(x) <= kHighsTiny; });
+    index = std::move(sum.nonzeroinds);
+    HighsInt numNz = index.size();
+    result.reserve(numNz);
+    for (HighsInt i = 0; i < numNz; ++i)
+      result.push_back(sum.getValue(index[i]));
   }
 }
 

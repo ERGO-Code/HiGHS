@@ -25,6 +25,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsCDouble.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -943,22 +944,90 @@ void HEkkDual::solvePhase2() {
     // There is no candidate in CHUZC, so probably dual unbounded
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-unbounded\n");
-    if (ekk_instance_.info_.costs_perturbed) {
-      // If the costs have been perturbed, clean up and return
-      cleanup();
-    } else if (ekk_instance_.info_.costs_shifted) {
-      // Costs have been shifted to ensure dual feasibility, so
-      // consider performing primal simplex iterations to get dual
-      // feasibility
-      //
-      // First remove any shifts and recompute the dual values
-      ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
-                                   false);
-      ekk_instance_.computeDual();
-      solve_phase = kSolvePhasePrimalInfeasibleCleanup;
+    ekk_instance_.lp_.unapplyScale();
+
+    HighsCDouble proofLower = 0.0;
+    if (row_ep.count > solver_num_row) {
+      // row_ep nonzeros not known
+      for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
+        if (row_ep.array[iRow] == 0.0) continue;
+
+        // scale the unbounded ray for original LP
+        row_ep.array[iRow] *= move_out;
+        if (ekk_instance_.simplex_in_scaled_space_)
+          row_ep.array[iRow] *= ekk_instance_.lp_.scale_.row[iRow];
+
+        // make sure infinite sides are not used
+        if (highs_isInfinity(-ekk_instance_.lp_.row_lower_[iRow]))
+          row_ep.array[iRow] = std::min(row_ep.array[iRow], 0.0);
+        if (highs_isInfinity(ekk_instance_.lp_.row_upper_[iRow]))
+          row_ep.array[iRow] = std::max(row_ep.array[iRow], 0.0);
+
+        // add up lower bound of proof constraint
+        if (row_ep.array[iRow] != 0.0) {
+          if (row_ep.array[iRow] > 0)
+            proofLower +=
+                row_ep.array[iRow] * ekk_instance_.lp_.row_lower_[iRow];
+          else
+            proofLower +=
+                row_ep.array[iRow] * ekk_instance_.lp_.row_upper_[iRow];
+        }
+      }
     } else {
-      // The costs have not been perturbed, so dual unbounded---and
-      // hence primal infeasible.
+      // row_ep nonzeros are known
+      for (HighsInt iX = 0; iX < row_ep.count; iX++) {
+        HighsInt iRow = row_ep.index[iX];
+
+        // scale the unbounded ray for original LP
+        row_ep.array[iRow] *= move_out;
+        if (ekk_instance_.simplex_in_scaled_space_)
+          row_ep.array[iRow] *= ekk_instance_.lp_.scale_.row[iRow];
+
+        // make sure infinite sides are not used
+        if (highs_isInfinity(-ekk_instance_.lp_.row_lower_[iRow]))
+          row_ep.array[iRow] = std::min(row_ep.array[iRow], 0.0);
+        if (highs_isInfinity(ekk_instance_.lp_.row_upper_[iRow]))
+          row_ep.array[iRow] = std::max(row_ep.array[iRow], 0.0);
+
+        // add up lower bound of proof constraint
+        if (row_ep.array[iRow] != 0.0) {
+          if (row_ep.array[iRow] > 0)
+            proofLower +=
+                row_ep.array[iRow] * ekk_instance_.lp_.row_lower_[iRow];
+          else
+            proofLower +=
+                row_ep.array[iRow] * ekk_instance_.lp_.row_upper_[iRow];
+        }
+      }
+    }
+
+    std::vector<HighsInt> proofInds;
+    std::vector<double> proofVals;
+    ekk_instance_.lp_.a_matrix_.productTran(proofVals, proofInds, row_ep);
+
+    HighsInt numProofNz = proofInds.size();
+
+    HighsCDouble impliedUpper = 0.0;
+    bool isInf = false;
+    for (HighsInt i = 0; i < numProofNz; ++i) {
+      if (proofVals[i] > 0) {
+        if (highs_isInfinity(ekk_instance_.lp_.col_upper_[proofInds[i]])) {
+          isInf = true;
+          break;
+        }
+        impliedUpper +=
+            proofVals[i] * ekk_instance_.lp_.col_upper_[proofInds[i]];
+      } else {
+        if (highs_isInfinity(-ekk_instance_.lp_.col_lower_[proofInds[i]])) {
+          isInf = true;
+          break;
+        }
+        impliedUpper +=
+            proofVals[i] * ekk_instance_.lp_.col_lower_[proofInds[i]];
+      }
+    }
+
+    if (!isInf && proofLower - impliedUpper > primal_feasibility_tolerance) {
       solve_phase = kSolvePhaseExit;
       // Dual feasible and dual unbounded, so save dual ray
       saveDualRay();
@@ -967,6 +1036,46 @@ void HEkkDual::solvePhase2() {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "problem-primal-infeasible\n");
       model_status = HighsModelStatus::kInfeasible;
+
+      if( ekk_instance_.info_.costs_perturbed || ekk_instance_.info_.costs_shifted )
+      {
+        // todo, prevents assertion failure but is probably not necessary?
+        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseExit,
+                                    false);
+        ekk_instance_.computeDual();
+      }
+    } else {
+      // assert(false);
+      // if(ekk_instance_.ha)
+      // row_ep.;
+      // ekk_instance_.
+      // std::vector<HighsInt> proofValues;
+
+      if (ekk_instance_.info_.costs_perturbed) {
+        // If the costs have been perturbed, clean up and return
+        cleanup();
+      } else if (ekk_instance_.info_.costs_shifted) {
+        // Costs have been shifted to ensure dual feasibility, so
+        // consider performing primal simplex iterations to get dual
+        // feasibility
+        //
+        // First remove any shifts and recompute the dual values
+        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
+                                     false);
+        ekk_instance_.computeDual();
+        solve_phase = kSolvePhasePrimalInfeasibleCleanup;
+      } else {
+        // The costs have not been perturbed, so dual unbounded---and
+        // hence primal infeasible.
+        solve_phase = kSolvePhaseExit;
+        // Dual feasible and dual unbounded, so save dual ray
+        saveDualRay();
+        // Model status should be unset?
+        assert(model_status == HighsModelStatus::kNotset);
+        highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                    "problem-primal-infeasible\n");
+        model_status = HighsModelStatus::kInfeasible;
+      }
     }
   }
   // Before primal simplex clean-up there will be dual infeasibilities
