@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #include "symbolic_invert.h"
 #include <algorithm>
 #include <cassert>
