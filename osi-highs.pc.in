@@ -1,6 +1,6 @@
 prefix=@CMAKE_INSTALL_PREFIX@
-libdir=@CMAKE_INSTALL_PREFIX@/lib
-includedir=@CMAKE_INSTALL_PREFIX@/include
+libdir=${prefix}/lib
+includedir=${prefix}/include
 
 Name: OsiHiGHS
 Description: COIN-OR Open Solver Interface for HiGHS
