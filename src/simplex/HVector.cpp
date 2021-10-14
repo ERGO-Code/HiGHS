@@ -13,6 +13,11 @@
 /**@file simplex/HVector.cpp
  * @brief
  */
+
+#if 0
+
+// todo these implementations are not needed as they are already located in HVectorBase.h
+
 #include "simplex/HVector.h"
 
 #include <cassert>
@@ -170,3 +175,5 @@ bool HVector::isEqual(HVector& v0) {
   if (this->synthetic_tick != v0.synthetic_tick) return false;
   return true;
 }
+
+#endif

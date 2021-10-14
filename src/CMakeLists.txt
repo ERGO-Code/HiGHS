@@ -165,7 +165,6 @@ set(sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    simplex/HVector.cpp
     test/DevKkt.cpp
     test/KktCh2.cpp
     util/HighsHash.cpp
@@ -258,6 +257,7 @@ set(headers
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
     simplex/HVector.h
+    simplex/HVectorBase.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -587,7 +587,6 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    simplex/HVector.cpp
     test/KktCh2.cpp
     test/DevKkt.cpp
     util/HighsHash.cpp
@@ -694,6 +693,7 @@ set(headers_fast_build_
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
     simplex/HVector.h
+    simplex/HVectorBase.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h

@@ -16,6 +16,7 @@
 #include <cassert>
 
 #include "simplex/HFactor.h"
+#include "simplex/HVectorBase.h"
 
 using std::fabs;
 

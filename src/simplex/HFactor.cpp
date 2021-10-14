@@ -23,6 +23,7 @@
 #include "simplex/FactorTimer.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HVector.h"
+#include "simplex/HVectorBase.h"
 #include "util/HighsTimer.h"
 
 // std::vector, std::max and std::min used in HFactor.h for local

@@ -22,6 +22,7 @@
 #include "lp_data/HStruct.h"  //For  HighsScale
 #include "lp_data/HighsStatus.h"
 #include "simplex/HVector.h"
+#include "simplex/HVectorBase.h"
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "util/HighsUtils.h"
 
