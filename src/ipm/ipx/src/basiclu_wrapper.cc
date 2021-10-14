@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #include "basiclu_wrapper.h"
 #include <cassert>
 #include <cmath>
