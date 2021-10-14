@@ -53,6 +53,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
+HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options);
+
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
                              const HighsScale& scale);
 

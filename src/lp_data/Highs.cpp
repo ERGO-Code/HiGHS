@@ -258,6 +258,11 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Check validity of any integrality
+  return_status = interpretCallStatus(assessIntegrality(lp, options_),
+                                      return_status, "assessIntegrality");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");

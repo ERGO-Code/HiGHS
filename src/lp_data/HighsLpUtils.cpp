@@ -397,6 +397,58 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
+HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
+  const double kMaxSemiVariableUpper = 1e6;
+  HighsStatus return_status = HighsStatus::kOk;
+  if (!lp.integrality_.size()) return return_status;
+  assert(lp.integrality_.size() == lp.num_col_);
+  HighsInt num_illegal_upper = 0;
+  HighsInt num_non_semi = 0;
+  HighsInt num_non_continuous_variables = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+	lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      num_non_continuous_variables++;
+      // Semi-variables with zero lower bound aren't semi
+      if (lp.col_upper_[iCol] == 0) {
+	num_non_semi++;
+	if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+	  // Semi-continuous become continuous
+	  lp.integrality_[iCol] = HighsVarType::kContinuous;
+	  num_non_continuous_variables--;
+	} else {
+	  // Semi-integer become integer
+	  lp.integrality_[iCol] = HighsVarType::kInteger;
+	}
+      }
+      // Semi-variables must have upper bound that's not too large
+      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
+    } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+      num_non_continuous_variables++;
+    }
+  }
+  if (!num_non_continuous_variables) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-integer/integer variables in model with non-empty integrality\n");
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_non_semi) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) with zero lower bound so are continuous/integer\n",
+                 num_illegal_upper);
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_illegal_upper) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) with upper bounds exceeding %12g\n",
+                 num_illegal_upper, kMaxSemiVariableUpper);
+    return_status = HighsStatus::kError;
+  }
+  return return_status;
+}
+
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   double max_residual = 0;
   HighsInt num_change = 0;
