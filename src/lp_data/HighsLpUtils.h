@@ -281,4 +281,7 @@ HighsStatus setFormat(
     HighsLp& lp, const MatrixFormat desired_format = MatrixFormat::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
+
+HighsLp withoutSemiVariables(const HighsLp& lp);
+
 #endif  // LP_DATA_HIGHSLPUTILS_H_

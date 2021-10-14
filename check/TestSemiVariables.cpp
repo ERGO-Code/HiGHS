@@ -26,6 +26,7 @@ TEST_CASE("semi-continuous", "[highs_test_semi_variables]") {
 
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 }
 
 HighsLp baseLp() {

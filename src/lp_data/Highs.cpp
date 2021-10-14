@@ -2424,9 +2424,18 @@ HighsStatus Highs::callSolveMip() {
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
   assert(model_.lp_.format_ != MatrixFormat::kRowwise);
-  HighsMipSolver solver(options_, model_.lp_, solution_);
+  const bool has_semi_variables = model_.lp_.hasSemiVariables();
+  HighsLp use_lp;
+  if (has_semi_variables) {
+    use_lp = withoutSemiVariables(model_.lp_);
+  }
+  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  HighsMipSolver solver(options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
+  if (has_semi_variables) {
+    assert(1==0);
+  }
   HighsStatus call_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");

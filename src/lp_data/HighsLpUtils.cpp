@@ -2569,3 +2569,86 @@ void ensureRowWise(HighsLp& lp) {
   assert((HighsInt)lp.a_value_.size() >= num_nz);
   lp.format_ = MatrixFormat::kRowwise;
 }
+
+HighsLp withoutSemiVariables(const HighsLp& lp_) {
+  HighsLp lp = lp_;
+  HighsInt num_col = lp.num_col_;
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_semi_variables = 0;
+  for (HighsInt iCol=0; iCol<num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+	lp.integrality_[iCol] == HighsVarType::kSemiInteger) num_semi_variables++;
+  }
+  assert(num_semi_variables);
+  // Insert spaces for index/value of new coefficients for
+  // semi-variables
+  vector<HighsInt>& start = lp.a_start_;
+  vector<HighsInt>& index = lp.a_index_;
+  vector<double>& value = lp.a_value_;
+  HighsInt num_nz = start[num_col];
+  HighsInt new_num_nz = num_nz + 2 * num_semi_variables;
+  HighsInt new_el = new_num_nz;
+  index.resize(new_num_nz);
+  value.resize(new_num_nz);
+  for (HighsInt iCol=num_col-1; iCol>=0; iCol--) {
+    HighsInt from_el = start[iCol+1]-1;
+    start[iCol+1] = new_el;
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+	lp.integrality_[iCol] == HighsVarType::kSemiInteger) new_el -= 2;
+    for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
+      new_el--;
+      index[new_el] = index[iEl];
+      value[new_el] = value[iEl];
+    }
+  }
+  assert(new_el==0);
+  // Insert the new coefficients for semi-variables
+  HighsInt row_num = num_row;
+  for (HighsInt iCol=0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+	lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      HighsInt iEl = start[iCol+1] - 2;    
+      index[iEl] = row_num++;
+      value[iEl] = 1;
+      iEl++;
+      index[iEl] = row_num++;
+      value[iEl] = 1;
+    }
+  }
+  num_nz = start[num_col];
+  new_num_nz = num_nz + 2 * num_semi_variables;
+  row_num = num_row;
+  // Insert the new variables and their coefficients
+  for (HighsInt iCol=0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+	lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      // Add a binary variable with zero cost
+      lp.col_cost_.push_back(0);
+      lp.col_lower_.push_back(0);
+      lp.col_upper_.push_back(1);
+      // Complete x - l*y >= 0
+      lp.row_lower_.push_back(0);
+      lp.row_upper_.push_back(kHighsInf);
+      index.push_back(row_num++);
+      value.push_back(-lp.col_lower_[iCol]);
+      // Complete 0 <= x - u*y 
+      lp.row_lower_.push_back(-kHighsInf);
+      lp.row_upper_.push_back(0);
+      index.push_back(row_num++);
+      value.push_back(-lp.col_upper_[iCol]);
+      // Add the next start
+      start.push_back(index.size());
+      lp.integrality_.push_back(HighsVarType::kInteger);
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+	lp.integrality_[iCol] = HighsVarType::kContinuous;
+      } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+	lp.integrality_[iCol] = HighsVarType::kInteger;
+      }
+    }
+  }
+  num_col += num_semi_variables;
+  lp.num_col_ += num_semi_variables;
+  lp.num_row_ += 2 * num_semi_variables;
+  assert(index.size() == new_num_nz);
+  return lp;
+}
