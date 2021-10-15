@@ -33,7 +33,8 @@ bool HighsLp::hasSemiVariables() const {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] == HighsVarType::kSemiContinuous ||
-	  this->integrality_[iCol] == HighsVarType::kSemiInteger) return true;
+          this->integrality_[iCol] == HighsVarType::kSemiInteger)
+        return true;
   }
   return false;
 }

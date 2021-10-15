@@ -407,19 +407,19 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   HighsInt num_non_continuous_variables = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-	lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
       num_non_continuous_variables++;
       // Semi-variables with zero lower bound aren't semi
       if (lp.col_upper_[iCol] == 0) {
-	num_non_semi++;
-	if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
-	  // Semi-continuous become continuous
-	  lp.integrality_[iCol] = HighsVarType::kContinuous;
-	  num_non_continuous_variables--;
-	} else {
-	  // Semi-integer become integer
-	  lp.integrality_[iCol] = HighsVarType::kInteger;
-	}
+        num_non_semi++;
+        if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+          // Semi-continuous become continuous
+          lp.integrality_[iCol] = HighsVarType::kContinuous;
+          num_non_continuous_variables--;
+        } else {
+          // Semi-integer become integer
+          lp.integrality_[iCol] = HighsVarType::kInteger;
+        }
       }
       // Semi-variables must have upper bound that's not too large
       if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
@@ -429,20 +429,23 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   }
   if (!num_non_continuous_variables) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "No semi-integer/integer variables in model with non-empty integrality\n");
+                 "No semi-integer/integer variables in model with non-empty "
+                 "integrality\n");
     return_status = HighsStatus::kWarning;
   }
   if (num_non_semi) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) with zero lower bound so are continuous/integer\n",
+                 " semi-continuous/integer variable(s) with zero lower bound "
+                 "so are continuous/integer\n",
                  num_illegal_upper);
     return_status = HighsStatus::kWarning;
   }
   if (num_illegal_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) with upper bounds exceeding %12g\n",
+                 " semi-continuous/integer variable(s) with upper bounds "
+                 "exceeding %12g\n",
                  num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
   }
@@ -2575,9 +2578,10 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   HighsInt num_col = lp.num_col_;
   HighsInt num_row = lp.num_row_;
   HighsInt num_semi_variables = 0;
-  for (HighsInt iCol=0; iCol<num_col; iCol++) {
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-	lp.integrality_[iCol] == HighsVarType::kSemiInteger) num_semi_variables++;
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+      num_semi_variables++;
   }
   assert(num_semi_variables);
   // Insert spaces for index/value of new coefficients for
@@ -2590,24 +2594,25 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   HighsInt new_el = new_num_nz;
   index.resize(new_num_nz);
   value.resize(new_num_nz);
-  for (HighsInt iCol=num_col-1; iCol>=0; iCol--) {
-    HighsInt from_el = start[iCol+1]-1;
-    start[iCol+1] = new_el;
+  for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
+    HighsInt from_el = start[iCol + 1] - 1;
+    start[iCol + 1] = new_el;
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-	lp.integrality_[iCol] == HighsVarType::kSemiInteger) new_el -= 2;
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+      new_el -= 2;
     for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
       new_el--;
       index[new_el] = index[iEl];
       value[new_el] = value[iEl];
     }
   }
-  assert(new_el==0);
+  assert(new_el == 0);
   // Insert the new coefficients for semi-variables
   HighsInt row_num = num_row;
-  for (HighsInt iCol=0; iCol < num_col; iCol++) {
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-	lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-      HighsInt iEl = start[iCol+1] - 2;    
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      HighsInt iEl = start[iCol + 1] - 2;
       index[iEl] = row_num++;
       value[iEl] = 1;
       iEl++;
@@ -2619,9 +2624,9 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   new_num_nz = num_nz + 2 * num_semi_variables;
   row_num = num_row;
   // Insert the new variables and their coefficients
-  for (HighsInt iCol=0; iCol < num_col; iCol++) {
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-	lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
       // Add a binary variable with zero cost
       lp.col_cost_.push_back(0);
       lp.col_lower_.push_back(0);
@@ -2631,7 +2636,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       lp.row_upper_.push_back(kHighsInf);
       index.push_back(row_num++);
       value.push_back(-lp.col_lower_[iCol]);
-      // Complete 0 <= x - u*y 
+      // Complete 0 <= x - u*y
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
       index.push_back(row_num++);
@@ -2640,14 +2645,14 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       start.push_back(index.size());
       lp.integrality_.push_back(HighsVarType::kInteger);
       if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
-	lp.integrality_[iCol] = HighsVarType::kContinuous;
+        lp.integrality_[iCol] = HighsVarType::kContinuous;
       } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-	lp.integrality_[iCol] = HighsVarType::kInteger;
+        lp.integrality_[iCol] = HighsVarType::kInteger;
       }
       // Change the lower bound to on the semi-variable to
       // zero. Cannot do this earlier, as its original value is used
       // in constraint 0 <= x-l*y
-      lp.col_lower_[iCol] = 0;      
+      lp.col_lower_[iCol] = 0;
     }
   }
   num_col += num_semi_variables;

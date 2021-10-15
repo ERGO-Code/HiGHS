@@ -34,38 +34,41 @@ TEST_CASE("semi-continuous", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", true);
   optimal_objective_function_value = 6.83333;
-  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
   // Remove the semi-condition and resolve
   highs.changeColIntegrality(semi_col, continuous);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", true);
   optimal_objective_function_value = 3.93333;
-  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
-  
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+
   // Restore the semi-condition, change the cost and resolve
   highs.changeColIntegrality(semi_col, semi_continuous);
   highs.changeColCost(semi_col, -0.1);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", true);
   optimal_objective_function_value = 8.22333;
-  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
-  
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+
   // Fix the variable at zero and resolve
   highs.changeColBounds(semi_col, 0, 0);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", true);
   optimal_objective_function_value = 6.83333;
-  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
-  
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+
   // Change to sem-integer, restore the bounds and resolve
   highs.changeColIntegrality(semi_col, semi_integer);
   highs.changeColBounds(semi_col, save_semi_col_lower, save_semi_col_upper);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", true);
   optimal_objective_function_value = 8.13333;
-  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
-  
-
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
 }
 
 HighsLp baseLp() {
@@ -78,7 +81,7 @@ HighsLp baseLp() {
   lp.row_lower_ = {-inf, 0, 0, 0.5};
   lp.row_upper_ = {5, inf, inf, inf};
   lp.a_start_ = {0, 3, 6, 7, 8};
-  lp.a_index_ = {0, 1,  2, 0,  1, 2, 3, 3};
+  lp.a_index_ = {0, 1, 2, 0, 1, 2, 3, 3};
   lp.a_value_ = {1, 2, -1, 1, -1, 3, 1, 1};
   lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMaximize;
