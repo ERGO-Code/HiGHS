@@ -36,11 +36,17 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     lp.num_col_ = m.variables.size();
     lp.num_row_ = m.constraints.size();
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
       lp.col_lower_.push_back(m.variables[i]->lowerbound);
       lp.col_upper_.push_back(m.variables[i]->upperbound);
       lp.col_names_.push_back(m.variables[i]->name);
+      if (m.variables[i]->type == VariableType::BINARY || m.variables[i]->type == VariableType::GENERAL) {
+        lp.integrality_[i] = HighsVarType::kInteger;
+      } else {
+        lp.integrality_[i] = HighsVarType::kContinuous;
+      }
     }
 
     // get objective
