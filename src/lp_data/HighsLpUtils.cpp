@@ -421,8 +421,11 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
           lp.integrality_[iCol] = HighsVarType::kInteger;
         }
       }
-      // Semi-variables must have upper bound that's not too large
-      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
+      // Semi-variables must have upper bound that's not too large,
+      // unless the lower bound is zero, in which case the variable is
+      // standard continuous or integer
+      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper && lp.col_lower_[iCol])
+        num_illegal_upper++;
     } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
       num_non_continuous_variables++;
     }
@@ -2623,7 +2626,10 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   num_nz = start[num_col];
   new_num_nz = num_nz + 2 * num_semi_variables;
   row_num = num_row;
+  HighsInt semi_col_num = 0;
+  HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
+  std::stringstream ss;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -2634,11 +2640,23 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       // Complete x - l*y >= 0
       lp.row_lower_.push_back(0);
       lp.row_upper_.push_back(kHighsInf);
+      // Create a column name
+      ss.str(std::string());
+      ss << "semi_binary_" << semi_col_num++;
+      lp.col_names_.push_back(ss.str());
+      // Create a row name
+      ss.str(std::string());
+      ss << "semi_lb_" << semi_row_num;
+      lp.row_names_.push_back(ss.str());
       index.push_back(row_num++);
       value.push_back(-lp.col_lower_[iCol]);
       // Complete 0 <= x - u*y
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
+      // Create a row name
+      ss.str(std::string());
+      ss << "semi_ub_" << semi_row_num++;
+      lp.row_names_.push_back(ss.str());
       index.push_back(row_num++);
       value.push_back(-lp.col_upper_[iCol]);
       // Add the next start
