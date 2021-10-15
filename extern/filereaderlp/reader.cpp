@@ -900,6 +900,7 @@ void Reader::readnexttoken(bool& done) {
          return;
 
       // check for line end
+      case ';':
       case '\n':
          this->linebufferrefill = true;
          return;
