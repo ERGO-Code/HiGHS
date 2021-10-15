@@ -8,7 +8,7 @@ const double double_equal_tolerance = 1e-5;
 
 HighsLp baseLp();
 
-TEST_CASE("semi-continuous", "[highs_test_semi_variables]") {
+TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   HighsStatus return_status;
@@ -67,6 +67,41 @@ TEST_CASE("semi-continuous", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", true);
   optimal_objective_function_value = 8.13333;
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+}
+
+TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  double optimal_objective_function_value;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  std::string model = "";
+  std::string model_file;
+  // Solve the same semi-continuous model from MPS and .lp files
+  model = "semi-continuous";
+  optimal_objective_function_value = 8.22333;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+  // Solve the same semi-integer model from MPS and .lp files
+  model = "semi-integer";
+  optimal_objective_function_value = 8.13333;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 }
