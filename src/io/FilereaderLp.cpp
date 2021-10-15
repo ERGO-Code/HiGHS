@@ -44,6 +44,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       lp.col_names_.push_back(m.variables[i]->name);
       if (m.variables[i]->type == VariableType::BINARY || m.variables[i]->type == VariableType::GENERAL) {
         lp.integrality_[i] = HighsVarType::kInteger;
+      } else if (m.variables[i]->type == VariableType::SEMICONTINUOUS) {
+        lp.integrality_[i] = HighsVarType::kSemiContinuous;
       } else {
         lp.integrality_[i] = HighsVarType::kContinuous;
       }
