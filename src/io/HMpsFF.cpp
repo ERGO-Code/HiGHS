@@ -49,7 +49,15 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.row_names_ = std::move(rowNames);
   lp.col_names_ = std::move(colNames);
 
-  lp.integrality_ = std::move(col_integrality);
+  // Only set up lp.integrality_ if non-continuous
+  bool is_mip = false;
+  for (HighsInt iCol = 0; iCol < (int)col_integrality.size(); iCol++) {
+    if (col_integrality[iCol] != HighsVarType::kContinuous) {
+      is_mip = true;
+      break;
+    }
+  }
+  if (is_mip) lp.integrality_ = std::move(col_integrality);
 
   hessian.dim_ = q_dim;
   hessian.format_ = HessianFormat::kTriangular;
