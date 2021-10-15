@@ -2433,9 +2433,6 @@ HighsStatus Highs::callSolveMip() {
   HighsMipSolver solver(options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
-  if (has_semi_variables) {
-    assert(1==0);
-  }
   HighsStatus call_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");
@@ -2445,7 +2442,10 @@ HighsStatus Highs::callSolveMip() {
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= model_.lp_.num_col_);
+    assert(solver_solution_size >= lp.num_col_);
+    // If the original model has semi-variables, its solution is
+    // (still) given by the first model_.lp_.num_col_ entries of the
+    // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.row_value.assign(model_.lp_.num_row_, 0);
     for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++) {

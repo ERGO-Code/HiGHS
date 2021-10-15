@@ -3,30 +3,69 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 HighsLp baseLp();
 
 TEST_CASE("semi-continuous", "[highs_test_semi_variables]") {
   Highs highs;
+  const HighsInfo& info = highs.getInfo();
   HighsStatus return_status;
+  double optimal_objective_function_value;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsModel model;
   HighsLp& lp = model.lp_;
   lp = baseLp();
   const HighsVarType continuous = HighsVarType::kContinuous;
   const HighsVarType semi_continuous = HighsVarType::kSemiContinuous;
+  const HighsVarType semi_integer = HighsVarType::kSemiInteger;
   lp.integrality_ = {continuous, continuous, semi_continuous, continuous};
-  const double save_upper2 = lp.col_upper_[2];
-  lp.col_upper_[2] = inf;
+  const HighsInt semi_col = 2;
+  const double save_semi_col_lower = lp.col_lower_[semi_col];
+  const double save_semi_col_upper = lp.col_upper_[semi_col];
+  lp.col_upper_[semi_col] = inf;
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kError);
-  lp.col_upper_[2] = save_upper2;
+  lp.col_upper_[semi_col] = save_semi_col_upper;
 
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", true);
+  optimal_objective_function_value = 6.83333;
+  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
+  // Remove the semi-condition and resolve
+  highs.changeColIntegrality(semi_col, continuous);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", true);
+  optimal_objective_function_value = 3.93333;
+  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
+  
+  // Restore the semi-condition, change the cost and resolve
+  highs.changeColIntegrality(semi_col, semi_continuous);
+  highs.changeColCost(semi_col, -0.1);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", true);
+  optimal_objective_function_value = 8.22333;
+  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
+  
+  // Fix the variable at zero and resolve
+  highs.changeColBounds(semi_col, 0, 0);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", true);
+  optimal_objective_function_value = 6.83333;
+  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
+  
+  // Change to sem-integer, restore the bounds and resolve
+  highs.changeColIntegrality(semi_col, semi_integer);
+  highs.changeColBounds(semi_col, save_semi_col_lower, save_semi_col_upper);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", true);
+  optimal_objective_function_value = 8.13333;
+  REQUIRE(fabs(info.objective_function_value-optimal_objective_function_value) < double_equal_tolerance);
+  
+
 }
 
 HighsLp baseLp() {

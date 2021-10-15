@@ -2644,6 +2644,10 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
 	lp.integrality_[iCol] = HighsVarType::kInteger;
       }
+      // Change the lower bound to on the semi-variable to
+      // zero. Cannot do this earlier, as its original value is used
+      // in constraint 0 <= x-l*y
+      lp.col_lower_[iCol] = 0;      
     }
   }
   num_col += num_semi_variables;
