@@ -2630,6 +2630,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
+  const bool has_col_names = lp.col_names_.size();
+  const bool has_row_names = lp.row_names_.size();
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -2640,23 +2642,29 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       // Complete x - l*y >= 0
       lp.row_lower_.push_back(0);
       lp.row_upper_.push_back(kHighsInf);
-      // Create a column name
-      ss.str(std::string());
-      ss << "semi_binary_" << semi_col_num++;
-      lp.col_names_.push_back(ss.str());
-      // Create a row name
-      ss.str(std::string());
-      ss << "semi_lb_" << semi_row_num;
-      lp.row_names_.push_back(ss.str());
+      if (has_col_names) {
+        // Create a column name
+        ss.str(std::string());
+        ss << "semi_binary_" << semi_col_num++;
+        lp.col_names_.push_back(ss.str());
+      }
+      if (has_row_names) {
+        // Create a row name
+        ss.str(std::string());
+        ss << "semi_lb_" << semi_row_num;
+        lp.row_names_.push_back(ss.str());
+      }
       index.push_back(row_num++);
       value.push_back(-lp.col_lower_[iCol]);
       // Complete 0 <= x - u*y
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
-      // Create a row name
-      ss.str(std::string());
-      ss << "semi_ub_" << semi_row_num++;
-      lp.row_names_.push_back(ss.str());
+      if (has_row_names) {
+        // Create a row name
+        ss.str(std::string());
+        ss << "semi_ub_" << semi_row_num++;
+        lp.row_names_.push_back(ss.str());
+      }
       index.push_back(row_num++);
       value.push_back(-lp.col_upper_[iCol]);
       // Add the next start
