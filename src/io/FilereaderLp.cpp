@@ -48,6 +48,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
         lp.integrality_[i] = HighsVarType::kInteger;
       } else if (m.variables[i]->type == VariableType::SEMICONTINUOUS) {
         lp.integrality_[i] = HighsVarType::kSemiContinuous;
+      } else if (m.variables[i]->type == VariableType::SEMIINTEGER) {
+        lp.integrality_[i] = HighsVarType::kSemiInteger;
       } else {
         lp.integrality_[i] = HighsVarType::kContinuous;
         num_continuous++;

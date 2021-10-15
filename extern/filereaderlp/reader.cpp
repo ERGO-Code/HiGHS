@@ -523,7 +523,11 @@ void Reader::processgensec() {
       lpassert(sectiontokens[LpSectionKeyword::GEN][i]->type == ProcessedTokenType::VARID);
       std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::GEN][i].get())->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
-      var->type = VariableType::GENERAL;
+      if (var->type == VariableType::SEMICONTINUOUS) {
+	var->type = VariableType::SEMIINTEGER;
+      } else {
+	var->type = VariableType::GENERAL;
+      };
    }
 }
 
@@ -532,7 +536,11 @@ void Reader::processsemisec() {
       lpassert(sectiontokens[LpSectionKeyword::SEMI][i]->type == ProcessedTokenType::VARID);
       std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::SEMI][i].get())->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
-      var->type = VariableType::SEMICONTINUOUS;
+      if (var->type == VariableType::GENERAL) {
+	var->type = VariableType::SEMIINTEGER;
+      } else {
+	var->type = VariableType::SEMICONTINUOUS;
+      };
    }
 }
 

@@ -10,7 +10,8 @@ enum class VariableType {
    CONTINUOUS,
    BINARY,
    GENERAL,
-   SEMICONTINUOUS
+   SEMICONTINUOUS,
+   SEMIINTEGER
 };
 
 enum class ObjectiveSense {
