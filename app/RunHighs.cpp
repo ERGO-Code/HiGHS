@@ -68,18 +68,35 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
   if (read_status == HighsStatus::kError) {
     highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
   } else {
-    HighsInt num_int = 0;
-    for (HighsUInt i = 0; i < lp.integrality_.size(); i++)
-      if (lp.integrality_[i] != HighsVarType::kContinuous) num_int++;
+    HighsInt num_integer = 0;
+    HighsInt num_semi_continuous = 0;
+    HighsInt num_semi_integer = 0;
+    for (HighsUInt i = 0; i < lp.integrality_.size(); i++) {
+      switch (lp.integrality_[i]) {
+        case HighsVarType::kInteger:
+          num_integer++;
+          break;
+        case HighsVarType::kSemiContinuous:
+          num_semi_continuous++;
+          break;
+        case HighsVarType::kSemiInteger:
+          num_semi_integer++;
+          break;
+        default:
+          break;
+      }
+    }
     std::string problem_type;
+    const bool non_continuous =
+        num_integer + num_semi_continuous + num_semi_integer;
     if (hessian.dim_) {
-      if (num_int) {
+      if (non_continuous) {
         problem_type = "MIQP";
       } else {
         problem_type = "QP  ";
       }
     } else {
-      if (num_int) {
+      if (non_continuous) {
         problem_type = "MIP ";
       } else {
         problem_type = "LP  ";
@@ -104,9 +121,15 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
         highsLogDev(log_options, HighsLogType::kInfo,
                     "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
       }
-      if (num_int)
+      if (num_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "Integer  : %" HIGHSINT_FORMAT "\n", num_int);
+                    "Integer  : %" HIGHSINT_FORMAT "\n", num_integer);
+      if (num_semi_continuous)
+        highsLogDev(log_options, HighsLogType::kInfo,
+                    "SemiConts: %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+      if (num_semi_integer)
+        highsLogDev(log_options, HighsLogType::kInfo,
+                    "SemiInt  : %" HIGHSINT_FORMAT "\n", num_semi_integer);
     } else {
       highsLogUser(log_options, HighsLogType::kInfo, "%s",
                    problem_type.c_str());
@@ -125,9 +148,17 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
         highsLogUser(log_options, HighsLogType::kInfo,
                      "; %" HIGHSINT_FORMAT " nonzeros", a_num_nz);
       }
-      if (num_int)
+      if (num_integer)
         highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " integer variables\n", num_int);
+                     "; %" HIGHSINT_FORMAT " integer variables", num_integer);
+      if (num_semi_continuous)
+        highsLogUser(log_options, HighsLogType::kInfo,
+                     "; %" HIGHSINT_FORMAT " semi-continuous variables",
+                     num_semi_continuous);
+      if (num_semi_integer)
+        highsLogUser(log_options, HighsLogType::kInfo,
+                     "; %" HIGHSINT_FORMAT " semi-integer variables",
+                     num_semi_integer);
       highsLogUser(log_options, HighsLogType::kInfo, "\n");
     }
   }

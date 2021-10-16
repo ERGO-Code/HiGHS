@@ -27,6 +27,18 @@ bool HighsLp::isMip() const {
   return false;
 }
 
+bool HighsLp::hasSemiVariables() const {
+  HighsInt integrality_size = this->integrality_.size();
+  if (integrality_size) {
+    assert(integrality_size == this->num_col_);
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+      if (this->integrality_[iCol] == HighsVarType::kSemiContinuous ||
+          this->integrality_[iCol] == HighsVarType::kSemiInteger)
+        return true;
+  }
+  return false;
+}
+
 bool HighsLp::operator==(const HighsLp& lp) {
   bool equal = equalButForNames(lp);
   equal = this->row_names_ == lp.row_names_ && equal;

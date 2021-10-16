@@ -53,6 +53,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
+HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options);
+
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
                              const HighsScale& scale);
 
@@ -279,4 +281,7 @@ HighsStatus setFormat(
     HighsLp& lp, const MatrixFormat desired_format = MatrixFormat::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
+
+HighsLp withoutSemiVariables(const HighsLp& lp);
+
 #endif  // LP_DATA_HIGHSLPUTILS_H_

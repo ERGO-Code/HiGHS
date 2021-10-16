@@ -399,6 +399,8 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
 #endif
   // Load ENDATA and close file
   fclose(file);
+  // If there are no integer variables then clear the integrality vector
+  if (!num_int) integerColumn.clear();
   return FilereaderRetcode::kOk;
 }
 
