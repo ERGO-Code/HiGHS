@@ -402,7 +402,7 @@ if (OSI_FOUND)
     configure_file(${HIGHS_SOURCE_DIR}/osi-highs.pc.in
         "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
     install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc"
-        DESTINATION lib/pkg-config)
+        DESTINATION lib/pkgconfig)
 endif()
 
 
@@ -482,7 +482,7 @@ install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" 
     DESTINATION lib/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
-    DESTINATION lib/pkg-config)
+    DESTINATION lib/pkgconfig)
 
 else() 
 

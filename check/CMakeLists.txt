@@ -37,6 +37,7 @@ set(TEST_SOURCES
     TestQpSolver.cpp
     TestRays.cpp
     TestRanging.cpp
+    TestSemiVariables.cpp
     TestThrow.cpp
     Avgas.cpp)
 

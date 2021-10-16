@@ -83,7 +83,9 @@ enum HighsAnalysisLevel {
 enum class HighsVarType : uint8_t {
   kContinuous = 0,
   kInteger = 1,
-  kImplicitInteger = 2,
+  kSemiContinuous = 2,
+  kSemiInteger = 3,
+  kImplicitInteger = 4,
 };
 
 enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };

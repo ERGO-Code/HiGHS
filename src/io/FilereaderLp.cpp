@@ -36,13 +36,27 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     lp.num_col_ = m.variables.size();
     lp.num_row_ = m.constraints.size();
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+    HighsInt num_continuous = 0;
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
       lp.col_lower_.push_back(m.variables[i]->lowerbound);
       lp.col_upper_.push_back(m.variables[i]->upperbound);
       lp.col_names_.push_back(m.variables[i]->name);
+      if (m.variables[i]->type == VariableType::BINARY ||
+          m.variables[i]->type == VariableType::GENERAL) {
+        lp.integrality_[i] = HighsVarType::kInteger;
+      } else if (m.variables[i]->type == VariableType::SEMICONTINUOUS) {
+        lp.integrality_[i] = HighsVarType::kSemiContinuous;
+      } else if (m.variables[i]->type == VariableType::SEMIINTEGER) {
+        lp.integrality_[i] = HighsVarType::kSemiInteger;
+      } else {
+        lp.integrality_[i] = HighsVarType::kContinuous;
+        num_continuous++;
+      }
     }
-
+    // Clear lp.integrality_ if problem is pure LP
+    if (num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
     if (m.objective->offset) {
       highsLogUser(options.log_options, HighsLogType::kWarning,

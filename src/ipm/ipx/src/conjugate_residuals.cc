@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #include "conjugate_residuals.h"
 #include <algorithm>
 #include <cmath>

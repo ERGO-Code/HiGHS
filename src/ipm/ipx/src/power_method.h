@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #ifndef IPX_POWER_METHOD_H_
 #define IPX_POWER_METHOD_H_
 

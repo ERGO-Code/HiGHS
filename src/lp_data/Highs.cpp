@@ -255,6 +255,12 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Check validity of any integrality
+  return_status =
+      interpretCallStatus(options_.log_options, assessIntegrality(lp, options_),
+                          return_status, "assessIntegrality");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
@@ -2242,9 +2248,15 @@ HighsStatus Highs::callSolveMip() {
   // Run the MIP solver
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
-  // Check that the model is column-wise
-  assert(model_.lp_.a_matrix_.isColwise());
-  HighsMipSolver solver(options_, model_.lp_, solution_);
+  // Check that the model isn't row-wise
+  assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
+  const bool has_semi_variables = model_.lp_.hasSemiVariables();
+  HighsLp use_lp;
+  if (has_semi_variables) {
+    use_lp = withoutSemiVariables(model_.lp_);
+  }
+  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  HighsMipSolver solver(options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
@@ -2256,7 +2268,10 @@ HighsStatus Highs::callSolveMip() {
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= model_.lp_.num_col_);
+    assert(solver_solution_size >= lp.num_col_);
+    // If the original model has semi-variables, its solution is
+    // (still) given by the first model_.lp_.num_col_ entries of the
+    // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
     model_.lp_.a_matrix_.product(solution_.row_value, solution_.col_value);
