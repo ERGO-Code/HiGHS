@@ -24,6 +24,8 @@ if(OpenMP_CXX_FOUND)
     set(OPENMP ON)
 endif()
 
+find_package(Threads REQUIRED)
+
 if(LINUX AND NOT MSVC)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT error)

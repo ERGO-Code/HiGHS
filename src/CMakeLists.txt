@@ -305,6 +305,7 @@ else ()
 endif()
 
 add_library(libhighs ${sources})
+target_link_libraries(libhighs ${CMAKE_THREAD_LIBS_INIT})
 
 if (IPX_ON)
     target_link_libraries(libhighs libipx)
