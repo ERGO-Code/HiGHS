@@ -2608,6 +2608,30 @@ void HEkk::fullBtran(HVector& buffer) {
   analysis_.simplexTimerStop(BtranFullClock);
 }
 
+void HEkk::unitBtranResidual(const HighsInt row_out,
+			     const HVector& row_ep,
+			     vector<HighsCDouble>& row_ep_residual) {
+  HighsLp& lp = this->lp_;
+  double row_ep_residual_norm = 0;
+  row_ep_residual.assign(lp.num_row_, 0);
+  row_ep_residual[row_out] = -1.0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    HighsInt iVar = basis_.basicIndex_[iRow];
+    HighsCDouble residual = row_ep_residual[iRow];
+    if (iVar < lp.num_col_) {
+      for (HighsInt iEl = lp.a_matrix_.start_[iVar];
+	   iEl < lp.a_matrix_.start_[iVar+1]; iEl++) {
+	residual += lp.a_matrix_.value_[iEl] * row_ep.array[lp.a_matrix_.index_[iEl]];
+      }
+    } else {
+      residual += row_ep.array[iVar - lp.num_col_];
+    }
+    row_ep_residual_norm = max((double)residual, row_ep_residual_norm);
+    row_ep_residual[iRow] = residual;
+  }
+  printf("||row_ep_residual|| = %g\n", row_ep_residual_norm);
+}
+
 void HEkk::choosePriceTechnique(const HighsInt price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,
@@ -3771,13 +3795,56 @@ bool HEkk::proofOfPrimalInfeasibility() {
   row_ep.setup(lp.num_row_);
   unitBtran(row_out, row_ep);
   printf("HEkk::proofOfPrimalInfeasibility row_out %d\n", (int)row_out);
-  return proofOfPrimalInfeasibility(row_ep, move_out);
+  return proofOfPrimalInfeasibility(row_ep, move_out, row_out);
 }
 
 bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep,
-                                      const HighsInt move_out) {
+                                      const HighsInt move_out,
+                                      const HighsInt row_out) {
   // To be called from inside HEkkDual
   HighsLp& lp = this->lp_;
+  const bool use_row_wise_matrix = status_.has_ar_matrix;
+  const bool use_iterative_refinement = true;
+  if (use_iterative_refinement) {
+    HVector correction;
+    double correction_rhs_norm = 0;
+    double correction_sol_norm = 0;
+    vector<HighsCDouble>row_ep_residual;
+    const double expected_density = 1;
+    correction.setup(lp.num_row_);
+    unitBtranResidual(row_out, row_ep, row_ep_residual);
+    // Perform an iteration of refinement
+    correction.clear();
+    correction.packFlag = false;
+    correction_rhs_norm = 0;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {      
+      const double residual = (double)row_ep_residual[iRow];
+      if (residual) {
+	correction.array[iRow] = residual;
+	correction.index[correction.count++] = iRow;
+      }
+     correction_rhs_norm = max(fabs(correction.array[iRow]), correction_rhs_norm);
+    }
+    printf("||correction_rhs|| = %g\n", correction_rhs_norm);
+    // Normalise using ||correction_rhs|| so kHighsTiny isn't used adversely
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      correction.array[iRow] /= correction_rhs_norm;
+    }
+    printf("HEkk::proofOfPrimalInfeasibility correction has count %d/%d\n",
+	   (int)correction.count, (int)lp.num_row_);
+    btran(correction, expected_density);
+    row_ep.count = 0;
+    correction_sol_norm = 0;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      const double correction_value = correction_rhs_norm * correction.array[iRow];
+      correction_sol_norm = max(fabs(correction_value), correction_sol_norm);
+      row_ep.array[iRow] += correction_value;
+      if (row_ep.array[iRow]) 
+	row_ep.index[row_ep.count++] = iRow;
+    }
+    printf("||correction_sol|| = %g\n", correction_sol_norm);
+    unitBtranResidual(row_out, row_ep, row_ep_residual);
+  }
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
     HighsInt iRow = row_ep.index[iX];
@@ -3799,37 +3866,11 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep,
   proof_index_.clear();
   vector<double>& proof_value = this->proof_value_;
   vector<HighsInt>& proof_index = this->proof_index_;
-  vector<double> alt_proof_value = this->proof_value_;
-  vector<HighsInt> alt_proof_index = this->proof_index_;
   
-  //  const bool use_row_wise_matrix = false;//status_.has_ar_matrix;
-  //  if (use_row_wise_matrix) {
-  if (status_.has_ar_matrix)
-    this->ar_matrix_.productTranspose(alt_proof_value, alt_proof_index, row_ep);
-  //  } else {
-  lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
-    //  }
-  if (status_.has_ar_matrix) {
-    vector<double> proof_array;
-    vector<double> alt_proof_array;
-    proof_array.assign(lp.num_col_, 0);
-    alt_proof_array.assign(lp.num_col_, 0);
-    
-    for (HighsInt i = 0; i < (int)proof_index.size(); i++)
-      proof_array[proof_index[i]] = proof_value[i];
-    for (HighsInt i = 0; i < (int)alt_proof_index.size(); i++)
-      alt_proof_array[alt_proof_index[i]] = alt_proof_value[i];
-    double norm_delta = 0;
-    for (HighsInt i = 0; i < lp.num_col_; i++) {
-      norm_delta = max(fabs(proof_array[i]-alt_proof_array[i]), norm_delta);
-      //      if (proof_array[i] || alt_proof_array[i]) {
-      //	printf("%2d; %11.4g; %11.4g; %11.4g\n",
-      //       (int)i, proof_array[i], alt_proof_array[i],
-      //       fabs(proof_array[i]-alt_proof_array[i]));
-      }
-    if ((int)proof_index.size() != (int)alt_proof_index.size() || norm_delta > 1e-12) 
-      printf("proof_value vs alt_proof_value\n Size: %4d vs %4d; ||delta|| = %g\n",
-	     (int)proof_index.size(), (int)alt_proof_index.size(), norm_delta);
+  if (use_row_wise_matrix) {
+    this->ar_matrix_.productTranspose(proof_value, proof_index, row_ep);
+  } else {
+    lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
   }
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;

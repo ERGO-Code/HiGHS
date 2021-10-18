@@ -84,7 +84,9 @@ class HEkk {
   double factorSolveError();
 
   bool proofOfPrimalInfeasibility();
-  bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out);
+  bool proofOfPrimalInfeasibility(HVector& row_ep,
+				  const HighsInt move_out,
+				  const HighsInt row_out);
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
@@ -213,6 +215,10 @@ class HEkk {
   void pivotColumnFtran(const HighsInt iCol, HVector& col_aq);
   void unitBtran(const HighsInt iRow, HVector& row_ep);
   void fullBtran(HVector& buffer);
+  void unitBtranResidual(const HighsInt row_out,
+			 const HVector& row_ep,
+			 vector<HighsCDouble>& row_ep_residual);
+
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
