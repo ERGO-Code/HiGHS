@@ -83,6 +83,9 @@ class HEkk {
   void unscaleSimplex(const HighsLp& incumbent_lp);
   double factorSolveError();
 
+  bool proofOfPrimalInfeasibility();
+  bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out);
+
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
@@ -149,6 +152,10 @@ class HEkk {
   SimplexAlgorithm exit_algorithm_;
   HighsInt return_primal_solution_status_;
   HighsInt return_dual_solution_status_;
+
+  // Data to be retained after proving primal infeasiblilty
+  vector<HighsInt> proof_index_;
+  vector<double> proof_value_;
 
   // Data to be retained when dualising
   HighsInt original_num_col_;
@@ -288,7 +295,7 @@ class HEkk {
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
 
-  HighsDebugStatus debugSimplexDualInfeasible(const bool force_report = false);
+  HighsDebugStatus debugSimplexDualInfeasible(const std::string message, const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
   friend class HEkkPrimal;
   friend class HEkkDual;

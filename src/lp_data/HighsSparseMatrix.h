@@ -80,6 +80,9 @@ class HighsSparseMatrix {
   void createColwise(const HighsSparseMatrix& matrix);
   void createRowwise(const HighsSparseMatrix& matrix);
   void product(vector<double>& result, const vector<double>& row) const;
+  void productTranspose(vector<double>& result_value,
+			vector<HighsInt>& result_index,
+			const HVector& column) const;
   // Methods for PRICE, including the creation and updating of the
   // partitioned row-wise matrix
   void createRowwisePartitioned(const HighsSparseMatrix& matrix,

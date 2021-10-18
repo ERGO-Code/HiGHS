@@ -167,11 +167,17 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsInt num_unscaled_primal_infeasibilities =
       kHighsIllegalInfeasibilityCount;
   HighsInt num_unscaled_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  // Record whether the unscaled LP has been solved. It's not solved
+  // if it's proved to be infeasible using the ray from the scaled LP,
+  // in which case the solution (FWIW) and basis are taken from the
+  // unscaled solution of the scaled LP.
+  bool solved_unscaled_lp = false;
   if (!incumbent_lp.scale_.has_scaling) {
     //
     // Solve the unscaled LP with unscaled NLA
     //
     return_status = ekk_instance.solve();
+    solved_unscaled_lp = true;
     ekk_instance.unpermute();
     ekk_instance.undualise();
     assert(!ekk_instance.status_.is_permuted &&
@@ -278,44 +284,56 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(!incumbent_lp.is_scaled_);
     // Move the incumbent LP
     ekk_instance.moveLp(solver_object);
-    // Save options/strategies that may be changed
-    HighsInt simplex_strategy = options.simplex_strategy;
-    double dual_simplex_cost_perturbation_multiplier =
-        options.dual_simplex_cost_perturbation_multiplier;
-    HighsInt simplex_dual_edge_weight_strategy =
-        ekk_info.dual_edge_weight_strategy;
-    if (num_unscaled_primal_infeasibilities == 0) {
-      // Only dual infeasibilities, so use primal simplex
-      options.simplex_strategy = kSimplexStrategyPrimal;
-    } else {
-      // Using dual simplex, so force Devex if starting from an advanced
-      // basis with no steepest edge weights
-      //    if (status.has_basis || basis.valid) {
-      // ToDo Track whether steepest edge weights are known &&
-      // !status.has_dual_steepest_edge_weights) {
-      ekk_info.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
-      // options.dual_simplex_cost_perturbation_multiplier = 0;
+    // If refining after proving primal infeasibility of the scaled
+    // LP, see whether the proof still holds for the unscaled LP. If
+    // it does, then there's no need to solve the unscaled LP
+    bool solve_unscaled_lp = true;
+    if (scaled_model_status == HighsModelStatus::kInfeasible && ekk_instance.status_.has_dual_ray) {
+      ekk_instance.setNlaPointersForLpAndScale(ekk_lp);
+      if (ekk_instance.proofOfPrimalInfeasibility()) solve_unscaled_lp = false;
     }
-    //
-    // Solve the unscaled LP with scaled NLA
-    //
-    return_status = ekk_instance.solve();
-    //
-    // Restore the options/strategies that may have been changed
-    options.simplex_strategy = simplex_strategy;
-    options.dual_simplex_cost_perturbation_multiplier =
+    if (solve_unscaled_lp) {
+      // Save options/strategies that may be changed
+      HighsInt simplex_strategy = options.simplex_strategy;
+      double dual_simplex_cost_perturbation_multiplier =
+        options.dual_simplex_cost_perturbation_multiplier;
+      HighsInt simplex_dual_edge_weight_strategy =
+        ekk_info.dual_edge_weight_strategy;
+      if (num_unscaled_primal_infeasibilities == 0) {
+	// Only dual infeasibilities, so use primal simplex
+	options.simplex_strategy = kSimplexStrategyPrimal;
+      } else {
+	// Using dual simplex, so force Devex if starting from an advanced
+	// basis with no steepest edge weights
+	//    if (status.has_basis || basis.valid) {
+	// ToDo Track whether steepest edge weights are known &&
+	// !status.has_dual_steepest_edge_weights) {
+	ekk_info.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
+	// options.dual_simplex_cost_perturbation_multiplier = 0;
+      }
+      //
+      // Solve the unscaled LP with scaled NLA
+      //
+      return_status = ekk_instance.solve();
+      solved_unscaled_lp = true;
+      //
+      // Restore the options/strategies that may have been changed
+      options.simplex_strategy = simplex_strategy;
+      options.dual_simplex_cost_perturbation_multiplier =
         dual_simplex_cost_perturbation_multiplier;
-    ekk_info.dual_edge_weight_strategy = simplex_dual_edge_weight_strategy;
+      ekk_info.dual_edge_weight_strategy = simplex_dual_edge_weight_strategy;
+    }
   }
-  // Copy solution data from the EKK istance
-  //
-  scaled_model_status = ekk_instance.model_status_;
-  highs_info.objective_function_value = ekk_info.primal_objective_value;
-  highs_info.simplex_iteration_count = ekk_instance.iteration_count_;
-  solution = ekk_instance.getSolution();
-  basis = ekk_instance.getHighsBasis(ekk_lp);
-  assert(basis.valid);
-  highs_info.basis_validity = kBasisValidityValid;
+  if (solved_unscaled_lp) {
+    // Copy solution data from the EKK istance
+    scaled_model_status = ekk_instance.model_status_;
+    highs_info.objective_function_value = ekk_info.primal_objective_value;
+    highs_info.simplex_iteration_count = ekk_instance.iteration_count_;
+    solution = ekk_instance.getSolution();
+    basis = ekk_instance.getHighsBasis(ekk_lp);
+    assert(basis.valid);
+    highs_info.basis_validity = kBasisValidityValid;
+  }
   // Move the incumbent LP back from Ekk
   incumbent_lp = std::move(ekk_lp);
   incumbent_lp.is_moved_ = false;

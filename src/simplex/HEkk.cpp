@@ -143,6 +143,9 @@ void HEkk::clearEkkData() {
   this->return_primal_solution_status_ = 0;
   this->return_dual_solution_status_ = 0;
 
+  this->proof_index_.clear();
+  this->proof_value_.clear();
+
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
 }
@@ -2744,12 +2747,15 @@ void HEkk::computeDual() {
     }
   }
   // If debugging, save the current duals
-  //  debugComputeDual(true);
-  //  debugSimplexDualInfeasible();
+  const bool debug_compute_dual = false;
+  if (debug_compute_dual) {
+    debugComputeDual(true);
+    debugSimplexDualInfeasible("(old duals)", true);
+  }
   // Copy the costs in case the basic costs are all zero
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt i = 0; i < num_tot; i++)
-    info_.workDual_[i] = info_.workCost_[i];
+    info_.workDual_[i] = info_.workCost_[i] + info_.workShift_[i];
 
   if (dual_col.count) {
     fullBtran(dual_col);
@@ -2761,7 +2767,10 @@ void HEkk::computeDual() {
       info_.workDual_[i] -= dual_row.array[i];
     for (HighsInt i = lp_.num_col_; i < num_tot; i++)
       info_.workDual_[i] -= dual_col.array[i - lp_.num_col_];
-    //    debugComputeDual();
+    if (debug_compute_dual) {
+      debugComputeDual();
+      debugSimplexDualInfeasible("(new duals)", true);
+    }
   }
   // Indicate that the dual infeasiblility information isn't known
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
@@ -3419,10 +3428,10 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       break;
     }
     case HighsModelStatus::kInfeasible: {
-      // Primal simplex has identified primal infeasibility in phase 1, or
-      // dual simplex has identified dual unboundedness in phase 2. In
-      // both cases there should be no primal or dual perturbations
-      assert(!info_.costs_perturbed && !info_.bounds_perturbed);
+      // Primal infeasibility has been identified in primal phase 1,
+      // or proved in dual phase 2. There should be no primal
+      // perturbations
+      assert(!info_.bounds_perturbed);
       if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
         // phase 1
@@ -3753,3 +3762,65 @@ double HEkk::factorSolveError() {
   double solution_error = max(ftran_solution_error, btran_solution_error);
   return solution_error;
 }
+
+bool HEkk::proofOfPrimalInfeasibility() {
+  // To be called from outside HEkk when row_ep is not known 
+  assert(status_.has_dual_ray);
+  HighsLp& lp = this->lp_;
+  HighsInt move_out = info_.dual_ray_sign_;
+  HighsInt row_out = info_.dual_ray_row_;
+  // Compute the basis inverse row
+  HVector row_ep;
+  row_ep.setup(lp.num_row_);
+  unitBtran(row_out, row_ep);
+  return proofOfPrimalInfeasibility(row_ep, move_out);
+}
+
+bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out) {
+  // To be called from inside HEkkDual
+  HighsLp& lp = this->lp_;
+  HighsCDouble proof_lower = 0.0;
+  for (HighsInt iX = 0; iX < row_ep.count; iX++) {
+    HighsInt iRow = row_ep.index[iX];
+    row_ep.array[iRow] *= move_out;
+    // make sure infinite sides are not used
+    if (highs_isInfinity(-lp.row_lower_[iRow]))
+      row_ep.array[iRow] = std::min(row_ep.array[iRow], 0.0);
+    if (highs_isInfinity(lp.row_upper_[iRow]))
+      row_ep.array[iRow] = std::max(row_ep.array[iRow], 0.0);
+    // add up lower bound of proof constraint
+    if (row_ep.array[iRow] != 0.0) {
+      if (row_ep.array[iRow] > 0)
+	proof_lower +=
+	  row_ep.array[iRow] * lp.row_lower_[iRow];
+      else
+	proof_lower +=
+	  row_ep.array[iRow] * lp.row_upper_[iRow];
+    }
+  }
+  vector<double>& proof_value = this->proof_value_;
+  vector<HighsInt>& proof_index = this->proof_index_;
+  //  lp.a_matrix_.productTran(proof_value, proof_index, row_ep);
+  HighsInt proof_num_nz = proof_index.size();
+  HighsCDouble implied_upper = 0.0;
+  bool infinite_implied_upper = false;
+  for (HighsInt i = 0; i < proof_num_nz; ++i) {
+    if (proof_value[i] > 0) {
+      if (highs_isInfinity(lp.col_upper_[proof_index[i]])) {
+	infinite_implied_upper = true;
+	break;
+      }
+      implied_upper +=
+	proof_value[i] * lp.col_upper_[proof_index[i]];
+    } else {
+      if (highs_isInfinity(-lp.col_lower_[proof_index[i]])) {
+	infinite_implied_upper = true;
+	break;
+      }
+      implied_upper +=
+	proof_value[i] * lp.col_lower_[proof_index[i]];
+    }
+  }
+  return !infinite_implied_upper && proof_lower - implied_upper > options_->primal_feasibility_tolerance;
+}
+

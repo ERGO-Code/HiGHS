@@ -355,6 +355,7 @@ class HEkkDual {
   void majorRollback();
 
   // private:
+  bool proofOfPrimalInfeasibility();
   void saveDualRay();
   void assessPhase1Optimality();
   void assessPhase1OptimalityUnperturbed();
