@@ -3796,7 +3796,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep,
   }
   vector<double>& proof_value = this->proof_value_;
   vector<HighsInt>& proof_index = this->proof_index_;
-  //  lp.a_matrix_.productTran(proof_value, proof_index, row_ep);
+  lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;
   bool infinite_implied_upper = false;
