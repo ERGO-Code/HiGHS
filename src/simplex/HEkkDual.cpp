@@ -2129,6 +2129,7 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
 }
 
 bool HEkkDual::proofOfPrimalInfeasibility() {
+  printf("HEkkDual::proofOfPrimalInfeasibility row_out %d\n", (int)row_out);
   return ekk_instance_.proofOfPrimalInfeasibility(row_ep, move_out);
 }
 

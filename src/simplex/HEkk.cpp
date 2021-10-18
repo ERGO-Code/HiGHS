@@ -3770,6 +3770,7 @@ bool HEkk::proofOfPrimalInfeasibility() {
   HVector row_ep;
   row_ep.setup(lp.num_row_);
   unitBtran(row_out, row_ep);
+  printf("HEkk::proofOfPrimalInfeasibility row_out %d\n", (int)row_out);
   return proofOfPrimalInfeasibility(row_ep, move_out);
 }
 
@@ -3794,30 +3795,62 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep,
         proof_lower += row_ep.array[iRow] * lp.row_upper_[iRow];
     }
   }
+  proof_value_.clear();
+  proof_index_.clear();
   vector<double>& proof_value = this->proof_value_;
   vector<HighsInt>& proof_index = this->proof_index_;
-  const bool use_row_wise_matrix = false;//status_.has_ar_matrix;
-  if (use_row_wise_matrix) {
-    this->ar_matrix_.productTranspose(proof_value, proof_index, row_ep);
-  } else {
-    lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
+  vector<double> alt_proof_value = this->proof_value_;
+  vector<HighsInt> alt_proof_index = this->proof_index_;
+  
+  //  const bool use_row_wise_matrix = false;//status_.has_ar_matrix;
+  //  if (use_row_wise_matrix) {
+  if (status_.has_ar_matrix)
+    this->ar_matrix_.productTranspose(alt_proof_value, alt_proof_index, row_ep);
+  //  } else {
+  lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
+    //  }
+  if (status_.has_ar_matrix) {
+    vector<double> proof_array;
+    vector<double> alt_proof_array;
+    proof_array.assign(lp.num_col_, 0);
+    alt_proof_array.assign(lp.num_col_, 0);
+    
+    for (HighsInt i = 0; i < (int)proof_index.size(); i++)
+      proof_array[proof_index[i]] = proof_value[i];
+    for (HighsInt i = 0; i < (int)alt_proof_index.size(); i++)
+      alt_proof_array[alt_proof_index[i]] = alt_proof_value[i];
+    double norm_delta = 0;
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      norm_delta = max(fabs(proof_array[i]-alt_proof_array[i]), norm_delta);
+      //      if (proof_array[i] || alt_proof_array[i]) {
+      //	printf("%2d; %11.4g; %11.4g; %11.4g\n",
+      //       (int)i, proof_array[i], alt_proof_array[i],
+      //       fabs(proof_array[i]-alt_proof_array[i]));
+      }
+    if ((int)proof_index.size() != (int)alt_proof_index.size() || norm_delta > 1e-12) 
+      printf("proof_value vs alt_proof_value\n Size: %4d vs %4d; ||delta|| = %g\n",
+	     (int)proof_index.size(), (int)alt_proof_index.size(), norm_delta);
   }
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;
   bool infinite_implied_upper = false;
-  const double kZeroProofValue = 0;//1e-12;
+  const double kZeroProofValue = 1e-12;
   printf("HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = %d\n",
 	 (int)row_ep.count, (int)proof_num_nz);
   for (HighsInt i = 0; i < proof_num_nz; ++i) {
     if (proof_value[i] > kZeroProofValue) {
       if (highs_isInfinity(lp.col_upper_[proof_index[i]])) {
         infinite_implied_upper = true;
+	printf("proof_value[i] = %11.4g has UB = %11.4g\n",
+	       proof_value[i], lp.col_upper_[proof_index[i]]);
         break;
       }
       implied_upper += proof_value[i] * lp.col_upper_[proof_index[i]];
     } else if (proof_value[i] < -kZeroProofValue) {
       if (highs_isInfinity(-lp.col_lower_[proof_index[i]])) {
         infinite_implied_upper = true;
+	printf("proof_value[i] = %11.4g has LB = %11.4g\n",
+	       proof_value[i], lp.col_upper_[proof_index[i]]);
         break;
       }
       implied_upper += proof_value[i] * lp.col_lower_[proof_index[i]];
