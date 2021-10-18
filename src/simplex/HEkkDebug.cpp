@@ -1443,14 +1443,16 @@ HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string message, const bool force_report) {
+HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string message,
+                                                  const bool force_report) {
   const HighsSimplexInfo& info = this->info_;
   computeSimplexDualInfeasible();
   if (info.num_dual_infeasibilities || force_report)
     printf(
-        "Iteration %6d: %s num / max / sum dual infeasibilities is %d / %g / %g\n",
+        "Iteration %6d: %s num / max / sum dual infeasibilities is %d / %g / "
+        "%g\n",
         (int)iteration_count_, message.c_str(),
-	(int)info.num_dual_infeasibilities,
-        info.max_dual_infeasibility, info.sum_dual_infeasibilities);
+        (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+        info.sum_dual_infeasibilities);
   return HighsDebugStatus::kOk;
 }

@@ -980,8 +980,8 @@ void HighsSparseMatrix::product(vector<double>& result,
 }
 
 void HighsSparseMatrix::productTranspose(vector<double>& result_value,
-					 vector<HighsInt>& result_index,
-					 const HVector& column) const {
+                                         vector<HighsInt>& result_index,
+                                         const HVector& column) const {
   if (this->isColwise()) {
     result_value.reserve(num_col_);
     result_index.reserve(num_col_);
@@ -990,7 +990,7 @@ void HighsSparseMatrix::productTranspose(vector<double>& result_value,
       for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
            iEl++)
         value += column.array[this->index_[iEl]] * this->value_[iEl];
-      
+
       if (abs(value) - kHighsTiny > 0.0) {
         result_value.push_back(double(value));
         result_index.push_back(iCol);
@@ -1004,7 +1004,7 @@ void HighsSparseMatrix::productTranspose(vector<double>& result_value,
            iEl++)
         sum.add(this->index_[iEl], multiplier * this->value_[iEl]);
     }
-    
+
     sum.cleanup([](HighsInt, double x) { return std::abs(x) <= kHighsTiny; });
     result_index = std::move(sum.nonzeroinds);
     HighsInt result_num_nz = result_index.size();

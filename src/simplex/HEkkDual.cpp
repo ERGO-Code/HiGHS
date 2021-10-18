@@ -196,12 +196,14 @@ HighsStatus HEkkDual::solve() {
   dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
   if (solve_phase == kSolvePhase1 &&
-      info.max_dual_infeasibility*info.max_dual_infeasibility < dual_feasibility_tolerance) {
+      info.max_dual_infeasibility * info.max_dual_infeasibility <
+          dual_feasibility_tolerance) {
     // Would use dual phase 1, but max dual infeasiblilty is small, so
     // better to use flips/shifts in phase 2
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                          "Small max dual infeasiblilty of %g after flips, so use flips/shifts in phase 2\n",
-                          info.max_dual_infeasibility);
+                "Small max dual infeasiblilty of %g after flips, so use "
+                "flips/shifts in phase 2\n",
+                info.max_dual_infeasibility);
     solve_phase = kSolvePhase2;
   }
   if (ekk_instance_.debugOkForSolve(SimplexAlgorithm::kDual, solve_phase) ==
@@ -953,40 +955,43 @@ void HEkkDual::solvePhase2() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-unbounded\n");
     // First determine whether there is a proof of primal infeasibility
-    const bool proof_of_infeasibility =
-      proofOfPrimalInfeasibility();
+    const bool proof_of_infeasibility = proofOfPrimalInfeasibility();
     if (proof_of_infeasibility) {
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                  "problem-primal-infeasible\n");
+      // There is a proof of primal infeasiblilty
+      solve_phase = kSolvePhaseExit;
       // Save dual ray information
       saveDualRay();
-      solve_phase = kSolvePhaseExit;
+      // Model status should be unset?
+      assert(model_status == HighsModelStatus::kNotset);
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                  "problem-primal-infeasible\n");
       model_status = HighsModelStatus::kInfeasible;
     } else {
       if (ekk_instance_.info_.costs_perturbed) {
-	// If the costs have been perturbed, clean up and return
-	cleanup();
+        // If the costs have been perturbed, clean up and return
+        cleanup();
       } else if (ekk_instance_.info_.costs_shifted) {
-	// Costs have been shifted to ensure dual feasibility, so
-	// consider performing primal simplex iterations to get dual
-	// feasibility
-	//
-	// First remove any shifts and recompute the dual values
-	ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
-				     false);
-	ekk_instance_.computeDual();
-	solve_phase = kSolvePhasePrimalInfeasibleCleanup;
+        // Costs have been shifted to ensure dual feasibility, so
+        // consider performing primal simplex iterations to get dual
+        // feasibility
+        //
+        // First remove any shifts and recompute the dual values
+        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
+                                     false);
+        ekk_instance_.computeDual();
+        solve_phase = kSolvePhasePrimalInfeasibleCleanup;
       } else {
-	// The costs have not been perturbed, so dual unbounded---and
-	// hence primal infeasible.
-	solve_phase = kSolvePhaseExit;
-	// Dual feasible and dual unbounded, so save dual ray
-	saveDualRay();
-	// Model status should be unset?
-	assert(model_status == HighsModelStatus::kNotset);
-	highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-		    "problem-primal-infeasible\n");
-	model_status = HighsModelStatus::kInfeasible;
+        // The costs have not been perturbed, so dual unbounded---and
+        // hence primal infeasible.
+        solve_phase = kSolvePhaseExit;
+        // Model status should be unset?
+        assert(model_status == HighsModelStatus::kNotset);
+        highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                    "problem-primal-infeasible\n");
+        highsLogDev(
+            ekk_instance_.options_->log_options, HighsLogType::kWarning,
+            "Dual unbounded but no ray to prove primal infeasiblilty?\n");
+        model_status = HighsModelStatus::kInfeasible;
       }
     }
   }
@@ -2484,4 +2489,3 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   if (initialise) return return_status;
   return HighsDebugStatus::kOk;
 }
-

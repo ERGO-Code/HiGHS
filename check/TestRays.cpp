@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-8;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
@@ -217,7 +217,11 @@ void testInfeasibleMps(const std::string model) {
   vector<double> primal_ray_value;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  } else {
+    highs.setOptionValue("log_dev_level", 2);
+  }
 
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 

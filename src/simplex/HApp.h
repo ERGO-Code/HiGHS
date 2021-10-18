@@ -288,7 +288,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // LP, see whether the proof still holds for the unscaled LP. If
     // it does, then there's no need to solve the unscaled LP
     bool solve_unscaled_lp = true;
-    if (scaled_model_status == HighsModelStatus::kInfeasible && ekk_instance.status_.has_dual_ray) {
+    if (scaled_model_status == HighsModelStatus::kInfeasible &&
+        ekk_instance.status_.has_dual_ray) {
       ekk_instance.setNlaPointersForLpAndScale(ekk_lp);
       if (ekk_instance.proofOfPrimalInfeasibility()) solve_unscaled_lp = false;
     }
@@ -296,20 +297,21 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // Save options/strategies that may be changed
       HighsInt simplex_strategy = options.simplex_strategy;
       double dual_simplex_cost_perturbation_multiplier =
-        options.dual_simplex_cost_perturbation_multiplier;
+          options.dual_simplex_cost_perturbation_multiplier;
       HighsInt simplex_dual_edge_weight_strategy =
-        ekk_info.dual_edge_weight_strategy;
+          ekk_info.dual_edge_weight_strategy;
       if (num_unscaled_primal_infeasibilities == 0) {
-	// Only dual infeasibilities, so use primal simplex
-	options.simplex_strategy = kSimplexStrategyPrimal;
+        // Only dual infeasibilities, so use primal simplex
+        options.simplex_strategy = kSimplexStrategyPrimal;
       } else {
-	// Using dual simplex, so force Devex if starting from an advanced
-	// basis with no steepest edge weights
-	//    if (status.has_basis || basis.valid) {
-	// ToDo Track whether steepest edge weights are known &&
-	// !status.has_dual_steepest_edge_weights) {
-	ekk_info.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
-	// options.dual_simplex_cost_perturbation_multiplier = 0;
+        // Using dual simplex, so force Devex if starting from an advanced
+        // basis with no steepest edge weights
+        //    if (status.has_basis || basis.valid) {
+        // ToDo Track whether steepest edge weights are known &&
+        // !status.has_dual_steepest_edge_weights) {
+        ekk_info.dual_edge_weight_strategy =
+            kSimplexDualEdgeWeightStrategyDevex;
+        // options.dual_simplex_cost_perturbation_multiplier = 0;
       }
       //
       // Solve the unscaled LP with scaled NLA
@@ -320,7 +322,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // Restore the options/strategies that may have been changed
       options.simplex_strategy = simplex_strategy;
       options.dual_simplex_cost_perturbation_multiplier =
-        dual_simplex_cost_perturbation_multiplier;
+          dual_simplex_cost_perturbation_multiplier;
       ekk_info.dual_edge_weight_strategy = simplex_dual_edge_weight_strategy;
     }
   }

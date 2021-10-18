@@ -999,9 +999,6 @@ HighsStatus HEkk::undualise() {
   status_.has_nla = false;
   status_.has_invert = false;
   HighsInt primal_solve_iteration_count = -iteration_count_;
-  printf(
-      "HEkk::undualise() Solving the primal LP using the optimal basis of its "
-      "dual\n");
   HighsStatus return_status = solve();
   primal_solve_iteration_count += iteration_count_;
   //  if (primal_solve_iteration_count)
@@ -3764,7 +3761,7 @@ double HEkk::factorSolveError() {
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {
-  // To be called from outside HEkk when row_ep is not known 
+  // To be called from outside HEkk when row_ep is not known
   assert(status_.has_dual_ray);
   HighsLp& lp = this->lp_;
   HighsInt move_out = info_.dual_ray_sign_;
@@ -3776,7 +3773,8 @@ bool HEkk::proofOfPrimalInfeasibility() {
   return proofOfPrimalInfeasibility(row_ep, move_out);
 }
 
-bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out) {
+bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep,
+                                      const HighsInt move_out) {
   // To be called from inside HEkkDual
   HighsLp& lp = this->lp_;
   HighsCDouble proof_lower = 0.0;
@@ -3791,11 +3789,9 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out) 
     // add up lower bound of proof constraint
     if (row_ep.array[iRow] != 0.0) {
       if (row_ep.array[iRow] > 0)
-	proof_lower +=
-	  row_ep.array[iRow] * lp.row_lower_[iRow];
+        proof_lower += row_ep.array[iRow] * lp.row_lower_[iRow];
       else
-	proof_lower +=
-	  row_ep.array[iRow] * lp.row_upper_[iRow];
+        proof_lower += row_ep.array[iRow] * lp.row_upper_[iRow];
     }
   }
   vector<double>& proof_value = this->proof_value_;
@@ -3807,20 +3803,24 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out) 
   for (HighsInt i = 0; i < proof_num_nz; ++i) {
     if (proof_value[i] > 0) {
       if (highs_isInfinity(lp.col_upper_[proof_index[i]])) {
-	infinite_implied_upper = true;
-	break;
+        infinite_implied_upper = true;
+        break;
       }
-      implied_upper +=
-	proof_value[i] * lp.col_upper_[proof_index[i]];
+      implied_upper += proof_value[i] * lp.col_upper_[proof_index[i]];
     } else {
       if (highs_isInfinity(-lp.col_lower_[proof_index[i]])) {
-	infinite_implied_upper = true;
-	break;
+        infinite_implied_upper = true;
+        break;
       }
-      implied_upper +=
-	proof_value[i] * lp.col_lower_[proof_index[i]];
+      implied_upper += proof_value[i] * lp.col_lower_[proof_index[i]];
     }
   }
-  return !infinite_implied_upper && proof_lower - implied_upper > options_->primal_feasibility_tolerance;
+  const double gap = double(proof_lower - implied_upper);
+  const bool gap_ok = gap > options_->primal_feasibility_tolerance;
+  const bool proof_of_primal_infeasibility = !infinite_implied_upper && gap_ok;
+  printf("HEkk::proofOfPrimalInfeasibility has %sfinite implied upper bound",
+         infinite_implied_upper ? "in" : "");
+  if (!infinite_implied_upper) printf(" and gap = %g", gap);
+  printf(" so proof is %s\n", proof_of_primal_infeasibility ? "true" : "false");
+  return proof_of_primal_infeasibility;
 }
-

@@ -295,7 +295,8 @@ class HEkk {
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
 
-  HighsDebugStatus debugSimplexDualInfeasible(const std::string message, const bool force_report = false);
+  HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
+                                              const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
   friend class HEkkPrimal;
   friend class HEkkDual;

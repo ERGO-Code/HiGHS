@@ -1296,7 +1296,7 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
   } else {
     // Primal infeasibility information may not be known if dual ray
     // has proved primal infeasibility
-    if (num_primal_infeasibility<0 || sum_primal_infeasibility<0) return;
+    if (num_primal_infeasibility < 0 || sum_primal_infeasibility < 0) return;
     if (solve_phase == 1) {
       *analysis_log << highsFormatToString(" Ph1: %" HIGHSINT_FORMAT "(%g)",
                                            num_primal_infeasibility,
