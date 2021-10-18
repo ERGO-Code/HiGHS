@@ -3796,18 +3796,26 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep,
   }
   vector<double>& proof_value = this->proof_value_;
   vector<HighsInt>& proof_index = this->proof_index_;
-  lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
+  const bool use_row_wise_matrix = false;//status_.has_ar_matrix;
+  if (use_row_wise_matrix) {
+    this->ar_matrix_.productTranspose(proof_value, proof_index, row_ep);
+  } else {
+    lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
+  }
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;
   bool infinite_implied_upper = false;
+  const double kZeroProofValue = 0;//1e-12;
+  printf("HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = %d\n",
+	 (int)row_ep.count, (int)proof_num_nz);
   for (HighsInt i = 0; i < proof_num_nz; ++i) {
-    if (proof_value[i] > 0) {
+    if (proof_value[i] > kZeroProofValue) {
       if (highs_isInfinity(lp.col_upper_[proof_index[i]])) {
         infinite_implied_upper = true;
         break;
       }
       implied_upper += proof_value[i] * lp.col_upper_[proof_index[i]];
-    } else {
+    } else if (proof_value[i] < -kZeroProofValue) {
       if (highs_isInfinity(-lp.col_lower_[proof_index[i]])) {
         infinite_implied_upper = true;
         break;
