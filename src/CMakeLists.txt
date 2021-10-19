@@ -99,7 +99,6 @@ set(sources
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
-    lp_data/HighsSparseMatrix.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
@@ -152,11 +151,6 @@ set(sources
     simplex/HEkkDualRow.cpp
     simplex/HEkkDualMulti.cpp
     simplex/HEkkInterface.cpp
-    simplex/HFactor.cpp
-    simplex/HFactorDebug.cpp
-    simplex/HFactorExtend.cpp
-    simplex/HFactorRefactor.cpp
-    simplex/HFactorUtils.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
@@ -167,11 +161,17 @@ set(sources
     simplex/HSimplexReport.cpp
     test/DevKkt.cpp
     test/KktCh2.cpp
+    util/HFactor.cpp
+    util/HFactorDebug.cpp
+    util/HFactorExtend.cpp
+    util/HFactorRefactor.cpp
+    util/HFactorUtils.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
     util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
+    util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
     util/HSet.cpp
     util/stringutil.cpp
@@ -205,7 +205,6 @@ set(headers
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
-    lp_data/HighsSparseMatrix.h
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
@@ -245,9 +244,6 @@ set(headers
     simplex/HEkkDual.h
     simplex/HEkkDualRow.h
     simplex/HEkkDualRHS.h
-    simplex/HFactor.h
-    simplex/HFactorConst.h
-    simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
@@ -256,8 +252,6 @@ set(headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    simplex/HVector.h
-    simplex/HVectorBase.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -271,6 +265,9 @@ set(headers
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
+    util/HFactor.h
+    util/HFactorConst.h
+    util/HFactorDebug.h
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
@@ -284,10 +281,13 @@ set(headers
     util/HighsMatrixUtils.h
     util/HighsRandom.h
     util/HighsSort.h
+    util/HighsSparseMatrix.h
     util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
     util/HSet.h
+    util/HVector.h
+    util/HVectorBase.h
     util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
@@ -521,7 +521,6 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
-    lp_data/HighsSparseMatrix.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
@@ -574,11 +573,6 @@ target_sources(libhighs PRIVATE
     simplex/HEkkDualRow.cpp
     simplex/HEkkDualMulti.cpp
     simplex/HEkkInterface.cpp
-    simplex/HFactor.cpp
-    simplex/HFactorDebug.cpp
-    simplex/HFactorExtend.cpp
-    simplex/HFactorRefactor.cpp
-    simplex/HFactorUtils.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
@@ -589,11 +583,17 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexReport.cpp
     test/KktCh2.cpp
     test/DevKkt.cpp
+    util/HFactor.cpp
+    util/HFactorDebug.cpp
+    util/HFactorExtend.cpp
+    util/HFactorRefactor.cpp
+    util/HFactorUtils.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
     util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
+    util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
     util/HSet.cpp
     util/stringutil.cpp
@@ -641,7 +641,6 @@ set(headers_fast_build_
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
-    lp_data/HighsSparseMatrix.h
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
@@ -681,9 +680,6 @@ set(headers_fast_build_
     simplex/HEkkDualRHS.h
     simplex/HEkkDualRow.h
     simplex/HEkkPrimal.h
-    simplex/HFactor.h
-    simplex/HFactorConst.h
-    simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
@@ -692,8 +688,6 @@ set(headers_fast_build_
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    simplex/HVector.h
-    simplex/HVectorBase.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -711,6 +705,9 @@ set(headers_fast_build_
     util/HighsComponent.h
     util/HighsDataStack.h
     util/HighsDisjointSets.h
+    util/HFactor.h
+    util/HFactorConst.h
+    util/HFactorDebug.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h
@@ -721,9 +718,12 @@ set(headers_fast_build_
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsSplay.h
+    util/HighsSparseMatrix.h
     util/HighsTimer.h
     util/HighsUtils.h
     util/HSet.h
+    util/HVector.h
+    util/HVectorBase.h
     util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h

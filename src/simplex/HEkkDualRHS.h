@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "simplex/HEkk.h"
-#include "simplex/HVector.h"
+#include "util/HVector.h"
 
 /**
  * @brief Dual simplex optimality test for HiGHS

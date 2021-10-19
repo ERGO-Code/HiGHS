@@ -19,7 +19,7 @@
 #define HSIMPLEXNLA_H_
 
 #include "lp_data/HighsDebug.h"
-#include "simplex/HFactor.h"
+#include "util/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 

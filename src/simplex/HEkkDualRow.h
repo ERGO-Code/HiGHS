@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "simplex/HEkk.h"
-#include "simplex/HVector.h"
+#include "util/HVector.h"
 
 const double kInitialTotalChange = 1e-12;
 const double kInitialRemainTheta = 1e100;

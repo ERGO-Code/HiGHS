@@ -25,8 +25,8 @@
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HVector.h"
-#include "simplex/HVectorBase.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 
 // Limit on the number of column slices for parallel calculations. SIP
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices

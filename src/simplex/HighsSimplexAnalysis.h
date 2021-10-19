@@ -23,8 +23,8 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "simplex/HVector.h"
-#include "simplex/HVectorBase.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "simplex/SimplexConst.h"
 #include "util/HighsInt.h"
 #include "util/HighsTimer.h"
