@@ -237,12 +237,11 @@ set(headers
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
-    simplex/FactorTimer.h
     simplex/HEkk.h
-    simplex/HEkkPrimal.h
     simplex/HEkkDual.h
-    simplex/HEkkDualRow.h
     simplex/HEkkDualRHS.h
+    simplex/HEkkDualRow.h
+    simplex/HEkkPrimal.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
@@ -264,6 +263,7 @@ set(headers
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
+    util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
     util/HFactorDebug.h
@@ -673,7 +673,6 @@ set(headers_fast_build_
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
-    simplex/FactorTimer.h
     simplex/HEkk.h
     simplex/HEkkDual.h
     simplex/HEkkDualRHS.h
@@ -700,25 +699,26 @@ set(headers_fast_build_
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
+    util/FactorTimer.h
+    util/HFactor.h
+    util/HFactorConst.h
+    util/HFactorDebug.h
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
     util/HighsDisjointSets.h
-    util/HFactor.h
-    util/HFactorConst.h
-    util/HFactorDebug.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
-    util/HighsMatrixUtils.h
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
+    util/HighsMatrixUtils.h
     util/HighsRandom.h
     util/HighsSort.h
-    util/HighsSplay.h
     util/HighsSparseMatrix.h
     util/HighsSparseVectorSum.h
+    util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
     util/HSet.h
