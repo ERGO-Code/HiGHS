@@ -229,7 +229,6 @@ set(headers
     mip/HighsSearch.h
     mip/HighsSeparation.h
     mip/HighsSeparator.h
-    mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
     model/HighsHessian.h
@@ -282,6 +281,7 @@ set(headers
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsSparseMatrix.h
+    util/HighsSparseVectorSum.h
     util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
@@ -665,7 +665,6 @@ set(headers_fast_build_
     mip/HighsSearch.h
     mip/HighsSeparation.h
     mip/HighsSeparator.h
-    mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
     model/HighsHessian.h
@@ -719,6 +718,7 @@ set(headers_fast_build_
     util/HighsSort.h
     util/HighsSplay.h
     util/HighsSparseMatrix.h
+    util/HighsSparseVectorSum.h
     util/HighsTimer.h
     util/HighsUtils.h
     util/HSet.h
