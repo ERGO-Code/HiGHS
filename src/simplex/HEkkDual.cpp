@@ -339,11 +339,12 @@ HighsStatus HEkkDual::solve() {
       // kSolvePhasePrimalInfeasibleCleanup) but can yield
       // unboundedness. Time/iteration limit return is, of course,
       // possible, as are solver error
-      highsLogDev(
-          options.log_options, HighsLogType::kInfo,
-          "HEkkDual:: Using primal simplex to try to clean up %" HIGHSINT_FORMAT
-          " dual infeasibilities\n",
-          info.num_dual_infeasibilities);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "HEkkDual:: Using primal simplex to try to clean up num / "
+                  "max / sum = %" HIGHSINT_FORMAT
+                  " %g / %g dual infeasibilities\n",
+                  info.num_dual_infeasibilities, info.max_dual_infeasibility,
+                  info.sum_dual_infeasibilities);
       HighsStatus return_status = HighsStatus::kOk;
       analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
       // Switch off any bound perturbation
@@ -644,16 +645,7 @@ void HEkkDual::solvePhase1() {
     const bool old_break_logic = status.has_fresh_rebuild;
     const bool need_rebuild =
         ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
-    if (old_break_logic && need_rebuild) {
-      printf(
-          "HEkkDual::solvePhase1 Rebuild due to refactorization requirement "
-          "when previously no rebuild would be performed: "
-          " solve = %d\n",
-          (int)ekk_instance_.debug_solve_call_num_);
-      assert(98 == 21);
-    }
     if (!need_rebuild) break;
-    //    if (old_break_logic) break;
   }
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
@@ -893,16 +885,7 @@ void HEkkDual::solvePhase2() {
     const bool old_break_logic = status.has_fresh_rebuild;
     const bool need_rebuild =
         ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
-    if (old_break_logic && need_rebuild) {
-      printf(
-          "HEkkDual::solvePhase2 Rebuild due to refactorization requirement "
-          "when previously no rebuild would be performed: "
-          " solve = %d\n",
-          (int)ekk_instance_.debug_solve_call_num_);
-      assert(98 == 22);
-    }
     if (!need_rebuild) break;
-    //    if (old_break_logic) break;
   }
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
@@ -1241,9 +1224,16 @@ void HEkkDual::iterate() {
       ekk_instance_.previous_iteration_cycling_detected =
           ekk_instance_.iteration_count_;
     }
-    //    printf("Cycling_detected: solve %d\n",
-    //           (int)ekk_instance_.debug_solve_call_num_);
-    //  assert(1 == 0);
+    printf("Cycling_detected: solve %d (Iteration %d)\n",
+           (int)ekk_instance_.debug_solve_call_num_,
+           (int)ekk_instance_.iteration_count_);
+    if (ekk_instance_.debug_solve_call_num_ == 161474 &&
+        ekk_instance_.iteration_count_ == 39) {
+      printf("Calling exit(0)\n");
+      fflush(stdout);
+      exit(0);
+    }
+    //    assert(1 == 0);
   }
 
   // Update the records of chosen rows and pivots
@@ -1528,6 +1518,11 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
+  const HighsInt check_iter = -54;
+  if (ekk_instance_.debug_solve_call_num_ == 12 &&
+      ekk_instance_.iteration_count_ == check_iter) {
+    printf("HEkkDual::chooseColumn Check iter = %d\n", (int)check_iter);
+  }
   //
   // PRICE
   //
@@ -1544,37 +1539,79 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   dualRow.createFreemove(row_ep);
   analysis->simplexTimerStop(Chuzc0Clock);
   //
-  // Section 1: Pack row_ap and row_ep, then determine the possible
-  // variables - candidates for CHUZC
+  // Section 1: Pack row_ap and row_ep
   analysis->simplexTimerStart(Chuzc1Clock);
   // Pack row_ap into the packIndex/Value of HEkkDualRow
+  max_pack_value = 0;
   dualRow.chooseMakepack(&row_ap, 0);
+  max_pack_value = max(dualRow.max_pack_value, max_pack_value);
   // Pack row_ep into the packIndex/Value of HEkkDualRow
   dualRow.chooseMakepack(row_ep, solver_num_col);
-  // Determine the possible variables - candidates for CHUZC
-  dualRow.choosePossible();
+  max_pack_value = max(dualRow.max_pack_value, max_pack_value);
   analysis->simplexTimerStop(Chuzc1Clock);
-  //
-  // Take action if the step to an expanded bound is not positive, or
-  // there are no candidates for CHUZC
-  variable_in = -1;
-  if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
-    return;
+  assert(max_pack_value > 0);
+  // Loop until an acceptable pivot is found. Each pass either finds a
+  // pivot, identifies possible unboundedness, or reduced the number
+  // of nonzeros in dualRow.pack_value
+  for (;;) {
+    //
+    // Section 2: Determine the possible variables - candidates for CHUZC
+    analysis->simplexTimerStart(Chuzc2Clock);
+    dualRow.choosePossible();
+    analysis->simplexTimerStop(Chuzc2Clock);
+    //
+    // Take action if the step to an expanded bound is not positive, or
+    // there are no candidates for CHUZC
+    variable_in = -1;
+    if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
+      rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
+      return;
+    }
+    //
+    // Sections 3 and 4: Perform (bound-flipping) ratio test. This can
+    // fail if the dual values are excessively large
+    bool chooseColumnFail = dualRow.chooseFinal();
+    if (chooseColumnFail) {
+      rebuild_reason = kRebuildReasonChooseColumnFail;
+      return;
+    }
+    if (dualRow.workPivot >= 0) {
+      // A pivot has been chosen
+      double alpha_row = dualRow.workAlpha;
+      assert(alpha_row);
+      double dual_growth = max_pack_value / std::abs(alpha_row);
+      const double kMaxOkGrowth = 1e12;
+      if (dual_growth > kMaxOkGrowth) {
+        // Pivot is relatively small, so remove it
+        printf(
+            "CHUZC: Solve %6d; Iter %4d; Variable %6d Pivot %11.4g (dual "
+            "%11.4g) has growth %11.4g",
+            (int)ekk_instance_.debug_solve_call_num_,
+            (int)ekk_instance_.iteration_count_, (int)dualRow.workPivot,
+            dualRow.workAlpha, workDual[dualRow.workPivot], dual_growth);
+        for (HighsInt i = 0; i < dualRow.packCount; i++) {
+          if (dualRow.packIndex[i] == dualRow.workPivot) {
+            dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
+            dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
+            printf(" so remove it from the packed values");
+            break;
+          }
+        }
+        dualRow.workPivot = -1;
+        dualRow.packCount--;
+        printf(": pack count = %6d so %s\n", (int)dualRow.packCount,
+               dualRow.packCount > 0 ? "repeat CHUZC" : "consider unbounded");
+      }
+    }
+    // If a pivot has been chosen, or there are no more packed values
+    // then end CHUZC
+    if (dualRow.workPivot >= 0 || dualRow.packCount <= 0) break;
   }
   //
-  // Sections 2 and 3: Perform (bound-flipping) ratio test. This can
-  // fail if the dual values are excessively large
-  bool chooseColumnFail = dualRow.chooseFinal();
-  if (chooseColumnFail) {
-    rebuild_reason = kRebuildReasonChooseColumnFail;
-    return;
-  }
-  //
-  // Section 4: Reset the nonbasicMove values for free columns
-  analysis->simplexTimerStart(Chuzc4Clock);
+  // Section 5: Reset the nonbasicMove values for free columns
+  analysis->simplexTimerStart(Chuzc5Clock);
   dualRow.deleteFreemove();
-  analysis->simplexTimerStop(Chuzc4Clock);
+  analysis->simplexTimerStop(Chuzc5Clock);
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
   variable_in = dualRow.workPivot;  // Index of the column entering the basis
@@ -1724,9 +1761,9 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
     return;
   }
 
-  analysis->simplexTimerStart(Chuzc4Clock);
+  analysis->simplexTimerStart(Chuzc5Clock);
   dualRow.deleteFreemove();
-  analysis->simplexTimerStop(Chuzc4Clock);
+  analysis->simplexTimerStop(Chuzc5Clock);
 
   variable_in = dualRow.workPivot;
   alpha_row = dualRow.workAlpha;

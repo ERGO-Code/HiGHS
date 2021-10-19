@@ -78,15 +78,16 @@ enum iClockSimplex {
   Chuzc1Clock,          //!< CHUZC - Dual stage 1
   Chuzc2Clock,          //!< CHUZC - Dual stage 2
   Chuzc3Clock,          //!< CHUZC - Dual stage 3
+  Chuzc4Clock,          //!< CHUZC - Dual stage 4
 
-  Chuzc3a0Clock,  //!< CHUZC - Dual stage 3a0
-  Chuzc3a1Clock,  //!< CHUZC - Dual stage 3a1
-  Chuzc3bClock,   //!< CHUZC - Dual stage 3b
-  Chuzc3cClock,   //!< CHUZC - Dual stage 3c
-  Chuzc3dClock,   //!< CHUZC - Dual stage 3d
-  Chuzc3eClock,   //!< CHUZC - Dual stage 3e
+  Chuzc4a0Clock,  //!< CHUZC - Dual stage 4a0
+  Chuzc4a1Clock,  //!< CHUZC - Dual stage 4a1
+  Chuzc4bClock,   //!< CHUZC - Dual stage 4b
+  Chuzc4cClock,   //!< CHUZC - Dual stage 4c
+  Chuzc4dClock,   //!< CHUZC - Dual stage 4d
+  Chuzc4eClock,   //!< CHUZC - Dual stage 4e
 
-  Chuzc4Clock,   //!< CHUZC - Dual stage 4
+  Chuzc5Clock,   //!< CHUZC - Dual stage 5
   DevexWtClock,  //!< Calculation of Devex weight of entering variable
   BtranClock,    //!< BTRAN - row p of inverse
   BtranBasicFeasibilityChangeClock,       //!< BTRAN - primal simplex phase 1
@@ -195,13 +196,14 @@ class SimplexTimer {
     clock[Chuzc1Clock] = timer_pointer->clock_def("CHUZC1", "CC1");
     clock[Chuzc2Clock] = timer_pointer->clock_def("CHUZC2", "CC2");
     clock[Chuzc3Clock] = timer_pointer->clock_def("CHUZC3", "CC3");
-    clock[Chuzc3a0Clock] = timer_pointer->clock_def("CHUZC3a0", "C30");
-    clock[Chuzc3a1Clock] = timer_pointer->clock_def("CHUZC3a1", "C31");
-    clock[Chuzc3bClock] = timer_pointer->clock_def("CHUZC3b", "C3b");
-    clock[Chuzc3cClock] = timer_pointer->clock_def("CHUZC3c", "C3c");
-    clock[Chuzc3dClock] = timer_pointer->clock_def("CHUZC3d", "C3d");
-    clock[Chuzc3eClock] = timer_pointer->clock_def("CHUZC3e", "C3e");
     clock[Chuzc4Clock] = timer_pointer->clock_def("CHUZC4", "CC4");
+    clock[Chuzc4a0Clock] = timer_pointer->clock_def("CHUZC4a0", "C40");
+    clock[Chuzc4a1Clock] = timer_pointer->clock_def("CHUZC4a1", "C41");
+    clock[Chuzc4bClock] = timer_pointer->clock_def("CHUZC4b", "C4b");
+    clock[Chuzc4cClock] = timer_pointer->clock_def("CHUZC4c", "C4c");
+    clock[Chuzc4dClock] = timer_pointer->clock_def("CHUZC4d", "C4d");
+    clock[Chuzc4eClock] = timer_pointer->clock_def("CHUZC4e", "C4e");
+    clock[Chuzc5Clock] = timer_pointer->clock_def("CHUZC5", "CC5");
     clock[DevexWtClock] = timer_pointer->clock_def("DEVEX_WT", "DWT");
     clock[BtranClock] = timer_pointer->clock_def("BTRAN", "REP");
     clock[BtranBasicFeasibilityChangeClock] =
@@ -249,7 +251,7 @@ class SimplexTimer {
     timer_pointer->report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
-  void reportChuzc3ClockList(std::vector<HighsInt> simplex_clock_list,
+  void reportChuzc4ClockList(std::vector<HighsInt> simplex_clock_list,
                              HighsTimerClock& simplex_timer_clock) {
     HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
@@ -259,9 +261,9 @@ class SimplexTimer {
     for (HighsInt en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = clock[simplex_clock_list[en]];
     }
-    const double ideal_sum_time = timer_pointer->read(clock[Chuzc3Clock]);
-    printf("reportChuzc3ClockList: ideal_sum_time = %g\n", ideal_sum_time);
-    timer_pointer->report_tl("CHUZC3:", clockList, ideal_sum_time, 1e-8);
+    const double ideal_sum_time = timer_pointer->read(clock[Chuzc4Clock]);
+    printf("reportChuzc4ClockList: ideal_sum_time = %g\n", ideal_sum_time);
+    timer_pointer->report_tl("CHUZC4:", clockList, ideal_sum_time, 1e-8);
   };
 
   void reportSimplexTotalClock(HighsTimerClock& simplex_timer_clock) {
@@ -322,6 +324,7 @@ class SimplexTimer {
         Chuzc2Clock,
         Chuzc3Clock,
         Chuzc4Clock,
+        Chuzc5Clock,
         FtranClock,
         ChuzrDualClock,
         Chuzr1Clock,
@@ -347,11 +350,11 @@ class SimplexTimer {
                            simplex_timer_clock);
   };
 
-  void reportSimplexChuzc3Clock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{Chuzc3a0Clock, Chuzc3a1Clock,
-                                             Chuzc3bClock,  Chuzc3cClock,
-                                             Chuzc3dClock,  Chuzc3eClock};
-    reportChuzc3ClockList(simplex_clock_list, simplex_timer_clock);
+  void reportSimplexChuzc4Clock(HighsTimerClock& simplex_timer_clock) {
+    std::vector<HighsInt> simplex_clock_list{Chuzc4a0Clock, Chuzc4a1Clock,
+                                             Chuzc4bClock,  Chuzc4cClock,
+                                             Chuzc4dClock,  Chuzc4eClock};
+    reportChuzc4ClockList(simplex_clock_list, simplex_timer_clock);
   };
 
   void reportSimplexMultiInnerClock(HighsTimerClock& simplex_timer_clock) {
@@ -389,6 +392,7 @@ class SimplexTimer {
         Chuzc2Clock,
         Chuzc3Clock,
         Chuzc4Clock,
+        Chuzc5Clock,
         DevexWtClock,
         FtranClock,
         FtranBfrtClock,

@@ -32,6 +32,7 @@
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices
 const HighsInt kHighsSlicedLimit = kHighsThreadLimit;
 // Was 100, but can't see why this should be higher than kHighsThreadLimit;
+// const double kMaxOkGrowth = 1e4;
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -445,6 +446,7 @@ class HEkkDual {
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
+  double max_pack_value;
 
   bool check_invert_condition = false;
 

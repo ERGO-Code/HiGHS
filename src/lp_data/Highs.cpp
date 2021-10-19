@@ -2437,6 +2437,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       clearInfo();
       clearSolution();
       clearBasis();
+      if (model_status_ != scaled_model_status_) {
+        printf(
+            "Highs::returnFromRun Solve %d: %d = model_status_ != "
+            "scaled_model_status_ = %d\n",
+            (int)ekk_instance_.debug_solve_call_num_, (int)model_status_,
+            (int)scaled_model_status_);
+        fflush(stdout);
+      }
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kError);
       break;

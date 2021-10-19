@@ -378,16 +378,7 @@ void HEkkPrimal::solvePhase1() {
         status.has_fresh_rebuild && num_flip_since_rebuild == 0;
     const bool need_rebuild =
         ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
-    if (old_break_logic && need_rebuild) {
-      printf(
-          "HEkkPrimal::solvePhase1 Rebuild due to refactorization requirement "
-          "when previously no rebuild would be performed: "
-          " solve = %d\n",
-          (int)ekk_instance_.debug_solve_call_num_);
-      assert(98 == 11);
-    }
     if (!need_rebuild) break;
-    //    if (old_break_logic) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
