@@ -3845,6 +3845,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     printf("||correction_sol|| = %g\n", correction_sol_norm);
     unitBtranResidual(row_out, row_ep, row_ep_residual);
   }
+  const double kZeroProofValue = 1e-12;
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
     HighsInt iRow = row_ep.index[iX];
@@ -3855,12 +3856,12 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     if (highs_isInfinity(lp.row_upper_[iRow]))
       row_ep.array[iRow] = std::max(row_ep.array[iRow], 0.0);
     // add up lower bound of proof constraint
-    if (row_ep.array[iRow] != 0.0) {
-      if (row_ep.array[iRow] > 0)
-        proof_lower += row_ep.array[iRow] * lp.row_lower_[iRow];
-      else
-        proof_lower += row_ep.array[iRow] * lp.row_upper_[iRow];
-    }
+    if (fabs(row_ep.array[iRow]) <= kZeroProofValue)
+      row_ep.array[iRow] = 0.0;
+    else
+      proof_lower +=
+          row_ep.array[iRow] *
+          (row_ep.array[iRow] > 0 ? lp.row_lower_[iRow] : lp.row_upper_[iRow]);
   }
   proof_value_.clear();
   proof_index_.clear();
@@ -3875,7 +3876,6 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;
   bool infinite_implied_upper = false;
-  const double kZeroProofValue = 1e-12;
   printf(
       "HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = %d\n",
       (int)row_ep.count, (int)proof_num_nz);
