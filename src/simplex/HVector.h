@@ -16,14 +16,8 @@
 #ifndef SIMPLEX_HVECTOR_H_
 #define SIMPLEX_HVECTOR_H_
 
-#include <vector>
-
+#include "simplex/HVectorBase.h"
 #include "util/HighsCDouble.h"
-
-using std::vector;
-
-template <typename Real>
-class HVectorBase;
 
 using HVector = HVectorBase<double>;
 using HVectorQuad = HVectorBase<HighsCDouble>;

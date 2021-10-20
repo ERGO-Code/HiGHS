@@ -10,7 +10,6 @@
 #include "runtime.hpp"
 #include "simplex/HFactor.h"
 #include "simplex/HVector.h"
-#include "simplex/HVectorBase.h"
 #include "snippets.hpp"
 
 enum class BasisStatus {

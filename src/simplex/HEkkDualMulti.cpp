@@ -584,7 +584,7 @@ void HEkkDual::majorUpdateFtranPrepare() {
         a_matrix->collectAj(*Vec, jFinish->variable_out, pivotX);
       }
     }
-    col_BFRT.saxpy(1, Vec);
+    col_BFRT.saxpy(1.0, Vec);
   }
 
   // Prepare regular FTRAN buffer

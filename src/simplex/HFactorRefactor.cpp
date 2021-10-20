@@ -18,7 +18,6 @@
 #include <iostream>
 
 #include "simplex/HFactor.h"
-#include "simplex/HVectorBase.h"
 
 // std::max and std::min used in HFactor.h for local in-line
 // functions, so HFactor.h has #include <algorithm>

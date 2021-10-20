@@ -20,7 +20,6 @@
 #include <cmath>
 
 #include "simplex/HVector.h"
-#include "simplex/HVectorBase.h"
 #include "util/HighsRandom.h"
 
 using std::fabs;
