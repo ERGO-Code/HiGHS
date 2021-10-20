@@ -750,9 +750,9 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       max(geomean_col_equilibration, 1 / geomean_col_equilibration);
   const double geomean_row =
       max(geomean_row_equilibration, 1 / geomean_row_equilibration);
-  const double mean_equilibration_improvement =
+  const double mean_equilibration_improvement = sqrt(
       (geomean_original_col * geomean_original_row) /
-      (geomean_col * geomean_row);
+      (geomean_col * geomean_row));
   // Compute the extreme equilibration improvement
   const double original_col_ratio =
       max_original_col_equilibration / min_original_col_equilibration;
@@ -770,14 +770,14 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       original_matrix_value_ratio / matrix_value_ratio;
   if (options.highs_analysis_level) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "Scaling: Extreme equilibration improvement = ( %11.4g + "
-                "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g\n",
+                "Scaling: Extreme equilibration improvement =      ( %11.4g + "
+                "%11.4g) / ( %11.4g + %11.4g)  =      %11.4g / %11.4g  = %11.4g\n",
                 original_col_ratio, original_row_ratio, col_ratio, row_ratio,
                 (original_col_ratio + original_row_ratio),
                 (col_ratio + row_ratio), extreme_equilibration_improvement);
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "Scaling:    Mean equilibration improvement = ( %11.4g * "
-                "%11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g\n",
+                "Scaling: Mean    equilibration improvement = sqrt(( %11.4g * "
+                "%11.4g) / ( %11.4g * %11.4g)) = sqrt(%11.4g / %11.4g) = %11.4g\n",
                 geomean_original_col, geomean_original_row, geomean_col,
                 geomean_row, (geomean_original_col * geomean_original_row),
                 (geomean_col * geomean_row), mean_equilibration_improvement);

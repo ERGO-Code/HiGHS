@@ -341,6 +341,12 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   incumbent_lp.is_moved_ = false;
   ekk_instance.setNlaPointersForLpAndScale(incumbent_lp);
   if (return_status == HighsStatus::kError) {
+    // Error return, so make sure that the unscaled and scaled model
+    // status values are the same, and that they correspond to an
+    // error return
+    unscaled_model_status = scaled_model_status;
+    return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
+    assert(return_status == HighsStatus::kError);
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }
   // The unscaled LP has been solved - either directly, or because

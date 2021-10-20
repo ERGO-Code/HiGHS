@@ -1066,7 +1066,7 @@ HighsStatus HEkk::solve() {
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
   debugReporting(-1);
-  const HighsInt debug_from_solve_call_num = 44;
+  const HighsInt debug_from_solve_call_num = -15;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   if (debug_solve_call_num_ >= debug_from_solve_call_num &&
       debug_solve_call_num_ <= debug_to_solve_call_num) {
@@ -3803,7 +3803,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   // To be called from inside HEkkDual
   HighsLp& lp = this->lp_;
   const bool use_row_wise_matrix = status_.has_ar_matrix;
-  const bool use_iterative_refinement = true;
+  const bool use_iterative_refinement = false;
   const bool report = false;
   if (use_iterative_refinement) {
     HVector correction;
@@ -3847,10 +3847,42 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     if (report) printf("||correction_sol|| = %g\n", correction_sol_norm);
     unitBtranResidual(row_out, row_ep, row_ep_residual);
   }
+  // Determine the maximum absolute value in row_ep
+  double max_row_ep_value = 0;
+  for (HighsInt iX = 0; iX < row_ep.count; iX++)
+    max_row_ep_value = std::max(fabs(row_ep.array[row_ep.index[iX]]), max_row_ep_value);
+  int exp_scale;
+  // Decompose max_row_ep_value into a normalized fraction and an
+  // integral power of two.
+  //
+  // If arg is zero, returns zero and stores zero in *exp. Otherwise
+  // (if arg is not zero), if no errors occur, returns the value x in
+  // the range (-1;-0.5], [0.5; 1) and stores an integer value in *exp
+  // such that x×2(*exp)=arg
+  std::frexp(max_row_ep_value, &exp_scale);
+  exp_scale = -exp_scale;
+  // Multiply a floating point value x(=1) by the number 2 raised to
+  // the exp power
+  double row_ep_scale = std::ldexp(1, exp_scale);
+  // Unlike the proof of infeasibility in the MIP solver, row_ep can't
+  // be scaled, as it needs to be available to provide a dual ray, so
+  // have to use the scaling explicitly
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
     HighsInt iRow = row_ep.index[iX];
+    // Give row_ep the sign of the leaving row - as is done in
+    // getDualRayInterface.
     row_ep.array[iRow] *= move_out;
+    // Compute the scaled value
+    const double scaled_row_ep_value = row_ep_scale * row_ep.array[iRow];
+    // If the scaled value is small, then zero the row_ep value
+    if (std::abs(scaled_row_ep_value) < options_->small_matrix_value) {
+      row_ep.array[iRow] = 0;
+      row_ep.index[iX] = row_ep.index[row_ep.count-1];
+      row_ep.count--;
+      iX--;
+      continue;
+    }
     // make sure infinite sides are not used
     if (highs_isInfinity(-lp.row_lower_[iRow]))
       row_ep.array[iRow] = std::min(row_ep.array[iRow], 0.0);
@@ -3878,28 +3910,30 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   HighsCDouble implied_upper = 0.0;
   bool infinite_implied_upper = false;
   const double kZeroProofValue = 1e-12;
+  double use_zero_proof_value = kZeroProofValue;
+  //    use_zero_proof_value = options_->small_matrix_value / row_ep_scale;
   if (report)
     printf(
         "HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = "
         "%d\n",
         (int)row_ep.count, (int)proof_num_nz);
   for (HighsInt i = 0; i < proof_num_nz; ++i) {
-    if (proof_value[i] > kZeroProofValue) {
+    if (proof_value[i] > use_zero_proof_value) {
       if (highs_isInfinity(lp.col_upper_[proof_index[i]])) {
         infinite_implied_upper = true;
         if (report)
           printf("proof_value[i] = %11.4g has UB = %11.4g\n", proof_value[i],
                  lp.col_upper_[proof_index[i]]);
-        break;
+	break;
       }
       implied_upper += proof_value[i] * lp.col_upper_[proof_index[i]];
-    } else if (proof_value[i] < -kZeroProofValue) {
+    } else if (proof_value[i] < -use_zero_proof_value) {
       if (highs_isInfinity(-lp.col_lower_[proof_index[i]])) {
         infinite_implied_upper = true;
         if (report)
           printf("proof_value[i] = %11.4g has LB = %11.4g\n", proof_value[i],
                  lp.col_upper_[proof_index[i]]);
-        break;
+	break;
       }
       implied_upper += proof_value[i] * lp.col_lower_[proof_index[i]];
     }
