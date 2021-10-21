@@ -18,10 +18,10 @@
 #include <iomanip>
 
 #include "HConfig.h"
-#include "simplex/FactorTimer.h"
-#include "simplex/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
+#include "util/FactorTimer.h"
+#include "util/HFactor.h"
 
 #ifdef OPENMP
 #include "omp.h"

@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsSparseMatrix.h
+/**@file util/HighsSparseMatrix.h
  * @brief
  */
 #ifndef LP_DATA_HIGHS_SPARSE_MATRIX_H_
@@ -21,8 +21,9 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"  //For  HighsScale
 #include "lp_data/HighsStatus.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "util/HighsUtils.h"
 
 const double kHyperPriceDensity = 0.1;

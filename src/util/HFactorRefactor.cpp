@@ -10,14 +10,15 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactorRefactor.cpp
+/**@file util/HFactorRefactor.cpp
  * @brief Types of solution classes
  */
 #include <cassert>
 #include <cmath>
 #include <iostream>
 
-#include "simplex/HFactor.h"
+#include "util/HFactor.h"
+#include "util/HVectorBase.h"
 
 // std::max and std::min used in HFactor.h for local in-line
 // functions, so HFactor.h has #include <algorithm>

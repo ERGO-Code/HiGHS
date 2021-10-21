@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "lp_data/HStruct.h"
-#include "lp_data/HighsSparseMatrix.h"
+#include "util/HighsSparseMatrix.h"
 
 class HighsLp {
  public:

@@ -10,13 +10,13 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactorExtend.cpp
+/**@file util/HFactorExtend.cpp
  * @brief Types of solution classes
  */
 #include <cassert>
 
-#include "simplex/HFactor.h"
-#include "simplex/HVector.h"
+#include "util/HFactor.h"
+#include "util/HVectorBase.h"
 
 using std::fabs;
 

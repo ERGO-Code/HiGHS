@@ -10,13 +10,13 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HVector.h
+/**@file util/HVector.h
  * @brief Vector structure for HiGHS
  */
-#ifndef SIMPLEX_HVECTOR_H_
-#define SIMPLEX_HVECTOR_H_
+#ifndef UTIL_HVECTOR_H_
+#define UTIL_HVECTOR_H_
 
-#include "simplex/HVectorBase.h"
+#include "util/HVectorBase.h"
 #include "util/HighsCDouble.h"
 
 using HVector = HVectorBase<double>;
@@ -24,4 +24,4 @@ using HVectorQuad = HVectorBase<HighsCDouble>;
 using HVector_ptr = HVector*;
 using HVectorQuad_ptr = HVectorQuad*;
 
-#endif /* SIMPLEX_HVECTOR_H_ */
+#endif /* UTIL_HVECTOR_H_ */

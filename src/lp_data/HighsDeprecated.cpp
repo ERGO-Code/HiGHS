@@ -147,6 +147,7 @@ double Highs::getHighsRunTime() {
 #if 0
 HighsStatus Highs::writeSolution(const std::string filename,
                                 const bool pretty) const {
+  deprecationMessage("writeSolution(filename, pretty)", "writeSolution(filename, style)");
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;

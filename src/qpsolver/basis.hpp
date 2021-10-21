@@ -8,8 +8,9 @@
 #include "instance.hpp"
 #include "pricing.hpp"
 #include "runtime.hpp"
-#include "simplex/HFactor.h"
-#include "simplex/HVector.h"
+#include "util/HFactor.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "snippets.hpp"
 
 enum class BasisStatus {

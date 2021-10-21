@@ -10,11 +10,11 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HVector.h
+/**@file util/HVector.h
  * @brief Vector structure for HiGHS
  */
-#ifndef SIMPLEX_HVECTOR_BASE_H_
-#define SIMPLEX_HVECTOR_BASE_H_
+#ifndef UTIL_HVECTOR_BASE_H_
+#define UTIL_HVECTOR_BASE_H_
 
 #include <vector>
 
@@ -96,4 +96,4 @@ class HVectorBase {
   bool isEqual(const HVectorBase<Real>& v0);
 };
 
-#endif /* SIMPLEX_HVECTOR_H_ */
+#endif /* UTIL_HVECTOR_BASE_H_ */

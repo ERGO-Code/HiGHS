@@ -10,19 +10,19 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsSparseMatrix.cpp
+/**@file util/HighsSparseMatrix.cpp
  * @brief
  */
-#include "lp_data/HighsSparseMatrix.h"
+#include "util/HighsSparseMatrix.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 
-#include "mip/HighsSparseVectorSum.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
+#include "util/HighsSparseVectorSum.h"
 
 using std::fabs;
 using std::max;

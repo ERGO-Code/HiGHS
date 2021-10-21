@@ -10,16 +10,17 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HFactorDebug.cpp
+/**@file util/HFactorDebug.cpp
  * @brief
  */
 
-#include "simplex/HFactorDebug.h"
+#include "util/HFactorDebug.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "simplex/HVector.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "util/HighsRandom.h"
 
 using std::fabs;

@@ -25,12 +25,14 @@
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HVector.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 
 // Limit on the number of column slices for parallel calculations. SIP
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices
 const HighsInt kHighsSlicedLimit = kHighsThreadLimit;
 // Was 100, but can't see why this should be higher than kHighsThreadLimit;
+// const double kMaxOkGrowth = 1e4;
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -444,6 +446,7 @@ class HEkkDual {
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
+  double max_pack_value;
 
   bool check_invert_condition = false;
 

@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactor.h
+/**@file util/HFactor.h
  * @brief Basis matrix factorization, update and solves for HiGHS
  */
 #ifndef HFACTOR_H_
@@ -26,8 +26,8 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
-#include "lp_data/HighsSparseMatrix.h"
-#include "simplex/HVector.h"
+#include "util/HVector.h"
+#include "util/HighsSparseMatrix.h"
 
 // Uses max and min for local in-line functions
 using std::max;
