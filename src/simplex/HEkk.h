@@ -86,7 +86,8 @@ class HEkk {
   bool proofOfPrimalInfeasibility();
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
-
+  void refineArray(HVector& hvector, double& scale, const double& small_value);
+  void refineVector(vector<double>& value, vector<HighsInt>& index, double& scale, const double& small_value);
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 

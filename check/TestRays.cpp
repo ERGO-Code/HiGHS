@@ -411,7 +411,7 @@ TEST_CASE("Rays-woodinfe", "[highs_test_rays]") {
 
 // klein1 is infeasible, but currently has no dual ray
 TEST_CASE("Rays-klein1", "[highs_test_rays]") {
-  testInfeasibleMps("klein1", false);
+  testInfeasibleMps("klein1", true);
 }
 
 TEST_CASE("Rays-gams10am", "[highs_test_rays]") {
