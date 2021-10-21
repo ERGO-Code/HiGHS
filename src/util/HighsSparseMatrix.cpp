@@ -1167,13 +1167,14 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       if (switch_to_dense) break;
       double multiplier = column.array[iRow];
       if (multiplier) {
-	for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
-	  HighsInt iCol = this->index_[iEl];
-	  double value0 = result.array[iCol];
-	  double value1 = value0 + multiplier * this->value_[iEl];
-	  if (value0 == 0) result.index[result.count++] = iCol;
-	  result.array[iCol] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
-	}
+        for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
+          HighsInt iCol = this->index_[iEl];
+          double value0 = result.array[iCol];
+          double value1 = value0 + multiplier * this->value_[iEl];
+          if (value0 == 0) result.index[result.count++] = iCol;
+          result.array[iCol] =
+              (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+        }
       }
       next_index = ix + 1;
     }

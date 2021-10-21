@@ -754,22 +754,22 @@ class HighsOptions : public HighsOptionsStruct {
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "simplex_pivotal_row_refinement_strategy", "Strategy for refining pivotal row in simplex "
-	"1 => Only for unscaled LP infeasibility proof"
-	"2 => And for scaled LP infeasibility proof"
-	"3 => And following growth in dual ratio test"
-	"4 => And for all dual ratio test", 
-	advanced,
-        &simplex_pivotal_row_refinement_strategy,
-	kSimplexPivotalRowRefinementStrategyMin,
-        kSimplexPivotalRowRefinementStrategyAndChuzcGrowth,
-	kSimplexPivotalRowRefinementStrategyMax);
+    record_int =
+        new OptionRecordInt("simplex_pivotal_row_refinement_strategy",
+                            "Strategy for refining pivotal row in simplex "
+                            "1 => Only for unscaled LP infeasibility proof"
+                            "2 => And for scaled LP infeasibility proof"
+                            "3 => And following growth in dual ratio test"
+                            "4 => And for all dual ratio test",
+                            advanced, &simplex_pivotal_row_refinement_strategy,
+                            kSimplexPivotalRowRefinementStrategyMin,
+                            kSimplexPivotalRowRefinementStrategyAndChuzcGrowth,
+                            kSimplexPivotalRowRefinementStrategyMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
-        "simplex_pivotal_col_refinement_strategy", "Strategy for refining pivotal column in simplex ",
-	advanced,
+        "simplex_pivotal_col_refinement_strategy",
+        "Strategy for refining pivotal column in simplex ", advanced,
         &simplex_pivotal_col_refinement_strategy, false);
     records.push_back(record_bool);
 
@@ -831,14 +831,14 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "simplex_pivotal_row_refinement_tolerance",
-        "Primal simplex pivotal row refinement tolerance",
-        advanced, &simplex_pivotal_row_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
+        "Primal simplex pivotal row refinement tolerance", advanced,
+        &simplex_pivotal_row_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "simplex_pivotal_col_refinement_tolerance",
-        "Primal simplex pivotal column refinement tolerance",
-        advanced, &simplex_pivotal_col_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
+        "Primal simplex pivotal column refinement tolerance", advanced,
+        &simplex_pivotal_col_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
