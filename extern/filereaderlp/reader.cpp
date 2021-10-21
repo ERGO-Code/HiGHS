@@ -515,6 +515,8 @@ void Reader::processbinsec() {
       std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BIN][i].get())->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       var->type = VariableType::BINARY;
+      var->lowerbound = 0.0;
+      var->upperbound = 1.0;
    }
 }
 
