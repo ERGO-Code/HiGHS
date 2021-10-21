@@ -258,6 +258,11 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Check validity of any integrality
+  return_status = interpretCallStatus(assessIntegrality(lp, options_),
+                                      return_status, "assessIntegrality");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
@@ -2419,7 +2424,13 @@ HighsStatus Highs::callSolveMip() {
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
   assert(model_.lp_.format_ != MatrixFormat::kRowwise);
-  HighsMipSolver solver(options_, model_.lp_, solution_);
+  const bool has_semi_variables = model_.lp_.hasSemiVariables();
+  HighsLp use_lp;
+  if (has_semi_variables) {
+    use_lp = withoutSemiVariables(model_.lp_);
+  }
+  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  HighsMipSolver solver(options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
   HighsStatus call_status = HighsStatus::kOk;
@@ -2431,7 +2442,10 @@ HighsStatus Highs::callSolveMip() {
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= model_.lp_.num_col_);
+    assert(solver_solution_size >= lp.num_col_);
+    // If the original model has semi-variables, its solution is
+    // (still) given by the first model_.lp_.num_col_ entries of the
+    // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.row_value.assign(model_.lp_.num_row_, 0);
     for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++) {
@@ -2455,7 +2469,7 @@ HighsStatus Highs::callSolveMip() {
   // Use generic method to set data required for info
   HighsSolutionParams solution_params;
   solution_params.primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
+      options_.mip_feasibility_tolerance;
   solution_params.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
@@ -2464,6 +2478,14 @@ HighsStatus Highs::callSolveMip() {
   solution_params.objective_function_value = solver.solution_objective_;
   //  Most come from solution_params...
   copyFromSolutionParams(info_, solution_params);
+  // Overwrite max infeasibility to include integrality if there is a solution
+  if (solver.solution_objective_ != kHighsInf) {
+    info_.max_primal_infeasibility =
+        std::max({solver.row_violation_, solver.bound_violation_,
+                  solver.integrality_violation_});
+    if (info_.max_primal_infeasibility > options_.mip_feasibility_tolerance)
+      info_.primal_solution_status = kSolutionStatusInfeasible;
+  }
   // ... and iteration counts...
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
@@ -2480,7 +2502,7 @@ HighsStatus Highs::callSolveMip() {
 }
 
 HighsStatus Highs::writeSolution(const std::string filename,
-                                 const bool pretty) const {
+                                 const HighsInt style) const {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -2489,7 +2511,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, model_.lp_, basis_, solution_, pretty);
+  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;
 }

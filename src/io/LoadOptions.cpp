@@ -23,6 +23,10 @@ bool loadOptionsFromFile(HighsOptions& options, const std::string filename) {
 
   string line, option, value;
   HighsInt line_count = 0;
+  // loadOptionsFromFile needs its own non-chars string since the
+  // default setting in io/stringutil.h excludes \" and \' that can
+  // appear in an MPS name - the only other place where trim() is used
+  const std::string non_chars = "\t\n\v\f\r\"\' ";
   std::ifstream file(filename);
   if (file.is_open()) {
     while (file.good()) {
@@ -39,8 +43,8 @@ bool loadOptionsFromFile(HighsOptions& options, const std::string filename) {
       }
       option = line.substr(0, equals);
       value = line.substr(equals + 1, line.size() - equals);
-      trim(option);
-      trim(value);
+      trim(option, non_chars);
+      trim(value, non_chars);
       if (setLocalOptionValue(options.log_options, option, options.records,
                               value) != OptionStatus::kOk)
         return false;

@@ -817,6 +817,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.passModel(lpsolver.getLp());
         ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("output_flag", false);
+        ipm.setOptionValue("ipm_iteration_limit", 200);
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",

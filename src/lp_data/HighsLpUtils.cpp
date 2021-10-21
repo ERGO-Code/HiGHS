@@ -397,6 +397,64 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
+HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
+  const double kMaxSemiVariableUpper = 1e6;
+  HighsStatus return_status = HighsStatus::kOk;
+  if (!lp.integrality_.size()) return return_status;
+  assert(lp.integrality_.size() == lp.num_col_);
+  HighsInt num_illegal_upper = 0;
+  HighsInt num_non_semi = 0;
+  HighsInt num_non_continuous_variables = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      num_non_continuous_variables++;
+      // Semi-variables with zero lower bound aren't semi
+      if (lp.col_upper_[iCol] == 0) {
+        num_non_semi++;
+        if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+          // Semi-continuous become continuous
+          lp.integrality_[iCol] = HighsVarType::kContinuous;
+          num_non_continuous_variables--;
+        } else {
+          // Semi-integer become integer
+          lp.integrality_[iCol] = HighsVarType::kInteger;
+        }
+      }
+      // Semi-variables must have upper bound that's not too large,
+      // unless the lower bound is zero, in which case the variable is
+      // standard continuous or integer
+      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper && lp.col_lower_[iCol])
+        num_illegal_upper++;
+    } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+      num_non_continuous_variables++;
+    }
+  }
+  if (!num_non_continuous_variables) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-integer/integer variables in model with non-empty "
+                 "integrality\n");
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_non_semi) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) with zero lower bound "
+                 "so are continuous/integer\n",
+                 num_illegal_upper);
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_illegal_upper) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) with upper bounds "
+                 "exceeding %12g\n",
+                 num_illegal_upper, kMaxSemiVariableUpper);
+    return_status = HighsStatus::kError;
+  }
+  return return_status;
+}
+
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   double max_residual = 0;
   HighsInt num_change = 0;
@@ -1751,8 +1809,9 @@ void analyseScaledLp(const HighsLogOptions& log_options,
   analyseLp(log_options, scaled_lp, "Scaled");
 }
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty) {
+void writeSolutionToFile(FILE* file, const HighsOptions& options,
+                         const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution, const HighsInt style) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
@@ -1775,13 +1834,19 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
     use_row_status = basis.row_status;
   }
   if (!have_value && !have_dual && !have_basis) return;
-  if (pretty) {
-    writeModelBoundSol(file, true, lp.num_col_, lp.col_lower_, lp.col_upper_,
-                       lp.col_names_, use_col_value, use_col_dual,
-                       use_col_status);
-    writeModelBoundSol(file, false, lp.num_row_, lp.row_lower_, lp.row_upper_,
-                       lp.row_names_, use_row_value, use_row_dual,
-                       use_row_status);
+  if (style == kWriteSolutionStylePretty) {
+    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
+                            lp.col_upper_, lp.col_names_, use_col_value,
+                            use_col_dual, use_col_status);
+    writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
+                            lp.row_upper_, lp.row_names_, use_row_value,
+                            use_row_dual, use_row_status);
+  } else if (style == kWriteSolutionStyleMittelmann) {
+    HighsCDouble solObj = lp.offset_;
+    for (HighsInt i = 0; i < lp.num_col_; ++i)
+      solObj += lp.col_cost_[i] * use_col_value[i];
+    writeModelSolution(file, options, double(solObj), lp.num_col_,
+                       lp.col_names_, use_col_value, lp.integrality_);
   } else {
     fprintf(file,
             "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
@@ -1808,19 +1873,19 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
     fprintf(file, " Basis\n");
     fprintf(file, "Columns\n");
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (have_value) fprintf(file, "%.15g", use_col_value[iCol]);
-      if (have_dual) fprintf(file, "%.15g", use_col_dual[iCol]);
+      if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
+      if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
       if (have_basis)
-        fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
-      fprintf(file, " \n");
+        fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
+      fprintf(file, "\n");
     }
     fprintf(file, "Rows\n");
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (have_value) fprintf(file, "%.15g", use_row_value[iRow]);
-      if (have_dual) fprintf(file, "%.15g", use_row_dual[iRow]);
+      if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
+      if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
       if (have_basis)
-        fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
-      fprintf(file, " \n");
+        fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
+      fprintf(file, "\n");
     }
   }
 }
@@ -2509,4 +2574,116 @@ void ensureRowWise(HighsLp& lp) {
   assert((HighsInt)lp.a_index_.size() >= num_nz);
   assert((HighsInt)lp.a_value_.size() >= num_nz);
   lp.format_ = MatrixFormat::kRowwise;
+}
+
+HighsLp withoutSemiVariables(const HighsLp& lp_) {
+  HighsLp lp = lp_;
+  HighsInt num_col = lp.num_col_;
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_semi_variables = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+      num_semi_variables++;
+  }
+  assert(num_semi_variables);
+  // Insert spaces for index/value of new coefficients for
+  // semi-variables
+  vector<HighsInt>& start = lp.a_start_;
+  vector<HighsInt>& index = lp.a_index_;
+  vector<double>& value = lp.a_value_;
+  HighsInt num_nz = start[num_col];
+  HighsInt new_num_nz = num_nz + 2 * num_semi_variables;
+  HighsInt new_el = new_num_nz;
+  index.resize(new_num_nz);
+  value.resize(new_num_nz);
+  for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
+    HighsInt from_el = start[iCol + 1] - 1;
+    start[iCol + 1] = new_el;
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+      new_el -= 2;
+    for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
+      new_el--;
+      index[new_el] = index[iEl];
+      value[new_el] = value[iEl];
+    }
+  }
+  assert(new_el == 0);
+  // Insert the new coefficients for semi-variables
+  HighsInt row_num = num_row;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      HighsInt iEl = start[iCol + 1] - 2;
+      index[iEl] = row_num++;
+      value[iEl] = 1;
+      iEl++;
+      index[iEl] = row_num++;
+      value[iEl] = 1;
+    }
+  }
+  num_nz = start[num_col];
+  new_num_nz = num_nz + 2 * num_semi_variables;
+  row_num = num_row;
+  HighsInt semi_col_num = 0;
+  HighsInt semi_row_num = 0;
+  // Insert the new variables and their coefficients
+  std::stringstream ss;
+  const bool has_col_names = lp.col_names_.size();
+  const bool has_row_names = lp.row_names_.size();
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      // Add a binary variable with zero cost
+      lp.col_cost_.push_back(0);
+      lp.col_lower_.push_back(0);
+      lp.col_upper_.push_back(1);
+      // Complete x - l*y >= 0
+      lp.row_lower_.push_back(0);
+      lp.row_upper_.push_back(kHighsInf);
+      if (has_col_names) {
+        // Create a column name
+        ss.str(std::string());
+        ss << "semi_binary_" << semi_col_num++;
+        lp.col_names_.push_back(ss.str());
+      }
+      if (has_row_names) {
+        // Create a row name
+        ss.str(std::string());
+        ss << "semi_lb_" << semi_row_num;
+        lp.row_names_.push_back(ss.str());
+      }
+      index.push_back(row_num++);
+      value.push_back(-lp.col_lower_[iCol]);
+      // Complete 0 <= x - u*y
+      lp.row_lower_.push_back(-kHighsInf);
+      lp.row_upper_.push_back(0);
+      if (has_row_names) {
+        // Create a row name
+        ss.str(std::string());
+        ss << "semi_ub_" << semi_row_num++;
+        lp.row_names_.push_back(ss.str());
+      }
+      index.push_back(row_num++);
+      value.push_back(-lp.col_upper_[iCol]);
+      // Add the next start
+      start.push_back(index.size());
+      lp.integrality_.push_back(HighsVarType::kInteger);
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+        lp.integrality_[iCol] = HighsVarType::kContinuous;
+      } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+        lp.integrality_[iCol] = HighsVarType::kInteger;
+      }
+      // Change the lower bound to on the semi-variable to
+      // zero. Cannot do this earlier, as its original value is used
+      // in constraint 0 <= x-l*y
+      lp.col_lower_[iCol] = 0;
+    }
+  }
+  num_col += num_semi_variables;
+  lp.num_col_ += num_semi_variables;
+  lp.num_row_ += 2 * num_semi_variables;
+  assert(index.size() == new_num_nz);
+  return lp;
 }

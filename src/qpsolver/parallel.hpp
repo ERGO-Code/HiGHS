@@ -6,6 +6,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+
 #include "util/HighsInt.h"
 
 enum class PARALLELISM_SETTING { NONE, OMP, BUILTIN };
@@ -57,40 +58,6 @@ static void parallel_for(
       }
       break;
   }
-}
-
-static void parallel_for_obo(HighsInt nb_elements,
-                             std::function<void(HighsInt idx)> functor) {
-  // -------
-  unsigned nb_threads_hHighsInt = std::thread::hardware_concurrency();
-  unsigned nb_threads = 1;  // nb_threads_hHighsInt == 0 ? 8 :
-                            // (nb_threads_hint);
-
-  std::vector<std::thread> my_threads(nb_threads);
-
-  HighsInt assigned = 0;
-  std::vector<HighsInt> current(nb_threads, 0);
-  std::mutex lock;
-  for (HighsInt i = 0; i < nb_threads; i++) {
-    my_threads[i] = std::thread(
-        [&](HighsInt tid) {
-          while (true) {
-            lock.lock();
-            if (assigned < nb_elements) {
-              current[tid] = assigned++;
-              lock.unlock();
-            } else {
-              lock.unlock();
-              break;
-            }
-
-            functor(current[tid]);
-          }
-        },
-        i);
-  }
-  std::for_each(my_threads.begin(), my_threads.end(),
-                std::mem_fn(&std::thread::join));
 }
 
 static void parallel_for_frac(

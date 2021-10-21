@@ -69,7 +69,9 @@ enum HighsAnalysisLevel {
 enum class HighsVarType : uint8_t {
   kContinuous = 0,
   kInteger = 1,
-  kImplicitInteger = 2,
+  kSemiContinuous = 2,
+  kSemiInteger = 3,
+  kImplicitInteger = 4,
 };
 
 enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
@@ -105,6 +107,12 @@ enum BasisValidity {
   kBasisValidityMin = kBasisValidityInvalid,
   kBasisValidityMax = kBasisValidityValid
 };
+
+const HighsInt kWriteSolutionStyleRaw = 0;
+const HighsInt kWriteSolutionStylePretty = 1;
+const HighsInt kWriteSolutionStyleMittelmann = 2;
+const HighsInt kWriteSolutionStyleMin = kWriteSolutionStyleRaw;
+const HighsInt kWriteSolutionStyleMax = kWriteSolutionStyleMittelmann;
 
 const std::string kHighsFilenameDefault = "";
 

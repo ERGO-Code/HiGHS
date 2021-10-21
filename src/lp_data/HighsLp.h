@@ -38,7 +38,7 @@ class HighsLp {
   std::vector<double> row_lower_;
   std::vector<double> row_upper_;
 
-  MatrixFormat format_ = MatrixFormat::kNone;
+  MatrixFormat format_ = MatrixFormat::kColwise;
   ObjSense sense_ = ObjSense::kMinimize;
   double offset_ = 0;
 
@@ -52,6 +52,7 @@ class HighsLp {
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
+  bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
   void clear();
 };
