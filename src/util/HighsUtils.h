@@ -181,4 +181,5 @@ void printScatterDataRegressionComparison(std::string name,
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
                                        const bool print = false);
 
+double nearestPowerOfTwoScale(const double value);
 #endif  // UTIL_HIGHSUTILS_H_

@@ -3864,7 +3864,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   }
   // Refine row_ep by removing relatively small values
   double row_ep_scale = 0;
-  if (use_refinement) refineArray(row_ep, row_ep_scale, options_->small_matrix_value);
+  if (use_refinement) refineArray(row_ep, row_ep_scale, options_->simplex_pivotal_row_refinement_tolerance);
   // Determine the maximum absolute value in row_ep
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
@@ -3893,7 +3893,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
   }
   // Refine the proof constraint coefficients according to row_ep_scale
-  if (use_refinement) refineVector(proof_value, proof_index, row_ep_scale, options_->small_matrix_value);
+  if (use_refinement) refineVector(proof_value, proof_index, row_ep_scale,
+				   options_->simplex_pivotal_row_refinement_tolerance);
 
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;
@@ -3937,28 +3938,20 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   return proof_of_primal_infeasibility;
 }
 
+double HEkk::getArrayScale(const HVector& hvector) {
+  if (hvector.count<=0) return 1;
+  double max_abs_value = 0;
+  for (HighsInt iX = 0; iX < hvector.count; iX++)
+    max_abs_value =
+      std::max(fabs(hvector.array[hvector.index[iX]]), max_abs_value);
+  double scale = nearestPowerOfTwoScale(max_abs_value);
+  return scale;
+}
+
 void HEkk::refineArray(HVector& hvector, double& scale, const double& small_value) {
   if (hvector.count<=0) return;
-  if (scale<=0) {
-    // The scale value isn't known, so find it
-    double max_abs_value = 0;
-    for (HighsInt iX = 0; iX < hvector.count; iX++)
-      max_abs_value =
-        std::max(fabs(hvector.array[hvector.index[iX]]), max_abs_value);
-    int exp_scale;
-    // Decompose max_abs_value into a normalized fraction and an
-    // integral power of two.
-    //
-    // If arg is zero, returns zero and stores zero in *exp. Otherwise
-    // (if arg is not zero), if no errors occur, returns the value x in
-    // the range (-1;-0.5], [0.5; 1) and stores an integer value in *exp
-    // such that x×2(*exp)=arg
-    std::frexp(max_abs_value, &exp_scale);
-    exp_scale = -exp_scale;
-    // Multiply a floating point value x(=1) by the number 2 raised to
-    // the exp power
-    scale = std::ldexp(1, exp_scale);
-  }
+  // If the scale value isn't known, then find it
+  if (scale<=0) scale = getArrayScale(hvector);
   HighsInt count = 0;
   for (HighsInt iX = 0; iX < hvector.count; iX++) {
     const HighsInt iRow = hvector.index[iX];
@@ -3998,10 +3991,7 @@ void HEkk::refineVector(vector<double>& value,
       for (HighsInt iRow = 0; iRow < dim; iRow++) 
 	max_abs_value = std::max(fabs(value[iRow]), max_abs_value);
     }
-    int exp_scale;
-    std::frexp(max_abs_value, &exp_scale);
-    exp_scale = -exp_scale;
-    scale = std::ldexp(1, exp_scale);
+    scale = nearestPowerOfTwoScale(max_abs_value);
   }
   if (have_index) {
     HighsInt count = 0;
