@@ -290,7 +290,6 @@ struct HighsOptionsStruct {
   std::string log_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
-  bool write_solution_pretty;
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
@@ -311,14 +310,18 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
+  HighsInt simplex_pivotal_row_refinement_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
+  bool simplex_pivotal_col_refinement_strategy;
   double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
+  double simplex_pivotal_row_refinement_tolerance;
+  double simplex_pivotal_col_refinement_tolerance;
   double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
@@ -587,12 +590,6 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "write_solution_pretty",
-        "Write the solution in a pretty (human-readable) format", advanced,
-        &write_solution_pretty, false);
-    records.push_back(record_bool);
-
     record_int = new OptionRecordInt(
         "write_solution_style",
         "Write the solution in style: 0=>Raw; 1=>Pretty; 2=>Mittlemann",
@@ -757,6 +754,25 @@ class HighsOptions : public HighsOptionsStruct {
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "simplex_pivotal_row_refinement_strategy", "Strategy for refining pivotal row in simplex "
+	"1 => Only for unscaled LP infeasibility proof"
+	"2 => And for scaled LP infeasibility proof"
+	"3 => And following growth in dual ratio test"
+	"4 => And for all dual ratio test", 
+	advanced,
+        &simplex_pivotal_row_refinement_strategy,
+	kSimplexPivotalRowRefinementStrategyMin,
+        kSimplexPivotalRowRefinementStrategyAndChuzcGrowth,
+	kSimplexPivotalRowRefinementStrategyMax);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "simplex_pivotal_col_refinement_strategy", "Strategy for refining pivotal column in simplex ",
+	advanced,
+        &simplex_pivotal_col_refinement_strategy, false);
+    records.push_back(record_bool);
+
     record_int =
         new OptionRecordInt("simplex_unscaled_solution_strategy",
                             "Strategy for solving unscaled LP in simplex",
@@ -811,6 +827,18 @@ class HighsOptions : public HighsOptionsStruct {
         "Primal simplex bound perturbation multiplier: 0 => no perturbation",
         advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
         kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "simplex_pivotal_row_refinement_tolerance",
+        "Primal simplex pivotal row refinement tolerance",
+        advanced, &simplex_pivotal_row_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "simplex_pivotal_col_refinement_tolerance",
+        "Primal simplex pivotal column refinement tolerance",
+        advanced, &simplex_pivotal_col_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

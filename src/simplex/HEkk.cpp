@@ -2270,18 +2270,22 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   const HighsInt pct0 = (100 * num_original_nonzero_cost) / lp_.num_col_;
   double average_abs_cost = 0;
   if (report_cost_perturbation) {
-    if (num_original_nonzero_cost) {
-      average_abs_cost = sum_abs_cost / num_original_nonzero_cost;
-    } else {
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
-                  "   STRANGE initial workCost has non nonzeros\n");
-    }
     highsLogDev(options_->log_options, HighsLogType::kInfo,
                 "   Initially have %" HIGHSINT_FORMAT
-                " nonzero costs (%3" HIGHSINT_FORMAT
-                "%%) with min / average / max = %g / %g / %g\n",
-                num_original_nonzero_cost, pct0, min_abs_cost, average_abs_cost,
-                max_abs_cost);
+                " nonzero costs (%3" HIGHSINT_FORMAT "%%)",
+                num_original_nonzero_cost, pct0);
+    if (num_original_nonzero_cost) {
+      average_abs_cost = sum_abs_cost / num_original_nonzero_cost;
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+		  " with min / average / max = %g / %g / %g\n",
+		  min_abs_cost, average_abs_cost, max_abs_cost);
+    } else {
+      min_abs_cost = 1.0;
+      max_abs_cost = 1.0;
+      average_abs_cost = 1.0;
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                  " but perturb as if max cost was 1\n");
+    }
   }
   if (max_abs_cost > 100) {
     max_abs_cost = sqrt(sqrt(max_abs_cost));
@@ -3847,9 +3851,20 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     if (report) printf("||correction_sol|| = %g\n", correction_sol_norm);
     unitBtranResidual(row_out, row_ep, row_ep_residual);
   }
+  // Identify whether refinement should be done
+  bool use_refinement = false;
+  if (lp.is_scaled_) {
+    // LP is scaled, so be more cautious
+    use_refinement = options_->simplex_pivotal_row_refinement_strategy >=
+      kSimplexPivotalRowRefinementStrategyAndScaledLpInfeasibilityProof;
+  } else {
+    // LP is unscaled, so be less cautious
+    use_refinement = options_->simplex_pivotal_row_refinement_strategy >=
+      kSimplexPivotalRowRefinementStrategyUnscaledLpInfeasibilityProof;
+  }
   // Refine row_ep by removing relatively small values
   double row_ep_scale = 0;
-  refineArray(row_ep, row_ep_scale, options_->small_matrix_value);
+  if (use_refinement) refineArray(row_ep, row_ep_scale, options_->small_matrix_value);
   // Determine the maximum absolute value in row_ep
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
@@ -3878,7 +3893,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
   }
   // Refine the proof constraint coefficients according to row_ep_scale
-  refineVector(proof_value, proof_index, row_ep_scale, options_->small_matrix_value);
+  if (use_refinement) refineVector(proof_value, proof_index, row_ep_scale, options_->small_matrix_value);
 
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;

@@ -99,6 +99,15 @@ enum SimplexPriceStrategy {
   kSimplexPriceStrategyMax = kSimplexPriceStrategyRowSwitchColSwitch
 };
 
+enum SimplexPivotalRowRefinementStrategy {
+  kSimplexPivotalRowRefinementStrategyMin = 0,
+  kSimplexPivotalRowRefinementStrategyUnscaledLpInfeasibilityProof = kSimplexPivotalRowRefinementStrategyMin,
+  kSimplexPivotalRowRefinementStrategyAndScaledLpInfeasibilityProof,
+  kSimplexPivotalRowRefinementStrategyAndChuzcGrowth,
+  kSimplexPivotalRowRefinementStrategyAndAllChuzc,
+  kSimplexPivotalRowRefinementStrategyMax = kSimplexPivotalRowRefinementStrategyAndAllChuzc
+};
+
 enum SimplexPrimalCorrectionStrategy {
   kSimplexPrimalCorrectionStrategyNone = 0,
   kSimplexPrimalCorrectionStrategyInRebuild,
