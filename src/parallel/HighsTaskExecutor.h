@@ -94,6 +94,10 @@ class HighsTaskExecutor {
     return globalExecutor.get();
   }
 
+  static int getNumWorkerThreads() {
+    return globalExecutor->workerDeques.size();
+  }
+
   static void initialize(int numThreads) {
     if (!globalExecutor)
       globalExecutor =

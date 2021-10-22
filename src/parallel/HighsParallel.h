@@ -25,6 +25,12 @@ inline void initialize_scheduler(int numThreads = 0) {
   HighsTaskExecutor::initialize(numThreads);
 }
 
+inline int num_threads() { return HighsTaskExecutor::getNumWorkerThreads(); }
+
+inline int thread_num() {
+  return HighsTaskExecutor::getThisWorkerDeque()->getOwnerId();
+}
+
 template <typename F>
 void spawn(HighsTaskExecutor::WorkerDeque* localDeque, F&& f) {
   localDeque->push(std::forward<F>(f));
