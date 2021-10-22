@@ -87,6 +87,7 @@ class HEkk {
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
   double getArrayScale(const HVector& hvector);
+  double getValueScale(const vector<double>& value);
   void refineArray(HVector& hvector, double& scale, const double& small_value);
   void refineVector(vector<double>& value, vector<HighsInt>& index,
                     double& scale, const double& small_value);

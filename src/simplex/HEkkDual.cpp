@@ -1518,38 +1518,20 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
-  const HighsInt check_iter = -54;
-  if (ekk_instance_.debug_solve_call_num_ == 12 &&
-      ekk_instance_.iteration_count_ == check_iter) {
+  HighsOptions* options = ekk_instance_.options_;
+  HighsLp& lp = ekk_instance_.lp_;
+
+  const HighsInt check_iter = -2822;
+  const bool debug = ekk_instance_.debug_solve_call_num_ == 1 &&
+                     ekk_instance_.iteration_count_ == check_iter;
+  if (debug) {
     printf("HEkkDual::chooseColumn Check iter = %d\n", (int)check_iter);
   }
   const bool report_small_pivot_issue = true;
-  HighsOptions* options = ekk_instance_.options_;
-  HighsLp& lp = ekk_instance_.lp_;
-  // Determine whether to refine the pivotal row in all CHUZC
-  double row_ep_scale = 0;
-  const bool use_refinement =
-      options->simplex_pivotal_row_refinement_strategy >=
-      kSimplexPivotalRowRefinementStrategyAndAllChuzc;
-  bool used_refinement = false;
-  if (use_refinement) {
-    // Refine row_ep, getting row_ep_scale in the process
-    ekk_instance_.refineArray(
-        *row_ep, row_ep_scale,
-        options->simplex_pivotal_row_refinement_tolerance);
-    used_refinement = true;
-  } else {
-    // Just get row_ep_scale
-    row_ep_scale = ekk_instance_.getArrayScale(*row_ep);
-  }
   //
   // PRICE
   //
   ekk_instance_.tableauRowPrice(*row_ep, row_ap);
-  if (use_refinement)
-    ekk_instance_.refineArray(
-        row_ap, row_ep_scale,
-        options->simplex_pivotal_row_refinement_tolerance);
   //
   // CHUZC
   //
@@ -1568,10 +1550,12 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   dualRow.chooseMakepack(&row_ap, 0);
   // Pack row_ep into the packIndex/Value of HEkkDualRow
   dualRow.chooseMakepack(row_ep, solver_num_col);
+  const double row_ep_scale = ekk_instance_.getValueScale(dualRow.packValue);
   analysis->simplexTimerStop(Chuzc1Clock);
   // Loop until an acceptable pivot is found. Each pass either finds a
   // pivot, identifies possible unboundedness, or reduced the number
   // of nonzeros in dualRow.pack_value
+  bool repeating_chuzc = false;
   for (;;) {
     //
     // Section 2: Determine the possible variables - candidates for CHUZC
@@ -1595,75 +1579,32 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
       return;
     }
     if (dualRow.workPivot >= 0) {
-      double relatively_small_value =
-          options->simplex_pivotal_row_refinement_tolerance;
+      const double growth_tolerance =
+          options->dual_simplex_pivot_growth_tolerance;
       // A pivot has been chosen
       double alpha_row = dualRow.workAlpha;
       assert(alpha_row);
       const double scaled_value = row_ep_scale * alpha_row;
-      if (std::abs(scaled_value) <= relatively_small_value) {
+      if (std::abs(scaled_value) <= growth_tolerance) {
         if (report_small_pivot_issue)
           printf(
               "CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
               "Pivot %11.4g (dual "
-              "%11.4g) is small",
+              "%11.4g; ratio = %11.4g) is small",
               (int)ekk_instance_.debug_solve_call_num_,
               (int)ekk_instance_.iteration_count_, 1.0 / row_ep_scale,
               (int)dualRow.workPivot, dualRow.workAlpha,
-              workDual[dualRow.workPivot]);
-        // Possibly use refinement, if it's not already been done
-        if (!used_refinement &&
-            options->simplex_pivotal_row_refinement_strategy >=
-                kSimplexPivotalRowRefinementStrategyAndChuzcGrowth) {
-          // Freemove depends on e_p, so needs to be cleared
-          analysis->simplexTimerStart(Chuzc5Clock);
-          dualRow.deleteFreemove();
-          analysis->simplexTimerStop(Chuzc5Clock);
-          // Now set up for CHUZC again, refining e_p and a_p
-          const HighsInt old_packCount = dualRow.packCount;
-          const HighsInt old_workPivot = dualRow.workPivot;
-          row_ep_scale = 0;
-          ekk_instance_.refineArray(*row_ep, row_ep_scale,
-                                    relatively_small_value);
-          used_refinement = true;
-          ekk_instance_.tableauRowPrice(*row_ep, row_ap);
-          ekk_instance_.refineArray(row_ap, row_ep_scale,
-                                    relatively_small_value);
-          // Repeat CHUZC section 0
-          analysis->simplexTimerStart(Chuzc0Clock);
-          dualRow.clear();
-          dualRow.workDelta = delta_primal;
-          dualRow.createFreemove(row_ep);
-          analysis->simplexTimerStop(Chuzc0Clock);
-          // Repeat CHUZC section 1
-          analysis->simplexTimerStart(Chuzc1Clock);
-          dualRow.chooseMakepack(&row_ap, 0);
-          dualRow.chooseMakepack(row_ep, solver_num_col);
-          analysis->simplexTimerStop(Chuzc1Clock);
-          if (report_small_pivot_issue) {
-            const HighsInt remove_count = old_packCount - dualRow.packCount;
-            const double new_workAlpha =
-                old_workPivot < lp.num_col_
-                    ? row_ap.array[old_workPivot]
-                    : row_ep->array[old_workPivot - lp.num_col_];
-            printf(
-                ": refinement removes %d = %d - %d values, and old pivot now "
-                "%g",
-                (int)remove_count, (int)old_packCount, (int)dualRow.packCount,
-                new_workAlpha);
-          }
-        } else {
-          // Refinement has either been tried or is not permitted, so
-          // just remove the pivot
-          for (HighsInt i = 0; i < dualRow.packCount; i++) {
-            if (dualRow.packIndex[i] == dualRow.workPivot) {
-              dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
-              dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
-              dualRow.packCount--;
-              printf(": remove pivot from the packed values: pack count = %6d",
-                     (int)dualRow.packCount);
-              break;
-            }
+              workDual[dualRow.workPivot],
+              workDual[dualRow.workPivot] / dualRow.workAlpha);
+        // Remove the pivot
+        for (HighsInt i = 0; i < dualRow.packCount; i++) {
+          if (dualRow.packIndex[i] == dualRow.workPivot) {
+            dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
+            dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
+            dualRow.packCount--;
+            printf(": removing pivot gives pack count = %6d",
+                   (int)dualRow.packCount);
+            break;
           }
         }
         // Indicate that no pivot has been chosen
@@ -1671,11 +1612,21 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
         if (report_small_pivot_issue)
           printf(" so %s\n",
                  dualRow.packCount > 0 ? "repeat CHUZC" : "consider unbounded");
+      } else if (repeating_chuzc && report_small_pivot_issue) {
+        printf(
+            "                                                       Variable "
+            "%6d "
+            "Pivot %11.4g (dual "
+            "%11.4g; ratio = %11.4g) is OK\n",
+            (int)dualRow.workPivot, dualRow.workAlpha,
+            workDual[dualRow.workPivot],
+            workDual[dualRow.workPivot] / dualRow.workAlpha);
       }
     }
     // If a pivot has been chosen, or there are no more packed values
     // then end CHUZC
     if (dualRow.workPivot >= 0 || dualRow.packCount <= 0) break;
+    repeating_chuzc = true;
   }
   //
   // Section 5: Reset the nonbasicMove values for free columns

@@ -3853,22 +3853,25 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   }
   // Identify whether refinement should be done
   bool use_refinement = false;
+  double refinement_tolerance;
   if (lp.is_scaled_) {
     // LP is scaled, so be more cautious
     use_refinement =
-        options_->simplex_pivotal_row_refinement_strategy >=
-        kSimplexPivotalRowRefinementStrategyAndScaledLpInfeasibilityProof;
+        options_->simplex_infeasiblilty_proof_refinement_strategy >=
+        kSimplexInfeasibilityProofRefinementAlsoScaledLp;
+    refinement_tolerance =
+        options_->simplex_infeasibility_proof_scaled_lp_refinement_tolerance;
   } else {
     // LP is unscaled, so be less cautious
     use_refinement =
-        options_->simplex_pivotal_row_refinement_strategy >=
-        kSimplexPivotalRowRefinementStrategyUnscaledLpInfeasibilityProof;
+        options_->simplex_infeasiblilty_proof_refinement_strategy >=
+        kSimplexInfeasibilityProofRefinementUnscaledLp;
+    refinement_tolerance =
+        options_->simplex_infeasibility_proof_unscaled_lp_refinement_tolerance;
   }
   // Refine row_ep by removing relatively small values
   double row_ep_scale = 0;
-  if (use_refinement)
-    refineArray(row_ep, row_ep_scale,
-                options_->simplex_pivotal_row_refinement_tolerance);
+  if (use_refinement) refineArray(row_ep, row_ep_scale, refinement_tolerance);
   // Determine the maximum absolute value in row_ep
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
@@ -3898,8 +3901,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   }
   // Refine the proof constraint coefficients according to row_ep_scale
   if (use_refinement)
-    refineVector(proof_value, proof_index, row_ep_scale,
-                 options_->simplex_pivotal_row_refinement_tolerance);
+    refineVector(proof_value, proof_index, row_ep_scale, refinement_tolerance);
 
   HighsInt proof_num_nz = proof_index.size();
   HighsCDouble implied_upper = 0.0;
@@ -3953,6 +3955,16 @@ double HEkk::getArrayScale(const HVector& hvector) {
   return scale;
 }
 
+double HEkk::getValueScale(const vector<double>& value) {
+  const HighsInt num_value = value.size();
+  if (num_value <= 0) return 1;
+  double max_abs_value = 0;
+  for (HighsInt iX = 0; iX < num_value; iX++)
+    max_abs_value = std::max(fabs(value[iX]), max_abs_value);
+  double scale = nearestPowerOfTwoScale(max_abs_value);
+  return scale;
+}
+
 void HEkk::refineArray(HVector& hvector, double& scale,
                        const double& small_value) {
   if (hvector.count <= 0) return;
@@ -3970,12 +3982,7 @@ void HEkk::refineArray(HVector& hvector, double& scale,
       hvector.array[iRow] = 0;
     }
   }
-  if (hvector.count > count) {
-    // Entries have been removed, so record the (new) count and
-    // invalidate any packed values
-    hvector.packCount = 0;
-    hvector.count = count;
-  }
+  hvector.count = count;
 }
 
 void HEkk::refineVector(vector<double>& value, vector<HighsInt>& index,

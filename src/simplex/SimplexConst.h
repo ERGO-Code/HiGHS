@@ -100,14 +100,13 @@ enum SimplexPriceStrategy {
 };
 
 enum SimplexPivotalRowRefinementStrategy {
-  kSimplexPivotalRowRefinementStrategyMin = 0,
-  kSimplexPivotalRowRefinementStrategyUnscaledLpInfeasibilityProof =
-      kSimplexPivotalRowRefinementStrategyMin,
-  kSimplexPivotalRowRefinementStrategyAndScaledLpInfeasibilityProof,
-  kSimplexPivotalRowRefinementStrategyAndChuzcGrowth,
-  kSimplexPivotalRowRefinementStrategyAndAllChuzc,
-  kSimplexPivotalRowRefinementStrategyMax =
-      kSimplexPivotalRowRefinementStrategyAndAllChuzc
+  kSimplexInfeasibilityProofRefinementMin = 0,
+  kSimplexInfeasibilityProofRefinementNo =
+      kSimplexInfeasibilityProofRefinementMin,
+  kSimplexInfeasibilityProofRefinementUnscaledLp,    // 1
+  kSimplexInfeasibilityProofRefinementAlsoScaledLp,  // 2
+  kSimplexInfeasibilityProofRefinementMax =
+      kSimplexInfeasibilityProofRefinementAlsoScaledLp
 };
 
 enum SimplexPrimalCorrectionStrategy {

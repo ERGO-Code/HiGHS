@@ -310,18 +310,18 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
-  HighsInt simplex_pivotal_row_refinement_strategy;
+  HighsInt simplex_infeasiblilty_proof_refinement_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
-  bool simplex_pivotal_col_refinement_strategy;
   double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
-  double simplex_pivotal_row_refinement_tolerance;
-  double simplex_pivotal_col_refinement_tolerance;
+  double dual_simplex_pivot_growth_tolerance;
+  double simplex_infeasibility_proof_scaled_lp_refinement_tolerance;
+  double simplex_infeasibility_proof_unscaled_lp_refinement_tolerance;
   double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
@@ -754,24 +754,15 @@ class HighsOptions : public HighsOptionsStruct {
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("simplex_pivotal_row_refinement_strategy",
-                            "Strategy for refining pivotal row in simplex "
-                            "1 => Only for unscaled LP infeasibility proof"
-                            "2 => And for scaled LP infeasibility proof"
-                            "3 => And following growth in dual ratio test"
-                            "4 => And for all dual ratio test",
-                            advanced, &simplex_pivotal_row_refinement_strategy,
-                            kSimplexPivotalRowRefinementStrategyMin,
-                            kSimplexPivotalRowRefinementStrategyAndChuzcGrowth,
-                            kSimplexPivotalRowRefinementStrategyMax);
+    record_int = new OptionRecordInt(
+        "simplex_infeasiblilty_proof_refinement_strategy",
+        "Strategy for refining infeasiblity proof constraint in simplex "
+        "0 => No; 1 => Only for unscaled LP; 2 => Also for scaled LP",
+        advanced, &simplex_infeasiblilty_proof_refinement_strategy,
+        kSimplexInfeasibilityProofRefinementMin,
+        kSimplexInfeasibilityProofRefinementAlsoScaledLp,
+        kSimplexInfeasibilityProofRefinementMax);
     records.push_back(record_int);
-
-    record_bool = new OptionRecordBool(
-        "simplex_pivotal_col_refinement_strategy",
-        "Strategy for refining pivotal column in simplex ", advanced,
-        &simplex_pivotal_col_refinement_strategy, false);
-    records.push_back(record_bool);
 
     record_int =
         new OptionRecordInt("simplex_unscaled_solution_strategy",
@@ -830,15 +821,23 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "simplex_pivotal_row_refinement_tolerance",
-        "Primal simplex pivotal row refinement tolerance", advanced,
-        &simplex_pivotal_row_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
+        "dual_simplex_pivot_growth_tolerance",
+        "Dual simplex pivot growth tolerance", advanced,
+        &dual_simplex_pivot_growth_tolerance, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "simplex_pivotal_col_refinement_tolerance",
-        "Primal simplex pivotal column refinement tolerance", advanced,
-        &simplex_pivotal_col_refinement_tolerance, 1e-12, 1e-9, kHighsInf);
+        "simplex_infeasibility_proof_scaled_lp_refinement_tolerance",
+        "Simplex infeasiblilty proof refinement tolerance for scaled LP",
+        advanced, &simplex_infeasibility_proof_scaled_lp_refinement_tolerance,
+        0, 1e-9, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "simplex_infeasibility_proof_unscaled_lp_refinement_tolerance",
+        "Simplex infeasiblilty proof refinement tolerance for unscaled LP",
+        advanced, &simplex_infeasibility_proof_unscaled_lp_refinement_tolerance,
+        1e-12, 1e-12, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
