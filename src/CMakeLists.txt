@@ -128,6 +128,7 @@ set(sources
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -235,6 +236,10 @@ set(headers
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsCacheAlign.h
+    parallel/HighsParallel.h
+    parallel/HighsSplitDeque.h
+    parallel/HighsTaskExecutor.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
@@ -551,6 +556,7 @@ target_sources(libhighs PRIVATE
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -672,6 +678,10 @@ set(headers_fast_build_
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsCacheAlign.h
+    parallel/HighsParallel.h
+    parallel/HighsSplitDeque.h
+    parallel/HighsTaskExecutor.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
