@@ -290,10 +290,15 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
 
 void HSimplexNla::reportArray(const std::string message, const HVector* vector,
                               const bool force) const {
+  reportArray(message, 0, vector, force);
+}
+
+void HSimplexNla::reportArray(const std::string message, const HighsInt offset,
+                              const HVector* vector, const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
   if (num_row > 25) {
-    reportArraySparse(message, vector, force);
+    reportArraySparse(message, offset, vector, force);
   } else {
     printf("%s", message.c_str());
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -305,7 +310,31 @@ void HSimplexNla::reportArray(const std::string message, const HVector* vector,
   }
 }
 
+void HSimplexNla::reportVector(const std::string message,
+                               const HighsInt num_index,
+                               const vector<double> vector_value,
+                               const vector<HighsInt> vector_index,
+                               const bool force) const {
+  if (!report_ && !force) return;
+  assert((int)vector_value.size() >= num_index);
+  if (num_index <= 0) return;
+  const HighsInt num_row = lp_->num_row_;
+  printf("%s", message.c_str());
+  for (HighsInt iX = 0; iX < num_index; iX++) {
+    if (iX % 5 == 0) printf("\n");
+    printf("(%4d %10.4g) ", (int)vector_index[iX], vector_value[iX]);
+  }
+  printf("\n");
+}
+
 void HSimplexNla::reportArraySparse(const std::string message,
+                                    const HVector* vector,
+                                    const bool force) const {
+  reportArraySparse(message, 0, vector, force);
+}
+
+void HSimplexNla::reportArraySparse(const std::string message,
+                                    const HighsInt offset,
                                     const HVector* vector,
                                     const bool force) const {
   if (!report_ && !force) return;
@@ -316,7 +345,7 @@ void HSimplexNla::reportArraySparse(const std::string message,
     for (HighsInt en = 0; en < vector->count; en++) {
       HighsInt iRow = vector->index[en];
       if (en % 5 == 0) printf("\n");
-      printf("(%4d %10.4g) ", (int)iRow, vector->array[iRow]);
+      printf("(%4d %10.4g) ", (int)(offset + iRow), vector->array[iRow]);
     }
   } else {
     if (num_row > 25) return;

@@ -1171,6 +1171,14 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
+  const HighsInt check_iter = 9;
+  ekk_instance_.debug_iteration_report_ =
+      ekk_instance_.debug_solve_report_ &&
+      ekk_instance_.iteration_count_ == check_iter;
+  if (ekk_instance_.debug_iteration_report_) {
+    printf("HEkkDual::iterate Debug iteration %d\n", (int)check_iter);
+  }
+
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1214,19 +1222,22 @@ void HEkkDual::iterate() {
 
   if (ekk_instance_.checkForCycling(variable_in, row_out)) {
     analysis->num_dual_cycling_detections++;
+    //    printf("Cycling_detected: solve %d (Iteration %d)\n",
+    //           (int)ekk_instance_.debug_solve_call_num_,
+    //           (int)ekk_instance_.iteration_count_);
     if (ekk_instance_.iteration_count_ ==
         ekk_instance_.previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                   "Cycling in dual simplex: rebuild\n");
+      printf("Calling exit(0)\n");
+      fflush(stdout);
+      exit(0);
       rebuild_reason = kRebuildReasonCycling;
     } else {
       ekk_instance_.previous_iteration_cycling_detected =
           ekk_instance_.iteration_count_;
     }
-    printf("Cycling_detected: solve %d (Iteration %d)\n",
-           (int)ekk_instance_.debug_solve_call_num_,
-           (int)ekk_instance_.iteration_count_);
     if (ekk_instance_.debug_solve_call_num_ == 161474 &&
         ekk_instance_.iteration_count_ == 39) {
       printf("Calling exit(0)\n");
@@ -1521,17 +1532,21 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   HighsOptions* options = ekk_instance_.options_;
   HighsLp& lp = ekk_instance_.lp_;
 
-  const HighsInt check_iter = -2822;
-  const bool debug = ekk_instance_.debug_solve_call_num_ == 1 &&
-                     ekk_instance_.iteration_count_ == check_iter;
-  if (debug) {
-    printf("HEkkDual::chooseColumn Check iter = %d\n", (int)check_iter);
+  if (ekk_instance_.debug_iteration_report_) {
+    printf("HEkkDual::chooseColumn Check iter = %d\n",
+           (int)ekk_instance_.iteration_count_);
   }
-  const bool report_small_pivot_issue = true;
+  const bool report_small_pivot_issue =
+      false || ekk_instance_.debug_iteration_report_;
   //
   // PRICE
   //
   ekk_instance_.tableauRowPrice(*row_ep, row_ap);
+  if (ekk_instance_.debug_iteration_report_) {
+    ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
+    ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,
+                                           true);
+  }
   //
   // CHUZC
   //
@@ -1555,7 +1570,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   // Loop until an acceptable pivot is found. Each pass either finds a
   // pivot, identifies possible unboundedness, or reduced the number
   // of nonzeros in dualRow.pack_value
-  bool repeating_chuzc = false;
+  HighsInt chuzc_pass = 0;
   for (;;) {
     //
     // Section 2: Determine the possible variables - candidates for CHUZC
@@ -1567,6 +1582,17 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     // there are no candidates for CHUZC
     variable_in = -1;
     if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
+      if (chuzc_pass > 0 && report_small_pivot_issue) {
+        printf(
+            "                                                       "
+            "Negative step or no candidates after %2d CHUZC passes\n",
+            (int)chuzc_pass);
+      }
+      if (ekk_instance_.debug_iteration_report_) {
+        ekk_instance_.simplex_nla_.reportVector(
+            "dualRow.packValue/Index", dualRow.packCount, dualRow.packValue,
+            dualRow.packIndex, true);
+      }
       rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
       return;
     }
@@ -1586,7 +1612,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
       assert(alpha_row);
       const double scaled_value = row_ep_scale * alpha_row;
       if (std::abs(scaled_value) <= growth_tolerance) {
-        if (report_small_pivot_issue)
+        if (chuzc_pass == 0 && report_small_pivot_issue)
           printf(
               "CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
               "Pivot %11.4g (dual "
@@ -1602,31 +1628,42 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
             dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
             dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
             dualRow.packCount--;
-            printf(": removing pivot gives pack count = %6d",
-                   (int)dualRow.packCount);
+            if (chuzc_pass == 0 && report_small_pivot_issue)
+              printf(": removing pivot gives pack count = %6d",
+                     (int)dualRow.packCount);
             break;
           }
         }
         // Indicate that no pivot has been chosen
         dualRow.workPivot = -1;
-        if (report_small_pivot_issue)
+        if (chuzc_pass == 0 && report_small_pivot_issue)
           printf(" so %s\n",
                  dualRow.packCount > 0 ? "repeat CHUZC" : "consider unbounded");
-      } else if (repeating_chuzc && report_small_pivot_issue) {
+      } else if (chuzc_pass > 0 && report_small_pivot_issue) {
         printf(
             "                                                       Variable "
             "%6d "
             "Pivot %11.4g (dual "
-            "%11.4g; ratio = %11.4g) is OK\n",
+            "%11.4g; ratio = %11.4g) is OK after %2d CHUZC passes\n",
             (int)dualRow.workPivot, dualRow.workAlpha,
             workDual[dualRow.workPivot],
-            workDual[dualRow.workPivot] / dualRow.workAlpha);
+            workDual[dualRow.workPivot] / dualRow.workAlpha, (int)chuzc_pass);
       }
+    } else {
+      // No pivot has been chosen
+      assert(dualRow.workPivot == -1);
+      if (chuzc_pass > 0 && report_small_pivot_issue) {
+        printf(
+            "                                                       No pivot "
+            "after %2d CHUZC passes\n",
+            (int)chuzc_pass);
+      }
+      break;
     }
     // If a pivot has been chosen, or there are no more packed values
     // then end CHUZC
     if (dualRow.workPivot >= 0 || dualRow.packCount <= 0) break;
-    repeating_chuzc = true;
+    chuzc_pass++;
   }
   //
   // Section 5: Reset the nonbasicMove values for free columns

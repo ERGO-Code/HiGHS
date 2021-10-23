@@ -132,11 +132,9 @@ HighsInt HEkkDualRow::chooseFinal() {
 
   // 1. Reduce by large step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
-  const HighsInt check_iter = -2822;
-  const bool debug = ekk_instance_.debug_solve_call_num_ == 1 &&
-                     ekk_instance_.iteration_count_ == check_iter;
-  if (debug) {
-    printf("HEkkDualRow::chooseFinal Check iter = %d\n", (int)check_iter);
+  if (ekk_instance_.debug_iteration_report_) {
+    printf("HEkkDualRow::chooseFinal Check iter = %d\n",
+           (int)ekk_instance_.iteration_count_);
   }
   HighsInt fullCount = workCount;
   workCount = 0;
@@ -248,7 +246,7 @@ HighsInt HEkkDualRow::chooseFinal() {
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;  // Not used
   workCount = 0;
-  const bool report_bfrt = debug;
+  const bool report_bfrt = ekk_instance_.debug_iteration_report_;
   if (use_quad_sort) {
     if (report_bfrt) {
       printf(
@@ -633,6 +631,12 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
 void HEkkDualRow::debugReportBfrtVar(
     const HighsInt ix,
     const std::vector<std::pair<HighsInt, double>>& pass_workData) const {
+  if (ix < 0) {
+    printf(
+        "Ix iCol Mv       Lower      Primal       Upper       Value        "
+        "Dual       Ratio      NwDual Ifs\n");
+    return;
+  }
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   const HighsInt iCol = pass_workData[ix].first;
@@ -642,12 +646,6 @@ void HEkkDualRow::debugReportBfrtVar(
   const double new_dual = dual - move_out * move * workTheta * value;
   const double new_dual_infeasibility = move * new_dual;
   const bool infeasible = new_dual_infeasibility < -Td;
-  if (ix < 0) {
-    printf(
-        "Ix iCol Mv       Lower      Primal       Upper       Value        "
-        "Dual       Ratio      NwDual Ifs\n");
-    return;
-  }
   printf("%2d %4d %2d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %3d\n",
          (int)ix, (int)iCol, (int)move, ekk_instance_.info_.workLower_[iCol],
          ekk_instance_.info_.workValue_[iCol],

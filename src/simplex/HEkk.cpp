@@ -1065,13 +1065,13 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  debugReporting(-1);
-  const HighsInt debug_from_solve_call_num = -15;
+  const HighsInt debug_from_solve_call_num = -14;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
-  if (debug_solve_call_num_ >= debug_from_solve_call_num &&
-      debug_solve_call_num_ <= debug_to_solve_call_num) {
-    printf(" HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    //    info_.dual_simplex_cost_perturbation_multiplier *= 0;
+  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
+                        debug_solve_call_num_ <= debug_to_solve_call_num;
+  if (debug_solve_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    debugReporting(-1);
     debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
   }
 
@@ -1131,8 +1131,10 @@ HighsStatus HEkk::solve() {
     }
   }
 
-  // Restore any modified development output settings
-  debugReporting(1);
+  if (debug_solve_report_) {
+    // Restore any modified development output settings
+    debugReporting(1);
+  }
 
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
@@ -3808,7 +3810,6 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   HighsLp& lp = this->lp_;
   const bool use_row_wise_matrix = status_.has_ar_matrix;
   const bool use_iterative_refinement = false;
-  const bool report = false;
   if (use_iterative_refinement) {
     HVector correction;
     double correction_rhs_norm = 0;
@@ -3830,12 +3831,13 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       correction_rhs_norm =
           max(fabs(correction.array[iRow]), correction_rhs_norm);
     }
-    if (report) printf("||correction_rhs|| = %g\n", correction_rhs_norm);
+    if (debug_iteration_report_)
+      printf("||correction_rhs|| = %g\n", correction_rhs_norm);
     // Normalise using ||correction_rhs|| so kHighsTiny isn't used adversely
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
       correction.array[iRow] /= correction_rhs_norm;
     }
-    if (report)
+    if (debug_iteration_report_)
       printf("HEkk::proofOfPrimalInfeasibility correction has count %d/%d\n",
              (int)correction.count, (int)lp.num_row_);
     btran(correction, expected_density);
@@ -3848,7 +3850,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       row_ep.array[iRow] += correction_value;
       if (row_ep.array[iRow]) row_ep.index[row_ep.count++] = iRow;
     }
-    if (report) printf("||correction_sol|| = %g\n", correction_sol_norm);
+    if (debug_iteration_report_)
+      printf("||correction_sol|| = %g\n", correction_sol_norm);
     unitBtranResidual(row_out, row_ep, row_ep_residual);
   }
   // Identify whether refinement should be done
@@ -3878,6 +3881,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     HighsInt iRow = row_ep.index[iX];
     // Give row_ep the sign of the leaving row - as is done in
     // getDualRayInterface.
+    const double row_ep_value = row_ep.array[iRow];
+    assert(row_ep_value);
     row_ep.array[iRow] *= move_out;
     // make sure infinite sides are not used
     if (highs_isInfinity(-lp.row_lower_[iRow]))
@@ -3888,6 +3893,9 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     proof_lower +=
         row_ep.array[iRow] *
         (row_ep.array[iRow] > 0 ? lp.row_lower_[iRow] : lp.row_upper_[iRow]);
+    if (!row_ep.array[iRow] && debug_iteration_report_)
+      printf("Zeroed row_ep.array[%6d] = %11.4g due to infinite bound\n",
+             (int)iRow, row_ep_value);
   }
   // Form the proof constraint coefficients
   proof_value_.clear();
@@ -3904,38 +3912,45 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     refineVector(proof_value, proof_index, row_ep_scale, refinement_tolerance);
 
   HighsInt proof_num_nz = proof_index.size();
+  if (debug_iteration_report_) {
+    simplex_nla_.reportArray("Row e_p", lp.num_col_, &row_ep, true);
+    simplex_nla_.reportVector("Proof", proof_num_nz, proof_value, proof_index,
+                              true);
+  }
   HighsCDouble implied_upper = 0.0;
   bool infinite_implied_upper = false;
-  if (report)
+  if (debug_iteration_report_)
     printf(
         "HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = "
         "%d; row_ep_scale = %g\n",
         (int)row_ep.count, (int)proof_num_nz, row_ep_scale);
   for (HighsInt i = 0; i < proof_num_nz; ++i) {
-    if (proof_value[i] > 0) {
-      if (highs_isInfinity(lp.col_upper_[proof_index[i]])) {
+    const HighsInt iCol = proof_index[i];
+    const double value = proof_value[i];
+    if (value > 0) {
+      if (highs_isInfinity(lp.col_upper_[iCol])) {
         infinite_implied_upper = true;
-        if (report)
-          printf("proof_value[i] = %11.4g has UB = %11.4g\n", proof_value[i],
-                 lp.col_upper_[proof_index[i]]);
-        break;
+        if (debug_iteration_report_)
+          printf("%6d: proof (index = %6d; value = %11.4g) has UB = %11.4g\n",
+                 (int)i, (int)iCol, value, lp.col_upper_[iCol]);
+        if (!debug_iteration_report_) break;
       }
-      implied_upper += proof_value[i] * lp.col_upper_[proof_index[i]];
+      implied_upper += value * lp.col_upper_[iCol];
     } else {
-      if (highs_isInfinity(-lp.col_lower_[proof_index[i]])) {
+      if (highs_isInfinity(-lp.col_lower_[iCol])) {
         infinite_implied_upper = true;
-        if (report)
-          printf("proof_value[i] = %11.4g has LB = %11.4g\n", proof_value[i],
-                 lp.col_upper_[proof_index[i]]);
-        break;
+        if (debug_iteration_report_)
+          printf("%6d: proof (index = %6d; value = %11.4g) has LB = %11.4g\n",
+                 (int)i, (int)iCol, value, lp.col_upper_[iCol]);
+        if (!debug_iteration_report_) break;
       }
-      implied_upper += proof_value[i] * lp.col_lower_[proof_index[i]];
+      implied_upper += value * lp.col_lower_[iCol];
     }
   }
   const double gap = double(proof_lower - implied_upper);
   const bool gap_ok = gap > options_->primal_feasibility_tolerance;
   const bool proof_of_primal_infeasibility = !infinite_implied_upper && gap_ok;
-  if (report) {
+  if (debug_iteration_report_) {
     printf("HEkk::proofOfPrimalInfeasibility has %sfinite implied upper bound",
            infinite_implied_upper ? "in" : "");
     if (!infinite_implied_upper) printf(" and gap = %g", gap);
