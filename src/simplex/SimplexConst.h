@@ -191,6 +191,8 @@ enum class LpAction {
   kBacktracking
 };
 
+enum class TabooReason { kSingular = 0, kCycling };
+
 //
 // Relation between HiGHS basis and Simplex basis
 //

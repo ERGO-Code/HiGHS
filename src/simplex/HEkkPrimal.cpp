@@ -62,6 +62,9 @@ HighsStatus HEkkPrimal::solve() {
                 info.num_dual_infeasibilities, info.max_dual_infeasibility,
                 info.sum_dual_infeasibilities);
 
+  // Allow taboo rows
+  ekk_instance_.allow_taboo_rows = true;
+
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
   if (!perturb_bounds)

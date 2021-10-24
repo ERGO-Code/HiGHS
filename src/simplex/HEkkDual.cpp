@@ -86,6 +86,9 @@ HighsStatus HEkkDual::solve() {
                 info.num_primal_infeasibilities, info.max_primal_infeasibility,
                 info.sum_primal_infeasibilities);
 
+  // Allow taboo rows
+  ekk_instance_.allow_taboo_rows = true;
+
   // Perturb costs according to whether the solution is near-optimnal
   const bool perturb_costs = !near_optimal;
   if (!perturb_costs)
@@ -1013,7 +1016,13 @@ void HEkkDual::rebuild() {
       solve_phase = kSolvePhaseError;
       return;
     }
+    // Record the synthetic clock for INVERT, and zero it for UPDATE
     ekk_instance_.resetSyntheticClock();
+    // Clear any taboo rows/cols
+    ekk_instance_.clearTaboo();
+    // Possibly allow taboo rows
+    ekk_instance_.allow_taboo_rows =
+        ekk_instance_.allowTabooRows(local_rebuild_reason);
   }
 
   if (!ekk_instance_.status_.has_ar_matrix) {
@@ -1178,6 +1187,9 @@ void HEkkDual::iterate() {
   if (ekk_instance_.debug_iteration_report_) {
     printf("HEkkDual::iterate Debug iteration %d\n", (int)check_iter);
   }
+
+  // Reset the flag to abandon an iteration
+  abandon_iteration = false;
 
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
@@ -1398,6 +1410,8 @@ void HEkkDual::chooseRow() {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
+  // Zero the infeasibility of any taboo rows
+  ekk_instance_.applyTabooRow(dualRHS.work_infeasibility, 0);
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   for (;;) {
@@ -1447,6 +1461,9 @@ void HEkkDual::chooseRow() {
       break;
     }
   }
+  // Recover the infeasibility of any taboo rows
+  ekk_instance_.unapplyTabooRow(dualRHS.work_infeasibility);
+
   // Index of row to leave the basis has been found
   //
   // Assign basic info:

@@ -419,6 +419,7 @@ class HEkkDual {
 
   HighsInt solve_phase;
   HighsInt rebuild_reason;
+  bool abandon_iteration;
 
   HVector row_ep;
   HVector row_ap;

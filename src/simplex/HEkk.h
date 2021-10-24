@@ -189,6 +189,10 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
 
+  bool allow_taboo_rows;
+  std::vector<HighsSimplexTabooRecord> taboo_col;
+  std::vector<HighsSimplexTabooRecord> taboo_row;
+
  private:
   bool isUnconstrainedLp();
   HighsStatus initialiseForSolve();
@@ -269,6 +273,13 @@ class HEkk {
   double computeBasisCondition();
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
+
+  void clearTaboo();
+  bool allowTabooRows(const HighsInt rebuild_reason);
+  void addTabooRow(const HighsInt iRow, const TabooReason reason,
+                   const double density = 0);
+  void applyTabooRow(vector<double>& values, double overwrite_with);
+  void unapplyTabooRow(vector<double>& values);
 
   // Methods in HEkkControl
   void initialiseControl();

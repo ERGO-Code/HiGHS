@@ -118,6 +118,7 @@ class HEkkPrimal {
   double dual_feasibility_tolerance;
   double objective_target;
   HighsInt rebuild_reason;
+  bool abandon_iteration;
   // Pivot related
   HighsInt variable_in;
   HighsInt move_in;

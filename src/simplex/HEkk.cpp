@@ -1597,6 +1597,10 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     }
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     resetSyntheticClock();
+    // Clear any taboo rows/cols
+    clearTaboo();
+    // Allow taboo rows
+    allow_taboo_rows = true;
   }
   assert(status_.has_invert);
   return 0;
@@ -3789,6 +3793,42 @@ double HEkk::factorSolveError() {
             btran_solution_error);
   double solution_error = max(ftran_solution_error, btran_solution_error);
   return solution_error;
+}
+
+void HEkk::clearTaboo() {
+  taboo_col.clear();
+  taboo_row.clear();
+}
+
+bool HEkk::allowTabooRows(const HighsInt rebuild_reason) {
+  return rebuild_reason == kRebuildReasonPossiblyOptimal ||
+         rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+         rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex;
+}
+
+void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason,
+                       const double density) {
+  HighsSimplexTabooRecord record;
+  record.reason = reason;
+  record.row = iRow;
+  record.col = -1;
+  taboo_row.push_back(record);
+}
+
+void HEkk::applyTabooRow(vector<double>& values, double overwrite_with) {
+  assert(values.size() >= lp_.num_row_);
+  for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++) {
+    HighsInt iRow = taboo_row[iX].row;
+    taboo_row[iX].save_value = values[iRow];
+    values[iRow] = overwrite_with;
+  }
+}
+
+void HEkk::unapplyTabooRow(vector<double>& values) {
+  assert(values.size() >= lp_.num_row_);
+  for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++)
+    values[taboo_row[iX].row] = taboo_row[iX].save_value;
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {
