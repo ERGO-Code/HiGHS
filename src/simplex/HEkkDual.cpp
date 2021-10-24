@@ -1025,6 +1025,10 @@ void HEkkDual::rebuild() {
         ekk_instance_.allowTabooRows(local_rebuild_reason);
   }
 
+  HighsInt alt_debug_level = -1;
+  //  if (ekk_instance_.debug_solve_report_) alt_debug_level = kHighsDebugLevelExpensive;
+  ekk_instance_.debugNlaCheckInvert("HEkkDual::rebuild", alt_debug_level);
+
   if (!ekk_instance_.status_.has_ar_matrix) {
     // Don't have the row-wise matrix, so reinitialise it
     //
@@ -1425,6 +1429,9 @@ void HEkkDual::chooseRow() {
     // Compute pi_p = B^{-T}e_p in row_ep
     analysis->simplexTimerStart(BtranClock);
     // Set up RHS for BTRAN
+    if (ekk_instance_.debug_iteration_report_) {
+      printf("HEkkDual::chooseRow debug\n");
+    }
     row_ep.clear();
     row_ep.count = 1;
     row_ep.index[0] = row_out;
@@ -1549,16 +1556,18 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   HighsOptions* options = ekk_instance_.options_;
   HighsLp& lp = ekk_instance_.lp_;
 
+  HighsInt debug_price_report = kDebugReportOff;
   if (ekk_instance_.debug_iteration_report_) {
     printf("HEkkDual::chooseColumn Check iter = %d\n",
            (int)ekk_instance_.iteration_count_);
+    debug_price_report = kDebugReportAll;
   }
   const bool report_small_pivot_issue =
       false || ekk_instance_.debug_iteration_report_;
   //
   // PRICE
   //
-  ekk_instance_.tableauRowPrice(*row_ep, row_ap);
+  ekk_instance_.tableauRowPrice(*row_ep, row_ap, debug_price_report);
   if (ekk_instance_.debug_iteration_report_) {
     ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
     ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,

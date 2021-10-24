@@ -1065,7 +1065,7 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = -14;
+  const HighsInt debug_from_solve_call_num = 14;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
@@ -2658,7 +2658,8 @@ void HEkk::choosePriceTechnique(const HighsInt price_strategy,
       price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;
 }
 
-void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
+void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap,
+			   const HighsInt debug_report) {
   analysis_.simplexTimerStart(PriceClock);
   const HighsInt solver_num_row = lp_.num_row_;
   const HighsInt solver_num_col = lp_.num_col_;
@@ -2686,16 +2687,19 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   row_ap.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
-    lp_.a_matrix_.priceByColumn(row_ap, row_ep);
+    lp_.a_matrix_.priceByColumn(row_ap, row_ep,
+				debug_report);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
     const double switch_density = kHyperPriceDensity;
     ar_matrix_.priceByRowWithSwitch(row_ap, row_ep, info_.row_ap_density, 0,
-                                    switch_density);
+                                    switch_density,
+				    debug_report);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    ar_matrix_.priceByRow(row_ap, row_ep);
+    ar_matrix_.priceByRow(row_ap, row_ep,
+			  debug_report);
   }
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
@@ -3091,7 +3095,7 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   // than checking after factorization.
   HighsInt alt_debug_level = options_->highs_debug_level - 1;
   // Forced expensive debug for development work
-  // alt_debug_level = kHighsDebugLevelExpensive;
+  //  if (debug_solve_report_) alt_debug_level = kHighsDebugLevelExpensive;
   HighsDebugStatus debug_status =
       debugNlaCheckInvert("HEkk::updateFactor", alt_debug_level);
   if (debug_status == HighsDebugStatus::kError) {
@@ -3938,14 +3942,18 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
              (int)iRow, row_ep_value);
   }
   // Form the proof constraint coefficients
+  HighsInt debug_product_report = kDebugReportOff;
+  if (debug_iteration_report_) debug_product_report = kDebugReportAll;
   proof_value_.clear();
   proof_index_.clear();
   vector<double>& proof_value = this->proof_value_;
   vector<HighsInt>& proof_index = this->proof_index_;
   if (use_row_wise_matrix) {
-    this->ar_matrix_.productTranspose(proof_value, proof_index, row_ep);
+    this->ar_matrix_.productTranspose(proof_value, proof_index, row_ep,
+				      debug_product_report);
   } else {
-    lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep);
+    lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep,
+				  debug_product_report);
   }
   // Refine the proof constraint coefficients according to row_ep_scale
   if (use_refinement)

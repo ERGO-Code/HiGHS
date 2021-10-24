@@ -322,7 +322,7 @@ void HSimplexNla::reportVector(const std::string message,
   printf("%s", message.c_str());
   for (HighsInt iX = 0; iX < num_index; iX++) {
     if (iX % 5 == 0) printf("\n");
-    printf("(%4d %10.4g) ", (int)vector_index[iX], vector_value[iX]);
+    printf("[%4d %10.4g] ", (int)vector_index[iX], vector_value[iX]);
   }
   printf("\n");
 }
@@ -345,7 +345,9 @@ void HSimplexNla::reportArraySparse(const std::string message,
     for (HighsInt en = 0; en < vector->count; en++) {
       HighsInt iRow = vector->index[en];
       if (en % 5 == 0) printf("\n");
-      printf("(%4d %10.4g) ", (int)(offset + iRow), vector->array[iRow]);
+      printf("[%4d ", (int)(iRow));
+      if (offset) printf("(%4d)", (int)(offset + iRow));
+      printf("%10.4g] ", vector->array[iRow]);
     }
   } else {
     if (num_row > 25) return;
@@ -368,7 +370,7 @@ void HSimplexNla::reportPackValue(const std::string message,
   for (HighsInt en = 0; en < vector->packCount; en++) {
     HighsInt iRow = vector->packIndex[en];
     if (en % 5 == 0) printf("\n");
-    printf("(%4d %10.4g) ", (int)iRow, vector->packValue[en]);
+    printf("[%4d %10.4g] ", (int)iRow, vector->packValue[en]);
   }
   printf("\n");
 }
