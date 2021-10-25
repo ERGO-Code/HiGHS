@@ -9,6 +9,7 @@
 
 using namespace highs;
 
+const int numThreads = (std::thread::hardware_concurrency() + 1)/2;
 // const bool dev_run = false;
 
 int64_t fib_sequential(const int64_t n) {
@@ -202,18 +203,18 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
 }
 
 TEST_CASE("MatrixMultHighs", "[parallel]") {
-  parallel::initialize_scheduler(16);
+  parallel::initialize_scheduler(numThreads);
   std::cout << "\nhighs workstealing for loop:" << std::endl;
   matrix_multiplication("highs", parallel::num_threads(), 10);
 }
 
 TEST_CASE("MatrixMultOmp", "[parallel]") {
   std::cout << "\nomp for loop:" << std::endl;
-  matrix_multiplication("omp", 16, 10);
+  matrix_multiplication("omp", numThreads, 10);
 }
 
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
-  parallel::initialize_scheduler(16);
+  parallel::initialize_scheduler(numThreads);
   int64_t result = fib(50);
 
   REQUIRE(result == 20365011074);
@@ -223,7 +224,7 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
 
 TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   int64_t result;
-#pragma omp parallel num_threads(16)
+#pragma omp parallel num_threads(numThreads)
   {
 #pragma omp single
     { result = fib_omp(50); }
