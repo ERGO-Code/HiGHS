@@ -1657,12 +1657,13 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
               workDual[dualRow.workPivot],
               workDual[dualRow.workPivot] / dualRow.workAlpha);
         // On the first pass, try to make the povotal row more accurate
-        const bool allow_improve_choose_column_row = true;
-        if (allow_improve_choose_column_row && chuzc_pass == 0) {
+        if (chuzc_pass == 0) {
           if (report_small_pivot_issue) printf(": improve row\n");
+          ekk_instance_.analysis_.num_improve_choose_column_row_call++;
           improveChooseColumnRow(row_ep);
         } else {
           // Remove the pivot
+          ekk_instance_.analysis_.num_remove_pivot_from_pack++;
           for (HighsInt i = 0; i < dualRow.packCount; i++) {
             if (dualRow.packIndex[i] == dualRow.workPivot) {
               dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];

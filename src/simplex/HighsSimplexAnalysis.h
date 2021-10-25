@@ -245,6 +245,9 @@ class HighsSimplexAnalysis {
   double sum_heap_chuzc_size = 0;
   HighsInt max_heap_chuzc_size = 0;
 
+  HighsInt num_improve_choose_column_row_call = 0;
+  HighsInt num_remove_pivot_from_pack = 0;
+
   HighsInt num_correct_dual_primal_flip = 0;
   double min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
   double max_correct_dual_primal_flip = 0;
