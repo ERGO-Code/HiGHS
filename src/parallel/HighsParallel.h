@@ -69,7 +69,7 @@ void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
       HighsTaskExecutor::getThisWorkerDeque();
 
   HighsInt numTasks = 0;
-  HighsInt numThreads = 2 * HighsTaskExecutor::getNumWorkerThreads();
+  HighsInt numThreads = HighsTaskExecutor::getNumWorkerThreads();
   while (end - start > grainSize) {
     HighsInt split = (start + end) >> 1;
     ++numTasks;
@@ -77,10 +77,11 @@ void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
         [split, end, &f, grainSize]() { for_each(split, end, f, grainSize); });
     end = split;
 
-    if ((numThreads >> numTasks) == 1) workerDeque->publishTasks(numTasks);
+    if (numThreads == 1) workerDeque->publishTasks(numTasks);
+    numThreads >>= 1;
   }
 
-  if ((numThreads >> numTasks) > 1) workerDeque->publishTasks(numTasks);
+  if (numThreads) workerDeque->publishTasks(numTasks);
 
   f(start, end);
 
