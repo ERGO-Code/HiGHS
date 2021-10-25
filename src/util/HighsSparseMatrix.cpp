@@ -1124,7 +1124,8 @@ bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
   return ok;
 }
 
-void HighsSparseMatrix::priceByColumn(HVector& result, const HVector& column,
+void HighsSparseMatrix::priceByColumn(const bool quad_precision,
+				      HVector& result, const HVector& column,
                                       const HighsInt debug_report) const {
   assert(this->isColwise());
   if (debug_report >= kDebugReportAll)
@@ -1143,7 +1144,8 @@ void HighsSparseMatrix::priceByColumn(HVector& result, const HVector& column,
   }
 }
 
-void HighsSparseMatrix::priceByRow(HVector& result, const HVector& column,
+void HighsSparseMatrix::priceByRow(const bool quad_precision,
+				   HVector& result, const HVector& column,
                                    const HighsInt debug_report) const {
   assert(this->isRowwise());
   if (debug_report >= kDebugReportAll)
@@ -1156,14 +1158,14 @@ void HighsSparseMatrix::priceByRow(HVector& result, const HVector& column,
   HighsInt from_index = 0;
   // Never switch to standard row-wise PRICE
   const double switch_density = kHighsInf;
-  this->priceByRowWithSwitch(result, column, expected_density, from_index,
+  this->priceByRowWithSwitch(quad_precision, result, column, expected_density, from_index,
                              switch_density);
 }
 
-void HighsSparseMatrix::priceByRowWithSwitch(
-    HVector& result, const HVector& column, const double expected_density,
-    const HighsInt from_index, const double switch_density,
-    const HighsInt debug_report) const {
+void HighsSparseMatrix::priceByRowWithSwitch(const bool quad_precision,
+					     HVector& result, const HVector& column, const double expected_density,
+					     const HighsInt from_index, const double switch_density,
+					     const HighsInt debug_report) const {
   assert(this->isRowwise());
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByRowWithSwitch\n");
@@ -1206,7 +1208,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   }
   if (next_index < column.count) {
     // PRICE is not complete: finish without maintaining nonzeros of result
-    this->priceByRowDenseResult(result, column, next_index);
+    this->priceByRowDenseResult(quad_precision, result, column, next_index);
   } else {
     // PRICE is complete maintaining nonzeros of result
     // Remove small values
@@ -1281,9 +1283,9 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
   }
 }
 
-void HighsSparseMatrix::priceByRowDenseResult(
-    HVector& result, const HVector& column, const HighsInt from_index,
-    const HighsInt debug_report) const {
+void HighsSparseMatrix::priceByRowDenseResult(const bool quad_precision,
+					      HVector& result, const HVector& column, const HighsInt from_index,
+					      const HighsInt debug_report) const {
   assert(this->isRowwise());
   for (HighsInt ix = from_index; ix < column.count; ix++) {
     HighsInt iRow = column.index[ix];

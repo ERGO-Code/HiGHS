@@ -231,7 +231,8 @@ class HEkk {
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
-  void tableauRowPrice(const HVector& row_ep, HVector& row_ap,
+  void tableauRowPrice(const bool quad_precision,
+		       const HVector& row_ep, HVector& row_ap,
                        const HighsInt debug_report = kDebugReportOff);
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();

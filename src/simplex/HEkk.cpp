@@ -2633,7 +2633,8 @@ void HEkk::choosePriceTechnique(const HighsInt price_strategy,
       price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;
 }
 
-void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap,
+void HEkk::tableauRowPrice(const bool quad_precision,
+			   const HVector& row_ep, HVector& row_ap,
                            const HighsInt debug_report) {
   analysis_.simplexTimerStart(PriceClock);
   const HighsInt solver_num_row = lp_.num_row_;
@@ -2662,16 +2663,16 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap,
   row_ap.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
-    lp_.a_matrix_.priceByColumn(row_ap, row_ep, debug_report);
+    lp_.a_matrix_.priceByColumn(quad_precision, row_ap, row_ep, debug_report);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
     const double switch_density = kHyperPriceDensity;
-    ar_matrix_.priceByRowWithSwitch(row_ap, row_ep, info_.row_ap_density, 0,
+    ar_matrix_.priceByRowWithSwitch(quad_precision, row_ap, row_ep, info_.row_ap_density, 0,
                                     switch_density, debug_report);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    ar_matrix_.priceByRow(row_ap, row_ep, debug_report);
+    ar_matrix_.priceByRow(quad_precision, row_ap, row_ep, debug_report);
   }
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
@@ -2697,7 +2698,8 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
     analysis_.operationRecordBefore(kSimplexNlaPriceFull, full_col,
                                     expected_density);
   }
-  lp_.a_matrix_.priceByColumn(full_row, full_col);
+  const bool quad_precision = false;
+  lp_.a_matrix_.priceByColumn(quad_precision, full_row, full_col);
   if (analysis_.analyse_simplex_summary_data)
     analysis_.operationRecordAfter(kSimplexNlaPriceFull, full_row);
   analysis_.simplexTimerStop(PriceFullClock);

@@ -1262,7 +1262,8 @@ void HEkkPrimal::assessPivot() {
   //
   // PRICE
   //
-  ekk_instance_.tableauRowPrice(row_ep, row_ap);
+  const bool quad_precision = false;
+  ekk_instance_.tableauRowPrice(quad_precision, row_ep, row_ap);
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
@@ -2090,23 +2091,26 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     }
   }
   row_basic_feasibility_change.clear();
+  const bool quad_precision = false;
   if (use_col_price) {
     // Perform column-wise PRICE
     assert(1 == 0);
-    ekk_instance_.lp_.a_matrix_.priceByColumn(row_basic_feasibility_change,
+    ekk_instance_.lp_.a_matrix_.priceByColumn(quad_precision,
+					      row_basic_feasibility_change,
                                               col_basic_feasibility_change);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of
     // row_basic_feasibility_change becomes extreme
     //
     const double switch_density = kHyperPriceDensity;
-    ekk_instance_.ar_matrix_.priceByRowWithSwitch(
+    ekk_instance_.ar_matrix_.priceByRowWithSwitch(quad_precision,
         row_basic_feasibility_change, col_basic_feasibility_change,
         info.row_basic_feasibility_change_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
     assert(1 == 0);
-    ekk_instance_.ar_matrix_.priceByRow(row_basic_feasibility_change,
+    ekk_instance_.ar_matrix_.priceByRow(quad_precision,
+					row_basic_feasibility_change,
                                         col_basic_feasibility_change);
   }
   if (use_col_price) {

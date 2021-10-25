@@ -92,14 +92,16 @@ class HighsSparseMatrix {
   void createRowwisePartitioned(const HighsSparseMatrix& matrix,
                                 const int8_t* in_partition = NULL);
   bool debugPartitionOk(const int8_t* in_partition) const;
-  void priceByColumn(HVector& result, const HVector& column,
+  void priceByColumn(const bool quad_precision,
+		     HVector& result, const HVector& column,
                      const HighsInt debug_report = kDebugReportOff) const;
-  void priceByRow(HVector& result, const HVector& column,
+  void priceByRow(const bool quad_precision,
+		  HVector& result, const HVector& column,
                   const HighsInt debug_report = kDebugReportOff) const;
-  void priceByRowWithSwitch(
-      HVector& result, const HVector& column, const double expected_density,
-      const HighsInt from_index, const double switch_density,
-      const HighsInt debug_report = kDebugReportOff) const;
+  void priceByRowWithSwitch(const bool quad_precision,
+			    HVector& result, const HVector& column, const double expected_density,
+			    const HighsInt from_index, const double switch_density,
+			    const HighsInt debug_report = kDebugReportOff) const;
   void update(const HighsInt var_in, const HighsInt var_out,
               const HighsSparseMatrix& matrix);
   double computeDot(const HVector& column, const HighsInt use_col) const;
@@ -107,9 +109,9 @@ class HighsSparseMatrix {
                  const double multiplier) const;
 
  private:
-  void priceByRowDenseResult(
-      HVector& result, const HVector& column, const HighsInt from_index,
-      const HighsInt debug_report = kDebugReportOff) const;
+  void priceByRowDenseResult(const bool quad_precision,
+			     HVector& result, const HVector& column, const HighsInt from_index,
+			     const HighsInt debug_report = kDebugReportOff) const;
   void debugReportRowPrice(const HighsInt iRow, const double multiplier,
                            const HighsInt to_iEl,
                            const vector<double>& result) const;
