@@ -83,25 +83,23 @@ class HighsSparseMatrix {
   void createColwise(const HighsSparseMatrix& matrix);
   void createRowwise(const HighsSparseMatrix& matrix);
   void product(vector<double>& result, const vector<double>& row,
-	       const HighsInt debug_report = kDebugReportOff) const;
+               const HighsInt debug_report = kDebugReportOff) const;
   void productTranspose(vector<double>& result_value,
-                        vector<HighsInt>& result_index,
-                        const HVector& column,
-			const HighsInt debug_report = kDebugReportOff) const;
+                        vector<HighsInt>& result_index, const HVector& column,
+                        const HighsInt debug_report = kDebugReportOff) const;
   // Methods for PRICE, including the creation and updating of the
   // partitioned row-wise matrix
   void createRowwisePartitioned(const HighsSparseMatrix& matrix,
                                 const int8_t* in_partition = NULL);
   bool debugPartitionOk(const int8_t* in_partition) const;
   void priceByColumn(HVector& result, const HVector& column,
-		     const HighsInt debug_report = kDebugReportOff) const;
+                     const HighsInt debug_report = kDebugReportOff) const;
   void priceByRow(HVector& result, const HVector& column,
-		  const HighsInt debug_report = kDebugReportOff) const;
-  void priceByRowWithSwitch(HVector& result, const HVector& column,
-                            const double expected_density,
-                            const HighsInt from_index,
-                            const double switch_density,
-			    const HighsInt debug_report = kDebugReportOff) const;
+                  const HighsInt debug_report = kDebugReportOff) const;
+  void priceByRowWithSwitch(
+      HVector& result, const HVector& column, const double expected_density,
+      const HighsInt from_index, const double switch_density,
+      const HighsInt debug_report = kDebugReportOff) const;
   void update(const HighsInt var_in, const HighsInt var_out,
               const HighsSparseMatrix& matrix);
   double computeDot(const HVector& column, const HighsInt use_col) const;
@@ -109,17 +107,15 @@ class HighsSparseMatrix {
                  const double multiplier) const;
 
  private:
-  void priceByRowDenseResult(HVector& result, const HVector& column,
-                             const HighsInt from_index,
-			     const HighsInt debug_report = kDebugReportOff) const;
-  void debugReportRowPrice(const HighsInt iRow,
-			   const double multiplier,
-			   const HighsInt to_iEl,
-			   const vector<double>& result) const;
-  void debugReportRowPrice(const HighsInt iRow,
-			   const double multiplier,
-			   const HighsInt to_iEl,
-			   HighsSparseVectorSum& sum) const;
+  void priceByRowDenseResult(
+      HVector& result, const HVector& column, const HighsInt from_index,
+      const HighsInt debug_report = kDebugReportOff) const;
+  void debugReportRowPrice(const HighsInt iRow, const double multiplier,
+                           const HighsInt to_iEl,
+                           const vector<double>& result) const;
+  void debugReportRowPrice(const HighsInt iRow, const double multiplier,
+                           const HighsInt to_iEl,
+                           HighsSparseVectorSum& sum) const;
 };
 
 #endif

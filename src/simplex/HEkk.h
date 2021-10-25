@@ -91,6 +91,10 @@ class HEkk {
   void refineArray(HVector& hvector, double& scale, const double& small_value);
   void refineVector(vector<double>& value, vector<HighsInt>& index,
                     double& scale, const double& small_value);
+  void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
+  void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
+			 HVector& residual, double& residual_norm);
+  
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
@@ -224,14 +228,11 @@ class HEkk {
   void pivotColumnFtran(const HighsInt iCol, HVector& col_aq);
   void unitBtran(const HighsInt iRow, HVector& row_ep);
   void fullBtran(HVector& buffer);
-  void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
-                         vector<HighsCDouble>& row_ep_residual);
-
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
   void tableauRowPrice(const HVector& row_ep, HVector& row_ap,
-		       const HighsInt debug_report = kDebugReportOff);
+                       const HighsInt debug_report = kDebugReportOff);
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();

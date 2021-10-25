@@ -1026,7 +1026,8 @@ void HEkkDual::rebuild() {
   }
 
   HighsInt alt_debug_level = -1;
-  //  if (ekk_instance_.debug_solve_report_) alt_debug_level = kHighsDebugLevelExpensive;
+  //  if (ekk_instance_.debug_solve_report_) alt_debug_level =
+  //  kHighsDebugLevelExpensive;
   ekk_instance_.debugNlaCheckInvert("HEkkDual::rebuild", alt_debug_level);
 
   if (!ekk_instance_.status_.has_ar_matrix) {
