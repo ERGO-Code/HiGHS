@@ -67,14 +67,47 @@ template <typename F>
 void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
   HighsTaskExecutor::WorkerDeque* workerDeque =
       HighsTaskExecutor::getThisWorkerDeque();
-  if (end - start <= grainSize) {
-    f(start, end);
-  } else {
-    HighsInt split = (start + end) / 2;
-    spawn(workerDeque, [&]() { for_each(split, end, f, grainSize); });
-    for_each(start, split, f, grainSize);
-    sync(workerDeque);
+
+  HighsInt numTasks = 0;
+  HighsInt numThreads = 2 * HighsTaskExecutor::getNumWorkerThreads();
+  while (end - start > grainSize) {
+    HighsInt split = (start + end) >> 1;
+    ++numTasks;
+    workerDeque->pushPrivate(
+        [split, end, &f, grainSize]() { for_each(split, end, f, grainSize); });
+    end = split;
+
+    if ((numThreads >> numTasks) == 1) workerDeque->publishTasks(numTasks);
   }
+
+  if ((numThreads >> numTasks) > 1) workerDeque->publishTasks(numTasks);
+
+  f(start, end);
+
+  for (HighsInt i = 0; i < numTasks; ++i) sync(workerDeque);
+}
+
+template <typename F>
+void for_each_static(HighsInt start, HighsInt end, F&& f) {
+  HighsTaskExecutor::WorkerDeque* workerDeque =
+      HighsTaskExecutor::getThisWorkerDeque();
+
+  HighsInt totalSize = end - start;
+  HighsInt numTasks =
+      std::min(HighsTaskExecutor::getNumWorkerThreads(), totalSize);
+  double chunkMult = double(totalSize) / numTasks;
+
+  for (HighsInt i = numTasks - 1; i > 0; --i) {
+    HighsInt chunkStart = i * chunkMult;
+    workerDeque->pushPrivate([chunkStart, end, &f] { f(chunkStart, end); });
+    end = chunkStart;
+  }
+
+  workerDeque->publishTasks(numTasks);
+
+  f(start, end);
+
+  for (HighsInt j = 0; j < numTasks; ++j) sync(workerDeque);
 }
 
 }  // namespace parallel
