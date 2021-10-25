@@ -217,7 +217,7 @@ class HighsSplitDeque {
         while (queueTail != nullptr) {
           SplitDeque* q = queueTail;
           if (q != localDeque) {
-            Task* t = q->stealWithRetryLoop();
+            Task* t = q->stealWithRetryLoop(false);
             if (t != nullptr) {
               localDeque->linkGlobalQueue(queueHead, queueTail);
               queueNonEmpty.notify_one();
@@ -262,9 +262,14 @@ class HighsSplitDeque {
     kPublishGlobal = 2u,
   };
 
-  void growShared() {
-    uint32_t newSplit =
-        std::min(TaskArraySize, (ownerData.splitCopy + ownerData.head + 1) / 2);
+  void growShared(bool publishAllTasks) {
+    uint32_t newSplit;
+
+    if (publishAllTasks)
+      newSplit = std::min(TaskArraySize, ownerData.head);
+    else
+      newSplit = std::min(TaskArraySize,
+                          (ownerData.splitCopy + ownerData.head + 1) / 2);
     assert(newSplit > ownerData.splitCopy);
 
     // we want to replace the old split point with the new splitPoint
@@ -284,7 +289,7 @@ class HighsSplitDeque {
     stealerData.ts.fetch_xor(xorMask, std::memory_order_release);
     ownerData.splitCopy = newSplit;
     unsigned int splitRq =
-        splitRequest.fetch_xor(kSplitRequest, std::memory_order_relaxed);
+        splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
     if (splitRq & kPublishGlobal) globalQueueData.globalQueue->push(this);
   }
 
@@ -376,9 +381,10 @@ class HighsSplitDeque {
   void push(F&& f) {
     if (ownerData.head >= TaskArraySize) {
       // task queue is full, execute task directly
-      if (ownerData.splitCopy < TaskArraySize && !ownerData.allStolenCopy &&
-          splitRequest.load(std::memory_order_relaxed))
-        growShared();
+      if (ownerData.splitCopy < TaskArraySize && !ownerData.allStolenCopy) {
+        unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
+        if (splitRq) growShared(splitRq & kPublishGlobal);
+      }
 
       ownerData.head += 1;
       f();
@@ -395,13 +401,48 @@ class HighsSplitDeque {
       unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
       if (splitRq) {
         splitRq =
-            splitRequest.fetch_xor(kSplitRequest, std::memory_order_relaxed);
+            splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
         if (splitRq & kPublishGlobal) globalQueueData.globalQueue->push(this);
       }
       ownerData.splitCopy = ownerData.head;
       ownerData.allStolenCopy = false;
-    } else if (splitRequest.load(std::memory_order_relaxed))
-      growShared();
+    } else {
+      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
+      if (splitRq) growShared(splitRq & kPublishGlobal);
+    }
+  }
+
+  template <typename F>
+  void pushPrivate(F&& f) {
+    if (ownerData.head >= TaskArraySize) {
+      ownerData.head += 1;
+      f();
+      return;
+    }
+
+    taskArray[ownerData.head++].setTaskData(std::forward<F>(f));
+  }
+
+  void publishTasks(HighsInt numTasks) {
+    if (ownerData.allStolenCopy) {
+      assert(ownerData.head >= numTasks);
+      stealerData.ts.store(
+          makeTailSplit(ownerData.head - numTasks, ownerData.head),
+          std::memory_order_release);
+      stealerData.allStolen.store(false, std::memory_order_relaxed);
+
+      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
+      if (splitRq) {
+        splitRq =
+            splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
+        if (splitRq & kPublishGlobal) globalQueueData.globalQueue->push(this);
+      }
+      ownerData.splitCopy = ownerData.head;
+      ownerData.allStolenCopy = false;
+    } else {
+      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
+      if (splitRq) growShared(splitRq & kPublishGlobal);
+    }
   }
 
   enum class Status {
@@ -431,9 +472,10 @@ class HighsSplitDeque {
 
     ownerData.head -= 1;
 
-    if (ownerData.head != ownerData.splitCopy &&
-        splitRequest.load(std::memory_order_relaxed))
-      growShared();
+    if (ownerData.head != ownerData.splitCopy) {
+      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
+      if (splitRq) growShared(splitRq & kPublishGlobal);
+    }
 
     return std::make_pair(Status::kWork, &taskArray[ownerData.head]);
   }
@@ -469,7 +511,7 @@ class HighsSplitDeque {
     return nullptr;
   }
 
-  Task* stealWithRetryLoop() {
+  Task* stealWithRetryLoop(bool setSplitRq = true) {
     if (stealerData.allStolen.load(std::memory_order_relaxed)) return nullptr;
 
     uint64_t ts = stealerData.ts.load(std::memory_order_relaxed);
@@ -486,7 +528,8 @@ class HighsSplitDeque {
       s = split(ts);
     }
 
-    if (t < TaskArraySize && !splitRequest.load(std::memory_order_relaxed))
+    if (setSplitRq && t < TaskArraySize &&
+        !splitRequest.load(std::memory_order_relaxed))
       splitRequest.fetch_or(kSplitRequest, std::memory_order_relaxed);
 
     return nullptr;
