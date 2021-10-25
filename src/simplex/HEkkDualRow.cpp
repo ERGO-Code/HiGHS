@@ -72,13 +72,11 @@ void HEkkDualRow::chooseMakepack(const HVector* row, const HighsInt offset) {
   const HighsInt rowCount = row->count;
   const HighsInt* rowIndex = &row->index[0];
   const double* rowArray = &row->array[0];
-  max_pack_value = 0;
   for (HighsInt i = 0; i < rowCount; i++) {
     const HighsInt index = rowIndex[i];
     const double value = rowArray[index];
     packIndex[packCount] = index + offset;
     packValue[packCount++] = value;
-    max_pack_value = std::max(fabs(value), max_pack_value);
   }
 }
 

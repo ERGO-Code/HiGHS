@@ -1185,12 +1185,16 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
-  const HighsInt check_iter = 9;
-  ekk_instance_.debug_iteration_report_ =
-      ekk_instance_.debug_solve_report_ &&
-      ekk_instance_.iteration_count_ == check_iter;
-  if (ekk_instance_.debug_iteration_report_) {
-    printf("HEkkDual::iterate Debug iteration %d\n", (int)check_iter);
+  const HighsInt from_check_iter = 0;
+  const HighsInt to_check_iter = from_check_iter + 10;
+  if (ekk_instance_.debug_solve_report_) {
+    ekk_instance_.debug_iteration_report_ =
+        ekk_instance_.iteration_count_ >= from_check_iter &&
+        ekk_instance_.iteration_count_ <= to_check_iter;
+    if (ekk_instance_.debug_iteration_report_) {
+      printf("HEkkDual::iterate Debug iteration %d\n",
+             (int)ekk_instance_.iteration_count_);
+    }
   }
 
   // Reset the flag to abandon an iteration
@@ -1564,12 +1568,13 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     debug_price_report = kDebugReportAll;
   }
   const bool report_small_pivot_issue =
-      true || ekk_instance_.debug_iteration_report_;
+      false || ekk_instance_.debug_iteration_report_;
   //
   // PRICE
   //
   const bool quad_precision = false;
-  ekk_instance_.tableauRowPrice(quad_precision, *row_ep, row_ap, debug_price_report);
+  ekk_instance_.tableauRowPrice(quad_precision, *row_ep, row_ap,
+                                debug_price_report);
   if (ekk_instance_.debug_iteration_report_) {
     ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
     ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,
@@ -1593,7 +1598,8 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   dualRow.chooseMakepack(&row_ap, 0);
   // Pack row_ep into the packIndex/Value of HEkkDualRow
   dualRow.chooseMakepack(row_ep, solver_num_col);
-  const double row_ep_scale = ekk_instance_.getValueScale(dualRow.packValue);
+  const double row_ep_scale =
+      ekk_instance_.getValueScale(dualRow.packCount, dualRow.packValue);
   analysis->simplexTimerStop(Chuzc1Clock);
   // Loop until an acceptable pivot is found. Each pass either finds a
   // pivot, identifies possible unboundedness, or reduced the number
@@ -1634,43 +1640,46 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     }
     if (dualRow.workPivot >= 0) {
       const double growth_tolerance =
-          options->dual_simplex_pivot_growth_tolerance;
+          options->dual_simplex_pivot_growth_tolerance;  // kHighsMacheps; //
       // A pivot has been chosen
       double alpha_row = dualRow.workAlpha;
       assert(alpha_row);
       const double scaled_value = row_ep_scale * alpha_row;
       if (std::abs(scaled_value) <= growth_tolerance) {
-	if (chuzc_pass == 0 && report_small_pivot_issue)
-          printf("CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
-		 "Pivot %11.4g (dual "
-		 "%11.4g; ratio = %11.4g) is small",
-		 (int)ekk_instance_.debug_solve_call_num_,
-		 (int)ekk_instance_.iteration_count_, 1.0 / row_ep_scale,
-		 (int)dualRow.workPivot, dualRow.workAlpha,
-		 workDual[dualRow.workPivot],
-		 workDual[dualRow.workPivot] / dualRow.workAlpha);
-	// On the first pass, try to make the povotal row more accurate
-	if (chuzc_pass == 0) {
-	  improveChooseColumnRow(row_ep);
-	} else {
-	  // Remove the pivot
-	  for (HighsInt i = 0; i < dualRow.packCount; i++) {
-	    if (dualRow.packIndex[i] == dualRow.workPivot) {
-	      dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
-	      dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
-	      dualRow.packCount--;
-	      if (chuzc_pass == 0 && report_small_pivot_issue)
-		printf(": removing pivot gives pack count = %6d",
-		       (int)dualRow.packCount);
-	      break;
-	    }
-	  }
-	  if (chuzc_pass == 0 && report_small_pivot_issue)
-	    printf(" so %s\n",
-		   dualRow.packCount > 0 ? "repeat CHUZC" : "consider unbounded");
-	 }
-	// Indicate that no pivot has been chosen
-	dualRow.workPivot = -1;
+        if (chuzc_pass == 0 && report_small_pivot_issue)
+          printf(
+              "CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
+              "Pivot %11.4g (dual "
+              "%11.4g; ratio = %11.4g) is small",
+              (int)ekk_instance_.debug_solve_call_num_,
+              (int)ekk_instance_.iteration_count_, 1.0 / row_ep_scale,
+              (int)dualRow.workPivot, dualRow.workAlpha,
+              workDual[dualRow.workPivot],
+              workDual[dualRow.workPivot] / dualRow.workAlpha);
+        // On the first pass, try to make the povotal row more accurate
+        const bool allow_improve_choose_column_row = true;
+        if (allow_improve_choose_column_row && chuzc_pass == 0) {
+          if (report_small_pivot_issue) printf(": improve row\n");
+          improveChooseColumnRow(row_ep);
+        } else {
+          // Remove the pivot
+          for (HighsInt i = 0; i < dualRow.packCount; i++) {
+            if (dualRow.packIndex[i] == dualRow.workPivot) {
+              dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
+              dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
+              dualRow.packCount--;
+              if (chuzc_pass == 0 && report_small_pivot_issue)
+                printf(": removing pivot gives pack count = %6d",
+                       (int)dualRow.packCount);
+              break;
+            }
+          }
+          if (chuzc_pass == 0 && report_small_pivot_issue)
+            printf(" so %s\n", dualRow.packCount > 0 ? "repeat CHUZC"
+                                                     : "consider unbounded");
+        }
+        // Indicate that no pivot has been chosen
+        dualRow.workPivot = -1;
       } else if (chuzc_pass > 0 && report_small_pivot_issue) {
         printf(
             "                                                       Variable "
@@ -1741,12 +1750,17 @@ void HEkkDual::improveChooseColumnRow(HVector* row_ep) {
   dualRow.deleteFreemove();
   analysis->simplexTimerStop(Chuzc5Clock);
 
-  ekk_instance_.simplex_nla_.reportArray("Row e_p.0", lp.num_col_, row_ep, true);
+  if (ekk_instance_.debug_iteration_report_)
+    ekk_instance_.simplex_nla_.reportArray("Row e_p.0", lp.num_col_, row_ep,
+                                           true);
   ekk_instance_.unitBtranIterativeRefinement(row_out, *row_ep);
-  ekk_instance_.simplex_nla_.reportArray("Row e_p.1", lp.num_col_, row_ep, true);
+  if (ekk_instance_.debug_iteration_report_)
+    ekk_instance_.simplex_nla_.reportArray("Row e_p.1", lp.num_col_, row_ep,
+                                           true);
 
   const bool quad_precision = true;
-  ekk_instance_.tableauRowPrice(quad_precision, *row_ep, row_ap, debug_price_report);
+  ekk_instance_.tableauRowPrice(quad_precision, *row_ep, row_ap,
+                                debug_price_report);
   if (ekk_instance_.debug_iteration_report_) {
     ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
     ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,
@@ -1765,8 +1779,6 @@ void HEkkDual::improveChooseColumnRow(HVector* row_ep) {
   // Pack row_ep into the packIndex/Value of HEkkDualRow
   dualRow.chooseMakepack(row_ep, solver_num_col);
   analysis->simplexTimerStop(Chuzc1Clock);
-
-
 }
 
 void HEkkDual::chooseColumnSlice(HVector* row_ep) {
@@ -1840,13 +1852,14 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
 
       if (use_col_price) {
         // Perform column-wise PRICE
-	slice_a_matrix[i].priceByColumn(quad_precision, slice_row_ap[i], *row_ep);
+        slice_a_matrix[i].priceByColumn(quad_precision, slice_row_ap[i],
+                                        *row_ep);
       } else if (use_row_price_w_switch) {
         // Perform hyper-sparse row-wise PRICE, but switch if the density of
         // row_ap becomes extreme
-        slice_ar_matrix[i].priceByRowWithSwitch(quad_precision, 
-            slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
-            kHyperPriceDensity);
+        slice_ar_matrix[i].priceByRowWithSwitch(
+            quad_precision, slice_row_ap[i], *row_ep,
+            ekk_instance_.info_.row_ap_density, 0, kHyperPriceDensity);
       } else {
         // Perform hyper-sparse row-wise PRICE
         slice_ar_matrix[i].priceByRow(quad_precision, slice_row_ap[i], *row_ep);

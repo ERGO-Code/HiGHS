@@ -960,8 +960,8 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
 }
 
 void HighsSparseMatrix::productQuad(vector<double>& result,
-				    const vector<double>& row,
-				    const HighsInt debug_report) const {
+                                    const vector<double>& row,
+                                    const HighsInt debug_report) const {
   assert(this->formatOk());
   assert((int)row.size() >= this->num_col_);
   result.assign(this->num_row_, 0.0);
@@ -982,10 +982,9 @@ void HighsSparseMatrix::productQuad(vector<double>& result,
   }
 }
 
-void HighsSparseMatrix::productTransposeQuad(vector<double>& result_value,
-					     vector<HighsInt>& result_index,
-					     const HVector& column,
-					     const HighsInt debug_report) const {
+void HighsSparseMatrix::productTransposeQuad(
+    vector<double>& result_value, vector<HighsInt>& result_index,
+    const HVector& column, const HighsInt debug_report) const {
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::productTranspose:\n");
   if (this->isColwise()) {
@@ -1007,9 +1006,8 @@ void HighsSparseMatrix::productTransposeQuad(vector<double>& result_value,
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
       double multiplier = column.array[iRow];
       for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
-           iEl++) {
+           iEl++)
         sum.add(this->index_[iEl], multiplier * this->value_[iEl]);
-      }
     }
     if (debug_report >= kDebugReportAll) {
       HighsSparseVectorSum report_sum(num_col_);
@@ -1125,8 +1123,10 @@ bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
 }
 
 void HighsSparseMatrix::priceByColumn(const bool quad_precision,
-				      HVector& result, const HVector& column,
+                                      HVector& result, const HVector& column,
                                       const HighsInt debug_report) const {
+  // Note tested for quad precision
+  assert(!quad_precision);
   assert(this->isColwise());
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByColumn:\n");
@@ -1144,9 +1144,11 @@ void HighsSparseMatrix::priceByColumn(const bool quad_precision,
   }
 }
 
-void HighsSparseMatrix::priceByRow(const bool quad_precision,
-				   HVector& result, const HVector& column,
+void HighsSparseMatrix::priceByRow(const bool quad_precision, HVector& result,
+                                   const HVector& column,
                                    const HighsInt debug_report) const {
+  // Note tested for quad precision
+  assert(!quad_precision);
   assert(this->isRowwise());
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByRow:\n");
@@ -1158,15 +1160,17 @@ void HighsSparseMatrix::priceByRow(const bool quad_precision,
   HighsInt from_index = 0;
   // Never switch to standard row-wise PRICE
   const double switch_density = kHighsInf;
-  this->priceByRowWithSwitch(quad_precision, result, column, expected_density, from_index,
-                             switch_density);
+  this->priceByRowWithSwitch(quad_precision, result, column, expected_density,
+                             from_index, switch_density);
 }
 
-void HighsSparseMatrix::priceByRowWithSwitch(const bool quad_precision,
-					     HVector& result, const HVector& column, const double expected_density,
-					     const HighsInt from_index, const double switch_density,
-					     const HighsInt debug_report) const {
+void HighsSparseMatrix::priceByRowWithSwitch(
+    const bool quad_precision, HVector& result, const HVector& column,
+    const double expected_density, const HighsInt from_index,
+    const double switch_density, const HighsInt debug_report) const {
   assert(this->isRowwise());
+  HighsInt sum_dim = quad_precision ? num_col_ : 1;
+  HighsSparseVectorSum sum(sum_dim);
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByRowWithSwitch\n");
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
@@ -1194,25 +1198,69 @@ void HighsSparseMatrix::priceByRowWithSwitch(const bool quad_precision,
       if (debug_report == kDebugReportAll || debug_report == iRow)
         debugReportRowPrice(iRow, multiplier, to_iEl, result.array);
       if (multiplier) {
-        for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
-          HighsInt iCol = this->index_[iEl];
-          double value0 = result.array[iCol];
-          double value1 = value0 + multiplier * this->value_[iEl];
-          if (value0 == 0) result.index[result.count++] = iCol;
-          result.array[iCol] =
-              (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+        if (quad_precision) {
+          for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
+            sum.add(this->index_[iEl], multiplier * this->value_[iEl]);
+          }
+        } else {
+          for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
+            HighsInt iCol = this->index_[iEl];
+            double value0 = result.array[iCol];
+            double value1 = value0 + multiplier * this->value_[iEl];
+            if (value0 == 0) result.index[result.count++] = iCol;
+            result.array[iCol] =
+                (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+          }
         }
       }
       next_index = ix + 1;
     }
   }
+  if (quad_precision)
+    sum.cleanup([](HighsInt, double x) { return std::abs(x) <= kHighsTiny; });
   if (next_index < column.count) {
     // PRICE is not complete: finish without maintaining nonzeros of result
-    this->priceByRowDenseResult(quad_precision, result, column, next_index);
+    if (quad_precision) {
+      std::vector<HighsCDouble> result_array = sum.values;
+      this->priceByRowDenseResult(result_array, column, next_index);
+      // Determine indices of nonzeros in result
+      result.count = 0;
+      for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+        double value1 = (double)result_array[iCol];
+        if (fabs(value1) < kHighsTiny) {
+          result.array[iCol] = 0;
+        } else {
+          result.array[iCol] = value1;
+          result.index[result.count++] = iCol;
+        }
+      }
+    } else {
+      this->priceByRowDenseResult(result.array, column, next_index);
+      // Determine indices of nonzeros in result
+      result.count = 0;
+      for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+        double value1 = result.array[iCol];
+        if (fabs(value1) < kHighsTiny) {
+          result.array[iCol] = 0;
+        } else {
+          result.index[result.count++] = iCol;
+        }
+      }
+    }
   } else {
-    // PRICE is complete maintaining nonzeros of result
-    // Remove small values
-    result.tight();
+    if (quad_precision) {
+      result.index = std::move(sum.nonzeroinds);
+      HighsInt result_num_nz = result.index.size();
+      result.count = result_num_nz;
+      for (HighsInt i = 0; i < result_num_nz; ++i) {
+        HighsInt iRow = result.index[i];
+        result.array[iRow] = sum.getValue(iRow);
+      }
+    } else {
+      // PRICE is complete maintaining nonzeros of result
+      // Remove small values
+      result.tight();
+    }
   }
 }
 
@@ -1283,9 +1331,11 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
   }
 }
 
-void HighsSparseMatrix::priceByRowDenseResult(const bool quad_precision,
-					      HVector& result, const HVector& column, const HighsInt from_index,
-					      const HighsInt debug_report) const {
+void HighsSparseMatrix::priceByRowDenseResult(
+    std::vector<double>& result, const HVector& column,
+    const HighsInt from_index, const HighsInt debug_report) const {
+  // Assumes that result is zeroed beforehand - in case continuing
+  // priceByRow after switch from sparse
   assert(this->isRowwise());
   for (HighsInt ix = from_index; ix < column.count; ix++) {
     HighsInt iRow = column.index[ix];
@@ -1299,22 +1349,38 @@ void HighsSparseMatrix::priceByRowDenseResult(const bool quad_precision,
       to_iEl = this->start_[iRow + 1];
     }
     if (debug_report == kDebugReportAll || debug_report == iRow)
-      debugReportRowPrice(iRow, multiplier, to_iEl, result.array);
+      debugReportRowPrice(iRow, multiplier, to_iEl, result);
     for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
       HighsInt iCol = this->index_[iEl];
-      double value0 = result.array[iCol];
+      double value0 = result[iCol];
       double value1 = value0 + multiplier * this->value_[iEl];
-      result.array[iCol] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+      result[iCol] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     }
   }
-  // Determine indices of nonzeros in result
-  result.count = 0;
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    double value1 = result.array[iCol];
-    if (fabs(value1) < kHighsTiny) {
-      result.array[iCol] = 0;
+}
+
+void HighsSparseMatrix::priceByRowDenseResult(
+    std::vector<HighsCDouble>& result, const HVector& column,
+    const HighsInt from_index, const HighsInt debug_report) const {
+  // Assumes that result is zeroed beforehand - in case continuing
+  // priceByRow after switch from sparse
+  assert(this->isRowwise());
+  for (HighsInt ix = from_index; ix < column.count; ix++) {
+    HighsInt iRow = column.index[ix];
+    double multiplier = column.array[iRow];
+    // Determine whether p_end_ or the next start_ should be used to end the
+    // loop
+    HighsInt to_iEl;
+    if (this->format_ == MatrixFormat::kRowwisePartitioned) {
+      to_iEl = this->p_end_[iRow];
     } else {
-      result.index[result.count++] = iCol;
+      to_iEl = this->start_[iRow + 1];
+    }
+    for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
+      HighsInt iCol = this->index_[iEl];
+      HighsCDouble value0 = result[iCol];
+      HighsCDouble value1 = value0 + multiplier * this->value_[iEl];
+      result[iCol] = (fabs((double)value1) < kHighsTiny) ? kHighsZero : value1;
     }
   }
 }
@@ -1331,7 +1397,25 @@ void HighsSparseMatrix::debugReportRowPrice(
     double value1 = value0 + multiplier * this->value_[iEl];
     double value2 = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     if (num_print % 5 == 0) printf("\n");
-    printf("[%4d %10.4g] ", (int)(iCol), value2);
+    printf("[%4d %11.4g] ", (int)(iCol), value2);
+    num_print++;
+  }
+  printf("\n");
+}
+
+void HighsSparseMatrix::debugReportRowPrice(
+    const HighsInt iRow, const double multiplier, const HighsInt to_iEl,
+    const vector<HighsCDouble>& result) const {
+  if (this->start_[iRow] >= to_iEl) return;
+  printf("Row %d: value = %11.4g", (int)iRow, multiplier);
+  HighsInt num_print = 0;
+  for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
+    HighsInt iCol = this->index_[iEl];
+    double value0 = (double)result[iCol];
+    double value1 = value0 + multiplier * this->value_[iEl];
+    double value2 = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+    if (num_print % 5 == 0) printf("\n");
+    printf("[%4d %11.4g] ", (int)(iCol), value2);
     num_print++;
   }
   printf("\n");
@@ -1349,7 +1433,7 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
     HighsInt iCol = this->index_[iEl];
     sum.add(iCol, multiplier * this->value_[iEl]);
     if (num_print % 5 == 0) printf("\n");
-    printf("[%4d %10.4g] ", (int)(iCol), sum.getValue(iCol));
+    printf("[%4d %11.4g] ", (int)(iCol), sum.getValue(iCol));
     num_print++;
   }
   printf("\n");

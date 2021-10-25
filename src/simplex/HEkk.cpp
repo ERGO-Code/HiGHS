@@ -1065,7 +1065,7 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = 14;
+  const HighsInt debug_from_solve_call_num = -61;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
@@ -2633,9 +2633,8 @@ void HEkk::choosePriceTechnique(const HighsInt price_strategy,
       price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;
 }
 
-void HEkk::tableauRowPrice(const bool quad_precision,
-			   const HVector& row_ep, HVector& row_ap,
-                           const HighsInt debug_report) {
+void HEkk::tableauRowPrice(const bool quad_precision, const HVector& row_ep,
+                           HVector& row_ap, const HighsInt debug_report) {
   analysis_.simplexTimerStart(PriceClock);
   const HighsInt solver_num_row = lp_.num_row_;
   const HighsInt solver_num_col = lp_.num_col_;
@@ -2668,8 +2667,9 @@ void HEkk::tableauRowPrice(const bool quad_precision,
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
     const double switch_density = kHyperPriceDensity;
-    ar_matrix_.priceByRowWithSwitch(quad_precision, row_ap, row_ep, info_.row_ap_density, 0,
-                                    switch_density, debug_report);
+    ar_matrix_.priceByRowWithSwitch(quad_precision, row_ap, row_ep,
+                                    info_.row_ap_density, 0, switch_density,
+                                    debug_report);
   } else {
     // Perform hyper-sparse row-wise PRICE
     ar_matrix_.priceByRow(quad_precision, row_ap, row_ep, debug_report);
@@ -3885,10 +3885,10 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   vector<HighsInt>& proof_index = this->proof_index_;
   if (use_row_wise_matrix) {
     this->ar_matrix_.productTransposeQuad(proof_value, proof_index, row_ep,
-                                      debug_product_report);
+                                          debug_product_report);
   } else {
     lp.a_matrix_.productTransposeQuad(proof_value, proof_index, row_ep,
-                                  debug_product_report);
+                                      debug_product_report);
   }
   // Refine the proof constraint coefficients according to row_ep_scale
   if (use_refinement)
@@ -3912,8 +3912,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       const HighsInt iCol = proof_index[i];
       const double value = proof_value[i];
       if (!basis_.nonbasicFlag_[iCol]) {
-	printf("Proof entry %6d (Column %6d) is basic with value %11.4g\n",
-	       (int)i, (int)iCol, value);
+        printf("Proof entry %6d (Column %6d) is basic with value %11.4g\n",
+               (int)i, (int)iCol, value);
       }
     }
   }
@@ -3959,18 +3959,15 @@ double HEkk::getArrayScale(const HVector& hvector) {
   for (HighsInt iX = 0; iX < hvector.count; iX++)
     max_abs_value =
         std::max(fabs(hvector.array[hvector.index[iX]]), max_abs_value);
-  double scale = nearestPowerOfTwoScale(max_abs_value);
-  return scale;
+  return nearestPowerOfTwoScale(max_abs_value);
 }
 
-double HEkk::getValueScale(const vector<double>& value) {
-  const HighsInt num_value = value.size();
-  if (num_value <= 0) return 1;
+double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
+  if (count <= 0) return 1;
   double max_abs_value = 0;
-  for (HighsInt iX = 0; iX < num_value; iX++)
+  for (HighsInt iX = 0; iX < count; iX++)
     max_abs_value = std::max(fabs(value[iX]), max_abs_value);
-  double scale = nearestPowerOfTwoScale(max_abs_value);
-  return scale;
+  return nearestPowerOfTwoScale(max_abs_value);
 }
 
 void HEkk::refineArray(HVector& hvector, double& scale,
@@ -4040,7 +4037,8 @@ void HEkk::refineVector(vector<double>& value, vector<HighsInt>& index,
   }
 }
 
-void HEkk::unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep) {
+void HEkk::unitBtranIterativeRefinement(const HighsInt row_out,
+                                        HVector& row_ep) {
   // Perform an iteration of refinement
   HighsLp& lp = this->lp_;
   HVector residual;
@@ -4050,10 +4048,13 @@ void HEkk::unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep)
   residual.setup(lp.num_row_);
   unitBtranResidual(row_out, row_ep, residual, residual_norm);
   if (debug_iteration_report_)
-    printf("HEkk::unitBtranIterativeRefinement: Residual   has %6d / %6d nonzeros and norm of %g\n", 
-	   (int)residual.count, (int)lp.num_row_, residual_norm);
+    printf(
+        "HEkk::unitBtranIterativeRefinement: Residual   has %6d / %6d nonzeros "
+        "and norm of %g\n",
+        (int)residual.count, (int)lp.num_row_, residual_norm);
   if (!residual_norm) return;
-  // Normalise using nearest power of 2 to ||correction_rhs|| so kHighsTiny isn't used adversely
+  // Normalise using nearest power of 2 to ||correction_rhs|| so kHighsTiny
+  // isn't used adversely
   const double residual_scale = nearestPowerOfTwoScale(residual_norm);
   for (HighsInt iEl = 0; iEl < residual.count; iEl++)
     residual.array[residual.index[iEl]] *= residual_scale;
@@ -4067,15 +4068,21 @@ void HEkk::unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep)
       correction_norm = max(fabs(correction_value), correction_norm);
       row_ep.array[iRow] -= correction_value;
     }
-    if (row_ep.array[iRow]) row_ep.index[row_ep.count++] = iRow;
+    if (fabs(row_ep.array[iRow]) < kHighsTiny) {
+      row_ep.array[iRow] = 0;
+    } else {
+      row_ep.index[row_ep.count++] = iRow;
+    }
   }
   if (debug_iteration_report_)
-    printf("HEkk::unitBtranIterativeRefinement: Correction has %6d / %6d nonzeros and norm of %g\n", 
-	   (int)residual.count, (int)lp.num_row_, correction_norm);
+    printf(
+        "HEkk::unitBtranIterativeRefinement: Correction has %6d / %6d nonzeros "
+        "and norm of %g\n",
+        (int)residual.count, (int)lp.num_row_, correction_norm);
 }
 
 void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
-			     HVector& residual, double& residual_norm) {
+                             HVector& residual, double& residual_norm) {
   HighsLp& lp = this->lp_;
   vector<HighsCDouble> quad_residual;
   quad_residual.assign(lp.num_row_, 0);
@@ -4105,4 +4112,3 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
     residual_norm = max(fabs(residual.array[iRow]), residual_norm);
   }
 }
-

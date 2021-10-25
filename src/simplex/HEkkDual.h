@@ -196,7 +196,7 @@ class HEkkDual {
    */
   void chooseColumn(HVector* row_ep);
   void improveChooseColumnRow(HVector* row_ep);
- 
+
   /**
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
    * exploiting slices of the pivotal row - for SIP and PAMI
@@ -448,7 +448,6 @@ class HEkkDual {
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
-  double max_pack_value;
 
   bool check_invert_condition = false;
 

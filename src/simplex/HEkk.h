@@ -87,14 +87,14 @@ class HEkk {
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
   double getArrayScale(const HVector& hvector);
-  double getValueScale(const vector<double>& value);
+  double getValueScale(const HighsInt count, const vector<double>& value);
   void refineArray(HVector& hvector, double& scale, const double& small_value);
   void refineVector(vector<double>& value, vector<HighsInt>& index,
                     double& scale, const double& small_value);
   void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
   void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
-			 HVector& residual, double& residual_norm);
-  
+                         HVector& residual, double& residual_norm);
+
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
@@ -231,8 +231,8 @@ class HEkk {
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
-  void tableauRowPrice(const bool quad_precision,
-		       const HVector& row_ep, HVector& row_ap,
+  void tableauRowPrice(const bool quad_precision, const HVector& row_ep,
+                       HVector& row_ap,
                        const HighsInt debug_report = kDebugReportOff);
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
