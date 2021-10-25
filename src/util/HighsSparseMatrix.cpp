@@ -959,9 +959,9 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
   this->num_row_ = num_row;
 }
 
-void HighsSparseMatrix::product(vector<double>& result,
-                                const vector<double>& row,
-                                const HighsInt debug_report) const {
+void HighsSparseMatrix::productQuad(vector<double>& result,
+				    const vector<double>& row,
+				    const HighsInt debug_report) const {
   assert(this->formatOk());
   assert((int)row.size() >= this->num_col_);
   result.assign(this->num_row_, 0.0);
@@ -982,10 +982,10 @@ void HighsSparseMatrix::product(vector<double>& result,
   }
 }
 
-void HighsSparseMatrix::productTranspose(vector<double>& result_value,
-                                         vector<HighsInt>& result_index,
-                                         const HVector& column,
-                                         const HighsInt debug_report) const {
+void HighsSparseMatrix::productTransposeQuad(vector<double>& result_value,
+					     vector<HighsInt>& result_index,
+					     const HVector& column,
+					     const HighsInt debug_report) const {
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::productTranspose:\n");
   if (this->isColwise()) {

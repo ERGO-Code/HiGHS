@@ -1564,7 +1564,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     debug_price_report = kDebugReportAll;
   }
   const bool report_small_pivot_issue =
-      false || ekk_instance_.debug_iteration_report_;
+      true || ekk_instance_.debug_iteration_report_;
   //
   // PRICE
   //
@@ -1639,33 +1639,39 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
       assert(alpha_row);
       const double scaled_value = row_ep_scale * alpha_row;
       if (std::abs(scaled_value) <= growth_tolerance) {
-        if (chuzc_pass == 0 && report_small_pivot_issue)
-          printf(
-              "CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
-              "Pivot %11.4g (dual "
-              "%11.4g; ratio = %11.4g) is small",
-              (int)ekk_instance_.debug_solve_call_num_,
-              (int)ekk_instance_.iteration_count_, 1.0 / row_ep_scale,
-              (int)dualRow.workPivot, dualRow.workAlpha,
-              workDual[dualRow.workPivot],
-              workDual[dualRow.workPivot] / dualRow.workAlpha);
-        // Remove the pivot
-        for (HighsInt i = 0; i < dualRow.packCount; i++) {
-          if (dualRow.packIndex[i] == dualRow.workPivot) {
-            dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
-            dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
-            dualRow.packCount--;
-            if (chuzc_pass == 0 && report_small_pivot_issue)
-              printf(": removing pivot gives pack count = %6d",
-                     (int)dualRow.packCount);
-            break;
-          }
-        }
-        // Indicate that no pivot has been chosen
-        dualRow.workPivot = -1;
-        if (chuzc_pass == 0 && report_small_pivot_issue)
-          printf(" so %s\n",
-                 dualRow.packCount > 0 ? "repeat CHUZC" : "consider unbounded");
+	if (chuzc_pass == 0 && report_small_pivot_issue)
+          printf("CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
+		 "Pivot %11.4g (dual "
+		 "%11.4g; ratio = %11.4g) is small",
+		 (int)ekk_instance_.debug_solve_call_num_,
+		 (int)ekk_instance_.iteration_count_, 1.0 / row_ep_scale,
+		 (int)dualRow.workPivot, dualRow.workAlpha,
+		 workDual[dualRow.workPivot],
+		 workDual[dualRow.workPivot] / dualRow.workAlpha);
+	if (chuzc_pass == 0) {
+	  // On the first pass, try to make the povotal row more accurate
+     
+	  improveChooseColumnRow(row_ep);
+	  
+	} else {
+	  // Remove the pivot
+	  for (HighsInt i = 0; i < dualRow.packCount; i++) {
+	    if (dualRow.packIndex[i] == dualRow.workPivot) {
+	      dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
+	      dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
+	      dualRow.packCount--;
+	      if (chuzc_pass == 0 && report_small_pivot_issue)
+		printf(": removing pivot gives pack count = %6d",
+		       (int)dualRow.packCount);
+	      break;
+	    }
+	  }
+	  if (chuzc_pass == 0 && report_small_pivot_issue)
+	    printf(" so %s\n",
+		   dualRow.packCount > 0 ? "repeat CHUZC" : "consider unbounded");
+	}
+	// Indicate that no pivot has been chosen
+	dualRow.workPivot = -1;
       } else if (chuzc_pass > 0 && report_small_pivot_issue) {
         printf(
             "                                                       Variable "
@@ -1721,6 +1727,46 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     analysis->simplexTimerStop(DevexWtClock);
   }
   return;
+}
+
+void HEkkDual::improveChooseColumnRow(HVector* row_ep) {
+  HighsLp& lp = ekk_instance_.lp_;
+  HighsInt debug_price_report = kDebugReportOff;
+  if (ekk_instance_.debug_iteration_report_) {
+    printf("HEkkDual::improveChooseColumnRow Check iter = %d\n",
+           (int)ekk_instance_.iteration_count_);
+    debug_price_report = kDebugReportAll;
+  }
+
+  analysis->simplexTimerStart(Chuzc5Clock);
+  dualRow.deleteFreemove();
+  analysis->simplexTimerStop(Chuzc5Clock);
+
+  ekk_instance_.simplex_nla_.reportArray("Row e_p.0", lp.num_col_, row_ep, true);
+  ekk_instance_.unitBtranIterativeRefinement(row_out, *row_ep);
+  ekk_instance_.simplex_nla_.reportArray("Row e_p.1", lp.num_col_, row_ep, true);
+
+  ekk_instance_.tableauRowPrice(*row_ep, row_ap, debug_price_report);
+  if (ekk_instance_.debug_iteration_report_) {
+    ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
+    ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,
+                                           true);
+  }
+  analysis->simplexTimerStart(Chuzc0Clock);
+  dualRow.clear();
+  dualRow.workDelta = delta_primal;
+  dualRow.createFreemove(row_ep);
+  analysis->simplexTimerStop(Chuzc0Clock);
+  //
+  // Section 1: Pack row_ap and row_ep
+  analysis->simplexTimerStart(Chuzc1Clock);
+  // Pack row_ap into the packIndex/Value of HEkkDualRow
+  dualRow.chooseMakepack(&row_ap, 0);
+  // Pack row_ep into the packIndex/Value of HEkkDualRow
+  dualRow.chooseMakepack(row_ep, solver_num_col);
+  analysis->simplexTimerStop(Chuzc1Clock);
+
+
 }
 
 void HEkkDual::chooseColumnSlice(HVector* row_ep) {

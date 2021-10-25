@@ -195,7 +195,8 @@ class HEkkDual {
    * enter the basis (CHUZC)
    */
   void chooseColumn(HVector* row_ep);
-
+  void improveChooseColumnRow(HVector* row_ep);
+ 
   /**
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
    * exploiting slices of the pivotal row - for SIP and PAMI

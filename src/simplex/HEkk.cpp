@@ -3882,10 +3882,10 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   vector<double>& proof_value = this->proof_value_;
   vector<HighsInt>& proof_index = this->proof_index_;
   if (use_row_wise_matrix) {
-    this->ar_matrix_.productTranspose(proof_value, proof_index, row_ep,
+    this->ar_matrix_.productTransposeQuad(proof_value, proof_index, row_ep,
                                       debug_product_report);
   } else {
-    lp.a_matrix_.productTranspose(proof_value, proof_index, row_ep,
+    lp.a_matrix_.productTransposeQuad(proof_value, proof_index, row_ep,
                                   debug_product_report);
   }
   // Refine the proof constraint coefficients according to row_ep_scale
