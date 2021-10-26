@@ -924,7 +924,7 @@ void HighsSimplexAnalysis::summaryReport() {
          model_name_.c_str(), lp_name_.c_str(), num_quad_chuzc, num_heap_chuzc,
          (int)average_heap_chuzc_size, max_heap_chuzc_size);
 
-  if (num_improve_choose_column_row_call) {
+  if (num_improve_choose_column_row_call>=0) {
     printf("\nDual_CHUZC: Number of improve CHUZC row calls =  %d\n",
            (int)num_improve_choose_column_row_call);
     printf("Dual_CHUZC: Number of pivots removed from pack = %d\n",
