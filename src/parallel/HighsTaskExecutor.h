@@ -27,6 +27,8 @@
 class HighsTaskExecutor {
   static constexpr int kTaskArraySize = 8192;
   static constexpr int kTaskSize = 64;
+  static constexpr int kNumYieldsBeforeGiveUp = 4;
+  static constexpr int kNumStealBeforeYieldFac = 4;
 
   using cache_aligned = highs::cache_aligned;
 
@@ -43,10 +45,9 @@ class HighsTaskExecutor {
 
   Task* random_steal_loop(WorkerDeque* localDeque) {
     const int numWorkers = workerDeques.size();
-    const int numStealsBeforeYield = 4 * (numWorkers - 1);
-    constexpr int numYieldsBeforeGiveUp = 4;
+    const int numStealsBeforeYield = kNumStealBeforeYieldFac * (numWorkers - 1);
 
-    for (int y = 0; y < numYieldsBeforeGiveUp; ++y) {
+    for (int y = 0; y < kNumYieldsBeforeGiveUp; ++y) {
       for (int s = 0; s < numStealsBeforeYield; ++s) {
         Task* task = localDeque->randomSteal(workerDeques.data(), numWorkers);
         if (task) return task;
@@ -77,8 +78,9 @@ class HighsTaskExecutor {
  public:
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
-    globalQueue = cache_aligned::make_shared<WorkerDeque::GlobalQueue>();
     workerDeques.resize(numThreads);
+    globalQueue = cache_aligned::make_shared<WorkerDeque::GlobalQueue>(
+        workerDeques.data());
 
     for (int i = 0; i < numThreads; ++i)
       workerDeques[i] = cache_aligned::make_unique<WorkerDeque>(globalQueue, i);
@@ -107,10 +109,10 @@ class HighsTaskExecutor {
   void sync_stolen_task(WorkerDeque* localDeque, Task* stolenTask) {
     if (!stolenTask->leapfrog(localDeque)) {
       const int numWorkers = workerDeques.size();
-      const int numStealsBeforeYield = 4 * (numWorkers - 1);
-      constexpr int numYieldsBeforeGiveUp = 4;
+      const int numStealsBeforeYield =
+          kNumStealBeforeYieldFac * (numWorkers - 1);
 
-      for (int y = 0; y < numYieldsBeforeGiveUp; ++y) {
+      for (int y = 0; y < kNumYieldsBeforeGiveUp; ++y) {
         if (stolenTask->isFinished()) {
           localDeque->popStolen();
           return;

@@ -56,9 +56,14 @@ class HighsSplitDeque {
     bool allStolenCopy = true;
   };
 
+ public:
+  class Task;
+
+ private:
   struct WaitForTaskData {
     std::mutex waitMutex;
     std::condition_variable waitCondition;
+    Task* injectedTask = nullptr;
   };
 
   struct StealerData {
@@ -104,8 +109,9 @@ class HighsSplitDeque {
     void run(SplitDeque* stealer) {
       metadata.stealer.store(stealer, std::memory_order_relaxed);
       reinterpret_cast<CallableBase*>(taskData)->operator()();
-      SplitDeque* waitingOwner = metadata.stealer.exchange(
-          reinterpret_cast<SplitDeque*>(1), std::memory_order_release);
+      SplitDeque* waitingOwner =
+          metadata.stealer.exchange(reinterpret_cast<SplitDeque*>(uintptr_t{1}),
+                                    std::memory_order_release);
 
       if (waitingOwner != stealer) {
         std::unique_lock<std::mutex> lg(
@@ -179,66 +185,185 @@ class HighsSplitDeque {
   struct GlobalQueue;
 
   struct GlobalQueueData {
-    SplitDeque* next = nullptr;
-    SplitDeque* prev = nullptr;
-    SplitDeque** headPtr = nullptr;
-    SplitDeque** tailPtr = nullptr;
+    std::atomic<SplitDeque*> nextSleeper{nullptr};
+    std::atomic<SplitDeque*> nextUnsignaled{nullptr};
     cache_aligned::shared_ptr<GlobalQueue> globalQueue = nullptr;
+    int ownerId;
   };
 
   struct GlobalQueue {
-    std::mutex mtx;
-    std::condition_variable queueNonEmpty;
+    cache_aligned::unique_ptr<SplitDeque>* workers;
+    alignas(64) std::atomic_uint64_t sleeperStack;
+    alignas(64) std::atomic_uint64_t unsignaledStack;
 
-    SplitDeque* queueHead = nullptr;
-    SplitDeque* queueTail = nullptr;
+    GlobalQueue(cache_aligned::unique_ptr<SplitDeque>* workers)
+        : workers(workers), sleeperStack(0), unsignaledStack(0) {}
 
-    SplitDeque* activeHead = nullptr;
-    SplitDeque* activeTail = nullptr;
+    void pushSleeper(SplitDeque* deque) {
+      constexpr int kAbaTagShift = 20;
+      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
 
-    void push(SplitDeque* localDeque) {
-      std::unique_lock<std::mutex> lg(mtx);
-      localDeque->unlinkGlobalQueue();
+      uint64_t stackState = sleeperStack.load(std::memory_order_relaxed);
+      uint64_t newStackState;
 
-      // since we needed to go to the global queue we know that there are
-      // sleeping workers that do not have work yet. Hence, we directly store a
-      // split request for ourself so that it gets less likely we need to
-      // acquire the lock of the global queue again.
-      localDeque->splitRequest.store(kSplitRequest, std::memory_order_relaxed);
-      localDeque->linkGlobalQueue(queueHead, queueTail);
-      queueNonEmpty.notify_one();
+      do {
+        SplitDeque* head = stackState & kIndexMask
+                               ? workers[(stackState & kIndexMask) - 1].get()
+                               : nullptr;
+        deque->globalQueueData.nextSleeper.store(head,
+                                                 std::memory_order_relaxed);
+
+        newStackState = (stackState >> kAbaTagShift) + 1;
+        newStackState = (newStackState << kAbaTagShift) |
+                        uint64_t(deque->readOwnersId() + 1);
+      } while (!sleeperStack.compare_exchange_weak(stackState, newStackState,
+                                                   std::memory_order_release,
+                                                   std::memory_order_relaxed));
+    }
+
+    SplitDeque* popSleeper() {
+      constexpr int kAbaTagShift = 20;
+      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
+
+      uint64_t stackState = sleeperStack.load(std::memory_order_relaxed);
+      SplitDeque* head;
+      uint64_t newStackState;
+
+      do {
+        if ((stackState & kIndexMask) == 0) return nullptr;
+        head = workers[(stackState & kIndexMask) - 1].get();
+        SplitDeque* newHead =
+            head->globalQueueData.nextSleeper.load(std::memory_order_relaxed);
+        int newHeadId = newHead != nullptr ? newHead->readOwnersId() + 1 : 0;
+        newStackState = (stackState >> kAbaTagShift) + 1;
+        newStackState = (newStackState << kAbaTagShift) | uint64_t(newHeadId);
+      } while (!sleeperStack.compare_exchange_weak(stackState, newStackState,
+                                                   std::memory_order_relaxed,
+                                                   std::memory_order_acquire));
+
+      head->globalQueueData.nextSleeper.store(nullptr,
+                                              std::memory_order_relaxed);
+
+      return head;
+    }
+
+    void pushUnsignaled(SplitDeque* deque) {
+      constexpr int kAbaTagShift = 20;
+      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
+
+      uint64_t stackState = unsignaledStack.load(std::memory_order_relaxed);
+      uint64_t newStackState;
+
+      do {
+        SplitDeque* head = stackState & kIndexMask
+                               ? workers[(stackState & kIndexMask) - 1].get()
+                               : nullptr;
+        deque->globalQueueData.nextUnsignaled.store(head,
+                                                    std::memory_order_relaxed);
+        newStackState = (stackState >> kAbaTagShift) + 1;
+        newStackState = (newStackState << kAbaTagShift) |
+                        uint64_t(deque->readOwnersId() + 1);
+      } while (!unsignaledStack.compare_exchange_weak(
+          stackState, newStackState, std::memory_order_release,
+          std::memory_order_relaxed));
+    }
+
+    SplitDeque* popUnsignaled() {
+      constexpr int kAbaTagShift = 20;
+      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
+
+      uint64_t stackState = unsignaledStack.load(std::memory_order_relaxed);
+      SplitDeque* head;
+      uint64_t newStackState;
+
+      do {
+        if ((stackState & kIndexMask) == 0) return nullptr;
+        head = workers[(stackState & kIndexMask) - 1].get();
+        SplitDeque* newHead = head->globalQueueData.nextUnsignaled.load(
+            std::memory_order_relaxed);
+        int newHeadId = newHead != nullptr ? newHead->readOwnersId() + 1 : 0;
+        newStackState = (stackState >> kAbaTagShift) + 1;
+        newStackState = (newStackState << kAbaTagShift) | uint64_t(newHeadId);
+      } while (!unsignaledStack.compare_exchange_weak(
+          stackState, newStackState, std::memory_order_relaxed,
+          std::memory_order_acquire));
+
+      head->globalQueueData.nextUnsignaled.store(nullptr,
+                                                 std::memory_order_relaxed);
+
+      return head;
+    }
+
+    void publishWork(SplitDeque* localDeque) {
+      SplitDeque* sleeper = popSleeper();
+      bool resetSignal = true;
+      while (sleeper) {
+        uint32_t t = localDeque->stealWithRetryLoopAndGetTail(false);
+        if (t >= localDeque->ownerData.splitCopy) {
+          if (localDeque->ownerData.head == localDeque->ownerData.splitCopy) {
+            localDeque->ownerData.allStolenCopy = true;
+            localDeque->stealerData.allStolen.store(true,
+                                                    std::memory_order_relaxed);
+          }
+          pushSleeper(sleeper);
+          // there still must be a notification for the thread even if no
+          // task was injected to make sure that no other worker may have lost
+          // its kPublishGlobal flag because we temporarily popped a sleeper
+          // thread here even though we had no remaining work
+          std::unique_lock<std::mutex> lg(
+              sleeper->stealerData.waitForTaskData->waitMutex);
+          sleeper->stealerData.waitForTaskData->waitCondition.notify_one();
+          return;
+        } else {
+          std::unique_lock<std::mutex> lg(
+              sleeper->stealerData.waitForTaskData->waitMutex);
+          // printf("worker %d injecting work to sleeper %d\n",
+          // localDeque->getOwnerId(), sleeper->readOwnersId());
+          sleeper->stealerData.waitForTaskData->injectedTask =
+              &localDeque->taskArray[t];
+          sleeper->stealerData.waitForTaskData->waitCondition.notify_one();
+        }
+
+        if (t == localDeque->ownerData.splitCopy - 1) {
+          if (localDeque->ownerData.head == localDeque->ownerData.splitCopy) {
+            localDeque->ownerData.allStolenCopy = true;
+            localDeque->stealerData.allStolen.store(true,
+                                                    std::memory_order_relaxed);
+          }
+          return;
+        }
+        sleeper = popSleeper();
+        if (resetSignal && !sleeper) {
+          resetSignal = false;
+          // reset the publish global request
+          localDeque->splitRequest.fetch_and(~kPublishGlobal,
+                                             std::memory_order_relaxed);
+          // then push this worker as unsignaled
+          pushUnsignaled(localDeque);
+          // now read again whether there is a new sleeper that might have not
+          // seen the flag being reset and try to feed it more work or at least
+          // signal it
+          sleeper = popSleeper();
+        }
+      }
     }
 
     Task* waitForNewTask(SplitDeque* localDeque) {
-      std::unique_lock<std::mutex> lg(mtx);
-      localDeque->unlinkGlobalQueue();
-      localDeque->splitRequest.store(kNone, std::memory_order_relaxed);
-      while (true) {
-        while (queueTail != nullptr) {
-          SplitDeque* q = queueTail;
-          if (q != localDeque) {
-            Task* t = q->stealWithRetryLoop(false);
-            if (t != nullptr) {
-              localDeque->linkGlobalQueue(queueHead, queueTail);
-              queueNonEmpty.notify_one();
-              return t;
-            }
+      pushSleeper(localDeque);
+      std::unique_lock<std::mutex> lg(
+          localDeque->stealerData.waitForTaskData->waitMutex);
 
-            q->unlinkGlobalQueue();
-            q->linkGlobalQueue(activeHead, activeTail);
-          } else
-            q->unlinkGlobalQueue();
-        }
+      while (localDeque->stealerData.waitForTaskData->injectedTask == nullptr) {
+        SplitDeque* unsignaled;
+        while ((unsignaled = popUnsignaled()) != nullptr)
+          unsignaled->requestPublishGlobalQueue();
 
-        // set request on all active workers to publish their work to the global
-        // queue
-        for (SplitDeque* q = activeHead; q != nullptr;
-             q = q->globalQueueData.next)
-          q->requestPublishGlobalQueue();
-
-        // now wait until the global queue becomes non-empty
-        while (queueTail == nullptr) queueNonEmpty.wait(lg);
+        localDeque->stealerData.waitForTaskData->waitCondition.wait(lg);
       }
+
+      Task* t = localDeque->stealerData.waitForTaskData->injectedTask;
+      localDeque->stealerData.waitForTaskData->injectedTask = nullptr;
+      return t;
     }
   };
 
@@ -290,41 +415,8 @@ class HighsSplitDeque {
     ownerData.splitCopy = newSplit;
     unsigned int splitRq =
         splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
-    if (splitRq & kPublishGlobal) globalQueueData.globalQueue->push(this);
-  }
-
-  void unlinkGlobalQueue() {
-    assert(globalQueueData.tailPtr != nullptr);
-    assert(globalQueueData.headPtr != nullptr);
-    SplitDeque* tmpNext = globalQueueData.next;
-    SplitDeque* tmpPrev = globalQueueData.prev;
-
-    globalQueueData.next = nullptr;
-    globalQueueData.prev = nullptr;
-
-    if (tmpNext != nullptr)
-      tmpNext->globalQueueData.prev = tmpPrev;
-    else
-      *globalQueueData.tailPtr = tmpPrev;
-
-    if (tmpPrev != nullptr)
-      tmpPrev->globalQueueData.next = tmpNext;
-    else
-      *globalQueueData.headPtr = tmpNext;
-  }
-
-  void linkGlobalQueue(SplitDeque*& head, SplitDeque*& tail) {
-    globalQueueData.headPtr = &head;
-    globalQueueData.tailPtr = &tail;
-
-    globalQueueData.next = head;
-    globalQueueData.prev = nullptr;
-    head = this;
-
-    if (globalQueueData.next == nullptr)
-      tail = this;
-    else
-      globalQueueData.next->globalQueueData.prev = this;
+    if (splitRq & kPublishGlobal)
+      globalQueueData.globalQueue->publishWork(this);
   }
 
   bool shrinkShared() {
@@ -358,13 +450,14 @@ class HighsSplitDeque {
   HighsSplitDeque(const cache_aligned::shared_ptr<GlobalQueue>& globalQueue,
                   int ownerId) {
     ownerData.ownerId = ownerId;
+    globalQueueData.ownerId = ownerId;
     std::random_device rd;
     ownerData.randgen.initialise(rd());
 
     stealerData.waitForTaskData = cache_aligned::make_unique<WaitForTaskData>();
     globalQueueData.globalQueue = globalQueue;
     splitRequest.store(kNone, std::memory_order_relaxed);
-    linkGlobalQueue(globalQueue->activeHead, globalQueue->activeTail);
+    globalQueue->pushUnsignaled(this);
 
     assert((reinterpret_cast<uintptr_t>(this) & 63u) == 0);
     static_assert(offsetof(SplitDeque, splitRequest) == 64,
@@ -397,48 +490,16 @@ class HighsSplitDeque {
       stealerData.ts.store(makeTailSplit(ownerData.head - 1, ownerData.head),
                            std::memory_order_release);
       stealerData.allStolen.store(false, std::memory_order_relaxed);
+      ownerData.splitCopy = ownerData.head;
+      ownerData.allStolenCopy = false;
 
       unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
       if (splitRq) {
         splitRq =
             splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
-        if (splitRq & kPublishGlobal) globalQueueData.globalQueue->push(this);
+        if (splitRq & kPublishGlobal)
+          globalQueueData.globalQueue->publishWork(this);
       }
-      ownerData.splitCopy = ownerData.head;
-      ownerData.allStolenCopy = false;
-    } else {
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) growShared(splitRq & kPublishGlobal);
-    }
-  }
-
-  template <typename F>
-  void pushPrivate(F&& f) {
-    if (ownerData.head >= TaskArraySize) {
-      ownerData.head += 1;
-      f();
-      return;
-    }
-
-    taskArray[ownerData.head++].setTaskData(std::forward<F>(f));
-  }
-
-  void publishTasks(HighsInt numTasks) {
-    if (ownerData.allStolenCopy) {
-      assert(ownerData.head >= numTasks);
-      stealerData.ts.store(
-          makeTailSplit(ownerData.head - numTasks, ownerData.head),
-          std::memory_order_release);
-      stealerData.allStolen.store(false, std::memory_order_relaxed);
-
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) {
-        splitRq =
-            splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
-        if (splitRq & kPublishGlobal) globalQueueData.globalQueue->push(this);
-      }
-      ownerData.splitCopy = ownerData.head;
-      ownerData.allStolenCopy = false;
     } else {
       unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
       if (splitRq) growShared(splitRq & kPublishGlobal);
@@ -535,11 +596,36 @@ class HighsSplitDeque {
     return nullptr;
   }
 
-  void requestPublishGlobalQueue() {
-    if (!(splitRequest.load(std::memory_order_relaxed) & kPublishGlobal)) {
-      splitRequest.store(kSplitRequest | kPublishGlobal,
-                         std::memory_order_relaxed);
+  uint32_t stealWithRetryLoopAndGetTail(bool setSplitRq = true) {
+    if (stealerData.allStolen.load(std::memory_order_relaxed))
+      return std::numeric_limits<uint32_t>::max();
+
+    uint64_t ts = stealerData.ts.load(std::memory_order_relaxed);
+    uint32_t t = tail(ts);
+    uint32_t s = split(ts);
+
+    while (t < s) {
+      if (stealerData.ts.compare_exchange_weak(ts, makeTailSplit(t + 1, s),
+                                               std::memory_order_acquire,
+                                               std::memory_order_relaxed))
+        return t;
+
+      t = tail(ts);
+      s = split(ts);
     }
+
+    if (setSplitRq && t < TaskArraySize &&
+        !splitRequest.load(std::memory_order_relaxed))
+      splitRequest.fetch_or(kSplitRequest, std::memory_order_relaxed);
+
+    return s;
+  }
+
+  void requestPublishGlobalQueue() {
+    // if (!(splitRequest.load(std::memory_order_relaxed) & kPublishGlobal)) {
+    splitRequest.store(kSplitRequest | kPublishGlobal,
+                       std::memory_order_relaxed);
+    //}
   }
 
   Task* randomSteal(cache_aligned::unique_ptr<SplitDeque>* workers,
@@ -554,6 +640,8 @@ class HighsSplitDeque {
   }
 
   int getOwnerId() const { return ownerData.ownerId; }
+
+  int readOwnersId() const { return globalQueueData.ownerId; }
 };
 
 #endif
