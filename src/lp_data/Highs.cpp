@@ -2516,6 +2516,16 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::readSolution(const std::string filename, const HighsInt style) {
+  HighsStatus return_status = HighsStatus::kOk;
+  return return_status;
+}
+
+HighsStatus Highs::checkSolution() const {
+  HighsStatus return_status = HighsStatus::kOk;
+  return return_status;
+}
+
 void Highs::reportModel() {
   reportLp(options_.log_options, model_.lp_, HighsLogType::kVerbose);
   if (model_.hessian_.dim_) {
