@@ -20,6 +20,7 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
+#include "lp_data/HighsInfo.h"
 #include "util/HighsUtils.h"
 
 class HighsLp;
@@ -250,8 +251,18 @@ void analyseScaledLp(const HighsLogOptions& log_options,
                      const HighsScale& scale, const HighsLp& scaled_lp);
 
 void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const HighsInt style);
+                         const HighsLp& lp,
+			 const HighsBasis& basis,
+                         const HighsSolution& solution, 
+                         const HighsInfo& info, 
+                         const HighsModelStatus model_status, 
+			 const HighsInt style);
+
+HighsStatus readSolutionFile(const std::string filename, const HighsOptions& options, 
+			     const HighsLp& lp,
+			     HighsBasis& basis,
+			     HighsSolution& solution, 
+			     const HighsInt style);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

@@ -1810,8 +1810,12 @@ void analyseScaledLp(const HighsLogOptions& log_options,
 }
 
 void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const HighsInt style) {
+                         const HighsLp& lp,
+			 const HighsBasis& basis,
+                         const HighsSolution& solution, 
+                         const HighsInfo& info, 
+                         const HighsModelStatus model_status, 
+			 const HighsInt style) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
@@ -1887,7 +1891,88 @@ void writeSolutionToFile(FILE* file, const HighsOptions& options,
         fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
       fprintf(file, "\n");
     }
+    fprintf(file, "Model status\n");
+    fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
+    fprintf(file, "Objective\n");
+    fprintf(file, "%.15g ", info.objective_function_value);
   }
+}
+
+HighsStatus readSolutionFile(const std::string filename, const HighsOptions& options,
+			     const HighsLp& lp,
+			     HighsBasis& basis,
+			     HighsSolution& solution, 
+			     const HighsInt style) {
+  if (style != kWriteSolutionStyleRaw) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "readSolutionFile: Cannot read file of style %d\n",
+                 (int)style);
+    return HighsStatus::kError;
+  }
+  const HighsInt kMaxLineLength = 80;
+  const HighsLogOptions& log_options = options.log_options;  
+  std::ifstream inFile(filename);
+  if (inFile.fail()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "readSolutionFile: Cannot open readable file \"%s\"\n",
+                 filename.c_str());
+    return HighsStatus::kError;
+  }
+  HighsInt num_col, num_row;
+  inFile >> num_col >> num_row;
+  HighsInt lp_num_col = lp.num_col_;
+  HighsInt lp_num_row = lp.num_row_;
+  if (num_col != lp_num_col) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+		 " columns, not %" HIGHSINT_FORMAT "\n",
+		 num_col, lp_num_col);
+    return HighsStatus::kError;
+  }
+  if (num_row != lp_num_row) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+		 " rows, not %" HIGHSINT_FORMAT "\n",
+		 num_row, lp_num_row);
+    return HighsStatus::kError;
+  }
+  inFile.ignore(kMaxLineLength, '\n');
+  std::string have_value_str;
+  std::string have_dual_str;
+  std::string have_basis_str;
+  inFile >> have_value_str;
+  inFile.ignore(kMaxLineLength, '\n');
+  inFile >> have_dual_str;
+  inFile.ignore(kMaxLineLength, '\n');
+  inFile >> have_basis_str;
+  inFile.ignore(kMaxLineLength, '\n');
+  const bool have_value = have_value_str == "T" ? true : false;
+  const bool have_dual = have_dual_str == "T" ? true : false;
+  const bool have_basis = have_basis_str == "T" ? true : false;
+  // Define idetifiers for reading in
+  HighsSolution read_solution = solution;
+  HighsBasis read_basis = basis;
+  std::string section_name;
+  HighsInt status;
+  // Should have reached the columns section
+  inFile >> section_name;
+  if (section_name != "Columns") return HighsStatus::kError;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (have_value) inFile >> read_solution.col_value[iCol];
+    if (have_dual) inFile >> read_solution.col_dual[iCol];
+    if (have_basis) inFile >> status;
+    read_basis.col_status[iCol] = (HighsBasisStatus)status;
+  }
+  // Should have reached the rows section
+  inFile >> section_name;
+  if (section_name != "Rows")return HighsStatus::kError;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (have_value) inFile >> read_solution.row_value[iRow];
+    if (have_dual) inFile >> read_solution.row_dual[iRow];
+    if (have_basis) inFile >> status;
+    read_basis.row_status[iRow] = (HighsBasisStatus)status;
+  }
+  return HighsStatus::kOk;
 }
 
 HighsStatus writeBasisFile(const HighsLogOptions& log_options,

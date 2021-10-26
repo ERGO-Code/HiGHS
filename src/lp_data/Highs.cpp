@@ -2511,14 +2511,13 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
+  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, info_, model_status_, style);
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::readSolution(const std::string filename, const HighsInt style) {
-  HighsStatus return_status = HighsStatus::kOk;
-  return return_status;
+  return readSolutionFile(filename, options_, model_.lp_, basis_, solution_, style);
 }
 
 HighsStatus Highs::checkSolution() const {
