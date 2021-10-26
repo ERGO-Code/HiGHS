@@ -192,6 +192,8 @@ class HighsSplitDeque {
   };
 
   struct GlobalQueue {
+    static constexpr uint64_t kAbaTagShift = 20;
+    static constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
     cache_aligned::unique_ptr<SplitDeque>* workers;
     alignas(64) std::atomic_uint64_t sleeperStack;
     alignas(64) std::atomic_uint64_t unsignaledStack;
@@ -200,9 +202,6 @@ class HighsSplitDeque {
         : workers(workers), sleeperStack(0), unsignaledStack(0) {}
 
     void pushSleeper(SplitDeque* deque) {
-      constexpr int kAbaTagShift = 20;
-      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-
       uint64_t stackState = sleeperStack.load(std::memory_order_relaxed);
       uint64_t newStackState;
 
@@ -222,9 +221,6 @@ class HighsSplitDeque {
     }
 
     SplitDeque* popSleeper() {
-      constexpr int kAbaTagShift = 20;
-      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-
       uint64_t stackState = sleeperStack.load(std::memory_order_relaxed);
       SplitDeque* head;
       uint64_t newStackState;
@@ -248,9 +244,6 @@ class HighsSplitDeque {
     }
 
     void pushUnsignaled(SplitDeque* deque) {
-      constexpr int kAbaTagShift = 20;
-      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-
       uint64_t stackState = unsignaledStack.load(std::memory_order_relaxed);
       uint64_t newStackState;
 
@@ -269,9 +262,6 @@ class HighsSplitDeque {
     }
 
     SplitDeque* popUnsignaled() {
-      constexpr int kAbaTagShift = 20;
-      constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-
       uint64_t stackState = unsignaledStack.load(std::memory_order_relaxed);
       SplitDeque* head;
       uint64_t newStackState;
@@ -310,9 +300,11 @@ class HighsSplitDeque {
           // task was injected to make sure that no other worker may have lost
           // its kPublishGlobal flag because we temporarily popped a sleeper
           // thread here even though we had no remaining work
-          std::unique_lock<std::mutex> lg(
-              sleeper->stealerData.waitForTaskData->waitMutex);
-          sleeper->stealerData.waitForTaskData->waitCondition.notify_one();
+          if (unsignaledStack.load(std::memory_order_relaxed) & kIndexMask) {
+            std::unique_lock<std::mutex> lg(
+                sleeper->stealerData.waitForTaskData->waitMutex);
+            sleeper->stealerData.waitForTaskData->waitCondition.notify_one();
+          }
           return;
         } else {
           std::unique_lock<std::mutex> lg(
