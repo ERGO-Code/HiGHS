@@ -28,6 +28,7 @@
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
 #include "model/HighsHessianUtils.h"
+#include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
 #include "qpsolver/solver.hpp"
 #include "simplex/HSimplex.h"
@@ -521,8 +522,10 @@ HighsStatus Highs::run() {
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
-#ifdef OPENMP
-  omp_max_threads = omp_get_max_threads();
+  highs::parallel::initialize_scheduler(options_.highs_max_threads);
+
+  //#ifdef OPENMP
+  omp_max_threads = highs::parallel::num_threads();
   assert(omp_max_threads > 0);
   if (omp_max_threads <= 0)
     highsLogDev(options_.log_options, HighsLogType::kWarning,
@@ -532,7 +535,7 @@ HighsStatus Highs::run() {
   highsLogDev(options_.log_options, HighsLogType::kDetailed,
               "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n",
               omp_max_threads);
-#endif
+  //#endif
   assert(called_return_from_run);
   if (!called_return_from_run) {
     highsLogDev(options_.log_options, HighsLogType::kError,

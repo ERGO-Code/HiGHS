@@ -18,6 +18,7 @@
 #include <iomanip>
 
 #include "HConfig.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
 #include "util/FactorTimer.h"
@@ -54,8 +55,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   delta_user_log_time = 5e0;
 
   // Set up the thread clocks
-  HighsInt omp_max_threads = 1;
-#ifdef OPENMP
+  HighsInt omp_max_threads = highs::parallel::num_threads();
+#if 0  // def OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
   if (analyse_simplex_time) {
@@ -628,8 +629,8 @@ double HighsSimplexAnalysis::simplexTimerRead(const HighsInt simplex_clock,
 HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analyse_factor_time) {
-    HighsInt thread_id = 0;
-#ifdef OPENMP
+    HighsInt thread_id = highs::parallel::thread_num();
+#if 0 //def OPENMP
     thread_id = omp_get_thread_num();
 #endif
     factor_timer_clock_pointer = &thread_factor_clocks[thread_id];
@@ -1148,8 +1149,8 @@ void HighsSimplexAnalysis::reportSimplexTimer() {
 void HighsSimplexAnalysis::reportFactorTimer() {
   assert(analyse_factor_time);
   FactorTimer factor_timer;
-  HighsInt omp_max_threads = 1;
-#ifdef OPENMP
+  HighsInt omp_max_threads = highs::parallel::num_threads();
+#if 0 //def OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
   for (HighsInt i = 0; i < omp_max_threads; i++) {

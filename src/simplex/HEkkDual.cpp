@@ -23,6 +23,7 @@
 #include <set>
 
 #include "lp_data/HighsLpUtils.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/SimplexTimer.h"
 
@@ -1277,26 +1278,29 @@ void HEkkDual::iterateTasks() {
   if (1.0 * row_ep.count / solver_num_row < 0.01) slice_PRICE = 0;
 
   analysis->simplexTimerStart(Group1Clock);
-#pragma omp parallel
-#pragma omp single
+  //#pragma omp parallel
+  //#pragma omp single
   {
-#pragma omp task
-    {
+    //#pragma omp task
+    highs::parallel::spawn([&]() {
       col_DSE.copy(&row_ep);
       updateFtranDSE(&col_DSE);
-    }
-#pragma omp task
+    });
+    //#pragma omp task
     {
       if (slice_PRICE)
         chooseColumnSlice(&row_ep);
       else
         chooseColumn(&row_ep);
-#pragma omp task
-      updateFtranBFRT();
-#pragma omp task
+      //#pragma omp task
+      highs::parallel::spawn([&]() { updateFtranBFRT(); });
+      //#pragma omp task
       updateFtran();
-#pragma omp taskwait
+      //#pragma omp taskwait
+      highs::parallel::sync();
     }
+
+    highs::parallel::sync();
   }
   analysis->simplexTimerStop(Group1Clock);
 
@@ -1741,8 +1745,8 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   row_ap_thread_id.resize(slice_num);
   */
 
-#pragma omp task
-  {
+  //#pragma omp task
+  highs::parallel::spawn([&]() {
     dualRow.chooseMakepack(row_ep, solver_num_col);
     dualRow.choosePossible();
 #ifdef OPENMP
@@ -1750,41 +1754,45 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
     //    printf("Hello world from Row_ep:         PACK + CC1 thread %"
     //    HIGHSINT_FORMAT "\n", row_ep_thread_id);
 #endif
-  }
+  });
 
   // Row_ap: PRICE + PACK + CC1
-  for (HighsInt i = 0; i < slice_num; i++) {
-#pragma omp task
-    {
+  highs::parallel::for_each(0, slice_num, [&](HighsInt start, HighsInt end) {
+    for (HighsInt i = start; i < end; i++) {
+      //#pragma omp task
+      {
 #ifdef OPENMP
-      //      HighsInt row_ap_thread_id = omp_get_thread_num();
-      //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1"
-      //      HIGHSINT_FORMAT "] thread %" HIGHSINT_FORMAT "\n", i,
-      //      row_ap_thread_id);
+        //      HighsInt row_ap_thread_id = omp_get_thread_num();
+        //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1"
+        //      HIGHSINT_FORMAT "] thread %" HIGHSINT_FORMAT "\n", i,
+        //      row_ap_thread_id);
 #endif
-      slice_row_ap[i].clear();
+        slice_row_ap[i].clear();
 
-      if (use_col_price) {
-        // Perform column-wise PRICE
-        slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
-      } else if (use_row_price_w_switch) {
-        // Perform hyper-sparse row-wise PRICE, but switch if the density of
-        // row_ap becomes extreme
-        slice_ar_matrix[i].priceByRowWithSwitch(
-            slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
-            kHyperPriceDensity);
-      } else {
-        // Perform hyper-sparse row-wise PRICE
-        slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
+        if (use_col_price) {
+          // Perform column-wise PRICE
+          slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+        } else if (use_row_price_w_switch) {
+          // Perform hyper-sparse row-wise PRICE, but switch if the density of
+          // row_ap becomes extreme
+          slice_ar_matrix[i].priceByRowWithSwitch(
+              slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
+              kHyperPriceDensity);
+        } else {
+          // Perform hyper-sparse row-wise PRICE
+          slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
+        }
+
+        slice_dualRow[i].clear();
+        slice_dualRow[i].workDelta = delta_primal;
+        slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
+        slice_dualRow[i].choosePossible();
       }
-
-      slice_dualRow[i].clear();
-      slice_dualRow[i].workDelta = delta_primal;
-      slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
-      slice_dualRow[i].choosePossible();
     }
-  }
-#pragma omp taskwait
+  });
+
+  highs::parallel::sync();
+  //#pragma omp taskwait
 
   if (analysis->analyse_simplex_summary_data) {
     // Determine the nonzero count of the whole row

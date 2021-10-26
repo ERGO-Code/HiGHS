@@ -19,6 +19,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplexDebug.h"
@@ -1770,8 +1771,8 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // Record the min/max minimum number of HiGHS threads in the options
   const HighsInt highs_min_threads = options.highs_min_threads;
   const HighsInt highs_max_threads = options.highs_max_threads;
-  HighsInt omp_max_threads = 0;
-#ifdef OPENMP
+  HighsInt omp_max_threads = highs::parallel::num_threads();
+#if 0  // def OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
   if (options.parallel == kHighsOnString &&
