@@ -30,7 +30,7 @@ int64_t fib(const int64_t n) {
 }
 
 int64_t fib_omp(const int64_t n) {
-  if (n <= 30) return fib_sequential(n);
+  if (n <= 20) return fib_sequential(n);
 
   int64_t n1;
 #pragma omp task shared(n1)
