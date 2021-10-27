@@ -14,6 +14,7 @@
 #define HIGHS_TASKEXECUTOR_H_
 
 #include <cassert>
+#include <chrono>
 #include <condition_variable>
 #include <memory>
 #include <thread>
@@ -27,8 +28,9 @@
 class HighsTaskExecutor {
   static constexpr int kTaskArraySize = 8192;
   static constexpr int kTaskSize = 64;
-  static constexpr int kNumYieldsBeforeGiveUp = 4;
-  static constexpr int kNumStealBeforeYieldFac = 4;
+  static constexpr int kNumTryFac = 16;
+  static constexpr int kMicroSecsBeforeSleep = 5000;
+  static constexpr int kMicroSecsBeforeGlobalSync = 1000;
 
   using cache_aligned = highs::cache_aligned;
 
@@ -45,15 +47,26 @@ class HighsTaskExecutor {
 
   Task* random_steal_loop(WorkerDeque* localDeque) {
     const int numWorkers = workerDeques.size();
-    const int numStealsBeforeYield = kNumStealBeforeYieldFac * (numWorkers - 1);
 
-    for (int y = 0; y < kNumYieldsBeforeGiveUp; ++y) {
-      for (int s = 0; s < numStealsBeforeYield; ++s) {
+    int numTries = 16 * (numWorkers - 1);
+
+    auto tStart = std::chrono::high_resolution_clock::now();
+
+    while (true) {
+      for (int s = 0; s < numTries; ++s) {
         Task* task = localDeque->randomSteal(workerDeques.data(), numWorkers);
         if (task) return task;
       }
 
-      std::this_thread::yield();
+      auto numMicroSecs =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::high_resolution_clock::now() - tStart)
+              .count();
+
+      if (numMicroSecs < kMicroSecsBeforeGlobalSync)
+        numTries *= 2;
+      else
+        break;
     }
 
     return nullptr;
@@ -62,7 +75,8 @@ class HighsTaskExecutor {
   void run_worker(int workerId) {
     WorkerDeque* localDeque = workerDeques[workerId].get();
     threadLocalWorkerDeque = localDeque;
-    Task* currentTask = globalQueue->waitForNewTask(localDeque);
+    Task* currentTask =
+        globalQueue->waitForNewTask(localDeque, kMicroSecsBeforeSleep);
     while (true) {
       assert(currentTask != nullptr);
 
@@ -71,7 +85,8 @@ class HighsTaskExecutor {
       currentTask = random_steal_loop(localDeque);
       if (currentTask != nullptr) continue;
 
-      currentTask = globalQueue->waitForNewTask(localDeque);
+      currentTask =
+          globalQueue->waitForNewTask(localDeque, kMicroSecsBeforeSleep);
     }
   }
 
@@ -109,24 +124,29 @@ class HighsTaskExecutor {
   void sync_stolen_task(WorkerDeque* localDeque, Task* stolenTask) {
     if (!stolenTask->leapfrog(localDeque)) {
       const int numWorkers = workerDeques.size();
-      const int numStealsBeforeYield =
-          kNumStealBeforeYieldFac * (numWorkers - 1);
+      int numTries = kNumTryFac * (numWorkers - 1);
 
-      for (int y = 0; y < kNumYieldsBeforeGiveUp; ++y) {
-        if (stolenTask->isFinished()) {
-          localDeque->popStolen();
-          return;
-        }
-        for (int s = 0; s < numStealsBeforeYield; ++s) {
-          Task* task = localDeque->randomSteal(workerDeques.data(), numWorkers);
-          if (task) task->run(localDeque);
+      auto tStart = std::chrono::high_resolution_clock::now();
+
+      while (true) {
+        for (int s = 0; s < numTries; ++s) {
           if (stolenTask->isFinished()) {
             localDeque->popStolen();
             return;
           }
+          Task* task = localDeque->randomSteal(workerDeques.data(), numWorkers);
+          if (task) task->run(localDeque);
         }
 
-        std::this_thread::yield();
+        auto numMicroSecs =
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::high_resolution_clock::now() - tStart)
+                .count();
+
+        if (numMicroSecs < kMicroSecsBeforeSleep)
+          numTries *= 2;
+        else
+          break;
       }
 
       if (!stolenTask->isFinished())
