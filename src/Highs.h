@@ -136,14 +136,13 @@ class Highs {
   /**
    * @brief reads a HiGHS solution file
    */
-  HighsStatus readSolution(
-      const std::string filename,   //!< the filename
-      const HighsInt style);  //!< Style of solution file
+  HighsStatus readSolution(const std::string filename,  //!< the filename
+                           const HighsInt style);  //!< Style of solution file
 
   /**
-   * @brief checks the current solution
+   * @brief checks feasibility of the current solution
    */
-  HighsStatus checkSolution() const;  //!< Style of solution file
+  HighsStatus checkSolutionFeasibility();
 
   /**
    * Methods for HiGHS option input/output

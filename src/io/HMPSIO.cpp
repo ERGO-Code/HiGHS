@@ -627,7 +627,9 @@ HighsStatus writeMps(
   have_int = false;
   if (integrality.size()) {
     for (HighsInt c_n = 0; c_n < num_col; c_n++) {
-      if (integrality[c_n] == HighsVarType::kInteger) {
+      if (integrality[c_n] == HighsVarType::kInteger ||
+          integrality[c_n] == HighsVarType::kSemiContinuous ||
+          integrality[c_n] == HighsVarType::kSemiInteger) {
         have_int = true;
         break;
       }
@@ -639,11 +641,15 @@ HighsStatus writeMps(
       break;
     }
     bool discrete = false;
-    if (have_int) discrete = integrality[c_n] == HighsVarType::kInteger;
+    if (have_int)
+      discrete = integrality[c_n] == HighsVarType::kInteger ||
+                 integrality[c_n] == HighsVarType::kSemiContinuous ||
+                 integrality[c_n] == HighsVarType::kSemiInteger;
     if (!highs_isInfinity(col_upper[c_n]) || discrete) {
-      // If the upper bound is finite, or the variable is integer then there is
-      // a BOUNDS section. Integer variables with infinite upper bound are
-      // indicated as LI
+      // If the upper bound is finite, or the variable is integer or a
+      // semi-variable then there is a BOUNDS section. Integer
+      // variables with infinite upper bound are indicated as LI. All
+      // semi-variables appear in the BOUNDS section.
       have_bounds = true;
       break;
     }
@@ -775,7 +781,10 @@ HighsStatus writeMps(
       double lb = col_lower[c_n];
       double ub = col_upper[c_n];
       bool discrete = false;
-      if (have_int) discrete = integrality[c_n] == HighsVarType::kInteger;
+      if (have_int)
+        discrete = integrality[c_n] == HighsVarType::kInteger ||
+                   integrality[c_n] == HighsVarType::kSemiContinuous ||
+                   integrality[c_n] == HighsVarType::kSemiInteger;
       if (a_start[c_n] == a_start[c_n + 1] && col_cost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
@@ -793,22 +802,34 @@ HighsStatus writeMps(
         fprintf(file, " FR BOUND     %-8s\n", col_names[c_n].c_str());
       } else {
         if (discrete) {
-          if (lb == 0 && ub == 1) {
-            // Binary
-            fprintf(file, " BV BOUND     %-8s\n", col_names[c_n].c_str());
-          } else {
-            if (!highs_isInfinity(-lb)) {
-              // Finite lower bound. No need to state this if LB is
-              // zero unless UB is infinte
-              if (lb || highs_isInfinity(ub))
-                fprintf(file, " LI BOUND     %-8s  %.15g\n",
-                        col_names[c_n].c_str(), lb);
+          if (integrality[c_n] == HighsVarType::kInteger) {
+            if (lb == 0 && ub == 1) {
+              // Binary
+              fprintf(file, " BV BOUND     %-8s\n", col_names[c_n].c_str());
+            } else {
+              if (!highs_isInfinity(-lb)) {
+                // Finite lower bound. No need to state this if LB is
+                // zero unless UB is infinte
+                if (lb || highs_isInfinity(ub))
+                  fprintf(file, " LI BOUND     %-8s  %.15g\n",
+                          col_names[c_n].c_str(), lb);
+              }
+              if (!highs_isInfinity(ub)) {
+                // Finite upper bound
+                fprintf(file, " UI BOUND     %-8s  %.15g\n",
+                        col_names[c_n].c_str(), ub);
+              }
             }
-            if (!highs_isInfinity(ub)) {
-              // Finite upper bound
-              fprintf(file, " UI BOUND     %-8s  %.15g\n",
-                      col_names[c_n].c_str(), ub);
-            }
+          } else if (integrality[c_n] == HighsVarType::kSemiInteger) {
+            fprintf(file, " SI BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+                    ub);
+            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+                    lb);
+          } else if (integrality[c_n] == HighsVarType::kSemiContinuous) {
+            fprintf(file, " SC BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+                    ub);
+            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+                    lb);
           }
         } else {
           if (!highs_isInfinity(-lb)) {
@@ -849,21 +870,15 @@ HighsStatus writeMps(
     }
   }
   fprintf(file, "ENDATA\n");
-  //#ifdef HiGHSDEV
-  if (num_zero_no_cost_columns) {
-    printf("Model has %" HIGHSINT_FORMAT
-           " zero columns with no costs: %" HIGHSINT_FORMAT
-           " have finite upper bounds "
-           "or nonzero lower bounds",
-           num_zero_no_cost_columns,
-           num_zero_no_cost_columns_in_bounds_section);
-    if (write_zero_no_cost_columns) {
-      printf(" and are written in MPS file\n");
-    } else {
-      printf(" and are not written in MPS file\n");
-    }
-  }
-  //#endif
+  if (num_zero_no_cost_columns)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Model has %" HIGHSINT_FORMAT
+                 " zero columns with no costs: %" HIGHSINT_FORMAT
+                 " have finite upper bounds "
+                 "or nonzero lower bounds and are %swritten in MPS file\n",
+                 num_zero_no_cost_columns,
+                 num_zero_no_cost_columns_in_bounds_section,
+                 write_zero_no_cost_columns ? "" : "not ");
   fclose(file);
   return HighsStatus::kOk;
 }

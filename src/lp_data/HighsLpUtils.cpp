@@ -408,24 +408,22 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-      num_non_continuous_variables++;
       // Semi-variables with zero lower bound aren't semi
-      if (lp.col_upper_[iCol] == 0) {
+      if (lp.col_lower_[iCol] == 0) {
         num_non_semi++;
         if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
           // Semi-continuous become continuous
           lp.integrality_[iCol] = HighsVarType::kContinuous;
-          num_non_continuous_variables--;
         } else {
           // Semi-integer become integer
           lp.integrality_[iCol] = HighsVarType::kInteger;
+          num_non_continuous_variables++;
         }
+        continue;
       }
-      // Semi-variables must have upper bound that's not too large,
-      // unless the lower bound is zero, in which case the variable is
-      // standard continuous or integer
-      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper && lp.col_lower_[iCol])
-        num_illegal_upper++;
+      // Semi-variables must have upper bound that's not too large
+      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
+      num_non_continuous_variables++;
     } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
       num_non_continuous_variables++;
     }
@@ -439,15 +437,15 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   if (num_non_semi) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) with zero lower bound "
+                 " semi-continuous/integer variable(s) have zero lower bound "
                  "so are continuous/integer\n",
-                 num_illegal_upper);
+                 num_non_semi);
     return_status = HighsStatus::kWarning;
   }
   if (num_illegal_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) with upper bounds "
+                 " semi-continuous/integer variable(s) have upper bounds "
                  "exceeding %12g\n",
                  num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
@@ -1810,12 +1808,10 @@ void analyseScaledLp(const HighsLogOptions& log_options,
 }
 
 void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp,
-			 const HighsBasis& basis,
-                         const HighsSolution& solution, 
-                         const HighsInfo& info, 
-                         const HighsModelStatus model_status, 
-			 const HighsInt style) {
+                         const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution, const HighsInfo& info,
+                         const HighsModelStatus model_status,
+                         const HighsInt style) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
@@ -1898,11 +1894,11 @@ void writeSolutionToFile(FILE* file, const HighsOptions& options,
   }
 }
 
-HighsStatus readSolutionFile(const std::string filename, const HighsOptions& options,
-			     const HighsLp& lp,
-			     HighsBasis& basis,
-			     HighsSolution& solution, 
-			     const HighsInt style) {
+HighsStatus readSolutionFile(const std::string filename,
+                             const HighsOptions& options, const HighsLp& lp,
+                             HighsBasis& basis, HighsSolution& solution,
+                             const HighsInt style) {
+  const HighsLogOptions& log_options = options.log_options;
   if (style != kWriteSolutionStyleRaw) {
     highsLogUser(log_options, HighsLogType::kError,
                  "readSolutionFile: Cannot read file of style %d\n",
@@ -1910,7 +1906,6 @@ HighsStatus readSolutionFile(const std::string filename, const HighsOptions& opt
     return HighsStatus::kError;
   }
   const HighsInt kMaxLineLength = 80;
-  const HighsLogOptions& log_options = options.log_options;  
   std::ifstream inFile(filename);
   if (inFile.fail()) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -1924,16 +1919,16 @@ HighsStatus readSolutionFile(const std::string filename, const HighsOptions& opt
   HighsInt lp_num_row = lp.num_row_;
   if (num_col != lp_num_col) {
     highsLogUser(log_options, HighsLogType::kError,
-		 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-		 " columns, not %" HIGHSINT_FORMAT "\n",
-		 num_col, lp_num_col);
+                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                 " columns, not %" HIGHSINT_FORMAT "\n",
+                 num_col, lp_num_col);
     return HighsStatus::kError;
   }
   if (num_row != lp_num_row) {
     highsLogUser(log_options, HighsLogType::kError,
-		 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-		 " rows, not %" HIGHSINT_FORMAT "\n",
-		 num_row, lp_num_row);
+                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                 " rows, not %" HIGHSINT_FORMAT "\n",
+                 num_row, lp_num_row);
     return HighsStatus::kError;
   }
   inFile.ignore(kMaxLineLength, '\n');
@@ -1965,14 +1960,146 @@ HighsStatus readSolutionFile(const std::string filename, const HighsOptions& opt
   }
   // Should have reached the rows section
   inFile >> section_name;
-  if (section_name != "Rows")return HighsStatus::kError;
+  if (section_name != "Rows") return HighsStatus::kError;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (have_value) inFile >> read_solution.row_value[iRow];
     if (have_dual) inFile >> read_solution.row_dual[iRow];
     if (have_basis) inFile >> status;
     read_basis.row_status[iRow] = (HighsBasisStatus)status;
   }
+  solution = read_solution;
+  basis = read_basis;
   return HighsStatus::kOk;
+}
+
+void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
+                                const HighsSolution& solution) {
+  HighsInt num_col_infeasibilities = 0;
+  double max_col_infeasibility = 0;
+  double sum_col_infeasibilities = 0;
+  HighsInt num_integer_infeasibilities = 0;
+  double max_integer_infeasibility = 0;
+  double sum_integer_infeasibilities = 0;
+  HighsInt num_row_infeasibilities = 0;
+  double max_row_infeasibility = 0;
+  double sum_row_infeasibilities = 0;
+  HighsInt num_row_residuals = 0;
+  double max_row_residual = 0;
+  double sum_row_residuals = 0;
+  const double kRowResidualTolerance = 1e-12;
+  const vector<HighsInt>& start = lp.a_start_;
+  const vector<HighsInt>& index = lp.a_index_;
+  const vector<double>& value = lp.a_value_;
+  vector<double> row_activity;
+  row_activity.assign(lp.num_row_, 0);
+  const bool have_integrality = lp.integrality_.size();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const double primal = solution.col_value[iCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const HighsVarType type =
+        have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    // @primal_infeasibility calculation
+    double col_infeasibility = 0;
+    if (primal < lower - options.primal_feasibility_tolerance) {
+      col_infeasibility = lower - primal;
+    } else if (primal > upper + options.primal_feasibility_tolerance) {
+      col_infeasibility = primal - upper;
+    }
+    double integer_infeasibility = 0;
+    if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
+      double nearest_integer = std::round(primal);
+      double integer_infeasibility = std::fabs(primal - nearest_integer);
+    }
+    if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
+                                  type == HighsVarType::kSemiInteger)) {
+      // Semi-variables at zero will have positive col
+      // infeasibility, so possibly zero this
+      if (std::fabs(primal) <= options.mip_feasibility_tolerance)
+        col_infeasibility = 0;
+    }
+    if (col_infeasibility > 0) {
+      if (col_infeasibility > options.primal_feasibility_tolerance) {
+        if (col_infeasibility > 2 * max_col_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Col %6d has         infeasiblilty of %11.4g from "
+                       "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
+                       (int)iCol, col_infeasibility, lower, primal, upper);
+        num_col_infeasibilities++;
+      }
+      max_col_infeasibility =
+          std::max(col_infeasibility, max_col_infeasibility);
+      sum_col_infeasibilities += col_infeasibility;
+    }
+    if (integer_infeasibility > 0) {
+      if (integer_infeasibility > options.mip_feasibility_tolerance) {
+        if (integer_infeasibility > 2 * max_integer_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Col %6d has integer infeasiblilty of %11.4g\n",
+                       (int)iCol, integer_infeasibility);
+        num_integer_infeasibilities++;
+      }
+      max_integer_infeasibility =
+          std::max(integer_infeasibility, max_integer_infeasibility);
+      sum_integer_infeasibilities += integer_infeasibility;
+    }
+    for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
+      row_activity[index[iEl]] += primal * value[iEl];
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const double primal = solution.row_value[iRow];
+    const double lower = lp.row_lower_[iRow];
+    const double upper = lp.row_upper_[iRow];
+    // @primal_infeasibility calculation
+    double row_infeasibility = 0;
+    if (primal < lower - options.primal_feasibility_tolerance) {
+      row_infeasibility = lower - primal;
+    } else if (primal > upper + options.primal_feasibility_tolerance) {
+      row_infeasibility = primal - upper;
+    }
+    if (row_infeasibility > 0) {
+      if (row_infeasibility > options.primal_feasibility_tolerance) {
+        if (row_infeasibility > 2 * max_row_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Row %6d has         infeasiblilty of %11.4g from "
+                       "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
+                       (int)iRow, row_infeasibility, lower, primal, upper);
+        num_row_infeasibilities++;
+      }
+      max_row_infeasibility =
+          std::max(row_infeasibility, max_row_infeasibility);
+      sum_row_infeasibilities += row_infeasibility;
+    }
+    double row_residual = fabs(primal - row_activity[iRow]);
+    if (row_residual > kRowResidualTolerance) {
+      if (row_residual > 2 * max_row_residual) {
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "Row %6d has         residual      of %11.4g\n", (int)iRow,
+                     row_residual);
+      }
+      num_row_residuals++;
+    }
+    max_row_residual = std::max(row_residual, max_row_residual);
+    sum_row_residuals += row_residual;
+  }
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Solution has               num          max          sum\n");
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Col     infeasibilities %6d  %11.4g  %11.4g\n",
+               (int)num_col_infeasibilities, max_col_infeasibility,
+               sum_col_infeasibilities);
+  if (lp.isMip())
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
+                 (int)num_integer_infeasibilities, max_integer_infeasibility,
+                 sum_integer_infeasibilities);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Row     infeasibilities %6d  %11.4g  %11.4g\n",
+               (int)num_row_infeasibilities, max_row_infeasibility,
+               sum_row_infeasibilities);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Row     residuals       %6d  %11.4g  %11.4g\n",
+               (int)num_row_residuals, max_row_residual, sum_row_residuals);
 }
 
 HighsStatus writeBasisFile(const HighsLogOptions& log_options,
@@ -2741,7 +2868,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       }
       index.push_back(row_num++);
       value.push_back(-lp.col_lower_[iCol]);
-      // Complete 0 <= x - u*y
+      // Complete x - u*y <= 0
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
       if (has_row_names) {
@@ -2771,4 +2898,109 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   lp.num_row_ += 2 * num_semi_variables;
   assert(index.size() == new_num_nz);
   return lp;
+}
+
+void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
+  HighsLp row_wise_lp = lp;
+  vector<HighsInt>& a_start = lp.a_start_;
+  vector<HighsInt>& a_index = lp.a_index_;
+  vector<double>& a_value = lp.a_value_;
+  vector<HighsInt> a_count;
+  vector<HighsInt> ar_count;
+  vector<HighsInt> ar_start;
+  vector<HighsInt> ar_index;
+  vector<double> ar_value;
+  const bool has_name = lp.row_names_.size() > 0;
+  HighsInt num_nz = a_start[lp.num_col_];
+  const HighsInt original_num_nz = num_nz;
+  const HighsInt original_num_row = lp.num_row_;
+  HighsInt num_row_count_1 = 0;
+  ar_count.assign(lp.num_row_, 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++)
+      ar_count[a_index[iEl]]++;
+  }
+  ar_start.push_back(0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    ar_start.push_back(ar_start[iRow] + ar_count[iRow]);
+    ar_count[iRow] = ar_start[iRow];
+  }
+  ar_index.resize(num_nz);
+  ar_value.resize(num_nz);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
+      HighsInt iRow = a_index[iEl];
+      ar_index[ar_count[iRow]] = iCol;
+      ar_value[ar_count[iRow]] = a_value[iEl];
+      ar_count[iRow]++;
+    }
+  }
+  HighsInt newRow = 0;
+  HighsInt newEl = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const HighsInt row_count = ar_start[iRow + 1] - ar_start[iRow];
+    if (row_count == 1) {
+      HighsInt iCol = ar_index[ar_start[iRow]];
+      double value = ar_value[ar_start[iRow]];
+      assert(value);
+      if (value > 0) {
+        if (lp.row_lower_[iRow] > -kHighsInf)
+          lp.col_lower_[iCol] =
+              std::max(lp.row_lower_[iRow] / value, lp.col_lower_[iCol]);
+        if (lp.row_upper_[iRow] < kHighsInf)
+          lp.col_upper_[iCol] =
+              std::min(lp.row_upper_[iRow] / value, lp.col_upper_[iCol]);
+      } else {
+        if (lp.row_lower_[iRow] > -kHighsInf)
+          lp.col_upper_[iCol] =
+              std::min(lp.row_lower_[iRow] / value, lp.col_upper_[iCol]);
+        if (lp.row_upper_[iRow] < kHighsInf)
+          lp.col_lower_[iCol] =
+              std::max(lp.row_upper_[iRow] / value, lp.col_lower_[iCol]);
+      }
+      num_row_count_1++;
+      continue;
+    }
+    lp.row_lower_[newRow] = lp.row_lower_[iRow];
+    lp.row_upper_[newRow] = lp.row_upper_[iRow];
+    if (has_name) lp.row_names_[newRow] = lp.row_names_[iRow];
+    ar_start[newRow] = newEl;
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      ar_index[newEl] = ar_index[iEl];
+      ar_value[newEl] = ar_value[iEl];
+      newEl++;
+    }
+    newRow++;
+  }
+  ar_start[newRow] = newEl;
+  lp.num_row_ = newRow;
+  lp.row_lower_.resize(newRow);
+  lp.row_upper_.resize(newRow);
+  if (has_name) lp.row_names_.resize(newRow);
+
+  num_nz = ar_start[lp.num_row_];
+  a_count.assign(lp.num_col_, 0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++)
+      a_count[ar_index[iEl]]++;
+  }
+  a_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    a_start[iCol + 1] = a_start[iCol] + a_count[iCol];
+    a_count[iCol] = a_start[iCol];
+  }
+  a_index.resize(num_nz);
+  a_value.resize(num_nz);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      HighsInt iCol = ar_index[iEl];
+      a_index[a_count[iCol]] = iRow;
+      a_value[a_count[iCol]] = ar_value[iEl];
+      a_count[iCol]++;
+    }
+  }
+  assert(original_num_row - lp.num_row_ == num_row_count_1);
+  assert(original_num_nz - num_nz == num_row_count_1);
+  highsLogUser(log_options, HighsLogType::kWarning,
+               "Removed %d rows of count 1\n", (int)num_row_count_1);
 }
