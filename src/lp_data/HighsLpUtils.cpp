@@ -1807,90 +1807,26 @@ void analyseScaledLp(const HighsLogOptions& log_options,
   analyseLp(log_options, scaled_lp, "Scaled");
 }
 
-void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const HighsInfo& info,
-                         const HighsModelStatus model_status,
-                         const HighsInt style) {
-  const bool have_value = solution.value_valid;
+void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style) {
+  const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  vector<double> use_col_value;
-  vector<double> use_row_value;
-  vector<double> use_col_dual;
-  vector<double> use_row_dual;
-  vector<HighsBasisStatus> use_col_status;
-  vector<HighsBasisStatus> use_row_status;
-  if (have_value) {
-    use_col_value = solution.col_value;
-    use_row_value = solution.row_value;
-  }
-  if (have_dual) {
-    use_col_dual = solution.col_dual;
-    use_row_dual = solution.row_dual;
-  }
-  if (have_basis) {
-    use_col_status = basis.col_status;
-    use_row_status = basis.row_status;
-  }
-  if (!have_value && !have_dual && !have_basis) return;
   if (style == kWriteSolutionStylePretty) {
     writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
-                            lp.col_upper_, lp.col_names_, use_col_value,
-                            use_col_dual, use_col_status);
+                            lp.col_upper_, lp.col_names_, have_primal,
+                            solution.col_value, have_dual, solution.col_dual,
+                            have_basis, basis.col_status, &lp.integrality_[0]);
     writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
-                            lp.row_upper_, lp.row_names_, use_row_value,
-                            use_row_dual, use_row_status);
-  } else if (style == kWriteSolutionStyleMittelmann) {
-    HighsCDouble solObj = lp.offset_;
-    for (HighsInt i = 0; i < lp.num_col_; ++i)
-      solObj += lp.col_cost_[i] * use_col_value[i];
-    writeModelSolution(file, options, double(solObj), lp.num_col_,
-                       lp.col_names_, use_col_value, lp.integrality_);
+                            lp.row_upper_, lp.row_names_, have_primal,
+                            solution.row_value, have_dual, solution.row_dual,
+                            have_basis, basis.row_status);
   } else {
-    fprintf(file,
-            "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
-            " : Number of columns and rows for primal or dual solution "
-            "or basis\n",
-            lp.num_col_, lp.num_row_);
-    if (have_value) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Primal solution\n");
-    if (have_dual) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Dual solution\n");
-    if (have_basis) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Basis\n");
-    fprintf(file, "Columns\n");
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
-      if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
-      if (have_basis)
-        fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
-      fprintf(file, "\n");
-    }
-    fprintf(file, "Rows\n");
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
-      if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
-      if (have_basis)
-        fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
-      fprintf(file, "\n");
-    }
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
-    fprintf(file, "Objective\n");
-    fprintf(file, "%.15g ", info.objective_function_value);
+    writeModelSolution(file, lp, solution, info);
   }
 }
 
@@ -1906,67 +1842,74 @@ HighsStatus readSolutionFile(const std::string filename,
     return HighsStatus::kError;
   }
   const HighsInt kMaxLineLength = 80;
-  std::ifstream inFile(filename);
-  if (inFile.fail()) {
+  std::ifstream in_file(filename);
+  if (in_file.fail()) {
     highsLogUser(log_options, HighsLogType::kError,
                  "readSolutionFile: Cannot open readable file \"%s\"\n",
                  filename.c_str());
     return HighsStatus::kError;
   }
-  HighsInt num_col, num_row;
-  inFile >> num_col >> num_row;
-  HighsInt lp_num_col = lp.num_col_;
-  HighsInt lp_num_row = lp.num_row_;
-  if (num_col != lp_num_col) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                 " columns, not %" HIGHSINT_FORMAT "\n",
-                 num_col, lp_num_col);
-    return HighsStatus::kError;
-  }
-  if (num_row != lp_num_row) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                 " rows, not %" HIGHSINT_FORMAT "\n",
-                 num_row, lp_num_row);
-    return HighsStatus::kError;
-  }
-  inFile.ignore(kMaxLineLength, '\n');
-  std::string have_value_str;
-  std::string have_dual_str;
-  std::string have_basis_str;
-  inFile >> have_value_str;
-  inFile.ignore(kMaxLineLength, '\n');
-  inFile >> have_dual_str;
-  inFile.ignore(kMaxLineLength, '\n');
-  inFile >> have_basis_str;
-  inFile.ignore(kMaxLineLength, '\n');
-  const bool have_value = have_value_str == "T" ? true : false;
-  const bool have_dual = have_dual_str == "T" ? true : false;
-  const bool have_basis = have_basis_str == "T" ? true : false;
+  std::string keyword;
+  std::string name;
+  HighsInt num_col;
+  HighsInt num_row;
+  const HighsInt lp_num_col = lp.num_col_;
+  const HighsInt lp_num_row = lp.num_row_;
   // Define idetifiers for reading in
   HighsSolution read_solution = solution;
   HighsBasis read_basis = basis;
   std::string section_name;
   HighsInt status;
-  // Should have reached the columns section
-  inFile >> section_name;
-  if (section_name != "Columns") return HighsStatus::kError;
-  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    if (have_value) inFile >> read_solution.col_value[iCol];
-    if (have_dual) inFile >> read_solution.col_dual[iCol];
-    if (have_basis) inFile >> status;
-    read_basis.col_status[iCol] = (HighsBasisStatus)status;
+  in_file.ignore(kMaxLineLength, '\n');  // Model status
+  in_file.ignore(kMaxLineLength, '\n');  // Optimal
+  in_file.ignore(kMaxLineLength, '\n');  // Primal solution values
+  in_file >> keyword;
+  if (keyword != "None") {
+    in_file.ignore(kMaxLineLength, '\n');  // Status
+    in_file.ignore(kMaxLineLength, '\n');  // Objective
+    // Read in the column values
+    in_file >> keyword >> num_col;
+    assert(keyword == "Columns");
+    if (num_col != lp_num_col) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " columns, not %" HIGHSINT_FORMAT "\n",
+                   num_col, lp_num_col);
+      return HighsStatus::kError;
+    }
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      in_file >> name >> read_solution.col_value[iCol];
+    // Read in the row values
+    in_file >> keyword >> num_row;
+    assert(keyword == "Rows");
+    if (num_row != lp_num_row) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " rows, not %" HIGHSINT_FORMAT "\n",
+                   num_row, lp_num_row);
+      return HighsStatus::kError;
+    }
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      in_file >> name >> read_solution.row_value[iRow];
   }
-  // Should have reached the rows section
-  inFile >> section_name;
-  if (section_name != "Rows") return HighsStatus::kError;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (have_value) inFile >> read_solution.row_value[iRow];
-    if (have_dual) inFile >> read_solution.row_dual[iRow];
-    if (have_basis) inFile >> status;
-    read_basis.row_status[iRow] = (HighsBasisStatus)status;
+  in_file.ignore(kMaxLineLength, '\n');
+  in_file.ignore(kMaxLineLength, '\n');  // Dual solution values
+  in_file >> keyword;
+  if (keyword != "None") {
+    in_file.ignore(kMaxLineLength, '\n');  // Status
+    in_file >> keyword >> num_col;
+    assert(keyword == "Columns");
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      in_file >> name >> read_solution.col_dual[iCol];
+    in_file >> keyword >> num_row;
+    assert(keyword == "Rows");
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      in_file >> name >> read_solution.row_dual[iRow];
   }
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // Basis
+  if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
+    return HighsStatus::kError;
   solution = read_solution;
   basis = read_basis;
   return HighsStatus::kOk;
@@ -2102,43 +2045,19 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
                (int)num_row_residuals, max_row_residual, sum_row_residuals);
 }
 
-HighsStatus writeBasisFile(const HighsLogOptions& log_options,
-                           const HighsBasis& basis,
-                           const std::string filename) {
-  HighsStatus return_status = HighsStatus::kOk;
-  std::ofstream out_file;
-  out_file.open(filename.c_str(), std::ios::out);
-  if (out_file.is_open()) {
-    writeBasisStream(log_options, basis, out_file);
-    out_file.close();
-  } else {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "writeBasisFile: Cannot open writeable file \"%s\"\n",
-                 filename.c_str());
-    return_status = HighsStatus::kError;
-  }
-  return return_status;
-}
-
-void writeBasisStream(const HighsLogOptions& log_options,
-		      const HighsBasis& basis,
-		      std::ofstream& out_file) {
-  out_file << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
+void writeBasisFile(FILE*& file, const HighsBasis& basis) {
+  fprintf(file, "HiGHS v%d\n", (int)HIGHS_VERSION_MAJOR);
   if (basis.valid == false) {
-    out_file << "Invalid";
+    fprintf(file, "Invalid\n");
     return;
   }
-  out_file << "Valid" << std::endl;
-  out_file << "Columns " << basis.col_status.size() << std::endl;
-  for (const auto& status : basis.col_status) {
-    out_file << (HighsInt)status << " ";
-  }
-  out_file << std::endl;
-  out_file << "Rows " << basis.row_status.size() << std::endl;
-  for (const auto& status : basis.row_status) {
-    out_file << (HighsInt)status << " ";
-  }
-  out_file << std::endl;
+  fprintf(file, "Valid\n");
+  fprintf(file, "Columns %d\n", (int)basis.col_status.size());
+  for (const auto& status : basis.col_status) fprintf(file, "%d ", (int)status);
+  fprintf(file, "\n");
+  fprintf(file, "Rows %d\n", (int)basis.row_status.size());
+  for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
+  fprintf(file, "\n");
 }
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
@@ -2159,15 +2078,14 @@ HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
   return return_status;
 }
 
-HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsBasis& basis,
-			    std::ifstream& in_file) {
+HighsStatus readBasisStream(const HighsLogOptions& log_options,
+                            HighsBasis& basis, std::ifstream& in_file) {
   // Reads a basis as an ifstream, returning an error if what's read is
   // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::kOk;
   std::string string_highs, string_version;
-  HighsInt highs_version_number;
-  in_file >> string_highs >> string_version >> highs_version_number;
-  if (highs_version_number == 1) {
+  in_file >> string_highs >> string_version;
+  if (string_version == "v1") {
     std::string keyword;
     in_file >> keyword;
     if (keyword == "Invalid") {
@@ -2211,8 +2129,8 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsBasis& basi
     }
   } else {
     highsLogUser(log_options, HighsLogType::kError,
-                 "readBasisFile: Cannot read basis file for HiGHS version "
-                 "%" HIGHSINT_FORMAT "\n", highs_version_number);
+                 "readBasisFile: Cannot read basis file for HiGHS %s\n",
+                 string_version.c_str());
     return_status = HighsStatus::kError;
   }
   return return_status;

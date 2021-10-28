@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
@@ -41,14 +41,14 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   std::ofstream f;
   // Write and read a file for unsupported HiGHS version
   f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 0" << std::endl;
+  f << "HiGHS v0" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
   REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for an invalid basis
   f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 1" << std::endl;
+  f << "HiGHS v1" << std::endl;
   f << "Invalid" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
@@ -56,9 +56,9 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 1" << std::endl;
+  f << "HiGHS v1" << std::endl;
   f << "Valid" << std::endl;
-  f << "Columns " << highs.getNumCol()-1 << std::endl;
+  f << "Columns " << highs.getNumCol() - 1 << std::endl;
   f << "Rows " << highs.getNumRow() << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
@@ -67,8 +67,8 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   testBasisRestart(highs, true);
   testBasisReloadModel(highs, true);
 
-  //  std::remove(basis_file.c_str());
-  //  std::remove(invalid_basis_file.c_str());
+  std::remove(basis_file.c_str());
+  std::remove(invalid_basis_file.c_str());
 }
 
 // No commas in test case name.
@@ -142,6 +142,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Ensure that no simplex iterations are required when solved from
   // the optimal basis
   highs.run();
+  //  highs.writeSolution("", kWriteSolutionStyleRaw);
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 void testBasisRestart(Highs& highs, const bool from_file) {

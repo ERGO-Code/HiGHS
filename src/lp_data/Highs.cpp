@@ -529,9 +529,15 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
-      writeBasisFile(options_.log_options, basis_, filename), return_status,
-      "writeBasis");
+  HighsStatus call_status;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writebasis", file, html);
+  return_status =
+      interpretCallStatus(call_status, return_status, "openWriteFile");
+  if (return_status == HighsStatus::kError) return return_status;
+  writeBasisFile(file, basis_);
+  if (file != stdout) fclose(file);
   return returnFromHighs(return_status);
 }
 
@@ -2522,8 +2528,12 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, info_,
-                      model_status_, style);
+  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
+                    style);
+  if (style == kWriteSolutionStyleRaw) {
+    fprintf(file, "Basis\n");
+    writeBasisFile(file, basis_);
+  }
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;
 }

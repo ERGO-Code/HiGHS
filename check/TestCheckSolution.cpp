@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("check-solution", "[highs_check_solution]") {
   std::string model = "";
@@ -25,7 +25,7 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
     model_file = "st-test23.lp";
     require_read_status = HighsStatus::kWarning;
   } else {
-    model = "25fv47";
+    model = "avgas";  // 25fv47";
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     require_read_status = HighsStatus::kOk;
   }
@@ -33,19 +33,17 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == require_read_status);
 
-  const bool solve_ml = true;
   HighsModelStatus status = HighsModelStatus::kNotset;
-  if (solve_ml) {
-    run_status = highs.run();
-    REQUIRE(run_status == HighsStatus::kOk);
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
 
-    status = highs.getModelStatus();
-    REQUIRE(status == HighsModelStatus::kOptimal);
+  status = highs.getModelStatus();
+  REQUIRE(status == HighsModelStatus::kOptimal);
 
-    solution_file = model + ".sol";
-    return_status = highs.writeSolution(solution_file, kWriteSolutionStyleRaw);
-    REQUIRE(return_status == HighsStatus::kOk);
-  }
+  solution_file = model + ".sol";
+  return_status = highs.writeSolution("", kWriteSolutionStyleRaw);
+  return_status = highs.writeSolution(solution_file, kWriteSolutionStyleRaw);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.readSolution(solution_file, kWriteSolutionStyleRaw);
   REQUIRE(return_status == HighsStatus::kOk);
