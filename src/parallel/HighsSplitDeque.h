@@ -296,8 +296,8 @@ class HighsSplitDeque {
       SplitDeque* sleeper = popSleeper();
       bool resetSignal = true;
       while (sleeper) {
-        uint32_t t = localDeque->stealWithRetryLoopAndGetTail();
-        if (t >= localDeque->ownerData.splitCopy) {
+        uint32_t t = localDeque->selfStealAndGetTail();
+        if (t == localDeque->ownerData.splitCopy) {
           if (localDeque->ownerData.head == localDeque->ownerData.splitCopy) {
             localDeque->ownerData.allStolenCopy = true;
             localDeque->stealerData.allStolen.store(true,
@@ -626,25 +626,25 @@ class HighsSplitDeque {
     return nullptr;
   }
 
-  uint32_t stealWithRetryLoopAndGetTail() {
-    if (stealerData.allStolen.load(std::memory_order_relaxed))
-      return std::numeric_limits<uint32_t>::max();
+  uint32_t selfStealAndGetTail() {
+    if (ownerData.allStolenCopy) return ownerData.splitCopy;
 
-    uint64_t ts = stealerData.ts.load(std::memory_order_relaxed);
-    uint32_t t = tail(ts);
-    uint32_t s = split(ts);
+    // when we steal from ourself we can simply do a fetch_add predictively
+    // instead of a cas loop. If the tail we read like this ends up to be
+    // above already equal to the splitPoint then we correct it with a simple
+    // store. When tail > split instead of tail == split no wrong result can
+    // occur as long as we know that the task at taskArray[split] is not
+    // actually considered to be stolen and tail is corrected before the owner
+    // enters shrinkShared.
 
-    while (t < s) {
-      if (stealerData.ts.compare_exchange_weak(ts, makeTailSplit(t + 1, s),
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed))
-        return t;
+    uint32_t t = tail(stealerData.ts.fetch_add(makeTailSplit(1, 0),
+                                               std::memory_order_relaxed));
 
-      t = tail(ts);
-      s = split(ts);
-    }
+    if (t == ownerData.splitCopy)
+      stealerData.ts.store(makeTailSplit(t, ownerData.splitCopy),
+                           std::memory_order_relaxed);
 
-    return s;
+    return t;
   }
 
   void requestPublishGlobalQueue() {
