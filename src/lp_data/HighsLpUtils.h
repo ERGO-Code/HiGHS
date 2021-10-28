@@ -33,9 +33,13 @@ using std::vector;
 
 HighsStatus writeBasisFile(const HighsLogOptions& log_options,
                            const HighsBasis& basis, const std::string filename);
+void writeBasisStream(const HighsLogOptions& log_options,
+                           const HighsBasis& basis, std::ofstream& out_file);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsBasis& basis,
+			    std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);

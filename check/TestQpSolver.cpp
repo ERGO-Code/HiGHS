@@ -92,6 +92,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[2] - required_x2) < double_equal_tolerance);
+  std::remove(filename.c_str());
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {

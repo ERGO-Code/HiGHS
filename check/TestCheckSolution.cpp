@@ -33,9 +33,6 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == require_read_status);
 
-  model_file = "ml.mps";
-  highs.writeModel(model_file);
-
   const bool solve_ml = true;
   HighsModelStatus status = HighsModelStatus::kNotset;
   if (solve_ml) {
@@ -55,4 +52,5 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
 
   return_status = highs.checkSolutionFeasibility();
   REQUIRE(return_status == HighsStatus::kOk);
+  std::remove(solution_file.c_str());
 }

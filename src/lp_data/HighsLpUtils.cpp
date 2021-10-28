@@ -2106,91 +2106,115 @@ HighsStatus writeBasisFile(const HighsLogOptions& log_options,
                            const HighsBasis& basis,
                            const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  if (basis.valid == false) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "writeBasisFile: Cannot write an invalid basis\n");
-    return HighsStatus::kError;
-  }
-  std::ofstream outFile(filename);
-  if (outFile.fail()) {
+  std::ofstream out_file;
+  out_file.open(filename.c_str(), std::ios::out);
+  if (out_file.is_open()) {
+    writeBasisStream(log_options, basis, out_file);
+    out_file.close();
+  } else {
     highsLogUser(log_options, HighsLogType::kError,
                  "writeBasisFile: Cannot open writeable file \"%s\"\n",
                  filename.c_str());
-    return HighsStatus::kError;
+    return_status = HighsStatus::kError;
   }
-  outFile << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
-  outFile << basis.col_status.size() << " " << basis.row_status.size()
-          << std::endl;
-  for (const auto& status : basis.col_status) {
-    outFile << (HighsInt)status << " ";
-  }
-  outFile << std::endl;
-  for (const auto& status : basis.row_status) {
-    outFile << (HighsInt)status << " ";
-  }
-  outFile << std::endl;
-  outFile << std::endl;
-  outFile.close();
   return return_status;
+}
+
+void writeBasisStream(const HighsLogOptions& log_options,
+		      const HighsBasis& basis,
+		      std::ofstream& out_file) {
+  out_file << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
+  if (basis.valid == false) {
+    out_file << "Invalid";
+    return;
+  }
+  out_file << "Valid" << std::endl;
+  out_file << "Columns " << basis.col_status.size() << std::endl;
+  for (const auto& status : basis.col_status) {
+    out_file << (HighsInt)status << " ";
+  }
+  out_file << std::endl;
+  out_file << "Rows " << basis.row_status.size() << std::endl;
+  for (const auto& status : basis.row_status) {
+    out_file << (HighsInt)status << " ";
+  }
+  out_file << std::endl;
 }
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename) {
-  // Reads a basis file, returning an error if what's read is
-  // inconsistent with the sizes of the HighsBasis passed in
+  // Opens a basis file as an ifstream
   HighsStatus return_status = HighsStatus::kOk;
-  std::ifstream inFile(filename);
-  if (inFile.fail()) {
+  std::ifstream in_file;
+  in_file.open(filename.c_str(), std::ios::in);
+  if (in_file.is_open()) {
+    return_status = readBasisStream(log_options, basis, in_file);
+    in_file.close();
+  } else {
     highsLogUser(log_options, HighsLogType::kError,
                  "readBasisFile: Cannot open readable file \"%s\"\n",
                  filename.c_str());
-    return HighsStatus::kError;
+    return_status = HighsStatus::kError;
   }
+  return return_status;
+}
+
+HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsBasis& basis,
+			    std::ifstream& in_file) {
+  // Reads a basis as an ifstream, returning an error if what's read is
+  // inconsistent with the sizes of the HighsBasis passed in
+  HighsStatus return_status = HighsStatus::kOk;
   std::string string_highs, string_version;
   HighsInt highs_version_number;
-  inFile >> string_highs >> string_version >> highs_version_number;
+  in_file >> string_highs >> string_version >> highs_version_number;
   if (highs_version_number == 1) {
-    HighsInt numCol, numRow;
-    inFile >> numCol >> numRow;
-    HighsInt basis_numCol = (HighsInt)basis.col_status.size();
-    HighsInt basis_numRow = (HighsInt)basis.row_status.size();
-    if (numCol != basis_numCol) {
+    std::string keyword;
+    in_file >> keyword;
+    if (keyword == "Invalid") {
+      basis.valid = false;
+      return HighsStatus::kOk;
+    }
+    const HighsInt basis_num_col = (HighsInt)basis.col_status.size();
+    const HighsInt basis_num_row = (HighsInt)basis.row_status.size();
+    HighsInt int_status;
+    assert(keyword == "Valid");
+    HighsInt num_col, num_row;
+    // Read in the columns section
+    in_file >> keyword;
+    assert(keyword == "Columns");
+    in_file >> num_col;
+    if (num_col != basis_num_col) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readBasisFile: Basis file is for %" HIGHSINT_FORMAT
                    " columns, not %" HIGHSINT_FORMAT "\n",
-                   numCol, basis_numCol);
+                   num_col, basis_num_col);
       return HighsStatus::kError;
     }
-    if (numRow != basis_numRow) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      in_file >> int_status;
+      basis.col_status[iCol] = (HighsBasisStatus)int_status;
+    }
+    // Read in the rows section
+    in_file >> keyword;
+    assert(keyword == "Rows");
+    in_file >> num_row;
+    if (num_row != basis_num_row) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readBasisFile: Basis file is for %" HIGHSINT_FORMAT
                    " rows, not %" HIGHSINT_FORMAT "\n",
-                   numRow, basis_numRow);
+                   num_row, basis_num_row);
       return HighsStatus::kError;
     }
-    HighsInt int_status;
-    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-      inFile >> int_status;
-      basis.col_status[iCol] = (HighsBasisStatus)int_status;
-    }
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      inFile >> int_status;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      in_file >> int_status;
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
-    }
-    if (inFile.eof()) {
-      highsLogUser(
-          log_options, HighsLogType::kError,
-          "readBasisFile: Reached end of file before reading complete basis\n");
-      return_status = HighsStatus::kError;
     }
   } else {
     highsLogUser(log_options, HighsLogType::kError,
                  "readBasisFile: Cannot read basis file for HiGHS version "
-                 "%" HIGHSINT_FORMAT "\n",
-                 highs_version_number);
+                 "%" HIGHSINT_FORMAT "\n", highs_version_number);
     return_status = HighsStatus::kError;
   }
-  inFile.close();
   return return_status;
 }
 
