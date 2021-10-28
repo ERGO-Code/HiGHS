@@ -468,69 +468,71 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     assert(info.dual_solution_status != kSolutionStatusNone);
   }
   const double double_tolerance = 1e-13;
-  fprintf(file, "Primal solution values\n");
+  fprintf(file, "\nPrimal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
-    return;
-  } else if (info.primal_solution_status == kSolutionStatusFeasible) {
-    fprintf(file, "Feasible\n");
   } else {
-    assert(info.primal_solution_status == kSolutionStatusInfeasible);
-    fprintf(file, "Infeasible\n");
+    if (info.primal_solution_status == kSolutionStatusFeasible) {
+      fprintf(file, "Feasible\n");
+    } else {
+      assert(info.primal_solution_status == kSolutionStatusInfeasible);
+      fprintf(file, "Infeasible\n");
+    }
+    HighsCDouble objective_function_value = lp.offset_;
+    for (HighsInt i = 0; i < lp.num_col_; ++i)
+      objective_function_value += lp.col_cost_[i] * solution.col_value[i];
+    std::array<char, 32> objStr =
+        highsDoubleToString((double)objective_function_value, double_tolerance);
+    fprintf(file, "Objective %s\n", objStr.data());
+    fprintf(file, "Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.col_value[ix], double_tolerance);
+      // Create a column name
+      ss.str(std::string());
+      ss << "C" << ix;
+      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+    fprintf(file, "Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.row_value[ix], double_tolerance);
+      // Create a row name
+      ss.str(std::string());
+      ss << "R" << ix;
+      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
   }
-  HighsCDouble objective_function_value = lp.offset_;
-  for (HighsInt i = 0; i < lp.num_col_; ++i)
-    objective_function_value += lp.col_cost_[i] * solution.col_value[i];
-  std::array<char, 32> objStr =
-      highsDoubleToString((double)objective_function_value, double_tolerance);
-  fprintf(file, "Objective %s\n", objStr.data());
-  fprintf(file, "Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
-  for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
-    std::array<char, 32> valStr =
-        highsDoubleToString(solution.col_value[ix], double_tolerance);
-    // Create a column name
-    ss.str(std::string());
-    ss << "C" << ix;
-    const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
-    fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
-  }
-  fprintf(file, "Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
-  for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-    std::array<char, 32> valStr =
-        highsDoubleToString(solution.row_value[ix], double_tolerance);
-    // Create a row name
-    ss.str(std::string());
-    ss << "R" << ix;
-    const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
-    fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
-  }
-  fprintf(file, "Dual solution values\n");
+  fprintf(file, "\nDual solution values\n");
   if (!have_dual || info.dual_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
-    return;
-  } else if (info.dual_solution_status == kSolutionStatusFeasible) {
-    fprintf(file, "Feasible\n");
   } else {
-    assert(info.dual_solution_status == kSolutionStatusInfeasible);
-    fprintf(file, "Infeasible\n");
-  }
-  fprintf(file, "Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
-  for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
-    std::array<char, 32> valStr =
-        highsDoubleToString(solution.col_dual[ix], double_tolerance);
-    ss.str(std::string());
-    ss << "C" << ix;
-    const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
-    fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
-  }
-  fprintf(file, "Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
-  for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-    std::array<char, 32> valStr =
-        highsDoubleToString(solution.row_dual[ix], double_tolerance);
-    ss.str(std::string());
-    ss << "R" << ix;
-    const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
-    fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    if (info.dual_solution_status == kSolutionStatusFeasible) {
+      fprintf(file, "Feasible\n");
+    } else {
+      assert(info.dual_solution_status == kSolutionStatusInfeasible);
+      fprintf(file, "Infeasible\n");
+    }
+    fprintf(file, "Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.col_dual[ix], double_tolerance);
+      ss.str(std::string());
+      ss << "C" << ix;
+      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+    fprintf(file, "Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.row_dual[ix], double_tolerance);
+      ss.str(std::string());
+      ss << "R" << ix;
+      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
   }
 }
 

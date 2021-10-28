@@ -49,7 +49,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   // Write and read a file for an invalid basis
   f.open(invalid_basis_file, std::ios::out);
   f << "HiGHS v1" << std::endl;
-  f << "Invalid" << std::endl;
+  f << "None" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -142,7 +142,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Ensure that no simplex iterations are required when solved from
   // the optimal basis
   highs.run();
-  //  highs.writeSolution("", kWriteSolutionStyleRaw);
+  //  highs.writeSolution("", kSolutionStyleRaw);
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 void testBasisRestart(Highs& highs, const bool from_file) {
@@ -151,7 +151,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // - so that the internal basis changes - and then restoring the
   // original LP
   HighsStatus return_status;
-  // highs.writeSolution("", kWriteSolutionStylePretty);
+  // highs.writeSolution("", kSolutionStylePretty);
   // Change a bound and resolve
 
   const HighsLp& lp = highs.getLp();
@@ -179,7 +179,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
            "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
            changeCol, old_lower_bound, new_lower_bound,
            info.simplex_iteration_count, highs.getObjectiveValue());
-    //  highs.writeSolution("", kWriteSolutionStylePretty);
+    //  highs.writeSolution("", kSolutionStylePretty);
   }
   // Make sure that the test requires iterations
   assert(info.simplex_iteration_count > 0);

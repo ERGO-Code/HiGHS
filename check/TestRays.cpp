@@ -351,7 +351,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
 
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is no dual ray

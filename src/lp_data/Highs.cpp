@@ -2530,8 +2530,8 @@ HighsStatus Highs::writeSolution(const std::string filename,
   if (return_status == HighsStatus::kError) return return_status;
   writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
                     style);
-  if (style == kWriteSolutionStyleRaw) {
-    fprintf(file, "Basis\n");
+  if (style == kSolutionStyleRaw) {
+    fprintf(file, "\nBasis\n");
     writeBasisFile(file, basis_);
   }
   if (file != stdout) fclose(file);

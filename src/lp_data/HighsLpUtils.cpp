@@ -1814,7 +1814,7 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  if (style == kWriteSolutionStylePretty) {
+  if (style == kSolutionStylePretty) {
     writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
                             lp.col_upper_, lp.col_names_, have_primal,
                             solution.col_value, have_dual, solution.col_dual,
@@ -1835,7 +1835,7 @@ HighsStatus readSolutionFile(const std::string filename,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
   const HighsLogOptions& log_options = options.log_options;
-  if (style != kWriteSolutionStyleRaw) {
+  if (style != kSolutionStyleRaw) {
     highsLogUser(log_options, HighsLogType::kError,
                  "readSolutionFile: Cannot read file of style %d\n",
                  (int)style);
@@ -1862,6 +1862,7 @@ HighsStatus readSolutionFile(const std::string filename,
   HighsInt status;
   in_file.ignore(kMaxLineLength, '\n');  // Model status
   in_file.ignore(kMaxLineLength, '\n');  // Optimal
+  in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  // Primal solution values
   in_file >> keyword;
   if (keyword != "None") {
@@ -1893,6 +1894,7 @@ HighsStatus readSolutionFile(const std::string filename,
       in_file >> name >> read_solution.row_value[iRow];
   }
   in_file.ignore(kMaxLineLength, '\n');
+  in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  // Dual solution values
   in_file >> keyword;
   if (keyword != "None") {
@@ -1906,6 +1908,7 @@ HighsStatus readSolutionFile(const std::string filename,
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
       in_file >> name >> read_solution.row_dual[iRow];
   }
+  in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  // Basis
   if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
@@ -2048,7 +2051,7 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
 void writeBasisFile(FILE*& file, const HighsBasis& basis) {
   fprintf(file, "HiGHS v%d\n", (int)HIGHS_VERSION_MAJOR);
   if (basis.valid == false) {
-    fprintf(file, "Invalid\n");
+    fprintf(file, "None\n");
     return;
   }
   fprintf(file, "Valid\n");
@@ -2088,7 +2091,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
   if (string_version == "v1") {
     std::string keyword;
     in_file >> keyword;
-    if (keyword == "Invalid") {
+    if (keyword == "None") {
       basis.valid = false;
       return HighsStatus::kOk;
     }

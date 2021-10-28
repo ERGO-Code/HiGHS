@@ -226,12 +226,12 @@ HighsInt Highs_writeModel(void* highs, const char* filename) {
 
 HighsInt Highs_writeSolution(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)
-      ->writeSolution(std::string(filename), kWriteSolutionStyleRaw);
+      ->writeSolution(std::string(filename), kSolutionStyleRaw);
 }
 
 HighsInt Highs_writeSolutionPretty(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)
-      ->writeSolution(std::string(filename), kWriteSolutionStylePretty);
+      ->writeSolution(std::string(filename), kSolutionStylePretty);
 }
 
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,

@@ -1,18 +1,20 @@
 #include <cstdio>
 
 #include "Highs.h"
+#include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
+
+void runWriteReadCheckSolution(Highs& highs, const std::string model,
+                               const HighsModelStatus require_model_status);
 
 TEST_CASE("check-solution", "[highs_check_solution]") {
   std::string model = "";
   std::string model_file;
-  std::string solution_file;
-  HighsStatus run_status;
   HighsStatus read_status;
   HighsStatus require_read_status;
-  HighsStatus return_status;
+  HighsModelStatus require_model_status;
   Highs highs;
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
@@ -33,19 +35,42 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == require_read_status);
 
+  require_model_status = HighsModelStatus::kOptimal;
+  runWriteReadCheckSolution(highs, model, require_model_status);
+  SpecialLps special_lps;
+  HighsLp lp;
+  double optimal_objective;
+
+  model = "distillation";
+  special_lps.distillationMip(lp, require_model_status, optimal_objective);
+  highs.passModel(lp);
+  runWriteReadCheckSolution(highs, model, require_model_status);
+
+  lp.clear();
+  model = "primalDualInfeasible1Lp";
+  special_lps.primalDualInfeasible1Lp(lp, require_model_status);
+  highs.passModel(lp);
+  runWriteReadCheckSolution(highs, model, require_model_status);
+}
+
+void runWriteReadCheckSolution(Highs& highs, const std::string model,
+                               const HighsModelStatus require_model_status) {
+  HighsStatus run_status;
+  HighsStatus return_status;
+  std::string solution_file;
   HighsModelStatus status = HighsModelStatus::kNotset;
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
   status = highs.getModelStatus();
-  REQUIRE(status == HighsModelStatus::kOptimal);
+  REQUIRE(status == require_model_status);
 
   solution_file = model + ".sol";
-  return_status = highs.writeSolution("", kWriteSolutionStyleRaw);
-  return_status = highs.writeSolution(solution_file, kWriteSolutionStyleRaw);
+  if (dev_run) return_status = highs.writeSolution("", kSolutionStyleRaw);
+  return_status = highs.writeSolution(solution_file, kSolutionStyleRaw);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  return_status = highs.readSolution(solution_file, kWriteSolutionStyleRaw);
+  return_status = highs.readSolution(solution_file, kSolutionStyleRaw);
   REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.checkSolutionFeasibility();
