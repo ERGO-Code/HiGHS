@@ -122,11 +122,10 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
-const HighsInt kWriteSolutionStyleRaw = 0;
-const HighsInt kWriteSolutionStylePretty = 1;
-const HighsInt kWriteSolutionStyleMittelmann = 2;
-const HighsInt kWriteSolutionStyleMin = kWriteSolutionStyleRaw;
-const HighsInt kWriteSolutionStyleMax = kWriteSolutionStyleMittelmann;
+const HighsInt kSolutionStyleRaw = 0;
+const HighsInt kSolutionStylePretty = 1;
+const HighsInt kSolutionStyleMin = kSolutionStyleRaw;
+const HighsInt kSolutionStyleMax = kSolutionStylePretty;
 
 const std::string kHighsFilenameDefault = "";
 

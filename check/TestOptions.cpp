@@ -171,6 +171,7 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   return_status = checkOptions(options.log_options, options.records);
   REQUIRE(return_status == OptionStatus::kOk);
+  std::remove(model_file.c_str());
 }
 
 TEST_CASE("highs-options", "[highs_options]") {
@@ -274,7 +275,8 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.setOptionValue(kModelFileString, model_file);
   REQUIRE(return_status == HighsStatus::kError);
 
-  return_status = highs.writeOptions("Highs.set");
+  std::string options_file = "Highs.set";
+  return_status = highs.writeOptions(options_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
   HighsOptionType highs_option_type;
@@ -319,4 +321,5 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(options.small_matrix_value == small_matrix_value);
   REQUIRE(options.allowed_matrix_scale_factor == allowed_matrix_scale_factor);
   REQUIRE(options.mps_parser_type_free == mps_parser_type_free);
+  std::remove(options_file.c_str());
 }

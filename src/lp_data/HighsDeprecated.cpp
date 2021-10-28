@@ -158,11 +158,12 @@ HighsStatus Highs::writeSolution(const std::string filename,
   if (return_status == HighsStatus::kError) return return_status;
   HighsInt style;
   if (pretty) {
-    style = kWriteSolutionStylePretty;
+    style = kSolutionStylePretty;
   } else {
-    style = kWriteSolutionStyleRaw;
+    style = kSolutionStyleRaw;
   }
-  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
+  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
+                    style);
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;
 }

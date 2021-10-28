@@ -603,11 +603,12 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt(
-        "write_solution_style",
-        "Write the solution in style: 0=>Raw; 1=>Pretty; 2=>Mittlemann",
-        advanced, &write_solution_style, kWriteSolutionStyleMin,
-        kWriteSolutionStyleRaw, kWriteSolutionStyleMax);
+    record_int =
+        new OptionRecordInt("write_solution_style",
+                            "Write the solution in style: 0=>Raw "
+                            "(computer-readable); 1=>Pretty (human-readable) ",
+                            advanced, &write_solution_style, kSolutionStyleMin,
+                            kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("mip_detect_symmetry",

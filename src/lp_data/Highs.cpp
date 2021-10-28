@@ -22,6 +22,8 @@
 #include <sstream>
 
 #include "io/Filereader.h"
+//#include "io/HMPSIO.h"
+//#include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
@@ -444,7 +446,16 @@ HighsStatus Highs::readModel(const std::string filename) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
-
+  const bool remove_rows_of_count_1 = false;
+  if (remove_rows_of_count_1) {
+    // .lp files from PWSC (notably st-test23.lp) have bounds for
+    // semi-continuous variables in the constraints section. By default,
+    // these are interpreted as constraints, so the semi-continuous
+    // variables are not set up correctly. Fix is to remove all rows of
+    // count 1, interpreting their bounds as bounds on the corresponding
+    // variable.
+    removeRowsOfCountOne(options_.log_options, model.lp_);
+  }
   return_status =
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");
@@ -502,10 +513,15 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
-      options_.log_options,
-      writeBasisFile(options_.log_options, basis_, filename), return_status,
-      "writeBasis");
+  HighsStatus call_status;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writebasis", file, html);
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "openWriteFile");
+  if (return_status == HighsStatus::kError) return return_status;
+  writeBasisFile(file, basis_);
+  if (file != stdout) fclose(file);
   return returnFromHighs(return_status);
 }
 
@@ -2331,8 +2347,24 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
+  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
+                    style);
+  if (style == kSolutionStyleRaw) {
+    fprintf(file, "\nBasis\n");
+    writeBasisFile(file, basis_);
+  }
   if (file != stdout) fclose(file);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::readSolution(const std::string filename,
+                                const HighsInt style) {
+  return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
+                          style);
+}
+
+HighsStatus Highs::checkSolutionFeasibility() {
+  checkLpSolutionFeasibility(options_, model_.lp_, solution_);
   return HighsStatus::kOk;
 }
 

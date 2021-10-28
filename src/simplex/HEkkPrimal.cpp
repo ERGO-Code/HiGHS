@@ -51,11 +51,10 @@ HighsStatus HEkkPrimal::solve() {
   // and the sum of dual infeasiblilities will be very much larger for
   // non-trivial LPs that are primal feasible for a logical or crash
   // basis.
-  const bool near_optimal =
-    info.num_dual_infeasibilities < 1000 &&
-    info.max_dual_infeasibility < 1e-3 &&
-    info.sum_dual_infeasibilities < 1 &&
-    info.num_primal_infeasibilities == 0;
+  const bool near_optimal = info.num_dual_infeasibilities < 1000 &&
+                            info.max_dual_infeasibility < 1e-3 &&
+                            info.sum_dual_infeasibilities < 1 &&
+                            info.num_primal_infeasibilities == 0;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Primal feasible and num / max / sum dual infeasibilities are "
@@ -220,11 +219,11 @@ HighsStatus HEkkPrimal::solve() {
 
   if (solve_phase == kSolvePhaseOptimalCleanup) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
-		"HEkkPrimal:: Using dual simplex to try to clean up num / "
-		"max / sum = %" HIGHSINT_FORMAT
-		" / %g / %g primal infeasibilities\n",
-		info.num_primal_infeasibilities, info.max_primal_infeasibility,
-		info.sum_primal_infeasibilities);
+                "HEkkPrimal:: Using dual simplex to try to clean up num / "
+                "max / sum = %" HIGHSINT_FORMAT
+                " / %g / %g primal infeasibilities\n",
+                info.num_primal_infeasibilities, info.max_primal_infeasibility,
+                info.sum_primal_infeasibilities);
     ekk_instance_.computePrimalObjectiveValue();
     // Use dual to clean up. This almost always yields optimality,
     // and shouldn't yield infeasiblilty - since the current point

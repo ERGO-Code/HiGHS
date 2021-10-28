@@ -32,14 +32,14 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 6.83333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
   // Remove the semi-condition and resolve
   highs.changeColIntegrality(semi_col, continuous);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 3.93333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
@@ -48,7 +48,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   highs.changeColIntegrality(semi_col, semi_continuous);
   highs.changeColCost(semi_col, -0.1);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 8.22333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
@@ -56,7 +56,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   // Fix the variable at zero and resolve
   highs.changeColBounds(semi_col, 0, 0);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 6.83333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
@@ -65,7 +65,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   highs.changeColIntegrality(semi_col, semi_integer);
   highs.changeColBounds(semi_col, save_semi_col_lower, save_semi_col_upper);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 8.13333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);

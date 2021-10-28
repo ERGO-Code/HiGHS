@@ -75,11 +75,10 @@ HighsStatus HEkkDual::solve() {
   // smaller than 1, and the sum of primal infeasiblilities will be
   // very much larger for non-trivial LPs that are dual feasible for a
   // logical or crash basis.
-  const bool near_optimal =
-    info.num_primal_infeasibilities < 1000 &&
-    info.max_primal_infeasibility < 1e-3 &&
-    info.sum_primal_infeasibilities < 1 &&
-    info.num_dual_infeasibilities == 0;
+  const bool near_optimal = info.num_primal_infeasibilities < 1000 &&
+                            info.max_primal_infeasibility < 1e-3 &&
+                            info.sum_primal_infeasibilities < 1 &&
+                            info.num_dual_infeasibilities == 0;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Dual feasible and num / max / sum primal infeasibilities are "
@@ -1247,8 +1246,8 @@ void HEkkDual::iterate() {
   if (ekk_instance_.checkForCycling(variable_in, row_out)) {
     analysis->num_dual_cycling_detections++;
     printf("HEkkDual::iterate Cycling_detected: solve %d (Iteration %d)\n",
-	   (int)ekk_instance_.debug_solve_call_num_,
-	   (int)ekk_instance_.iteration_count_);
+           (int)ekk_instance_.debug_solve_call_num_,
+           (int)ekk_instance_.iteration_count_);
     if (ekk_instance_.iteration_count_ ==
         ekk_instance_.previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
