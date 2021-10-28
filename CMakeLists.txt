@@ -17,16 +17,14 @@ if(EXISTS "${LOC_PATH}")
 endif()
 
 # Use OpenMP if version is high enough.
-option(OPENMP "OpenMP" ON)
-
-if (OPENMP)
-    find_package(OpenMP 3.0)
-    if(OpenMP_CXX_FOUND)
-        message(STATUS "Linking with OpenMP... ")
-    else()
-        set(OPENMP OFF)
-    endif()
+option(OPENMP "OpenMP" OFF)
+find_package(OpenMP 3.0)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "Linking with OpenMP... ")
+    set(OPENMP ON)
 endif()
+
+option(BUILD_TESTING "Build Tests" ON)
 
 if(LINUX AND NOT MSVC)
     include(CheckIPOSupported)
@@ -188,24 +186,20 @@ if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
     message(STATUS "HIGHSINT64: " ${HIGHSINT64})
 endif()
 
-option(HiGHSOSI "Build Osi interface" OFF)
+set(OSI_ROOT "" CACHE PATH "Osi root folder.")
+if (NOT "${OSI_ROOT}" STREQUAL "")
+    # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
+    message(STATUS "OSI root folder set: " ${OSI_ROOT})
+    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+endif ()
+unset(OSI_ROOT CACHE)
 
-if (HiGHSOSI)
-    set(OSI_ROOT "" CACHE PATH "Osi root folder.")
-    if (NOT "${OSI_ROOT}" STREQUAL "")
-        # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
-        message(STATUS "OSI root folder set: " ${OSI_ROOT})
-        set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
-    endif ()
-    unset(OSI_ROOT CACHE)
-
-    pkg_check_modules(OSI osi)
-    if (OSI_FOUND)
-        # need to come before adding any targets (add_executable, add_library)
-        link_directories(${OSI_LIBRARY_DIRS})
-        include_directories(${OSITEST_INCLUDE_DIRS})
-    endif (OSI_FOUND)
-endif (HiGHSOSI)
+pkg_check_modules(OSI osi)
+if (OSI_FOUND)
+    # need to come before adding any targets (add_executable, add_library)
+    link_directories(${OSI_LIBRARY_DIRS})
+    include_directories(${OSITEST_INCLUDE_DIRS})
+endif (OSI_FOUND)
 
 set(IPX_ON ON)
 include(CheckLanguage)
@@ -317,7 +311,9 @@ endif()
 # Targets
 enable_testing()
 add_subdirectory(app)
-add_subdirectory(check)
+if(BUILD_TESTING)
+    add_subdirectory(check)
+endif()
 add_subdirectory(src)
 
 

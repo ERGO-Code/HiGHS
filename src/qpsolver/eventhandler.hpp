@@ -2,6 +2,7 @@
 #define __SRC_LIB_EVENTHANDLER_HPP__
 
 #include <vector>
+#include <functional>
 
 template <typename T>  // T: void (*fncptr)(int, double)
 class Eventhandler {
