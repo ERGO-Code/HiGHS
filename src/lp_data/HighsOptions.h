@@ -252,6 +252,7 @@ const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
+const string kRangingString = "ranging";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -261,6 +262,7 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
+  std::string ranging;
   double time_limit;
 
   // Options read from the file
@@ -407,18 +409,29 @@ class HighsOptions : public HighsOptionsStruct {
         kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kSolverString, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
         advanced, &parallel, kHighsChooseString);
     records.push_back(record_string);
+
     record_double =
         new OptionRecordDouble(kTimeLimitString, "Time limit", advanced,
                                &time_limit, 0, kHighsInf, kHighsInf);
     records.push_back(record_double);
+
+    record_string =
+        new OptionRecordString(kRangingString,
+                               "Compute cost, bound, RHS and basic solution "
+                               "ranging: \"off\" or \"on\"",
+                               advanced, &ranging, kHighsOffString);
+    records.push_back(record_string);
+    //
     // Options read from the file
     record_double =
         new OptionRecordDouble("infinite_cost",
