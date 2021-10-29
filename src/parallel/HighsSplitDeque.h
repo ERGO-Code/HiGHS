@@ -77,9 +77,17 @@ class HighsSplitDeque {
     }
   };
 
+  enum TailSplit {
+    kTail = 0,
+    kSplit = 1,
+  };
   struct StealerData {
+    union {
+      std::atomic<uint64_t> tsJoined;
+      std::array<std::atomic_uint32_t, 2> ts;
+    };
+    // std::atomic<uint64_t> ts{0};
     cache_aligned::unique_ptr<WaitForTaskData> waitForTaskData{nullptr};
-    std::atomic<uint64_t> ts{0};
     std::atomic_bool allStolen{true};
   };
 
@@ -89,15 +97,26 @@ class HighsSplitDeque {
     std::atomic<SplitDeque*> stealer;
   };
 
-  static constexpr uint64_t makeTailSplit(uint32_t tail, uint32_t split) {
-    return (uint64_t(tail) << 32) | split;
+  static uint64_t makeTailSplit(uint32_t tail, uint32_t split) {
+    std::array<uint32_t, 2> ts = {tail, split};
+    uint64_t tsJoined;
+    std::memcpy(&tsJoined, ts.data(), 8);
+    return tsJoined;
   }
 
-  static constexpr uint32_t tail(uint64_t tailSplit) { return tailSplit >> 32; }
-
-  static constexpr uint32_t split(uint64_t tailSplit) {
-    return static_cast<uint32_t>(tailSplit);
+  static std::array<uint32_t, 2> unpackTailSplit(uint64_t tsJoined) {
+    std::array<uint32_t, 2> ts;
+    std::memcpy(ts.data(), &tsJoined, 8);
+    return ts;
   }
+
+  //
+  //  static constexpr uint32_t tail(uint64_t tailSplit) { return tailSplit >>
+  //  32; }
+  //
+  //  static constexpr uint32_t split(uint64_t tailSplit) {
+  //    return static_cast<uint32_t>(tailSplit);
+  //  }
 
  public:
   class Task {
@@ -307,28 +326,30 @@ class HighsSplitDeque {
 
           SplitDeque* unsignaled;
           while ((unsignaled = popUnsignaled()) != nullptr)
-            unsignaled->requestPublishGlobalQueue();
+            unsignaled->signals.set(Signals::kWakeUp,
+                                    std::memory_order_relaxed);
 
           return;
         } else {
           sleeper->stealerData.waitForTaskData->injectTaskAndNotify(
               &localDeque->taskArray[t]);
+
+          if (t == localDeque->ownerData.splitCopy - 1) {
+            if (localDeque->ownerData.head == localDeque->ownerData.splitCopy) {
+              localDeque->ownerData.allStolenCopy = true;
+              localDeque->stealerData.allStolen.store(
+                  true, std::memory_order_relaxed);
+            }
+            return;
+          }
         }
 
-        if (t == localDeque->ownerData.splitCopy - 1) {
-          if (localDeque->ownerData.head == localDeque->ownerData.splitCopy) {
-            localDeque->ownerData.allStolenCopy = true;
-            localDeque->stealerData.allStolen.store(true,
-                                                    std::memory_order_relaxed);
-          }
-          return;
-        }
         sleeper = popSleeper();
         if (resetSignal && !sleeper) {
           resetSignal = false;
           // reset the publish global request
-          localDeque->splitRequest.fetch_and(~kPublishGlobal,
-                                             std::memory_order_relaxed);
+          localDeque->signals.unset(Signals::kWakeUp,
+                                    std::memory_order_relaxed);
           // then push this worker as unsignaled
           pushUnsignaled(localDeque);
           // now read again whether there is a new sleeper that might have not
@@ -343,7 +364,7 @@ class HighsSplitDeque {
       pushSleeper(localDeque);
       SplitDeque* unsignaled;
       while ((unsignaled = popUnsignaled()) != nullptr)
-        unsignaled->requestPublishGlobalQueue();
+        unsignaled->signals.set(Signals::kWakeUp, std::memory_order_seq_cst);
 
       auto tStart = std::chrono::high_resolution_clock::now();
       int spinIters = 10;
@@ -406,62 +427,75 @@ class HighsSplitDeque {
   static_assert(sizeof(GlobalQueueData) <= 64,
                 "sizeof(GlobalQueueData) exceeds cache line size");
 
+  struct Signals {
+    enum Type {
+      kSplit = 0,
+      kWakeUp = 1,
+    };
+    union {
+      std::atomic_uint32_t allRequest;
+      std::array<std::atomic_uint16_t, 2> request;
+    };
+
+    void unsetAll(std::memory_order mo) { allRequest.store(0x00000000u, mo); }
+    bool loadAll(std::array<uint16_t, 2>& allSignals, std::memory_order mo) {
+      uint32_t x = allRequest.load(mo);
+      if (!x) return false;
+      std::memcpy(allSignals.data(), &x, 4);
+      return true;
+    }
+
+    static std::array<uint16_t, 2> unpack(uint32_t x) {
+      std::array<uint16_t, 2> y;
+      std::memcpy(y.data(), &x, 4);
+      return y;
+    }
+
+    void set(Type t, std::memory_order mo) { request[t].store(0xffffu, mo); }
+    void unset(Type t, std::memory_order mo) { request[t].store(0x0000u, mo); }
+    uint16_t load(Type t, std::memory_order mo) { return request[t].load(mo); }
+  };
+
   alignas(64) OwnerData ownerData;
-  alignas(64) std::atomic_uint splitRequest;
+  alignas(64) Signals signals;
   alignas(64) StealerData stealerData;
   alignas(64) GlobalQueueData globalQueueData;
   alignas(64) std::array<Task, TaskArraySize> taskArray;
 
-  enum Request : unsigned int {
-    kNone = 0u,
-    kSplitRequest = 0x00ffu,
-    kPublishGlobal = 0xff00u,
-  };
+  void growShared() {
+    std::array<uint16_t, 2> allSignals;
+    if (!signals.loadAll(allSignals, std::memory_order_acquire)) return;
 
-  void growShared(bool publishAllTasks) {
-    uint32_t newSplit;
-
-    if (publishAllTasks)
-      newSplit = std::min(TaskArraySize, ownerData.head);
-    else
-      newSplit = std::min(TaskArraySize,
-                          (ownerData.splitCopy + ownerData.head + 1) / 2);
-    assert(newSplit > ownerData.splitCopy);
-
-    // we want to replace the old split point with the new splitPoint
-    // but not alter the upper 32 bits of tail.
-    // Hence with xor we can xor or the copy of the current split point
-    // to set the lower bits to zero and then xor the bits of the new split
-    // point to the lower bits that are then zero. First doing the xor of the
-    // old and new split point and then doing the xor with the stealerData
-    // will not alter the result. Also the upper 32 bits of the xor mask are
-    // zero and will therefore not alter the value of tail.
-    uint64_t xorMask = ownerData.splitCopy ^ newSplit;
-    // since we publish the task data here, we need to use
-    // std::memory_order_release which ensures all writes to set up the task
-    // are done
-    assert((xorMask >> 32) == 0);
-
-    stealerData.ts.fetch_xor(xorMask, std::memory_order_release);
-    ownerData.splitCopy = newSplit;
-    unsigned int splitRq =
-        splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
-    if (splitRq & kPublishGlobal) ownerData.globalQueue->publishWork(this);
+    if (allSignals[Signals::kSplit]) {
+      ownerData.splitCopy = std::min(
+          TaskArraySize, (ownerData.splitCopy + ownerData.head + 1) / 2);
+      stealerData.ts[kSplit].store(ownerData.splitCopy,
+                                   std::memory_order_release);
+      signals.unset(Signals::kSplit, std::memory_order_relaxed);
+    } else {
+      ownerData.splitCopy = std::min(TaskArraySize, ownerData.head);
+      stealerData.ts[kSplit].store(ownerData.splitCopy,
+                                   std::memory_order_release);
+      ownerData.globalQueue->publishWork(this);
+    }
   }
 
   bool shrinkShared() {
-    uint32_t t = tail(stealerData.ts.load(std::memory_order_relaxed));
+    uint32_t t = stealerData.ts[kTail].load(std::memory_order_relaxed);
     uint32_t s = ownerData.splitCopy;
 
     if (t != s) {
       ownerData.splitCopy = (t + s) / 2;
-      t = tail(stealerData.ts.fetch_add(uint64_t{ownerData.splitCopy} - s,
-                                        std::memory_order_acq_rel));
+      stealerData.ts[kSplit].store(ownerData.splitCopy,
+                                   std::memory_order_seq_cst);
+      t = stealerData.ts[kTail].load(std::memory_order_seq_cst);
+      // t = tail(stealerData.ts.fetch_add(
+      //    uint64_t{ownerData.splitCopy} - s, std::memory_order_acq_rel));
       if (t != s) {
         if (t > ownerData.splitCopy) {
           ownerData.splitCopy = (t + s) / 2;
-          stealerData.ts.store(makeTailSplit(t, ownerData.splitCopy),
-                               std::memory_order_relaxed);
+          stealerData.ts[kSplit].store(ownerData.splitCopy,
+                                       std::memory_order_relaxed);
         }
 
         return false;
@@ -483,11 +517,11 @@ class HighsSplitDeque {
     ownerData.globalQueue = globalQueue;
 
     stealerData.waitForTaskData = cache_aligned::make_unique<WaitForTaskData>();
-    splitRequest.store(kNone, std::memory_order_relaxed);
+    signals.unsetAll(std::memory_order_relaxed);
     globalQueue->pushUnsignaled(this);
 
     assert((reinterpret_cast<uintptr_t>(this) & 63u) == 0);
-    static_assert(offsetof(SplitDeque, splitRequest) == 64,
+    static_assert(offsetof(SplitDeque, signals) == 64,
                   "alignas failed to guarantee 64 byte alignment");
     static_assert(offsetof(SplitDeque, stealerData) == 128,
                   "alignas failed to guarantee 64 byte alignment");
@@ -502,8 +536,7 @@ class HighsSplitDeque {
     if (ownerData.head >= TaskArraySize) {
       // task queue is full, execute task directly
       if (ownerData.splitCopy < TaskArraySize && !ownerData.allStolenCopy) {
-        unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-        if (splitRq) growShared(splitRq & kPublishGlobal);
+        growShared();
       }
 
       ownerData.head += 1;
@@ -514,22 +547,22 @@ class HighsSplitDeque {
     taskArray[ownerData.head++].setTaskData(std::forward<F>(f));
     if (ownerData.allStolenCopy) {
       assert(ownerData.head > 0);
-      stealerData.ts.store(makeTailSplit(ownerData.head - 1, ownerData.head),
-                           std::memory_order_release);
+      stealerData.tsJoined.store(
+          makeTailSplit(ownerData.head - 1, ownerData.head),
+          std::memory_order_release);
       stealerData.allStolen.store(false, std::memory_order_relaxed);
       ownerData.splitCopy = ownerData.head;
       ownerData.allStolenCopy = false;
 
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) {
-        splitRq =
-            splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
-        if (splitRq & kPublishGlobal) ownerData.globalQueue->publishWork(this);
+      std::array<uint16_t, 2> allSignals;
+      if (signals.loadAll(allSignals, std::memory_order_acquire)) {
+        if (allSignals[Signals::kWakeUp])
+          ownerData.globalQueue->publishWork(this);
+        else
+          signals.unset(Signals::kSplit, std::memory_order_relaxed);
       }
-    } else {
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) growShared(splitRq & kPublishGlobal);
-    }
+    } else
+      growShared();
   }
 
   enum class Status {
@@ -564,10 +597,8 @@ class HighsSplitDeque {
         ownerData.allStolenCopy = true;
         stealerData.allStolen.store(true, std::memory_order_relaxed);
       }
-    } else if (ownerData.head != ownerData.splitCopy) {
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) growShared(splitRq & kPublishGlobal);
-    }
+    } else if (ownerData.head != ownerData.splitCopy)
+      growShared();
 
     return std::make_pair(Status::kWork, &taskArray[ownerData.head]);
   }
@@ -583,22 +614,22 @@ class HighsSplitDeque {
   Task* steal() {
     if (stealerData.allStolen.load(std::memory_order_relaxed)) return nullptr;
 
-    uint64_t ts = stealerData.ts.load(std::memory_order_relaxed);
-    uint32_t t = tail(ts);
-    uint32_t s = split(ts);
-    if (t < s) {
-      if (stealerData.ts.compare_exchange_weak(ts, makeTailSplit(t + 1, s),
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed))
-        return &taskArray[t];
+    uint64_t tsJoined = stealerData.tsJoined.load(std::memory_order_relaxed);
+    std::array<uint32_t, 2> ts = unpackTailSplit(tsJoined);
 
-      t = tail(ts);
-      s = split(ts);
-      if (t < s) return nullptr;
+    if (ts[kTail] < ts[kSplit]) {
+      if (stealerData.tsJoined.compare_exchange_weak(
+              tsJoined, makeTailSplit(ts[kTail] + 1, ts[kSplit]),
+              std::memory_order_acquire, std::memory_order_relaxed))
+        return &taskArray[ts[kTail]];
+
+      ts = unpackTailSplit(tsJoined);
+      if (ts[kTail] < ts[kSplit]) return nullptr;
     }
 
-    if (t < TaskArraySize && !splitRequest.load(std::memory_order_relaxed))
-      splitRequest.fetch_or(kSplitRequest, std::memory_order_relaxed);
+    if (ts[kTail] < TaskArraySize &&
+        !signals.load(Signals::kSplit, std::memory_order_relaxed))
+      signals.set(Signals::kSplit, std::memory_order_seq_cst);
 
     return nullptr;
   }
@@ -606,22 +637,21 @@ class HighsSplitDeque {
   Task* stealWithRetryLoop() {
     if (stealerData.allStolen.load(std::memory_order_relaxed)) return nullptr;
 
-    uint64_t ts = stealerData.ts.load(std::memory_order_relaxed);
-    uint32_t t = tail(ts);
-    uint32_t s = split(ts);
+    uint64_t tsJoined = stealerData.tsJoined.load(std::memory_order_relaxed);
+    std::array<uint32_t, 2> ts = unpackTailSplit(tsJoined);
 
-    while (t < s) {
-      if (stealerData.ts.compare_exchange_weak(ts, makeTailSplit(t + 1, s),
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed))
-        return &taskArray[t];
+    while (ts[kTail] < ts[kSplit]) {
+      if (stealerData.tsJoined.compare_exchange_weak(
+              tsJoined, makeTailSplit(ts[kTail] + 1, ts[kSplit]),
+              std::memory_order_acquire, std::memory_order_relaxed))
+        return &taskArray[ts[kTail]];
 
-      t = tail(ts);
-      s = split(ts);
+      ts = unpackTailSplit(tsJoined);
     }
 
-    if (t < TaskArraySize && !splitRequest.load(std::memory_order_relaxed))
-      splitRequest.fetch_or(kSplitRequest, std::memory_order_relaxed);
+    if (ts[kTail] < TaskArraySize &&
+        !signals.load(Signals::kSplit, std::memory_order_relaxed))
+      signals.set(Signals::kSplit, std::memory_order_seq_cst);
 
     return nullptr;
   }
@@ -636,21 +666,17 @@ class HighsSplitDeque {
     // occur as long as we know that the task at taskArray[split] is not
     // actually considered to be stolen and tail is corrected before the owner
     // enters shrinkShared.
-
-    uint32_t t = tail(stealerData.ts.fetch_add(makeTailSplit(1, 0),
-                                               std::memory_order_relaxed));
+    uint32_t t = stealerData.ts[kTail].fetch_add(1, std::memory_order_relaxed);
 
     if (t == ownerData.splitCopy)
-      stealerData.ts.store(makeTailSplit(t, ownerData.splitCopy),
-                           std::memory_order_relaxed);
+      stealerData.ts[kTail].store(t, std::memory_order_relaxed);
 
     return t;
   }
 
-  void requestPublishGlobalQueue() {
-    splitRequest.store(kSplitRequest | kPublishGlobal,
-                       std::memory_order_relaxed);
-  }
+  // void requestPublishGlobalQueue() {
+  //  signals.set(Signals::kWakeUp, std::memory_order_seq_cst);
+  //}
 
   Task* randomSteal(cache_aligned::unique_ptr<SplitDeque>* workers,
                     int numWorkers) {
