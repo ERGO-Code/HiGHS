@@ -19,9 +19,35 @@
 #include <cassert>
 #include <functional>  // for negate
 
-//#include "io/HighsIO.h"
-//#include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelUtils.h"
+
+void HighsRanging::clear() {
+  valid = false;
+  this->col_cost_up.value_.clear();
+  this->col_cost_up.objective_.clear();
+  this->col_cost_up.in_var_.clear();
+  this->col_cost_up.ou_var_.clear();
+  this->col_cost_dn.value_.clear();
+  this->col_cost_dn.objective_.clear();
+  this->col_cost_dn.in_var_.clear();
+  this->col_cost_dn.ou_var_.clear();
+  this->col_bound_up.value_.clear();
+  this->col_bound_up.objective_.clear();
+  this->col_bound_up.in_var_.clear();
+  this->col_bound_up.ou_var_.clear();
+  this->col_bound_dn.value_.clear();
+  this->col_bound_dn.objective_.clear();
+  this->col_bound_dn.in_var_.clear();
+  this->col_bound_dn.ou_var_.clear();
+  this->row_bound_up.value_.clear();
+  this->row_bound_up.objective_.clear();
+  this->row_bound_up.in_var_.clear();
+  this->row_bound_up.ou_var_.clear();
+  this->row_bound_dn.value_.clear();
+  this->row_bound_dn.objective_.clear();
+  this->row_bound_dn.in_var_.clear();
+  this->row_bound_dn.ou_var_.clear();
+}
 
 double infProduct(double value) {
   // Multiplying value and kHighsInf
@@ -43,6 +69,7 @@ double possInfProduct(double poss_inf, double value) {
 
 HighsStatus getRangingData(HighsRanging& ranging,
                            HighsLpSolverObject& solver_object) {
+  ranging.clear();
   if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal) {
     highsLogUser(solver_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without an optimal solution\n");
@@ -567,60 +594,67 @@ HighsStatus getRangingData(HighsRanging& ranging,
   ranging.row_bound_dn.ou_var_ = {b_up_l.begin() + numCol,
                                   b_up_l.begin() + numTotal};
 
-  writeRanging(ranging, solver_object);
+  ranging.valid = true;
+  if (solver_object.options_.log_dev_level)
+    writeRangingFile(stdout, use_lp,
+		     solver_object.highs_info_.objective_function_value,
+		     solver_object.basis_,
+		     solver_object.solution_,
+		     ranging);
   return HighsStatus::kOk;
 }
 
-void writeRanging(const HighsRanging& ranging,
-                  const HighsLpSolverObject& solver_object) {
-  if (!solver_object.options_.log_dev_level) return;
-  if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal) return;
-  HighsLp& use_lp = solver_object.lp_;
-  HighsLogOptions& log_options = solver_object.options_.log_options;
-  highsLogDev(log_options, HighsLogType::kVerbose,
-              "\nRanging data: Optimal objective = %g\n"
-              "           |                               Bound ranging        "
-              "                           "
-              " |                    Cost ranging\n"
-              "Col Status | DownObj    Down       (Lower      Value      Upper "
-              "    ) Up         UpObj     "
-              " | DownObj    Down       Value      Up         UpObj\n",
-              solver_object.highs_info_.objective_function_value);
-  for (HighsInt iCol = 0; iCol < use_lp.num_col_; iCol++) {
-    highsLogDev(log_options, HighsLogType::kVerbose,
-                "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
-                "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
-                iCol,
-                statusToString(solver_object.basis_.col_status[iCol],
-                               use_lp.col_lower_[iCol], use_lp.col_upper_[iCol])
-                    .c_str(),
-                ranging.col_bound_dn.objective_[iCol],
-                ranging.col_bound_dn.value_[iCol], use_lp.col_lower_[iCol],
-                solver_object.solution_.col_value[iCol],
-                use_lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
-                ranging.col_bound_up.objective_[iCol],
-                ranging.col_cost_dn.objective_[iCol],
-                ranging.col_cost_dn.value_[iCol], use_lp.col_cost_[iCol],
-                ranging.col_cost_up.value_[iCol],
-                ranging.col_cost_up.objective_[iCol]);
+void writeRangingFile(FILE* file,
+		      const HighsLp& lp,
+		      const double objective_function_value,
+		      const HighsBasis& basis,
+		      const HighsSolution& solution,
+		      const HighsRanging& ranging) {
+  if (!ranging.valid) return;
+  fprintf(file,
+	  "\nRanging data: Optimal objective = %g\n"
+	  "           |                               Bound ranging        "
+	  "                           "
+	  " |                    Cost ranging\n"
+	  "Col Status | DownObj    Down       (Lower      Value      Upper "
+	  "    ) Up         UpObj     "
+	  " | DownObj    Down       Value      Up         UpObj\n",
+	  objective_function_value);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    fprintf(file,
+	    "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
+	    "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
+	    (int)iCol,
+	    statusToString(basis.col_status[iCol],
+			   lp.col_lower_[iCol],
+			   lp.col_upper_[iCol]).c_str(),
+	    ranging.col_bound_dn.objective_[iCol],
+	    ranging.col_bound_dn.value_[iCol], lp.col_lower_[iCol],
+	    solution.col_value[iCol],
+	    lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
+	    ranging.col_bound_up.objective_[iCol],
+	    ranging.col_cost_dn.objective_[iCol],
+	    ranging.col_cost_dn.value_[iCol], lp.col_cost_[iCol],
+	    ranging.col_cost_up.value_[iCol],
+	    ranging.col_cost_up.objective_[iCol]);
   }
-  highsLogDev(log_options, HighsLogType::kVerbose,
-              "           |                               Bound ranging        "
-              "                             \n"
-              "Col Status | DownObj    Down       (Lower      Value      Upper "
-              "    ) Up         UpObj   \n");
-  for (HighsInt iRow = 0; iRow < use_lp.num_row_; iRow++) {
-    highsLogDev(log_options, HighsLogType::kVerbose,
-                "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
-                "%-10.4g |\n",
-                iRow,
-                statusToString(solver_object.basis_.row_status[iRow],
-                               use_lp.row_lower_[iRow], use_lp.row_upper_[iRow])
-                    .c_str(),
-                ranging.row_bound_dn.objective_[iRow],
-                ranging.row_bound_dn.value_[iRow], use_lp.row_lower_[iRow],
-                solver_object.solution_.row_value[iRow],
-                use_lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
-                ranging.row_bound_up.objective_[iRow]);
+  fprintf(file,
+	  "           |                               Bound ranging        "
+	  "                             \n"
+	  "Col Status | DownObj    Down       (Lower      Value      Upper "
+	  "    ) Up         UpObj   \n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    fprintf(file,
+	    "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
+	    "%-10.4g |\n",
+	    (int)iRow,
+	    statusToString(basis.row_status[iRow],
+			   lp.row_lower_[iRow],
+			   lp.row_upper_[iRow]).c_str(),
+	    ranging.row_bound_dn.objective_[iRow],
+	    ranging.row_bound_dn.value_[iRow], lp.row_lower_[iRow],
+	    solution.row_value[iRow],
+	    lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
+	    ranging.row_bound_up.objective_[iRow]);
   }
 }
