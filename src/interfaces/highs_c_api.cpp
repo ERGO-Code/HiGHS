@@ -344,7 +344,8 @@ HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
   return retcode;
 }
 
-HighsInt Highs_getOptionType(const void* highs, const char* option, HighsInt* type) {
+HighsInt Highs_getOptionType(const void* highs, const char* option,
+                             HighsInt* type) {
   HighsOptionType t;
   HighsInt retcode =
       (HighsInt)((Highs*)highs)->getOptionType(std::string(option), t);
@@ -364,7 +365,8 @@ HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->writeOptions(filename, true);
 }
 
-HighsInt Highs_getIntInfoValue(const void* highs, const char* info, HighsInt* value) {
+HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
+                               HighsInt* value) {
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
@@ -403,7 +405,8 @@ HighsInt Highs_getSolution(const void* highs, double* colvalue, double* coldual,
   return HighsStatuskOk;
 }
 
-HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus, HighsInt* rowstatus) {
+HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
+                        HighsInt* rowstatus) {
   HighsBasis basis = ((Highs*)highs)->getBasis();
   for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
     colstatus[i] = (HighsInt)basis.col_status[i];
@@ -845,13 +848,21 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row,
   return (HighsInt)((Highs*)highs)->scaleRow(row, scaleval);
 }
 
-double Highs_getInfinity(const void* highs) { return ((Highs*)highs)->getInfinity(); }
+double Highs_getInfinity(const void* highs) {
+  return ((Highs*)highs)->getInfinity();
+}
 
-HighsInt Highs_getNumCol(const void* highs) { return ((Highs*)highs)->getNumCol(); }
+HighsInt Highs_getNumCol(const void* highs) {
+  return ((Highs*)highs)->getNumCol();
+}
 
-HighsInt Highs_getNumRow(const void* highs) { return ((Highs*)highs)->getNumRow(); }
+HighsInt Highs_getNumRow(const void* highs) {
+  return ((Highs*)highs)->getNumRow();
+}
 
-HighsInt Highs_getNumNz(const void* highs) { return ((Highs*)highs)->getNumNz(); }
+HighsInt Highs_getNumNz(const void* highs) {
+  return ((Highs*)highs)->getNumNz();
+}
 
 HighsInt Highs_getHessianNumNz(const void* highs) {
   return ((Highs*)highs)->getHessianNumNz();

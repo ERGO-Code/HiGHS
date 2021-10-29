@@ -1863,13 +1863,13 @@ HighsStatus readSolutionFile(const std::string filename,
   in_file.ignore(kMaxLineLength, '\n');  // Model status
   in_file.ignore(kMaxLineLength, '\n');  // Optimal
   in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  // Primal solution values
+  in_file.ignore(kMaxLineLength, '\n');  // # Primal solution values
   in_file >> keyword;
   if (keyword != "None") {
     in_file.ignore(kMaxLineLength, '\n');  // Status
     in_file.ignore(kMaxLineLength, '\n');  // Objective
     // Read in the column values
-    in_file >> keyword >> num_col;
+    in_file >> keyword >> keyword >> num_col;
     assert(keyword == "Columns");
     if (num_col != lp_num_col) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -1881,7 +1881,7 @@ HighsStatus readSolutionFile(const std::string filename,
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       in_file >> name >> read_solution.col_value[iCol];
     // Read in the row values
-    in_file >> keyword >> num_row;
+    in_file >> keyword >> keyword >> num_row;
     assert(keyword == "Rows");
     if (num_row != lp_num_row) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -1895,22 +1895,22 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   in_file.ignore(kMaxLineLength, '\n');
   in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  // Dual solution values
+  in_file.ignore(kMaxLineLength, '\n');  // # Dual solution values
   in_file >> keyword;
   if (keyword != "None") {
     in_file.ignore(kMaxLineLength, '\n');  // Status
-    in_file >> keyword >> num_col;
+    in_file >> keyword >> keyword >> num_col;
     assert(keyword == "Columns");
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       in_file >> name >> read_solution.col_dual[iCol];
-    in_file >> keyword >> num_row;
+    in_file >> keyword >> keyword >> num_row;
     assert(keyword == "Rows");
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
       in_file >> name >> read_solution.row_dual[iRow];
   }
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  // Basis
+  in_file.ignore(kMaxLineLength, '\n');  // # Basis
   if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
     return HighsStatus::kError;
   solution = read_solution;
@@ -2055,10 +2055,10 @@ void writeBasisFile(FILE*& file, const HighsBasis& basis) {
     return;
   }
   fprintf(file, "Valid\n");
-  fprintf(file, "Columns %d\n", (int)basis.col_status.size());
+  fprintf(file, "# Columns %d\n", (int)basis.col_status.size());
   for (const auto& status : basis.col_status) fprintf(file, "%d ", (int)status);
   fprintf(file, "\n");
-  fprintf(file, "Rows %d\n", (int)basis.row_status.size());
+  fprintf(file, "# Rows %d\n", (int)basis.row_status.size());
   for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
   fprintf(file, "\n");
 }
@@ -2101,7 +2101,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
     assert(keyword == "Valid");
     HighsInt num_col, num_row;
     // Read in the columns section
-    in_file >> keyword;
+    in_file >> keyword >> keyword;
     assert(keyword == "Columns");
     in_file >> num_col;
     if (num_col != basis_num_col) {
@@ -2116,7 +2116,7 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
       basis.col_status[iCol] = (HighsBasisStatus)int_status;
     }
     // Read in the rows section
-    in_file >> keyword;
+    in_file >> keyword >> keyword;
     assert(keyword == "Rows");
     in_file >> num_row;
     if (num_row != basis_num_row) {
