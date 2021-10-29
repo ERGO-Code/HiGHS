@@ -375,21 +375,36 @@ std::string statusToString(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
-                             const std::vector<double>& lower,
-                             const std::vector<double>& upper,
-                             const std::vector<std::string>& names,
-                             const std::vector<double>& primal,
-                             const std::vector<double>& dual,
-                             const std::vector<HighsBasisStatus>& status) {
+std::string typeToString(const HighsVarType type) {
+  switch (type) {
+    case HighsVarType::kContinuous:
+      return "Continuous";
+    case HighsVarType::kInteger:
+      return "Integer   ";
+    case HighsVarType::kSemiContinuous:
+      return "Semi-conts";
+    case HighsVarType::kSemiInteger:
+      return "Semi-int  ";
+    case HighsVarType::kImplicitInteger:
+      return "ImpliedInt";
+  }
+  return "";
+}
+
+void writeModelBoundSolution(
+    FILE* file, const bool columns, const HighsInt dim,
+    const std::vector<double>& lower, const std::vector<double>& upper,
+    const std::vector<std::string>& names, const bool have_primal,
+    const std::vector<double>& primal, const bool have_dual,
+    const std::vector<double>& dual, const bool have_basis,
+    const std::vector<HighsBasisStatus>& status,
+    const HighsVarType* integrality) {
   const bool have_names = names.size() > 0;
-  const bool have_primal = primal.size() > 0;
-  const bool have_dual = dual.size() > 0;
-  const bool have_basis = status.size() > 0;
   if (have_names) assert((int)names.size() >= dim);
   if (have_primal) assert((int)primal.size() >= dim);
   if (have_dual) assert((int)dual.size() >= dim);
   if (have_basis) assert((int)status.size() >= dim);
+  const bool have_integrality = integrality != NULL;
   std::string var_status_string;
   if (columns) {
     fprintf(file, "Columns\n");
@@ -399,6 +414,7 @@ void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
   fprintf(
       file,
       "    Index Status        Lower        Upper       Primal         Dual");
+  if (have_integrality) fprintf(file, "  Type      ");
   if (have_names) {
     fprintf(file, "  Name\n");
   } else {
@@ -422,6 +438,8 @@ void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
     } else {
       fprintf(file, "             ");
     }
+    if (have_integrality)
+      fprintf(file, "  %s", typeToString(integrality[ix]).c_str());
     if (have_names) {
       fprintf(file, "  %-s\n", names[ix].c_str());
     } else {
@@ -430,25 +448,91 @@ void writeModelBoundSolution(FILE* file, const bool columns, const HighsInt dim,
   }
 }
 
-void writeModelSolution(FILE* file, const HighsOptions& options,
-                        double solutionObjective, const HighsInt dim,
-                        const std::vector<std::string>& names,
-                        const std::vector<double>& primal,
-                        const std::vector<HighsVarType>& integrality) {
-  const bool have_names = names.size() > 0;
-  const bool have_primal = primal.size() > 0;
-  const bool have_integrality = integrality.size() > 0;
-  if (!have_names || !have_primal) return;
-  if (have_names) assert((int)names.size() >= dim);
-  if (have_primal) assert((int)primal.size() >= dim);
-  if (have_integrality) assert((int)integrality.size() >= dim);
-
-  std::array<char, 32> objStr = highsDoubleToString(solutionObjective, 1e-13);
-  fprintf(file, "=obj= %s\n", objStr.data());
-
-  for (HighsInt ix = 0; ix < dim; ix++) {
-    std::array<char, 32> valStr = highsDoubleToString(primal[ix], 1e-13);
-    fprintf(file, "%-s %s\n", names[ix].c_str(), valStr.data());
+void writeModelSolution(FILE* file, const HighsLp& lp,
+                        const HighsSolution& solution, const HighsInfo& info) {
+  const bool have_col_names = lp.col_names_.size() > 0;
+  const bool have_row_names = lp.row_names_.size() > 0;
+  const bool have_primal = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  std::stringstream ss;
+  if (have_col_names) assert((int)lp.col_names_.size() >= lp.num_col_);
+  if (have_row_names) assert((int)lp.row_names_.size() >= lp.num_row_);
+  if (have_primal) {
+    assert((int)solution.col_value.size() >= lp.num_col_);
+    assert((int)solution.row_value.size() >= lp.num_row_);
+    assert(info.primal_solution_status != kSolutionStatusNone);
+  }
+  if (have_dual) {
+    assert((int)solution.col_dual.size() >= lp.num_col_);
+    assert((int)solution.row_dual.size() >= lp.num_row_);
+    assert(info.dual_solution_status != kSolutionStatusNone);
+  }
+  const double double_tolerance = 1e-13;
+  fprintf(file, "\n# Primal solution values\n");
+  if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
+    fprintf(file, "None\n");
+  } else {
+    if (info.primal_solution_status == kSolutionStatusFeasible) {
+      fprintf(file, "Feasible\n");
+    } else {
+      assert(info.primal_solution_status == kSolutionStatusInfeasible);
+      fprintf(file, "Infeasible\n");
+    }
+    HighsCDouble objective_function_value = lp.offset_;
+    for (HighsInt i = 0; i < lp.num_col_; ++i)
+      objective_function_value += lp.col_cost_[i] * solution.col_value[i];
+    std::array<char, 32> objStr =
+        highsDoubleToString((double)objective_function_value, double_tolerance);
+    fprintf(file, "Objective %s\n", objStr.data());
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.col_value[ix], double_tolerance);
+      // Create a column name
+      ss.str(std::string());
+      ss << "C" << ix;
+      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+    fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.row_value[ix], double_tolerance);
+      // Create a row name
+      ss.str(std::string());
+      ss << "R" << ix;
+      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+  }
+  fprintf(file, "\n# Dual solution values\n");
+  if (!have_dual || info.dual_solution_status == kSolutionStatusNone) {
+    fprintf(file, "None\n");
+  } else {
+    if (info.dual_solution_status == kSolutionStatusFeasible) {
+      fprintf(file, "Feasible\n");
+    } else {
+      assert(info.dual_solution_status == kSolutionStatusInfeasible);
+      fprintf(file, "Infeasible\n");
+    }
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.col_dual[ix], double_tolerance);
+      ss.str(std::string());
+      ss << "C" << ix;
+      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+    fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.row_dual[ix], double_tolerance);
+      ss.str(std::string());
+      ss << "R" << ix;
+      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
   }
 }
 
@@ -627,7 +711,7 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
       return "Postsolve error";
       break;
     case HighsModelStatus::kModelEmpty:
-      return "Model empty";
+      return "Empty";
       break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
@@ -642,16 +726,16 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
       return "Unbounded";
       break;
     case HighsModelStatus::kObjectiveBound:
-      return "Reached objective bound";
+      return "Bound on objective reached";
       break;
     case HighsModelStatus::kObjectiveTarget:
-      return "Reached objective target";
+      return "Target for objective reached";
       break;
     case HighsModelStatus::kTimeLimit:
-      return "Reached time limit";
+      return "Time limit reached";
       break;
     case HighsModelStatus::kIterationLimit:
-      return "Reached iteration limit";
+      return "Iteration limit reached";
       break;
     case HighsModelStatus::kUnknown:
       return "Unknown";

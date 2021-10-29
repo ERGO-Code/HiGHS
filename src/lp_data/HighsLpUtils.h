@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"
 
@@ -30,11 +31,12 @@ class HighsOptions;
 
 using std::vector;
 
-HighsStatus writeBasisFile(const HighsLogOptions& log_options,
-                           const HighsBasis& basis, const std::string filename);
+void writeBasisFile(FILE*& file, const HighsBasis& basis);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options,
+                            HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
@@ -249,9 +251,18 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
 void analyseScaledLp(const HighsLogOptions& log_options,
                      const HighsScale& scale, const HighsLp& scaled_lp);
 
-void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const HighsInt style);
+void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style);
+
+HighsStatus readSolutionFile(const std::string filename,
+                             const HighsOptions& options, const HighsLp& lp,
+                             HighsBasis& basis, HighsSolution& solution,
+                             const HighsInt style);
+
+void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
+                                const HighsSolution& solution);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
@@ -284,4 +295,5 @@ void ensureRowWise(HighsLp& lp);
 
 HighsLp withoutSemiVariables(const HighsLp& lp);
 
+void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

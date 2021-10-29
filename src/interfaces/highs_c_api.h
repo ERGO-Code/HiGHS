@@ -1084,8 +1084,9 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
 
 HighsInt Highs_runQuiet(void* highs);
 
-HighsInt Highs_setHighsLogfile(void* highs,
-                               const void* logfile  //!< File handle of the logfile
+HighsInt Highs_setHighsLogfile(
+    void* highs,
+    const void* logfile  //!< File handle of the logfile
 );
 
 HighsInt Highs_setHighsOutput(

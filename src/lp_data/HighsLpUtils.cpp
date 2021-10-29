@@ -408,24 +408,22 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-      num_non_continuous_variables++;
       // Semi-variables with zero lower bound aren't semi
-      if (lp.col_upper_[iCol] == 0) {
+      if (lp.col_lower_[iCol] == 0) {
         num_non_semi++;
         if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
           // Semi-continuous become continuous
           lp.integrality_[iCol] = HighsVarType::kContinuous;
-          num_non_continuous_variables--;
         } else {
           // Semi-integer become integer
           lp.integrality_[iCol] = HighsVarType::kInteger;
+          num_non_continuous_variables++;
         }
+        continue;
       }
-      // Semi-variables must have upper bound that's not too large,
-      // unless the lower bound is zero, in which case the variable is
-      // standard continuous or integer
-      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper && lp.col_lower_[iCol])
-        num_illegal_upper++;
+      // Semi-variables must have upper bound that's not too large
+      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
+      num_non_continuous_variables++;
     } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
       num_non_continuous_variables++;
     }
@@ -439,15 +437,15 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   if (num_non_semi) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) with zero lower bound "
+                 " semi-continuous/integer variable(s) have zero lower bound "
                  "so are continuous/integer\n",
-                 num_illegal_upper);
+                 num_non_semi);
     return_status = HighsStatus::kWarning;
   }
   if (num_illegal_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) with upper bounds "
+                 " semi-continuous/integer variable(s) have upper bounds "
                  "exceeding %12g\n",
                  num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
@@ -1809,176 +1807,335 @@ void analyseScaledLp(const HighsLogOptions& log_options,
   analyseLp(log_options, scaled_lp, "Scaled");
 }
 
-void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const HighsInt style) {
-  const bool have_value = solution.value_valid;
+void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style) {
+  const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  vector<double> use_col_value;
-  vector<double> use_row_value;
-  vector<double> use_col_dual;
-  vector<double> use_row_dual;
-  vector<HighsBasisStatus> use_col_status;
-  vector<HighsBasisStatus> use_row_status;
-  if (have_value) {
-    use_col_value = solution.col_value;
-    use_row_value = solution.row_value;
-  }
-  if (have_dual) {
-    use_col_dual = solution.col_dual;
-    use_row_dual = solution.row_dual;
-  }
-  if (have_basis) {
-    use_col_status = basis.col_status;
-    use_row_status = basis.row_status;
-  }
-  if (!have_value && !have_dual && !have_basis) return;
-  if (style == kWriteSolutionStylePretty) {
+  if (style == kSolutionStylePretty) {
     writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
-                            lp.col_upper_, lp.col_names_, use_col_value,
-                            use_col_dual, use_col_status);
+                            lp.col_upper_, lp.col_names_, have_primal,
+                            solution.col_value, have_dual, solution.col_dual,
+                            have_basis, basis.col_status, &lp.integrality_[0]);
     writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
-                            lp.row_upper_, lp.row_names_, use_row_value,
-                            use_row_dual, use_row_status);
-  } else if (style == kWriteSolutionStyleMittelmann) {
-    HighsCDouble solObj = lp.offset_;
-    for (HighsInt i = 0; i < lp.num_col_; ++i)
-      solObj += lp.col_cost_[i] * use_col_value[i];
-    writeModelSolution(file, options, double(solObj), lp.num_col_,
-                       lp.col_names_, use_col_value, lp.integrality_);
+                            lp.row_upper_, lp.row_names_, have_primal,
+                            solution.row_value, have_dual, solution.row_dual,
+                            have_basis, basis.row_status);
   } else {
-    fprintf(file,
-            "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
-            " : Number of columns and rows for primal or dual solution "
-            "or basis\n",
-            lp.num_col_, lp.num_row_);
-    if (have_value) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Primal solution\n");
-    if (have_dual) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Dual solution\n");
-    if (have_basis) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Basis\n");
-    fprintf(file, "Columns\n");
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
-      if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
-      if (have_basis)
-        fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
-      fprintf(file, "\n");
-    }
-    fprintf(file, "Rows\n");
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
-      if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
-      if (have_basis)
-        fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
-      fprintf(file, "\n");
-    }
+    fprintf(file, "Model status\n");
+    fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
+    writeModelSolution(file, lp, solution, info);
   }
 }
 
-HighsStatus writeBasisFile(const HighsLogOptions& log_options,
-                           const HighsBasis& basis,
-                           const std::string filename) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (basis.valid == false) {
+HighsStatus readSolutionFile(const std::string filename,
+                             const HighsOptions& options, const HighsLp& lp,
+                             HighsBasis& basis, HighsSolution& solution,
+                             const HighsInt style) {
+  const HighsLogOptions& log_options = options.log_options;
+  if (style != kSolutionStyleRaw) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "writeBasisFile: Cannot write an invalid basis\n");
+                 "readSolutionFile: Cannot read file of style %d\n",
+                 (int)style);
     return HighsStatus::kError;
   }
-  std::ofstream outFile(filename);
-  if (outFile.fail()) {
+  const HighsInt kMaxLineLength = 80;
+  std::ifstream in_file(filename);
+  if (in_file.fail()) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "writeBasisFile: Cannot open writeable file \"%s\"\n",
+                 "readSolutionFile: Cannot open readable file \"%s\"\n",
                  filename.c_str());
     return HighsStatus::kError;
   }
-  outFile << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
-  outFile << basis.col_status.size() << " " << basis.row_status.size()
-          << std::endl;
-  for (const auto& status : basis.col_status) {
-    outFile << (HighsInt)status << " ";
+  std::string keyword;
+  std::string name;
+  HighsInt num_col;
+  HighsInt num_row;
+  const HighsInt lp_num_col = lp.num_col_;
+  const HighsInt lp_num_row = lp.num_row_;
+  // Define idetifiers for reading in
+  HighsSolution read_solution = solution;
+  HighsBasis read_basis = basis;
+  std::string section_name;
+  HighsInt status;
+  in_file.ignore(kMaxLineLength, '\n');  // Model status
+  in_file.ignore(kMaxLineLength, '\n');  // Optimal
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // # Primal solution values
+  in_file >> keyword;
+  if (keyword != "None") {
+    in_file.ignore(kMaxLineLength, '\n');  // Status
+    in_file.ignore(kMaxLineLength, '\n');  // Objective
+    // Read in the column values
+    in_file >> keyword >> keyword >> num_col;
+    assert(keyword == "Columns");
+    if (num_col != lp_num_col) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " columns, not %" HIGHSINT_FORMAT "\n",
+                   num_col, lp_num_col);
+      return HighsStatus::kError;
+    }
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      in_file >> name >> read_solution.col_value[iCol];
+    // Read in the row values
+    in_file >> keyword >> keyword >> num_row;
+    assert(keyword == "Rows");
+    if (num_row != lp_num_row) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " rows, not %" HIGHSINT_FORMAT "\n",
+                   num_row, lp_num_row);
+      return HighsStatus::kError;
+    }
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      in_file >> name >> read_solution.row_value[iRow];
   }
-  outFile << std::endl;
-  for (const auto& status : basis.row_status) {
-    outFile << (HighsInt)status << " ";
+  in_file.ignore(kMaxLineLength, '\n');
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // # Dual solution values
+  in_file >> keyword;
+  if (keyword != "None") {
+    in_file.ignore(kMaxLineLength, '\n');  // Status
+    in_file >> keyword >> keyword >> num_col;
+    assert(keyword == "Columns");
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      in_file >> name >> read_solution.col_dual[iCol];
+    in_file >> keyword >> keyword >> num_row;
+    assert(keyword == "Rows");
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      in_file >> name >> read_solution.row_dual[iRow];
   }
-  outFile << std::endl;
-  outFile << std::endl;
-  outFile.close();
-  return return_status;
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // # Basis
+  if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
+    return HighsStatus::kError;
+  solution = read_solution;
+  basis = read_basis;
+  return HighsStatus::kOk;
+}
+
+void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
+                                const HighsSolution& solution) {
+  HighsInt num_col_infeasibilities = 0;
+  double max_col_infeasibility = 0;
+  double sum_col_infeasibilities = 0;
+  HighsInt num_integer_infeasibilities = 0;
+  double max_integer_infeasibility = 0;
+  double sum_integer_infeasibilities = 0;
+  HighsInt num_row_infeasibilities = 0;
+  double max_row_infeasibility = 0;
+  double sum_row_infeasibilities = 0;
+  HighsInt num_row_residuals = 0;
+  double max_row_residual = 0;
+  double sum_row_residuals = 0;
+  const double kRowResidualTolerance = 1e-12;
+  const vector<HighsInt>& start = lp.a_start_;
+  const vector<HighsInt>& index = lp.a_index_;
+  const vector<double>& value = lp.a_value_;
+  vector<double> row_activity;
+  row_activity.assign(lp.num_row_, 0);
+  const bool have_integrality = lp.integrality_.size();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const double primal = solution.col_value[iCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const HighsVarType type =
+        have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    // @primal_infeasibility calculation
+    double col_infeasibility = 0;
+    if (primal < lower - options.primal_feasibility_tolerance) {
+      col_infeasibility = lower - primal;
+    } else if (primal > upper + options.primal_feasibility_tolerance) {
+      col_infeasibility = primal - upper;
+    }
+    double integer_infeasibility = 0;
+    if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
+      double nearest_integer = std::round(primal);
+      double integer_infeasibility = std::fabs(primal - nearest_integer);
+    }
+    if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
+                                  type == HighsVarType::kSemiInteger)) {
+      // Semi-variables at zero will have positive col
+      // infeasibility, so possibly zero this
+      if (std::fabs(primal) <= options.mip_feasibility_tolerance)
+        col_infeasibility = 0;
+    }
+    if (col_infeasibility > 0) {
+      if (col_infeasibility > options.primal_feasibility_tolerance) {
+        if (col_infeasibility > 2 * max_col_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Col %6d has         infeasiblilty of %11.4g from "
+                       "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
+                       (int)iCol, col_infeasibility, lower, primal, upper);
+        num_col_infeasibilities++;
+      }
+      max_col_infeasibility =
+          std::max(col_infeasibility, max_col_infeasibility);
+      sum_col_infeasibilities += col_infeasibility;
+    }
+    if (integer_infeasibility > 0) {
+      if (integer_infeasibility > options.mip_feasibility_tolerance) {
+        if (integer_infeasibility > 2 * max_integer_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Col %6d has integer infeasiblilty of %11.4g\n",
+                       (int)iCol, integer_infeasibility);
+        num_integer_infeasibilities++;
+      }
+      max_integer_infeasibility =
+          std::max(integer_infeasibility, max_integer_infeasibility);
+      sum_integer_infeasibilities += integer_infeasibility;
+    }
+    for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
+      row_activity[index[iEl]] += primal * value[iEl];
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const double primal = solution.row_value[iRow];
+    const double lower = lp.row_lower_[iRow];
+    const double upper = lp.row_upper_[iRow];
+    // @primal_infeasibility calculation
+    double row_infeasibility = 0;
+    if (primal < lower - options.primal_feasibility_tolerance) {
+      row_infeasibility = lower - primal;
+    } else if (primal > upper + options.primal_feasibility_tolerance) {
+      row_infeasibility = primal - upper;
+    }
+    if (row_infeasibility > 0) {
+      if (row_infeasibility > options.primal_feasibility_tolerance) {
+        if (row_infeasibility > 2 * max_row_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Row %6d has         infeasiblilty of %11.4g from "
+                       "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
+                       (int)iRow, row_infeasibility, lower, primal, upper);
+        num_row_infeasibilities++;
+      }
+      max_row_infeasibility =
+          std::max(row_infeasibility, max_row_infeasibility);
+      sum_row_infeasibilities += row_infeasibility;
+    }
+    double row_residual = fabs(primal - row_activity[iRow]);
+    if (row_residual > kRowResidualTolerance) {
+      if (row_residual > 2 * max_row_residual) {
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "Row %6d has         residual      of %11.4g\n", (int)iRow,
+                     row_residual);
+      }
+      num_row_residuals++;
+    }
+    max_row_residual = std::max(row_residual, max_row_residual);
+    sum_row_residuals += row_residual;
+  }
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Solution has               num          max          sum\n");
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Col     infeasibilities %6d  %11.4g  %11.4g\n",
+               (int)num_col_infeasibilities, max_col_infeasibility,
+               sum_col_infeasibilities);
+  if (lp.isMip())
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
+                 (int)num_integer_infeasibilities, max_integer_infeasibility,
+                 sum_integer_infeasibilities);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Row     infeasibilities %6d  %11.4g  %11.4g\n",
+               (int)num_row_infeasibilities, max_row_infeasibility,
+               sum_row_infeasibilities);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Row     residuals       %6d  %11.4g  %11.4g\n",
+               (int)num_row_residuals, max_row_residual, sum_row_residuals);
+}
+
+void writeBasisFile(FILE*& file, const HighsBasis& basis) {
+  fprintf(file, "HiGHS v%d\n", (int)HIGHS_VERSION_MAJOR);
+  if (basis.valid == false) {
+    fprintf(file, "None\n");
+    return;
+  }
+  fprintf(file, "Valid\n");
+  fprintf(file, "# Columns %d\n", (int)basis.col_status.size());
+  for (const auto& status : basis.col_status) fprintf(file, "%d ", (int)status);
+  fprintf(file, "\n");
+  fprintf(file, "# Rows %d\n", (int)basis.row_status.size());
+  for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
+  fprintf(file, "\n");
 }
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename) {
-  // Reads a basis file, returning an error if what's read is
-  // inconsistent with the sizes of the HighsBasis passed in
+  // Opens a basis file as an ifstream
   HighsStatus return_status = HighsStatus::kOk;
-  std::ifstream inFile(filename);
-  if (inFile.fail()) {
+  std::ifstream in_file;
+  in_file.open(filename.c_str(), std::ios::in);
+  if (in_file.is_open()) {
+    return_status = readBasisStream(log_options, basis, in_file);
+    in_file.close();
+  } else {
     highsLogUser(log_options, HighsLogType::kError,
                  "readBasisFile: Cannot open readable file \"%s\"\n",
                  filename.c_str());
-    return HighsStatus::kError;
+    return_status = HighsStatus::kError;
   }
+  return return_status;
+}
+
+HighsStatus readBasisStream(const HighsLogOptions& log_options,
+                            HighsBasis& basis, std::ifstream& in_file) {
+  // Reads a basis as an ifstream, returning an error if what's read is
+  // inconsistent with the sizes of the HighsBasis passed in
+  HighsStatus return_status = HighsStatus::kOk;
   std::string string_highs, string_version;
-  HighsInt highs_version_number;
-  inFile >> string_highs >> string_version >> highs_version_number;
-  if (highs_version_number == 1) {
-    HighsInt numCol, numRow;
-    inFile >> numCol >> numRow;
-    HighsInt basis_numCol = (HighsInt)basis.col_status.size();
-    HighsInt basis_numRow = (HighsInt)basis.row_status.size();
-    if (numCol != basis_numCol) {
+  in_file >> string_highs >> string_version;
+  if (string_version == "v1") {
+    std::string keyword;
+    in_file >> keyword;
+    if (keyword == "None") {
+      basis.valid = false;
+      return HighsStatus::kOk;
+    }
+    const HighsInt basis_num_col = (HighsInt)basis.col_status.size();
+    const HighsInt basis_num_row = (HighsInt)basis.row_status.size();
+    HighsInt int_status;
+    assert(keyword == "Valid");
+    HighsInt num_col, num_row;
+    // Read in the columns section
+    in_file >> keyword >> keyword;
+    assert(keyword == "Columns");
+    in_file >> num_col;
+    if (num_col != basis_num_col) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readBasisFile: Basis file is for %" HIGHSINT_FORMAT
                    " columns, not %" HIGHSINT_FORMAT "\n",
-                   numCol, basis_numCol);
+                   num_col, basis_num_col);
       return HighsStatus::kError;
     }
-    if (numRow != basis_numRow) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      in_file >> int_status;
+      basis.col_status[iCol] = (HighsBasisStatus)int_status;
+    }
+    // Read in the rows section
+    in_file >> keyword >> keyword;
+    assert(keyword == "Rows");
+    in_file >> num_row;
+    if (num_row != basis_num_row) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readBasisFile: Basis file is for %" HIGHSINT_FORMAT
                    " rows, not %" HIGHSINT_FORMAT "\n",
-                   numRow, basis_numRow);
+                   num_row, basis_num_row);
       return HighsStatus::kError;
     }
-    HighsInt int_status;
-    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-      inFile >> int_status;
-      basis.col_status[iCol] = (HighsBasisStatus)int_status;
-    }
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      inFile >> int_status;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      in_file >> int_status;
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
-    }
-    if (inFile.eof()) {
-      highsLogUser(
-          log_options, HighsLogType::kError,
-          "readBasisFile: Reached end of file before reading complete basis\n");
-      return_status = HighsStatus::kError;
     }
   } else {
     highsLogUser(log_options, HighsLogType::kError,
-                 "readBasisFile: Cannot read basis file for HiGHS version "
-                 "%" HIGHSINT_FORMAT "\n",
-                 highs_version_number);
+                 "readBasisFile: Cannot read basis file for HiGHS %s\n",
+                 string_version.c_str());
     return_status = HighsStatus::kError;
   }
-  inFile.close();
   return return_status;
 }
 
@@ -2656,7 +2813,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       }
       index.push_back(row_num++);
       value.push_back(-lp.col_lower_[iCol]);
-      // Complete 0 <= x - u*y
+      // Complete x - u*y <= 0
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
       if (has_row_names) {
@@ -2686,4 +2843,109 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   lp.num_row_ += 2 * num_semi_variables;
   assert(index.size() == new_num_nz);
   return lp;
+}
+
+void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
+  HighsLp row_wise_lp = lp;
+  vector<HighsInt>& a_start = lp.a_start_;
+  vector<HighsInt>& a_index = lp.a_index_;
+  vector<double>& a_value = lp.a_value_;
+  vector<HighsInt> a_count;
+  vector<HighsInt> ar_count;
+  vector<HighsInt> ar_start;
+  vector<HighsInt> ar_index;
+  vector<double> ar_value;
+  const bool has_name = lp.row_names_.size() > 0;
+  HighsInt num_nz = a_start[lp.num_col_];
+  const HighsInt original_num_nz = num_nz;
+  const HighsInt original_num_row = lp.num_row_;
+  HighsInt num_row_count_1 = 0;
+  ar_count.assign(lp.num_row_, 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++)
+      ar_count[a_index[iEl]]++;
+  }
+  ar_start.push_back(0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    ar_start.push_back(ar_start[iRow] + ar_count[iRow]);
+    ar_count[iRow] = ar_start[iRow];
+  }
+  ar_index.resize(num_nz);
+  ar_value.resize(num_nz);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
+      HighsInt iRow = a_index[iEl];
+      ar_index[ar_count[iRow]] = iCol;
+      ar_value[ar_count[iRow]] = a_value[iEl];
+      ar_count[iRow]++;
+    }
+  }
+  HighsInt newRow = 0;
+  HighsInt newEl = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const HighsInt row_count = ar_start[iRow + 1] - ar_start[iRow];
+    if (row_count == 1) {
+      HighsInt iCol = ar_index[ar_start[iRow]];
+      double value = ar_value[ar_start[iRow]];
+      assert(value);
+      if (value > 0) {
+        if (lp.row_lower_[iRow] > -kHighsInf)
+          lp.col_lower_[iCol] =
+              std::max(lp.row_lower_[iRow] / value, lp.col_lower_[iCol]);
+        if (lp.row_upper_[iRow] < kHighsInf)
+          lp.col_upper_[iCol] =
+              std::min(lp.row_upper_[iRow] / value, lp.col_upper_[iCol]);
+      } else {
+        if (lp.row_lower_[iRow] > -kHighsInf)
+          lp.col_upper_[iCol] =
+              std::min(lp.row_lower_[iRow] / value, lp.col_upper_[iCol]);
+        if (lp.row_upper_[iRow] < kHighsInf)
+          lp.col_lower_[iCol] =
+              std::max(lp.row_upper_[iRow] / value, lp.col_lower_[iCol]);
+      }
+      num_row_count_1++;
+      continue;
+    }
+    lp.row_lower_[newRow] = lp.row_lower_[iRow];
+    lp.row_upper_[newRow] = lp.row_upper_[iRow];
+    if (has_name) lp.row_names_[newRow] = lp.row_names_[iRow];
+    ar_start[newRow] = newEl;
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      ar_index[newEl] = ar_index[iEl];
+      ar_value[newEl] = ar_value[iEl];
+      newEl++;
+    }
+    newRow++;
+  }
+  ar_start[newRow] = newEl;
+  lp.num_row_ = newRow;
+  lp.row_lower_.resize(newRow);
+  lp.row_upper_.resize(newRow);
+  if (has_name) lp.row_names_.resize(newRow);
+
+  num_nz = ar_start[lp.num_row_];
+  a_count.assign(lp.num_col_, 0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++)
+      a_count[ar_index[iEl]]++;
+  }
+  a_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    a_start[iCol + 1] = a_start[iCol] + a_count[iCol];
+    a_count[iCol] = a_start[iCol];
+  }
+  a_index.resize(num_nz);
+  a_value.resize(num_nz);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      HighsInt iCol = ar_index[iEl];
+      a_index[a_count[iCol]] = iRow;
+      a_value[a_count[iCol]] = ar_value[iEl];
+      a_count[iCol]++;
+    }
+  }
+  assert(original_num_row - lp.num_row_ == num_row_count_1);
+  assert(original_num_nz - num_nz == num_row_count_1);
+  highsLogUser(log_options, HighsLogType::kWarning,
+               "Removed %d rows of count 1\n", (int)num_row_count_1);
 }
