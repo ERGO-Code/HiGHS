@@ -3127,7 +3127,9 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-bool HEkk::checkForCycling(const HighsInt variable_in, const HighsInt row_out) {
+bool HEkk::checkForCycling(const HighsInt variable_in, const HighsInt row_out,
+                           const HighsInt rebuild_reason) {
+  if (rebuild_reason) return false;
   if (variable_in == -1 || row_out == -1) return false;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
