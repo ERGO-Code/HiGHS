@@ -2363,11 +2363,17 @@ HighsStatus Highs::writeSolution(const std::string filename,
     writeBasisFile(file, basis_);
   }
   if (options_.ranging == kHighsOnString) {
-    this->getRanging();
+    if (model_.isMip() || model_.isQp()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot determing ranging information for MIP or QP\n");
+      return HighsStatus::kError;
+    }
+    return_status = interpretCallStatus(
+        options_.log_options, this->getRanging(), return_status, "getRanging");
+    if (return_status == HighsStatus::kError) return return_status;
     fprintf(file, "\nRanging\n");
-    writeRangingFile(file, model_.lp_,
-		     info_.objective_function_value,
-		     basis_, solution_,ranging_);
+    writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
+                     solution_, ranging_, style);
   }
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;

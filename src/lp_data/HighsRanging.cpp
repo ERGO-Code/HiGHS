@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>  // for negate
+#include <sstream>
 
 #include "lp_data/HighsModelUtils.h"
 
@@ -597,64 +598,149 @@ HighsStatus getRangingData(HighsRanging& ranging,
   ranging.valid = true;
   if (solver_object.options_.log_dev_level)
     writeRangingFile(stdout, use_lp,
-		     solver_object.highs_info_.objective_function_value,
-		     solver_object.basis_,
-		     solver_object.solution_,
-		     ranging);
+                     solver_object.highs_info_.objective_function_value,
+                     solver_object.basis_, solver_object.solution_, ranging,
+                     kSolutionStylePretty);
   return HighsStatus::kOk;
 }
 
-void writeRangingFile(FILE* file,
-		      const HighsLp& lp,
-		      const double objective_function_value,
-		      const HighsBasis& basis,
-		      const HighsSolution& solution,
-		      const HighsRanging& ranging) {
-  if (!ranging.valid) return;
-  fprintf(file,
-	  "\nRanging data: Optimal objective = %g\n"
-	  "           |                               Bound ranging        "
-	  "                           "
-	  " |                    Cost ranging\n"
-	  "Col Status | DownObj    Down       (Lower      Value      Upper "
-	  "    ) Up         UpObj     "
-	  " | DownObj    Down       Value      Up         UpObj\n",
-	  objective_function_value);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    fprintf(file,
-	    "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
-	    "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
-	    (int)iCol,
-	    statusToString(basis.col_status[iCol],
-			   lp.col_lower_[iCol],
-			   lp.col_upper_[iCol]).c_str(),
-	    ranging.col_bound_dn.objective_[iCol],
-	    ranging.col_bound_dn.value_[iCol], lp.col_lower_[iCol],
-	    solution.col_value[iCol],
-	    lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
-	    ranging.col_bound_up.objective_[iCol],
-	    ranging.col_cost_dn.objective_[iCol],
-	    ranging.col_cost_dn.value_[iCol], lp.col_cost_[iCol],
-	    ranging.col_cost_up.value_[iCol],
-	    ranging.col_cost_up.objective_[iCol]);
+void writeRangingFile(FILE* file, const HighsLp& lp,
+                      const double objective_function_value,
+                      const HighsBasis& basis, const HighsSolution& solution,
+                      const HighsRanging& ranging, const HighsInt style) {
+  if (!ranging.valid) {
+    fprintf(file, "None\n");
+    return;
   }
-  fprintf(file,
-	  "           |                               Bound ranging        "
-	  "                             \n"
-	  "Col Status | DownObj    Down       (Lower      Value      Upper "
-	  "    ) Up         UpObj   \n");
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+  const double double_tolerance = 1e-13;
+  std::stringstream ss;
+  const bool have_col_names = lp.col_names_.size() > 0;
+  const bool have_row_names = lp.row_names_.size() > 0;
+  const bool pretty = style == kSolutionStylePretty;
+  const char* pretty_cost_format =
+      "%6d   %4s  %-10.4g %-10.4g            %-10.4g            %-10.4g "
+      "%-10.4g %-s\n";
+  const char* raw_cost_format = "%-s %s %s %s %s\n";
+
+  const char* pretty_bound_format =
+      "%6d   %4s  %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g "
+      "%-s\n";
+  const char* raw_bound_format = "%-s %s %s %s %s\n";
+
+  std::array<char, 32> dn_objective;
+  std::array<char, 32> up_objective;
+  std::array<char, 32> dn_value;
+  std::array<char, 32> up_value;
+
+  std::array<char, 32> objective =
+      highsDoubleToString(objective_function_value, double_tolerance);
+  fprintf(file, "Objective %s\n", objective.data());
+  if (pretty) {
     fprintf(file,
-	    "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
-	    "%-10.4g |\n",
-	    (int)iRow,
-	    statusToString(basis.row_status[iRow],
-			   lp.row_lower_[iRow],
-			   lp.row_upper_[iRow]).c_str(),
-	    ranging.row_bound_dn.objective_[iRow],
-	    ranging.row_bound_dn.value_[iRow], lp.row_lower_[iRow],
-	    solution.row_value[iRow],
-	    lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
-	    ranging.row_bound_up.objective_[iRow]);
+            "\n                                            Cost ranging\n"
+            "Column Status  DownObj    Down                  Value             "
+            "    Up         UpObj      Name\n");
+  } else {
+    fprintf(file, "\nCost ranging\n");
+  }
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    // Create a column name
+    ss.str(std::string());
+    ss << "C" << iCol;
+    const std::string name = have_col_names ? lp.col_names_[iCol] : ss.str();
+    if (pretty) {
+      fprintf(file, pretty_cost_format, (int)iCol,
+              statusToString(basis.col_status[iCol], lp.col_lower_[iCol],
+                             lp.col_upper_[iCol])
+                  .c_str(),
+              ranging.col_cost_dn.objective_[iCol],
+              ranging.col_cost_dn.value_[iCol], lp.col_cost_[iCol],
+              ranging.col_cost_up.value_[iCol],
+              ranging.col_cost_up.objective_[iCol], name.c_str());
+    } else {
+      dn_objective = highsDoubleToString(ranging.col_cost_dn.objective_[iCol],
+                                         double_tolerance);
+      up_objective = highsDoubleToString(ranging.col_cost_up.objective_[iCol],
+                                         double_tolerance);
+      dn_value = highsDoubleToString(ranging.col_cost_dn.value_[iCol],
+                                     double_tolerance);
+      up_value = highsDoubleToString(ranging.col_cost_up.value_[iCol],
+                                     double_tolerance);
+      fprintf(file, raw_cost_format, name.c_str(), dn_objective.data(),
+              dn_value.data(), up_value.data(), up_objective.data());
+    }
+  }
+  if (pretty) {
+    fprintf(file,
+            "\n                                            Bound ranging\n"
+            "Column Status  DownObj    Down       Lower      Value      Upper "
+            "     Up         UpObj      Name\n");
+  } else {
+    fprintf(file, "\nBound ranging\nColumns\n");
+  }
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    // Create a column name
+    ss.str(std::string());
+    ss << "C" << iCol;
+    const std::string name = have_col_names ? lp.col_names_[iCol] : ss.str();
+    if (pretty) {
+      fprintf(file, pretty_bound_format, (int)iCol,
+              statusToString(basis.col_status[iCol], lp.col_lower_[iCol],
+                             lp.col_upper_[iCol])
+                  .c_str(),
+              ranging.col_bound_dn.objective_[iCol],
+              ranging.col_bound_dn.value_[iCol], lp.col_lower_[iCol],
+              solution.col_value[iCol], lp.col_upper_[iCol],
+              ranging.col_bound_up.value_[iCol],
+              ranging.col_bound_up.objective_[iCol], name.c_str());
+    } else {
+      dn_objective = highsDoubleToString(ranging.col_bound_dn.objective_[iCol],
+                                         double_tolerance);
+      up_objective = highsDoubleToString(ranging.col_bound_up.objective_[iCol],
+                                         double_tolerance);
+      dn_value = highsDoubleToString(ranging.col_bound_dn.value_[iCol],
+                                     double_tolerance);
+      up_value = highsDoubleToString(ranging.col_bound_up.value_[iCol],
+                                     double_tolerance);
+      fprintf(file, raw_bound_format, name.c_str(), dn_objective.data(),
+              dn_value.data(), up_value.data(), up_objective.data());
+    }
+  }
+
+  if (pretty) {
+    fprintf(file,
+            "                                            Bound ranging\n"
+            "   Row Status  DownObj    Down       Lower      Value      Upper "
+            "     Up         UpObj      Name\n");
+  } else {
+    fprintf(file, "Rows\n");
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    // Create a row name
+    ss.str(std::string());
+    ss << "R" << iRow;
+    const std::string name = have_row_names ? lp.row_names_[iRow] : ss.str();
+    if (pretty) {
+      fprintf(file, pretty_bound_format, (int)iRow,
+              statusToString(basis.row_status[iRow], lp.row_lower_[iRow],
+                             lp.row_upper_[iRow])
+                  .c_str(),
+              ranging.row_bound_dn.objective_[iRow],
+              ranging.row_bound_dn.value_[iRow], lp.row_lower_[iRow],
+              solution.row_value[iRow], lp.row_upper_[iRow],
+              ranging.row_bound_up.value_[iRow],
+              ranging.row_bound_up.objective_[iRow], name.c_str());
+    } else {
+      dn_objective = highsDoubleToString(ranging.row_bound_dn.objective_[iRow],
+                                         double_tolerance);
+      up_objective = highsDoubleToString(ranging.row_bound_up.objective_[iRow],
+                                         double_tolerance);
+      dn_value = highsDoubleToString(ranging.row_bound_dn.value_[iRow],
+                                     double_tolerance);
+      up_value = highsDoubleToString(ranging.row_bound_up.value_[iRow],
+                                     double_tolerance);
+      fprintf(file, raw_bound_format, name.c_str(), dn_objective.data(),
+              dn_value.data(), up_value.data(), up_objective.data());
+    }
   }
 }

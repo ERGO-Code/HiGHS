@@ -40,10 +40,8 @@ struct HighsRanging {
 
 HighsStatus getRangingData(HighsRanging& ranging,
                            HighsLpSolverObject& solver_object);
-void writeRangingFile(FILE* file,
-		      const HighsLp& lp,
-		      const double objective_function_value,
-		      const HighsBasis& basis,
-		      const HighsSolution& solution,
-		      const HighsRanging& ranging);
+void writeRangingFile(FILE* file, const HighsLp& lp,
+                      const double objective_function_value,
+                      const HighsBasis& basis, const HighsSolution& solution,
+                      const HighsRanging& ranging, const HighsInt style);
 #endif

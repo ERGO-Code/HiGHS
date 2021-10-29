@@ -126,9 +126,8 @@ class Highs {
   /**
    * @brief writes the current solution to a file
    */
-  HighsStatus writeSolution(
-      const std::string filename,   //!< the filename
-      const HighsInt style);  //!< Style of solution file
+  HighsStatus writeSolution(const std::string filename,  //!< the filename
+                            const HighsInt style);  //!< Style of solution file
 
   /**
    * @brief reads a HiGHS solution file
