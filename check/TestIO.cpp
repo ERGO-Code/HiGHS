@@ -4,7 +4,7 @@
 #include "HighsIO.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 char printedmsg[100000];
 void* receiveddata = NULL;

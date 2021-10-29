@@ -5,7 +5,7 @@
 #include "mip/HighsGFkSolve.h"
 #include "util/HighsRandom.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 template <int k>
 void testGFkSolve(const std::vector<HighsInt>& Avalue,

@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void ekk_solve(Highs& highs, std::string presolve,
                const HighsModelStatus require_model_status,

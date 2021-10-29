@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("highs-info", "[highs_info]") {
   std::string filename;
