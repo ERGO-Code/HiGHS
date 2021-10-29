@@ -129,13 +129,10 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
         std::cout << "Multiple solution files not implemented.\n";
         return false;
       }
-      const HighsInt style = kSolutionStyleRaw;
       if (setLocalOptionValue(options.log_options, kSolutionFileString,
                               options.records, v[0]) != OptionStatus::kOk ||
           setLocalOptionValue(options.log_options, "write_solution_to_file",
                               options.records, true) != OptionStatus::kOk ||
-          setLocalOptionValue(options.log_options, "write_solution_style",
-                              options.records, style) != OptionStatus::kOk)
         return false;
     }
 
