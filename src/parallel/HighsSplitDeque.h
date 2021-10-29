@@ -20,7 +20,6 @@
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
-#include <random>
 #include <thread>
 
 #include "parallel/HighsCacheAlign.h"
@@ -480,8 +479,7 @@ class HighsSplitDeque {
                   int ownerId) {
     ownerData.ownerId = ownerId;
     globalQueueData.ownerId = ownerId;
-    std::random_device rd;
-    ownerData.randgen.initialise(rd());
+    ownerData.randgen.initialise(ownerId);
     ownerData.globalQueue = globalQueue;
 
     stealerData.waitForTaskData = cache_aligned::make_unique<WaitForTaskData>();
