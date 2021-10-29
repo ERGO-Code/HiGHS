@@ -418,10 +418,13 @@ class HighsSplitDeque {
     kPublishGlobal = 0xff00u,
   };
 
-  void growShared(bool publishAllTasks) {
+  void growShared() {
+    unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
+    if (!splitRq) return;
+
     uint32_t newSplit;
 
-    if (publishAllTasks)
+    if (splitRq & kPublishGlobal)
       newSplit = std::min(TaskArraySize, ownerData.head);
     else
       newSplit = std::min(TaskArraySize,
@@ -444,8 +447,7 @@ class HighsSplitDeque {
 
     stealerData.ts.fetch_xor(xorMask, std::memory_order_release);
     ownerData.splitCopy = newSplit;
-    unsigned int splitRq =
-        splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
+    splitRq = splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
     if (splitRq & kPublishGlobal) ownerData.globalQueue->publishWork(this);
   }
 
@@ -501,10 +503,8 @@ class HighsSplitDeque {
   void push(F&& f) {
     if (ownerData.head >= TaskArraySize) {
       // task queue is full, execute task directly
-      if (ownerData.splitCopy < TaskArraySize && !ownerData.allStolenCopy) {
-        unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-        if (splitRq) growShared(splitRq & kPublishGlobal);
-      }
+      if (ownerData.splitCopy < TaskArraySize && !ownerData.allStolenCopy)
+        growShared();
 
       ownerData.head += 1;
       f();
@@ -526,10 +526,8 @@ class HighsSplitDeque {
             splitRequest.fetch_and(~kSplitRequest, std::memory_order_relaxed);
         if (splitRq & kPublishGlobal) ownerData.globalQueue->publishWork(this);
       }
-    } else {
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) growShared(splitRq & kPublishGlobal);
-    }
+    } else
+      growShared();
   }
 
   enum class Status {
@@ -564,10 +562,8 @@ class HighsSplitDeque {
         ownerData.allStolenCopy = true;
         stealerData.allStolen.store(true, std::memory_order_relaxed);
       }
-    } else if (ownerData.head != ownerData.splitCopy) {
-      unsigned int splitRq = splitRequest.load(std::memory_order_relaxed);
-      if (splitRq) growShared(splitRq & kPublishGlobal);
-    }
+    } else if (ownerData.head != ownerData.splitCopy)
+      growShared();
 
     return std::make_pair(Status::kWork, &taskArray[ownerData.head]);
   }
