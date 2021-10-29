@@ -796,11 +796,19 @@ void HEkkPrimal::iterate() {
       solve_phase == kSolvePhase1)
     rebuild_reason = kRebuildReasonPossiblyPhase1Feasible;
 
-  assert(rebuild_reason == kRebuildReasonNo ||
-         rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
-         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
-         rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
-         rebuild_reason == kRebuildReasonUpdateLimitReached);
+  const bool ok_rebuild_reason =
+      rebuild_reason == kRebuildReasonNo ||
+      rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
+      rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
+      rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
+      rebuild_reason == kRebuildReasonUpdateLimitReached;
+  if (!ok_rebuild_reason) {
+    printf("HEkkPrimal::rebuild Solve %d; Iter %d: rebuild_reason = %d\n",
+           (int)ekk_instance_.debug_solve_call_num_,
+           (int)ekk_instance_.iteration_count_, (int)rebuild_reason);
+    fflush(stdout);
+  }
+  assert(ok_rebuild_reason);
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2);
 }
 
@@ -1331,7 +1339,7 @@ void HEkkPrimal::update() {
 
   assert(row_out >= 0);
 
-  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
+  if (ekk_instance_.checkForCycling(variable_in, row_out, rebuild_reason)) {
     analysis->num_primal_cycling_detections++;
     if (ekk_instance_.iteration_count_ ==
         ekk_instance_.previous_iteration_cycling_detected + 1) {

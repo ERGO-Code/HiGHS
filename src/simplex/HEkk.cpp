@@ -1065,7 +1065,7 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = 160;
+  const HighsInt debug_from_solve_call_num = -1;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
@@ -3127,7 +3127,9 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-bool HEkk::checkForCycling(const HighsInt variable_in, const HighsInt row_out) {
+bool HEkk::checkForCycling(const HighsInt variable_in, const HighsInt row_out,
+                           const HighsInt rebuild_reason) {
+  if (rebuild_reason) return false;
   if (variable_in == -1 || row_out == -1) return false;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
