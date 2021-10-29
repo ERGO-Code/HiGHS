@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cstdio>  // For printf
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
                 std::vector<double>& rowLower, std::vector<double>& rowUpper,

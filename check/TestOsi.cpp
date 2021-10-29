@@ -19,7 +19,7 @@
 #include "OsiHiGHSSolverInterface.hpp"
 #include "OsiUnitTests.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 using namespace OsiUnitTest;
 

@@ -4,7 +4,7 @@
 
 #include "catch.hpp"
 //#include <exception>
-const bool dev_run = false;
+const bool dev_run = true;
 
 void invalidArgument() {
   // Used in .lp file reader
