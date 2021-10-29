@@ -211,7 +211,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     assert(info.dual_solution_status != kSolutionStatusNone);
   }
   const double double_tolerance = 1e-13;
-  fprintf(file, "\nPrimal solution values\n");
+  fprintf(file, "\n# Primal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
   } else {
@@ -227,7 +227,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     std::array<char, 32> objStr =
         highsDoubleToString((double)objective_function_value, double_tolerance);
     fprintf(file, "Objective %s\n", objStr.data());
-    fprintf(file, "Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       std::array<char, 32> valStr =
           highsDoubleToString(solution.col_value[ix], double_tolerance);
@@ -237,7 +237,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
       const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
       fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
     }
-    fprintf(file, "Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       std::array<char, 32> valStr =
           highsDoubleToString(solution.row_value[ix], double_tolerance);
@@ -248,7 +248,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
       fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
     }
   }
-  fprintf(file, "\nDual solution values\n");
+  fprintf(file, "\n# Dual solution values\n");
   if (!have_dual || info.dual_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
   } else {
@@ -258,7 +258,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
       assert(info.dual_solution_status == kSolutionStatusInfeasible);
       fprintf(file, "Infeasible\n");
     }
-    fprintf(file, "Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       std::array<char, 32> valStr =
           highsDoubleToString(solution.col_dual[ix], double_tolerance);
@@ -267,7 +267,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
       const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
       fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
     }
-    fprintf(file, "Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       std::array<char, 32> valStr =
           highsDoubleToString(solution.row_dual[ix], double_tolerance);

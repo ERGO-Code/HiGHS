@@ -58,8 +58,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f.open(invalid_basis_file, std::ios::out);
   f << "HiGHS v1" << std::endl;
   f << "Valid" << std::endl;
-  f << "Columns " << highs.getNumCol() - 1 << std::endl;
-  f << "Rows " << highs.getNumRow() << std::endl;
+  f << "# Columns " << highs.getNumCol() - 1 << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
   REQUIRE(return_status == HighsStatus::kError);
