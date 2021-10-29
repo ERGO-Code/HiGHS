@@ -2350,7 +2350,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
                     style);
   if (style == kSolutionStyleRaw) {
-    fprintf(file, "\nBasis\n");
+    fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
   }
   if (file != stdout) fclose(file);
