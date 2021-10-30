@@ -32,7 +32,7 @@ inline int thread_num() {
 }
 
 template <typename F>
-void spawn(HighsTaskExecutor::WorkerDeque* localDeque, F&& f) {
+void spawn(HighsSplitDeque* localDeque, F&& f) {
   localDeque->push(std::forward<F>(f));
 }
 
@@ -41,22 +41,21 @@ void spawn(F&& f) {
   spawn(HighsTaskExecutor::getThisWorkerDeque(), std::forward<F>(f));
 }
 
-inline void sync(HighsTaskExecutor::WorkerDeque* localDeque) {
-  std::pair<HighsTaskExecutor::WorkerDeque::Status, HighsTaskExecutor::Task*>
-      popResult = localDeque->pop();
+inline void sync(HighsSplitDeque* localDeque) {
+  std::pair<HighsSplitDeque::Status, HighsTask*> popResult = localDeque->pop();
   switch (popResult.first) {
-    case HighsTaskExecutor::WorkerDeque::Status::kEmpty:
+    case HighsSplitDeque::Status::kEmpty:
       assert(false);
       // fall through
-    case HighsTaskExecutor::WorkerDeque::Status::kOverflown:
+    case HighsSplitDeque::Status::kOverflown:
       // when the local deque is overflown the task has been executed during
       // spawn already
       break;
-    case HighsTaskExecutor::WorkerDeque::Status::kStolen:
+    case HighsSplitDeque::Status::kStolen:
       HighsTaskExecutor::getGlobalTaskExecutor()->sync_stolen_task(
           localDeque, popResult.second);
       break;
-    case HighsTaskExecutor::WorkerDeque::Status::kWork:
+    case HighsSplitDeque::Status::kWork:
       popResult.second->run();
   }
 }
@@ -70,8 +69,7 @@ void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
     return;
   }
 
-  HighsTaskExecutor::WorkerDeque* workerDeque =
-      HighsTaskExecutor::getThisWorkerDeque();
+  HighsSplitDeque* workerDeque = HighsTaskExecutor::getThisWorkerDeque();
 
   HighsInt split = (start + end) >> 1;
   spawn(workerDeque,

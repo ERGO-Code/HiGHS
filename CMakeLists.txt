@@ -248,6 +248,20 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles("int main () { _mm_pause(); }" HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE FAIL_REGEX "implicitly declaring library function")
+if( NOT HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE )
+    check_cxx_source_compiles("#include \"immintrin.h\"\n int main () { _mm_pause(); }" HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
+    if(HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
+        set(HIGHS_HAVE_MM_PAUSE 1)
+    else()
+        set(HIGHS_HAVE_MM_PAUSE 0)
+    endif()
+else()
+    set(HIGHS_HAVE_MM_PAUSE 1)
+endif()
+
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 include_directories(
     ${HIGHS_BINARY_DIR}

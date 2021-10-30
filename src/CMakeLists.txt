@@ -238,8 +238,10 @@ set(headers
     model/HighsModel.h
     parallel/HighsCacheAlign.h
     parallel/HighsParallel.h
+    parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
+    parallel/HighsTask.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
@@ -322,6 +324,9 @@ add_library(libhighs ${sources})
 if (IPX_ON)
     target_link_libraries(libhighs libipx)
 endif()
+
+find_package(Threads REQUIRED)
+target_link_libraries(libhighs Threads::Threads)
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -680,8 +685,10 @@ set(headers_fast_build_
     model/HighsModel.h
     parallel/HighsCacheAlign.h
     parallel/HighsParallel.h
+    parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
+    parallel/HighsTask.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h

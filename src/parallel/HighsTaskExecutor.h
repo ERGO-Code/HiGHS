@@ -26,26 +26,20 @@
 #include "util/HighsRandom.h"
 
 class HighsTaskExecutor {
-  static constexpr int kTaskArraySize = 8192;
-  static constexpr int kTaskSize = 64;
   static constexpr int kNumTryFac = 16;
   static constexpr int kMicroSecsBeforeSleep = 5000;
   static constexpr int kMicroSecsBeforeGlobalSync = 1000;
 
   using cache_aligned = highs::cache_aligned;
 
- public:
-  using WorkerDeque = HighsSplitDeque<kTaskArraySize, kTaskSize>;
-  using Task = WorkerDeque::Task;
-
  private:
-  static thread_local WorkerDeque* threadLocalWorkerDeque;
+  static thread_local HighsSplitDeque* threadLocalWorkerDeque;
   static cache_aligned::shared_ptr<HighsTaskExecutor> globalExecutor;
 
-  std::vector<cache_aligned::unique_ptr<WorkerDeque>> workerDeques;
-  cache_aligned::shared_ptr<WorkerDeque::GlobalQueue> globalQueue;
+  std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
+  cache_aligned::shared_ptr<HighsSplitDeque::GlobalQueue> globalQueue;
 
-  Task* random_steal_loop(WorkerDeque* localDeque) {
+  HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
 
     int numTries = 16 * (numWorkers - 1);
@@ -54,7 +48,8 @@ class HighsTaskExecutor {
 
     while (true) {
       for (int s = 0; s < numTries; ++s) {
-        Task* task = localDeque->randomSteal(workerDeques.data(), numWorkers);
+        HighsTask* task =
+            localDeque->randomSteal(workerDeques.data(), numWorkers);
         if (task) return task;
       }
 
@@ -73,14 +68,14 @@ class HighsTaskExecutor {
   }
 
   void run_worker(int workerId) {
-    WorkerDeque* localDeque = workerDeques[workerId].get();
+    HighsSplitDeque* localDeque = workerDeques[workerId].get();
     threadLocalWorkerDeque = localDeque;
-    Task* currentTask =
+    HighsTask* currentTask =
         globalQueue->waitForNewTask(localDeque, kMicroSecsBeforeSleep);
     while (true) {
       assert(currentTask != nullptr);
 
-      currentTask->run(localDeque);
+      localDeque->runStolenTask(currentTask);
 
       currentTask = random_steal_loop(localDeque);
       if (currentTask != nullptr) continue;
@@ -94,18 +89,21 @@ class HighsTaskExecutor {
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
     workerDeques.resize(numThreads);
-    globalQueue = cache_aligned::make_shared<WorkerDeque::GlobalQueue>(
+    globalQueue = cache_aligned::make_shared<HighsSplitDeque::GlobalQueue>(
         workerDeques.data());
 
     for (int i = 0; i < numThreads; ++i)
-      workerDeques[i] = cache_aligned::make_unique<WorkerDeque>(globalQueue, i);
+      workerDeques[i] =
+          cache_aligned::make_unique<HighsSplitDeque>(globalQueue, i);
 
     threadLocalWorkerDeque = workerDeques[0].get();
     for (int i = 1; i < numThreads; ++i)
       std::thread([&](int id) { run_worker(id); }, i).detach();
   }
 
-  static WorkerDeque* getThisWorkerDeque() { return threadLocalWorkerDeque; }
+  static HighsSplitDeque* getThisWorkerDeque() {
+    return threadLocalWorkerDeque;
+  }
 
   static HighsTaskExecutor* getGlobalTaskExecutor() {
     return globalExecutor.get();
@@ -121,8 +119,8 @@ class HighsTaskExecutor {
           cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
   }
 
-  void sync_stolen_task(WorkerDeque* localDeque, Task* stolenTask) {
-    if (!stolenTask->leapfrog(localDeque)) {
+  void sync_stolen_task(HighsSplitDeque* localDeque, HighsTask* stolenTask) {
+    if (!localDeque->leapfrogStolenTask(stolenTask)) {
       const int numWorkers = workerDeques.size();
       int numTries = kNumTryFac * (numWorkers - 1);
 
@@ -134,8 +132,9 @@ class HighsTaskExecutor {
             localDeque->popStolen();
             return;
           }
-          Task* task = localDeque->randomSteal(workerDeques.data(), numWorkers);
-          if (task) task->run(localDeque);
+          HighsTask* task =
+              localDeque->randomSteal(workerDeques.data(), numWorkers);
+          if (task) localDeque->runStolenTask(task);
         }
 
         auto numMicroSecs =
@@ -150,7 +149,7 @@ class HighsTaskExecutor {
       }
 
       if (!stolenTask->isFinished())
-        stolenTask->waitForTaskToFinish(localDeque);
+        localDeque->waitForTaskToFinish(stolenTask);
     }
 
     localDeque->popStolen();

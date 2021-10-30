@@ -10,6 +10,8 @@
 #cmakedefine HiGHSRELEASE
 #cmakedefine IPX_ON
 #cmakedefine HIGHSINT64
+#cmakedefine HIGHS_HAVE_MM_PAUSE
+#cmakedefine HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN
 
 #define HIGHS_GITHASH "@GITHASH@"
 #define HIGHS_COMPILATION_DATE "@TODAY@"
