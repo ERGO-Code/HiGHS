@@ -1210,6 +1210,8 @@ void HEkkDual::iterate() {
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
+  checkForCycling();
+
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
 
@@ -1242,33 +1244,6 @@ void HEkkDual::iterate() {
   ekk_instance_.status_.has_primal_objective_value = false;
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  updatePrimal");
-
-  if (ekk_instance_.checkForCycling(variable_in, row_out, rebuild_reason)) {
-    analysis->num_dual_cycling_detections++;
-    printf("HEkkDual::iterate Cycling_detected: solve %d (Iteration %d)\n",
-           (int)ekk_instance_.debug_solve_call_num_,
-           (int)ekk_instance_.iteration_count_);
-    if (ekk_instance_.iteration_count_ ==
-        ekk_instance_.previous_iteration_cycling_detected + 1) {
-      // Cycling detected on successive iterations suggests infinite cycling
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-                  "Cycling in dual simplex: rebuild\n");
-      printf("Calling exit(0)\n");
-      fflush(stdout);
-      exit(0);
-      rebuild_reason = kRebuildReasonCycling;
-    } else {
-      ekk_instance_.previous_iteration_cycling_detected =
-          ekk_instance_.iteration_count_;
-    }
-    if (ekk_instance_.debug_solve_call_num_ == 161474 &&
-        ekk_instance_.iteration_count_ == 39) {
-      printf("Calling exit(0)\n");
-      fflush(stdout);
-      exit(0);
-    }
-    //    assert(1 == 0);
-  }
 
   // Update the records of chosen rows and pivots
   //  ekk_instance_.info_.pivot_.push_back(alpha_row);
@@ -2677,4 +2652,8 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
   return HighsDebugStatus::kOk;
+}
+
+void HEkkDual::checkForCycling() {
+  ekk_instance_.checkForCycling(SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
 }

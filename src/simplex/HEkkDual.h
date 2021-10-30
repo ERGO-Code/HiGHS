@@ -372,6 +372,8 @@ class HEkkDual {
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
+  void checkForCycling();
+
   // Devex scalars
   HighsInt num_devex_iterations =
       0;  //!< Number of Devex iterations with the current framework

@@ -3127,17 +3127,46 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-bool HEkk::checkForCycling(const HighsInt variable_in, const HighsInt row_out,
-                           const HighsInt rebuild_reason) {
-  if (rebuild_reason) return false;
-  if (variable_in == -1 || row_out == -1) return false;
+void HEkk::checkForCycling(const SimplexAlgorithm algorithm,
+			   const HighsInt variable_in,
+			   const HighsInt row_out,
+                           HighsInt& rebuild_reason) {
+  if (rebuild_reason) return;
+  if (variable_in == -1 || row_out == -1) return;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
 
   HighsHashHelpers::sparse_inverse_combine(currhash, variable_out);
   HighsHashHelpers::sparse_combine(currhash, variable_in);
 
-  return visited_basis_.find(currhash) != nullptr;
+  const bool call_exit_on_cycling = false;
+
+  const bool cycling_detected = visited_basis_.find(currhash) != nullptr;
+  if (cycling_detected) {
+    if (algorithm == SimplexAlgorithm::kPrimal) {
+      analysis_.num_primal_cycling_detections++;
+      printf("HEkkPrimal");
+    } else {
+      analysis_.num_dual_cycling_detections++;
+      printf("HEkkDual");
+    }
+    printf(" Cycling_detected: solve %d (Iteration %d)\n",
+           (int)debug_solve_call_num_, (int)iteration_count_);
+    if (iteration_count_ == previous_iteration_cycling_detected + 1) {
+      // Cycling detected on successive iterations suggests infinite cycling
+      highsLogDev(options_->log_options, HighsLogType::kWarning,
+                  "Cycling in %s simplex: rebuild\n",
+		  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual");
+      if (call_exit_on_cycling) {
+	printf("Calling exit(0)\n");
+	fflush(stdout);
+	exit(0);
+      }
+      rebuild_reason = kRebuildReasonCycling;
+    } else {
+      previous_iteration_cycling_detected = iteration_count_;
+    }
+  }
 }
 
 void HEkk::updateMatrix(const HighsInt variable_in,

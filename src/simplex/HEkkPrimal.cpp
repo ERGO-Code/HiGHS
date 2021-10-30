@@ -762,7 +762,14 @@ void HEkkPrimal::iterate() {
   if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
 
+  checkForCycling();
+  if (rebuild_reason) {
+    assert(rebuild_reason == kRebuildReasonCycling);
+    return;
+  }
+
   if (row_out >= 0) {
+    //
     // Perform unit BTRAN and PRICE to get pivotal row - and do a
     // numerical check.
     //
@@ -1338,23 +1345,6 @@ void HEkkPrimal::update() {
   }
 
   assert(row_out >= 0);
-
-  if (ekk_instance_.checkForCycling(variable_in, row_out, rebuild_reason)) {
-    analysis->num_primal_cycling_detections++;
-    if (ekk_instance_.iteration_count_ ==
-        ekk_instance_.previous_iteration_cycling_detected + 1) {
-      // Cycling detected on successive iterations suggests infinite cycling
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-                  "Cycling in primal simplex: rebuild\n");
-      rebuild_reason = kRebuildReasonCycling;
-    } else {
-      ekk_instance_.previous_iteration_cycling_detected =
-          ekk_instance_.iteration_count_;
-    }
-    //    printf("Cycling_detected: solve %d\n",
-    //           (int)ekk_instance_.debug_solve_call_num_);
-    //  assert(1 == 0);
-  }
 
   // Now set the value of the entering variable
   info.baseValue_[row_out] = value_in;
@@ -2538,4 +2528,8 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
       num_free_col, nonbasic_free_col_set);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   return HighsDebugStatus::kOk;
+}
+
+void HEkkPrimal::checkForCycling() {
+  ekk_instance_.checkForCycling(SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
 }
