@@ -1065,7 +1065,7 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = -160;
+  const HighsInt debug_from_solve_call_num = 1;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
@@ -3127,45 +3127,34 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-void HEkk::checkForCycling(const SimplexAlgorithm algorithm,
+bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
                            const HighsInt variable_in, const HighsInt row_out,
-                           HighsInt& rebuild_reason) {
-  if (rebuild_reason) return;
-  if (variable_in == -1 || row_out == -1) return;
+                           const HighsInt rebuild_reason) {
+  if (rebuild_reason) return false;
+  if (variable_in == -1 || row_out == -1) return false;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
 
   HighsHashHelpers::sparse_inverse_combine(currhash, variable_out);
   HighsHashHelpers::sparse_combine(currhash, variable_in);
 
-  const bool call_exit_on_cycling = false;
-
-  const bool cycling_detected = visited_basis_.find(currhash) != nullptr;
-  if (cycling_detected) {
-    if (algorithm == SimplexAlgorithm::kPrimal) {
-      analysis_.num_primal_cycling_detections++;
-      printf("HEkkPrimal");
-    } else {
-      analysis_.num_dual_cycling_detections++;
-      printf("HEkkDual");
-    }
-    printf(" Cycling_detected: solve %d (Iteration %d)\n",
-           (int)debug_solve_call_num_, (int)iteration_count_);
+  bool cycling_detected = false;
+  const bool posible_cycling = visited_basis_.find(currhash) != nullptr;
+  if (posible_cycling) {
     if (iteration_count_ == previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
-      highsLogDev(options_->log_options, HighsLogType::kWarning,
-                  "Cycling in %s simplex: rebuild\n",
-                  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual");
-      if (call_exit_on_cycling) {
-        printf("Calling exit(0)\n");
-        fflush(stdout);
-        exit(0);
-      }
-      rebuild_reason = kRebuildReasonCycling;
+      printf("Cycling detected in %s simplex solve %d (Iteration %d)\n",
+	     algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+	     (int)debug_solve_call_num_, (int)iteration_count_);
+      cycling_detected = true;
     } else {
+      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
+	     algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+	     (int)debug_solve_call_num_, (int)iteration_count_);
       previous_iteration_cycling_detected = iteration_count_;
     }
   }
+  return cycling_detected;
 }
 
 void HEkk::updateMatrix(const HighsInt variable_in,
@@ -3683,8 +3672,6 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
     rebuild_reason_string = "Primal infeasible in primal simplex";
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     rebuild_reason_string = "Choose column failure";
-  } else if (rebuild_reason == kRebuildReasonCycling) {
-    rebuild_reason_string = "Cycling detected";
   } else {
     rebuild_reason_string = "Unidentified";
     assert(1 == 0);
@@ -3818,19 +3805,18 @@ bool HEkk::allowTabooRows(const HighsInt rebuild_reason) {
          rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex;
 }
 
-void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason,
-                       const double density) {
+void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason) {
+  assert(iRow <= lp_.num_row_);
   HighsSimplexTabooRecord record;
   record.reason = reason;
-  record.row = iRow;
-  record.col = -1;
+  record.index = iRow;
   taboo_row.push_back(record);
 }
 
 void HEkk::applyTabooRow(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_row_);
   for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++) {
-    HighsInt iRow = taboo_row[iX].row;
+    HighsInt iRow = taboo_row[iX].index;
     taboo_row[iX].save_value = values[iRow];
     values[iRow] = overwrite_with;
   }
@@ -3839,7 +3825,37 @@ void HEkk::applyTabooRow(vector<double>& values, double overwrite_with) {
 void HEkk::unapplyTabooRow(vector<double>& values) {
   assert(values.size() >= lp_.num_row_);
   for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++)
-    values[taboo_row[iX].row] = taboo_row[iX].save_value;
+    values[taboo_row[iX].index] = taboo_row[iX].save_value;
+}
+
+bool HEkk::allowTabooCols(const HighsInt rebuild_reason) {
+  return rebuild_reason == kRebuildReasonPossiblyOptimal ||
+         rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+         rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex;
+}
+
+void HEkk::addTabooCol(const HighsInt iCol, const TabooReason reason) {
+  assert(iCol <= lp_.num_col_ + lp_.num_row_);
+  HighsSimplexTabooRecord record;
+  record.reason = reason;
+  record.index = iCol;
+  taboo_col.push_back(record);
+}
+
+void HEkk::applyTabooCol(vector<double>& values, double overwrite_with) {
+  assert(values.size() >= lp_.num_col_ + lp_.num_row_);
+  for (HighsInt iX = 0; iX < (HighsInt)taboo_col.size(); iX++) {
+    HighsInt iCol = taboo_col[iX].index;
+    taboo_col[iX].save_value = values[iCol];
+    values[iCol] = overwrite_with;
+  }
+}
+
+void HEkk::unapplyTabooCol(vector<double>& values) {
+  assert(values.size() >= lp_.num_col_ + lp_.num_row_);
+  for (HighsInt iX = 0; iX < (HighsInt)taboo_col.size(); iX++)
+    values[taboo_col[iX].index] = taboo_col[iX].save_value;
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {

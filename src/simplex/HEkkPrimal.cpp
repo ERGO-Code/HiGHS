@@ -64,8 +64,8 @@ HighsStatus HEkkPrimal::solve() {
                 info.num_dual_infeasibilities, info.max_dual_infeasibility,
                 info.sum_dual_infeasibilities);
 
-  // Allow taboo rows
-  ekk_instance_.allow_taboo_rows = true;
+  // Allow taboo columns
+  ekk_instance_.allow_taboo_cols = true;
 
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
@@ -624,7 +624,14 @@ void HEkkPrimal::rebuild() {
       solve_phase = kSolvePhaseError;
       return;
     }
+    // Record the synthetic clock for INVERT, and zero it for UPDATE
+    ekk_instance_.resetSyntheticClock();
   }
+  // Clear any taboo rows/cols
+  ekk_instance_.clearTaboo();
+  // Possibly allow taboo columns
+  ekk_instance_.allow_taboo_cols =
+    ekk_instance_.allowTabooCols(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {
     // Don't have the row-wise matrix, so reinitialise it
     //
@@ -699,11 +706,18 @@ void HEkkPrimal::rebuild() {
 }
 
 void HEkkPrimal::iterate() {
-  bool check = ekk_instance_.iteration_count_ >= check_iter;
-  if (check) {
-    printf("Iter %" HIGHSINT_FORMAT "\n", ekk_instance_.iteration_count_);
-    ekk_instance_.options_->highs_debug_level = kHighsDebugLevelExpensive;
+  const HighsInt from_check_iter = 15;
+  const HighsInt to_check_iter = from_check_iter + 10;
+  if (ekk_instance_.debug_solve_report_) {
+    ekk_instance_.debug_iteration_report_ =
+        ekk_instance_.iteration_count_ >= from_check_iter &&
+        ekk_instance_.iteration_count_ <= to_check_iter;
+    if (ekk_instance_.debug_iteration_report_) {
+      printf("HEkkDual::iterate Debug iteration %d\n",
+             (int)ekk_instance_.iteration_count_);
+    }
   }
+
   if (debugPrimalSimplex("Before iteration") ==
       HighsDebugStatus::kLogicalError) {
     solve_phase = kSolvePhaseError;
@@ -762,11 +776,8 @@ void HEkkPrimal::iterate() {
   if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
 
-  checkForCycling();
-  if (rebuild_reason) {
-    assert(rebuild_reason == kRebuildReasonCycling);
-    return;
-  }
+  
+  if (cyclingDetected()) return;
 
   if (row_out >= 0) {
     //
@@ -821,10 +832,11 @@ void HEkkPrimal::iterate() {
 
 void HEkkPrimal::chuzc() {
   if (done_next_chuzc) assert(use_hyper_chuzc);
+  vector<double>& workDual = ekk_instance_.info_.workDual_;
+  ekk_instance_.applyTabooCol(workDual, 0);
   if (use_hyper_chuzc) {
     // Perform hyper-sparse CHUZC and then check result using full CHUZC
     if (!done_next_chuzc) chooseColumn(true);
-    const vector<double>& workDual = ekk_instance_.info_.workDual_;
     const bool check_hyper_chuzc = true;
     if (check_hyper_chuzc) {
       HighsInt hyper_sparse_variable_in = variable_in;
@@ -852,6 +864,7 @@ void HEkkPrimal::chuzc() {
   } else {
     chooseColumn(false);
   }
+  ekk_instance_.unapplyTabooCol(workDual);
 }
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
@@ -1419,6 +1432,9 @@ void HEkkPrimal::hyperChooseColumn() {
         max_changed_measure_value, max_changed_measure_column);
   double best_measure = max_changed_measure_value;
   variable_in = max_changed_measure_column;
+  // Avoid max_changed_measure_column if its dual has been zeroed
+  // because it is taboo
+  if (!workDual[variable_in]) variable_in = -1;
   const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
   if (num_hyper_chuzc_candidates) {
     for (HighsInt iEntry = 1; iEntry <= num_hyper_chuzc_candidates; iEntry++) {
@@ -2530,7 +2546,21 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
   return HighsDebugStatus::kOk;
 }
 
-void HEkkPrimal::checkForCycling() {
-  ekk_instance_.checkForCycling(SimplexAlgorithm::kPrimal, variable_in, row_out,
-                                rebuild_reason);
+bool HEkkPrimal::cyclingDetected() {
+  bool cycling_detected =
+    ekk_instance_.cyclingDetected(SimplexAlgorithm::kPrimal, variable_in, row_out,
+				  rebuild_reason);
+  if (cycling_detected) {
+    analysis->num_primal_cycling_detections++;
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+		"Cycling detected in primal simplex:");
+    if (ekk_instance_.allow_taboo_cols) {
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+		  "make column %d taboo\n", (int)variable_in);
+      ekk_instance_.addTabooCol(variable_in, TabooReason::kCycling);
+    } else {
+      assert(1==0);
+    }
+  }
+  return cycling_detected;
 }

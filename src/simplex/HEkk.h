@@ -193,6 +193,7 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
 
+  bool allow_taboo_cols;
   bool allow_taboo_rows;
   std::vector<HighsSimplexTabooRecord> taboo_col;
   std::vector<HighsSimplexTabooRecord> taboo_row;
@@ -256,9 +257,9 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  void checkForCycling(const SimplexAlgorithm algorithm,
+  bool cyclingDetected(const SimplexAlgorithm algorithm,
                        const HighsInt variable_in, const HighsInt row_out,
-                       HighsInt& rebuild_reason);
+                       const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -280,11 +281,16 @@ class HEkk {
   std::string rebuildReason(const HighsInt rebuild_reason);
 
   void clearTaboo();
+
   bool allowTabooRows(const HighsInt rebuild_reason);
-  void addTabooRow(const HighsInt iRow, const TabooReason reason,
-                   const double density = 0);
+  void addTabooRow(const HighsInt iRow, const TabooReason reason);
   void applyTabooRow(vector<double>& values, double overwrite_with);
   void unapplyTabooRow(vector<double>& values);
+
+  bool allowTabooCols(const HighsInt rebuild_reason);
+  void addTabooCol(const HighsInt iCol, const TabooReason reason);
+  void applyTabooCol(vector<double>& values, double overwrite_with);
+  void unapplyTabooCol(vector<double>& values);
 
   // Methods in HEkkControl
   void initialiseControl();

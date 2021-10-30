@@ -129,7 +129,6 @@ enum RebuildReason {
   kRebuildReasonPossiblySingularBasis,            // 7
   kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
   kRebuildReasonChooseColumnFail,                 // 9
-  kRebuildReasonCycling,                          // 10
   kRebuildReasonCount
 };
 

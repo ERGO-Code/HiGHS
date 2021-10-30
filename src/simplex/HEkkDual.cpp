@@ -693,12 +693,6 @@ void HEkkDual::solvePhase1() {
       // infeasibilities, it will set solve_phase = kSolvePhase2;
       assessPhase1Optimality();
     }
-  } else if (rebuild_reason == kRebuildReasonCycling) {
-    // Cycling has occurred after rebuild
-    solve_phase = kSolvePhaseError;
-    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                "dual-phase-1-not-solved\n");
-    model_status = HighsModelStatus::kSolveError;
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
@@ -925,12 +919,6 @@ void HEkkDual::solvePhase2() {
                   "problem-optimal\n");
       model_status = HighsModelStatus::kOptimal;
     }
-  } else if (rebuild_reason == kRebuildReasonCycling) {
-    // Cycling has occurred after rebuild
-    solve_phase = kSolvePhaseError;
-    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                "dual-phase-2-not-solved\n");
-    model_status = HighsModelStatus::kSolveError;
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
@@ -1020,12 +1008,12 @@ void HEkkDual::rebuild() {
     }
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     ekk_instance_.resetSyntheticClock();
-    // Clear any taboo rows/cols
-    ekk_instance_.clearTaboo();
-    // Possibly allow taboo rows
-    ekk_instance_.allow_taboo_rows =
-        ekk_instance_.allowTabooRows(local_rebuild_reason);
   }
+  // Clear any taboo rows/cols
+  ekk_instance_.clearTaboo();
+  // Possibly allow taboo rows
+  ekk_instance_.allow_taboo_rows =
+    ekk_instance_.allowTabooRows(local_rebuild_reason);
 
   HighsInt alt_debug_level = -1;
   //  if (ekk_instance_.debug_solve_report_) alt_debug_level =
@@ -1199,9 +1187,6 @@ void HEkkDual::iterate() {
     }
   }
 
-  // Reset the flag to abandon an iteration
-  abandon_iteration = false;
-
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1210,7 +1195,7 @@ void HEkkDual::iterate() {
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
-  checkForCycling();
+  if (cyclingDetected()) return;
 
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
@@ -2654,7 +2639,21 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   return HighsDebugStatus::kOk;
 }
 
-void HEkkDual::checkForCycling() {
-  ekk_instance_.checkForCycling(SimplexAlgorithm::kDual, variable_in, row_out,
-                                rebuild_reason);
+bool HEkkDual::cyclingDetected() {
+  bool cycling_detected =
+    ekk_instance_.cyclingDetected(SimplexAlgorithm::kDual, variable_in, row_out,
+				  rebuild_reason);
+  if (cycling_detected) {
+    analysis->num_dual_cycling_detections++;
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+		"Cycling detected in dual simplex:");
+    if (ekk_instance_.allow_taboo_rows) {
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+		  "make row %d taboo\n", (int)row_out);
+      ekk_instance_.addTabooRow(row_out, TabooReason::kCycling);
+    } else {
+      assert(1==0);
+    }
+  }
+  return cycling_detected;
 }
