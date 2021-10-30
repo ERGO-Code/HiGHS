@@ -943,11 +943,14 @@ HighsStatus Highs::run() {
       }
     }
   }
+  // Cycling can yield model_status_ == HighsModelStatus::kNotset,
+  //  assert(model_status_ != HighsModelStatus::kNotset);
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
     // be infeasible or unbounded, or the time/iteration limit has
     // been reached
-    assert(model_status_ == HighsModelStatus::kInfeasible ||
+    assert(model_status_ == HighsModelStatus::kNotset ||
+           model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||

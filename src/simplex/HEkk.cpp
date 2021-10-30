@@ -1065,7 +1065,7 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = 1;
+  const HighsInt debug_from_solve_call_num = -1;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
@@ -1146,8 +1146,6 @@ HighsStatus HEkk::solve() {
               algorithm_name.c_str(), info_.num_primal_infeasibilities,
               info_.num_dual_infeasibilities,
               utilModelStatusToString(model_status_).c_str());
-  // Can model_status_ = HighsModelStatus::kNotset be returned?
-  assert(model_status_ != HighsModelStatus::kNotset);
 
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStop(SimplexTotalClock);
@@ -3498,13 +3496,16 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       assert(info_.num_primal_infeasibilities == 0);
       break;
     }
+    case HighsModelStatus::kNotset:
     case HighsModelStatus::kObjectiveBound:
     case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit: {
-      // Simplex has bailed out due to reaching the objecive cut-off,
-      // time or iteration limit. Could happen anywhere (other than
-      // the fist implying dual simplex)
+      // Simplex has failed to conclude a model property. Either it
+      // has not been set (cycling is the only reason), it has bailed
+      // out due to reaching the objecive cut-off, time or iteration
+      // limit. Could happen anywhere (other than the fist implying
+      // dual simplex)
       //
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);

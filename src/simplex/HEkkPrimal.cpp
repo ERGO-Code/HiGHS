@@ -166,13 +166,16 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kUnbounded is set
       //
+      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase2();
       assert(solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
              solve_phase == kSolvePhase2 ||
              solve_phase == kSolvePhaseOptimalCleanup ||
              solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
+             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseCycling ||
+	     solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
              ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
@@ -188,6 +191,11 @@ HighsStatus HEkkPrimal::solve() {
     // Can have all possible cases of solve_phase
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
+    if (solve_phase == kSolvePhaseCycling) {
+      // Solver error so return HighsStatus::kError
+      ekk_instance_.model_status_ = HighsModelStatus::kNotset;
+      return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+    }
     if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
       ekk_instance_.model_status_ = HighsModelStatus::kSolveError;
@@ -461,6 +469,7 @@ void HEkkPrimal::solvePhase2() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
+      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase2);
       if (rebuild_reason) break;
     }
@@ -2562,7 +2571,7 @@ bool HEkkPrimal::cyclingDetected() {
 		  "make column %d taboo\n", (int)variable_in);
       ekk_instance_.addTabooCol(variable_in, TabooReason::kCycling);
     } else {
-      assert(1==0);
+      solve_phase = kSolvePhaseCycling;
     }
   }
   return cycling_detected;
