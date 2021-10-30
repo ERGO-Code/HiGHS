@@ -257,8 +257,7 @@ class HEkk {
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
   void checkForCycling(const SimplexAlgorithm algorithm,
-		       const HighsInt variable_in,
-		       const HighsInt row_out,
+                       const HighsInt variable_in, const HighsInt row_out,
                        HighsInt& rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 

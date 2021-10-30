@@ -2655,5 +2655,6 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
 }
 
 void HEkkDual::checkForCycling() {
-  ekk_instance_.checkForCycling(SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
+  ekk_instance_.checkForCycling(SimplexAlgorithm::kDual, variable_in, row_out,
+                                rebuild_reason);
 }

@@ -2531,5 +2531,6 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 void HEkkPrimal::checkForCycling() {
-  ekk_instance_.checkForCycling(SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
+  ekk_instance_.checkForCycling(SimplexAlgorithm::kPrimal, variable_in, row_out,
+                                rebuild_reason);
 }

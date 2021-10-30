@@ -3128,8 +3128,7 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 }
 
 void HEkk::checkForCycling(const SimplexAlgorithm algorithm,
-			   const HighsInt variable_in,
-			   const HighsInt row_out,
+                           const HighsInt variable_in, const HighsInt row_out,
                            HighsInt& rebuild_reason) {
   if (rebuild_reason) return;
   if (variable_in == -1 || row_out == -1) return;
@@ -3156,11 +3155,11 @@ void HEkk::checkForCycling(const SimplexAlgorithm algorithm,
       // Cycling detected on successive iterations suggests infinite cycling
       highsLogDev(options_->log_options, HighsLogType::kWarning,
                   "Cycling in %s simplex: rebuild\n",
-		  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual");
+                  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual");
       if (call_exit_on_cycling) {
-	printf("Calling exit(0)\n");
-	fflush(stdout);
-	exit(0);
+        printf("Calling exit(0)\n");
+        fflush(stdout);
+        exit(0);
       }
       rebuild_reason = kRebuildReasonCycling;
     } else {
