@@ -23,10 +23,10 @@
 #include <thread>
 
 #include "parallel/HighsCacheAlign.h"
+#include "parallel/HighsSpinMutex.h"
 #include "parallel/HighsTask.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
-#include "parallel/HighsSpinMutex.h"
 
 class HighsSplitDeque {
   using cache_aligned = highs::cache_aligned;
@@ -186,7 +186,8 @@ class HighsSplitDeque {
         head = workerArray[(state & stackIndexMask()) - 1];
         HighsSplitDeque* newHead = head->globalQueueData.nextUnsignaled.load(
             std::memory_order_relaxed);
-        int newHeadId = newHead != nullptr ? newHead->readThreadGroupIndex() + 1 : 0;
+        int newHeadId =
+            newHead != nullptr ? newHead->readThreadGroupIndex() + 1 : 0;
         newState = (state >> abaTagShift()) + 1;
         newState = (newState << abaTagShift()) | uint64_t(newHeadId);
       } while (!stackState.compare_exchange_weak(state, newState,
@@ -417,7 +418,7 @@ class HighsSplitDeque {
   static_assert(sizeof(GlobalQueueData) <= 64,
                 "sizeof(GlobalQueueData) exceeds cache line size");
 
-  OwnerData ownerData;
+  alignas(64) OwnerData ownerData;
   alignas(64) std::atomic_uint splitRequest;
   alignas(64) StealerData stealerData;
   alignas(64) GlobalQueueData globalQueueData;
@@ -726,7 +727,9 @@ class HighsSplitDeque {
 
   int readOwnersId() const { return globalQueueData.ownerId; }
 
-  int readThreadGroupIndex() const { return 0; } //return threadGroupData.workerIndex; }
+  int readThreadGroupIndex() const {
+    return 0;
+  }  // return threadGroupData.workerIndex; }
 };
 
 #endif
