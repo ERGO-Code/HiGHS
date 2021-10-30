@@ -630,6 +630,9 @@ void HEkkPrimal::rebuild() {
   // Clear any taboo rows/cols
   ekk_instance_.clearTaboo();
   // Possibly allow taboo columns
+  if (ekk_instance_.debug_iteration_report_) {
+    printf("HEkkPrimal::rebuild() local_rebuild_reason = %d\n", (int)local_rebuild_reason);
+  }
   ekk_instance_.allow_taboo_cols =
     ekk_instance_.allowTabooCols(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {

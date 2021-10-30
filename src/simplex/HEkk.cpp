@@ -3799,10 +3799,10 @@ void HEkk::clearTaboo() {
 }
 
 bool HEkk::allowTabooRows(const HighsInt rebuild_reason) {
-  return rebuild_reason == kRebuildReasonPossiblyOptimal ||
-         rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-         rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex;
+  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
+	   rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+	   rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+	   rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
 }
 
 void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason) {
@@ -3829,10 +3829,10 @@ void HEkk::unapplyTabooRow(vector<double>& values) {
 }
 
 bool HEkk::allowTabooCols(const HighsInt rebuild_reason) {
-  return rebuild_reason == kRebuildReasonPossiblyOptimal ||
-         rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-         rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex;
+  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
+	   rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+	   rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+	   rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
 }
 
 void HEkk::addTabooCol(const HighsInt iCol, const TabooReason reason) {
