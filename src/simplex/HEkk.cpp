@@ -1146,6 +1146,8 @@ HighsStatus HEkk::solve() {
               algorithm_name.c_str(), info_.num_primal_infeasibilities,
               info_.num_dual_infeasibilities,
               utilModelStatusToString(model_status_).c_str());
+  // Can model_status_ = HighsModelStatus::kNotset be returned?
+  assert(model_status_ != HighsModelStatus::kNotset);
 
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStop(SimplexTotalClock);
@@ -3142,13 +3144,13 @@ bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
     if (iteration_count_ == previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
       printf("Cycling detected in %s simplex solve %d (Iteration %d)\n",
-	     algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-	     (int)debug_solve_call_num_, (int)iteration_count_);
+             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+             (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
     } else {
       printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
-	     algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-	     (int)debug_solve_call_num_, (int)iteration_count_);
+             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+             (int)debug_solve_call_num_, (int)iteration_count_);
       previous_iteration_cycling_detected = iteration_count_;
     }
   }
@@ -3496,16 +3498,15 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       assert(info_.num_primal_infeasibilities == 0);
       break;
     }
-    case HighsModelStatus::kNotset:
     case HighsModelStatus::kObjectiveBound:
     case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kTimeLimit:
-    case HighsModelStatus::kIterationLimit: {
+    case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kUnknown: {
       // Simplex has failed to conclude a model property. Either it
-      // has not been set (cycling is the only reason), it has bailed
-      // out due to reaching the objecive cut-off, time or iteration
-      // limit. Could happen anywhere (other than the fist implying
-      // dual simplex)
+      // has bailed out due to reaching the objecive bound, target,
+      // time or iteration limit, or it has not been set (cycling is
+      // the only reason). Could happen anywhere.
       //
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -3801,9 +3802,9 @@ void HEkk::clearTaboo() {
 
 bool HEkk::allowTabooRows(const HighsInt rebuild_reason) {
   return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
-	   rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-	   rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-	   rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
+           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
 }
 
 void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason) {
@@ -3831,9 +3832,9 @@ void HEkk::unapplyTabooRow(vector<double>& values) {
 
 bool HEkk::allowTabooCols(const HighsInt rebuild_reason) {
   return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
-	   rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-	   rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-	   rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
+           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
 }
 
 void HEkk::addTabooCol(const HighsInt iCol, const TabooReason reason) {

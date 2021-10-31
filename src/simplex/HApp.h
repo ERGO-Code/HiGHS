@@ -256,19 +256,16 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
                     highs_info.max_dual_infeasibility,
                     highs_info.sum_dual_infeasibilities);
       // Determine whether refinement will take place
-      if (scaled_model_status == HighsModelStatus::kNotset) {
-	printf("HApp::solveLpSimplex scaled_model_status = %d\n", (int)scaled_model_status);
-      }
       refine_solution =
           options.simplex_unscaled_solution_strategy ==
               kSimplexUnscaledSolutionStrategyRefine &&
           (scaled_optimality_but_unscaled_infeasibilities ||
-           scaled_model_status == HighsModelStatus::kNotset ||
            scaled_model_status == HighsModelStatus::kInfeasible ||
            scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
            scaled_model_status == HighsModelStatus::kUnbounded ||
            scaled_model_status == HighsModelStatus::kObjectiveBound ||
-           scaled_model_status == HighsModelStatus::kObjectiveTarget);
+           scaled_model_status == HighsModelStatus::kObjectiveTarget ||
+           scaled_model_status == HighsModelStatus::kUnknown);
       // Handle the case when refinement will not take place
       if (!refine_solution) {
         unscaled_model_status = scaled_model_status;

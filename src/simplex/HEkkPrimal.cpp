@@ -170,12 +170,12 @@ HighsStatus HEkkPrimal::solve() {
       //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase2();
-      assert(solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
-             solve_phase == kSolvePhase2 ||
-             solve_phase == kSolvePhaseOptimalCleanup ||
-             solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseCycling ||
-	     solve_phase == kSolvePhaseError);
+      assert(
+          solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
+          solve_phase == kSolvePhase2 ||
+          solve_phase == kSolvePhaseOptimalCleanup ||
+          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
+          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
              ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
@@ -192,8 +192,8 @@ HighsStatus HEkkPrimal::solve() {
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
     if (solve_phase == kSolvePhaseCycling) {
-      // Solver error so return HighsStatus::kError
-      ekk_instance_.model_status_ = HighsModelStatus::kNotset;
+      // Cycling so return HighsStatus::kWarning
+      ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
     }
     if (solve_phase == kSolvePhaseError) {
@@ -640,10 +640,11 @@ void HEkkPrimal::rebuild() {
   ekk_instance_.clearTaboo();
   // Possibly allow taboo columns
   if (ekk_instance_.debug_iteration_report_) {
-    printf("HEkkPrimal::rebuild() local_rebuild_reason = %d\n", (int)local_rebuild_reason);
+    printf("HEkkPrimal::rebuild() local_rebuild_reason = %d\n",
+           (int)local_rebuild_reason);
   }
   ekk_instance_.allow_taboo_cols =
-    ekk_instance_.allowTabooCols(local_rebuild_reason);
+      ekk_instance_.allowTabooCols(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {
     // Don't have the row-wise matrix, so reinitialise it
     //
@@ -788,7 +789,6 @@ void HEkkPrimal::iterate() {
   if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
 
-  
   if (cyclingDetected()) return;
 
   if (row_out >= 0) {
@@ -2559,16 +2559,15 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 bool HEkkPrimal::cyclingDetected() {
-  bool cycling_detected =
-    ekk_instance_.cyclingDetected(SimplexAlgorithm::kPrimal, variable_in, row_out,
-				  rebuild_reason);
+  bool cycling_detected = ekk_instance_.cyclingDetected(
+      SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
   if (cycling_detected) {
     analysis->num_primal_cycling_detections++;
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-		"Cycling detected in primal simplex:");
+                "Cycling detected in primal simplex:");
     if (ekk_instance_.allow_taboo_cols) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-		  "make column %d taboo\n", (int)variable_in);
+                  "make column %d taboo\n", (int)variable_in);
       ekk_instance_.addTabooCol(variable_in, TabooReason::kCycling);
     } else {
       solve_phase = kSolvePhaseCycling;

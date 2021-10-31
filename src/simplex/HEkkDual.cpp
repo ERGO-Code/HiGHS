@@ -1013,7 +1013,7 @@ void HEkkDual::rebuild() {
   ekk_instance_.clearTaboo();
   // Possibly allow taboo rows
   ekk_instance_.allow_taboo_rows =
-    ekk_instance_.allowTabooRows(local_rebuild_reason);
+      ekk_instance_.allowTabooRows(local_rebuild_reason);
 
   HighsInt alt_debug_level = -1;
   //  if (ekk_instance_.debug_solve_report_) alt_debug_level =
@@ -2640,19 +2640,18 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
 }
 
 bool HEkkDual::cyclingDetected() {
-  bool cycling_detected =
-    ekk_instance_.cyclingDetected(SimplexAlgorithm::kDual, variable_in, row_out,
-				  rebuild_reason);
+  bool cycling_detected = ekk_instance_.cyclingDetected(
+      SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
   if (cycling_detected) {
     analysis->num_dual_cycling_detections++;
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-		"Cycling detected in dual simplex:");
+                "Cycling detected in dual simplex:");
     if (ekk_instance_.allow_taboo_rows) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-		  "make row %d taboo\n", (int)row_out);
+                  "make row %d taboo\n", (int)row_out);
       ekk_instance_.addTabooRow(row_out, TabooReason::kCycling);
     } else {
-      assert(1==0);
+      assert(1 == 0);
     }
   }
   return cycling_detected;

@@ -947,14 +947,14 @@ HighsStatus Highs::run() {
   //  assert(model_status_ != HighsModelStatus::kNotset);
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
-    // be infeasible or unbounded, or the time/iteration limit has
-    // been reached
-    assert(model_status_ == HighsModelStatus::kNotset ||
-           model_status_ == HighsModelStatus::kInfeasible ||
+    // be infeasible or unbounded, the time/iteration limit has been
+    // reached, or the status is unknown (cycling)
+    assert(model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||
-           model_status_ == HighsModelStatus::kIterationLimit);
+           model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kUnknown);
     // The HEkk data correspond to the (strictly reduced) presolved LP
     // so must be cleared
     ekk_instance_.clear();
