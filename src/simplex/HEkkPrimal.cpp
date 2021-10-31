@@ -137,11 +137,14 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kInfeasible is set
       //
+      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase1();
-      assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
-             solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
+      assert(
+          solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
+          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
       info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solve_phase == kSolvePhase2) {
@@ -382,6 +385,7 @@ void HEkkPrimal::solvePhase1() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
+      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase1);
       if (rebuild_reason) break;
     }
@@ -639,10 +643,6 @@ void HEkkPrimal::rebuild() {
   // Clear any taboo rows/cols
   ekk_instance_.clearTaboo();
   // Possibly allow taboo columns
-  if (ekk_instance_.debug_iteration_report_) {
-    printf("HEkkPrimal::rebuild() local_rebuild_reason = %d\n",
-           (int)local_rebuild_reason);
-  }
   ekk_instance_.allow_taboo_cols =
       ekk_instance_.allowTabooCols(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {

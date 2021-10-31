@@ -130,9 +130,13 @@ HighsInt HEkkDualRow::chooseFinal() {
 
   // 1. Reduce by large step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
+  bool report_bfrt = false;
+  const bool debug_bfrt_report_on = false;
   if (ekk_instance_.debug_iteration_report_) {
-    printf("HEkkDualRow::chooseFinal Check iter = %d\n",
-           (int)ekk_instance_.iteration_count_);
+    report_bfrt = debug_bfrt_report_on;
+    if (report_bfrt)
+      printf("HEkkDualRow::chooseFinal Check iter = %d\n",
+             (int)ekk_instance_.iteration_count_);
   }
   HighsInt fullCount = workCount;
   workCount = 0;
@@ -244,7 +248,6 @@ HighsInt HEkkDualRow::chooseFinal() {
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;  // Not used
   workCount = 0;
-  const bool report_bfrt = ekk_instance_.debug_iteration_report_;
   if (use_quad_sort) {
     if (report_bfrt) {
       printf(

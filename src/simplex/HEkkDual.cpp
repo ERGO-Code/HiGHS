@@ -69,19 +69,19 @@ HighsStatus HEkkDual::solve() {
     }
   }
 
-  // Determine whether the solution is near-optimal. Value 1 is
-  // unimportant, as the sum of primal infeasiblilities for
-  // near-optimal solutions is typically many orders of magnitude
-  // smaller than 1, and the sum of primal infeasiblilities will be
-  // very much larger for non-trivial LPs that are dual feasible for a
-  // logical or crash basis.
-  const bool near_optimal = info.num_primal_infeasibilities < 1000 &&
-                            info.max_primal_infeasibility < 1e-3 &&
-                            info.sum_primal_infeasibilities < 1 &&
-                            info.num_dual_infeasibilities == 0;
+  // Record whether the solution with unperturbed costs is dual feasible
+  const bool dual_feasible_without_unperturbed_costs =
+      info.num_dual_infeasibilities == 0;
+  // Determine whether the solution is near-optimal.
+  const bool near_optimal = dual_feasible_without_unperturbed_costs &&
+                            info.num_primal_infeasibilities < 1000 &&
+                            info.max_primal_infeasibility < 1e-3;
+  // Save a copy of info for the LP without cost perturbations
+  HighsSimplexInfo unperturbed_info = info;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
-                "Dual feasible and num / max / sum primal infeasibilities are "
+                "Dual feasible with unperturbed costs and num / max / sum "
+                "primal infeasibilities are "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
@@ -200,16 +200,56 @@ HighsStatus HEkkDual::solve() {
   ekk_instance_.computeDualInfeasibleWithFlips();
   dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
-  if (solve_phase == kSolvePhase1 &&
-      info.max_dual_infeasibility * info.max_dual_infeasibility <
-          dual_feasibility_tolerance) {
-    // Would use dual phase 1, but max dual infeasiblilty is small, so
-    // better to use flips/shifts in phase 2
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "Small max dual infeasiblilty of %g after flips, so use "
-                "flips/shifts in phase 2\n",
-                info.max_dual_infeasibility);
-    solve_phase = kSolvePhase2;
+  // Allow phase 2 if the infeasibilities are minor - and can be
+  // removed by shifts. This can happen when using cost perturbation
+  // for a basis that, without it, is dual feasible.
+  //
+  // NB the case of lseu: A single dual infeasibility for a LB variable
+  // put it at its nonzero phase 1 bound. One iteration made it basic
+  // and solved the phase 1 problem. The first phase 2 iteration put
+  // the variable at its bound - returning to the initial basis. Not
+  // true cycling, but something to be avoided numerically.
+  //
+  // Perhaps the answer is to go straight to phase 2 when dual
+  // feasible without perturbed costs. Hence any shifts required in
+  // phase 2 are due to perturbed costs
+  if (solve_phase == kSolvePhase1) {
+    const bool near_dual_feasible = (info.num_dual_infeasibilities <= 1 &&
+                                     info.max_dual_infeasibility < 1e-1) ||
+                                    (info.num_dual_infeasibilities <= 10 &&
+                                     info.max_dual_infeasibility < 1e-2) ||
+                                    (info.num_dual_infeasibilities <= 100 &&
+                                     info.max_dual_infeasibility < 1e-3);
+    if (dual_feasible_without_unperturbed_costs || near_dual_feasible) {
+      solve_phase = kSolvePhase2;
+      if (!dual_feasible_without_unperturbed_costs)
+        printf(
+            "Near dual feasible with perturbed costs but not dual feasible "
+            "with unperturbed costs\n"
+            "num / max / sum dual infeasiblitiles\n"
+            "%d / %11.4g / %11.4g (  perturbed costs)\n"
+            "%d / %11.4g / %11.4g (unperturbed costs)\n",
+            (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+            info.sum_dual_infeasibilities,
+            (int)unperturbed_info.num_dual_infeasibilities,
+            unperturbed_info.max_dual_infeasibility,
+            unperturbed_info.sum_dual_infeasibilities);
+      //      printf("HEkkDual::solve Use phase 2 with "
+      //		  "num / max / sum dual infeasiblitiles of %d / %11.4g /
+      //%11.4g, " 		  "perturbation (base = %11.4g; max|cost| = %11.4g)\n",
+      //	     (int)info.num_dual_infeasibilities,
+      //	     info.max_dual_infeasibility,
+      //	     info.sum_dual_infeasibilities,
+      //	     ekk_instance_.cost_perturbation_base_,
+      //	     ekk_instance_.cost_perturbation_max_abs_cost_);
+      highsLogDev(
+          options.log_options, HighsLogType::kInfo,
+          "Dual feasible with unperturbed costs, or small dual infeasibilities,"
+          "so use flips/shifts in phase 2 with "
+          "num / max / sum dual infeasiblitiles of %d / %11.4g / %11.4g\n",
+          (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+          info.sum_dual_infeasibilities);
+    }
   }
   if (ekk_instance_.debugOkForSolve(SimplexAlgorithm::kDual, solve_phase) ==
       HighsDebugStatus::kLogicalError)
@@ -268,6 +308,11 @@ HighsStatus HEkkDual::solve() {
     // Can have all possible cases of solve_phase
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
+    if (solve_phase == kSolvePhaseCycling) {
+      // Cycling so return HighsStatus::kWarning
+      ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
+      return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+    }
     if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
       assert(model_status == HighsModelStatus::kSolveError);
@@ -564,6 +609,8 @@ void HEkkDual::solvePhase1() {
   //
   // kSolvePhaseError => Solver error
   //
+  // kSolvePhaseCycling => unavoidable cycling occurs
+  //
   // kSolvePhaseExit => LP identified as dual infeasible
   //
   // kSolvePhaseUnknown => Back-tracking due to singularity
@@ -636,6 +683,7 @@ void HEkkDual::solvePhase1() {
           break;
       }
       if (ekk_instance_.bailoutOnTimeIterations()) break;
+      if (solve_phase == kSolvePhaseCycling) return;
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
@@ -782,6 +830,8 @@ void HEkkDual::solvePhase2() {
   //
   // kSolvePhaseError => Solver error
   //
+  // kSolvePhaseCycling => unavoidable cycling occurs
+  //
   // kSolvePhaseExit => LP identified as not having an optimal solution
   //
   // kSolvePhaseUnknown => Back-tracking due to singularity
@@ -876,6 +926,7 @@ void HEkkDual::solvePhase2() {
       }
       if (ekk_instance_.bailoutOnTimeIterations()) break;
       if (bailoutOnDualObjective()) break;
+      if (solve_phase == kSolvePhaseCycling) return;
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
@@ -1396,9 +1447,6 @@ void HEkkDual::chooseRow() {
     // Compute pi_p = B^{-T}e_p in row_ep
     analysis->simplexTimerStart(BtranClock);
     // Set up RHS for BTRAN
-    if (ekk_instance_.debug_iteration_report_) {
-      printf("HEkkDual::chooseRow debug\n");
-    }
     row_ep.clear();
     row_ep.count = 1;
     row_ep.index[0] = row_out;
@@ -1524,20 +1572,26 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   HighsLp& lp = ekk_instance_.lp_;
 
   HighsInt debug_price_report = kDebugReportOff;
+  const bool debug_price_report_on = false;
+  const bool debug_small_pivot_issue_report_on = false;
+  bool debug_small_pivot_issue_report = false;
+  bool debug_rows_report = false;
   if (ekk_instance_.debug_iteration_report_) {
-    printf("HEkkDual::chooseColumn Check iter = %d\n",
-           (int)ekk_instance_.iteration_count_);
-    debug_price_report = kDebugReportAll;
+    if (debug_price_report_on) debug_price_report = kDebugReportAll;
+    debug_rows_report = debug_price_report_on;
+    debug_small_pivot_issue_report = debug_small_pivot_issue_report_on;
+    if (debug_price_report != kDebugReportOff || debug_rows_report ||
+        debug_small_pivot_issue_report)
+      printf("HEkkDual::chooseColumn Check iter = %d\n",
+             (int)ekk_instance_.iteration_count_);
   }
-  const bool report_small_pivot_issue =
-      false || ekk_instance_.debug_iteration_report_;
   //
   // PRICE
   //
   const bool quad_precision = false;
   ekk_instance_.tableauRowPrice(quad_precision, *row_ep, row_ap,
                                 debug_price_report);
-  if (ekk_instance_.debug_iteration_report_) {
+  if (debug_rows_report) {
     ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
     ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,
                                            true);
@@ -1578,13 +1632,13 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     // there are no candidates for CHUZC
     variable_in = -1;
     if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-      if (chuzc_pass > 0 && report_small_pivot_issue) {
+      if (chuzc_pass > 0 && debug_small_pivot_issue_report) {
         printf(
             "                                                       "
             "Negative step or no candidates after %2d CHUZC passes\n",
             (int)chuzc_pass);
       }
-      if (ekk_instance_.debug_iteration_report_) {
+      if (debug_rows_report) {
         ekk_instance_.simplex_nla_.reportVector(
             "dualRow.packValue/Index", dualRow.packCount, dualRow.packValue,
             dualRow.packIndex, true);
@@ -1608,7 +1662,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
       assert(alpha_row);
       const double scaled_value = row_ep_scale * alpha_row;
       if (std::abs(scaled_value) <= growth_tolerance) {
-        if (chuzc_pass == 0 && report_small_pivot_issue)
+        if (chuzc_pass == 0 && debug_small_pivot_issue_report)
           printf(
               "CHUZC: Solve %6d; Iter %4d; ||e_p|| = %11.4g: Variable %6d "
               "Pivot %11.4g (dual "
@@ -1620,7 +1674,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
               workDual[dualRow.workPivot] / dualRow.workAlpha);
         // On the first pass, try to make the povotal row more accurate
         if (chuzc_pass == 0) {
-          if (report_small_pivot_issue) printf(": improve row\n");
+          if (debug_small_pivot_issue_report) printf(": improve row\n");
           ekk_instance_.analysis_.num_improve_choose_column_row_call++;
           improveChooseColumnRow(row_ep);
         } else {
@@ -1631,19 +1685,19 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
               dualRow.packIndex[i] = dualRow.packIndex[dualRow.packCount - 1];
               dualRow.packValue[i] = dualRow.packValue[dualRow.packCount - 1];
               dualRow.packCount--;
-              if (chuzc_pass == 0 && report_small_pivot_issue)
+              if (chuzc_pass == 0 && debug_small_pivot_issue_report)
                 printf(": removing pivot gives pack count = %6d",
                        (int)dualRow.packCount);
               break;
             }
           }
-          if (chuzc_pass == 0 && report_small_pivot_issue)
+          if (chuzc_pass == 0 && debug_small_pivot_issue_report)
             printf(" so %s\n", dualRow.packCount > 0 ? "repeat CHUZC"
                                                      : "consider unbounded");
         }
         // Indicate that no pivot has been chosen
         dualRow.workPivot = -1;
-      } else if (chuzc_pass > 0 && report_small_pivot_issue) {
+      } else if (chuzc_pass > 0 && debug_small_pivot_issue_report) {
         printf(
             "                                                       Variable "
             "%6d "
@@ -1656,7 +1710,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     } else {
       // No pivot has been chosen
       assert(dualRow.workPivot == -1);
-      if (chuzc_pass > 0 && report_small_pivot_issue) {
+      if (chuzc_pass > 0 && debug_small_pivot_issue_report) {
         printf(
             "                                                       No pivot "
             "after %2d CHUZC passes\n",
@@ -1702,29 +1756,33 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
 
 void HEkkDual::improveChooseColumnRow(HVector* row_ep) {
   HighsLp& lp = ekk_instance_.lp_;
+  const bool debug_price_report_on = false;
   HighsInt debug_price_report = kDebugReportOff;
+  bool debug_rows_report = false;
   if (ekk_instance_.debug_iteration_report_) {
-    printf("HEkkDual::improveChooseColumnRow Check iter = %d\n",
-           (int)ekk_instance_.iteration_count_);
-    debug_price_report = kDebugReportAll;
+    if (debug_price_report_on) debug_price_report = kDebugReportAll;
+    debug_rows_report = debug_price_report_on;
+    if (debug_price_report != kDebugReportOff)
+      printf("HEkkDual::chooseColumn Check iter = %d\n",
+             (int)ekk_instance_.iteration_count_);
   }
 
   analysis->simplexTimerStart(Chuzc5Clock);
   dualRow.deleteFreemove();
   analysis->simplexTimerStop(Chuzc5Clock);
 
-  if (ekk_instance_.debug_iteration_report_)
+  if (debug_rows_report)
     ekk_instance_.simplex_nla_.reportArray("Row e_p.0", lp.num_col_, row_ep,
                                            true);
   ekk_instance_.unitBtranIterativeRefinement(row_out, *row_ep);
-  if (ekk_instance_.debug_iteration_report_)
+  if (debug_rows_report)
     ekk_instance_.simplex_nla_.reportArray("Row e_p.1", lp.num_col_, row_ep,
                                            true);
 
   const bool quad_precision = true;
   ekk_instance_.tableauRowPrice(quad_precision, *row_ep, row_ap,
                                 debug_price_report);
-  if (ekk_instance_.debug_iteration_report_) {
+  if (debug_rows_report) {
     ekk_instance_.simplex_nla_.reportArray("Row a_p", 0, &row_ap, true);
     ekk_instance_.simplex_nla_.reportArray("Row e_p", lp.num_col_, row_ep,
                                            true);
@@ -2651,7 +2709,7 @@ bool HEkkDual::cyclingDetected() {
                   "make row %d taboo\n", (int)row_out);
       ekk_instance_.addTabooRow(row_out, TabooReason::kCycling);
     } else {
-      assert(1 == 0);
+      solve_phase = kSolvePhaseCycling;
     }
   }
   return cycling_detected;
