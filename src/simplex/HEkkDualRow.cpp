@@ -308,14 +308,6 @@ HighsInt HEkkDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc4eClock);
   analysis->simplexTimerStop(Chuzc4Clock);
 
-  HighsInt num_infeasibility = debugChooseColumnInfeasibilities();
-  if (num_infeasibility) {
-    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
-                "Heap-based chooseFinal would create %d dual infeasibilities\n",
-                (int)num_infeasibility);
-    analysis->simplexTimerStop(Chuzc4dClock);
-    return -1;
-  }
   return 0;
 }
 

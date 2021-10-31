@@ -222,30 +222,27 @@ HighsStatus HEkkDual::solve() {
                                      info.max_dual_infeasibility < 1e-3);
     if (dual_feasible_without_unperturbed_costs || near_dual_feasible) {
       solve_phase = kSolvePhase2;
-      if (!dual_feasible_without_unperturbed_costs)
+      const bool local_report = false;
+      if (!dual_feasible_without_unperturbed_costs && local_report) {
         printf(
-            "Near dual feasible with perturbed costs but not dual feasible "
+            "Solve %d: Near dual feasible with perturbed costs but not dual "
+            "feasible "
             "with unperturbed costs\n"
             "num / max / sum dual infeasiblitiles\n"
-            "%d / %11.4g / %11.4g (  perturbed costs)\n"
-            "%d / %11.4g / %11.4g (unperturbed costs)\n",
+            "%d / %11.4g / %11.4g (  perturbed costs with    flips)\n"
+            "%d / %11.4g / %11.4g (unperturbed costs without flips)\n",
+            (int)ekk_instance_.debug_solve_call_num_,
             (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
             info.sum_dual_infeasibilities,
             (int)unperturbed_info.num_dual_infeasibilities,
             unperturbed_info.max_dual_infeasibility,
             unperturbed_info.sum_dual_infeasibilities);
-      //      printf("HEkkDual::solve Use phase 2 with "
-      //		  "num / max / sum dual infeasiblitiles of %d / %11.4g /
-      //%11.4g, " 		  "perturbation (base = %11.4g; max|cost| = %11.4g)\n",
-      //	     (int)info.num_dual_infeasibilities,
-      //	     info.max_dual_infeasibility,
-      //	     info.sum_dual_infeasibilities,
-      //	     ekk_instance_.cost_perturbation_base_,
-      //	     ekk_instance_.cost_perturbation_max_abs_cost_);
+      }
       highsLogDev(
           options.log_options, HighsLogType::kInfo,
-          "Dual feasible with unperturbed costs, or small dual infeasibilities,"
-          "so use flips/shifts in phase 2 with "
+          "Dual feasible with unperturbed costs, or small dual "
+          "infeasibilities, "
+          "so use shifts in phase 2 with "
           "num / max / sum dual infeasiblitiles of %d / %11.4g / %11.4g\n",
           (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
           info.sum_dual_infeasibilities);
@@ -1919,12 +1916,28 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   // Choose column 2, This only happens if didn't go out
   HighsInt return_code = dualRow.chooseFinal();
   if (return_code) {
+    // Only returns -1, if not zero
+    assert(return_code == -1);
     if (return_code < 0) {
       rebuild_reason = kRebuildReasonChooseColumnFail;
     } else {
       rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
     }
     return;
+  }
+
+  if (slice_num == 0) {
+    // This check is only done for serial code - since packIndex/Value
+    // is distributed
+    HighsInt num_infeasibility = dualRow.debugChooseColumnInfeasibilities();
+    if (num_infeasibility) {
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
+                  "chooseFinal would create %d dual infeasibilities\n",
+                  (int)num_infeasibility);
+      analysis->simplexTimerStop(Chuzc4dClock);
+      rebuild_reason = kRebuildReasonChooseColumnFail;
+      return;
+    }
   }
 
   analysis->simplexTimerStart(Chuzc5Clock);
