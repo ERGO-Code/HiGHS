@@ -2374,7 +2374,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
     return_status = interpretCallStatus(
         options_.log_options, this->getRanging(), return_status, "getRanging");
     if (return_status == HighsStatus::kError) return return_status;
-    fprintf(file, "\nRanging\n");
+    fprintf(file, "\n# Ranging\n");
     writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
                      solution_, ranging_, style);
   }

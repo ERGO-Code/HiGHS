@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 void solve(Highs& highs, std::string presolve,
@@ -172,7 +172,7 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
 
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
-                 const bool dev_run = true) {
+                 const bool dev_run = false) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
                  std::max(1.0, std::fabs(require_optimal_objective));
   bool error_ok = error < 1e-10;

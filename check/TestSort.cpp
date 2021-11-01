@@ -8,7 +8,7 @@
 
 using std::vector;
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 // No commas in test case name.
 void getRandomValues(const HighsInt num_values, vector<double>& values,

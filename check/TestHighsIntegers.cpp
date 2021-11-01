@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "util/HighsIntegers.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("HighsIntegers", "[util]") {
   double x1 = 6.4700675;

@@ -3,7 +3,7 @@
 #include "HighsLpUtils.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("LP-validation", "[highs_data]") {

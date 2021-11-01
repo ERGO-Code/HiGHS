@@ -4,7 +4,7 @@
 #include "model/HighsHessianUtils.h"
 //#include "<cstdio>"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("HighsHessian", "[highs_hessian]") {

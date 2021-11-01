@@ -15,7 +15,7 @@
 
 #include "lp_solver.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 using Int = ipxint;
 

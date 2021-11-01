@@ -612,6 +612,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
     fprintf(file, "None\n");
     return;
   }
+  fprintf(file, "Valid\n");
   const double double_tolerance = 1e-13;
   std::stringstream ss;
   const bool have_col_names = lp.col_names_.size() > 0;
@@ -641,7 +642,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
             "Column Status  DownObj    Down                  Value             "
             "    Up         UpObj      Name\n");
   } else {
-    fprintf(file, "\nCost ranging\n");
+    fprintf(file, "\n# Cost ranging\n");
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     // Create a column name
@@ -676,7 +677,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
             "Column Status  DownObj    Down       Lower      Value      Upper "
             "     Up         UpObj      Name\n");
   } else {
-    fprintf(file, "\nBound ranging\nColumns\n");
+    fprintf(file, "\n# Bound ranging\n# Columns\n");
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     // Create a column name
@@ -713,7 +714,7 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
             "   Row Status  DownObj    Down       Lower      Value      Upper "
             "     Up         UpObj      Name\n");
   } else {
-    fprintf(file, "Rows\n");
+    fprintf(file, "# Rows\n");
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     // Create a row name

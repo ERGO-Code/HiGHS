@@ -1,7 +1,7 @@
 #include "catch.hpp"
 #include "util/HSet.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("HSet", "[highs_test_hset]") {
   const HighsInt size = 5;

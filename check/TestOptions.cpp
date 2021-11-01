@@ -5,7 +5,7 @@
 #include "LoadOptions.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;

@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 HighsStatus quietRun(Highs& highs);
 void colCostColumnHeader();
