@@ -64,8 +64,8 @@ HighsStatus HEkkPrimal::solve() {
                 info.num_dual_infeasibilities, info.max_dual_infeasibility,
                 info.sum_dual_infeasibilities);
 
-  // Allow taboo columns
-  ekk_instance_.allow_taboo_cols = true;
+  // Allow taboo
+  ekk_instance_.allow_taboo = true;
 
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
@@ -640,11 +640,11 @@ void HEkkPrimal::rebuild() {
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     ekk_instance_.resetSyntheticClock();
   }
-  // Clear any taboo rows/cols
+  // Clear any taboo
   ekk_instance_.clearTaboo();
-  // Possibly allow taboo columns
-  ekk_instance_.allow_taboo_cols =
-      ekk_instance_.allowTabooCols(local_rebuild_reason);
+  // Possibly allow taboo
+  ekk_instance_.allow_taboo =
+      ekk_instance_.allowTaboo(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {
     // Don't have the row-wise matrix, so reinitialise it
     //
@@ -2568,10 +2568,10 @@ bool HEkkPrimal::cyclingDetected() {
     analysis->num_primal_cycling_detections++;
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                 "Cycling detected in primal simplex:");
-    if (ekk_instance_.allow_taboo_cols) {
+    if (ekk_instance_.allow_taboo) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                   "make column %d taboo\n", (int)variable_in);
-      ekk_instance_.addTabooCol(variable_in, TabooReason::kCycling);
+      ekk_instance_.addTaboo(-1, variable_in, TabooReason::kCycling);
     } else {
       solve_phase = kSolvePhaseCycling;
     }

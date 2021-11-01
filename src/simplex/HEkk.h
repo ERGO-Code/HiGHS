@@ -195,10 +195,8 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
 
-  bool allow_taboo_cols;
-  bool allow_taboo_rows;
-  std::vector<HighsSimplexTabooRecord> taboo_col;
-  std::vector<HighsSimplexTabooRecord> taboo_row;
+  bool allow_taboo;
+  std::vector<HighsSimplexTabooRecord> taboo;
 
  private:
   bool isUnconstrainedLp();
@@ -282,15 +280,12 @@ class HEkk {
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
 
-  void clearTaboo();
+  void clearTaboo() { taboo.clear(); };
 
-  bool allowTabooRows(const HighsInt rebuild_reason);
-  void addTabooRow(const HighsInt iRow, const TabooReason reason);
+  bool allowTaboo(const HighsInt rebuild_reason);
+  void addTaboo(const HighsInt iRow, const HighsInt iCol, const TabooReason reason);
   void applyTabooRow(vector<double>& values, double overwrite_with);
   void unapplyTabooRow(vector<double>& values);
-
-  bool allowTabooCols(const HighsInt rebuild_reason);
-  void addTabooCol(const HighsInt iCol, const TabooReason reason);
   void applyTabooCol(vector<double>& values, double overwrite_with);
   void unapplyTabooCol(vector<double>& values);
 

@@ -1599,8 +1599,8 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     resetSyntheticClock();
     // Clear any taboo rows/cols
     clearTaboo();
-    // Allow taboo rows
-    allow_taboo_rows = true;
+    // Allow taboo
+    allow_taboo = true;
   }
   assert(status_.has_invert);
   return 0;
@@ -3798,69 +3798,50 @@ double HEkk::factorSolveError() {
   return solution_error;
 }
 
-void HEkk::clearTaboo() {
-  taboo_col.clear();
-  taboo_row.clear();
-}
-
-bool HEkk::allowTabooRows(const HighsInt rebuild_reason) {
+bool HEkk::allowTaboo(const HighsInt rebuild_reason) {
   return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
            rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
            rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
            rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
 }
 
-void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason) {
+void HEkk::addTaboo(const HighsInt iRow, const HighsInt iCol, const TabooReason reason) {
   assert(iRow <= lp_.num_row_);
   HighsSimplexTabooRecord record;
   record.reason = reason;
-  record.index = iRow;
-  taboo_row.push_back(record);
+  record.row = iRow;
+  record.col = iCol;
+  taboo.push_back(record);
 }
 
 void HEkk::applyTabooRow(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++) {
-    HighsInt iRow = taboo_row[iX].index;
-    taboo_row[iX].save_value = values[iRow];
+  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++) {
+    HighsInt iRow = taboo[iX].row;
+    taboo[iX].save_value = values[iRow];
     values[iRow] = overwrite_with;
   }
 }
 
 void HEkk::unapplyTabooRow(vector<double>& values) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++)
-    values[taboo_row[iX].index] = taboo_row[iX].save_value;
-}
-
-bool HEkk::allowTabooCols(const HighsInt rebuild_reason) {
-  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
-           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
-}
-
-void HEkk::addTabooCol(const HighsInt iCol, const TabooReason reason) {
-  assert(iCol <= lp_.num_col_ + lp_.num_row_);
-  HighsSimplexTabooRecord record;
-  record.reason = reason;
-  record.index = iCol;
-  taboo_col.push_back(record);
+  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++)
+    values[taboo[iX].row] = taboo[iX].save_value;
 }
 
 void HEkk::applyTabooCol(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_col.size(); iX++) {
-    HighsInt iCol = taboo_col[iX].index;
-    taboo_col[iX].save_value = values[iCol];
+  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++) {
+    HighsInt iCol = taboo[iX].col;
+    taboo[iX].save_value = values[iCol];
     values[iCol] = overwrite_with;
   }
 }
 
 void HEkk::unapplyTabooCol(vector<double>& values) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_col.size(); iX++)
-    values[taboo_col[iX].index] = taboo_col[iX].save_value;
+  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++)
+    values[taboo[iX].col] = taboo[iX].save_value;
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {

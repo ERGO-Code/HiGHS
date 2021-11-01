@@ -88,8 +88,8 @@ HighsStatus HEkkDual::solve() {
                 info.num_primal_infeasibilities, info.max_primal_infeasibility,
                 info.sum_primal_infeasibilities);
 
-  // Allow taboo rows
-  ekk_instance_.allow_taboo_rows = true;
+  // Allow taboo
+  ekk_instance_.allow_taboo = true;
 
   // Perturb costs according to whether the solution is near-optimnal
   const bool perturb_costs = !near_optimal;
@@ -1057,11 +1057,11 @@ void HEkkDual::rebuild() {
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     ekk_instance_.resetSyntheticClock();
   }
-  // Clear any taboo rows/cols
+  // Clear any taboo
   ekk_instance_.clearTaboo();
-  // Possibly allow taboo rows
-  ekk_instance_.allow_taboo_rows =
-      ekk_instance_.allowTabooRows(local_rebuild_reason);
+  // Possibly allow taboo
+  ekk_instance_.allow_taboo =
+      ekk_instance_.allowTaboo(local_rebuild_reason);
 
   HighsInt alt_debug_level = -1;
   //  if (ekk_instance_.debug_solve_report_) alt_debug_level =
@@ -2717,10 +2717,10 @@ bool HEkkDual::cyclingDetected() {
     analysis->num_dual_cycling_detections++;
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                 "Cycling detected in dual simplex:");
-    if (ekk_instance_.allow_taboo_rows) {
+    if (ekk_instance_.allow_taboo) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                   "make row %d taboo\n", (int)row_out);
-      ekk_instance_.addTabooRow(row_out, TabooReason::kCycling);
+      ekk_instance_.addTaboo(row_out, variable_out, TabooReason::kCycling);
     } else {
       solve_phase = kSolvePhaseCycling;
     }
