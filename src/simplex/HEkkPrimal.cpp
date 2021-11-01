@@ -1443,10 +1443,13 @@ void HEkkPrimal::hyperChooseColumn() {
         "",
         max_changed_measure_value, max_changed_measure_column);
   double best_measure = max_changed_measure_value;
-  variable_in = max_changed_measure_column;
-  // Avoid max_changed_measure_column if its dual has been zeroed
-  // because it is taboo
-  if (!workDual[variable_in]) variable_in = -1;
+  variable_in = -1;
+  if (max_changed_measure_column >= 0) {
+    // Use max_changed_measure_column if it is well defined and has
+    // nonzero dual. It may have been zeroed because it is taboo
+    if (workDual[max_changed_measure_column])
+      variable_in = max_changed_measure_column;
+  }
   const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
   if (num_hyper_chuzc_candidates) {
     for (HighsInt iEntry = 1; iEntry <= num_hyper_chuzc_candidates; iEntry++) {

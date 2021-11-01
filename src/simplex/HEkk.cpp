@@ -3151,9 +3151,9 @@ bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
              (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
     } else {
-      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
-             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-             (int)debug_solve_call_num_, (int)iteration_count_);
+      //      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
+      //             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+      //             (int)debug_solve_call_num_, (int)iteration_count_);
       previous_iteration_cycling_detected = iteration_count_;
     }
   }
