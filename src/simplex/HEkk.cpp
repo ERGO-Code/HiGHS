@@ -1609,11 +1609,12 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
 void HEkk::handleRankDeficiency() {
   HFactor& factor = simplex_nla_.factor_;
   HighsInt rank_deficiency = factor.rank_deficiency;
-  vector<HighsInt>& noPvC = factor.noPvC;
-  vector<HighsInt>& noPvR = factor.noPvR;
+  vector<HighsInt>& row_with_no_pivot = factor.row_with_no_pivot;
+  vector<HighsInt>& col_with_no_pivot = factor.col_with_no_pivot;
+  vector<HighsInt>& var_with_no_pivot = factor.var_with_no_pivot;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
-    HighsInt variable_in = lp_.num_col_ + noPvR[k];
-    HighsInt variable_out = noPvC[k];
+    HighsInt variable_in = lp_.num_col_ + row_with_no_pivot[k];
+    HighsInt variable_out = var_with_no_pivot[k];
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
   }
@@ -1863,7 +1864,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     printf(
         "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
         "%d)\n",
-        (int)debug_solve_call_num_, (int)iteration_count_);
+        (int)debug_solve_call_num_, (int)iteration_count_); fflush(stdout);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {

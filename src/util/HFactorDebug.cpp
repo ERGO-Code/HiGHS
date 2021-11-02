@@ -32,7 +32,8 @@ void debugReportRankDeficiency(
     const HighsLogOptions& log_options, const HighsInt numRow,
     const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
     const HighsInt* baseIndex, const HighsInt rank_deficiency,
-    const vector<HighsInt>& noPvR, const vector<HighsInt>& noPvC) {
+    const vector<HighsInt>& row_with_no_pivot,
+    const vector<HighsInt>& col_with_no_pivot) {
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (call_id == 0) {
     if (numRow > 123) return;
@@ -61,14 +62,14 @@ void debugReportRankDeficiency(
     for (HighsInt i = 0; i < rank_deficiency; i++)
       highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::kWarning, "\nnoPvR  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nrow_with_no_pivot  ");
     for (HighsInt i = 0; i < rank_deficiency; i++)
       highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
-                  noPvR[i]);
-    highsLogDev(log_options, HighsLogType::kWarning, "\nnoPvC  ");
+                  row_with_no_pivot[i]);
+    highsLogDev(log_options, HighsLogType::kWarning, "\ncol_with_no_pivot  ");
     for (HighsInt i = 0; i < rank_deficiency; i++)
       highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
-                  noPvC[i]);
+                  col_with_no_pivot[i]);
     highsLogDev(log_options, HighsLogType::kWarning, "\n");
     if (numRow > 123) return;
     highsLogDev(log_options, HighsLogType::kWarning, "Index  ");
@@ -100,8 +101,9 @@ void debugReportRankDeficientASM(
     const HighsInt numRow, const vector<HighsInt>& MCstart,
     const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
     const vector<double>& MCvalue, const vector<HighsInt>& iwork,
-    const HighsInt rank_deficiency, const vector<HighsInt>& noPvC,
-    const vector<HighsInt>& noPvR) {
+    const HighsInt rank_deficiency,
+    const vector<HighsInt>& col_with_no_pivot,
+    const vector<HighsInt>& row_with_no_pivot) {
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (rank_deficiency > 10) return;
   double* ASM;
@@ -112,7 +114,7 @@ void debugReportRankDeficientASM(
     }
   }
   for (HighsInt j = 0; j < rank_deficiency; j++) {
-    HighsInt ASMcol = noPvC[j];
+    HighsInt ASMcol = col_with_no_pivot[j];
     HighsInt start = MCstart[ASMcol];
     HighsInt end = start + MCcountA[ASMcol];
     for (HighsInt en = start; en < end; en++) {
@@ -124,11 +126,11 @@ void debugReportRankDeficientASM(
                     " = i >= rank_deficiency = %" HIGHSINT_FORMAT "\n",
                     i, i, rank_deficiency);
       } else {
-        if (noPvR[i] != ASMrow) {
+        if (row_with_no_pivot[i] != ASMrow) {
           highsLogDev(log_options, HighsLogType::kWarning,
                       "STRANGE: %" HIGHSINT_FORMAT
-                      " = noPvR[i] != ASMrow = %" HIGHSINT_FORMAT "\n",
-                      noPvR[i], ASMrow);
+                      " = row_with_no_pivot[i] != ASMrow = %" HIGHSINT_FORMAT "\n",
+                      row_with_no_pivot[i], ASMrow);
         }
         highsLogDev(log_options, HighsLogType::kWarning,
                     "Setting ASM(%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT
@@ -146,7 +148,7 @@ void debugReportRankDeficientASM(
               "\n                        ");
   for (HighsInt j = 0; j < rank_deficiency; j++)
     highsLogDev(log_options, HighsLogType::kWarning, " %11" HIGHSINT_FORMAT "",
-                noPvC[j]);
+                col_with_no_pivot[j]);
   highsLogDev(log_options, HighsLogType::kWarning,
               "\n                        ");
   for (HighsInt j = 0; j < rank_deficiency; j++)
@@ -154,7 +156,7 @@ void debugReportRankDeficientASM(
   highsLogDev(log_options, HighsLogType::kWarning, "\n");
   for (HighsInt i = 0; i < rank_deficiency; i++) {
     highsLogDev(log_options, HighsLogType::kWarning,
-                "%11" HIGHSINT_FORMAT " %11" HIGHSINT_FORMAT "|", i, noPvR[i]);
+                "%11" HIGHSINT_FORMAT " %11" HIGHSINT_FORMAT "|", i, row_with_no_pivot[i]);
     for (HighsInt j = 0; j < rank_deficiency; j++) {
       highsLogDev(log_options, HighsLogType::kWarning, " %11.4g",
                   ASM[i + j * rank_deficiency]);

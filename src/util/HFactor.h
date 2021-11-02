@@ -194,12 +194,17 @@ class HFactor {
   /**
    * @brief Rows not pivoted on
    */
-  vector<HighsInt> noPvR;
+  vector<HighsInt> row_with_no_pivot;
 
   /**
-   * @brief Columns not pivoted on
+   * @brief (Basis matrix) columns not pivoted on
    */
-  vector<HighsInt> noPvC;
+  vector<HighsInt> col_with_no_pivot;
+
+  /**
+   * @brief Variables not pivoted on
+   */
+  vector<HighsInt> var_with_no_pivot;
 
   /**
    * @brief Gets baseIndex since it is private
