@@ -25,7 +25,7 @@
 #endif
 
 class HighsSpinMutex {
-  std::atomic_bool flag{true};
+  std::atomic_bool flag{false};
 
  public:
   static void yieldProcessor() {
@@ -35,6 +35,8 @@ class HighsSpinMutex {
     std::this_thread::yield();
 #endif
   }
+
+  bool try_lock() { return !flag.exchange(true, std::memory_order_acquire); }
 
   void lock() noexcept {
     while (true) {
