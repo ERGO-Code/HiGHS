@@ -69,6 +69,11 @@ struct cache_aligned {
   static unique_ptr<T> make_unique(Args&&... args) {
     return unique_ptr<T>(new (alloc(sizeof(T))) T(std::forward<Args>(args)...));
   }
+
+  template <typename T, typename... Args>
+  static unique_ptr<T[]> make_unique_array(std::size_t N) {
+    return unique_ptr<T[]>(static_cast<T*>(alloc(sizeof(T) * N)));
+  }
 };
 
 }  // namespace highs
