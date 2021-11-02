@@ -3918,7 +3918,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   }
   // Refine row_ep by removing relatively small values
   double row_ep_scale = 0;
-  if (use_refinement) refineArray(row_ep, row_ep_scale, refinement_tolerance);
+  // if (use_refinement) refineArray(row_ep, row_ep_scale,
+  // refinement_tolerance);
   // Determine the maximum absolute value in row_ep
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
@@ -3927,12 +3928,48 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     // getDualRayInterface.
     const double row_ep_value = row_ep.array[iRow];
     assert(row_ep_value);
+    if (std::abs(row_ep_value * getMaxAbsRowValue(iRow)) <=
+        options_->small_matrix_value) {
+      if (debug_proof_report)
+        printf(
+            "Zeroed row_ep.array[%6d] = %11.4g due to being small in "
+            "contribution\n",
+            (int)iRow, row_ep_value);
+      row_ep.array[iRow] = 0.0;
+      continue;
+    }
+
     row_ep.array[iRow] *= move_out;
+
     // make sure infinite sides are not used
-    if (highs_isInfinity(-lp.row_lower_[iRow]))
-      row_ep.array[iRow] = std::min(row_ep.array[iRow], 0.0);
-    if (highs_isInfinity(lp.row_upper_[iRow]))
-      row_ep.array[iRow] = std::max(row_ep.array[iRow], 0.0);
+    double rowBound;
+    if (row_ep.array[iRow] > 0) {
+      rowBound = lp.row_lower_[iRow];
+      if (highs_isInfinity(-rowBound)) {
+        // row lower bound is infinite
+        if (debug_proof_report)
+          printf(
+              "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
+              "bound\n",
+              (int)iRow, row_ep_value);
+        row_ep.array[iRow] = 0.0;
+        continue;
+      }
+
+    } else {
+      rowBound = lp.row_upper_[iRow];
+      if (highs_isInfinity(rowBound)) {
+        // row upper bound is infinite
+        if (debug_proof_report)
+          printf(
+              "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
+              "bound\n",
+              (int)iRow, row_ep_value);
+        row_ep.array[iRow] = 0.0;
+        continue;
+      }
+    }
+
     // add up lower bound of proof constraint
     proof_lower +=
         row_ep.array[iRow] *
@@ -3954,8 +3991,9 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                       debug_product_report);
   }
   // Refine the proof constraint coefficients according to row_ep_scale
-  if (use_refinement)
-    refineVector(proof_value, proof_index, row_ep_scale, refinement_tolerance);
+  // if (use_refinement)
+  //  refineVector(proof_value, proof_index, row_ep_scale,
+  //  refinement_tolerance);
 
   HighsInt proof_num_nz = proof_index.size();
   if (debug_rows_report) {
@@ -3985,6 +4023,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     const double value = proof_value[i];
     if (value > 0) {
       if (highs_isInfinity(lp.col_upper_[iCol])) {
+        if (value <= options_->small_matrix_value) continue;
         infinite_implied_upper = true;
         if (debug_proof_report)
           printf("%6d: proof (index = %6d; value = %11.4g) has UB = %11.4g\n",
@@ -3994,6 +4033,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       implied_upper += value * lp.col_upper_[iCol];
     } else {
       if (highs_isInfinity(-lp.col_lower_[iCol])) {
+        if (value >= -options_->small_matrix_value) continue;
         infinite_implied_upper = true;
         if (debug_proof_report)
           printf("%6d: proof (index = %6d; value = %11.4g) has LB = %11.4g\n",
@@ -4051,6 +4091,16 @@ void HEkk::refineArray(HVector& hvector, double& scale,
     }
   }
   hvector.count = count;
+}
+
+double HEkk::getMaxAbsRowValue(HighsInt row) {
+  if (!status_.has_ar_matrix) initialisePartitionedRowwiseMatrix();
+
+  double val = 0.0;
+  for (HighsInt i = ar_matrix_.start_[row]; i < ar_matrix_.start_[row + 1]; ++i)
+    val = std::max(val, std::abs(ar_matrix_.value_[i]));
+
+  return val;
 }
 
 void HEkk::refineVector(vector<double>& value, vector<HighsInt>& index,

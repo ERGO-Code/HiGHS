@@ -88,6 +88,7 @@ class HEkk {
                                   const HighsInt row_out);
   double getArrayScale(const HVector& hvector);
   double getValueScale(const HighsInt count, const vector<double>& value);
+  double getMaxAbsRowValue(HighsInt row);
   void refineArray(HVector& hvector, double& scale, const double& small_value);
   void refineVector(vector<double>& value, vector<HighsInt>& index,
                     double& scale, const double& small_value);
