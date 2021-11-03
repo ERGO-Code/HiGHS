@@ -257,8 +257,8 @@ class HEkk {
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
   HighsInt badBasisChange(const SimplexAlgorithm algorithm,
-			  const HighsInt variable_in, const HighsInt row_out,
-			  const HighsInt rebuild_reason);
+                          const HighsInt variable_in, const HighsInt row_out,
+                          const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -281,12 +281,10 @@ class HEkk {
 
   void clearBadBasisChange() { bad_basis_change_.clear(); };
 
-  void addBadBasisChange(const HighsInt row_out,
-			 const HighsInt variable_out,
-			 const HighsInt variable_in,
-			 const BadBasisChangeReason reason);
+  void addBadBasisChange(const HighsInt row_out, const HighsInt variable_out,
+                         const HighsInt variable_in,
+                         const BadBasisChangeReason reason);
   void clearBadBasisChangeTabooFlag();
-  //  bool allowTaboo(const HighsInt rebuild_reason);
   bool tabooBadBasisChange();
   void applyTabooRowOut(vector<double>& values, double overwrite_with);
   void unapplyTabooRowOut(vector<double>& values);

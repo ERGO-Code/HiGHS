@@ -52,8 +52,8 @@ enum SimplexSolvePhase {
   kSolvePhase2,                        // 2
   kSolvePhasePrimalInfeasibleCleanup,  // 3
   kSolvePhaseOptimalCleanup,           // 4
-  kSolvePhaseCycling,                  // 5
-  kSolvePhaseMax = kSolvePhaseCycling
+  kSolvePhaseTabooBasis,               // 5
+  kSolvePhaseMax = kSolvePhaseTabooBasis
 };
 
 enum SimplexCrashStrategy {

@@ -302,8 +302,9 @@ HighsStatus HEkkDual::solve() {
     // Can have all possible cases of solve_phase
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
-    if (solve_phase == kSolvePhaseCycling) {
-      // Cycling so return HighsStatus::kWarning
+    if (solve_phase == kSolvePhaseTabooBasis) {
+      // Only basis change is taboo
+      printf("HEkkDual::solve Only basis change is taboo\n");
       ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
     }
@@ -603,7 +604,7 @@ void HEkkDual::solvePhase1() {
   //
   // kSolvePhaseError => Solver error
   //
-  // kSolvePhaseCycling => unavoidable cycling occurs
+  // kSolvePhaseTabooBasis => Only basis change is taboo
   //
   // kSolvePhaseExit => LP identified as dual infeasible
   //
@@ -677,7 +678,7 @@ void HEkkDual::solvePhase1() {
           break;
       }
       if (ekk_instance_.bailoutOnTimeIterations()) break;
-      if (solve_phase == kSolvePhaseCycling) return;
+      assert(solve_phase != kSolvePhaseTabooBasis);
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
@@ -689,22 +690,18 @@ void HEkkDual::solvePhase1() {
     // status.has_fresh_rebuild being true may not imply that there is
     // a fresh factorization
     //
-    const bool old_break_logic = status.has_fresh_rebuild;
-    const bool need_rebuild =
-        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
     bool finished = status.has_fresh_rebuild &&
-      !ekk_instance_.rebuildRefactor(rebuild_reason);
-    assert(finished == !need_rebuild);
+                    !ekk_instance_.rebuildRefactor(rebuild_reason);
     if (finished && ekk_instance_.tabooBadBasisChange()) {
       // A bad basis change has had to be made taboo without any other
       // basis changes having been performed from a fresh rebuild. In
       // other words, the only basis change that could be made is not
       // permitted, so no definitive statement about the LP can be
       // made.
-      solve_phase = kSolvePhaseCycling;
+      solve_phase = kSolvePhaseTabooBasis;
       return;
     }
-    if (!need_rebuild) break;
+    if (finished) break;
   }
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
@@ -836,7 +833,7 @@ void HEkkDual::solvePhase2() {
   //
   // kSolvePhaseError => Solver error
   //
-  // kSolvePhaseCycling => unavoidable cycling occurs
+  // kSolvePhaseTabooBasis => Only basis change is taboo
   //
   // kSolvePhaseExit => LP identified as not having an optimal solution
   //
@@ -932,28 +929,24 @@ void HEkkDual::solvePhase2() {
       }
       if (ekk_instance_.bailoutOnTimeIterations()) break;
       if (bailoutOnDualObjective()) break;
-      if (solve_phase == kSolvePhaseCycling) return;
+      assert(solve_phase != kSolvePhaseTabooBasis);
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
     // If the data are fresh from rebuild(), possibly break out of the
     // outer loop to see what's ocurred
-    const bool old_break_logic = status.has_fresh_rebuild;
-    const bool need_rebuild =
-        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
     bool finished = status.has_fresh_rebuild &&
-      !ekk_instance_.rebuildRefactor(rebuild_reason);
-    assert(finished == !need_rebuild);
+                    !ekk_instance_.rebuildRefactor(rebuild_reason);
     if (finished && ekk_instance_.tabooBadBasisChange()) {
       // A bad basis change has had to be made taboo without any other
       // basis changes having been performed from a fresh rebuild. In
       // other words, the only basis change that could be made is not
       // permitted, so no definitive statement about the LP can be
       // made.
-      solve_phase = kSolvePhaseCycling;
+      solve_phase = kSolvePhaseTabooBasis;
       return;
     }
-    if (!need_rebuild) break;
+    if (finished) break;
   }
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
@@ -2726,7 +2719,7 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
 }
 
 bool HEkkDual::badBasisChange() {
-  HighsInt bad_basis_change_num =
-    ekk_instance_.badBasisChange(SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
+  HighsInt bad_basis_change_num = ekk_instance_.badBasisChange(
+      SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
   return bad_basis_change_num >= 0;
 }

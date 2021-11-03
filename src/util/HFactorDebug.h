@@ -35,8 +35,7 @@ void debugReportRankDeficientASM(
     const HighsInt numRow, const vector<HighsInt>& MCstart,
     const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
     const vector<double>& MCvalue, const vector<HighsInt>& iwork,
-    const HighsInt rank_deficiency,
-    const vector<HighsInt>& col_with_no_pivot,
+    const HighsInt rank_deficiency, const vector<HighsInt>& col_with_no_pivot,
     const vector<HighsInt>& row_with_no_pivot);
 
 void debugReportMarkSingC(const HighsInt call_id,

@@ -134,14 +134,16 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kInfeasible is set
       //
-      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      // solve_phase = kSolvePhaseTabooBasis is set if only basis change is
+      // taboo
       //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase1();
-      assert(
-          solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
-          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
-          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
+      assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+             solve_phase == kSolvePhaseUnknown ||
+             solve_phase == kSolvePhaseExit ||
+             solve_phase == kSolvePhaseTabooBasis ||
+             solve_phase == kSolvePhaseError);
       info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solve_phase == kSolvePhase2) {
@@ -166,16 +168,18 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kUnbounded is set
       //
-      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      // solve_phase = kSolvePhaseTabooBasis is set if only basis change is
+      // taboo
       //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase2();
-      assert(
-          solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
-          solve_phase == kSolvePhase2 ||
-          solve_phase == kSolvePhaseOptimalCleanup ||
-          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
-          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
+      assert(solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
+             solve_phase == kSolvePhase2 ||
+             solve_phase == kSolvePhaseOptimalCleanup ||
+             solve_phase == kSolvePhaseUnknown ||
+             solve_phase == kSolvePhaseExit ||
+             solve_phase == kSolvePhaseTabooBasis ||
+             solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
              ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
@@ -191,8 +195,9 @@ HighsStatus HEkkPrimal::solve() {
     // Can have all possible cases of solve_phase
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
-    if (solve_phase == kSolvePhaseCycling) {
-      // Cycling so return HighsStatus::kWarning
+    if (solve_phase == kSolvePhaseTabooBasis) {
+      // Only basis change is taboo so return HighsStatus::kWarning
+      printf("HEkkPrimal::solve Only basis change is taboo\n");
       ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
     }
@@ -382,31 +387,24 @@ void HEkkPrimal::solvePhase1() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
-      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase1);
       if (rebuild_reason) break;
     }
     // If the data are fresh from rebuild() and no flips have
     // occurred, possibly break out of the outer loop to see what's
     // ocurred
-    const bool old_break_logic =
-        status.has_fresh_rebuild && num_flip_since_rebuild == 0;
-    const bool need_rebuild =
-        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
-    bool finished = status.has_fresh_rebuild &&
-      num_flip_since_rebuild == 0 &&
-      !ekk_instance_.rebuildRefactor(rebuild_reason);
-    assert(finished == !need_rebuild);
+    bool finished = status.has_fresh_rebuild && num_flip_since_rebuild == 0 &&
+                    !ekk_instance_.rebuildRefactor(rebuild_reason);
     if (finished && ekk_instance_.tabooBadBasisChange()) {
       // A bad basis change has had to be made taboo without any other
       // basis changes or flips having been performed from a fresh
       // rebuild. In other words, the only basis change that could be
       // made is not permitted, so no definitive statement about the
       // LP can be made.
-      solve_phase = kSolvePhaseCycling;
+      solve_phase = kSolvePhaseTabooBasis;
       return;
     }
-    if (!need_rebuild) break;
+    if (finished) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
@@ -483,31 +481,24 @@ void HEkkPrimal::solvePhase2() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
-      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase2);
       if (rebuild_reason) break;
     }
     // If the data are fresh from rebuild() and no flips have
     // occurred, possibly break out of the outer loop to see what's
     // ocurred
-    const bool old_break_logic =
-        status.has_fresh_rebuild && num_flip_since_rebuild == 0;
-    const bool need_rebuild =
-        ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
-    bool finished = status.has_fresh_rebuild &&
-      num_flip_since_rebuild == 0 &&
-      !ekk_instance_.rebuildRefactor(rebuild_reason);
-    assert(finished == !need_rebuild);
+    bool finished = status.has_fresh_rebuild && num_flip_since_rebuild == 0 &&
+                    !ekk_instance_.rebuildRefactor(rebuild_reason);
     if (finished && ekk_instance_.tabooBadBasisChange()) {
       // A bad basis change has had to be made taboo without any other
       // basis changes or flips having been performed from a fresh
       // rebuild. In other words, the only basis change that could be
       // made is not permitted, so no definitive statement about the
       // LP can be made.
-      solve_phase = kSolvePhaseCycling;
+      solve_phase = kSolvePhaseTabooBasis;
       return;
     }
-    if (!need_rebuild) break;
+    if (finished) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
@@ -728,7 +719,7 @@ void HEkkPrimal::rebuild() {
   if (solve_phase == kSolvePhase1) {
     use_hyper_chuzc = false;
   } else {
-    use_hyper_chuzc = false;//true;
+    use_hyper_chuzc = false;  // true;
   }
   hyperChooseColumnClear();
 
@@ -822,7 +813,7 @@ void HEkkPrimal::iterate() {
       return;
     }
   }
-  
+
   if (badBasisChange()) return;
 
   // Any pivoting is numerically acceptable, so perform update.
@@ -2583,9 +2574,8 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 bool HEkkPrimal::badBasisChange() {
-  HighsInt bad_basis_change_num =
-    ekk_instance_.badBasisChange(SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
+  HighsInt bad_basis_change_num = ekk_instance_.badBasisChange(
+      SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
 
-  
   return bad_basis_change_num >= 0;
 }

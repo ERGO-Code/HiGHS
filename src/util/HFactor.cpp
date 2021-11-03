@@ -1000,8 +1000,7 @@ HighsInt HFactor::buildKernel() {
 void HFactor::buildHandleRankDeficiency() {
   debugReportRankDeficiency(0, highs_debug_level, log_options, numRow, permute,
                             iwork, baseIndex, rank_deficiency,
-			    row_with_no_pivot,
-			    col_with_no_pivot);
+                            row_with_no_pivot, col_with_no_pivot);
   // iwork can now be used as workspace: use it to accumulate the new
   // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
   // Indices of iwork corresponding to missing indices in permute
@@ -1036,8 +1035,7 @@ void HFactor::buildHandleRankDeficiency() {
   assert(lc_rank_deficiency == rank_deficiency);
   debugReportRankDeficiency(1, highs_debug_level, log_options, numRow, permute,
                             iwork, baseIndex, rank_deficiency,
-			    row_with_no_pivot,
-			    col_with_no_pivot);
+                            row_with_no_pivot, col_with_no_pivot);
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt iRow = row_with_no_pivot[k];
     HighsInt iCol = col_with_no_pivot[k];
@@ -1050,13 +1048,10 @@ void HFactor::buildHandleRankDeficiency() {
   }
   debugReportRankDeficiency(2, highs_debug_level, log_options, numRow, permute,
                             iwork, baseIndex, rank_deficiency,
-			    row_with_no_pivot,
-			    col_with_no_pivot);
-  debugReportRankDeficientASM(highs_debug_level, log_options, numRow, MCstart,
-                              MCcountA, MCindex, MCvalue, iwork,
-                              rank_deficiency,
-			      col_with_no_pivot,
-			      row_with_no_pivot);
+                            row_with_no_pivot, col_with_no_pivot);
+  debugReportRankDeficientASM(
+      highs_debug_level, log_options, numRow, MCstart, MCcountA, MCindex,
+      MCvalue, iwork, rank_deficiency, col_with_no_pivot, row_with_no_pivot);
 }
 
 void HFactor::buildMarkSingC() {
