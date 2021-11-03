@@ -239,10 +239,12 @@ struct HighsSimplexInfo {
   HighsInt num_basic_logicals;
 };
 
-struct HighsSimplexTabooRecord {
-  TabooReason reason;
-  HighsInt row;
-  HighsInt col;
+struct HighsSimplexBadBasisChangeRecord {
+  bool taboo;
+  HighsInt row_out;
+  HighsInt variable_out;
+  HighsInt variable_in;
+  BadBasisChangeReason reason;
   double save_value;
 };
 

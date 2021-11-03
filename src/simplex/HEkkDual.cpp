@@ -88,9 +88,6 @@ HighsStatus HEkkDual::solve() {
                 info.num_primal_infeasibilities, info.max_primal_infeasibility,
                 info.sum_primal_infeasibilities);
 
-  // Allow taboo
-  ekk_instance_.allow_taboo = true;
-
   // Perturb costs according to whether the solution is near-optimnal
   const bool perturb_costs = !near_optimal;
   if (!perturb_costs)
@@ -695,6 +692,18 @@ void HEkkDual::solvePhase1() {
     const bool old_break_logic = status.has_fresh_rebuild;
     const bool need_rebuild =
         ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+    bool finished = status.has_fresh_rebuild &&
+      !ekk_instance_.rebuildRefactor(rebuild_reason);
+    assert(finished == !need_rebuild);
+    if (finished && ekk_instance_.tabooBadBasisChange()) {
+      // A bad basis change has had to be made taboo without any other
+      // basis changes having been performed from a fresh rebuild. In
+      // other words, the only basis change that could be made is not
+      // permitted, so no definitive statement about the LP can be
+      // made.
+      solve_phase = kSolvePhaseCycling;
+      return;
+    }
     if (!need_rebuild) break;
   }
   analysis->simplexTimerStop(IterateClock);
@@ -932,6 +941,18 @@ void HEkkDual::solvePhase2() {
     const bool old_break_logic = status.has_fresh_rebuild;
     const bool need_rebuild =
         ekk_instance_.rebuildRefactor(rebuild_reason) || !old_break_logic;
+    bool finished = status.has_fresh_rebuild &&
+      !ekk_instance_.rebuildRefactor(rebuild_reason);
+    assert(finished == !need_rebuild);
+    if (finished && ekk_instance_.tabooBadBasisChange()) {
+      // A bad basis change has had to be made taboo without any other
+      // basis changes having been performed from a fresh rebuild. In
+      // other words, the only basis change that could be made is not
+      // permitted, so no definitive statement about the LP can be
+      // made.
+      solve_phase = kSolvePhaseCycling;
+      return;
+    }
     if (!need_rebuild) break;
   }
   analysis->simplexTimerStop(IterateClock);
@@ -1034,9 +1055,8 @@ void HEkkDual::solvePhase2() {
 void HEkkDual::rebuild() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
-  // Save history information
-  // Move this to Simplex class once it's created
-  //  record_pivots(-1, -1, 0);  // Indicate REINVERT
+  // Clear taboo flag from any bad basis changes
+  ekk_instance_.clearBadBasisChangeTabooFlag();
 
   // Decide whether refactorization should be performed
   const bool refactor_basis_matrix =
@@ -1057,11 +1077,6 @@ void HEkkDual::rebuild() {
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     ekk_instance_.resetSyntheticClock();
   }
-  // Clear any taboo
-  ekk_instance_.clearTaboo();
-  // Possibly allow taboo
-  ekk_instance_.allow_taboo =
-      ekk_instance_.allowTaboo(local_rebuild_reason);
 
   HighsInt alt_debug_level = -1;
   //  if (ekk_instance_.debug_solve_report_) alt_debug_level =
@@ -1243,7 +1258,7 @@ void HEkkDual::iterate() {
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
-  if (cyclingDetected()) return;
+  if (badBasisChange()) return;
 
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
@@ -1430,7 +1445,7 @@ void HEkkDual::chooseRow() {
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
   // Zero the infeasibility of any taboo rows
-  ekk_instance_.applyTabooRow(dualRHS.work_infeasibility, 0);
+  ekk_instance_.applyTabooRowOut(dualRHS.work_infeasibility, 0);
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   for (;;) {
@@ -1481,7 +1496,7 @@ void HEkkDual::chooseRow() {
     }
   }
   // Recover the infeasibility of any taboo rows
-  ekk_instance_.unapplyTabooRow(dualRHS.work_infeasibility);
+  ekk_instance_.unapplyTabooRowOut(dualRHS.work_infeasibility);
 
   // Index of row to leave the basis has been found
   //
@@ -2710,20 +2725,8 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   return HighsDebugStatus::kOk;
 }
 
-bool HEkkDual::cyclingDetected() {
-  bool cycling_detected = ekk_instance_.cyclingDetected(
-      SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
-  if (cycling_detected) {
-    analysis->num_dual_cycling_detections++;
-    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-                "Cycling detected in dual simplex:");
-    if (ekk_instance_.allow_taboo) {
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-                  "make row %d taboo\n", (int)row_out);
-      ekk_instance_.addTaboo(row_out, variable_out, TabooReason::kCycling);
-    } else {
-      solve_phase = kSolvePhaseCycling;
-    }
-  }
-  return cycling_detected;
+bool HEkkDual::badBasisChange() {
+  HighsInt bad_basis_change_num =
+    ekk_instance_.badBasisChange(SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
+  return bad_basis_change_num >= 0;
 }

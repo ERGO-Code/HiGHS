@@ -195,8 +195,7 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
 
-  bool allow_taboo;
-  std::vector<HighsSimplexTabooRecord> taboo;
+  std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
  private:
   bool isUnconstrainedLp();
@@ -257,9 +256,9 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  bool cyclingDetected(const SimplexAlgorithm algorithm,
-                       const HighsInt variable_in, const HighsInt row_out,
-                       const HighsInt rebuild_reason);
+  HighsInt badBasisChange(const SimplexAlgorithm algorithm,
+			  const HighsInt variable_in, const HighsInt row_out,
+			  const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -280,14 +279,19 @@ class HEkk {
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
 
-  void clearTaboo() { taboo.clear(); };
+  void clearBadBasisChange() { bad_basis_change_.clear(); };
 
-  bool allowTaboo(const HighsInt rebuild_reason);
-  void addTaboo(const HighsInt iRow, const HighsInt iCol, const TabooReason reason);
-  void applyTabooRow(vector<double>& values, double overwrite_with);
-  void unapplyTabooRow(vector<double>& values);
-  void applyTabooCol(vector<double>& values, double overwrite_with);
-  void unapplyTabooCol(vector<double>& values);
+  void addBadBasisChange(const HighsInt row_out,
+			 const HighsInt variable_out,
+			 const HighsInt variable_in,
+			 const BadBasisChangeReason reason);
+  void clearBadBasisChangeTabooFlag();
+  //  bool allowTaboo(const HighsInt rebuild_reason);
+  bool tabooBadBasisChange();
+  void applyTabooRowOut(vector<double>& values, double overwrite_with);
+  void unapplyTabooRowOut(vector<double>& values);
+  void applyTabooVariableIn(vector<double>& values, double overwrite_with);
+  void unapplyTabooVariableIn(vector<double>& values);
 
   // Methods in HEkkControl
   void initialiseControl();

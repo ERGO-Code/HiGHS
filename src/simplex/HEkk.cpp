@@ -148,6 +148,8 @@ void HEkk::clearEkkData() {
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
+
+  clearBadBasisChange();
 }
 
 void HEkk::clearEkkDataInfo() {
@@ -1597,10 +1599,6 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     }
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     resetSyntheticClock();
-    // Clear any taboo rows/cols
-    clearTaboo();
-    // Allow taboo
-    allow_taboo = true;
   }
   assert(status_.has_invert);
   return 0;
@@ -1629,6 +1627,7 @@ void HEkk::initialiseEkk() {
   initialiseControl();
   initialiseSimplexLpRandomVectors();
   simplex_nla_.clear();
+  clearBadBasisChange();
   status_.initialised_for_new_lp = true;
 }
 
@@ -2078,6 +2077,8 @@ bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
 HighsInt HEkk::computeFactor() {
   assert(status_.has_nla);
   if (status_.has_fresh_invert) return 0;
+  // Clear any bad basis changes
+  clearBadBasisChange();
   //
   // Perform INVERT
   analysis_.simplexTimerStart(InvertClock);
@@ -3131,11 +3132,12 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
-                           const HighsInt variable_in, const HighsInt row_out,
-                           const HighsInt rebuild_reason) {
-  if (rebuild_reason) return false;
-  if (variable_in == -1 || row_out == -1) return false;
+HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
+			      const HighsInt variable_in, const HighsInt row_out,
+			      const HighsInt rebuild_reason) {
+  HighsInt bad_basis_change_num = -1;
+  if (rebuild_reason) return bad_basis_change_num;
+  if (variable_in == -1 || row_out == -1) return bad_basis_change_num;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
 
@@ -3147,18 +3149,47 @@ bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
   if (posible_cycling) {
     if (iteration_count_ == previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
-      printf("Cycling detected in %s simplex solve %d (Iteration %d)\n",
+      //      highsLogDev(options_->log_options, HighsLogType::kWarning,
+      //		  "Cycling detected in %s simplex:");
+      printf("Cycling detected in %s simplex solve %d (Iteration %d)",
              algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
              (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
+      //      fflush(stdout);assert(1==99);
     } else {
-      //      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
-      //             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-      //             (int)debug_solve_call_num_, (int)iteration_count_);
+      printf("Possible cycling in %s simplex solve %d (Iteration %d)",
+	     algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+	     (int)debug_solve_call_num_, (int)iteration_count_);
       previous_iteration_cycling_detected = iteration_count_;
+      //      cycling_detected = true;
     }
   }
-  return cycling_detected;
+  if (cycling_detected) {
+    if (algorithm == SimplexAlgorithm::kDual) {
+      analysis_.num_dual_cycling_detections++;
+    } else {
+      analysis_.num_primal_cycling_detections++;
+    }
+    //    highsLogDev(options_->log_options, HighsLogType::kWarning,
+    printf(
+		" basis change (%d out; %d in) is bad\n", (int)variable_out, (int)variable_in);
+    addBadBasisChange(row_out, variable_out, variable_in, BadBasisChangeReason::kCycling);
+    bad_basis_change_num = bad_basis_change_.size() - 1;
+  } else {
+    // Look to see whether this basis change is in the list of bad
+    // ones
+    for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+      if (bad_basis_change_[iX].variable_out == variable_out &&
+	  bad_basis_change_[iX].variable_in == variable_in) {
+	bad_basis_change_num = iX;
+	break;
+      }
+    }
+  }
+  if (bad_basis_change_num >= 0) {
+    bad_basis_change_[bad_basis_change_num].taboo = true;
+  }
+  return bad_basis_change_num;
 }
 
 void HEkk::updateMatrix(const HighsInt variable_in,
@@ -3799,50 +3830,75 @@ double HEkk::factorSolveError() {
   return solution_error;
 }
 
-bool HEkk::allowTaboo(const HighsInt rebuild_reason) {
-  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
-           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
-}
-
-void HEkk::addTaboo(const HighsInt iRow, const HighsInt iCol, const TabooReason reason) {
-  assert(iRow <= lp_.num_row_);
-  HighsSimplexTabooRecord record;
+void HEkk::addBadBasisChange(const HighsInt row_out,
+			     const HighsInt variable_out,
+			     const HighsInt variable_in,
+			     const BadBasisChangeReason reason) {
+  assert(0 <= row_out && row_out <= lp_.num_row_);
+  assert(0 <= variable_out && variable_out <= lp_.num_col_ + lp_.num_row_);
+  assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
+  HighsSimplexBadBasisChangeRecord record;
+  record.taboo = false;
+  record.row_out = row_out;
+  record.variable_out = variable_out;
+  record.variable_in = variable_in;
   record.reason = reason;
-  record.row = iRow;
-  record.col = iCol;
-  taboo.push_back(record);
+  bad_basis_change_.push_back(record);
 }
 
-void HEkk::applyTabooRow(vector<double>& values, double overwrite_with) {
+void HEkk::clearBadBasisChangeTabooFlag() {
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+    bad_basis_change_[iX].taboo = false;
+}
+
+bool HEkk::tabooBadBasisChange() {
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+    if (bad_basis_change_[iX].taboo) return true;
+  }
+  return false;
+}
+
+//bool HEkk::allowTaboo(const HighsInt rebuild_reason) {
+//  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
+//           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
+//           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
+//           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
+//}
+
+void HEkk::applyTabooRowOut(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++) {
-    HighsInt iRow = taboo[iX].row;
-    taboo[iX].save_value = values[iRow];
-    values[iRow] = overwrite_with;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+    if (bad_basis_change_[iX].taboo) {
+      HighsInt iRow = bad_basis_change_[iX].row_out;
+      bad_basis_change_[iX].save_value = values[iRow];
+      values[iRow] = overwrite_with;
+    }
   }
 }
 
-void HEkk::unapplyTabooRow(vector<double>& values) {
+void HEkk::unapplyTabooRowOut(vector<double>& values) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++)
-    values[taboo[iX].row] = taboo[iX].save_value;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+    if (bad_basis_change_[iX].taboo)
+      values[bad_basis_change_[iX].row_out] = bad_basis_change_[iX].save_value;
 }
 
-void HEkk::applyTabooCol(vector<double>& values, double overwrite_with) {
+void HEkk::applyTabooVariableIn(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++) {
-    HighsInt iCol = taboo[iX].col;
-    taboo[iX].save_value = values[iCol];
-    values[iCol] = overwrite_with;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+    if (bad_basis_change_[iX].taboo) {
+      HighsInt iCol = bad_basis_change_[iX].variable_in;
+      bad_basis_change_[iX].save_value = values[iCol];
+      values[iCol] = overwrite_with;
+    }
   }
 }
 
-void HEkk::unapplyTabooCol(vector<double>& values) {
+void HEkk::unapplyTabooVariableIn(vector<double>& values) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo.size(); iX++)
-    values[taboo[iX].col] = taboo[iX].save_value;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+    if (bad_basis_change_[iX].taboo)
+      values[bad_basis_change_[iX].variable_in] = bad_basis_change_[iX].save_value;
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {
