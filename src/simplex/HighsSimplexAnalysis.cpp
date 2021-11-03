@@ -307,6 +307,14 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   }
 }
 
+void HighsSimplexAnalysis::setupSimplexTime() {
+  assert(analyse_simplex_time);
+}
+
+void HighsSimplexAnalysis::setupFactorTime() {
+  assert(analyse_factor_time);
+}
+
 void HighsSimplexAnalysis::messaging(const HighsLogOptions& log_options_) {
   log_options = log_options_;
 }

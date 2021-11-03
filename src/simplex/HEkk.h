@@ -121,6 +121,7 @@ class HEkk {
   void debugReporting(
       const HighsInt save_mod_recover,
       const HighsInt log_dev_level_ = kHighsLogDevLevelDetailed);
+  void timeReporting(const HighsInt save_mod_recover);
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
@@ -192,6 +193,7 @@ class HEkk {
   double build_synthetic_tick_;
   double total_synthetic_tick_;
   HighsInt debug_solve_call_num_ = 0;
+  bool time_report_ = false;
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
 
@@ -283,7 +285,8 @@ class HEkk {
 
   void addBadBasisChange(const HighsInt row_out, const HighsInt variable_out,
                          const HighsInt variable_in,
-                         const BadBasisChangeReason reason);
+                         const BadBasisChangeReason reason,
+			 const bool taboo = false);
   void clearBadBasisChangeTabooFlag();
   bool tabooBadBasisChange();
   void applyTabooRowOut(vector<double>& values, double overwrite_with);

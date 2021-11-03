@@ -1077,6 +1077,16 @@ HighsStatus HEkk::solve() {
     debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
   }
 
+  const HighsInt time_from_solve_call_num = 1;
+  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
+  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
+                        debug_solve_call_num_ <= time_to_solve_call_num;
+  if (time_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    timeReporting(-1);
+    timeReporting(0);
+  }
+
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
     algorithm_name = "primal";
@@ -1137,6 +1147,8 @@ HighsStatus HEkk::solve() {
     // Restore any modified development output settings
     debugReporting(1);
   }
+
+   if (time_report_) timeReporting(1);
 
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
@@ -1615,6 +1627,11 @@ void HEkk::handleRankDeficiency() {
     HighsInt variable_out = var_with_no_pivot[k];
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
+    HighsInt row_out = row_with_no_pivot[k];
+    printf("HEkk::handleRankDeficiency: (Out = %4d, In = %4d) basicIndex[%4d] = %4d\n",
+	   (int)variable_out, (int)variable_in, (int)row_out, (int)basis_.basicIndex_[row_out]);
+	   addBadBasisChange(row_out, variable_out, variable_in, 
+		      BadBasisChangeReason::kSingular, true);
   }
   status_.has_ar_matrix = false;
 }
@@ -3157,13 +3174,8 @@ HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
              algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
              (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
-      //      fflush(stdout);assert(1==99);
     } else {
-      printf("Possible cycling in %s simplex solve %d (Iteration %d)",
-             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-             (int)debug_solve_call_num_, (int)iteration_count_);
       previous_iteration_cycling_detected = iteration_count_;
-      //      cycling_detected = true;
     }
   }
   if (cycling_detected) {
@@ -3836,12 +3848,13 @@ double HEkk::factorSolveError() {
 void HEkk::addBadBasisChange(const HighsInt row_out,
                              const HighsInt variable_out,
                              const HighsInt variable_in,
-                             const BadBasisChangeReason reason) {
+                             const BadBasisChangeReason reason,
+			     const bool taboo) {
   assert(0 <= row_out && row_out <= lp_.num_row_);
   assert(0 <= variable_out && variable_out <= lp_.num_col_ + lp_.num_row_);
   assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
   HighsSimplexBadBasisChangeRecord record;
-  record.taboo = false;
+  record.taboo = taboo;
   record.row_out = row_out;
   record.variable_out = variable_out;
   record.variable_in = variable_in;

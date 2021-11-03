@@ -71,6 +71,8 @@ class HighsSimplexAnalysis {
   void setup(const std::string lp_name, const HighsLp& lp,
              const HighsOptions& options,
              const HighsInt simplex_iteration_count);
+  void setupSimplexTime();
+  void setupFactorTime();
   void messaging(const HighsLogOptions& log_options_);
   void iterationReport();
   void invertReport();
