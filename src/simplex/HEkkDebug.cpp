@@ -21,6 +21,7 @@
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HEkk.h"
+#include "simplex/SimplexTimer.h"
 
 using std::abs;
 using std::max;
@@ -42,16 +43,23 @@ const double updated_dual_large_absolute_error =
 
 void HEkk::timeReporting(const HighsInt save_mod_recover) {
   static HighsInt highs_analysis_level;
-  static bool analyse_simplex_time;
   if (save_mod_recover == -1) {
-    analyse_simplex_time = this->analysis_.analyse_simplex_time;
     highs_analysis_level = options_->highs_analysis_level;
   } else if (save_mod_recover == 0) {
-    this->analysis_.analyse_simplex_time = true;
     this->options_->highs_analysis_level = kHighsAnalysisLevelSolverTime;
+    //    this->analysis_.setupSimplexTime(*this->options_);
+    //    analysis_.simplexTimerStart(SimplexTotalClock);
   } else {
-    this->analysis_.analyse_simplex_time = analyse_simplex_time;
+    // Stop SimplexTotalClock unless it needs to be stopped by routine
+    // setting of analyse_simplex_time
+    const bool analyse_simplex_time =
+        kHighsAnalysisLevelSolverTime & highs_analysis_level;
+    if (!analyse_simplex_time) analysis_.simplexTimerStop(SimplexTotalClock);
     options_->highs_analysis_level = highs_analysis_level;
+    SimplexTimer simplex_timer;
+    simplex_timer.reportSimplexInnerClock(
+        this->analysis_.thread_simplex_clocks[0], 20);
+    this->analysis_.analyse_simplex_time = analyse_simplex_time;
   }
 }
 
@@ -72,8 +80,8 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
     this->options_->output_flag = true;
     this->options_->log_dev_level = log_dev_level_;
     this->options_->highs_analysis_level =
-      kHighsAnalysisLevelSolverSummaryData +
-      kHighsAnalysisLevelSolverRuntimeData;
+        kHighsAnalysisLevelSolverSummaryData +
+        kHighsAnalysisLevelSolverRuntimeData;
     this->options_->highs_debug_level = kHighsDebugLevelCostly;
     if (log_dev_level_ == kHighsLogDevLevelVerbose)
       this->analysis_.analyse_simplex_runtime_data = true;

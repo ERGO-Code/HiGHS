@@ -286,7 +286,7 @@ class HEkk {
   void addBadBasisChange(const HighsInt row_out, const HighsInt variable_out,
                          const HighsInt variable_in,
                          const BadBasisChangeReason reason,
-			 const bool taboo = false);
+                         const bool taboo = false);
   void clearBadBasisChangeTabooFlag();
   bool tabooBadBasisChange();
   void applyTabooRowOut(vector<double>& values, double overwrite_with);

@@ -1024,6 +1024,26 @@ HighsStatus HEkk::unpermute() {
 
 HighsStatus HEkk::solve() {
   debug_solve_call_num_++;
+  const HighsInt debug_from_solve_call_num = -607;
+  const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
+  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
+                        debug_solve_call_num_ <= debug_to_solve_call_num;
+  if (debug_solve_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    debugReporting(-1);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
+  }
+
+  const HighsInt time_from_solve_call_num = 1;
+  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
+  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
+                 debug_solve_call_num_ <= time_to_solve_call_num;
+  if (time_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    timeReporting(-1);
+    timeReporting(0);
+  }
+
   initialiseAnalysis();
   initialiseControl();
 
@@ -1067,25 +1087,6 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = -607;
-  const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
-  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
-                        debug_solve_call_num_ <= debug_to_solve_call_num;
-  if (debug_solve_report_) {
-    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    debugReporting(-1);
-    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
-  }
-
-  const HighsInt time_from_solve_call_num = 1;
-  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
-  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
-                        debug_solve_call_num_ <= time_to_solve_call_num;
-  if (time_report_) {
-    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    timeReporting(-1);
-    timeReporting(0);
-  }
 
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
@@ -1148,7 +1149,11 @@ HighsStatus HEkk::solve() {
     debugReporting(1);
   }
 
-   if (time_report_) timeReporting(1);
+  if (time_report_) {
+    // Restore any modified development timing settings and analyse
+    // solver timing
+    timeReporting(1);
+  }
 
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
@@ -1628,10 +1633,13 @@ void HEkk::handleRankDeficiency() {
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
-    printf("HEkk::handleRankDeficiency: (Out = %4d, In = %4d) basicIndex[%4d] = %4d\n",
-	   (int)variable_out, (int)variable_in, (int)row_out, (int)basis_.basicIndex_[row_out]);
-	   addBadBasisChange(row_out, variable_out, variable_in, 
-		      BadBasisChangeReason::kSingular, true);
+    printf(
+        "HEkk::handleRankDeficiency: (Out = %4d, In = %4d) basicIndex[%4d] = "
+        "%4d\n",
+        (int)variable_out, (int)variable_in, (int)row_out,
+        (int)basis_.basicIndex_[row_out]);
+    addBadBasisChange(row_out, variable_out, variable_in,
+                      BadBasisChangeReason::kSingular, true);
   }
   status_.has_ar_matrix = false;
 }
@@ -3211,7 +3219,7 @@ void HEkk::updateMatrix(const HighsInt variable_in,
                         const HighsInt variable_out) {
   analysis_.simplexTimerStart(UpdateMatrixClock);
   ar_matrix_.update(variable_in, variable_out, lp_.a_matrix_);
-  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
+  //  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(UpdateMatrixClock);
 }
 
@@ -3849,7 +3857,7 @@ void HEkk::addBadBasisChange(const HighsInt row_out,
                              const HighsInt variable_out,
                              const HighsInt variable_in,
                              const BadBasisChangeReason reason,
-			     const bool taboo) {
+                             const bool taboo) {
   assert(0 <= row_out && row_out <= lp_.num_row_);
   assert(0 <= variable_out && variable_out <= lp_.num_col_ + lp_.num_row_);
   assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
