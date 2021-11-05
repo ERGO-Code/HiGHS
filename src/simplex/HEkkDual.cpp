@@ -2322,7 +2322,7 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
 
 void HEkkDual::interpretDualEdgeWeightStrategy(
     const HighsInt dual_edge_weight_strategy) {
-  const bool always_initialise_dual_steepest_edge_weights = false;
+  const bool always_initialise_dual_steepest_edge_weights = true;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose) {
     if (initial_basis_is_logical_ ||
 	always_initialise_dual_steepest_edge_weights) {
