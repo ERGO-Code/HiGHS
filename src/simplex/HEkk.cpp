@@ -1032,7 +1032,8 @@ HighsStatus HEkk::solve() {
   const HighsInt time_to_solve_call_num = time_from_solve_call_num;
   time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
                  debug_solve_call_num_ <= time_to_solve_call_num;
-
+  const HighsInt debug_basis_id = -999;
+  debug_basis_report_ = basis_.debug_id == debug_basis_id;
   if (debug_solve_report_) {
     printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
     debugReporting(-1);
@@ -1042,7 +1043,9 @@ HighsStatus HEkk::solve() {
     timeReporting(-1);
     timeReporting(0);
   }
-
+  if (debug_basis_report_) {
+    printf("HEkk::solve basis %d\n", (int)debug_basis_id);
+  }
   initialiseAnalysis();
   initialiseControl();
 
@@ -1209,12 +1212,8 @@ HighsStatus HEkk::setBasis() {
   const HighsInt num_col = lp_.num_col_;
   const HighsInt num_row = lp_.num_row_;
   const HighsInt num_tot = num_col + num_row;
-  basis_.hash = 0;
-  basis_.nonbasicFlag_.resize(num_tot);
-  basis_.nonbasicMove_.resize(num_tot);
-  basis_.basicIndex_.resize(num_row);
-  basis_.debug_id = -1;
-  basis_.debug_update_count = -1;
+  
+  basis_.setup(num_col, num_row);
   
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     basis_.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
@@ -1276,16 +1275,17 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   HighsInt num_col = lp_.num_col_;
   HighsInt num_row = lp_.num_row_;
   HighsInt num_tot = num_col + num_row;
-  // Resize the basis in case none has yet been defined for this LP
-  basis_.nonbasicFlag_.resize(num_tot);
-  basis_.nonbasicMove_.resize(num_tot);
-  basis_.basicIndex_.resize(num_row);
-
-  basis_.hash = 0;
+  // Set up the basis in case it has not yet been done for this LP
+  basis_.setup(num_col, num_row);
+  if (highs_basis.debug_id == -1) {
+    printf("HEkk::setBasis Id = %d; UpdateCount = %d\n",
+	   (int)basis_.debug_id, (int)basis_.debug_update_count);
+  }
+  basis_.debug_id = highs_basis.debug_id;
+  basis_.debug_update_count = highs_basis.debug_update_count;
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
-
     const double lower = lp_.col_lower_[iCol];
     const double upper = lp_.col_upper_[iCol];
     if (highs_basis.col_status[iCol] == HighsBasisStatus::kBasic) {
@@ -1591,9 +1591,8 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
-      printf("HEkk::initialiseSimplexLpBasisAndFactor Rank_deficiency: solve %d (Iteration "
-	     "%d)\n",
-	     (int)debug_solve_call_num_, (int)iteration_count_);
+      printf("HEkk::initialiseSimplexLpBasisAndFactor Rank_deficiency: Id = %d; UpdateCount = %d\n",
+	     (int)basis_.debug_id, (int)basis_.debug_update_count);
       if (only_from_known_basis) {
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,

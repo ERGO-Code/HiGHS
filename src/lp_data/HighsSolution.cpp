@@ -853,3 +853,13 @@ void HighsBasis::clear() {
   this->row_status.clear();
   this->col_status.clear();
 }
+
+/*
+void HighsBasis::copy(const HighsBasis& basis) {
+  this->valid = basis.valid;
+  this->debug_id = basis.debug_id;
+  this->debug_update_count = basis.debug_update_count;
+  this->row_status = basis.row_status;
+  this->col_status = basis.col_status;
+}
+*/

@@ -60,6 +60,7 @@ struct HighsBasis {
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
   void clear();
+  //  void copy(const HighsBasis& basis);
 };
 
 struct HighsScale {

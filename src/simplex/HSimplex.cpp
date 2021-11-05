@@ -36,6 +36,15 @@ void SimplexBasis::clear() {
   this->debug_update_count = -1;
 }
 
+void SimplexBasis::setup(const HighsInt num_col, const HighsInt num_row) {
+  this->hash = 0;
+  this->basicIndex_.resize(num_row);
+  this->nonbasicFlag_.resize(num_col + num_row);
+  this->nonbasicMove_.resize(num_col + num_row);
+  this->debug_id = -1;
+  this->debug_update_count = -1;
+}
+
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol) {
   assert(highs_basis.valid);

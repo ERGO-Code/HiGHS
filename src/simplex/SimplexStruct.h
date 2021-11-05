@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <vector>
 
+//#include "lp_data/HighsLp.h"
 #include "lp_data/HConst.h"
 #include "simplex/SimplexConst.h"
 
@@ -35,6 +36,7 @@ struct SimplexBasis {
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
   void clear();
+  void setup(const HighsInt num_col, const HighsInt num_row);
 };
 
 struct HighsSimplexStatus {
