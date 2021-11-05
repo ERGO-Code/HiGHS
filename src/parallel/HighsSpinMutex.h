@@ -38,7 +38,7 @@ class HighsSpinMutex {
 
   bool try_lock() { return !flag.exchange(true, std::memory_order_acquire); }
 
-  void lock() noexcept {
+  void lock() {
     while (true) {
       if (!flag.exchange(true, std::memory_order_acquire)) return;
 
@@ -46,7 +46,7 @@ class HighsSpinMutex {
     }
   }
 
-  void unlock() noexcept { flag.store(false, std::memory_order_release); }
+  void unlock() { flag.store(false, std::memory_order_release); }
 };
 
 #endif

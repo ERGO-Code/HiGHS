@@ -236,7 +236,9 @@ set(headers
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsBinarySemaphore.h
     parallel/HighsCacheAlign.h
+    parallel/HighsMutex.h
     parallel/HighsParallel.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
@@ -683,7 +685,9 @@ set(headers_fast_build_
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsBinarySemaphore.h
     parallel/HighsCacheAlign.h
+    parallel/HighsMutex.h
     parallel/HighsParallel.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h

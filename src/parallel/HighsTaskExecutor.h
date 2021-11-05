@@ -26,18 +26,19 @@
 #include "util/HighsRandom.h"
 
 class HighsTaskExecutor {
+ public:
   static constexpr int kNumTryFac = 16;
   static constexpr int kMicroSecsBeforeSleep = 5000;
   static constexpr int kMicroSecsBeforeGlobalSync = 1000;
 
+ private:
   using cache_aligned = highs::cache_aligned;
 
- private:
   static thread_local HighsSplitDeque* threadLocalWorkerDeque;
   static cache_aligned::shared_ptr<HighsTaskExecutor> globalExecutor;
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
-  cache_aligned::shared_ptr<HighsSplitDeque::GlobalQueue> globalQueue;
+  cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -48,10 +49,11 @@ class HighsTaskExecutor {
 
     while (true) {
       for (int s = 0; s < numTries; ++s) {
-        HighsTask* task =
-            localDeque->randomSteal(workerDeques.data(), numWorkers);
+        HighsTask* task = localDeque->randomSteal();
         if (task) return task;
       }
+
+      if (!workerBunk->haveJobs.load(std::memory_order_relaxed)) break;
 
       auto numMicroSecs =
           std::chrono::duration_cast<std::chrono::microseconds>(
@@ -70,8 +72,7 @@ class HighsTaskExecutor {
   void run_worker(int workerId) {
     HighsSplitDeque* localDeque = workerDeques[workerId].get();
     threadLocalWorkerDeque = localDeque;
-    HighsTask* currentTask =
-        globalQueue->waitForNewTask(localDeque, kMicroSecsBeforeSleep);
+    HighsTask* currentTask = workerBunk->waitForNewTask(localDeque);
     while (true) {
       assert(currentTask != nullptr);
 
@@ -80,8 +81,7 @@ class HighsTaskExecutor {
       currentTask = random_steal_loop(localDeque);
       if (currentTask != nullptr) continue;
 
-      currentTask =
-          globalQueue->waitForNewTask(localDeque, kMicroSecsBeforeSleep);
+      currentTask = workerBunk->waitForNewTask(localDeque);
     }
   }
 
@@ -89,12 +89,11 @@ class HighsTaskExecutor {
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
     workerDeques.resize(numThreads);
-    globalQueue = cache_aligned::make_shared<HighsSplitDeque::GlobalQueue>(
-        workerDeques.data());
+    workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
 
     for (int i = 0; i < numThreads; ++i)
-      workerDeques[i] =
-          cache_aligned::make_unique<HighsSplitDeque>(globalQueue, i);
+      workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
+          workerBunk, workerDeques.data(), i, numThreads);
 
     threadLocalWorkerDeque = workerDeques[0].get();
     for (int i = 1; i < numThreads; ++i)
@@ -132,9 +131,7 @@ class HighsTaskExecutor {
             localDeque->popStolen();
             return;
           }
-          HighsTask* task =
-              localDeque->randomSteal(workerDeques.data(), numWorkers);
-          if (task) localDeque->runStolenTask(task);
+          localDeque->yield();
         }
 
         auto numMicroSecs =
