@@ -284,6 +284,7 @@ HighsStatus HEkkPrimal::solve() {
 }
 
 void HEkkPrimal::initialiseInstance() {
+  // Called in constructor for HEkkPrimal class
   analysis = &ekk_instance_.analysis_;
 
   num_col = ekk_instance_.lp_.num_col_;

@@ -406,6 +406,9 @@ class HEkkDual {
   double* rowUpper;
   int8_t* nonbasicFlag;
 
+  // Retained value
+  bool initial_basis_is_logical_;
+
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
   bool initialise_dual_steepest_edge_weights;

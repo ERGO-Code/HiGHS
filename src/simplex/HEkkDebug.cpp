@@ -21,6 +21,7 @@
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HEkk.h"
+#include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
 
 using std::abs;
@@ -46,20 +47,28 @@ void HEkk::timeReporting(const HighsInt save_mod_recover) {
   if (save_mod_recover == -1) {
     highs_analysis_level = options_->highs_analysis_level;
   } else if (save_mod_recover == 0) {
-    this->options_->highs_analysis_level = kHighsAnalysisLevelSolverTime;
-    //    this->analysis_.setupSimplexTime(*this->options_);
-    //    analysis_.simplexTimerStart(SimplexTotalClock);
+    // Ensure that kHighsAnalysisLevelSolverTime is set
+    if (!(kHighsAnalysisLevelSolverTime & highs_analysis_level))
+      this->options_->highs_analysis_level += kHighsAnalysisLevelSolverTime;
   } else {
-    // Stop SimplexTotalClock unless it needs to be stopped by routine
-    // setting of analyse_simplex_time
-    const bool analyse_simplex_time =
-        kHighsAnalysisLevelSolverTime & highs_analysis_level;
-    if (!analyse_simplex_time) analysis_.simplexTimerStop(SimplexTotalClock);
     options_->highs_analysis_level = highs_analysis_level;
     SimplexTimer simplex_timer;
-    simplex_timer.reportSimplexInnerClock(
-        this->analysis_.thread_simplex_clocks[0], 20);
-    this->analysis_.analyse_simplex_time = analyse_simplex_time;
+    const bool non_null_report =
+      simplex_timer.reportSimplexInnerClock(this->analysis_.thread_simplex_clocks[0], 20);
+    this->analysis_.analyse_simplex_time =
+      kHighsAnalysisLevelSolverTime & options_->highs_analysis_level;
+    if (non_null_report) {
+      HighsLogOptions log_options;
+      bool output_flag = true;
+      bool log_to_console = false;
+      HighsInt log_dev_level = kHighsLogDevLevelVerbose;
+      log_options.log_file_stream = stdout;
+      log_options.output_flag = &output_flag;
+      log_options.log_to_console = &log_to_console;
+      log_options.log_dev_level = &log_dev_level;
+      reportSimplexPhaseIterations(log_options, this->iteration_count_, this->info_);
+    }
+    
   }
 }
 

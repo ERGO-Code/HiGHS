@@ -235,7 +235,7 @@ class SimplexTimer {
     clock[UpdateRowEpClock] = timer_pointer->clock_def("UPDATE_ROW_EP", "UPR");
   }
 
-  void reportSimplexClockList(const char* grepStamp,
+  bool reportSimplexClockList(const char* grepStamp,
                               const std::vector<HighsInt> simplex_clock_list,
                               const HighsTimerClock& simplex_timer_clock,
                               const double tolerance_percent_report_ = -1) {
@@ -251,8 +251,8 @@ class SimplexTimer {
         timer_pointer->clock_time[clock[SimplexTotalClock]];
     const double tolerance_percent_report =
         tolerance_percent_report_ >= 0 ? tolerance_percent_report_ : 1e-8;
-    timer_pointer->reportOnTolerance(grepStamp, clockList, ideal_sum_time,
-                                     tolerance_percent_report);
+    return timer_pointer->reportOnTolerance(grepStamp, clockList, ideal_sum_time,
+					    tolerance_percent_report);
   };
 
   void reportChuzc4ClockList(const std::vector<HighsInt> simplex_clock_list,
@@ -301,7 +301,7 @@ class SimplexTimer {
                            simplex_timer_clock);
   };
 
-  void reportSimplexInnerClock(const HighsTimerClock& simplex_timer_clock,
+  bool reportSimplexInnerClock(const HighsTimerClock& simplex_timer_clock,
                                const double tolerance_percent_report_ = -1) {
     const std::vector<HighsInt> simplex_clock_list{
         initialiseSimplexLpBasisAndFactorClock,
@@ -353,8 +353,8 @@ class SimplexTimer {
         UpdatePivotsClock,
         UpdateFactorClock,
         UpdateMatrixClock};
-    reportSimplexClockList("SimplexInner", simplex_clock_list,
-                           simplex_timer_clock, tolerance_percent_report_);
+    return reportSimplexClockList("SimplexInner", simplex_clock_list,
+				  simplex_timer_clock, tolerance_percent_report_);
   };
 
   void reportSimplexChuzc4Clock(const HighsTimerClock& simplex_timer_clock) {

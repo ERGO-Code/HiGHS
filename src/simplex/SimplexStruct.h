@@ -32,6 +32,8 @@ struct SimplexBasis {
   std::vector<int8_t> nonbasicFlag_;
   std::vector<int8_t> nonbasicMove_;
   uint64_t hash;
+  HighsInt debug_id = -1;
+  HighsInt debug_update_count = -1;
   void clear();
 };
 

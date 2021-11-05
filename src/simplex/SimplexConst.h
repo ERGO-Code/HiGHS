@@ -78,9 +78,8 @@ enum SimplexDualEdgeWeightStrategy {
   kSimplexDualEdgeWeightStrategyDantzig,
   kSimplexDualEdgeWeightStrategyDevex,
   kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial,
   kSimplexDualEdgeWeightStrategyMax =
-      kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial
+      kSimplexDualEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
@@ -173,6 +172,8 @@ const double kAcceptDseWeightThreshold = 0.25;
 
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
+
+const double minDualSteepestEdgeWeight = 1e-4;
 
 enum class LpAction {
   kScale = 0,

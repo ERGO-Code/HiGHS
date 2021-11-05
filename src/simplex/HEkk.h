@@ -193,6 +193,7 @@ class HEkk {
   double build_synthetic_tick_;
   double total_synthetic_tick_;
   HighsInt debug_solve_call_num_ = 0;
+  HighsInt debug_basis_id_ = 0;
   bool time_report_ = false;
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
@@ -275,6 +276,7 @@ class HEkk {
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
   bool bailoutOnTimeIterations();
+  HighsStatus returnFromEkkSolve(const HighsStatus return_status);
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
   double computeBasisCondition();

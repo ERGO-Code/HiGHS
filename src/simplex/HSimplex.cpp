@@ -28,10 +28,12 @@ using std::runtime_error;
 #endif
 
 void SimplexBasis::clear() {
-  hash = 0;
-  basicIndex_.clear();
-  nonbasicFlag_.clear();
-  nonbasicMove_.clear();
+  this->hash = 0;
+  this->basicIndex_.clear();
+  this->nonbasicFlag_.clear();
+  this->nonbasicMove_.clear();
+  this->debug_id = -1;
+  this->debug_update_count = -1;
 }
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,

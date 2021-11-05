@@ -200,17 +200,17 @@ class HighsTimer {
   /**
    * @brief Report timing information for the clock indices in the list
    */
-  void report(const char* grep_stamp,  //!< Character string used to extract
+  bool report(const char* grep_stamp,  //!< Character string used to extract
                                        //!< output using grep
               std::vector<HighsInt>& clock_list,  //!< List of indices to report
               double ideal_sum_time = 0  //!< Ideal value for times to sum to
   ) {
     const double tolerance_percent_report = 1.0;
-    reportOnTolerance(grep_stamp, clock_list, ideal_sum_time,
-                      tolerance_percent_report);
+    return reportOnTolerance(grep_stamp, clock_list, ideal_sum_time,
+			     tolerance_percent_report);
   }
 
-  void reportOnTolerance(
+  bool reportOnTolerance(
       const char*
           grep_stamp,  //!< Character string used to extract output using grep
       std::vector<HighsInt>& clock_list,  //!< List of indices to report
@@ -221,6 +221,7 @@ class HighsTimer {
   ) {
     HighsInt num_clock_list_entries = clock_list.size();
     double current_run_highs_time = readRunHighsClock();
+    bool non_null_report = false;
 
     // Check validity of the clock list and check no clocks are still
     // running, determine whether there are any times to report and
@@ -237,8 +238,8 @@ class HighsTimer {
       sum_calls += clock_num_call[iClock];
       sum_clock_times += clock_time[iClock];
     }
-    if (!sum_calls) return;
-    if (sum_clock_times < 0) return;
+    if (!sum_calls) return non_null_report;
+    if (sum_clock_times < 0) return non_null_report;
 
     std::vector<double> percent_sum_clock_times(num_clock_list_entries);
     double max_percent_sum_clock_times = 0;
@@ -248,7 +249,9 @@ class HighsTimer {
       max_percent_sum_clock_times =
           std::max(percent_sum_clock_times[i], max_percent_sum_clock_times);
     }
-    if (max_percent_sum_clock_times < tolerance_percent_report) return;
+    if (max_percent_sum_clock_times < tolerance_percent_report) return non_null_report;
+
+    non_null_report = true;
 
     const bool print_per_mille = false;
     if (print_per_mille) {
@@ -337,6 +340,7 @@ class HighsTimer {
     printf("; %5.1f%%)\n", percent_sum_clock_times_all);
     printf("%s-time  TOTAL             : %11.4e\n", grep_stamp,
            current_run_highs_time);
+    return non_null_report;
   }
 
   /**

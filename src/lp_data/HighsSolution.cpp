@@ -837,25 +837,19 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          (HighsInt)basis.row_status.size() == lp.num_row_;
 }
 
-void clearPrimalSolutionUtil(HighsSolution& solution) {
-  solution.col_value.clear();
-  solution.row_value.clear();
-  solution.value_valid = false;
+void HighsSolution::clear() {
+  this->col_value.clear();
+  this->row_value.clear();
+  this->value_valid = false;
+  this->col_dual.clear();
+  this->row_dual.clear();
+  this->dual_valid = false;
 }
 
-void clearDualSolutionUtil(HighsSolution& solution) {
-  solution.col_dual.clear();
-  solution.row_dual.clear();
-  solution.dual_valid = false;
-}
-
-void clearSolutionUtil(HighsSolution& solution) {
-  clearPrimalSolutionUtil(solution);
-  clearDualSolutionUtil(solution);
-}
-
-void clearBasisUtil(HighsBasis& basis) {
-  basis.row_status.clear();
-  basis.col_status.clear();
-  basis.valid = false;
+void HighsBasis::clear() {
+  this->valid = false;
+  this->debug_id = -1;
+  this->debug_update_count = -1;
+  this->row_status.clear();
+  this->col_status.clear();
 }

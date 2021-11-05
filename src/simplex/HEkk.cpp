@@ -1028,18 +1028,17 @@ HighsStatus HEkk::solve() {
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
+  const HighsInt time_from_solve_call_num = -1;
+  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
+  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
+                 debug_solve_call_num_ <= time_to_solve_call_num;
+
   if (debug_solve_report_) {
     printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
     debugReporting(-1);
     debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
   }
-
-  const HighsInt time_from_solve_call_num = 1;
-  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
-  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
-                 debug_solve_call_num_ <= time_to_solve_call_num;
   if (time_report_) {
-    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
     timeReporting(-1);
     timeReporting(0);
   }
@@ -1055,7 +1054,8 @@ HighsStatus HEkk::solve() {
   previous_iteration_cycling_detected = -kHighsIInf;
 
   HighsStatus call_status = initialiseForSolve();
-  if (call_status == HighsStatus::kError) return HighsStatus::kError;
+  if (call_status == HighsStatus::kError)
+    return returnFromEkkSolve(call_status);
 
   const HighsDebugStatus simplex_nla_status =
       simplex_nla_.debugCheckData("Before HEkk::solve()");
@@ -1064,13 +1064,14 @@ HighsStatus HEkk::solve() {
     highsLogUser(options_->log_options, HighsLogType::kError,
                  "Error in simplex NLA data\n");
     assert(simplex_nla_ok);
-    return HighsStatus::kError;
+    return returnFromEkkSolve(HighsStatus::kError);
   }
 
   assert(status_.has_basis);
   assert(status_.has_invert);
   assert(status_.initialised_for_solve);
-  if (model_status_ == HighsModelStatus::kOptimal) return HighsStatus::kOk;
+  if (model_status_ == HighsModelStatus::kOptimal)
+    return returnFromEkkSolve(HighsStatus::kOk);
 
   HighsStatus return_status = HighsStatus::kOk;
   std::string algorithm_name;
@@ -1144,19 +1145,8 @@ HighsStatus HEkk::solve() {
     }
   }
 
-  if (debug_solve_report_) {
-    // Restore any modified development output settings
-    debugReporting(1);
-  }
-
-  if (time_report_) {
-    // Restore any modified development timing settings and analyse
-    // solver timing
-    timeReporting(1);
-  }
-
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
-  if (return_status == HighsStatus::kError) return return_status;
+  if (return_status == HighsStatus::kError) return returnFromEkkSolve(return_status);
   highsLogDev(options_->log_options, HighsLogType::kInfo,
               "EKK %s simplex solver returns %" HIGHSINT_FORMAT
               " primal and %" HIGHSINT_FORMAT
@@ -1168,14 +1158,10 @@ HighsStatus HEkk::solve() {
   // Can model_status_ = HighsModelStatus::kNotset be returned?
   assert(model_status_ != HighsModelStatus::kNotset);
 
-  if (analysis_.analyse_simplex_time) {
-    analysis_.simplexTimerStop(SimplexTotalClock);
-    analysis_.reportSimplexTimer();
-  }
   if (analysis_.analyse_simplex_summary_data) analysis_.summaryReport();
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
   if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
-  return return_status;
+  return returnFromEkkSolve(return_status);
 }
 
 HighsStatus HEkk::cleanup() {
@@ -1227,6 +1213,9 @@ HighsStatus HEkk::setBasis() {
   basis_.nonbasicFlag_.resize(num_tot);
   basis_.nonbasicMove_.resize(num_tot);
   basis_.basicIndex_.resize(num_row);
+  basis_.debug_id = -1;
+  basis_.debug_update_count = -1;
+  
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     basis_.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     double lower = lp_.col_lower_[iCol];
@@ -1542,6 +1531,8 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
+  highs_basis.debug_id = (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
+  highs_basis.debug_update_count = info_.update_count;
   return highs_basis;
 }
 
@@ -1600,6 +1591,9 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
+      printf("HEkk::initialiseSimplexLpBasisAndFactor Rank_deficiency: solve %d (Iteration "
+	     "%d)\n",
+	     (int)debug_solve_call_num_, (int)iteration_count_);
       if (only_from_known_basis) {
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,
@@ -1633,11 +1627,9 @@ void HEkk::handleRankDeficiency() {
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
-    printf(
-        "HEkk::handleRankDeficiency: (Out = %4d, In = %4d) basicIndex[%4d] = "
-        "%4d\n",
-        (int)variable_out, (int)variable_in, (int)row_out,
-        (int)basis_.basicIndex_[row_out]);
+    assert(basis_.basicIndex_[row_out] == variable_in);
+    printf("HEkk::handleRankDeficiency: %4d (Row = %4d; Out = %4d; In = %4d)\n",
+	   (int)k, (int)row_out, (int)variable_out, (int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
                       BadBasisChangeReason::kSingular, true);
   }
@@ -3466,6 +3458,23 @@ bool HEkk::bailoutOnTimeIterations() {
     model_status_ = HighsModelStatus::kIterationLimit;
   }
   return solve_bailout_;
+}
+
+HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
+  if (analysis_.analyse_simplex_time)
+    analysis_.simplexTimerStop(SimplexTotalClock);
+  // Restore any modified development or timing settings and analyse
+  // solver timing
+  if (debug_solve_report_) debugReporting(1);
+  if (time_report_) timeReporting(1);
+  // Note that in timeReporting(1), analysis_.analyse_simplex_time
+  // reverts to its value given by options_
+  if (analysis_.analyse_simplex_time) {
+    analysis_.reportSimplexTimer();
+    assert(!analysis_.analyse_simplex_time);
+  }
+  
+  return return_status;
 }
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {

@@ -760,8 +760,8 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReducedToEmpty: {
         reportPresolveReductions(log_options, incumbent_lp, true);
         // Create a trivial optimal solution for postsolve to use
-        clearSolutionUtil(solution_);
-        clearBasisUtil(basis_);
+        solution_.clear();
+	basis_.clear();
         have_optimal_solution = true;
         break;
       }
@@ -2125,12 +2125,12 @@ void Highs::clearSolution() {
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  clearSolutionUtil(solution_);
+  this->solution_.clear();
 }
 
 void Highs::clearBasis() {
   info_.basis_validity = kBasisValidityInvalid;
-  clearBasisUtil(basis_);
+  this->basis_.clear();
 }
 
 void Highs::clearInfo() { info_.clear(); }

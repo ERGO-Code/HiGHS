@@ -118,75 +118,54 @@ HighsStatus HEkkDual::solve() {
     // Set up edge weights according to dual_edge_weight_mode and
     // initialise_dual_steepest_edge_weights
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
-      // Using dual Devex edge weights, so set up the first framework
+    const bool use_devex =
+      dual_edge_weight_mode == DualEdgeWeightMode::kDevex ||
+      (!initial_basis_is_logical_ && near_optimal);
+    if (use_devex) {
+      // Using dual Devex edge weights, so ensure that
+      // dual_edge_weight_mode is DualEdgeWeightMode::kDevex and set
+      // up the first Devex framework
+      dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
       info.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-      // Intending to using dual steepest edge (DSE) weights
-      if (initialise_dual_steepest_edge_weights) {
-        // Exact DSE weights need to be computed if the basis contains
-        // structurals
-        bool logical_basis = true;
-        for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
-          if (ekk_instance_.basis_.basicIndex_[iRow] < solver_num_col) {
-            logical_basis = false;
-            break;
-          }
-        }
-        if (!logical_basis) {
-          if (near_optimal) {
-            // Basis is not logical but near optimal, so use Devex
-            // rather than initialise DSE weights
-            highsLogDev(
-                options.log_options, HighsLogType::kDetailed,
-                "Basis is not logical, but near-optimal so use Devex rather "
-                "than compute exact weights for DSE\n");
-            dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
-            info.devex_index_.assign(solver_num_tot, 0);
-            initialiseDevexFramework();
-          } else {
-            // Basis is not logical and DSE weights are to be initialised
-            highsLogDev(options.log_options, HighsLogType::kDetailed,
-                        "Basis is not logical, so compute exact DSE weights\n");
-            if (analysis->analyse_simplex_time) {
-              analysis->simplexTimerStart(SimplexIzDseWtClock);
-              analysis->simplexTimerStart(DseIzClock);
-            }
-            for (HighsInt i = 0; i < solver_num_row; i++) {
-              row_ep.clear();
-              row_ep.count = 1;
-              row_ep.index[0] = i;
-              row_ep.array[i] = 1;
-              row_ep.packFlag = false;
-              simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
-                                 analysis->pointer_serial_factor_clocks);
-              const double local_row_ep_density =
-                  (double)row_ep.count / solver_num_row;
-              ekk_instance_.updateOperationResultDensity(local_row_ep_density,
-                                                         info.row_ep_density);
-              dualRHS.workEdWt[i] = row_ep.norm2();
-            }
-            if (analysis->analyse_simplex_time) {
-              analysis->simplexTimerStop(SimplexIzDseWtClock);
-              analysis->simplexTimerStop(DseIzClock);
-              double IzDseWtTT =
-                  analysis->simplexTimerRead(SimplexIzDseWtClock);
-              highsLogDev(options.log_options, HighsLogType::kDetailed,
-                          "Computed %" HIGHSINT_FORMAT
-                          " initial DSE weights in %gs\n",
-                          solver_num_row, IzDseWtTT);
-            }
-          }
-        } else {
-          highsLogDev(
-              options.log_options, HighsLogType::kDetailed,
-              "solve:: Starting from B=I so unit initial DSE weights\n");
-        }
+      // Using dual steepest edge (DSE) weights, so must initialise
+      // them if the basis is not logical
+      assert(initialise_dual_steepest_edge_weights);
+      if (!initial_basis_is_logical_) {
+	highsLogDev(options.log_options, HighsLogType::kDetailed,
+		    "Basis is not logical, so compute exact DSE weights\n");
+	if (analysis->analyse_simplex_time) {
+	  analysis->simplexTimerStart(SimplexIzDseWtClock);
+	  analysis->simplexTimerStart(DseIzClock);
+	}
+	for (HighsInt i = 0; i < solver_num_row; i++) {
+	  row_ep.clear();
+	  row_ep.count = 1;
+	  row_ep.index[0] = i;
+	  row_ep.array[i] = 1;
+	  row_ep.packFlag = false;
+	  simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
+			     analysis->pointer_serial_factor_clocks);
+	  const double local_row_ep_density = (double)row_ep.count / solver_num_row;
+	  ekk_instance_.updateOperationResultDensity(local_row_ep_density,
+						     info.row_ep_density);
+	  dualRHS.workEdWt[i] = row_ep.norm2();
+	}
+	if (analysis->analyse_simplex_time) {
+	  analysis->simplexTimerStop(SimplexIzDseWtClock);
+	  analysis->simplexTimerStop(DseIzClock);
+	  double IzDseWtTT =
+	    analysis->simplexTimerRead(SimplexIzDseWtClock);
+	  highsLogDev(options.log_options, HighsLogType::kDetailed,
+		      "Computed %" HIGHSINT_FORMAT
+		      " initial DSE weights in %gs\n",
+		      solver_num_row, IzDseWtTT);
+	}
       }
+      // Indicate that edge weights are known
+      status.has_dual_steepest_edge_weights = true;
     }
-    // Indicate that edge weights are known
-    status.has_dual_steepest_edge_weights = true;
   }
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weights_.resize(solver_num_tot);
@@ -433,6 +412,7 @@ HighsStatus HEkkDual::solve() {
 }
 
 void HEkkDual::initialiseInstance() {
+  // Called in constructor for HEkkDual class
   // Copy size, matrix and simplex NLA
 
   solver_num_col = ekk_instance_.lp_.num_col_;
@@ -586,6 +566,14 @@ void HEkkDual::initialiseSolve() {
   // ToDo: Eliminate these horribly-named unnecessary copies!
   Tp = primal_feasibility_tolerance;
   Td = dual_feasibility_tolerance;
+
+  initial_basis_is_logical_ = true;
+  for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
+    if (ekk_instance_.basis_.basicIndex_[iRow] < solver_num_col) {
+      initial_basis_is_logical_ = false;
+      break;
+    }
+  }
 
   interpretDualEdgeWeightStrategy(
       ekk_instance_.info_.dual_edge_weight_strategy);
@@ -751,6 +739,7 @@ void HEkkDual::solvePhase1() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
+    printf("HEkkDual::solvePhase1 kRebuildReasonChooseColumnFail dual-phase-1-not-solved\n");
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
@@ -775,6 +764,7 @@ void HEkkDual::solvePhase1() {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       model_status = HighsModelStatus::kSolveError;
+      printf("HEkkDual::solvePhase1 dual phase 1 unbounded dual-phase-1-not-solved\n");
     }
   }
 
@@ -803,6 +793,12 @@ void HEkkDual::solvePhase1() {
   // at the cases where you set model_status = HighsModelStatus::kSolveError. I
   // think this error can lead to infinite looping, or at least plays a part in
   // some of the cases where the simplex gets stuck infinitely.
+  const bool solve_phase_ok = solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+    solve_phase == kSolvePhaseExit;
+  if (!solve_phase_ok) printf("HEkkDual::solvePhase1 solve_phase == %d (solve call %d; iter %d)\n",
+			      (int)solve_phase,
+			      (int)ekk_instance_.debug_solve_call_num_,
+			      (int)ekk_instance_.iteration_count_);
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
          solve_phase == kSolvePhaseExit);
   if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {
@@ -1247,10 +1243,16 @@ void HEkkDual::iterate() {
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
 
+  if (row_out == 238 && variable_out == 297) {
+    printf("HEkkDual::iterate row_out = %d variable_out = %d\n", (int)row_out, (int)variable_out);
+  }
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
+  if (rebuild_reason == kRebuildReasonChooseColumnFail) {
+    printf("HEkkDual::iterate row_out = %d: kRebuildReasonChooseColumnFail\n", (int)row_out);
+  }
   if (badBasisChange()) return;
 
   analysis->simplexTimerStart(IterateFtranClock);
@@ -2320,10 +2322,16 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
 
 void HEkkDual::interpretDualEdgeWeightStrategy(
     const HighsInt dual_edge_weight_strategy) {
+  const bool always_initialise_dual_steepest_edge_weights = false;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose) {
-    dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
-    initialise_dual_steepest_edge_weights = true;
-    allow_dual_steepest_edge_to_devex_switch = true;
+    if (initial_basis_is_logical_ ||
+	always_initialise_dual_steepest_edge_weights) {
+      dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
+      initialise_dual_steepest_edge_weights = true;
+      allow_dual_steepest_edge_to_devex_switch = true;
+    } else {
+      dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
+    }
   } else if (dual_edge_weight_strategy ==
              kSimplexDualEdgeWeightStrategyDantzig) {
     dual_edge_weight_mode = DualEdgeWeightMode::kDantzig;
@@ -2334,12 +2342,8 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
     dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
-  } else if (dual_edge_weight_strategy ==
-             kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
-    dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
-    initialise_dual_steepest_edge_weights = false;
-    allow_dual_steepest_edge_to_devex_switch = false;
   } else {
+    assert(1==0);
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "HEkkDual::interpretDualEdgeWeightStrategy: "
                 "unrecognised dual_edge_weight_strategy = %" HIGHSINT_FORMAT
