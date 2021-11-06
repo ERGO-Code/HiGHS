@@ -53,10 +53,10 @@ void HEkk::timeReporting(const HighsInt save_mod_recover) {
   } else {
     options_->highs_analysis_level = highs_analysis_level;
     SimplexTimer simplex_timer;
-    const bool non_null_report =
-      simplex_timer.reportSimplexInnerClock(this->analysis_.thread_simplex_clocks[0], 20);
+    const bool non_null_report = simplex_timer.reportSimplexInnerClock(
+        this->analysis_.thread_simplex_clocks[0], 20);
     this->analysis_.analyse_simplex_time =
-      kHighsAnalysisLevelSolverTime & options_->highs_analysis_level;
+        kHighsAnalysisLevelSolverTime & options_->highs_analysis_level;
     if (non_null_report) {
       HighsLogOptions log_options;
       bool output_flag = true;
@@ -66,9 +66,9 @@ void HEkk::timeReporting(const HighsInt save_mod_recover) {
       log_options.output_flag = &output_flag;
       log_options.log_to_console = &log_to_console;
       log_options.log_dev_level = &log_dev_level;
-      reportSimplexPhaseIterations(log_options, this->iteration_count_, this->info_);
+      reportSimplexPhaseIterations(log_options, this->iteration_count_,
+                                   this->info_);
     }
-    
   }
 }
 

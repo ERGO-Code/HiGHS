@@ -1149,7 +1149,8 @@ HighsStatus HEkk::solve() {
   }
 
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
-  if (return_status == HighsStatus::kError) return returnFromEkkSolve(return_status);
+  if (return_status == HighsStatus::kError)
+    return returnFromEkkSolve(return_status);
   highsLogDev(options_->log_options, HighsLogType::kInfo,
               "EKK %s simplex solver returns %" HIGHSINT_FORMAT
               " primal and %" HIGHSINT_FORMAT
@@ -1212,9 +1213,10 @@ HighsStatus HEkk::setBasis() {
   const HighsInt num_col = lp_.num_col_;
   const HighsInt num_row = lp_.num_row_;
   const HighsInt num_tot = num_col + num_row;
-  
+
   basis_.setup(num_col, num_row);
-  
+  basis_.debug_origin_name = "HEkk::setBasis - logical";
+
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     basis_.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     double lower = lp_.col_lower_[iCol];
@@ -1277,12 +1279,14 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   HighsInt num_tot = num_col + num_row;
   // Set up the basis in case it has not yet been done for this LP
   basis_.setup(num_col, num_row);
-  if (highs_basis.debug_id == -1) {
-    printf("HEkk::setBasis Id = %d; UpdateCount = %d\n",
-	   (int)basis_.debug_id, (int)basis_.debug_update_count);
-  }
   basis_.debug_id = highs_basis.debug_id;
   basis_.debug_update_count = highs_basis.debug_update_count;
+  basis_.debug_origin_name = highs_basis.debug_origin_name;
+  //  if (basis_.debug_origin_name == "")
+  printf("HEkk::setBasis Id = %9d; UpdateCount = %4d; Origin (%s)\n",
+         (int)basis_.debug_id, (int)basis_.debug_update_count,
+         basis_.debug_origin_name.c_str());
+
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
@@ -1531,8 +1535,10 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
-  highs_basis.debug_id = (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
+  highs_basis.debug_id =
+      (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
   highs_basis.debug_update_count = info_.update_count;
+  highs_basis.debug_origin_name = basis_.debug_origin_name;
   return highs_basis;
 }
 
@@ -1591,8 +1597,11 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
-      printf("HEkk::initialiseSimplexLpBasisAndFactor Rank_deficiency: Id = %d; UpdateCount = %d\n",
-	     (int)basis_.debug_id, (int)basis_.debug_update_count);
+      printf(
+          "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency: Id = "
+          "%d; UpdateCount = %d\n",
+          basis_.debug_origin_name.c_str(), (int)basis_.debug_id,
+          (int)basis_.debug_update_count);
       if (only_from_known_basis) {
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,
@@ -1628,7 +1637,7 @@ void HEkk::handleRankDeficiency() {
     HighsInt row_out = row_with_no_pivot[k];
     assert(basis_.basicIndex_[row_out] == variable_in);
     printf("HEkk::handleRankDeficiency: %4d (Row = %4d; Out = %4d; In = %4d)\n",
-	   (int)k, (int)row_out, (int)variable_out, (int)variable_in);
+           (int)k, (int)row_out, (int)variable_out, (int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
                       BadBasisChangeReason::kSingular, true);
   }
@@ -3472,7 +3481,7 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
     analysis_.reportSimplexTimer();
     assert(!analysis_.analyse_simplex_time);
   }
-  
+
   return return_status;
 }
 

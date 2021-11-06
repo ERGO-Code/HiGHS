@@ -882,7 +882,7 @@ class Highs {
   /**
    * @brief Uses the HighsBasis passed to set basis_
    */
-  HighsStatus setBasis(const HighsBasis& basis);
+  HighsStatus setBasis(const HighsBasis& basis, const std::string origin = "");
 
   /**
    * @brief Clears basis_

@@ -119,8 +119,8 @@ HighsStatus HEkkDual::solve() {
     // initialise_dual_steepest_edge_weights
 
     const bool use_devex =
-      dual_edge_weight_mode == DualEdgeWeightMode::kDevex ||
-      (!initial_basis_is_logical_ && near_optimal);
+        dual_edge_weight_mode == DualEdgeWeightMode::kDevex ||
+        (!initial_basis_is_logical_ && near_optimal);
     if (use_devex) {
       // Using dual Devex edge weights, so ensure that
       // dual_edge_weight_mode is DualEdgeWeightMode::kDevex and set
@@ -133,35 +133,35 @@ HighsStatus HEkkDual::solve() {
       // them if the basis is not logical
       assert(initialise_dual_steepest_edge_weights);
       if (!initial_basis_is_logical_) {
-	highsLogDev(options.log_options, HighsLogType::kDetailed,
-		    "Basis is not logical, so compute exact DSE weights\n");
-	if (analysis->analyse_simplex_time) {
-	  analysis->simplexTimerStart(SimplexIzDseWtClock);
-	  analysis->simplexTimerStart(DseIzClock);
-	}
-	for (HighsInt i = 0; i < solver_num_row; i++) {
-	  row_ep.clear();
-	  row_ep.count = 1;
-	  row_ep.index[0] = i;
-	  row_ep.array[i] = 1;
-	  row_ep.packFlag = false;
-	  simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
-			     analysis->pointer_serial_factor_clocks);
-	  const double local_row_ep_density = (double)row_ep.count / solver_num_row;
-	  ekk_instance_.updateOperationResultDensity(local_row_ep_density,
-						     info.row_ep_density);
-	  dualRHS.workEdWt[i] = row_ep.norm2();
-	}
-	if (analysis->analyse_simplex_time) {
-	  analysis->simplexTimerStop(SimplexIzDseWtClock);
-	  analysis->simplexTimerStop(DseIzClock);
-	  double IzDseWtTT =
-	    analysis->simplexTimerRead(SimplexIzDseWtClock);
-	  highsLogDev(options.log_options, HighsLogType::kDetailed,
-		      "Computed %" HIGHSINT_FORMAT
-		      " initial DSE weights in %gs\n",
-		      solver_num_row, IzDseWtTT);
-	}
+        highsLogDev(options.log_options, HighsLogType::kDetailed,
+                    "Basis is not logical, so compute exact DSE weights\n");
+        if (analysis->analyse_simplex_time) {
+          analysis->simplexTimerStart(SimplexIzDseWtClock);
+          analysis->simplexTimerStart(DseIzClock);
+        }
+        for (HighsInt i = 0; i < solver_num_row; i++) {
+          row_ep.clear();
+          row_ep.count = 1;
+          row_ep.index[0] = i;
+          row_ep.array[i] = 1;
+          row_ep.packFlag = false;
+          simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
+                             analysis->pointer_serial_factor_clocks);
+          const double local_row_ep_density =
+              (double)row_ep.count / solver_num_row;
+          ekk_instance_.updateOperationResultDensity(local_row_ep_density,
+                                                     info.row_ep_density);
+          dualRHS.workEdWt[i] = row_ep.norm2();
+        }
+        if (analysis->analyse_simplex_time) {
+          analysis->simplexTimerStop(SimplexIzDseWtClock);
+          analysis->simplexTimerStop(DseIzClock);
+          double IzDseWtTT = analysis->simplexTimerRead(SimplexIzDseWtClock);
+          highsLogDev(options.log_options, HighsLogType::kDetailed,
+                      "Computed %" HIGHSINT_FORMAT
+                      " initial DSE weights in %gs\n",
+                      solver_num_row, IzDseWtTT);
+        }
       }
       // Indicate that edge weights are known
       status.has_dual_steepest_edge_weights = true;
@@ -739,7 +739,9 @@ void HEkkDual::solvePhase1() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
-    printf("HEkkDual::solvePhase1 kRebuildReasonChooseColumnFail dual-phase-1-not-solved\n");
+    printf(
+        "HEkkDual::solvePhase1 kRebuildReasonChooseColumnFail "
+        "dual-phase-1-not-solved\n");
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
@@ -764,7 +766,9 @@ void HEkkDual::solvePhase1() {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       model_status = HighsModelStatus::kSolveError;
-      printf("HEkkDual::solvePhase1 dual phase 1 unbounded dual-phase-1-not-solved\n");
+      printf(
+          "HEkkDual::solvePhase1 dual phase 1 unbounded "
+          "dual-phase-1-not-solved\n");
     }
   }
 
@@ -793,12 +797,13 @@ void HEkkDual::solvePhase1() {
   // at the cases where you set model_status = HighsModelStatus::kSolveError. I
   // think this error can lead to infinite looping, or at least plays a part in
   // some of the cases where the simplex gets stuck infinitely.
-  const bool solve_phase_ok = solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
-    solve_phase == kSolvePhaseExit;
-  if (!solve_phase_ok) printf("HEkkDual::solvePhase1 solve_phase == %d (solve call %d; iter %d)\n",
-			      (int)solve_phase,
-			      (int)ekk_instance_.debug_solve_call_num_,
-			      (int)ekk_instance_.iteration_count_);
+  const bool solve_phase_ok = solve_phase == kSolvePhase1 ||
+                              solve_phase == kSolvePhase2 ||
+                              solve_phase == kSolvePhaseExit;
+  if (!solve_phase_ok)
+    printf("HEkkDual::solvePhase1 solve_phase == %d (solve call %d; iter %d)\n",
+           (int)solve_phase, (int)ekk_instance_.debug_solve_call_num_,
+           (int)ekk_instance_.iteration_count_);
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
          solve_phase == kSolvePhaseExit);
   if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {
@@ -1244,14 +1249,16 @@ void HEkkDual::iterate() {
   analysis->simplexTimerStop(IterateChuzrClock);
 
   if (row_out == 238 && variable_out == 297) {
-    printf("HEkkDual::iterate row_out = %d variable_out = %d\n", (int)row_out, (int)variable_out);
+    printf("HEkkDual::iterate row_out = %d variable_out = %d\n", (int)row_out,
+           (int)variable_out);
   }
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
   if (rebuild_reason == kRebuildReasonChooseColumnFail) {
-    printf("HEkkDual::iterate row_out = %d: kRebuildReasonChooseColumnFail\n", (int)row_out);
+    printf("HEkkDual::iterate row_out = %d: kRebuildReasonChooseColumnFail\n",
+           (int)row_out);
   }
   if (badBasisChange()) return;
 
@@ -2325,7 +2332,7 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
   const bool always_initialise_dual_steepest_edge_weights = true;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose) {
     if (initial_basis_is_logical_ ||
-	always_initialise_dual_steepest_edge_weights) {
+        always_initialise_dual_steepest_edge_weights) {
       dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
       initialise_dual_steepest_edge_weights = true;
       allow_dual_steepest_edge_to_devex_switch = true;
@@ -2343,7 +2350,7 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else {
-    assert(1==0);
+    assert(1 == 0);
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "HEkkDual::interpretDualEdgeWeightStrategy: "
                 "unrecognised dual_edge_weight_strategy = %" HIGHSINT_FORMAT

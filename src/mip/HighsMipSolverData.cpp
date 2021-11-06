@@ -1113,7 +1113,8 @@ restart:
   }
 
   if (firstrootbasis.valid)
-    lp.getLpSolver().setBasis(firstrootbasis);
+    lp.getLpSolver().setBasis(firstrootbasis,
+                              "HighsMipSolverData::evaluateRootNode");
   else
     lp.getLpSolver().setOptionValue("presolve", "on");
   if (mipsolver.options_mip_->highs_debug_level)

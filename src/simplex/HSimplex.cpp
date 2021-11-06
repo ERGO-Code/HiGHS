@@ -34,6 +34,7 @@ void SimplexBasis::clear() {
   this->nonbasicMove_.clear();
   this->debug_id = -1;
   this->debug_update_count = -1;
+  this->debug_origin_name = "None";
 }
 
 void SimplexBasis::setup(const HighsInt num_col, const HighsInt num_row) {
@@ -43,6 +44,7 @@ void SimplexBasis::setup(const HighsInt num_col, const HighsInt num_row) {
   this->nonbasicMove_.resize(num_col + num_row);
   this->debug_id = -1;
   this->debug_update_count = -1;
+  this->debug_origin_name = "None";
 }
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,

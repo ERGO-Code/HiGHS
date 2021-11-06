@@ -307,6 +307,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     lprows.resize(lprows.size() - ndelcuts);
 
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
+    basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
     lpsolver.run();
   }
@@ -347,6 +348,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   if (!useBasis && agelimit != kHighsIInf) {
     HighsBasis b = mipsolver.mipdata_->firstrootbasis;
     b.row_status.resize(nlprows, HighsBasisStatus::kBasic);
+    b.debug_origin_name = "HighsLpRelaxation::removeCuts";
     HighsStatus st = lpsolver.setBasis(b);
     assert(st != HighsStatus::kError);
   }
@@ -659,7 +661,7 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
 
 void HighsLpRelaxation::recoverBasis() {
   if (basischeckpoint) {
-    lpsolver.setBasis(*basischeckpoint);
+    lpsolver.setBasis(*basischeckpoint, "HighsLpRelaxation::recoverBasis");
     currentbasisstored = true;
   }
 }
@@ -824,7 +826,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
         ipm.run();
-        lpsolver.setBasis(ipm.getBasis());
+        lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }
 

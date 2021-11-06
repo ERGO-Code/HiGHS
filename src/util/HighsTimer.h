@@ -207,7 +207,7 @@ class HighsTimer {
   ) {
     const double tolerance_percent_report = 1.0;
     return reportOnTolerance(grep_stamp, clock_list, ideal_sum_time,
-			     tolerance_percent_report);
+                             tolerance_percent_report);
   }
 
   bool reportOnTolerance(
@@ -249,7 +249,8 @@ class HighsTimer {
       max_percent_sum_clock_times =
           std::max(percent_sum_clock_times[i], max_percent_sum_clock_times);
     }
-    if (max_percent_sum_clock_times < tolerance_percent_report) return non_null_report;
+    if (max_percent_sum_clock_times < tolerance_percent_report)
+      return non_null_report;
 
     non_null_report = true;
 

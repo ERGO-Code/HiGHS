@@ -35,6 +35,7 @@ struct SimplexBasis {
   uint64_t hash;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
+  std::string debug_origin_name = "";
   void clear();
   void setup(const HighsInt num_col, const HighsInt num_row);
 };

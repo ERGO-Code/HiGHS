@@ -418,8 +418,8 @@ bool HEkkDualRow::quadChooseFinalWorkGroupQuad() {
       HighsInt num_var =
           ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
       debugDualChuzcFailQuad0(*ekk_instance_.options_, workCount, workData,
-                              num_var, workDual, (double)selectTheta, (double)remainTheta,
-                              true);
+                              num_var, workDual, (double)selectTheta,
+                              (double)remainTheta, true);
       return false;
     }
     // Record the initial values of workCount, remainTheta and selectTheta for

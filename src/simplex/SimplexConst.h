@@ -78,8 +78,7 @@ enum SimplexDualEdgeWeightStrategy {
   kSimplexDualEdgeWeightStrategyDantzig,
   kSimplexDualEdgeWeightStrategyDevex,
   kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategyMax =
-      kSimplexDualEdgeWeightStrategySteepestEdge
+  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
