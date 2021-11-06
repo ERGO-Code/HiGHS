@@ -494,6 +494,10 @@ class HighsSplitDeque {
   }
 
   int getOwnerId() const { return ownerData.ownerId; }
+
+  HighsSplitDeque* getWorkerById(int id) const {
+    return ownerData.workers[id].get();
+  }
 };
 
 #endif

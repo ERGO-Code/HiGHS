@@ -18,12 +18,12 @@
 #include "parallel/HighsTaskExecutor.h"
 
 class HighsMutex {
-  std::atomic_uintptr_t state{0};
+  std::atomic_uint state{0u};
   enum Constants { kNumSpinTries = 10 };
 
  public:
   bool try_lock() {
-    uintptr_t uncontendedState = 0;
+    unsigned int uncontendedState = 0;
     return state.compare_exchange_weak(uncontendedState, 1,
                                        std::memory_order_acquire,
                                        std::memory_order_relaxed);
@@ -75,8 +75,8 @@ class HighsMutex {
     // The lock is still not available, now we will try to set ourselves as the
     // next worker to acquire the lock and start wait until we are
     // notified by the current worker holding the lock.
-
-    uintptr_t s = state.load(std::memory_order_relaxed);
+    unsigned int ownerId = (thisDeque->getOwnerId() + 1) << 1;
+    unsigned int s = state.load(std::memory_order_relaxed);
     while (true) {
       // as long as we observe that the lock is available we try to lock it, so
       // that we are guaranteed to have a locked state stored within s.
@@ -85,10 +85,10 @@ class HighsMutex {
                                         std::memory_order_relaxed))
           return;
 
-      if (s & uintptr_t{1}) {
-        if (state.compare_exchange_weak(
-                s, reinterpret_cast<uintptr_t>(thisDeque) | 1,
-                std::memory_order_release, std::memory_order_relaxed))
+      if (s & 1u) {
+        if (state.compare_exchange_weak(s, ownerId | 1,
+                                        std::memory_order_release,
+                                        std::memory_order_relaxed))
           break;
       } else {
         // if we observe that the semaphore is unlocked but has its state not
@@ -114,10 +114,14 @@ class HighsMutex {
   }
 
   void unlock() {
-    uintptr_t prevState = state.fetch_add(-1, std::memory_order_relaxed);
+    unsigned int prevState = state.fetch_add(-1, std::memory_order_relaxed);
 
-    if (prevState != 1)
-      reinterpret_cast<HighsSplitDeque*>(prevState & ~uintptr_t{1})->notify();
+    if (prevState != 1) {
+      unsigned int notifyWorkerId = (prevState >> 1) - 1;
+      HighsTaskExecutor::getThisWorkerDeque()
+          ->getWorkerById(notifyWorkerId)
+          ->notify();
+    }
   }
 };
 
