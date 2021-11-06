@@ -43,7 +43,7 @@ void HEkk::clear() {
   this->clearEkkDualise();
   this->clearEkkData();
   this->clearEkkPointers();
-  this->clearSimplexBasis(this->basis_);
+  this->basis_.clear();
   this->simplex_nla_.clear();
   this->clearEkkAllStatus();
 }
@@ -176,7 +176,7 @@ void HEkk::clearEkkDataInfo() {
   info.phase2_backtracking_test_done = false;
   info.backtracking_ = false;
   info.valid_backtracking_basis_ = false;
-  this->clearSimplexBasis(info.backtracking_basis_);
+  info.backtracking_basis_.clear();
   info.backtracking_basis_costs_shifted_ = false;
   info.backtracking_basis_costs_perturbed_ = false;
   info.backtracking_basis_bounds_perturbed_ = false;
@@ -260,14 +260,6 @@ void HEkk::clearEkkNlaInfo() {
   HighsSimplexInfo& info = this->info_;
   info.factor_pivot_threshold = 0;
   info.update_limit = 0;
-}
-
-void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
-  // Clear a given simplex basis. Needs an argument because it's used
-  // to clear the backtracking basis
-  simplex_basis.basicIndex_.clear();
-  simplex_basis.nonbasicFlag_.clear();
-  simplex_basis.nonbasicMove_.clear();
 }
 
 void HotStart::clear() {
@@ -1282,10 +1274,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   basis_.debug_id = highs_basis.debug_id;
   basis_.debug_update_count = highs_basis.debug_update_count;
   basis_.debug_origin_name = highs_basis.debug_origin_name;
-  //  if (basis_.debug_origin_name == "")
-  printf("HEkk::setBasis Id = %9d; UpdateCount = %4d; Origin (%s)\n",
-         (int)basis_.debug_id, (int)basis_.debug_update_count,
-         basis_.debug_origin_name.c_str());
+  assert(basis_.debug_origin_name != "");
+  //  printf("HEkk::setBasis Id = %9d; UpdateCount = %4d; Origin (%s)\n",
+  //	 (int)basis_.debug_id, (int)basis_.debug_update_count,
+  //	 basis_.debug_origin_name.c_str());
 
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -1598,10 +1590,11 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     if (rank_deficiency) {
       // Basis is rank deficient
       printf(
-          "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency: Id = "
+          "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency %d: Id "
+          "= "
           "%d; UpdateCount = %d\n",
-          basis_.debug_origin_name.c_str(), (int)basis_.debug_id,
-          (int)basis_.debug_update_count);
+          basis_.debug_origin_name.c_str(), (int)rank_deficiency,
+          (int)basis_.debug_id, (int)basis_.debug_update_count);
       if (only_from_known_basis) {
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,
@@ -1630,15 +1623,20 @@ void HEkk::handleRankDeficiency() {
   vector<HighsInt>& col_with_no_pivot = factor.col_with_no_pivot;
   vector<HighsInt>& var_with_no_pivot = factor.var_with_no_pivot;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
-    HighsInt variable_in = lp_.num_col_ + row_with_no_pivot[k];
+    HighsInt row_in = row_with_no_pivot[k];
+    HighsInt variable_in = lp_.num_col_ + row_in;
     HighsInt variable_out = var_with_no_pivot[k];
+    assert(variable_out < lp_.num_col_);
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
     assert(basis_.basicIndex_[row_out] == variable_in);
-    printf("HEkk::handleRankDeficiency: %4d (Row = %4d; Out = %4d; In = %4d)\n",
-           (int)k, (int)row_out, (int)variable_out, (int)variable_in);
-    addBadBasisChange(row_out, variable_out, variable_in,
+    printf(
+        "HEkk::handleRankDeficiency: %4d (Basic row of leaving column (%4d) is "
+        "%4d; Entering logical = %4d is variable %d)\n",
+        (int)k, (int)variable_out, (int)row_out, (int)(row_in),
+        (int)variable_in);
+    addBadBasisChange(row_out, variable_in, variable_out,
                       BadBasisChangeReason::kSingular, true);
   }
   status_.has_ar_matrix = false;

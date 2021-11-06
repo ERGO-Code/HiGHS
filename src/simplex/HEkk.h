@@ -42,7 +42,6 @@ class HEkk {
   void clearEkkDataStatus();
   void clearNlaStatus();
   void clearNlaInvertStatus();
-  void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void invalidate();
   void invalidateBasisMatrix();

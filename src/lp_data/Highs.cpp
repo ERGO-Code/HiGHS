@@ -762,7 +762,7 @@ HighsStatus Highs::run() {
         // Create a trivial optimal solution for postsolve to use
         solution_.clear();
         basis_.clear();
-	basis_.debug_origin_name = "Presolve to empty";
+        basis_.debug_origin_name = "Presolve to empty";
         have_optimal_solution = true;
         break;
       }
@@ -1323,9 +1323,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   basis_.valid = true;
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
-  if (basis_.debug_origin_name == "HighsMipSolverData::evaluateRootNode") {
-    printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());
-  }
+  // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
