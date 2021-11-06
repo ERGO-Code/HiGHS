@@ -1626,16 +1626,19 @@ void HEkk::handleRankDeficiency() {
     HighsInt row_in = row_with_no_pivot[k];
     HighsInt variable_in = lp_.num_col_ + row_in;
     HighsInt variable_out = var_with_no_pivot[k];
-    assert(variable_out < lp_.num_col_);
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
     assert(basis_.basicIndex_[row_out] == variable_in);
     printf(
-        "HEkk::handleRankDeficiency: %4d (Basic row of leaving column (%4d) is "
+        "HEkk::handleRankDeficiency: %4d: Basic row of leaving variable (%4d "
+        "is %s %4d) is "
         "%4d; Entering logical = %4d is variable %d)\n",
-        (int)k, (int)variable_out, (int)row_out, (int)(row_in),
-        (int)variable_in);
+        (int)k, (int)variable_out,
+        variable_out < lp_.num_col_ ? " column" : "logical",
+        variable_out < lp_.num_col_ ? (int)variable_out
+                                    : (int)(variable_out - lp_.num_col_),
+        (int)row_out, (int)(row_in), (int)variable_in);
     addBadBasisChange(row_out, variable_in, variable_out,
                       BadBasisChangeReason::kSingular, true);
   }
