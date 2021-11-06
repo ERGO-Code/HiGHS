@@ -23,10 +23,6 @@ using std::runtime_error;
 #include <cassert>
 #include <vector>
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 void SimplexBasis::clear() {
   hash = 0;
   basicIndex_.clear();

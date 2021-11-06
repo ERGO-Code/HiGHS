@@ -1,5 +1,7 @@
 
+#if 0
 #include <omp.h>
+#endif
 
 #include <iostream>
 
@@ -28,7 +30,7 @@ int64_t fib(const int64_t n) {
   // printf("fib(%ld) = %ld + %ld = %ld\n", n, n1, n2, n1 + n2);
   return n1 + n2;
 }
-
+#if 0
 int64_t fib_omp(const int64_t n) {
   if (n <= 20) return fib_sequential(n);
 
@@ -119,7 +121,7 @@ void matrix_multiplication_omp(unsigned nthreads) {
 
   // std::cout << reduce_sum() << std::endl;
 }
-
+#endif
 void matrix_multiplication_highs(unsigned nthreads) {
   //#pragma omp parallel for private(i, j)
   parallel::for_each(0, N, [&](HighsInt start, HighsInt end) {
@@ -156,14 +158,14 @@ void matrix_multiplication_highs(unsigned nthreads) {
     }
   });
 }
-
+#if 0
 std::chrono::microseconds measure_time_omp(unsigned num_threads) {
   auto beg = std::chrono::high_resolution_clock::now();
   matrix_multiplication_omp(num_threads);
   auto end = std::chrono::high_resolution_clock::now();
   return std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
 }
-
+#endif
 std::chrono::microseconds measure_time_highs(unsigned num_threads) {
   auto beg = std::chrono::high_resolution_clock::now();
   matrix_multiplication_highs(num_threads);
@@ -187,12 +189,16 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
     double runtime{0.0};
 
     for (unsigned j = 0; j < num_rounds; ++j) {
+#if 0
       if (model == "highs") {
         runtime += measure_time_highs(num_threads).count();
       } else if (model == "omp") {
         runtime += measure_time_omp(num_threads).count();
       } else
         assert(false);
+#else
+      runtime += measure_time_highs(num_threads).count();
+#endif
     }
 
     std::cout << std::setw(12) << N << std::setw(12)
@@ -206,11 +212,6 @@ TEST_CASE("MatrixMultHighs", "[parallel]") {
   parallel::initialize_scheduler(numThreads);
   std::cout << "\nhighs workstealing for loop:" << std::endl;
   matrix_multiplication("highs", parallel::num_threads(), 10);
-}
-
-TEST_CASE("MatrixMultOmp", "[parallel]") {
-  std::cout << "\nomp for loop:" << std::endl;
-  matrix_multiplication("omp", numThreads, 10);
 }
 
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
@@ -231,6 +232,11 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
   // REQUIRE(result == 2971215073);
 }
 
+#if 0
+TEST_CASE("MatrixMultOmp", "[parallel]") {
+  std::cout << "\nomp for loop:" << std::endl;
+  matrix_multiplication("omp", numThreads, 10);
+}
 TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   int64_t result;
   auto beg = std::chrono::high_resolution_clock::now();
@@ -251,3 +257,4 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   // fib 46
   // REQUIRE(result == 2971215073);
 }
+#endif

@@ -202,10 +202,8 @@ void testSolversSetup(const std::string model,
 
 void testSolvers(Highs& highs, IterationCount& model_iteration_count,
                  const vector<HighsInt>& simplex_strategy_iteration_count) {
-  bool have_omp = false;
-#ifdef OPENMP
-  have_omp = true;
-#endif
+  bool have_omp = true;
+
   /*
   HighsInt i = (HighsInt)SimplexStrategy::kSimplexStrategyPrimal;
   model_iteration_count.simplex = simplex_strategy_iteration_count[i];

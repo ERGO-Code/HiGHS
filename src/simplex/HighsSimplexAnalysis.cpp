@@ -24,10 +24,6 @@
 #include "util/FactorTimer.h"
 #include "util/HFactor.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
@@ -55,19 +51,17 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   delta_user_log_time = 5e0;
 
   // Set up the thread clocks
-  HighsInt omp_max_threads = highs::parallel::num_threads();
-#if 0  // def OPENMP
-  omp_max_threads = omp_get_max_threads();
-#endif
+  HighsInt max_threads = highs::parallel::num_threads();
+
   if (analyse_simplex_time) {
-    for (HighsInt i = 0; i < omp_max_threads; i++) {
+    for (HighsInt i = 0; i < max_threads; i++) {
       HighsTimerClock clock;
       clock.timer_pointer_ = timer_;
       thread_simplex_clocks.push_back(clock);
     }
   }
   if (analyse_factor_time) {
-    for (HighsInt i = 0; i < omp_max_threads; i++) {
+    for (HighsInt i = 0; i < max_threads; i++) {
       HighsTimerClock clock;
       clock.timer_pointer_ = timer_;
       thread_factor_clocks.push_back(clock);
@@ -173,7 +167,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
 
   // Set following averages to illegal values so that first average is
   // set equal to first value
-  average_num_threads = -1;
+  average_concurrency = -1;
   average_fraction_of_possible_minor_iterations_performed = -1;
   sum_multi_chosen = 0;
   sum_multi_finished = 0;
@@ -630,7 +624,7 @@ HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analyse_factor_time) {
     HighsInt thread_id = highs::parallel::thread_num();
-#if 0 //def OPENMP
+#if 0  // def OPENMP
     thread_id = omp_get_thread_num();
 #endif
     factor_timer_clock_pointer = &thread_factor_clocks[thread_id];
@@ -711,11 +705,11 @@ void HighsSimplexAnalysis::iterationRecordMajor() {
         (1 - kRunningAverageMultiplier) *
             average_fraction_of_possible_minor_iterations_performed;
   }
-  if (average_num_threads < 0) {
-    average_num_threads = num_threads;
+  if (average_concurrency < 0) {
+    average_concurrency = num_concurrency;
   } else {
-    average_num_threads = kRunningAverageMultiplier * num_threads +
-                          (1 - kRunningAverageMultiplier) * average_num_threads;
+    average_concurrency = kRunningAverageMultiplier * num_concurrency +
+                          (1 - kRunningAverageMultiplier) * average_concurrency;
   }
 }
 
@@ -961,7 +955,7 @@ void HighsSimplexAnalysis::summaryReport() {
     const HighsInt pct_minor_iterations_performed =
         (100 * sum_multi_finished) / sum_multi_chosen;
     printf("\nPAMI summary: for average of %0.1g threads \n",
-           average_num_threads);
+           average_concurrency);
     printf("%12" HIGHSINT_FORMAT " Major iterations\n", multi_iteration_count);
     printf("%12" HIGHSINT_FORMAT " Minor iterations\n", sum_multi_finished);
     printf("%12" HIGHSINT_FORMAT
@@ -1150,7 +1144,7 @@ void HighsSimplexAnalysis::reportFactorTimer() {
   assert(analyse_factor_time);
   FactorTimer factor_timer;
   HighsInt omp_max_threads = highs::parallel::num_threads();
-#if 0 //def OPENMP
+#if 0  // def OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
   for (HighsInt i = 0; i < omp_max_threads; i++) {
@@ -1317,12 +1311,12 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
 
 void HighsSimplexAnalysis::reportThreads(const bool header) {
   assert(analyse_simplex_runtime_data);
-  if (header) {
-    *analysis_log << highsFormatToString("  Threads");
-  } else if (num_threads > 0) {
+  if (header) {                             
+    *analysis_log << highsFormatToString(" Concurr.");
+  } else if (num_concurrency > 0) {
     *analysis_log << highsFormatToString(
         " %2" HIGHSINT_FORMAT "|%2" HIGHSINT_FORMAT "|%2" HIGHSINT_FORMAT "",
-        min_threads, num_threads, max_threads);
+        min_concurrency, num_concurrency, max_concurrency);
   } else {
     *analysis_log << highsFormatToString("   |  |  ");
   }

@@ -16,18 +16,6 @@ if(EXISTS "${LOC_PATH}")
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
 
-# Use OpenMP if version is high enough.
-option(OPENMP "OpenMP" ON)
-
-if (OPENMP)
-    find_package(OpenMP 3.0)
-    if(OpenMP_CXX_FOUND)
-        message(STATUS "Linking with OpenMP... ")
-    else()
-        set(OPENMP OFF)
-    endif()
-endif()
-
 if(LINUX AND NOT MSVC)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT error)
@@ -538,17 +526,6 @@ elseif (WIN32)
 endif()
 
 
-endif()
-
-# Modern CMake link in FAST_BUILD mode
-# All uses of target_link_libraries with a target must be either 
-# all-keyword or all-plain.
-if (OPENMP)
-    if (FAST_BUILD)
-        target_link_libraries(libhighs PUBLIC OpenMP::OpenMP_CXX)
-    else()
-        target_link_libraries(libhighs OpenMP::OpenMP_CXX)
-    endif()
 endif()
 
 # # Comment out for scaffold/ tests

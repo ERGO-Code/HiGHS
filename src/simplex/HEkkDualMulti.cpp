@@ -180,10 +180,10 @@ void HEkkDual::majorChooseRowBtran() {
 
   // 4.1. Prepare BTRAN buffer
   HighsInt multi_ntasks = 0;
-  HighsInt multi_iRow[kHighsThreadLimit];
-  HighsInt multi_iwhich[kHighsThreadLimit];
-  double multi_EdWt[kHighsThreadLimit];
-  HVector_ptr multi_vector[kHighsThreadLimit];
+  HighsInt multi_iRow[kSimplexConcurrencyLimit];
+  HighsInt multi_iwhich[kSimplexConcurrencyLimit];
+  double multi_EdWt[kSimplexConcurrencyLimit];
+  HVector_ptr multi_vector[kSimplexConcurrencyLimit];
   for (HighsInt ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].row_out >= 0) {
       multi_iRow[multi_ntasks] = multi_choice[ich].row_out;
@@ -466,9 +466,9 @@ void HEkkDual::minorUpdateRows() {
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
   if (updateRows_inDense) {
     HighsInt multi_nTasks = 0;
-    HighsInt multi_iwhich[kHighsThreadLimit];
-    double multi_xpivot[kHighsThreadLimit];
-    HVector_ptr multi_vector[kHighsThreadLimit];
+    HighsInt multi_iwhich[kSimplexConcurrencyLimit];
+    double multi_xpivot[kSimplexConcurrencyLimit];
+    HVector_ptr multi_vector[kSimplexConcurrencyLimit];
 
     /*
      * Dense mode
@@ -621,8 +621,8 @@ void HEkkDual::majorUpdateFtranParallel() {
 
   // Prepare buffers
   HighsInt multi_ntasks = 0;
-  double multi_density[kHighsThreadLimit * 2 + 1];
-  HVector_ptr multi_vector[kHighsThreadLimit * 2 + 1];
+  double multi_density[kSimplexConcurrencyLimit * 2 + 1];
+  HVector_ptr multi_vector[kSimplexConcurrencyLimit * 2 + 1];
   // BFRT first
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT.count,
@@ -1002,9 +1002,9 @@ void HEkkDual::iterationAnalysisMinor() {
 void HEkkDual::iterationAnalysisMajorData() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->min_threads = info.min_threads;
-  analysis->num_threads = info.num_threads;
-  analysis->max_threads = info.max_threads;
+  analysis->min_concurrency = info.min_concurrency;
+  analysis->num_concurrency = info.num_concurrency;
+  analysis->max_concurrency = info.max_concurrency;
 }
 
 void HEkkDual::iterationAnalysisMajor() {

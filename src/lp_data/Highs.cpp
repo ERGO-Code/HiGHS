@@ -36,10 +36,6 @@
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 Highs::Highs() {}
 
 HighsStatus Highs::clear() {
@@ -522,19 +518,17 @@ HighsStatus Highs::run() {
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
-  highs::parallel::initialize_scheduler(options_.highs_max_threads);
+  highs::parallel::initialize_scheduler(options_.highs_threads);
 
-  //#ifdef OPENMP
-  omp_max_threads = highs::parallel::num_threads();
-  assert(omp_max_threads > 0);
-  if (omp_max_threads <= 0)
+  max_threads = highs::parallel::num_threads();
+  assert(max_threads > 0);
+  if (max_threads <= 0)
     highsLogDev(options_.log_options, HighsLogType::kWarning,
-                "WARNING: omp_get_max_threads() returns %" HIGHSINT_FORMAT "\n",
-                omp_max_threads);
+                "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
+                max_threads);
 
   highsLogDev(options_.log_options, HighsLogType::kDetailed,
-              "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n",
-              omp_max_threads);
+              "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n", max_threads);
   //#endif
   assert(called_return_from_run);
   if (!called_return_from_run) {
@@ -884,8 +878,8 @@ HighsStatus Highs::run() {
           if (options_.solver == kIpmString) options_.solver = kSimplexString;
           options_.simplex_strategy = kSimplexStrategyChoose;
           // Ensure that the parallel solver isn't used
-          options_.highs_min_threads = 1;
-          options_.highs_max_threads = 1;
+          options_.simplex_min_concurrency = 1;
+          options_.simplex_max_concurrency = 1;
           // Use any pivot threshold resulting from solving the presolved LP
           if (factor_pivot_threshold > 0)
             options_.factor_pivot_threshold = factor_pivot_threshold;
@@ -2213,9 +2207,9 @@ HighsStatus Highs::callSolveQp() {
   HighsStatus return_status = HighsStatus::kOk;
   model_status_ = runtime.status == ProblemStatus::OPTIMAL
                       ? HighsModelStatus::kOptimal
-                      : runtime.status == ProblemStatus::UNBOUNDED
-                            ? HighsModelStatus::kUnbounded
-                            : HighsModelStatus::kInfeasible;
+                  : runtime.status == ProblemStatus::UNBOUNDED
+                      ? HighsModelStatus::kUnbounded
+                      : HighsModelStatus::kInfeasible;
   scaled_model_status_ = model_status_;
   // Extract the solution
   solution_.col_value.resize(lp.num_col_);

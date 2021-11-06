@@ -13,11 +13,14 @@
 #ifndef HIGHS_PARALLEL_H_
 #define HIGHS_PARALLEL_H_
 
+#include "parallel/HighsMutex.h"
 #include "parallel/HighsTaskExecutor.h"
 
 namespace highs {
 
 namespace parallel {
+
+using mutex = HighsMutex;
 
 inline void initialize_scheduler(int numThreads = 0) {
   if (numThreads == 0)

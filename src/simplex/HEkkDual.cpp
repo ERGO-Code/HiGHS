@@ -27,10 +27,6 @@
 #include "simplex/HEkkPrimal.h"
 #include "simplex/SimplexTimer.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 using std::cout;
 using std::endl;
 using std::fabs;
@@ -425,12 +421,12 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
   if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain) return;
 
   // Identify the (current) number of HiGHS tasks to be used
-  const HighsInt num_threads = ekk_instance_.info_.num_threads;
+  const HighsInt num_concurrency = ekk_instance_.info_.num_concurrency;
 
   HighsInt pass_num_slice;
   if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualTasks) {
     // Initialize for tasks
-    pass_num_slice = num_threads - 2;
+    pass_num_slice = num_concurrency - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
@@ -438,13 +434,14 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
                   " slices due to number of "
                   "threads (%" HIGHSINT_FORMAT
                   ") being too small: results unpredictable\n",
-                  pass_num_slice, num_threads);
+                  pass_num_slice, num_concurrency);
     }
   } else {
     // Initialize for multi
-    multi_num = num_threads;
+    multi_num = num_concurrency;
     if (multi_num < 1) multi_num = 1;
-    if (multi_num > kHighsThreadLimit) multi_num = kHighsThreadLimit;
+    if (multi_num > kSimplexConcurrencyLimit)
+      multi_num = kSimplexConcurrencyLimit;
     for (HighsInt i = 0; i < multi_num; i++) {
       multi_choice[i].row_ep.setup(solver_num_row);
       multi_choice[i].col_aq.setup(solver_num_row);
@@ -458,7 +455,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
                   " slices due to number of "
                   "threads (%" HIGHSINT_FORMAT
                   ") being too small: results unpredictable\n",
-                  pass_num_slice, num_threads);
+                  pass_num_slice, num_concurrency);
     }
   }
   // Create the multiple HEkkDualRow instances: one for each column
@@ -1745,54 +1742,38 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   row_ap_thread_id.resize(slice_num);
   */
 
-  //#pragma omp task
   highs::parallel::spawn([&]() {
     dualRow.chooseMakepack(row_ep, solver_num_col);
     dualRow.choosePossible();
-#ifdef OPENMP
-    //    HighsInt row_ep_thread_id = omp_get_thread_num();
-    //    printf("Hello world from Row_ep:         PACK + CC1 thread %"
-    //    HIGHSINT_FORMAT "\n", row_ep_thread_id);
-#endif
   });
 
   // Row_ap: PRICE + PACK + CC1
   highs::parallel::for_each(0, slice_num, [&](HighsInt start, HighsInt end) {
     for (HighsInt i = start; i < end; i++) {
-      //#pragma omp task
-      {
-#ifdef OPENMP
-        //      HighsInt row_ap_thread_id = omp_get_thread_num();
-        //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1"
-        //      HIGHSINT_FORMAT "] thread %" HIGHSINT_FORMAT "\n", i,
-        //      row_ap_thread_id);
-#endif
-        slice_row_ap[i].clear();
+      slice_row_ap[i].clear();
 
-        if (use_col_price) {
-          // Perform column-wise PRICE
-          slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
-        } else if (use_row_price_w_switch) {
-          // Perform hyper-sparse row-wise PRICE, but switch if the density of
-          // row_ap becomes extreme
-          slice_ar_matrix[i].priceByRowWithSwitch(
-              slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
-              kHyperPriceDensity);
-        } else {
-          // Perform hyper-sparse row-wise PRICE
-          slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
-        }
-
-        slice_dualRow[i].clear();
-        slice_dualRow[i].workDelta = delta_primal;
-        slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
-        slice_dualRow[i].choosePossible();
+      if (use_col_price) {
+        // Perform column-wise PRICE
+        slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+      } else if (use_row_price_w_switch) {
+        // Perform hyper-sparse row-wise PRICE, but switch if the density of
+        // row_ap becomes extreme
+        slice_ar_matrix[i].priceByRowWithSwitch(
+            slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
+            kHyperPriceDensity);
+      } else {
+        // Perform hyper-sparse row-wise PRICE
+        slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
       }
+
+      slice_dualRow[i].clear();
+      slice_dualRow[i].workDelta = delta_primal;
+      slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
+      slice_dualRow[i].choosePossible();
     }
   });
 
   highs::parallel::sync();
-  //#pragma omp taskwait
 
   if (analysis->analyse_simplex_summary_data) {
     // Determine the nonzero count of the whole row

@@ -22,10 +22,6 @@
 #include "parallel/HighsParallel.h"
 #include "simplex/HSimplex.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 using std::vector;
 
 void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
