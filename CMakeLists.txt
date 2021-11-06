@@ -250,9 +250,19 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 include(CheckCXXSourceCompiles)
 
-check_cxx_source_compiles("int main () { _mm_pause(); }" HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE FAIL_REGEX "implicitly declaring library function")
+check_cxx_source_compiles(
+    "int main () {
+        _mm_pause();
+        return 0;
+    }"
+    HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE FAIL_REGEX "implicitly declaring library function")
 if( NOT HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE )
-    check_cxx_source_compiles("#include \"immintrin.h\"\n int main () { _mm_pause(); }" HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
+    check_cxx_source_compiles(
+        "#include <immintrin.h>
+        int main () {
+            _mm_pause();
+            return 0;
+        }" HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
     if(HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
         set(HIGHS_HAVE_MM_PAUSE 1)
     else()
@@ -260,6 +270,30 @@ if( NOT HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE )
     endif()
 else()
     set(HIGHS_HAVE_MM_PAUSE 1)
+endif()
+
+check_cxx_source_compiles(
+    "#include <cstdint>
+     int main () {
+        volatile unsigned int x = 5;
+        volatile unsigned long long y = __builtin_clz(x);
+        x = __builtin_clzll(y);
+        return 0;
+    }"
+     HIGHS_HAVE_BUILTIN_CLZ)
+if( NOT HIGHS_HAVE_BUILTIN_CLZ )
+    check_cxx_source_compiles(
+        "#include <intrin.h>
+        #pragma intrinsic(_BitScanReverse)
+        #pragma intrinsic(_BitScanReverse64)
+        int main () {
+            volatile unsigned long x = 5;
+            volatile unsigned long y;
+            _BitScanReverse(&y, x);
+            _BitScanReverse64(&x, y);
+            return 0;
+        }"
+        HIGHS_HAVE_BITSCAN_REVERSE)
 endif()
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)

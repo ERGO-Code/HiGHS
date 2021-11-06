@@ -28,6 +28,12 @@
 
 #include "util/HighsInt.h"
 
+#ifdef HIGHS_HAVE_BITSCAN_REVERSE
+#include <intrin.h>
+#pragma intrinsic(_BitScanReverse)
+#pragma intrinsic(_BitScanReverse64)
+#endif
+
 #if __GNUG__ && __GNUC__ < 5
 #define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
 #else
@@ -92,6 +98,24 @@ struct HighsHashHelpers {
   /// mersenne prime 2^61 - 1
   static constexpr u64 M61() { return u64{0x1fffffffffffffff}; };
 
+#ifdef HIGHS_HAVE_BUILTIN_CLZ
+  static int log2i(uint64_t n) { return 63 - __builtin_clzll(n); }
+
+  static int log2i(unsigned int n) { return 31 - __builtin_clz(n); }
+
+#elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
+  static int log2i(uint64_t n) {
+    unsigned long result;
+    _BitScanReverse64(&result, n);
+    return result;
+  }
+
+  static int log2i(unsigned int n) {
+    unsigned long result;
+    _BitScanReverse64(&result, (unsigned long)n);
+    return result;
+  }
+#else
   // integer log2 algorithm without floating point arithmetic. It uses an
   // unrolled loop and requires few instructions that can be well optimized.
   static int log2i(uint64_t n) {
@@ -132,6 +156,8 @@ struct HighsHashHelpers {
 
     return x;
   }
+
+#endif
 
   /// compute a * b mod 2^61-1
   static u64 multiply_modM61(u64 a, u64 b) {
@@ -786,8 +812,8 @@ class HighsHashTable {
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0)->value())>::type;
+  using ValueType = typename std::remove_reference<
+      decltype(reinterpret_cast<Entry*>(0)->value())>::type;
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;

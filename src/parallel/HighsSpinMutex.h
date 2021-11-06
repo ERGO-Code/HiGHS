@@ -19,7 +19,7 @@
 #include "HConfig.h"
 
 #ifdef HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN
-#include "immintrin.h"
+#include <immintrin.h>
 #elif !defined(HIGHS_HAVE_MM_PAUSE)
 #include <thread>
 #endif
