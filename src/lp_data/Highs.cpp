@@ -762,6 +762,7 @@ HighsStatus Highs::run() {
         // Create a trivial optimal solution for postsolve to use
         solution_.clear();
         basis_.clear();
+	basis_.debug_origin_name = "Presolve to empty";
         have_optimal_solution = true;
         break;
       }

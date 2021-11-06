@@ -850,7 +850,7 @@ void HighsBasis::clear() {
   this->valid = false;
   this->debug_id = -1;
   this->debug_update_count = -1;
-  this->debug_origin_name = "";
+  this->debug_origin_name = "None";
   this->row_status.clear();
   this->col_status.clear();
 }
