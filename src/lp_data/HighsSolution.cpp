@@ -845,7 +845,26 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
                       kDefaultPivotThreshold, kDefaultPivotTolerance,
                       kHighsDebugLevelMin, &options.log_options);
   factor.build();
-  assert(num_basic_variables == num_row);
+  // Deduce the basis from basic_index
+  //
+  // Set all basic variables to nonbasic
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
+  }
+  // Set all variables in basic_index to basic
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = basic_index[iRow];
+    if (iVar < num_col) {
+      basis.col_status[iVar] = HighsBasisStatus::kBasic;
+    } else {
+      basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
+    }
+  }
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {

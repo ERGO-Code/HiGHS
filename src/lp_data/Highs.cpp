@@ -1314,7 +1314,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
     printf("Highs::setBasis Alien basis origin_name = (%s); origin =  (%s)\n",
-           basis_.debug_origin_name.c_str(), origin.c_str());
+           basis.debug_origin_name.c_str(), origin.c_str());
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
     HighsBasis modifiable_basis = basis;
