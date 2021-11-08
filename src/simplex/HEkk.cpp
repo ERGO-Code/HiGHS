@@ -3898,24 +3898,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     unitBtranIterativeRefinement(row_out, row_ep);
     simplex_nla_.reportArray("Row e_p.1", lp.num_col_, &row_ep, true);
   }
-  // Identify whether refinement should be done
-  bool use_refinement = false;
-  double refinement_tolerance;
-  if (lp.is_scaled_) {
-    // LP is scaled, so be more cautious
-    use_refinement =
-        options_->simplex_infeasiblilty_proof_refinement_strategy >=
-        kSimplexInfeasibilityProofRefinementAlsoScaledLp;
-    refinement_tolerance =
-        options_->simplex_infeasibility_proof_scaled_lp_refinement_tolerance;
-  } else {
-    // LP is unscaled, so be less cautious
-    use_refinement =
-        options_->simplex_infeasiblilty_proof_refinement_strategy >=
-        kSimplexInfeasibilityProofRefinementUnscaledLp;
-    refinement_tolerance =
-        options_->simplex_infeasibility_proof_unscaled_lp_refinement_tolerance;
-  }
+
   // Refine row_ep by removing relatively small values
   double row_ep_scale = 0;
   // if (use_refinement) refineArray(row_ep, row_ep_scale,
@@ -3990,10 +3973,6 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     lp.a_matrix_.productTransposeQuad(proof_value, proof_index, row_ep,
                                       debug_product_report);
   }
-  // Refine the proof constraint coefficients according to row_ep_scale
-  // if (use_refinement)
-  //  refineVector(proof_value, proof_index, row_ep_scale,
-  //  refinement_tolerance);
 
   HighsInt proof_num_nz = proof_index.size();
   if (debug_rows_report) {
@@ -4056,41 +4035,12 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   return proof_of_primal_infeasibility;
 }
 
-double HEkk::getArrayScale(const HVector& hvector) {
-  if (hvector.count <= 0) return 1;
-  double max_abs_value = 0;
-  for (HighsInt iX = 0; iX < hvector.count; iX++)
-    max_abs_value =
-        std::max(fabs(hvector.array[hvector.index[iX]]), max_abs_value);
-  return nearestPowerOfTwoScale(max_abs_value);
-}
-
 double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
   if (count <= 0) return 1;
   double max_abs_value = 0;
   for (HighsInt iX = 0; iX < count; iX++)
     max_abs_value = std::max(fabs(value[iX]), max_abs_value);
   return nearestPowerOfTwoScale(max_abs_value);
-}
-
-void HEkk::refineArray(HVector& hvector, double& scale,
-                       const double& small_value) {
-  if (hvector.count <= 0) return;
-  // If the scale value isn't known, then find it
-  if (scale <= 0) scale = getArrayScale(hvector);
-  HighsInt count = 0;
-  for (HighsInt iX = 0; iX < hvector.count; iX++) {
-    const HighsInt iRow = hvector.index[iX];
-    const double scaled_value = scale * hvector.array[iRow];
-    if (std::abs(scaled_value) > small_value) {
-      // Keep the value and its index
-      hvector.index[count++] = iRow;
-    } else {
-      // Zero the value and (implicitly) discard the index
-      hvector.array[iRow] = 0;
-    }
-  }
-  hvector.count = count;
 }
 
 double HEkk::getMaxAbsRowValue(HighsInt row) {
@@ -4101,53 +4051,6 @@ double HEkk::getMaxAbsRowValue(HighsInt row) {
     val = std::max(val, std::abs(ar_matrix_.value_[i]));
 
   return val;
-}
-
-void HEkk::refineVector(vector<double>& value, vector<HighsInt>& index,
-                        double& scale, const double& small_value) {
-  const HighsInt dim = value.size();
-  if (dim <= 0) return;
-  HighsInt num_index = index.size();
-  const bool have_index = num_index > 0;
-  const HighsInt to_en = have_index ? num_index : dim;
-  if (scale <= 0) {
-    // The scale value isn't known, so find it
-    double max_abs_value = 0;
-    if (have_index) {
-      for (HighsInt iX = 0; iX < num_index; iX++)
-        max_abs_value = std::max(fabs(value[iX]), max_abs_value);
-    } else {
-      for (HighsInt iRow = 0; iRow < dim; iRow++)
-        max_abs_value = std::max(fabs(value[iRow]), max_abs_value);
-    }
-    scale = nearestPowerOfTwoScale(max_abs_value);
-  }
-  if (have_index) {
-    HighsInt count = 0;
-    for (HighsInt iX = 0; iX < num_index; iX++) {
-      const double scaled_value = scale * value[iX];
-      if (std::abs(scaled_value) > small_value) {
-        // Keep the value and its index
-        value[count] = value[iX];
-        index[count] = index[iX];
-        count++;
-      }
-    }
-    // Remember that Windows doesn't allow a vector to be resized to
-    // zero!
-    if (count) {
-      value.resize(count);
-      index.resize(count);
-    } else {
-      value.clear();
-      index.clear();
-    }
-  } else {
-    for (HighsInt iRow = 0; iRow < dim; iRow++) {
-      const double scaled_value = scale * value[iRow];
-      if (std::abs(scaled_value) <= small_value) value[iRow] = 0;
-    }
-  }
 }
 
 void HEkk::unitBtranIterativeRefinement(const HighsInt row_out,
