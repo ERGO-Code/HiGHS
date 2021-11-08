@@ -160,21 +160,24 @@ void solveHyper(const HighsInt Hsize, const HighsInt* Hlookup,
   }
 }
 
-void HFactor::setup(const HighsSparseMatrix* a_matrix, HighsInt* baseIndex,
-                    const double pivot_threshold, const double pivot_tolerance,
-                    const HighsInt highs_debug_level, const bool output_flag,
-                    FILE* log_file_stream, const bool log_to_console,
-                    const HighsInt log_dev_level) {
-  this->setup(a_matrix->num_col_, a_matrix->num_row_, &a_matrix->start_[0],
-              &a_matrix->index_[0], &a_matrix->value_[0], baseIndex,
-              pivot_threshold, pivot_tolerance, highs_debug_level, output_flag,
-              log_file_stream, log_to_console, log_dev_level, true,
-              kUpdateMethodFt);
+void HFactor::setupGeneral(const HighsSparseMatrix* a_matrix,
+			   HighsInt num_basic_variables,
+			   HighsInt* baseIndex,
+			   const double pivot_threshold, const double pivot_tolerance,
+			   const HighsInt highs_debug_level, const bool output_flag,
+			   FILE* log_file_stream, const bool log_to_console,
+			   const HighsInt log_dev_level) {
+  this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_, &a_matrix->start_[0],
+		     &a_matrix->index_[0], &a_matrix->value_[0], num_basic_variables, baseIndex,
+		     pivot_threshold, pivot_tolerance, highs_debug_level, output_flag,
+		     log_file_stream, log_to_console, log_dev_level, true,
+		     kUpdateMethodFt);
 }
 
 void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
                     const HighsInt* Astart_, const HighsInt* Aindex_,
-                    const double* Avalue_, HighsInt* baseIndex_,
+                    const double* Avalue_,
+		    HighsInt* baseIndex_,
                     const double pivot_threshold_,
                     const double pivot_tolerance_,
                     const HighsInt highs_debug_level_, const bool output_flag_,
@@ -182,6 +185,27 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
                     const HighsInt log_dev_level_,
                     const bool use_original_HFactor_logic_,
                     const HighsInt updateMethod_) {
+  setupGeneral(numCol_, numRow_, Astart_, Aindex_, Avalue_,
+	       numRow_, baseIndex_,
+	       pivot_threshold_, pivot_tolerance_,
+	       highs_debug_level_, output_flag_,
+	       log_file_stream_, log_to_console_, log_dev_level_,
+	       use_original_HFactor_logic_,
+	       updateMethod_);
+}
+
+void HFactor::setupGeneral(const HighsInt numCol_, const HighsInt numRow_,
+			   const HighsInt* Astart_, const HighsInt* Aindex_,
+			   const double* Avalue_,
+			   HighsInt num_basic_variables,
+			   HighsInt* baseIndex_,
+			   const double pivot_threshold_,
+			   const double pivot_tolerance_,
+			   const HighsInt highs_debug_level_, const bool output_flag_,
+			   FILE* log_file_stream_, const bool log_to_console_,
+			   const HighsInt log_dev_level_,
+			   const bool use_original_HFactor_logic_,
+			   const HighsInt updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;

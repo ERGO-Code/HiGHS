@@ -81,13 +81,15 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setup(const HighsSparseMatrix* a_matrix, HighsInt* baseIndex,
-             const double pivot_threshold = kDefaultPivotThreshold,
-             const double pivot_tolerance = kDefaultPivotTolerance,
-             const HighsInt highs_debug_level = kHighsDebugLevelMin,
-             const bool output_flag = false, FILE* log_file_stream_ = NULL,
-             const bool log_to_console = true,
-             const HighsInt log_dev_level = 0);
+  void setupGeneral(const HighsSparseMatrix* a_matrix,
+		    HighsInt num_basic_variables,
+		    HighsInt* baseIndex,
+		    const double pivot_threshold = kDefaultPivotThreshold,
+		    const double pivot_tolerance = kDefaultPivotTolerance,
+		    const HighsInt highs_debug_level = kHighsDebugLevelMin,
+		    const bool output_flag = false, FILE* log_file_stream_ = NULL,
+		    const bool log_to_console = true,
+		    const HighsInt log_dev_level = 0);
 
   void setup(const HighsInt numCol,   //!< Number of columns
              const HighsInt numRow,   //!< Number of rows
@@ -104,6 +106,23 @@ class HFactor {
              const bool log_to_console = true, const HighsInt log_dev_level = 0,
              const bool use_original_HFactor_logic = true,
              const HighsInt updateMethod = kUpdateMethodFt);
+
+  void setupGeneral(const HighsInt numCol,   //!< Number of columns
+		    const HighsInt numRow,   //!< Number of rows
+		    const HighsInt* Astart,  //!< Column starts of constraint matrix
+		    const HighsInt* Aindex,  //!< Row indices of constraint matrix
+		    const double* Avalue,    //!< Row values of constraint matrix
+		    HighsInt num_basic_variables,
+		    HighsInt* baseIndex,     //!< Indices of basic variables
+		    const double pivot_threshold =
+		    kDefaultPivotThreshold,  //!< Pivoting threshold
+		    const double pivot_tolerance =
+		    kDefaultPivotTolerance,  //!< Min absolute pivot
+		    const HighsInt highs_debug_level = kHighsDebugLevelMin,
+		    const bool output_flag = false, FILE* logfile = NULL,
+		    const bool log_to_console = true, const HighsInt log_dev_level = 0,
+		    const bool use_original_HFactor_logic = true,
+		    const HighsInt updateMethod = kUpdateMethodFt);
 
   void setupMatrix(
       const HighsInt* Astart,  //!< Column starts of constraint matrix

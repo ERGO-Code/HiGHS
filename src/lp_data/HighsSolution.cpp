@@ -841,7 +841,7 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   HighsInt num_basic_variables = basic_index.size();
   assert(num_basic_variables <= num_row);
   HFactor factor;
-  factor.setup(&lp.a_matrix_, &basic_index[0]);
+  factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0]);
   assert(1==0);
 }
 
