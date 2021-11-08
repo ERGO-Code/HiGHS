@@ -98,7 +98,7 @@ class HEkk {
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
 
-  HighsInt initialiseSimplexLpBasisAndFactor(
+  HighsStatus initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
   void initialisePartitionedRowwiseMatrix();
@@ -201,7 +201,7 @@ class HEkk {
 
  private:
   bool isUnconstrainedLp();
-  HighsStatus initialiseForSolve();
+  void initialiseForSolve();
   void setSimplexOptions();
   void updateSimplexOptions();
   void initialiseSimplexLpRandomVectors();

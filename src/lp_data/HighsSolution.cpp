@@ -20,6 +20,7 @@
 
 #include "io/HighsIO.h"
 #include "ipm/IpxSolution.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 
@@ -763,8 +764,53 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 }
 #endif
 
-HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object) {
-  return HighsStatus::kError;
+HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
+                                        const bool only_from_known_basis) {
+  // Ideally, forms a SimplexBasis from the HighsBasis in the
+  // HighsLpSolverObject
+  //
+  // If only_from_known_basis is true and
+  // initialiseSimplexLpBasisAndFactor finds that there is no simplex
+  // basis, then its error return is passed down
+  //
+  // If only_from_known_basis is false, then the basis is completed
+  // with logicals if it is rank deficient (from singularity or being
+  // incomplete)
+  //
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+  HighsLp& lp = solver_object.lp_;
+  HighsBasis& basis = solver_object.basis_;
+  HighsOptions& options = solver_object.options_;
+  HEkk& ekk_instance = solver_object.ekk_instance_;
+  HighsLp& ekk_lp = ekk_instance.lp_;
+  HighsSimplexStatus& ekk_status = ekk_instance.status_;
+  //  HighsInt num_row = lp.num_row_;
+  //  HighsInt num_col = lp.num_col_;
+  lp.ensureColwise();
+  // Consider scaling the LP
+  const bool new_scaling = considerScaling(options, lp);
+  // If new scaling is performed, the hot start information is
+  // no longer valid
+  if (new_scaling) ekk_instance.clearHotStart();
+  // Move the HighsLpSolverObject's LP to EKK
+  ekk_instance.moveLp(solver_object);
+  if (!ekk_status.has_basis) {
+    // The Ekk instance has no simplex basis, so pass the HiGHS basis
+    HighsStatus call_status = ekk_instance.setBasis(basis);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "setBasis");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  // Now form the invert
+  assert(ekk_status.has_basis);
+  call_status =
+      ekk_instance.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
+  if (call_status != HighsStatus::kOk) return HighsStatus::kError;
+  // Once the invert is formed, move back the LP and remove any scaling.
+  lp.moveBackLpAndUnapplyScaling(ekk_lp);
+  // If the current basis cannot be inverted, return an error
+  return HighsStatus::kOk;
 }
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
@@ -868,4 +914,3 @@ void HighsBasis::copy(const HighsBasis& basis) {
   this->col_status = basis.col_status;
 }
 */
-

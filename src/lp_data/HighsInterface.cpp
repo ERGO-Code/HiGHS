@@ -1018,39 +1018,18 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     return HighsStatus::kError;
   }
   if (!ekk_status.has_invert) {
+    // The LP has no invert to use, so have to set one up, but only
+    // for the current basis, so return_value is the rank deficiency.
+    //
     // Create a HighsLpSolverObject
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);
-    HighsStatus call_status = formSimplexLpBasisAndFactor(solver_object);
-    return_status = interpretCallStatus(options_.log_options, call_status,
-    					return_status, "formSimplexLpBasisAndFactor");
-    if (return_status == HighsStatus::kError) return return_status;
-
-    // The LP has no invert to use, so have to set one up
-    lp.ensureColwise();
-    // Consider scaling the LP
-    const bool new_scaling = considerScaling(options_, lp);
-    // If new scaling is performed, the hot start information is
-    // no longer valid
-    if (new_scaling) ekk_instance_.clearHotStart();
-    // Move the HighsLpSolverObject's LP to EKK
-    ekk_instance_.moveLp(solver_object);
-    if (!ekk_status.has_basis) {
-      // The Ekk instance has no simplex basis, so pass the HiGHS basis
-      HighsStatus call_status = ekk_instance_.setBasis(basis_);
-      return_status = interpretCallStatus(options_.log_options, call_status,
-                                          return_status, "setBasis");
-      if (return_status == HighsStatus::kError) return return_status;
-    }
-    // Now form the invert
-    assert(ekk_status.has_basis);
     const bool only_from_known_basis = true;
-    HighsInt return_value =
-        ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
-    // Once the invert is formed, move back the LP and remove any scaling.
-    lp.moveBackLpAndUnapplyScaling(ekk_lp);
-    // If the current basis cannot be inverted, return an error
-    if (return_value) return HighsStatus::kError;
+    return_status = interpretCallStatus(
+        options_.log_options,
+        formSimplexLpBasisAndFactor(solver_object, only_from_known_basis),
+        return_status, "formSimplexLpBasisAndFactor");
+    if (return_status != HighsStatus::kOk) return return_status;
   }
   assert(ekk_status.has_invert);
 

@@ -1048,9 +1048,7 @@ HighsStatus HEkk::solve() {
 
   previous_iteration_cycling_detected = -kHighsIInf;
 
-  HighsStatus call_status = initialiseForSolve();
-  if (call_status == HighsStatus::kError)
-    return returnFromEkkSolve(call_status);
+  initialiseForSolve();
 
   const HighsDebugStatus simplex_nla_status =
       simplex_nla_.debugCheckData("Before HEkk::solve()");
@@ -1069,6 +1067,7 @@ HighsStatus HEkk::solve() {
     return returnFromEkkSolve(HighsStatus::kOk);
 
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
@@ -1537,24 +1536,38 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
   return highs_basis;
 }
 
-HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
+HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
     const bool only_from_known_basis) {
-  // If there's no basis, return error if the basis has to be known,
-  // otherwise set a logical basis
+  // This is normally called only from HEkk::initialiseForSolve, with
+  // only_from_known_basis = false.
   //
-  // If the basis has to be known, then non-negative return value is
-  // rank deficiency; negative return value is error. Otherwise, any
-  // rank deficiency is handled and return is 0
-  if (!status_.has_basis) {
-    if (only_from_known_basis) {
-      highsLogDev(options_->log_options, HighsLogType::kError,
-                  "Simplex basis should be known but isn't\n");
-      return -1;
-    }
-    setBasis();
-  }
-
+  // In this case, if there is no existing simplex basis then a
+  // logical basis is set up. Otherwise the existing simplex basis is
+  // factorized, with logicals introduced to handle rank deficiency.
   //
+  // It is also called from HighsSolution's
+  // formSimplexLpBasisAndFactor, with only_from_known_basis = true or
+  // false. In both cases a simplex basis is known.
+  //
+  // Calls with only_from_known_basis = true originate from
+  // Highs::getBasicVariablesInterface, and are made when
+  // Highs::getBasicVariables has been called and there is no
+  // factorization of the current basis matrix. No rank deficiency
+  // handling is permitted so, if it occurs, an error must be
+  // returned.
+  //
+  // Calls with only_from_known_basis = false originate from
+  // Highs::setBasis. The simplex basis should be non-singular since
+  // it's come from a HighsBasis that is either non-alien, or from an
+  // alien HighsBasis that's been checked/completed. However, it's
+  // conceivable that a singularity could occur, and it's fine to
+  // accommodate it.
+  //
+  // If only_from_known_basis is true, then there should be a simplex
+  // basis to use
+  if (only_from_known_basis) assert(status_.has_basis);
+  // If there is no simplex basis, set up a logical basis
+  if (!status_.has_basis) setBasis();
   // The simplex NLA operates in the scaled space if the LP has
   // scaling factors. If they exist but haven't been applied, then the
   // simplex NLA needs a separate, scaled constraint matrix. Thus
@@ -1602,7 +1615,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,
                     "Supposed to be a full-rank basis, but incorrect\n");
-        return rank_deficiency;
+        return HighsStatus::kError;
       }
       // Account for rank deficiency by correcing nonbasicFlag
       handleRankDeficiency();
@@ -1616,7 +1629,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     resetSyntheticClock();
   }
   assert(status_.has_invert);
-  return 0;
+  return HighsStatus::kOk;
 }
 
 void HEkk::handleRankDeficiency() {
@@ -1672,10 +1685,9 @@ bool HEkk::isUnconstrainedLp() {
   return is_unconstrained_lp;
 }
 
-HighsStatus HEkk::initialiseForSolve() {
-  const HighsInt error_return = initialiseSimplexLpBasisAndFactor();
-  assert(!error_return);
-  if (error_return) return HighsStatus::kError;
+void HEkk::initialiseForSolve() {
+  const HighsStatus return_status = initialiseSimplexLpBasisAndFactor();
+  assert(return_status == HighsStatus::kOk);
   assert(status_.has_basis);
 
   updateSimplexOptions();
@@ -1699,7 +1711,6 @@ HighsStatus HEkk::initialiseForSolve() {
   model_status_ = HighsModelStatus::kNotset;
   if (primal_feasible && dual_feasible)
     model_status_ = HighsModelStatus::kOptimal;
-  return HighsStatus::kOk;
 }
 
 void HEkk::setSimplexOptions() {
