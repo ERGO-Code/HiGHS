@@ -1313,11 +1313,13 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
+    printf("Highs::setBasis Alien basis origin_name = (%s); origin =  (%s)\n",
+           basis_.debug_origin_name.c_str(), origin.c_str());
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
     HighsBasis modifiable_basis = basis;
-    HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_, 
-				      info_, ekk_instance_, options_, timer_);
+    HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
+                                      info_, ekk_instance_, options_, timer_);
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
     if (return_status != HighsStatus::kOk) return HighsStatus::kError;
     // Update the HiGHS basis
@@ -1326,14 +1328,13 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
     // Check the user-supplied basis
     if (!isBasisConsistent(model_.lp_, basis)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "setBasis: invalid basis\n");
+                   "setBasis: invalid basis\n");
       return HighsStatus::kError;
     }
     // Update the HiGHS basis
     basis_ = basis;
   }
   basis_.valid = true;
-  //  }
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
   // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());

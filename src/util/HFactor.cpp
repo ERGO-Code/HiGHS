@@ -161,50 +161,38 @@ void solveHyper(const HighsInt Hsize, const HighsInt* Hlookup,
 }
 
 void HFactor::setupGeneral(const HighsSparseMatrix* a_matrix,
-			   HighsInt num_basic_variables,
-			   HighsInt* baseIndex,
-			   const double pivot_threshold, const double pivot_tolerance,
-			   const HighsInt highs_debug_level, 
-			   const HighsLogOptions* log_options) {
-  this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_, &a_matrix->start_[0],
-		     &a_matrix->index_[0], &a_matrix->value_[0], num_basic_variables, baseIndex,
-		     pivot_threshold, pivot_tolerance, highs_debug_level, 
-		     log_options,
-		     true,
-		     kUpdateMethodFt);
+                           HighsInt num_basic_variables, HighsInt* baseIndex,
+                           const double pivot_threshold,
+                           const double pivot_tolerance,
+                           const HighsInt highs_debug_level,
+                           const HighsLogOptions* log_options) {
+  this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_,
+                     &a_matrix->start_[0], &a_matrix->index_[0],
+                     &a_matrix->value_[0], num_basic_variables, baseIndex,
+                     pivot_threshold, pivot_tolerance, highs_debug_level,
+                     log_options, true, kUpdateMethodFt);
 }
 
-void HFactor::setup(const HighsInt numCol_,
-		    const HighsInt numRow_,
-                    const HighsInt* Astart_,
-		    const HighsInt* Aindex_,
-                    const double* Avalue_,
-		    HighsInt* baseIndex_,
-                    const double pivot_threshold_,
-                    const double pivot_tolerance_,
-                    const HighsInt highs_debug_level_, 
-		    const HighsLogOptions* log_options_,
-                    const bool use_original_HFactor_logic_,
-                    const HighsInt updateMethod_) {
-  setupGeneral(numCol_, numRow_, Astart_, Aindex_, Avalue_,
-	       numRow_, baseIndex_,
-	       pivot_threshold_, pivot_tolerance_,
-	       highs_debug_level_, log_options_,
-	       use_original_HFactor_logic_,
-	       updateMethod_);
+void HFactor::setup(
+    const HighsInt numCol_, const HighsInt numRow_, const HighsInt* Astart_,
+    const HighsInt* Aindex_, const double* Avalue_, HighsInt* baseIndex_,
+    const double pivot_threshold_, const double pivot_tolerance_,
+    const HighsInt highs_debug_level_, const HighsLogOptions* log_options_,
+    const bool use_original_HFactor_logic_, const HighsInt updateMethod_) {
+  setupGeneral(numCol_, numRow_, Astart_, Aindex_, Avalue_, numRow_, baseIndex_,
+               pivot_threshold_, pivot_tolerance_, highs_debug_level_,
+               log_options_, use_original_HFactor_logic_, updateMethod_);
 }
 
 void HFactor::setupGeneral(const HighsInt numCol_, const HighsInt numRow_,
-			   const HighsInt* Astart_, const HighsInt* Aindex_,
-			   const double* Avalue_,
-			   HighsInt num_basic_variables,
-			   HighsInt* baseIndex_,
-			   const double pivot_threshold_,
-			   const double pivot_tolerance_,
-			   const HighsInt highs_debug_level_,
-			   const HighsLogOptions* log_options_,
-			   const bool use_original_HFactor_logic_,
-			   const HighsInt updateMethod_) {
+                           const HighsInt* Astart_, const HighsInt* Aindex_,
+                           const double* Avalue_, HighsInt num_basic_variables,
+                           HighsInt* baseIndex_, const double pivot_threshold_,
+                           const double pivot_tolerance_,
+                           const HighsInt highs_debug_level_,
+                           const HighsLogOptions* log_options_,
+                           const bool use_original_HFactor_logic_,
+                           const HighsInt updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -535,6 +523,12 @@ void HFactor::buildSimple() {
                       lc_iRow);
         for (HighsInt k = start; k < start + count; k++) {
           MRcountb4[Aindex[k]]++;
+          if (BcountX >= BlimitX) {
+            printf("BcountX >= BlimitX\n");
+            fflush(stdout);
+          }
+
+          assert(BcountX < BlimitX);
           Bindex[BcountX] = Aindex[k];
           Bvalue[BcountX++] = Avalue[k];
         }

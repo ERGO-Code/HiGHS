@@ -101,8 +101,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
-HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
-                                        const bool only_from_known_basis = false);
+HighsStatus formSimplexLpBasisAndFactor(
+    HighsLpSolverObject& solver_object,
+    const bool only_from_known_basis = false);
 
 void accommodateAlienBasis(HighsLpSolverObject& solver_object);
 

@@ -831,20 +831,19 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   assert((int)basis.row_status.size() >= num_row);
   std::vector<HighsInt> basic_index;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::kBasic) basic_index.push_back(iCol);
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      basic_index.push_back(iCol);
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (basis.row_status[iRow] == HighsBasisStatus::kBasic) basic_index.push_back(iRow);
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      basic_index.push_back(num_col + iRow);
   }
   HighsInt num_basic_variables = basic_index.size();
   assert(num_basic_variables <= num_row);
   HFactor factor;
-  factor.setupGeneral(&lp.a_matrix_,
-		      num_basic_variables, &basic_index[0],
-		      kDefaultPivotThreshold,
-		      kDefaultPivotTolerance,
-		      kHighsDebugLevelMin,
-		      &options.log_options);
+  factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0],
+                      kDefaultPivotThreshold, kDefaultPivotTolerance,
+                      kHighsDebugLevelMin, &options.log_options);
   factor.build();
   assert(num_basic_variables == num_row);
 }
