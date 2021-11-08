@@ -31,7 +31,7 @@ void debugReportRankDeficiency(
     const HighsInt call_id, const HighsInt highs_debug_level,
     const HighsLogOptions& log_options, const HighsInt num_row,
     const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
-    const HighsInt* baseIndex, const HighsInt rank_deficiency,
+    const HighsInt* basic_index, const HighsInt rank_deficiency,
     const vector<HighsInt>& row_with_no_pivot,
     const vector<HighsInt>& col_with_no_pivot) {
   if (highs_debug_level == kHighsDebugLevelNone) return;
@@ -53,7 +53,7 @@ void debugReportRankDeficiency(
     highsLogDev(log_options, HighsLogType::kWarning, "\nBaseI  ");
     for (HighsInt i = 0; i < num_row; i++)
       highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
-                  baseIndex[i]);
+                  basic_index[i]);
     highsLogDev(log_options, HighsLogType::kWarning, "\n");
   } else if (call_id == 1) {
     if (rank_deficiency > 100) return;
@@ -98,9 +98,9 @@ void debugReportRankDeficiency(
 
 void debugReportRankDeficientASM(
     const HighsInt highs_debug_level, const HighsLogOptions& log_options,
-    const HighsInt num_row, const vector<HighsInt>& MCstart,
-    const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
-    const vector<double>& MCvalue, const vector<HighsInt>& iwork,
+    const HighsInt num_row, const vector<HighsInt>& mc_start,
+    const vector<HighsInt>& mc_count_a, const vector<HighsInt>& mc_index,
+    const vector<double>& mc_value, const vector<HighsInt>& iwork,
     const HighsInt rank_deficiency, const vector<HighsInt>& col_with_no_pivot,
     const vector<HighsInt>& row_with_no_pivot) {
   if (highs_debug_level == kHighsDebugLevelNone) return;
@@ -114,10 +114,10 @@ void debugReportRankDeficientASM(
   }
   for (HighsInt j = 0; j < rank_deficiency; j++) {
     HighsInt ASMcol = col_with_no_pivot[j];
-    HighsInt start = MCstart[ASMcol];
-    HighsInt end = start + MCcountA[ASMcol];
+    HighsInt start = mc_start[ASMcol];
+    HighsInt end = start + mc_count_a[ASMcol];
     for (HighsInt en = start; en < end; en++) {
-      HighsInt ASMrow = MCindex[en];
+      HighsInt ASMrow = mc_index[en];
       HighsInt i = -iwork[ASMrow] - 1;
       if (i < 0 || i >= rank_deficiency) {
         highsLogDev(log_options, HighsLogType::kWarning,
@@ -135,8 +135,8 @@ void debugReportRankDeficientASM(
         highsLogDev(log_options, HighsLogType::kWarning,
                     "Setting ASM(%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT
                     ") = %11.4g\n",
-                    i, j, MCvalue[en]);
-        ASM[i + j * rank_deficiency] = MCvalue[en];
+                    i, j, mc_value[en]);
+        ASM[i + j * rank_deficiency] = mc_value[en];
       }
     }
   }
@@ -171,7 +171,7 @@ void debugReportMarkSingC(const HighsInt call_id,
                           const HighsInt highs_debug_level,
                           const HighsLogOptions& log_options,
                           const HighsInt num_row, const vector<HighsInt>& iwork,
-                          const HighsInt* baseIndex) {
+                          const HighsInt* basic_index) {
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (num_row > 123) return;
   if (call_id == 0) {
@@ -187,7 +187,7 @@ void debugReportMarkSingC(const HighsInt call_id,
     highsLogDev(log_options, HighsLogType::kWarning, "\nBaseI  ");
     for (HighsInt i = 0; i < num_row; i++)
       highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
-                  baseIndex[i]);
+                  basic_index[i]);
   } else if (call_id == 1) {
     highsLogDev(log_options, HighsLogType::kWarning, "\nMarkSingC2");
     highsLogDev(log_options, HighsLogType::kWarning, "\nIndex  ");
@@ -197,7 +197,7 @@ void debugReportMarkSingC(const HighsInt call_id,
     highsLogDev(log_options, HighsLogType::kWarning, "\nNwBaseI");
     for (HighsInt i = 0; i < num_row; i++)
       highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
-                  baseIndex[i]);
+                  basic_index[i]);
     highsLogDev(log_options, HighsLogType::kWarning, "\n");
   }
 }

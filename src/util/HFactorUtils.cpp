@@ -70,11 +70,11 @@ void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
     }
   }
   if (l_u_or_both == 3 && full) {
-    reportDoubleVector("PFpivotValue", PFpivotValue);
-    reportIntVector("PFpivotIndex", PFpivotIndex);
-    reportIntVector("PFstart", PFstart);
-    reportIntVector("PFindex", PFindex);
-    reportDoubleVector("PFvalue", PFvalue);
+    reportDoubleVector("pf_pivot_value", pf_pivot_value);
+    reportIntVector("pf_pivot_index", pf_pivot_index);
+    reportIntVector("pf_start", pf_start);
+    reportIntVector("pf_index", pf_index);
+    reportDoubleVector("pf_value", pf_value);
   }
 }
 

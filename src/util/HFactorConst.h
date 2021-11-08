@@ -65,9 +65,10 @@ const HighsInt kMultiSyntheticTickReinversionMinUpdateCount =
     kSyntheticTickReinversionMinUpdateCount;
 
 // Constants defining the space available for dimension-related
-// identifiers like starts, and multipliers (of BlimitX, the basis
-// matrix limit size) for fill-related identifiers like indices/values
-// in Markowitz, and update.
+// identifiers like starts, and multipliers (of
+// basis_matrix_limit_size, the basis matrix limit size) for
+// fill-related identifiers like indices/values in Markowitz, and
+// update.
 const HighsInt kMCExtraEntriesMultiplier = 2;
 const HighsInt kMRExtraEntriesMultiplier = 2;
 const HighsInt kLFactorExtraEntriesMultiplier = 3;

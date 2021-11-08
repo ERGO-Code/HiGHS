@@ -116,10 +116,10 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       if (pivot_type == kPivotRowSingleton) {
         //
         // 2.2 Deal with row singleton
-        const double pivotX = 1 / a_value[pivot_k];
+        const double pivot_multiplier = 1 / a_value[pivot_k];
         if (report_singletons)
           printf("Stage %d: Row singleton (%4d, %g)\n", (int)iK, (int)pivot_k,
-                 pivotX);
+                 pivot_multiplier);
         for (HighsInt section = 0; section < 2; section++) {
           HighsInt p0 = section == 0 ? start : pivot_k + 1;
           HighsInt p1 = section == 0 ? pivot_k : end;
@@ -128,9 +128,9 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
             if (!has_pivot[local_iRow]) {
               if (report_singletons)
                 printf("Row singleton: L En (%4d, %11.4g)\n", (int)local_iRow,
-                       a_value[k] * pivotX);
+                       a_value[k] * pivot_multiplier);
               l_index.push_back(local_iRow);
-              l_value.push_back(a_value[k] * pivotX);
+              l_value.push_back(a_value[k] * pivot_multiplier);
             } else {
               if (report_singletons)
                 printf("Row singleton: U En (%4d, %11.4g)\n", (int)local_iRow,
@@ -178,7 +178,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       stage = iK;
       break;
     }
-    baseIndex[iRow] = iVar;
+    basic_index[iRow] = iVar;
     has_pivot[iRow] = true;
   }
   if (report_lu) {
@@ -273,7 +273,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
         rank_deficiency = num_row - iK;
         return rank_deficiency;
       }
-      const double pivotX = 1 / column.array[iRow];
+      const double pivot_multiplier = 1 / column.array[iRow];
       for (HighsInt section = 0; section < 2; section++) {
         HighsInt p0 = section == 0 ? start : pivot_k + 1;
         HighsInt p1 = section == 0 ? pivot_k : end;
@@ -281,7 +281,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
           HighsInt local_iRow = column.index[k];
           if (!has_pivot[local_iRow]) {
             l_index.push_back(local_iRow);
-            l_value.push_back(column.array[local_iRow] * pivotX);
+            l_value.push_back(column.array[local_iRow] * pivot_multiplier);
           } else {
             u_index.push_back(local_iRow);
             u_value.push_back(column.array[local_iRow]);
@@ -292,7 +292,7 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
       u_pivot_index.push_back(iRow);
       u_pivot_value.push_back(column.array[iRow]);
       u_start.push_back(u_index.size());
-      baseIndex[iRow] = iVar;
+      basic_index[iRow] = iVar;
       has_pivot[iRow] = true;
       if (report_lu) {
         printf("\nAfter Markowitz %d\n", (int)(iK - stage));

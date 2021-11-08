@@ -44,11 +44,11 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   vector<HighsInt> in_basis;
   in_basis.assign(num_col, -1);
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    HighsInt iVar = baseIndex[iRow];
+    HighsInt iVar = basic_index[iRow];
     if (iVar < num_col) in_basis[iVar] = iRow;
   }
   for (HighsInt iRow = num_row; iRow < new_num_row; iRow++) {
-    HighsInt iVar = baseIndex[iRow];
+    HighsInt iVar = basic_index[iRow];
     assert(iVar >= num_col);
   }
   //  reportLu(kReportLuBoth, true);
@@ -178,11 +178,11 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // UR space
   //
   // Borrowing names from buildFinish()
-  HighsInt URstuffX = updateMethod == kUpdateMethodFt ? 5 : 0;
+  HighsInt ur_stuff_size = update_method == kUpdateMethodFt ? 5 : 0;
   HighsInt ur_size = ur_index.size();
-  HighsInt URcountX = ur_size + URstuffX * num_new_row;
-  ur_index.resize(URcountX);
-  ur_value.resize(URcountX);
+  HighsInt ur_count_size = ur_size + ur_stuff_size * num_new_row;
+  ur_index.resize(ur_count_size);
+  ur_value.resize(ur_count_size);
 
   // Need to refer to just the new UR vectors
   HighsInt ur_cur_num_vec = ur_start.size();
@@ -202,23 +202,23 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   vector<HighsInt> ur_temp;
   ur_temp.assign(ur_new_num_vec, 0);
   //
-  // ur_space has its new entries assigned (to URstuffX) as in
+  // ur_space has its new entries assigned (to ur_stuff_size) as in
   // buildFinish()
   ur_space.resize(ur_new_num_vec);
   for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++)
-    ur_space[iRow] = URstuffX;
+    ur_space[iRow] = ur_stuff_size;
   // Compute ur_temp exactly as in buildFinish()
   for (HighsInt k = 0; k < UcountX; k++) ur_temp[u_pivot_lookup[u_index[k]]]++;
   HighsInt iStart = ur_size;
   ur_start[ur_cur_num_vec] = iStart;
   for (HighsInt iRow = ur_cur_num_vec + 1; iRow < ur_new_num_vec + 1; iRow++) {
-    HighsInt gap = ur_temp[iRow - 1] + URstuffX;
+    HighsInt gap = ur_temp[iRow - 1] + ur_stuff_size;
     ur_start[iRow] = iStart + gap;
     iStart += gap;
     printf("ur_start[%d] = %d; gap = %d; iStart = %d\n", (int)iRow,
            (int)ur_start[iRow], (int)gap, (int)iStart);
   }
-  printf("URcountX = %d; iStart%d\n", (int)URcountX, (int)iStart);
+  printf("ur_count_size = %d; iStart%d\n", (int)ur_count_size, (int)iStart);
   // Lose the start for the fictitious ur_new_num_vec'th row
   ur_start.resize(ur_new_num_vec);
   // Resize ur_lastp and initialise its new entries to be the ur_start

@@ -57,7 +57,7 @@ void HSimplexNla::setLpAndScalePointers(const HighsLp* for_lp) {
 
 void HSimplexNla::setBasicIndexPointers(HighsInt* basic_index) {
   this->base_index_ = basic_index;
-  this->factor_.baseIndex = basic_index;
+  this->factor_.basic_index = basic_index;
 }
 
 void HSimplexNla::setPointers(const HighsLp* for_lp,
@@ -270,7 +270,7 @@ void HSimplexNla::addRows(const HighsLp* updated_lp, HighsInt* base_index,
   // HFactor matrix isn't needed until reinversion has to be performed
   setLpAndScalePointers(updated_lp);
   base_index_ = base_index;
-  factor_.baseIndex = base_index;
+  factor_.basic_index = base_index;
   factor_.addRows(scaled_ar_matrix);
 }
 
