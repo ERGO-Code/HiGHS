@@ -1018,6 +1018,14 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     return HighsStatus::kError;
   }
   if (!ekk_status.has_invert) {
+    // Create a HighsLpSolverObject
+    HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
+                                      ekk_instance_, options_, timer_);
+    //    HighsStatus call_status = formSimplexLpBasisAndFactor(solver_object);
+    //    return_status = interpretCallStatus(options_.log_options, call_status,
+    //					return_status, "formSimplexLpBasisAndFactor");
+    //    if (return_status == HighsStatus::kError) return return_status;
+   
     // The LP has no invert to use, so have to set one up
     lp.ensureColwise();
     // Consider scaling the LP
@@ -1025,9 +1033,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // If new scaling is performed, the hot start information is
     // no longer valid
     if (new_scaling) ekk_instance_.clearHotStart();
-    // Create a HighsLpSolverObject, and then move its LP to EKK
-    HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
-                                      ekk_instance_, options_, timer_);
+    // Move the HighsLpSolverObject's LP to EKK
     ekk_instance_.moveLp(solver_object);
     if (!ekk_status.has_basis) {
       // The Ekk instance has no simplex basis, so pass the HiGHS basis

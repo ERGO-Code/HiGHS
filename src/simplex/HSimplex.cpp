@@ -19,13 +19,18 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsSort.h"
 
-using std::runtime_error;
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <vector>
 
 #ifdef OPENMP
 #include "omp.h"
 #endif
+
+using std::max;
+using std::min;
+using std::runtime_error;
 
 void SimplexBasis::clear() {
   this->hash = 0;

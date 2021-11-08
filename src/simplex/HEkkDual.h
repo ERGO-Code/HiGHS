@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include "HConfig.h"
+//#include "HConfig.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"

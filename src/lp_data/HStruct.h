@@ -55,6 +55,7 @@ struct HotStart {
 
 struct HighsBasis {
   bool valid = false;
+  bool alien = true;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
   std::string debug_origin_name = "None";
