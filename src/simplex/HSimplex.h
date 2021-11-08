@@ -16,8 +16,8 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
-#include "lp_data/HighsLp.h"
 #include "lp_data/HighsInfo.h"
+#include "lp_data/HighsLp.h"
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol);

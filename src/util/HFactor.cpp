@@ -33,6 +33,7 @@ using std::fabs;
 using std::copy;
 using std::fill_n;
 using std::make_pair;
+using std::min;
 using std::pair;
 
 void solveMatrixT(const HighsInt Xstart, const HighsInt Xend,

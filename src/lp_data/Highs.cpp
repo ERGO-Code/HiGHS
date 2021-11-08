@@ -1313,20 +1313,20 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   //  if (basis.alien) {
-    // An alien basis needs to be checked properly, since it may be
-    // singular, or even incomplete.
-    
+  // An alien basis needs to be checked properly, since it may be
+  // singular, or even incomplete.
+
   //  } else {
-    // Check the user-supplied basis
-    if (!isBasisConsistent(model_.lp_, basis)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "setBasis: invalid basis\n");
-      return HighsStatus::kError;
-    }
-    // Update the HiGHS basis
-    basis_ = basis;
-    basis_.valid = true;
-    //  }
+  // Check the user-supplied basis
+  if (!isBasisConsistent(model_.lp_, basis)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "setBasis: invalid basis\n");
+    return HighsStatus::kError;
+  }
+  // Update the HiGHS basis
+  basis_ = basis;
+  basis_.valid = true;
+  //  }
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
   // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());

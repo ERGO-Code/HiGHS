@@ -20,6 +20,8 @@
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
 
+using std::min;
+
 HighsStatus HEkkPrimal::solve() {
   // Initialise control data for a particular solve
   initialiseSolve();

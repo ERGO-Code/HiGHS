@@ -31,7 +31,7 @@
 
 // Uses max and min for local in-line functions
 using std::max;
-using std::min;
+// using std::min;
 using std::vector;
 
 /**

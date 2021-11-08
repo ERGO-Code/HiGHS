@@ -25,6 +25,7 @@
 #include "util/HighsSort.h"
 
 using std::make_pair;
+using std::min;
 using std::pair;
 using std::set;
 

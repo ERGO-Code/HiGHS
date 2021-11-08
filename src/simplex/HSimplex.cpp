@@ -16,13 +16,13 @@
 
 #include "simplex/HSimplex.h"
 
-#include "lp_data/HighsLpUtils.h"
-#include "util/HighsSort.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <vector>
+
+#include "lp_data/HighsLpUtils.h"
+#include "util/HighsSort.h"
 
 #ifdef OPENMP
 #include "omp.h"

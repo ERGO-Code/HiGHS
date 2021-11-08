@@ -25,6 +25,7 @@
 
 using std::fill_n;
 using std::make_pair;
+using std::min;
 using std::nth_element;
 using std::pair;
 

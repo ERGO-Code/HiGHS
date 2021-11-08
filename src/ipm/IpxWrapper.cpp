@@ -18,6 +18,8 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
+using std::min;
+
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& obj, std::vector<double>& col_lb,
                    std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
