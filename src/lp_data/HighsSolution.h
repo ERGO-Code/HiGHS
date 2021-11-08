@@ -101,6 +101,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
+HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object);
+
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);

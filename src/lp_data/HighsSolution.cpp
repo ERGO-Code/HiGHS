@@ -763,6 +763,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 }
 #endif
 
+HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object) {
+  return HighsStatus::kError;
+}
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
   solver_object.scaled_model_status_ = HighsModelStatus::kNotset;
@@ -865,3 +868,4 @@ void HighsBasis::copy(const HighsBasis& basis) {
   this->col_status = basis.col_status;
 }
 */
+

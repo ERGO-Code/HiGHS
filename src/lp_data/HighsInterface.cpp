@@ -1021,11 +1021,10 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // Create a HighsLpSolverObject
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);
-    //    HighsStatus call_status = formSimplexLpBasisAndFactor(solver_object);
-    //    return_status = interpretCallStatus(options_.log_options, call_status,
-    //					return_status,
-    //"formSimplexLpBasisAndFactor");
-    //    if (return_status == HighsStatus::kError) return return_status;
+    HighsStatus call_status = formSimplexLpBasisAndFactor(solver_object);
+    return_status = interpretCallStatus(options_.log_options, call_status,
+    					return_status, "formSimplexLpBasisAndFactor");
+    if (return_status == HighsStatus::kError) return return_status;
 
     // The LP has no invert to use, so have to set one up
     lp.ensureColwise();
