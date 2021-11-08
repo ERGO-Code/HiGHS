@@ -235,11 +235,12 @@ class SimplexTimer {
     clock[UpdateRowEpClock] = timer_pointer->clock_def("UPDATE_ROW_EP", "UPR");
   }
 
-  void reportSimplexClockList(const char* grepStamp,
-                              std::vector<HighsInt> simplex_clock_list,
-                              HighsTimerClock& simplex_timer_clock) {
+  bool reportSimplexClockList(const char* grepStamp,
+                              const std::vector<HighsInt> simplex_clock_list,
+                              const HighsTimerClock& simplex_timer_clock,
+                              const double tolerance_percent_report_ = -1) {
     HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
-    std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
+    const std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
     HighsInt simplex_clock_list_size = simplex_clock_list.size();
     std::vector<HighsInt> clockList;
     clockList.resize(simplex_clock_list_size);
@@ -248,13 +249,16 @@ class SimplexTimer {
     }
     const double ideal_sum_time =
         timer_pointer->clock_time[clock[SimplexTotalClock]];
-    timer_pointer->report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
+    const double tolerance_percent_report =
+        tolerance_percent_report_ >= 0 ? tolerance_percent_report_ : 1e-8;
+    return timer_pointer->reportOnTolerance(
+        grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
   };
 
-  void reportChuzc4ClockList(std::vector<HighsInt> simplex_clock_list,
-                             HighsTimerClock& simplex_timer_clock) {
+  void reportChuzc4ClockList(const std::vector<HighsInt> simplex_clock_list,
+                             const HighsTimerClock& simplex_timer_clock) {
     HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
-    std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
+    const std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
     HighsInt simplex_clock_list_size = simplex_clock_list.size();
     std::vector<HighsInt> clockList;
     clockList.resize(simplex_clock_list_size);
@@ -263,31 +267,33 @@ class SimplexTimer {
     }
     const double ideal_sum_time = timer_pointer->read(clock[Chuzc4Clock]);
     printf("reportChuzc4ClockList: ideal_sum_time = %g\n", ideal_sum_time);
-    timer_pointer->report_tl("CHUZC4:", clockList, ideal_sum_time, 1e-8);
+    timer_pointer->reportOnTolerance("CHUZC4:", clockList, ideal_sum_time,
+                                     1e-8);
   };
 
-  void reportSimplexTotalClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{SimplexTotalClock};
+  void reportSimplexTotalClock(const HighsTimerClock& simplex_timer_clock) {
+    const std::vector<HighsInt> simplex_clock_list{SimplexTotalClock};
     reportSimplexClockList("SimplexTotal", simplex_clock_list,
                            simplex_timer_clock);
   };
 
-  void reportSimplexPhasesClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{
+  void reportSimplexPhasesClock(const HighsTimerClock& simplex_timer_clock) {
+    const std::vector<HighsInt> simplex_clock_list{
         SimplexIzDseWtClock, SimplexDualPhase1Clock, SimplexDualPhase2Clock,
         SimplexPrimalPhase2Clock};
     reportSimplexClockList("SimplexPhases", simplex_clock_list,
                            simplex_timer_clock);
   };
 
-  void reportDualSimplexIterateClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{IterateClock};
+  void reportDualSimplexIterateClock(
+      const HighsTimerClock& simplex_timer_clock) {
+    const std::vector<HighsInt> simplex_clock_list{IterateClock};
     reportSimplexClockList("SimplexIterate", simplex_clock_list,
                            simplex_timer_clock);
   };
 
-  void reportDualSimplexOuterClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{
+  void reportDualSimplexOuterClock(const HighsTimerClock& simplex_timer_clock) {
+    const std::vector<HighsInt> simplex_clock_list{
         IterateDualRebuildClock, IterateChuzrClock,   IterateChuzcClock,
         IterateFtranClock,       IterateVerifyClock,  IterateDualClock,
         IteratePrimalClock,      IterateDevexIzClock, IteratePivotsClock};
@@ -295,8 +301,9 @@ class SimplexTimer {
                            simplex_timer_clock);
   };
 
-  void reportSimplexInnerClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{
+  bool reportSimplexInnerClock(const HighsTimerClock& simplex_timer_clock,
+                               const double tolerance_percent_report_ = -1) {
+    const std::vector<HighsInt> simplex_clock_list{
         initialiseSimplexLpBasisAndFactorClock,
         allocateSimplexArraysClock,
         initialiseSimplexCostBoundsClock,
@@ -346,19 +353,21 @@ class SimplexTimer {
         UpdatePivotsClock,
         UpdateFactorClock,
         UpdateMatrixClock};
-    reportSimplexClockList("SimplexInner", simplex_clock_list,
-                           simplex_timer_clock);
+    return reportSimplexClockList("SimplexInner", simplex_clock_list,
+                                  simplex_timer_clock,
+                                  tolerance_percent_report_);
   };
 
-  void reportSimplexChuzc4Clock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{Chuzc4a0Clock, Chuzc4a1Clock,
-                                             Chuzc4bClock,  Chuzc4cClock,
-                                             Chuzc4dClock,  Chuzc4eClock};
+  void reportSimplexChuzc4Clock(const HighsTimerClock& simplex_timer_clock) {
+    const std::vector<HighsInt> simplex_clock_list{Chuzc4a0Clock, Chuzc4a1Clock,
+                                                   Chuzc4bClock,  Chuzc4cClock,
+                                                   Chuzc4dClock,  Chuzc4eClock};
     reportChuzc4ClockList(simplex_clock_list, simplex_timer_clock);
   };
 
-  void reportSimplexMultiInnerClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<HighsInt> simplex_clock_list{
+  void reportSimplexMultiInnerClock(
+      const HighsTimerClock& simplex_timer_clock) {
+    const std::vector<HighsInt> simplex_clock_list{
         ScaleClock,
         CrashClock,
         BasisConditionClock,

@@ -21,6 +21,7 @@
 #include "pdqsort/pdqsort.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsCDouble.h"
 #include "util/HighsSort.h"
 
 using std::make_pair;
@@ -188,6 +189,9 @@ HighsInt HEkkDualRow::chooseFinal() {
     // Use the O(n^2) quadratic sort for the candidates
     analysis->simplexTimerStart(Chuzc4a0Clock);
     choose_ok = chooseFinalWorkGroupQuad();
+    //    if (!choose_ok) {
+    //  choose_ok = quadChooseFinalWorkGroupQuad();
+    //    }
     analysis->simplexTimerStop(Chuzc4a0Clock);
   }
   if (use_heap_sort) {
@@ -368,6 +372,68 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
     HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
     debugDualChuzcFailQuad1(*ekk_instance_.options_, workCount, workData,
                             num_var, workDual, selectTheta, true);
+    return false;
+  }
+  return true;
+}
+
+bool HEkkDualRow::quadChooseFinalWorkGroupQuad() {
+  const HighsCDouble Td = ekk_instance_.options_->dual_feasibility_tolerance;
+  HighsInt fullCount = workCount;
+  workCount = 0;
+  HighsCDouble totalChange = kInitialTotalChange;
+  HighsCDouble selectTheta = workTheta;
+  const HighsCDouble totalDelta = fabs(workDelta);
+  workGroup.clear();
+  workGroup.push_back(0);
+  HighsInt prev_workCount = workCount;
+  HighsCDouble prev_remainTheta = kInitialRemainTheta;
+  HighsCDouble prev_selectTheta = selectTheta;
+  HighsInt debug_num_loop = 0;
+
+  while (selectTheta < kMaxSelectTheta) {
+    HighsCDouble remainTheta = kInitialRemainTheta;
+    debug_num_loop++;
+    HighsInt debug_loop_ln = 0;
+    for (HighsInt i = workCount; i < fullCount; i++) {
+      HighsInt iCol = workData[i].first;
+      HighsCDouble value = workData[i].second;
+      HighsCDouble dual = workMove[iCol] * workDual[iCol];
+      // Tight satisfy
+      if (dual <= selectTheta * value) {
+        swap(workData[workCount++], workData[i]);
+        totalChange += value * (workRange[iCol]);
+      } else if (dual + Td < remainTheta * value) {
+        remainTheta = (dual + Td) / value;
+      }
+      debug_loop_ln++;
+    }
+    workGroup.push_back(workCount);
+
+    // Update selectTheta with the value of remainTheta;
+    selectTheta = remainTheta;
+    // Check for no change in this loop - to prevent infinite loop
+    if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
+        (prev_remainTheta == remainTheta)) {
+      HighsInt num_var =
+          ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+      debugDualChuzcFailQuad0(*ekk_instance_.options_, workCount, workData,
+                              num_var, workDual, (double)selectTheta,
+                              (double)remainTheta, true);
+      return false;
+    }
+    // Record the initial values of workCount, remainTheta and selectTheta for
+    // the next pass through the loop - to check for infinite loop condition
+    prev_workCount = workCount;
+    prev_remainTheta = remainTheta;
+    prev_selectTheta = selectTheta;
+    if (totalChange >= totalDelta || workCount == fullCount) break;
+  }
+  // Check that at least one group has been identified
+  if ((HighsInt)workGroup.size() <= 1) {
+    HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+    debugDualChuzcFailQuad1(*ekk_instance_.options_, workCount, workData,
+                            num_var, workDual, (double)selectTheta, true);
     return false;
   }
   return true;

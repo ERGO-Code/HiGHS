@@ -112,8 +112,4 @@ bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
-void clearPrimalSolutionUtil(HighsSolution& solution);
-void clearDualSolutionUtil(HighsSolution& solution);
-void clearSolutionUtil(HighsSolution& solution);
-void clearBasisUtil(HighsBasis& solution);
 #endif  // LP_DATA_HIGHSSOLUTION_H_

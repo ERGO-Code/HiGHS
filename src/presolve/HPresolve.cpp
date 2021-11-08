@@ -5743,6 +5743,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   highs.passModel(model);
   highs.passOptions(options);
   highs.setSolution(sol);
+  basis.debug_origin_name = "HPresolve::debug";
   highs.setBasis(basis);
   highs.run();
   return;
@@ -5825,6 +5826,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     Highs highs;
     highs.passOptions(options);
     highs.passModel(model);
+    temp_basis.debug_origin_name = "HPresolve::debug";
     highs.setBasis(temp_basis);
     // highs.writeModel("model.mps");
     // highs.writeBasis("bad.bas");

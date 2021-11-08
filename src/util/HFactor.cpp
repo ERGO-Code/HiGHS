@@ -999,7 +999,8 @@ HighsInt HFactor::buildKernel() {
 
 void HFactor::buildHandleRankDeficiency() {
   debugReportRankDeficiency(0, highs_debug_level, log_options, numRow, permute,
-                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
+                            iwork, baseIndex, rank_deficiency,
+                            row_with_no_pivot, col_with_no_pivot);
   // iwork can now be used as workspace: use it to accumulate the new
   // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
   // Indices of iwork corresponding to missing indices in permute
@@ -1007,8 +1008,8 @@ void HFactor::buildHandleRankDeficiency() {
   // will replace singular columns. Once baseIndex[i] is read, it can
   // be used to pack up the entries in baseIndex which are not
   // permuted anywhere - and so will be singular columns.
-  noPvR.resize(rank_deficiency);
-  noPvC.resize(rank_deficiency);
+  row_with_no_pivot.resize(rank_deficiency);
+  col_with_no_pivot.resize(rank_deficiency);
   HighsInt lc_rank_deficiency = 0;
   for (HighsInt i = 0; i < numRow; i++) iwork[i] = -1;
   for (HighsInt i = 0; i < numRow; i++) {
@@ -1016,27 +1017,28 @@ void HFactor::buildHandleRankDeficiency() {
     if (perm_i >= 0) {
       iwork[perm_i] = baseIndex[i];
     } else {
-      noPvC[lc_rank_deficiency++] = i;
+      col_with_no_pivot[lc_rank_deficiency++] = i;
     }
   }
   assert(lc_rank_deficiency == rank_deficiency);
   lc_rank_deficiency = 0;
   for (HighsInt i = 0; i < numRow; i++) {
     if (iwork[i] < 0) {
-      // Record the rows with no pivots in noPvR and indicate them
+      // Record the rows with no pivots in row_with_no_pivot and indicate them
       // within iwork by storing the negation of one more than their
       // rank deficiency counter [since we can't have -0].
-      noPvR[lc_rank_deficiency] = i;
+      row_with_no_pivot[lc_rank_deficiency] = i;
       iwork[i] = -(lc_rank_deficiency + 1);
       lc_rank_deficiency++;
     }
   }
   assert(lc_rank_deficiency == rank_deficiency);
   debugReportRankDeficiency(1, highs_debug_level, log_options, numRow, permute,
-                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
+                            iwork, baseIndex, rank_deficiency,
+                            row_with_no_pivot, col_with_no_pivot);
   for (HighsInt k = 0; k < rank_deficiency; k++) {
-    HighsInt iRow = noPvR[k];
-    HighsInt iCol = noPvC[k];
+    HighsInt iRow = row_with_no_pivot[k];
+    HighsInt iCol = col_with_no_pivot[k];
     assert(permute[iCol] == -1);
     permute[iCol] = iRow;
     Lstart.push_back(Lindex.size());
@@ -1045,10 +1047,11 @@ void HFactor::buildHandleRankDeficiency() {
     Ustart.push_back(Uindex.size());
   }
   debugReportRankDeficiency(2, highs_debug_level, log_options, numRow, permute,
-                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
-  debugReportRankDeficientASM(highs_debug_level, log_options, numRow, MCstart,
-                              MCcountA, MCindex, MCvalue, iwork,
-                              rank_deficiency, noPvC, noPvR);
+                            iwork, baseIndex, rank_deficiency,
+                            row_with_no_pivot, col_with_no_pivot);
+  debugReportRankDeficientASM(
+      highs_debug_level, log_options, numRow, MCstart, MCcountA, MCindex,
+      MCvalue, iwork, rank_deficiency, col_with_no_pivot, row_with_no_pivot);
 }
 
 void HFactor::buildMarkSingC() {
@@ -1058,14 +1061,15 @@ void HFactor::buildMarkSingC() {
   debugReportMarkSingC(0, highs_debug_level, log_options, numRow, iwork,
                        baseIndex);
 
+  var_with_no_pivot.resize(rank_deficiency);
   for (HighsInt k = 0; k < rank_deficiency; k++) {
-    HighsInt ASMrow = noPvR[k];
-    HighsInt ASMcol = noPvC[k];
+    HighsInt ASMrow = row_with_no_pivot[k];
+    HighsInt ASMcol = col_with_no_pivot[k];
     assert(-iwork[ASMrow] - 1 >= 0 && -iwork[ASMrow] - 1 < rank_deficiency);
     // Store negation of 1+ASMcol so that removing column 0 can be
     // identified!
     iwork[ASMrow] = -(ASMcol + 1);
-    noPvC[k] = baseIndex[ASMcol];
+    var_with_no_pivot[k] = baseIndex[ASMcol];
     baseIndex[ASMcol] = numCol + ASMrow;
   }
   debugReportMarkSingC(1, highs_debug_level, log_options, numRow, iwork,

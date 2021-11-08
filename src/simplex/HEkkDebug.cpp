@@ -21,6 +21,8 @@
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HEkk.h"
+#include "simplex/HSimplexReport.h"
+#include "simplex/SimplexTimer.h"
 
 using std::abs;
 using std::max;
@@ -40,6 +42,36 @@ const double updated_dual_small_absolute_error = 1e-6;
 const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
+void HEkk::timeReporting(const HighsInt save_mod_recover) {
+  static HighsInt highs_analysis_level;
+  if (save_mod_recover == -1) {
+    highs_analysis_level = options_->highs_analysis_level;
+  } else if (save_mod_recover == 0) {
+    // Ensure that kHighsAnalysisLevelSolverTime is set
+    if (!(kHighsAnalysisLevelSolverTime & highs_analysis_level))
+      this->options_->highs_analysis_level += kHighsAnalysisLevelSolverTime;
+  } else {
+    options_->highs_analysis_level = highs_analysis_level;
+    SimplexTimer simplex_timer;
+    const bool non_null_report = simplex_timer.reportSimplexInnerClock(
+        this->analysis_.thread_simplex_clocks[0], 20);
+    this->analysis_.analyse_simplex_time =
+        kHighsAnalysisLevelSolverTime & options_->highs_analysis_level;
+    if (non_null_report) {
+      HighsLogOptions log_options;
+      bool output_flag = true;
+      bool log_to_console = false;
+      HighsInt log_dev_level = kHighsLogDevLevelVerbose;
+      log_options.log_file_stream = stdout;
+      log_options.output_flag = &output_flag;
+      log_options.log_to_console = &log_to_console;
+      log_options.log_dev_level = &log_dev_level;
+      reportSimplexPhaseIterations(log_options, this->iteration_count_,
+                                   this->info_);
+    }
+  }
+}
+
 void HEkk::debugReporting(const HighsInt save_mod_recover,
                           const HighsInt log_dev_level_) {
   static bool output_flag;
@@ -56,8 +88,10 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
   } else if (save_mod_recover == 0) {
     this->options_->output_flag = true;
     this->options_->log_dev_level = log_dev_level_;
-    this->options_->highs_analysis_level = 6;
-    this->options_->highs_debug_level = 2;
+    this->options_->highs_analysis_level =
+        kHighsAnalysisLevelSolverSummaryData +
+        kHighsAnalysisLevelSolverRuntimeData;
+    this->options_->highs_debug_level = kHighsDebugLevelCostly;
     if (log_dev_level_ == kHighsLogDevLevelVerbose)
       this->analysis_.analyse_simplex_runtime_data = true;
   } else {

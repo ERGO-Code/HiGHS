@@ -27,15 +27,16 @@ void debugReportRankDeficiency(
     const HighsLogOptions& log_options, const HighsInt numRow,
     const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
     const HighsInt* baseIndex, const HighsInt rank_deficiency,
-    const vector<HighsInt>& noPvR, const vector<HighsInt>& noPvC);
+    const vector<HighsInt>& row_with_no_pivot,
+    const vector<HighsInt>& col_with_no_pivot);
 
 void debugReportRankDeficientASM(
     const HighsInt highs_debug_level, const HighsLogOptions& log_options,
     const HighsInt numRow, const vector<HighsInt>& MCstart,
     const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
     const vector<double>& MCvalue, const vector<HighsInt>& iwork,
-    const HighsInt rank_deficiency, const vector<HighsInt>& noPvC,
-    const vector<HighsInt>& noPvR);
+    const HighsInt rank_deficiency, const vector<HighsInt>& col_with_no_pivot,
+    const vector<HighsInt>& row_with_no_pivot);
 
 void debugReportMarkSingC(const HighsInt call_id,
                           const HighsInt highs_debug_level,

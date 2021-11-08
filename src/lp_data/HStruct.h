@@ -34,6 +34,7 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
+  void clear();
 };
 
 struct RefactorInfo {
@@ -54,8 +55,13 @@ struct HotStart {
 
 struct HighsBasis {
   bool valid = false;
+  HighsInt debug_id = -1;
+  HighsInt debug_update_count = -1;
+  std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  void clear();
+  //  void copy(const HighsBasis& basis);
 };
 
 struct HighsScale {

@@ -372,7 +372,7 @@ class HEkkDual {
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
-  bool cyclingDetected();
+  bool badBasisChange();
 
   // Devex scalars
   HighsInt num_devex_iterations =
@@ -405,6 +405,9 @@ class HEkkDual {
   double* rowLower;
   double* rowUpper;
   int8_t* nonbasicFlag;
+
+  // Retained value
+  bool initial_basis_is_logical_;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;

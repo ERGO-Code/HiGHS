@@ -760,8 +760,9 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReducedToEmpty: {
         reportPresolveReductions(log_options, incumbent_lp, true);
         // Create a trivial optimal solution for postsolve to use
-        clearSolutionUtil(solution_);
-        clearBasisUtil(basis_);
+        solution_.clear();
+        basis_.clear();
+        basis_.debug_origin_name = "Presolve to empty";
         have_optimal_solution = true;
         break;
       }
@@ -875,7 +876,7 @@ HighsStatus Highs::run() {
           basis_.valid = true;
           basis_.col_status = presolve_.data_.recovered_basis_.col_status;
           basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-
+          basis_.debug_origin_name += ": after postsolve";
           // Possibly force debug to perform KKT check on what's
           // returned from postsolve
           const bool force_debug = false;
@@ -1310,7 +1311,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setBasis(const HighsBasis& basis) {
+HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   // Check the user-supplied basis
   if (!isBasisConsistent(model_.lp_, basis)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -1320,6 +1321,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   // Update the HiGHS basis
   basis_ = basis;
   basis_.valid = true;
+  if (origin != "") basis_.debug_origin_name = origin;
+  assert(basis_.debug_origin_name != "");
+  // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1332,6 +1336,9 @@ HighsStatus Highs::setBasis() {
   // Don't set to logical basis since that causes presolve to be
   // skipped
   basis_.valid = false;
+  basis_.debug_id = -1;
+  basis_.debug_update_count = -1;
+  basis_.debug_origin_name = "Invalidated";
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -2125,12 +2132,12 @@ void Highs::clearSolution() {
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  clearSolutionUtil(solution_);
+  this->solution_.clear();
 }
 
 void Highs::clearBasis() {
   info_.basis_validity = kBasisValidityInvalid;
-  clearBasisUtil(basis_);
+  this->basis_.clear();
 }
 
 void Highs::clearInfo() { info_.clear(); }
