@@ -1312,16 +1312,21 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
-  //  if (basis.alien) {
-  // An alien basis needs to be checked properly, since it may be
-  // singular, or even incomplete.
-
-  //  } else {
-  // Check the user-supplied basis
-  if (!isBasisConsistent(model_.lp_, basis)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "setBasis: invalid basis\n");
-    return HighsStatus::kError;
+  if (basis.alien) {
+    // An alien basis needs to be checked properly, since it may be
+    // singular, or even incomplete.
+    HighsBasis modifiable_basis = basis;
+    HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_, 
+				      info_, ekk_instance_, options_, timer_);
+    HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
+    if (return_status != HighsStatus::kOk) return HighsStatus::kError;
+  } else {
+    // Check the user-supplied basis
+    if (!isBasisConsistent(model_.lp_, basis)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+		   "setBasis: invalid basis\n");
+      return HighsStatus::kError;
+    }
   }
   // Update the HiGHS basis
   basis_ = basis;

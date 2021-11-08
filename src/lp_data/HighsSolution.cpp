@@ -785,8 +785,6 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   HEkk& ekk_instance = solver_object.ekk_instance_;
   HighsLp& ekk_lp = ekk_instance.lp_;
   HighsSimplexStatus& ekk_status = ekk_instance.status_;
-  //  HighsInt num_row = lp.num_row_;
-  //  HighsInt num_col = lp.num_col_;
   lp.ensureColwise();
   // Consider scaling the LP
   const bool new_scaling = considerScaling(options, lp);
@@ -795,6 +793,13 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   if (new_scaling) ekk_instance.clearHotStart();
   // Move the HighsLpSolverObject's LP to EKK
   ekk_instance.moveLp(solver_object);
+  if (basis.alien) {
+    // An alien basis needs to be checked for rank deficiency, and
+    // possibly completed if it is rectangular
+    assert(!only_from_known_basis);
+    accommodateAlienBasis(solver_object);
+    ekk_status.has_basis = false;
+  }
   if (!ekk_status.has_basis) {
     // The Ekk instance has no simplex basis, so pass the HiGHS basis
     HighsStatus call_status = ekk_instance.setBasis(basis);
@@ -812,6 +817,34 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   // If the current basis cannot be inverted, return an error
   return HighsStatus::kOk;
 }
+
+void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
+  HighsLp& lp = solver_object.lp_;
+  HighsBasis& basis = solver_object.basis_;
+  HighsOptions& options = solver_object.options_;
+  HEkk& ekk_instance = solver_object.ekk_instance_;
+  HighsLp& ekk_lp = ekk_instance.lp_;
+  HighsSimplexStatus& ekk_status = ekk_instance.status_;
+  assert(basis.alien);
+
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_col = lp.num_col_;
+  assert((int)basis.col_status.size() >= num_col);
+  assert((int)basis.row_status.size() >= num_row);
+  std::vector<HighsInt> basic_index;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic) basic_index.push_back(iCol);
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic) basic_index.push_back(iRow);
+  }
+  HighsInt num_basic_variables = basic_index.size();
+  assert(num_basic_variables <= num_row);
+  HFactor factor;
+  factor.setup(&lp.a_matrix_, &basic_index[0]);
+  assert(1==0);
+}
+
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
   solver_object.scaled_model_status_ = HighsModelStatus::kNotset;
