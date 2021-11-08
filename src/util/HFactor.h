@@ -87,9 +87,7 @@ class HFactor {
 		    const double pivot_threshold = kDefaultPivotThreshold,
 		    const double pivot_tolerance = kDefaultPivotTolerance,
 		    const HighsInt highs_debug_level = kHighsDebugLevelMin,
-		    const bool output_flag = false, FILE* log_file_stream_ = NULL,
-		    const bool log_to_console = true,
-		    const HighsInt log_dev_level = 0);
+		    const HighsLogOptions* log_options = NULL);
 
   void setup(const HighsInt numCol,   //!< Number of columns
              const HighsInt numRow,   //!< Number of rows
@@ -102,8 +100,7 @@ class HFactor {
              const double pivot_tolerance =
                  kDefaultPivotTolerance,  //!< Min absolute pivot
              const HighsInt highs_debug_level = kHighsDebugLevelMin,
-             const bool output_flag = false, FILE* logfile = NULL,
-             const bool log_to_console = true, const HighsInt log_dev_level = 0,
+	     const HighsLogOptions* log_options = NULL,
              const bool use_original_HFactor_logic = true,
              const HighsInt updateMethod = kUpdateMethodFt);
 
@@ -119,8 +116,7 @@ class HFactor {
 		    const double pivot_tolerance =
 		    kDefaultPivotTolerance,  //!< Min absolute pivot
 		    const HighsInt highs_debug_level = kHighsDebugLevelMin,
-		    const bool output_flag = false, FILE* logfile = NULL,
-		    const bool log_to_console = true, const HighsInt log_dev_level = 0,
+		    const HighsLogOptions* log_options = NULL,
 		    const bool use_original_HFactor_logic = true,
 		    const HighsInt updateMethod = kUpdateMethodFt);
 
@@ -278,7 +274,13 @@ class HFactor {
   HighsInt highs_debug_level;
 
   std::unique_ptr<std::tuple<bool, bool, HighsInt>> log_data;
+
+  FILE* log_file_stream;
+  bool output_flag;
+  bool log_to_console;
+  HighsInt log_dev_level;
   HighsLogOptions log_options;
+
   bool use_original_HFactor_logic;
   HighsInt BlimitX;
   HighsInt updateMethod;

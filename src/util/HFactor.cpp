@@ -164,32 +164,32 @@ void HFactor::setupGeneral(const HighsSparseMatrix* a_matrix,
 			   HighsInt num_basic_variables,
 			   HighsInt* baseIndex,
 			   const double pivot_threshold, const double pivot_tolerance,
-			   const HighsInt highs_debug_level, const bool output_flag,
-			   FILE* log_file_stream, const bool log_to_console,
-			   const HighsInt log_dev_level) {
+			   const HighsInt highs_debug_level, 
+			   const HighsLogOptions* log_options) {
   this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_, &a_matrix->start_[0],
 		     &a_matrix->index_[0], &a_matrix->value_[0], num_basic_variables, baseIndex,
-		     pivot_threshold, pivot_tolerance, highs_debug_level, output_flag,
-		     log_file_stream, log_to_console, log_dev_level, true,
+		     pivot_threshold, pivot_tolerance, highs_debug_level, 
+		     log_options,
+		     true,
 		     kUpdateMethodFt);
 }
 
-void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
-                    const HighsInt* Astart_, const HighsInt* Aindex_,
+void HFactor::setup(const HighsInt numCol_,
+		    const HighsInt numRow_,
+                    const HighsInt* Astart_,
+		    const HighsInt* Aindex_,
                     const double* Avalue_,
 		    HighsInt* baseIndex_,
                     const double pivot_threshold_,
                     const double pivot_tolerance_,
-                    const HighsInt highs_debug_level_, const bool output_flag_,
-                    FILE* log_file_stream_, const bool log_to_console_,
-                    const HighsInt log_dev_level_,
+                    const HighsInt highs_debug_level_, 
+		    const HighsLogOptions* log_options_,
                     const bool use_original_HFactor_logic_,
                     const HighsInt updateMethod_) {
   setupGeneral(numCol_, numRow_, Astart_, Aindex_, Avalue_,
 	       numRow_, baseIndex_,
 	       pivot_threshold_, pivot_tolerance_,
-	       highs_debug_level_, output_flag_,
-	       log_file_stream_, log_to_console_, log_dev_level_,
+	       highs_debug_level_, log_options_,
 	       use_original_HFactor_logic_,
 	       updateMethod_);
 }
@@ -201,9 +201,8 @@ void HFactor::setupGeneral(const HighsInt numCol_, const HighsInt numRow_,
 			   HighsInt* baseIndex_,
 			   const double pivot_threshold_,
 			   const double pivot_tolerance_,
-			   const HighsInt highs_debug_level_, const bool output_flag_,
-			   FILE* log_file_stream_, const bool log_to_console_,
-			   const HighsInt log_dev_level_,
+			   const HighsInt highs_debug_level_,
+			   const HighsLogOptions* log_options_,
 			   const bool use_original_HFactor_logic_,
 			   const HighsInt updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
@@ -219,12 +218,18 @@ void HFactor::setupGeneral(const HighsInt numCol_, const HighsInt numRow_,
   pivot_tolerance =
       max(kMinPivotTolerance, min(pivot_tolerance_, kMaxPivotTolerance));
   highs_debug_level = highs_debug_level_;
-  log_options.log_file_stream = log_file_stream_;
-  log_data = decltype(log_data)(new std::tuple<bool, bool, HighsInt>(
-      output_flag_, log_to_console_, log_dev_level_));
-  log_options.output_flag = &std::get<0>(*log_data);
-  log_options.log_to_console = &std::get<1>(*log_data);
-  log_options.log_dev_level = &std::get<2>(*log_data);
+  if (!log_options_) {
+    output_flag = false;
+    log_file_stream = NULL;
+    log_to_console = true;
+    log_dev_level = 0;
+  } else {
+    output_flag = *(log_options_->output_flag);
+    log_file_stream = log_options_->log_file_stream;
+    log_to_console = *(log_options_->log_to_console);
+    log_dev_level = *(log_options_->log_dev_level);
+    log_options = *log_options_;
+  }
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
 
