@@ -88,11 +88,11 @@ class HFactor {
                     const HighsInt highs_debug_level = kHighsDebugLevelMin,
                     const HighsLogOptions* log_options = NULL);
 
-  void setup(const HighsInt numCol,   //!< Number of columns
-             const HighsInt numRow,   //!< Number of rows
-             const HighsInt* Astart,  //!< Column starts of constraint matrix
-             const HighsInt* Aindex,  //!< Row indices of constraint matrix
-             const double* Avalue,    //!< Row values of constraint matrix
+  void setup(const HighsInt num_col,   //!< Number of columns
+             const HighsInt num_row,   //!< Number of rows
+             const HighsInt* a_start,  //!< Column starts of constraint matrix
+             const HighsInt* a_index,  //!< Row indices of constraint matrix
+             const double* a_value,    //!< Row values of constraint matrix
              HighsInt* baseIndex,     //!< Indices of basic variables
              const double pivot_threshold =
                  kDefaultPivotThreshold,  //!< Pivoting threshold
@@ -104,11 +104,11 @@ class HFactor {
              const HighsInt updateMethod = kUpdateMethodFt);
 
   void setupGeneral(
-      const HighsInt numCol,   //!< Number of columns
-      const HighsInt numRow,   //!< Number of rows
-      const HighsInt* Astart,  //!< Column starts of constraint matrix
-      const HighsInt* Aindex,  //!< Row indices of constraint matrix
-      const double* Avalue,    //!< Row values of constraint matrix
+      const HighsInt num_col,   //!< Number of columns
+      const HighsInt num_row,   //!< Number of rows
+      const HighsInt* a_start,  //!< Column starts of constraint matrix
+      const HighsInt* a_index,  //!< Row indices of constraint matrix
+      const double* a_value,    //!< Row values of constraint matrix
       HighsInt num_basic_variables,
       HighsInt* baseIndex,  //!< Indices of basic variables
       const double pivot_threshold =
@@ -121,9 +121,9 @@ class HFactor {
       const HighsInt updateMethod = kUpdateMethodFt);
 
   void setupMatrix(
-      const HighsInt* Astart,  //!< Column starts of constraint matrix
-      const HighsInt* Aindex,  //!< Row indices of constraint matrix
-      const double* Avalue);   //!< Row values of constraint matrix
+      const HighsInt* a_start,  //!< Column starts of constraint matrix
+      const HighsInt* a_index,  //!< Row indices of constraint matrix
+      const double* a_value);   //!< Row values of constraint matrix
   void setupMatrix(const HighsSparseMatrix* a_matrix);
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
@@ -227,19 +227,19 @@ class HFactor {
   const HighsInt* getBaseIndex() const { return baseIndex; }
 
   /**
-   * @brief Gets Astart since it is private
+   * @brief Gets a_start since it is private
    */
-  const HighsInt* getAstart() const { return Astart; }
+  const HighsInt* getAstart() const { return a_start; }
 
   /**
-   * @brief Gets Aindex since it is private
+   * @brief Gets a_index since it is private
    */
-  const HighsInt* getAindex() const { return Aindex; }
+  const HighsInt* getAindex() const { return a_index; }
 
   /**
-   * @brief Gets Avalue since it is private
+   * @brief Gets a_value since it is private
    */
-  const double* getAvalue() const { return Avalue; }
+  const double* getAvalue() const { return a_value; }
 
   void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
                 const bool full = true) const;
@@ -260,14 +260,14 @@ class HFactor {
 
   // private:
   // Problem size, coefficient matrix and update method
-  HighsInt numRow;
-  HighsInt numCol;
+  HighsInt num_row;
+  HighsInt num_col;
 
  private:
   bool a_matrix_valid;
-  const HighsInt* Astart;
-  const HighsInt* Aindex;
-  const double* Avalue;
+  const HighsInt* a_start;
+  const HighsInt* a_index;
+  const double* a_value;
   HighsInt* baseIndex;
   double pivot_threshold;
   double pivot_tolerance;
@@ -322,41 +322,41 @@ class HFactor {
   vector<double> mwz_column_array;
 
   // Count link list
-  vector<HighsInt> clinkFirst;
-  vector<HighsInt> clinkNext;
-  vector<HighsInt> clinkLast;
+  vector<HighsInt> col_link_first;
+  vector<HighsInt> col_link_next;
+  vector<HighsInt> col_link_last;
 
-  vector<HighsInt> rlinkFirst;
-  vector<HighsInt> rlinkNext;
-  vector<HighsInt> rlinkLast;
+  vector<HighsInt> row_link_first;
+  vector<HighsInt> row_link_next;
+  vector<HighsInt> row_link_last;
 
   // Factor L
-  vector<HighsInt> LpivotLookup;
-  vector<HighsInt> LpivotIndex;
+  vector<HighsInt> l_pivot_lookup;
+  vector<HighsInt> l_pivot_index;
 
-  vector<HighsInt> Lstart;
-  vector<HighsInt> Lindex;
-  vector<double> Lvalue;
-  vector<HighsInt> LRstart;
-  vector<HighsInt> LRindex;
-  vector<double> LRvalue;
+  vector<HighsInt> l_start;
+  vector<HighsInt> l_index;
+  vector<double> l_value;
+  vector<HighsInt> lr_start;
+  vector<HighsInt> lr_index;
+  vector<double> lr_value;
 
   // Factor U
-  vector<HighsInt> UpivotLookup;
-  vector<HighsInt> UpivotIndex;
-  vector<double> UpivotValue;
+  vector<HighsInt> u_pivot_lookup;
+  vector<HighsInt> u_pivot_index;
+  vector<double> u_pivot_value;
 
   HighsInt UmeritX;
   HighsInt UtotalX;
-  vector<HighsInt> Ustart;
-  vector<HighsInt> Ulastp;
-  vector<HighsInt> Uindex;
-  vector<double> Uvalue;
-  vector<HighsInt> URstart;
-  vector<HighsInt> URlastp;
-  vector<HighsInt> URspace;
-  vector<HighsInt> URindex;
-  vector<double> URvalue;
+  vector<HighsInt> u_start;
+  vector<HighsInt> u_last_p;
+  vector<HighsInt> u_index;
+  vector<double> u_value;
+  vector<HighsInt> ur_start;
+  vector<HighsInt> ur_lastp;
+  vector<HighsInt> ur_space;
+  vector<HighsInt> ur_index;
+  vector<double> ur_value;
 
   // Update buffer
   vector<double> PFpivotValue;
@@ -453,39 +453,39 @@ class HFactor {
   }
 
   void clinkAdd(const HighsInt index, const HighsInt count) {
-    const HighsInt mover = clinkFirst[count];
-    clinkLast[index] = -2 - count;
-    clinkNext[index] = mover;
-    clinkFirst[count] = index;
-    if (mover >= 0) clinkLast[mover] = index;
+    const HighsInt mover = col_link_first[count];
+    col_link_last[index] = -2 - count;
+    col_link_next[index] = mover;
+    col_link_first[count] = index;
+    if (mover >= 0) col_link_last[mover] = index;
   }
 
   void clinkDel(const HighsInt index) {
-    const HighsInt xlast = clinkLast[index];
-    const HighsInt xnext = clinkNext[index];
+    const HighsInt xlast = col_link_last[index];
+    const HighsInt xnext = col_link_next[index];
     if (xlast >= 0)
-      clinkNext[xlast] = xnext;
+      col_link_next[xlast] = xnext;
     else
-      clinkFirst[-xlast - 2] = xnext;
-    if (xnext >= 0) clinkLast[xnext] = xlast;
+      col_link_first[-xlast - 2] = xnext;
+    if (xnext >= 0) col_link_last[xnext] = xlast;
   }
 
   void rlinkAdd(const HighsInt index, const HighsInt count) {
-    const HighsInt mover = rlinkFirst[count];
-    rlinkLast[index] = -2 - count;
-    rlinkNext[index] = mover;
-    rlinkFirst[count] = index;
-    if (mover >= 0) rlinkLast[mover] = index;
+    const HighsInt mover = row_link_first[count];
+    row_link_last[index] = -2 - count;
+    row_link_next[index] = mover;
+    row_link_first[count] = index;
+    if (mover >= 0) row_link_last[mover] = index;
   }
 
   void rlinkDel(const HighsInt index) {
-    const HighsInt xlast = rlinkLast[index];
-    const HighsInt xnext = rlinkNext[index];
+    const HighsInt xlast = row_link_last[index];
+    const HighsInt xnext = row_link_next[index];
     if (xlast >= 0)
-      rlinkNext[xlast] = xnext;
+      row_link_next[xlast] = xnext;
     else
-      rlinkFirst[-xlast - 2] = xnext;
-    if (xnext >= 0) rlinkLast[xnext] = xlast;
+      row_link_first[-xlast - 2] = xnext;
+    if (xnext >= 0) row_link_last[xnext] = xlast;
   }
   friend class HSimplexNla;
 };

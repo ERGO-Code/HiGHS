@@ -30,7 +30,7 @@ TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
     basis.row_status[iRow] = status;
   }
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
-  highs.run();
+  /*  highs.run();
   // Create a rectangular basis using just struturals
   for (HighsInt iCol = 0; iCol < num_col; iCol++)
     basis.col_status[iCol] = HighsBasisStatus::kBasic;
@@ -39,4 +39,5 @@ TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
     basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
   highs.run();
+  */
 }

@@ -24,7 +24,7 @@ using std::vector;
 
 void debugReportRankDeficiency(
     const HighsInt call_id, const HighsInt highs_debug_level,
-    const HighsLogOptions& log_options, const HighsInt numRow,
+    const HighsLogOptions& log_options, const HighsInt num_row,
     const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
     const HighsInt* baseIndex, const HighsInt rank_deficiency,
     const vector<HighsInt>& row_with_no_pivot,
@@ -32,7 +32,7 @@ void debugReportRankDeficiency(
 
 void debugReportRankDeficientASM(
     const HighsInt highs_debug_level, const HighsLogOptions& log_options,
-    const HighsInt numRow, const vector<HighsInt>& MCstart,
+    const HighsInt num_row, const vector<HighsInt>& MCstart,
     const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
     const vector<double>& MCvalue, const vector<HighsInt>& iwork,
     const HighsInt rank_deficiency, const vector<HighsInt>& col_with_no_pivot,
@@ -41,7 +41,7 @@ void debugReportRankDeficientASM(
 void debugReportMarkSingC(const HighsInt call_id,
                           const HighsInt highs_debug_level,
                           const HighsLogOptions& log_options,
-                          const HighsInt numRow, const vector<HighsInt>& iwork,
+                          const HighsInt num_row, const vector<HighsInt>& iwork,
                           const HighsInt* baseIndex);
 
 void debugLogRankDeficiency(const HighsInt highs_debug_level,
@@ -54,7 +54,7 @@ void debugLogRankDeficiency(const HighsInt highs_debug_level,
 
 void debugPivotValueAnalysis(const HighsInt highs_debug_level,
                              const HighsLogOptions& log_options,
-                             const HighsInt numRow,
-                             const vector<double>& UpivotValue);
+                             const HighsInt num_row,
+                             const vector<double>& u_pivot_value);
 
 #endif  // UTIL_HFACTORDEBUG_H_
