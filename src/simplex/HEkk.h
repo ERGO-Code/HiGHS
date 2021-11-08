@@ -86,11 +86,10 @@ class HEkk {
   bool proofOfPrimalInfeasibility();
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
-  double getArrayScale(const HVector& hvector);
+
   double getValueScale(const HighsInt count, const vector<double>& value);
-  void refineArray(HVector& hvector, double& scale, const double& small_value);
-  void refineVector(vector<double>& value, vector<HighsInt>& index,
-                    double& scale, const double& small_value);
+  double getMaxAbsRowValue(HighsInt row);
+
   void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
   void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
                          HVector& residual, double& residual_norm);

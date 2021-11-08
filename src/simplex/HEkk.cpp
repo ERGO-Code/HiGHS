@@ -3898,27 +3898,11 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     unitBtranIterativeRefinement(row_out, row_ep);
     simplex_nla_.reportArray("Row e_p.1", lp.num_col_, &row_ep, true);
   }
-  // Identify whether refinement should be done
-  bool use_refinement = false;
-  double refinement_tolerance;
-  if (lp.is_scaled_) {
-    // LP is scaled, so be more cautious
-    use_refinement =
-        options_->simplex_infeasiblilty_proof_refinement_strategy >=
-        kSimplexInfeasibilityProofRefinementAlsoScaledLp;
-    refinement_tolerance =
-        options_->simplex_infeasibility_proof_scaled_lp_refinement_tolerance;
-  } else {
-    // LP is unscaled, so be less cautious
-    use_refinement =
-        options_->simplex_infeasiblilty_proof_refinement_strategy >=
-        kSimplexInfeasibilityProofRefinementUnscaledLp;
-    refinement_tolerance =
-        options_->simplex_infeasibility_proof_unscaled_lp_refinement_tolerance;
-  }
+
   // Refine row_ep by removing relatively small values
   double row_ep_scale = 0;
-  if (use_refinement) refineArray(row_ep, row_ep_scale, refinement_tolerance);
+  // if (use_refinement) refineArray(row_ep, row_ep_scale,
+  // refinement_tolerance);
   // Determine the maximum absolute value in row_ep
   HighsCDouble proof_lower = 0.0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
@@ -3927,12 +3911,48 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     // getDualRayInterface.
     const double row_ep_value = row_ep.array[iRow];
     assert(row_ep_value);
+    if (std::abs(row_ep_value * getMaxAbsRowValue(iRow)) <=
+        options_->small_matrix_value) {
+      if (debug_proof_report)
+        printf(
+            "Zeroed row_ep.array[%6d] = %11.4g due to being small in "
+            "contribution\n",
+            (int)iRow, row_ep_value);
+      row_ep.array[iRow] = 0.0;
+      continue;
+    }
+
     row_ep.array[iRow] *= move_out;
+
     // make sure infinite sides are not used
-    if (highs_isInfinity(-lp.row_lower_[iRow]))
-      row_ep.array[iRow] = std::min(row_ep.array[iRow], 0.0);
-    if (highs_isInfinity(lp.row_upper_[iRow]))
-      row_ep.array[iRow] = std::max(row_ep.array[iRow], 0.0);
+    double rowBound;
+    if (row_ep.array[iRow] > 0) {
+      rowBound = lp.row_lower_[iRow];
+      if (highs_isInfinity(-rowBound)) {
+        // row lower bound is infinite
+        if (debug_proof_report)
+          printf(
+              "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
+              "bound\n",
+              (int)iRow, row_ep_value);
+        row_ep.array[iRow] = 0.0;
+        continue;
+      }
+
+    } else {
+      rowBound = lp.row_upper_[iRow];
+      if (highs_isInfinity(rowBound)) {
+        // row upper bound is infinite
+        if (debug_proof_report)
+          printf(
+              "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
+              "bound\n",
+              (int)iRow, row_ep_value);
+        row_ep.array[iRow] = 0.0;
+        continue;
+      }
+    }
+
     // add up lower bound of proof constraint
     proof_lower +=
         row_ep.array[iRow] *
@@ -3953,9 +3973,6 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     lp.a_matrix_.productTransposeQuad(proof_value, proof_index, row_ep,
                                       debug_product_report);
   }
-  // Refine the proof constraint coefficients according to row_ep_scale
-  if (use_refinement)
-    refineVector(proof_value, proof_index, row_ep_scale, refinement_tolerance);
 
   HighsInt proof_num_nz = proof_index.size();
   if (debug_rows_report) {
@@ -3985,6 +4002,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     const double value = proof_value[i];
     if (value > 0) {
       if (highs_isInfinity(lp.col_upper_[iCol])) {
+        if (value <= options_->small_matrix_value) continue;
         infinite_implied_upper = true;
         if (debug_proof_report)
           printf("%6d: proof (index = %6d; value = %11.4g) has UB = %11.4g\n",
@@ -3994,6 +4012,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       implied_upper += value * lp.col_upper_[iCol];
     } else {
       if (highs_isInfinity(-lp.col_lower_[iCol])) {
+        if (value >= -options_->small_matrix_value) continue;
         infinite_implied_upper = true;
         if (debug_proof_report)
           printf("%6d: proof (index = %6d; value = %11.4g) has LB = %11.4g\n",
@@ -4016,15 +4035,6 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   return proof_of_primal_infeasibility;
 }
 
-double HEkk::getArrayScale(const HVector& hvector) {
-  if (hvector.count <= 0) return 1;
-  double max_abs_value = 0;
-  for (HighsInt iX = 0; iX < hvector.count; iX++)
-    max_abs_value =
-        std::max(fabs(hvector.array[hvector.index[iX]]), max_abs_value);
-  return nearestPowerOfTwoScale(max_abs_value);
-}
-
 double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
   if (count <= 0) return 1;
   double max_abs_value = 0;
@@ -4033,71 +4043,14 @@ double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
   return nearestPowerOfTwoScale(max_abs_value);
 }
 
-void HEkk::refineArray(HVector& hvector, double& scale,
-                       const double& small_value) {
-  if (hvector.count <= 0) return;
-  // If the scale value isn't known, then find it
-  if (scale <= 0) scale = getArrayScale(hvector);
-  HighsInt count = 0;
-  for (HighsInt iX = 0; iX < hvector.count; iX++) {
-    const HighsInt iRow = hvector.index[iX];
-    const double scaled_value = scale * hvector.array[iRow];
-    if (std::abs(scaled_value) > small_value) {
-      // Keep the value and its index
-      hvector.index[count++] = iRow;
-    } else {
-      // Zero the value and (implicitly) discard the index
-      hvector.array[iRow] = 0;
-    }
-  }
-  hvector.count = count;
-}
+double HEkk::getMaxAbsRowValue(HighsInt row) {
+  if (!status_.has_ar_matrix) initialisePartitionedRowwiseMatrix();
 
-void HEkk::refineVector(vector<double>& value, vector<HighsInt>& index,
-                        double& scale, const double& small_value) {
-  const HighsInt dim = value.size();
-  if (dim <= 0) return;
-  HighsInt num_index = index.size();
-  const bool have_index = num_index > 0;
-  const HighsInt to_en = have_index ? num_index : dim;
-  if (scale <= 0) {
-    // The scale value isn't known, so find it
-    double max_abs_value = 0;
-    if (have_index) {
-      for (HighsInt iX = 0; iX < num_index; iX++)
-        max_abs_value = std::max(fabs(value[iX]), max_abs_value);
-    } else {
-      for (HighsInt iRow = 0; iRow < dim; iRow++)
-        max_abs_value = std::max(fabs(value[iRow]), max_abs_value);
-    }
-    scale = nearestPowerOfTwoScale(max_abs_value);
-  }
-  if (have_index) {
-    HighsInt count = 0;
-    for (HighsInt iX = 0; iX < num_index; iX++) {
-      const double scaled_value = scale * value[iX];
-      if (std::abs(scaled_value) > small_value) {
-        // Keep the value and its index
-        value[count] = value[iX];
-        index[count] = index[iX];
-        count++;
-      }
-    }
-    // Remember that Windows doesn't allow a vector to be resized to
-    // zero!
-    if (count) {
-      value.resize(count);
-      index.resize(count);
-    } else {
-      value.clear();
-      index.clear();
-    }
-  } else {
-    for (HighsInt iRow = 0; iRow < dim; iRow++) {
-      const double scaled_value = scale * value[iRow];
-      if (std::abs(scaled_value) <= small_value) value[iRow] = 0;
-    }
-  }
+  double val = 0.0;
+  for (HighsInt i = ar_matrix_.start_[row]; i < ar_matrix_.start_[row + 1]; ++i)
+    val = std::max(val, std::abs(ar_matrix_.value_[i]));
+
+  return val;
 }
 
 void HEkk::unitBtranIterativeRefinement(const HighsInt row_out,
