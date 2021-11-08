@@ -791,15 +791,17 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   // If new scaling is performed, the hot start information is
   // no longer valid
   if (new_scaling) ekk_instance.clearHotStart();
-  // Move the HighsLpSolverObject's LP to EKK
-  ekk_instance.moveLp(solver_object);
   if (basis.alien) {
     // An alien basis needs to be checked for rank deficiency, and
     // possibly completed if it is rectangular
     assert(!only_from_known_basis);
     accommodateAlienBasis(solver_object);
-    ekk_status.has_basis = false;
+    basis.alien = false;
+    lp.unapplyScale();
+    return HighsStatus::kOk;
   }
+  // Move the HighsLpSolverObject's LP to EKK
+  ekk_instance.moveLp(solver_object);
   if (!ekk_status.has_basis) {
     // The Ekk instance has no simplex basis, so pass the HiGHS basis
     HighsStatus call_status = ekk_instance.setBasis(basis);
@@ -822,11 +824,7 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   HighsLp& lp = solver_object.lp_;
   HighsBasis& basis = solver_object.basis_;
   HighsOptions& options = solver_object.options_;
-  HEkk& ekk_instance = solver_object.ekk_instance_;
-  HighsLp& ekk_lp = ekk_instance.lp_;
-  HighsSimplexStatus& ekk_status = ekk_instance.status_;
   assert(basis.alien);
-
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
   assert((int)basis.col_status.size() >= num_col);
@@ -841,8 +839,14 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   HighsInt num_basic_variables = basic_index.size();
   assert(num_basic_variables <= num_row);
   HFactor factor;
-  factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0]);
-  assert(1==0);
+  factor.setupGeneral(&lp.a_matrix_,
+		      num_basic_variables, &basic_index[0],
+		      kDefaultPivotThreshold,
+		      kDefaultPivotTolerance,
+		      kHighsDebugLevelMin,
+		      &options.log_options);
+  factor.build();
+  assert(num_basic_variables == num_row);
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {

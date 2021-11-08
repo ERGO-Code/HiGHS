@@ -1320,6 +1320,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
 				      info_, ekk_instance_, options_, timer_);
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
     if (return_status != HighsStatus::kOk) return HighsStatus::kError;
+    // Update the HiGHS basis
+    basis_ = modifiable_basis;
   } else {
     // Check the user-supplied basis
     if (!isBasisConsistent(model_.lp_, basis)) {
@@ -1327,9 +1329,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
 		   "setBasis: invalid basis\n");
       return HighsStatus::kError;
     }
+    // Update the HiGHS basis
+    basis_ = basis;
   }
-  // Update the HiGHS basis
-  basis_ = basis;
   basis_.valid = true;
   //  }
   if (origin != "") basis_.debug_origin_name = origin;
