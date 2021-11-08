@@ -241,8 +241,7 @@ struct HighsSimplexInfo {
 
 struct HighsSimplexTabooRecord {
   TabooReason reason;
-  HighsInt row;
-  HighsInt col;
+  HighsInt index;
   double save_value;
 };
 

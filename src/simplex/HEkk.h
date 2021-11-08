@@ -86,11 +86,10 @@ class HEkk {
   bool proofOfPrimalInfeasibility();
   bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
                                   const HighsInt row_out);
-  double getArrayScale(const HVector& hvector);
+
   double getValueScale(const HighsInt count, const vector<double>& value);
-  void refineArray(HVector& hvector, double& scale, const double& small_value);
-  void refineVector(vector<double>& value, vector<HighsInt>& index,
-                    double& scale, const double& small_value);
+  double getMaxAbsRowValue(HighsInt row);
+
   void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
   void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
                          HVector& residual, double& residual_norm);
@@ -150,6 +149,8 @@ class HEkk {
   HotStart hot_start_;
 
   double cost_scale_ = 1;
+  double cost_perturbation_base_;
+  double cost_perturbation_max_abs_cost_;
   HighsInt iteration_count_ = 0;
   HighsInt dual_simplex_cleanup_level_ = 0;
   HighsInt dual_simplex_phase1_cleanup_level_ = 0;
@@ -193,6 +194,7 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
 
+  bool allow_taboo_cols;
   bool allow_taboo_rows;
   std::vector<HighsSimplexTabooRecord> taboo_col;
   std::vector<HighsSimplexTabooRecord> taboo_row;
@@ -256,7 +258,9 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  bool checkForCycling(const HighsInt variable_in, const HighsInt row_out);
+  bool cyclingDetected(const SimplexAlgorithm algorithm,
+                       const HighsInt variable_in, const HighsInt row_out,
+                       const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -278,11 +282,16 @@ class HEkk {
   std::string rebuildReason(const HighsInt rebuild_reason);
 
   void clearTaboo();
+
   bool allowTabooRows(const HighsInt rebuild_reason);
-  void addTabooRow(const HighsInt iRow, const TabooReason reason,
-                   const double density = 0);
+  void addTabooRow(const HighsInt iRow, const TabooReason reason);
   void applyTabooRow(vector<double>& values, double overwrite_with);
   void unapplyTabooRow(vector<double>& values);
+
+  bool allowTabooCols(const HighsInt rebuild_reason);
+  void addTabooCol(const HighsInt iCol, const TabooReason reason);
+  void applyTabooCol(vector<double>& values, double overwrite_with);
+  void unapplyTabooCol(vector<double>& values);
 
   // Methods in HEkkControl
   void initialiseControl();

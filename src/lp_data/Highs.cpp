@@ -943,15 +943,18 @@ HighsStatus Highs::run() {
       }
     }
   }
+  // Cycling can yield model_status_ == HighsModelStatus::kNotset,
+  //  assert(model_status_ != HighsModelStatus::kNotset);
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
-    // be infeasible or unbounded, or the time/iteration limit has
-    // been reached
+    // be infeasible or unbounded, the time/iteration limit has been
+    // reached, or the status is unknown (cycling)
     assert(model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||
-           model_status_ == HighsModelStatus::kIterationLimit);
+           model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kUnknown);
     // The HEkk data correspond to the (strictly reduced) presolved LP
     // so must be cleared
     ekk_instance_.clear();
@@ -1041,14 +1044,20 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
-HighsStatus Highs::getRanging(HighsRanging& ranging) {
+HighsStatus Highs::getRanging() {
   // Create a HighsLpSolverObject of references to data in the Highs
   // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
                                     ekk_instance_, options_, timer_);
   solver_object.scaled_model_status_ = scaled_model_status_;
   solver_object.unscaled_model_status_ = model_status_;
-  return getRangingData(ranging, solver_object);
+  return getRangingData(this->ranging_, solver_object);
+}
+
+HighsStatus Highs::getRanging(HighsRanging& ranging) {
+  HighsStatus return_status = getRanging();
+  ranging = this->ranging_;
+  return return_status;
 }
 
 HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
@@ -2091,6 +2100,7 @@ void Highs::clearUserSolverData() {
   clearModelStatus();
   clearSolution();
   clearBasis();
+  clearRanging();
   clearInfo();
   clearEkk();
 }
@@ -2124,6 +2134,8 @@ void Highs::clearBasis() {
 }
 
 void Highs::clearInfo() { info_.clear(); }
+
+void Highs::clearRanging() { ranging_.clear(); }
 
 void Highs::clearEkk() { ekk_instance_.invalidate(); }
 
@@ -2338,7 +2350,7 @@ HighsStatus Highs::callSolveMip() {
 }
 
 HighsStatus Highs::writeSolution(const std::string filename,
-                                 const HighsInt style) const {
+                                 const HighsInt style) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -2352,6 +2364,19 @@ HighsStatus Highs::writeSolution(const std::string filename,
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
+  }
+  if (options_.ranging == kHighsOnString) {
+    if (model_.isMip() || model_.isQp()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot determing ranging information for MIP or QP\n");
+      return HighsStatus::kError;
+    }
+    return_status = interpretCallStatus(
+        options_.log_options, this->getRanging(), return_status, "getRanging");
+    if (return_status == HighsStatus::kError) return return_status;
+    fprintf(file, "\n# Ranging\n");
+    writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
+                     solution_, ranging_, style);
   }
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;

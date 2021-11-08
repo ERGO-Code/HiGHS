@@ -64,8 +64,8 @@ HighsStatus HEkkPrimal::solve() {
                 info.num_dual_infeasibilities, info.max_dual_infeasibility,
                 info.sum_dual_infeasibilities);
 
-  // Allow taboo rows
-  ekk_instance_.allow_taboo_rows = true;
+  // Allow taboo columns
+  ekk_instance_.allow_taboo_cols = true;
 
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
@@ -137,11 +137,14 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kInfeasible is set
       //
+      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase1();
-      assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
-             solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
+      assert(
+          solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
+          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
       info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solve_phase == kSolvePhase2) {
@@ -166,13 +169,16 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kUnbounded is set
       //
+      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase2();
-      assert(solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
-             solve_phase == kSolvePhase2 ||
-             solve_phase == kSolvePhaseOptimalCleanup ||
-             solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
+      assert(
+          solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
+          solve_phase == kSolvePhase2 ||
+          solve_phase == kSolvePhaseOptimalCleanup ||
+          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
+          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
              ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
@@ -188,6 +194,11 @@ HighsStatus HEkkPrimal::solve() {
     // Can have all possible cases of solve_phase
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
+    if (solve_phase == kSolvePhaseCycling) {
+      // Cycling so return HighsStatus::kWarning
+      ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
+      return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+    }
     if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
       ekk_instance_.model_status_ = HighsModelStatus::kSolveError;
@@ -374,6 +385,7 @@ void HEkkPrimal::solvePhase1() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
+      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase1);
       if (rebuild_reason) break;
     }
@@ -461,6 +473,7 @@ void HEkkPrimal::solvePhase2() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
+      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase2);
       if (rebuild_reason) break;
     }
@@ -624,7 +637,14 @@ void HEkkPrimal::rebuild() {
       solve_phase = kSolvePhaseError;
       return;
     }
+    // Record the synthetic clock for INVERT, and zero it for UPDATE
+    ekk_instance_.resetSyntheticClock();
   }
+  // Clear any taboo rows/cols
+  ekk_instance_.clearTaboo();
+  // Possibly allow taboo columns
+  ekk_instance_.allow_taboo_cols =
+      ekk_instance_.allowTabooCols(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {
     // Don't have the row-wise matrix, so reinitialise it
     //
@@ -699,11 +719,18 @@ void HEkkPrimal::rebuild() {
 }
 
 void HEkkPrimal::iterate() {
-  bool check = ekk_instance_.iteration_count_ >= check_iter;
-  if (check) {
-    printf("Iter %" HIGHSINT_FORMAT "\n", ekk_instance_.iteration_count_);
-    ekk_instance_.options_->highs_debug_level = kHighsDebugLevelExpensive;
+  const HighsInt from_check_iter = 15;
+  const HighsInt to_check_iter = from_check_iter + 10;
+  if (ekk_instance_.debug_solve_report_) {
+    ekk_instance_.debug_iteration_report_ =
+        ekk_instance_.iteration_count_ >= from_check_iter &&
+        ekk_instance_.iteration_count_ <= to_check_iter;
+    if (ekk_instance_.debug_iteration_report_) {
+      printf("HEkkDual::iterate Debug iteration %d\n",
+             (int)ekk_instance_.iteration_count_);
+    }
   }
+
   if (debugPrimalSimplex("Before iteration") ==
       HighsDebugStatus::kLogicalError) {
     solve_phase = kSolvePhaseError;
@@ -762,7 +789,10 @@ void HEkkPrimal::iterate() {
   if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
 
+  if (cyclingDetected()) return;
+
   if (row_out >= 0) {
+    //
     // Perform unit BTRAN and PRICE to get pivotal row - and do a
     // numerical check.
     //
@@ -796,20 +826,29 @@ void HEkkPrimal::iterate() {
       solve_phase == kSolvePhase1)
     rebuild_reason = kRebuildReasonPossiblyPhase1Feasible;
 
-  assert(rebuild_reason == kRebuildReasonNo ||
-         rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
-         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
-         rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
-         rebuild_reason == kRebuildReasonUpdateLimitReached);
+  const bool ok_rebuild_reason =
+      rebuild_reason == kRebuildReasonNo ||
+      rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
+      rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
+      rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
+      rebuild_reason == kRebuildReasonUpdateLimitReached;
+  if (!ok_rebuild_reason) {
+    printf("HEkkPrimal::rebuild Solve %d; Iter %d: rebuild_reason = %d\n",
+           (int)ekk_instance_.debug_solve_call_num_,
+           (int)ekk_instance_.iteration_count_, (int)rebuild_reason);
+    fflush(stdout);
+  }
+  assert(ok_rebuild_reason);
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2);
 }
 
 void HEkkPrimal::chuzc() {
   if (done_next_chuzc) assert(use_hyper_chuzc);
+  vector<double>& workDual = ekk_instance_.info_.workDual_;
+  ekk_instance_.applyTabooCol(workDual, 0);
   if (use_hyper_chuzc) {
     // Perform hyper-sparse CHUZC and then check result using full CHUZC
     if (!done_next_chuzc) chooseColumn(true);
-    const vector<double>& workDual = ekk_instance_.info_.workDual_;
     const bool check_hyper_chuzc = true;
     if (check_hyper_chuzc) {
       HighsInt hyper_sparse_variable_in = variable_in;
@@ -837,6 +876,7 @@ void HEkkPrimal::chuzc() {
   } else {
     chooseColumn(false);
   }
+  ekk_instance_.unapplyTabooCol(workDual);
 }
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
@@ -1331,23 +1371,6 @@ void HEkkPrimal::update() {
 
   assert(row_out >= 0);
 
-  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
-    analysis->num_primal_cycling_detections++;
-    if (ekk_instance_.iteration_count_ ==
-        ekk_instance_.previous_iteration_cycling_detected + 1) {
-      // Cycling detected on successive iterations suggests infinite cycling
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-                  "Cycling in primal simplex: rebuild\n");
-      rebuild_reason = kRebuildReasonCycling;
-    } else {
-      ekk_instance_.previous_iteration_cycling_detected =
-          ekk_instance_.iteration_count_;
-    }
-    //    printf("Cycling_detected: solve %d\n",
-    //           (int)ekk_instance_.debug_solve_call_num_);
-    //  assert(1 == 0);
-  }
-
   // Now set the value of the entering variable
   info.baseValue_[row_out] = value_in;
   // Consider whether the entering value is feasible and, if not, take
@@ -1420,7 +1443,13 @@ void HEkkPrimal::hyperChooseColumn() {
         "",
         max_changed_measure_value, max_changed_measure_column);
   double best_measure = max_changed_measure_value;
-  variable_in = max_changed_measure_column;
+  variable_in = -1;
+  if (max_changed_measure_column >= 0) {
+    // Use max_changed_measure_column if it is well defined and has
+    // nonzero dual. It may have been zeroed because it is taboo
+    if (workDual[max_changed_measure_column])
+      variable_in = max_changed_measure_column;
+  }
   const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
   if (num_hyper_chuzc_candidates) {
     for (HighsInt iEntry = 1; iEntry <= num_hyper_chuzc_candidates; iEntry++) {
@@ -2530,4 +2559,22 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
       num_free_col, nonbasic_free_col_set);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   return HighsDebugStatus::kOk;
+}
+
+bool HEkkPrimal::cyclingDetected() {
+  bool cycling_detected = ekk_instance_.cyclingDetected(
+      SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
+  if (cycling_detected) {
+    analysis->num_primal_cycling_detections++;
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+                "Cycling detected in primal simplex:");
+    if (ekk_instance_.allow_taboo_cols) {
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+                  "make column %d taboo\n", (int)variable_in);
+      ekk_instance_.addTabooCol(variable_in, TabooReason::kCycling);
+    } else {
+      solve_phase = kSolvePhaseCycling;
+    }
+  }
+  return cycling_detected;
 }

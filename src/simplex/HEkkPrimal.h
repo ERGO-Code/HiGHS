@@ -103,6 +103,8 @@ class HEkkPrimal {
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);
+  bool cyclingDetected();
+
   // References:
   HEkk& ekk_instance_;
 
@@ -118,7 +120,6 @@ class HEkkPrimal {
   double dual_feasibility_tolerance;
   double objective_target;
   HighsInt rebuild_reason;
-  bool abandon_iteration;
   // Pivot related
   HighsInt variable_in;
   HighsInt move_in;

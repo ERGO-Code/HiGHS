@@ -1201,6 +1201,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
   basicIndex = hot_start.refactor_info.pivot_var;
   nonbasicFlag.assign(num_tot, kNonbasicFlagTrue);
   ekk_instance_.basis_.nonbasicMove_ = hot_start.nonbasicMove;
+  ekk_instance_.hot_start_.refactor_info = hot_start.refactor_info;
   // Complete nonbasicFlag by setting the entries for basic variables
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     nonbasicFlag[basicIndex[iRow]] = kNonbasicFlagFalse;

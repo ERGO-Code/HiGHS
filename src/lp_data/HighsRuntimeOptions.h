@@ -132,9 +132,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
       if (setLocalOptionValue(options.log_options, kSolutionFileString,
                               options.records, v[0]) != OptionStatus::kOk ||
           setLocalOptionValue(options.log_options, "write_solution_to_file",
-                              options.records, true) != OptionStatus::kOk ||
-          setLocalOptionValue(options.log_options, "write_solution_style",
-                              options.records, 2) != OptionStatus::kOk)
+                              options.records, true) != OptionStatus::kOk)
         return false;
     }
 

@@ -1679,10 +1679,12 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
   if (style == kSolutionStylePretty) {
+    const HighsVarType* integrality_ptr =
+        lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
     writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
                             lp.col_upper_, lp.col_names_, have_primal,
                             solution.col_value, have_dual, solution.col_dual,
-                            have_basis, basis.col_status, &lp.integrality_[0]);
+                            have_basis, basis.col_status, integrality_ptr);
     writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
