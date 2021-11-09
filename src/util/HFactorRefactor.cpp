@@ -205,9 +205,8 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       if (iRow < stage) {
         if (l_pivot_lookup[l_pivot_index[iRow]] != iRow) {
-          //	  printf("Strange: Thought that
-          //l_pivot_lookup[l_pivot_index[iRow]]
-          //== iRow\n");
+          // printf("Strange: Thought that l_pivot_lookup[l_pivot_index[iRow]]
+          // == iRow\n");
         }
       }
       l_pivot_lookup[l_pivot_index[iRow]] = iRow;
