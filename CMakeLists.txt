@@ -121,6 +121,17 @@ enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
 enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
 enable_cxx_compiler_flag_if_supported("-pedantic")
 
+option(DEBUGSOL "check the debug solution" OFF)
+
+if(DEBUGSOL)
+  add_definitions("-DHIGHS_DEBUGSOL")
+endif()
+
+option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
+if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
+    message(STATUS "HIGHSINT64: " ${HIGHSINT64})
+endif()
+
 if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 1)
@@ -166,11 +177,6 @@ message(STATUS "Git hash: " ${GITHASH})
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
 
-option(DEBUGSOL "check the debug solution" OFF)
-
-if(DEBUGSOL)
-  add_definitions("-DHIGHS_DEBUGSOL")
-endif()
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)
 
@@ -242,11 +248,6 @@ if (HIGHS_COVERAGE)
                     COMMENT "Resetting code coverage counters to zero.")
   endif()
 endif ()
-
-option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
-if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
-    message(STATUS "HIGHSINT64: " ${HIGHSINT64})
-endif()
 
 set(OSI_ROOT "" CACHE PATH "Osi root folder.")
 if (NOT "${OSI_ROOT}" STREQUAL "")
@@ -525,6 +526,9 @@ endif()
 
 
 endif()
+
+include(GenerateExportHeader)
+generate_export_header(libhighs)
 
 # # Comment out for scaffold/ tests
 # add_subdirectory(scaffold)

@@ -24,7 +24,7 @@
 #include "parallel/HighsSplitDeque.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
-
+#include "libhighs_export.h"
 class HighsTaskExecutor {
  public:
   static constexpr int kNumTryFac = 16;
@@ -34,8 +34,8 @@ class HighsTaskExecutor {
  private:
   using cache_aligned = highs::cache_aligned;
 
-  static thread_local HighsSplitDeque* threadLocalWorkerDeque;
-  static cache_aligned::shared_ptr<HighsTaskExecutor> globalExecutor;
+  static LIBHIGHS_EXPORT thread_local HighsSplitDeque* threadLocalWorkerDeque;
+  static LIBHIGHS_EXPORT cache_aligned::shared_ptr<HighsTaskExecutor> globalExecutor;
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
