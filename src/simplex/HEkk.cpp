@@ -3955,12 +3955,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     }
 
     // add up lower bound of proof constraint
-    proof_lower +=
-        row_ep.array[iRow] *
-        (row_ep.array[iRow] > 0 ? lp.row_lower_[iRow] : lp.row_upper_[iRow]);
-    if (!row_ep.array[iRow] && debug_proof_report)
-      printf("Zeroed row_ep.array[%6d] = %11.4g due to infinite bound\n",
-             (int)iRow, row_ep_value);
+    proof_lower += row_ep.array[iRow] * rowBound;
   }
   // Form the proof constraint coefficients
   proof_value_.clear();
