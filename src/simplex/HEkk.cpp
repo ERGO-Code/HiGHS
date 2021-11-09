@@ -399,7 +399,7 @@ void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
   assert(status_.has_nla);
   assert(status_.has_basis);
   simplex_nla_.setLpAndScalePointers(&lp);
-  simplex_nla_.base_index_ = &basis_.basicIndex_[0];
+  simplex_nla_.basic_index_ = &basis_.basicIndex_[0];
 }
 
 void HEkk::setNlaRefactorInfo() {
@@ -3811,7 +3811,7 @@ double HEkk::factorSolveError() {
   const HighsInt num_col = this->lp_.num_col_;
   const HighsInt num_row = this->lp_.num_row_;
   const HighsSparseMatrix& a_matrix = this->lp_.a_matrix_;
-  const vector<HighsInt>& base_index = this->basis_.basicIndex_;
+  const vector<HighsInt>& basic_index = this->basis_.basicIndex_;
   const HighsSparseMatrix& ar_matrix = this->ar_matrix_;
   HVector btran_rhs;
   HVector ftran_rhs;
@@ -3837,7 +3837,7 @@ double HEkk::factorSolveError() {
     solution_value.push_back(value);
     solution_index.push_back(iRow);
     solution_nonzero[iRow] = 1;
-    HighsInt iCol = base_index[iRow];
+    HighsInt iCol = basic_index[iRow];
     a_matrix.collectAj(ftran_rhs, iCol, value);
     if ((int)solution_value.size() == solution_num_nz) break;
   }
@@ -3861,7 +3861,7 @@ double HEkk::factorSolveError() {
       btran_scattered_rhs[iCol] = solution_value[iX];
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    HighsInt iCol = base_index[iRow];
+    HighsInt iCol = basic_index[iRow];
     if (btran_scattered_rhs[iCol] == 0) continue;
     btran_rhs.array[iRow] = btran_scattered_rhs[iCol];
     btran_rhs.index[btran_rhs.count++] = iRow;
