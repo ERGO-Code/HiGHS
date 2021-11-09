@@ -2484,20 +2484,20 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
       sum_primal_infeasibility += primal_infeasibility;
     }
   }
-  if (updated_num_primal_infeasibility >= 0) {
+  if (updated_num_primal_infeasibility != kHighsIllegalInfeasibilityCount) {
     // The number of primal infeasibliities should be correct
     bool num_primal_infeasibility_ok =
         num_primal_infeasibility == updated_num_primal_infeasibility;
-    if (!num_primal_infeasibility_ok) {
-      printf("In iteration %" HIGHSINT_FORMAT
-             ": num_primal_infeasibility = %" HIGHSINT_FORMAT
-             " != %" HIGHSINT_FORMAT
-             " = "
-             "updated_num_primal_infeasibility\n",
-             ekk_instance_.iteration_count_, num_primal_infeasibility,
-             updated_num_primal_infeasibility);
-      assert(num_primal_infeasibility_ok);
-    }
+    // if (!num_primal_infeasibility_ok)
+    //   printf("In iteration %" HIGHSINT_FORMAT
+    //          ": num_primal_infeasibility = %" HIGHSINT_FORMAT
+    //          " != %" HIGHSINT_FORMAT
+    //          " = "
+    //          "updated_num_primal_infeasibility\n",
+    //          ekk_instance_.iteration_count_, num_primal_infeasibility,
+    //          updated_num_primal_infeasibility);
+
+    assert(num_primal_infeasibility_ok);
   }
   analysis->simplexTimerStop(ComputePrIfsClock);
 }
