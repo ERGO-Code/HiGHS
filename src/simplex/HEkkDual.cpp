@@ -27,11 +27,7 @@
 #include "simplex/HEkkPrimal.h"
 #include "simplex/SimplexTimer.h"
 
-using std::cout;
-using std::endl;
 using std::fabs;
-using std::flush;
-using std::runtime_error;
 
 HighsStatus HEkkDual::solve() {
   // Initialise control data for a particular solve
@@ -536,7 +532,7 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   const HighsInt AcountX = Astart[solver_num_col];
 
   // Figure out partition weight
-  double sliced_countX = AcountX / slice_num;
+  double sliced_countX = AcountX / (double)slice_num;
   slice_start[0] = 0;
   for (HighsInt i = 0; i < slice_num - 1; i++) {
     HighsInt endColumn = slice_start[i] + 1;  // At least one column
