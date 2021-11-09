@@ -227,6 +227,7 @@ void HFactor::setupGeneral(
 
   // Find Basis matrix limit size
   basis_matrix_limit_size = 0;
+
   iwork.assign(num_row + 1, 0);
   for (HighsInt i = 0; i < num_col; i++) iwork[a_start[i + 1] - a_start[i]]++;
   for (HighsInt i = num_row, counted = 0; i >= 0 && counted < num_row; i--)
@@ -234,21 +235,24 @@ void HFactor::setupGeneral(
   basis_matrix_limit_size += num_row;
 
   // Allocate space for basis matrix, L, U factor and Update buffer
-  b_var.resize(num_row);
-  b_start.resize(num_row + 1, 0);
+  const HighsInt b_max_dim = max(num_row, num_basic);
+  b_var.resize(b_max_dim);
+  b_start.resize(b_max_dim + 1, 0);
   b_index.resize(basis_matrix_limit_size);
   b_value.resize(basis_matrix_limit_size);
 
   // Allocate space for pivot records
-  permute.resize(num_row);
+  const HighsInt permute_max_dim = max(num_row, num_basic);
+  permute.resize(permute_max_dim);
 
   // Allocate space for Markowitz matrices
-  mc_var.resize(num_row);
-  mc_start.resize(num_row);
-  mc_count_a.resize(num_row);
-  mc_count_n.resize(num_row);
-  mc_space.resize(num_row);
-  mc_min_pivot.resize(num_row);
+  const HighsInt mc_max_dim = max(num_row, num_basic);
+  mc_var.resize(mc_max_dim);
+  mc_start.resize(mc_max_dim);
+  mc_count_a.resize(mc_max_dim);
+  mc_count_n.resize(mc_max_dim);
+  mc_space.resize(mc_max_dim);
+  mc_min_pivot.resize(mc_max_dim);
   mc_index.resize(basis_matrix_limit_size * kMCExtraEntriesMultiplier);
   mc_value.resize(basis_matrix_limit_size * kMCExtraEntriesMultiplier);
 
@@ -263,11 +267,13 @@ void HFactor::setupGeneral(
   mwz_column_array.assign(num_row, 0);
 
   // Allocate space for count-link-list
+  const HighsInt col_link_max_dim = max(num_row, num_basic);
   col_link_first.assign(num_row + 1, -1);
-  col_link_next.resize(num_row);
-  col_link_last.resize(num_row);
+  col_link_next.resize(col_link_max_dim);
+  col_link_last.resize(col_link_max_dim);
 
-  row_link_first.assign(num_row + 1, -1);
+  const HighsInt row_link_max_count = max(num_row, num_basic);
+  row_link_first.assign(row_link_max_count + 1, -1);
   row_link_next.resize(num_row);
   row_link_last.resize(num_row);
 
@@ -459,8 +465,9 @@ void HFactor::buildSimple() {
   luClear();
 
   // Set all values of permute to -1 so that unpermuted (rank
-  // deficient) columns canm be identified
-  permute.assign(num_row, -1);
+  // deficient) columns can be identified
+  const HighsInt permute_max_dim = max(num_row, num_basic);
+  permute.assign(permute_max_dim, -1);
 
   /**
    * 1. Prepare basis matrix and deal with unit columns
@@ -475,9 +482,12 @@ void HFactor::buildSimple() {
   fill_n(&mr_count_before[0], num_row, 0);
   nwork = 0;
   if (report_anything) printf("\nFactor\n");
-  // Compile a vector iwork of the nwork non-unit structural columns
-  // in baseindex: they will be formed into the B matrix as the kernel
-  for (HighsInt iCol = 0; iCol < num_row; iCol++) {
+  // Compile a vector iwork of the indices within basic_index of the
+  // its nwork non-unit structural columns: they will be formed into
+  // the B matrix as the kernel
+  const HighsInt iwork_max_dim = max(num_row, num_basic);
+  iwork.assign(iwork_max_dim + 1, 0);
+  for (HighsInt iCol = 0; iCol < num_basic; iCol++) {
     HighsInt iMat = basic_index[iCol];
     HighsInt iRow = -1;
     int8_t pivot_type = kPivotIllegal;
@@ -523,12 +533,6 @@ void HFactor::buildSimple() {
                       lc_iRow);
         for (HighsInt k = start; k < start + count; k++) {
           mr_count_before[a_index[k]]++;
-          if (BcountX >= basis_matrix_limit_size) {
-            printf("BcountX >= basis_matrix_limit_size\n");
-            fflush(stdout);
-          }
-
-          assert(BcountX < basis_matrix_limit_size);
           b_index[BcountX] = a_index[k];
           b_value[BcountX++] = a_value[k];
         }
@@ -710,10 +714,11 @@ void HFactor::buildSimple() {
 
   // 3.2 Prepare column links, kernel matrix
   col_link_first.assign(num_row + 1, -1);
+  const HighsInt mc_max_dim = max(num_row, num_basic);
   mc_index.clear();
   mc_value.clear();
-  mc_count_a.assign(num_row, 0);
-  mc_count_n.assign(num_row, 0);
+  mc_count_a.assign(mc_max_dim, 0);
+  mc_count_n.assign(mc_max_dim, 0);
   HighsInt MCcountX = 0;
   for (HighsInt i = 0; i < nwork; i++) {
     HighsInt iCol = iwork[i];
@@ -739,7 +744,10 @@ void HFactor::buildSimple() {
   build_synthetic_tick += (num_row + nwork + MCcountX) * 40 + mr_countX * 20;
   // Record the kernel dimension
   kernel_dim = nwork;
-  assert((HighsInt)this->refactor_info_.pivot_row.size() == num_row - nwork);
+  printf("HFactor::buildSimple() nwork = %d; num_row = %d; refactor_info_.pivot_row.size() = %d\n",
+	 (int)nwork, (int)num_row,
+	 (int)this->refactor_info_.pivot_row.size()); fflush(stdout);
+  assert((HighsInt)this->refactor_info_.pivot_row.size() == num_basic - nwork);
 }
 
 HighsInt HFactor::buildKernel() {
@@ -759,7 +767,9 @@ HighsInt HFactor::buildKernel() {
     // 1.1. Setup search merits
     HighsInt searchLimit = min(nwork, HighsInt{8});
     HighsInt searchCount = 0;
-    double merit_limit = 1.0 * num_row * num_row;
+
+    const HighsInt max_col_dim = max(num_row, num_basic);
+    double merit_limit = 1.0 * max_col_dim * num_row;
     double merit_pivot = merit_limit;
 
     // 1.2. Search for local singletons
@@ -777,32 +787,38 @@ HighsInt HFactor::buildKernel() {
     const bool singleton_pivot = foundPivot;
     // 1.3. Major search loop
     double candidate_pivot_value = 0;
-    for (HighsInt count = 2; !foundPivot && count <= num_row; count++) {
-      // 1.3.1 Search for columns
-      for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
-        double min_pivot = mc_min_pivot[j];
-        HighsInt start = mc_start[j];
-        HighsInt end = start + mc_count_a[j];
-        for (HighsInt k = start; k < end; k++) {
-          if (fabs(mc_value[k]) >= min_pivot) {
-            HighsInt i = mc_index[k];
-            HighsInt row_count = mr_count[i];
-            double merit_local = 1.0 * (count - 1) * (row_count - 1);
-            if (merit_pivot > merit_local) {
-              candidate_pivot_value = fabs(mc_value[k]);
-              merit_pivot = merit_local;
-              jColPivot = j;
-              iRowPivot = i;
-              foundPivot = foundPivot || (row_count < count);
-            }
-          }
-        }
+    // Row count can be more than the number of rows if num_basic >
+    // num_row
+    const HighsInt max_count = max(num_row, num_basic);
+    for (HighsInt count = 2; !foundPivot && count <= max_count; count++) {
+      // Column count cannot exceed the number of rows
+      if (count <= num_row) {
+	// 1.3.1 Search for columns
+	for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
+	  double min_pivot = mc_min_pivot[j];
+	  HighsInt start = mc_start[j];
+	  HighsInt end = start + mc_count_a[j];
+	  for (HighsInt k = start; k < end; k++) {
+	    if (fabs(mc_value[k]) >= min_pivot) {
+	      HighsInt i = mc_index[k];
+	      HighsInt row_count = mr_count[i];
+	      double merit_local = 1.0 * (count - 1) * (row_count - 1);
+	      if (merit_pivot > merit_local) {
+		candidate_pivot_value = fabs(mc_value[k]);
+		merit_pivot = merit_local;
+		jColPivot = j;
+		iRowPivot = i;
+		foundPivot = foundPivot || (row_count < count);
+	      }
+	    }
+	  }
 
-        if (searchCount++ >= searchLimit && merit_pivot < merit_limit)
-          foundPivot = true;
-        if (foundPivot) break;
-
-        fake_search += count;
+	  if (searchCount++ >= searchLimit && merit_pivot < merit_limit)
+	    foundPivot = true;
+	  if (foundPivot) break;
+	  
+	  fake_search += count;
+	}
       }
 
       // 1.3.2 Search for rows
