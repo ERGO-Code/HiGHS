@@ -3146,9 +3146,10 @@ bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
   if (posible_cycling) {
     if (iteration_count_ == previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
-      printf("Cycling detected in %s simplex solve %d (Iteration %d)\n",
-             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-             (int)debug_solve_call_num_, (int)iteration_count_);
+      highsLogDev(options_->log_options, HighsLogType::kWarning,
+                  "Cycling detected in %s simplex solve %d (Iteration %d)\n",
+                  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+                  (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
     } else {
       //      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
