@@ -2,7 +2,7 @@
 
 using namespace highs;
 
-thread_local HighsSplitDeque* HighsTaskExecutor::threadLocalWorkerDeque{
+thread_local HighsSplitDeque* threadLocalWorkerDeque{
     nullptr};
-cache_aligned::shared_ptr<HighsTaskExecutor> HighsTaskExecutor::globalExecutor{
+cache_aligned::shared_ptr<HighsTaskExecutor> globalExecutor{
     nullptr};
