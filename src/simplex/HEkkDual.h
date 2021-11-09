@@ -25,12 +25,14 @@
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HVector.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 
 // Limit on the number of column slices for parallel calculations. SIP
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices
 const HighsInt kHighsSlicedLimit = kHighsThreadLimit;
 // Was 100, but can't see why this should be higher than kHighsThreadLimit;
+// const double kMaxOkGrowth = 1e4;
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -193,6 +195,7 @@ class HEkkDual {
    * enter the basis (CHUZC)
    */
   void chooseColumn(HVector* row_ep);
+  void improveChooseColumnRow(HVector* row_ep);
 
   /**
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
@@ -354,6 +357,7 @@ class HEkkDual {
   void majorRollback();
 
   // private:
+  bool proofOfPrimalInfeasibility();
   void saveDualRay();
   void assessPhase1Optimality();
   void assessPhase1OptimalityUnperturbed();
@@ -367,6 +371,8 @@ class HEkkDual {
                                     const bool initialise = false);
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
+
+  bool cyclingDetected();
 
   // Devex scalars
   HighsInt num_devex_iterations =

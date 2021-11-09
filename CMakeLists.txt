@@ -24,6 +24,8 @@ if(OpenMP_CXX_FOUND)
     set(OPENMP ON)
 endif()
 
+option(BUILD_TESTING "Build Tests" ON)
+
 if(LINUX AND NOT MSVC)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT error)
@@ -309,7 +311,9 @@ endif()
 # Targets
 enable_testing()
 add_subdirectory(app)
-add_subdirectory(check)
+if(BUILD_TESTING)
+    add_subdirectory(check)
+endif()
 add_subdirectory(src)
 
 

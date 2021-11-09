@@ -4,7 +4,7 @@
 #include "lp_data/HConst.h"
 
 const bool dev_run = false;
-const double zero_ray_value_tolerance = 1e-8;
+const double zero_ray_value_tolerance = 1e-14;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
                        const vector<double>& expected_ray_value) {
@@ -207,7 +207,8 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   REQUIRE(ray_error_norm < 1e-6);
 }
 
-void testInfeasibleMps(const std::string model) {
+void testInfeasibleMps(const std::string model,
+                       const bool has_dual_ray_ = true) {
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -217,7 +218,11 @@ void testInfeasibleMps(const std::string model) {
   vector<double> primal_ray_value;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  } else {
+    highs.setOptionValue("log_dev_level", 2);
+  }
 
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
@@ -232,7 +237,7 @@ void testInfeasibleMps(const std::string model) {
   // Check that there is a dual ray
   dual_ray_value.resize(lp.num_row_);
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
-  REQUIRE(has_dual_ray == true);
+  REQUIRE(has_dual_ray == has_dual_ray_);
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
           HighsStatus::kOk);
   checkDualRayValue(highs, dual_ray_value);
@@ -352,7 +357,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
 
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is no dual ray
@@ -404,7 +409,10 @@ TEST_CASE("Rays-woodinfe", "[highs_test_rays]") {
   testInfeasibleMps("woodinfe");
 }
 
-TEST_CASE("Rays-klein1", "[highs_test_rays]") { testInfeasibleMps("klein1"); }
+// klein1 is infeasible, but currently has no dual ray
+TEST_CASE("Rays-klein1", "[highs_test_rays]") {
+  testInfeasibleMps("klein1", true);
+}
 
 TEST_CASE("Rays-gams10am", "[highs_test_rays]") {
   testInfeasibleMps("gams10am");

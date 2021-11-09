@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #ifndef IPX_INFO_CPP_H_
 #define IPX_INFO_CPP_H_
 

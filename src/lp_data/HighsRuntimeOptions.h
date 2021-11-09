@@ -25,7 +25,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
 
-    std::string presolve, solver, parallel;
+    std::string presolve, solver, parallel, ranging;
 
     // clang-format off
     cxx_options.add_options()
@@ -53,6 +53,9 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
         (kRandomSeedString,
         "Seed to initialize random number generation.",
         cxxopts::value<HighsInt>())
+        (kRangingString,
+        "Compute cost, bound, RHS and basic solution ranging.",
+        cxxopts::value<std::string>(ranging))
         ("h, help", "Print help.");
     // clang-format on
     cxx_options.parse_positional("model_file");
@@ -129,9 +132,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
       if (setLocalOptionValue(options.log_options, kSolutionFileString,
                               options.records, v[0]) != OptionStatus::kOk ||
           setLocalOptionValue(options.log_options, "write_solution_to_file",
-                              options.records, true) != OptionStatus::kOk ||
-          setLocalOptionValue(options.log_options, "write_solution_style",
-                              options.records, 2) != OptionStatus::kOk)
+                              options.records, true) != OptionStatus::kOk)
         return false;
     }
 
@@ -141,6 +142,14 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
+
+    if (result.count(kRangingString)) {
+      std::string value = result[kRangingString].as<std::string>();
+      if (setLocalOptionValue(options.log_options, kRangingString,
+                              options.records, value) != OptionStatus::kOk)
+        return false;
+    }
+
   } catch (const cxxopts::OptionException& e) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());

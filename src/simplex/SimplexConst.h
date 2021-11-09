@@ -52,7 +52,8 @@ enum SimplexSolvePhase {
   kSolvePhase2,                        // 2
   kSolvePhasePrimalInfeasibleCleanup,  // 3
   kSolvePhaseOptimalCleanup,           // 4
-  kSolvePhaseMax = kSolvePhaseOptimalCleanup
+  kSolvePhaseCycling,                  // 5
+  kSolvePhaseMax = kSolvePhaseCycling
 };
 
 enum SimplexCrashStrategy {
@@ -97,6 +98,16 @@ enum SimplexPriceStrategy {
   kSimplexPriceStrategyRowSwitch,
   kSimplexPriceStrategyRowSwitchColSwitch,
   kSimplexPriceStrategyMax = kSimplexPriceStrategyRowSwitchColSwitch
+};
+
+enum SimplexPivotalRowRefinementStrategy {
+  kSimplexInfeasibilityProofRefinementMin = 0,
+  kSimplexInfeasibilityProofRefinementNo =
+      kSimplexInfeasibilityProofRefinementMin,
+  kSimplexInfeasibilityProofRefinementUnscaledLp,    // 1
+  kSimplexInfeasibilityProofRefinementAlsoScaledLp,  // 2
+  kSimplexInfeasibilityProofRefinementMax =
+      kSimplexInfeasibilityProofRefinementAlsoScaledLp
 };
 
 enum SimplexPrimalCorrectionStrategy {
@@ -179,6 +190,8 @@ enum class LpAction {
   kHotStart,
   kBacktracking
 };
+
+enum class TabooReason { kSingular = 0, kCycling };
 
 //
 // Relation between HiGHS basis and Simplex basis

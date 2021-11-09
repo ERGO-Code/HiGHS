@@ -20,8 +20,8 @@
 #include <vector>
 
 #include "simplex/HEkk.h"
+#include "util/HVector.h"
 
-class HVector;
 const double kInitialTotalChange = 1e-12;
 const double kInitialRemainTheta = 1e100;
 const double kMaxSelectTheta = 1e18;

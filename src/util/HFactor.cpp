@@ -10,19 +10,20 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactor.cpp
+/**@file util/HFactor.cpp
  * @brief Types of solution classes
  */
-#include "simplex/HFactor.h"
+#include "util/HFactor.h"
 
 #include <cassert>
 #include <iostream>
 
 #include "lp_data/HConst.h"
 #include "pdqsort/pdqsort.h"
-#include "simplex/FactorTimer.h"
-#include "simplex/HFactorDebug.h"
-#include "simplex/HVector.h"
+#include "util/FactorTimer.h"
+#include "util/HFactorDebug.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "util/HighsTimer.h"
 
 // std::vector, std::max and std::min used in HFactor.h for local

@@ -23,9 +23,9 @@
 
 #include "lp_data/HConst.h"
 #include "mip/HighsImplications.h"
-#include "mip/HighsSparseVectorSum.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsInt.h"
+#include "util/HighsSparseVectorSum.h"
 
 class HighsLpRelaxation;
 

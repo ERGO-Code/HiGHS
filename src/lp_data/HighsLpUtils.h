@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"
@@ -31,11 +32,12 @@ class HighsOptions;
 
 using std::vector;
 
-HighsStatus writeBasisFile(const HighsLogOptions& log_options,
-                           const HighsBasis& basis, const std::string filename);
+void writeBasisFile(FILE*& file, const HighsBasis& basis);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename);
+HighsStatus readBasisStream(const HighsLogOptions& log_options,
+                            HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
@@ -52,6 +54,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
+HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options);
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
 void scaleLp(const HighsOptions& options, HighsLp& lp);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
@@ -186,9 +189,18 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
-void writeSolutionToFile(FILE* file, const HighsOptions& options,
-                         const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const HighsInt style);
+void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style);
+
+HighsStatus readSolutionFile(const std::string filename,
+                             const HighsOptions& options, const HighsLp& lp,
+                             HighsBasis& basis, HighsSolution& solution,
+                             const HighsInt style);
+
+void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
+                                const HighsSolution& solution);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
@@ -214,4 +226,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
+HighsLp withoutSemiVariables(const HighsLp& lp);
+
+void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

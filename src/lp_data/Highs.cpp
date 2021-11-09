@@ -22,6 +22,8 @@
 #include <sstream>
 
 #include "io/Filereader.h"
+//#include "io/HMPSIO.h"
+//#include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
@@ -255,6 +257,12 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Check validity of any integrality
+  return_status =
+      interpretCallStatus(options_.log_options, assessIntegrality(lp, options_),
+                          return_status, "assessIntegrality");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
@@ -438,7 +446,16 @@ HighsStatus Highs::readModel(const std::string filename) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
-
+  const bool remove_rows_of_count_1 = false;
+  if (remove_rows_of_count_1) {
+    // .lp files from PWSC (notably st-test23.lp) have bounds for
+    // semi-continuous variables in the constraints section. By default,
+    // these are interpreted as constraints, so the semi-continuous
+    // variables are not set up correctly. Fix is to remove all rows of
+    // count 1, interpreting their bounds as bounds on the corresponding
+    // variable.
+    removeRowsOfCountOne(options_.log_options, model.lp_);
+  }
   return_status =
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");
@@ -496,10 +513,15 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
-      options_.log_options,
-      writeBasisFile(options_.log_options, basis_, filename), return_status,
-      "writeBasis");
+  HighsStatus call_status;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writebasis", file, html);
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "openWriteFile");
+  if (return_status == HighsStatus::kError) return return_status;
+  writeBasisFile(file, basis_);
+  if (file != stdout) fclose(file);
   return returnFromHighs(return_status);
 }
 
@@ -921,15 +943,18 @@ HighsStatus Highs::run() {
       }
     }
   }
+  // Cycling can yield model_status_ == HighsModelStatus::kNotset,
+  //  assert(model_status_ != HighsModelStatus::kNotset);
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
-    // be infeasible or unbounded, or the time/iteration limit has
-    // been reached
+    // be infeasible or unbounded, the time/iteration limit has been
+    // reached, or the status is unknown (cycling)
     assert(model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||
-           model_status_ == HighsModelStatus::kIterationLimit);
+           model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kUnknown);
     // The HEkk data correspond to the (strictly reduced) presolved LP
     // so must be cleared
     ekk_instance_.clear();
@@ -1019,14 +1044,20 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
-HighsStatus Highs::getRanging(HighsRanging& ranging) {
+HighsStatus Highs::getRanging() {
   // Create a HighsLpSolverObject of references to data in the Highs
   // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
                                     ekk_instance_, options_, timer_);
   solver_object.scaled_model_status_ = scaled_model_status_;
   solver_object.unscaled_model_status_ = model_status_;
-  return getRangingData(ranging, solver_object);
+  return getRangingData(this->ranging_, solver_object);
+}
+
+HighsStatus Highs::getRanging(HighsRanging& ranging) {
+  HighsStatus return_status = getRanging();
+  ranging = this->ranging_;
+  return return_status;
 }
 
 HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
@@ -2069,6 +2100,7 @@ void Highs::clearUserSolverData() {
   clearModelStatus();
   clearSolution();
   clearBasis();
+  clearRanging();
   clearInfo();
   clearEkk();
 }
@@ -2102,6 +2134,8 @@ void Highs::clearBasis() {
 }
 
 void Highs::clearInfo() { info_.clear(); }
+
+void Highs::clearRanging() { ranging_.clear(); }
 
 void Highs::clearEkk() { ekk_instance_.invalidate(); }
 
@@ -2242,9 +2276,15 @@ HighsStatus Highs::callSolveMip() {
   // Run the MIP solver
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
-  // Check that the model is column-wise
-  assert(model_.lp_.a_matrix_.isColwise());
-  HighsMipSolver solver(options_, model_.lp_, solution_);
+  // Check that the model isn't row-wise
+  assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
+  const bool has_semi_variables = model_.lp_.hasSemiVariables();
+  HighsLp use_lp;
+  if (has_semi_variables) {
+    use_lp = withoutSemiVariables(model_.lp_);
+  }
+  HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+  HighsMipSolver solver(options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
@@ -2256,10 +2296,13 @@ HighsStatus Highs::callSolveMip() {
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= model_.lp_.num_col_);
+    assert(solver_solution_size >= lp.num_col_);
+    // If the original model has semi-variables, its solution is
+    // (still) given by the first model_.lp_.num_col_ entries of the
+    // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
-    model_.lp_.a_matrix_.product(solution_.row_value, solution_.col_value);
+    model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
     // There is no primal solution: should be so by default
@@ -2307,7 +2350,7 @@ HighsStatus Highs::callSolveMip() {
 }
 
 HighsStatus Highs::writeSolution(const std::string filename,
-                                 const HighsInt style) const {
+                                 const HighsInt style) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -2316,8 +2359,37 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, options_, model_.lp_, basis_, solution_, style);
+  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
+                    style);
+  if (style == kSolutionStyleRaw) {
+    fprintf(file, "\n# Basis\n");
+    writeBasisFile(file, basis_);
+  }
+  if (options_.ranging == kHighsOnString) {
+    if (model_.isMip() || model_.isQp()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot determing ranging information for MIP or QP\n");
+      return HighsStatus::kError;
+    }
+    return_status = interpretCallStatus(
+        options_.log_options, this->getRanging(), return_status, "getRanging");
+    if (return_status == HighsStatus::kError) return return_status;
+    fprintf(file, "\n# Ranging\n");
+    writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
+                     solution_, ranging_, style);
+  }
   if (file != stdout) fclose(file);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::readSolution(const std::string filename,
+                                const HighsInt style) {
+  return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
+                          style);
+}
+
+HighsStatus Highs::checkSolutionFeasibility() {
+  checkLpSolutionFeasibility(options_, model_.lp_, solution_);
   return HighsStatus::kOk;
 }
 
@@ -2422,6 +2494,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       clearInfo();
       clearSolution();
       clearBasis();
+      if (model_status_ != scaled_model_status_) {
+        printf(
+            "Highs::returnFromRun Solve %d: %d = model_status_ != "
+            "scaled_model_status_ = %d\n",
+            (int)ekk_instance_.debug_solve_call_num_, (int)model_status_,
+            (int)scaled_model_status_);
+        fflush(stdout);
+      }
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kError);
       break;

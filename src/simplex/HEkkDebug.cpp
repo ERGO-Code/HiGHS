@@ -45,22 +45,26 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
   static bool output_flag;
   static HighsInt log_dev_level;
   static HighsInt highs_analysis_level;
+  static HighsInt highs_debug_level;
   static bool analyse_simplex_runtime_data;
   if (save_mod_recover == -1) {
     output_flag = options_->output_flag;
     log_dev_level = options_->log_dev_level;
     highs_analysis_level = options_->highs_analysis_level;
+    highs_debug_level = options_->highs_debug_level;
     analyse_simplex_runtime_data = analysis_.analyse_simplex_runtime_data;
   } else if (save_mod_recover == 0) {
     this->options_->output_flag = true;
     this->options_->log_dev_level = log_dev_level_;
     this->options_->highs_analysis_level = 6;
+    this->options_->highs_debug_level = 2;
     if (log_dev_level_ == kHighsLogDevLevelVerbose)
       this->analysis_.analyse_simplex_runtime_data = true;
   } else {
     options_->output_flag = output_flag;
     options_->log_dev_level = log_dev_level;
     options_->highs_analysis_level = highs_analysis_level;
+    options_->highs_debug_level = highs_debug_level;
     analysis_.analyse_simplex_runtime_data = analyse_simplex_runtime_data;
   }
 }
@@ -315,7 +319,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
   }
   const double info_max_primal_infeasibility =
       this->info_.max_primal_infeasibility;
-  if (info_max_primal_infeasibility >= 0) {
+  if (info_max_primal_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_max_primal_infeasibility =
         abs(max_primal_infeasibility - info_max_primal_infeasibility) >
         ok_feasibility_difference;
@@ -332,7 +336,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
   }
   const double info_sum_primal_infeasibility =
       this->info_.sum_primal_infeasibilities;
-  if (info_sum_primal_infeasibility >= 0) {
+  if (info_sum_primal_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_sum_primal_infeasibility =
         abs(sum_primal_infeasibility - info_sum_primal_infeasibility) >
         ok_feasibility_difference;
@@ -365,7 +369,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
     }
   }
   const double info_max_dual_infeasibility = this->info_.max_dual_infeasibility;
-  if (info_max_dual_infeasibility >= 0) {
+  if (info_max_dual_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_max_dual_infeasibility =
         abs(max_dual_infeasibility - info_max_dual_infeasibility) >
         ok_feasibility_difference;
@@ -382,7 +386,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
   }
   const double info_sum_dual_infeasibility =
       this->info_.sum_dual_infeasibilities;
-  if (info_sum_dual_infeasibility >= 0) {
+  if (info_sum_dual_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_sum_dual_infeasibility =
         abs(sum_dual_infeasibility - info_sum_dual_infeasibility) >
         ok_feasibility_difference;
@@ -1443,13 +1447,16 @@ HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus HEkk::debugSimplexDualInfeasible(const bool force_report) {
+HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string message,
+                                                  const bool force_report) {
   const HighsSimplexInfo& info = this->info_;
   computeSimplexDualInfeasible();
   if (info.num_dual_infeasibilities || force_report)
     printf(
-        "Iteration %6d: num / max / sum dual infeasibilities is %d / %g / %g\n",
-        (int)iteration_count_, (int)info.num_dual_infeasibilities,
-        info.max_dual_infeasibility, info.sum_dual_infeasibilities);
+        "Iteration %6d: %s num / max / sum dual infeasibilities is %d / %g / "
+        "%g\n",
+        (int)iteration_count_, message.c_str(),
+        (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+        info.sum_dual_infeasibilities);
   return HighsDebugStatus::kOk;
 }

@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactorConst.h
+/**@file util/HFactorConst.h
  * @brief Constants for basis matrix factorization, update and solves for HiGHS
  */
 #ifndef HFACTORCONST_H_

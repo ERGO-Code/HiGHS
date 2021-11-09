@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "lp_data/HStruct.h"
-#include "lp_data/HighsSparseMatrix.h"
+#include "util/HighsSparseMatrix.h"
 
 class HighsLp {
  public:
@@ -54,6 +54,7 @@ class HighsLp {
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
+  bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   bool dimensionsOk(std::string message) const;

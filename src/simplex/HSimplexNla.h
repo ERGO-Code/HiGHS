@@ -19,9 +19,9 @@
 #define HSIMPLEXNLA_H_
 
 #include "lp_data/HighsDebug.h"
-#include "simplex/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
+#include "util/HFactor.h"
 
 struct ProductFormUpdate {
   bool valid_ = false;
@@ -95,10 +95,18 @@ class HSimplexNla {
                const HighsSparseMatrix* scaled_ar_matrix);
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
                        HighsInt& to_entry) const;
+  void reportVector(const std::string message, const HighsInt num_index,
+                    const vector<double> vector_value,
+                    const vector<HighsInt> vector_index,
+                    const bool force) const;
   void reportArray(const std::string message, const HVector* vector,
                    const bool force = false) const;
+  void reportArray(const std::string message, const HighsInt offset,
+                   const HVector* vector, const bool force = false) const;
   void reportArraySparse(const std::string message, const HVector* vector,
                          const bool force = false) const;
+  void reportArraySparse(const std::string message, const HighsInt offset,
+                         const HVector* vector, const bool force = false) const;
   void reportPackValue(const std::string message, const HVector* vector,
                        const bool force = false) const;
   // Debug methods
