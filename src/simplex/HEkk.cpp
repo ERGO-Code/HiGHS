@@ -1859,26 +1859,26 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
-  if (rank_deficiency)
-    printf(
-        "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
-        "%d)\n",
-        (int)debug_solve_call_num_, (int)iteration_count_);
+  // if (rank_deficiency)
+  //   printf(
+  //       "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
+  //       "%d)\n",
+  //       (int)debug_solve_call_num_, (int)iteration_count_);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
       // Claim rank deficiency to test backtracking
-      printf("Phase1 (Iter %" HIGHSINT_FORMAT
-             ") Claiming rank deficiency to test backtracking\n",
-             iteration_count_);
+      // printf("Phase1 (Iter %" HIGHSINT_FORMAT
+      //        ") Claiming rank deficiency to test backtracking\n",
+      //        iteration_count_);
       rank_deficiency = 1;
       info_.phase1_backtracking_test_done = true;
     } else if (!info_.phase2_backtracking_test_done &&
                solve_phase == kSolvePhase2) {
       // Claim rank deficiency to test backtracking
-      printf("Phase2 (Iter %" HIGHSINT_FORMAT
-             ") Claiming rank deficiency to test backtracking\n",
-             iteration_count_);
+      // printf("Phase2 (Iter %" HIGHSINT_FORMAT
+      //        ") Claiming rank deficiency to test backtracking\n",
+      //        iteration_count_);
       rank_deficiency = 1;
       info_.phase2_backtracking_test_done = true;
     }
@@ -3146,9 +3146,10 @@ bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
   if (posible_cycling) {
     if (iteration_count_ == previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
-      printf("Cycling detected in %s simplex solve %d (Iteration %d)\n",
-             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-             (int)debug_solve_call_num_, (int)iteration_count_);
+      highsLogDev(options_->log_options, HighsLogType::kWarning,
+                  "Cycling detected in %s simplex solve %d (Iteration %d)\n",
+                  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+                  (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
     } else {
       //      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
@@ -3954,12 +3955,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     }
 
     // add up lower bound of proof constraint
-    proof_lower +=
-        row_ep.array[iRow] *
-        (row_ep.array[iRow] > 0 ? lp.row_lower_[iRow] : lp.row_upper_[iRow]);
-    if (!row_ep.array[iRow] && debug_proof_report)
-      printf("Zeroed row_ep.array[%6d] = %11.4g due to infinite bound\n",
-             (int)iRow, row_ep_value);
+    proof_lower += row_ep.array[iRow] * rowBound;
   }
   // Form the proof constraint coefficients
   proof_value_.clear();
