@@ -20,6 +20,7 @@
 #include "lp_data/HConst.h"
 #include "util/HighsHash.h"
 #include "util/HighsRandom.h"
+#include "util/HighsRbTree.h"
 
 class HighsCutPool;
 class HighsDomain;
@@ -67,25 +68,27 @@ class HighsCliqueTable {
  private:
   struct CliqueSetNode {
     HighsInt cliqueid;
-    // links for storing the column lists of the clique as a splay tree
-    HighsInt left;
-    HighsInt right;
+    highs::RbTreeLinks links;
 
-    CliqueSetNode(HighsInt cliqueid)
-        : cliqueid(cliqueid), left(-1), right(-1) {}
+    CliqueSetNode(HighsInt cliqueid) : cliqueid(cliqueid) {}
 
-    CliqueSetNode() : cliqueid(-1), left(-1), right(-1) {}
+    CliqueSetNode() {}
   };
 
+  class CliqueSet;
   std::vector<CliqueVar> cliqueentries;
   std::vector<CliqueSetNode> cliquesets;
+  struct CliqueSetTree {
+    HighsInt root = -1;
+    HighsInt first = -1;
+  };
 
   std::vector<std::pair<HighsInt*, HighsInt*>> commoncliquestack;
   std::set<std::pair<HighsInt, int>> freespaces;
   std::vector<HighsInt> freeslots;
   std::vector<Clique> cliques;
-  std::vector<HighsInt> cliquesetroot;
-  std::vector<HighsInt> sizeTwoCliquesetRoot;
+  std::vector<CliqueSetTree> cliquesetTree;
+  std::vector<CliqueSetTree> sizeTwoCliquesetTree;
   std::vector<HighsInt> numcliquesvar;
   std::vector<CliqueVar> infeasvertexstack;
 
@@ -95,9 +98,8 @@ class HighsCliqueTable {
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<uint8_t> iscandidate;
   std::vector<uint8_t> colDeleted;
-  std::vector<uint16_t> cliquehits;
+  std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
-  std::vector<HighsInt> stack;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
@@ -106,7 +108,6 @@ class HighsCliqueTable {
   HighsInt nfixings;
   HighsInt numEntries;
   bool inPresolve;
-  HighsInt splay(HighsInt cliqueid, HighsInt root);
 
   void unlink(HighsInt node);
 
@@ -151,15 +152,12 @@ class HighsCliqueTable {
 
   void propagateAndCleanup(HighsDomain& globaldom);
 
-  void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,
-                   bool equality = false, HighsInt origin = kHighsIInf);
-
  public:
   int64_t numNeighborhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
-    cliquesetroot.resize(2 * ncols, -1);
-    sizeTwoCliquesetRoot.resize(2 * ncols, -1);
+    cliquesetTree.resize(2 * ncols);
+    sizeTwoCliquesetTree.resize(2 * ncols);
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
@@ -171,9 +169,14 @@ class HighsCliqueTable {
 
   void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
 
+  bool getPresolveFlag() const { return inPresolve; }
+
   HighsInt getNumEntries() const { return numEntries; }
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
+
+  void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,
+                   bool equality = false, HighsInt origin = kHighsIInf);
 
   void addClique(const HighsMipSolver& mipsolver, CliqueVar* cliquevars,
                  HighsInt numcliquevars, bool equality = false,
@@ -210,6 +213,9 @@ class HighsCliqueTable {
   }
 
   HighsInt getNumFixings() const { return nfixings; }
+
+  void cliquePartition(std::vector<CliqueVar>& clqVars,
+                       std::vector<HighsInt>& partitionStart);
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 

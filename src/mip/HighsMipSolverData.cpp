@@ -194,6 +194,7 @@ void HighsMipSolverData::init() {
   sb_lp_iterations_before_run = 0;
   num_disp_lines = 0;
   numCliqueEntriesAfterPresolve = 0;
+  numCliqueEntriesAfterFirstPresolve = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
@@ -367,9 +368,10 @@ void HighsMipSolverData::runSetup() {
   }
   numintegercols = integer_cols.size();
   detectSymmetries = detectSymmetries && numBin > 0;
+  numCliqueEntriesAfterPresolve = cliquetable.getNumEntries();
 
   if (numRestarts == 0) {
-    numCliqueEntriesAfterPresolve = cliquetable.getNumEntries();
+    numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  // clang-format off
                "\nSolving MIP model with:\n"
