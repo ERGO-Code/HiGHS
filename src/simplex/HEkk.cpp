@@ -1859,26 +1859,26 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
-  if (rank_deficiency)
-    printf(
-        "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
-        "%d)\n",
-        (int)debug_solve_call_num_, (int)iteration_count_);
+  // if (rank_deficiency)
+  //   printf(
+  //       "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
+  //       "%d)\n",
+  //       (int)debug_solve_call_num_, (int)iteration_count_);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
       // Claim rank deficiency to test backtracking
-      printf("Phase1 (Iter %" HIGHSINT_FORMAT
-             ") Claiming rank deficiency to test backtracking\n",
-             iteration_count_);
+      // printf("Phase1 (Iter %" HIGHSINT_FORMAT
+      //        ") Claiming rank deficiency to test backtracking\n",
+      //        iteration_count_);
       rank_deficiency = 1;
       info_.phase1_backtracking_test_done = true;
     } else if (!info_.phase2_backtracking_test_done &&
                solve_phase == kSolvePhase2) {
       // Claim rank deficiency to test backtracking
-      printf("Phase2 (Iter %" HIGHSINT_FORMAT
-             ") Claiming rank deficiency to test backtracking\n",
-             iteration_count_);
+      // printf("Phase2 (Iter %" HIGHSINT_FORMAT
+      //        ") Claiming rank deficiency to test backtracking\n",
+      //        iteration_count_);
       rank_deficiency = 1;
       info_.phase2_backtracking_test_done = true;
     }
