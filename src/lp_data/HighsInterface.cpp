@@ -1400,7 +1400,8 @@ HighsStatus Highs::checkOptimality(const std::string solver_type,
   // Cannot expect to have no dual_infeasibilities since the QP solver
   // (and, of course, the MIP solver) give no dual information
   if (info_.num_primal_infeasibilities == 0 &&
-      info_.dual_solution_status == kSolutionStatusNone)
+      (info_.num_dual_infeasibilities == 0 ||
+       info_.dual_solution_status == kSolutionStatusNone))
     return HighsStatus::kOk;
   HighsLogType log_type = HighsLogType::kWarning;
   return_status = HighsStatus::kWarning;
