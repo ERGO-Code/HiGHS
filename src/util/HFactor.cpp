@@ -84,13 +84,13 @@ void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
 
   for (HighsInt i = 0; i < rhs_count; i++) {
     // Skip touched index
-    HighsInt iTrans = h_lookup[rhs_index[i]];  // XXX: this contains a bug iTran
-    if (list_mark[iTrans])                    // XXX bug here
+    HighsInt i_trans = h_lookup[rhs_index[i]];  // XXX: this contains a bug iTran
+    if (list_mark[i_trans])                    // XXX bug here
       continue;
 
-    HighsInt Hi = iTrans;      // H matrix pivot index
+    HighsInt Hi = i_trans;      // H matrix pivot index
     HighsInt Hk = h_start[Hi];  // H matrix non zero position
-    HighsInt nStack = -1;      // Usage of the stack (-1 not used)
+    HighsInt n_stack = -1;      // Usage of the stack (-1 not used)
 
     list_mark[Hi] = 1;  // Mark this as touched
 
@@ -99,8 +99,8 @@ void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
         HighsInt Hi_sub = h_lookup[h_index[Hk++]];
         if (list_mark[Hi_sub] == 0) {  // Go to a child
           list_mark[Hi_sub] = 1;       // Mark as touched
-          list_stack[++nStack] = Hi;   // Store current into stack
-          list_stack[++nStack] = Hk;
+          list_stack[++n_stack] = Hi;   // Store current into stack
+          list_stack[++n_stack] = Hk;
           Hi = Hi_sub;  // Replace current with child
           Hk = h_start[Hi];
           if (Hi >= h_size) {
@@ -110,10 +110,10 @@ void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
         }
       } else {
         list_index[list_count++] = Hi;
-        if (nStack == -1)  // Quit on empty stack
+        if (n_stack == -1)  // Quit on empty stack
           break;
-        Hk = list_stack[nStack--];  // Back to last in stack
-        Hi = list_stack[nStack--];
+        Hk = list_stack[n_stack--];  // Back to last in stack
+        Hi = list_stack[n_stack--];
       }
     }
   }
