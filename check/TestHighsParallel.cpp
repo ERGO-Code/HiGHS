@@ -211,31 +211,31 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
 TEST_CASE("MatrixMultHighs", "[parallel]") {
   parallel::initialize_scheduler(numThreads);
   std::cout << "\nhighs workstealing for loop:" << std::endl;
-  matrix_multiplication("highs", parallel::num_threads(), 10);
+  matrix_multiplication("highs", parallel::num_threads(), 1);
 }
 
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
   auto beg = std::chrono::high_resolution_clock::now();
   parallel::initialize_scheduler(numThreads);
-  int64_t result = fib(47);
+  int64_t result = fib(46);
   auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "time elapsed for fib(47) with HiGHS work stealing: "
+  std::cout << "time elapsed for fib(46) with HiGHS work stealing: "
             << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
                     .count() /
                 1e3)
             << "ms" << std::endl;
 
-  REQUIRE(result == 4807526976);
+  // REQUIRE(result == 4807526976);
   // REQUIRE(result == 20365011074);
   // fib 46
-  // REQUIRE(result == 2971215073);
+  REQUIRE(result == 2971215073);
 }
 
 #if 0
 TEST_CASE("MatrixMultOmp", "[parallel]") {
   std::cout << "\nomp for loop:" << std::endl;
-  matrix_multiplication("omp", numThreads, 10);
+  matrix_multiplication("omp", numThreads, 1);
 }
 TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   int64_t result;
@@ -243,18 +243,18 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
 #pragma omp parallel num_threads(numThreads)
   {
 #pragma omp single
-    { result = fib_omp(47); }
+    { result = fib_omp(46); }
   }
   auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "time elapsed for fib(47) with omp tasks: "
+  std::cout << "time elapsed for fib(46) with omp tasks: "
             << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
                     .count() /
                 1e3)
             << "ms" << std::endl;
 
-  REQUIRE(result == 4807526976);
+  // REQUIRE(result == 4807526976);
   // fib 46
-  // REQUIRE(result == 2971215073);
+  REQUIRE(result == 2971215073);
 }
 #endif
