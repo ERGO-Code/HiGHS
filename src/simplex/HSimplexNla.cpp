@@ -41,10 +41,8 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* basic_index,
   this->report_ = false;
   this->factor_.setupGeneral(
       this->lp_->num_col_, this->lp_->num_row_, this->lp_->num_row_,
-      &factor_a_matrix->start_[0],
-      &factor_a_matrix->index_[0],
-      &factor_a_matrix->value_[0],
-      this->basic_index_, factor_pivot_threshold,
+      &factor_a_matrix->start_[0], &factor_a_matrix->index_[0],
+      &factor_a_matrix->value_[0], this->basic_index_, factor_pivot_threshold,
       this->options_->factor_pivot_tolerance, this->options_->highs_debug_level,
       &(this->options_->log_options));
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
@@ -64,8 +62,8 @@ void HSimplexNla::setBasicIndexPointers(HighsInt* basic_index) {
 
 void HSimplexNla::setPointers(const HighsLp* for_lp,
                               const HighsSparseMatrix* factor_a_matrix,
-                              HighsInt* basic_index, const HighsOptions* options,
-                              HighsTimer* timer,
+                              HighsInt* basic_index,
+                              const HighsOptions* options, HighsTimer* timer,
                               HighsSimplexAnalysis* analysis) {
   this->setLpAndScalePointers(for_lp);
   if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);

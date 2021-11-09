@@ -81,8 +81,8 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setupGeneral(const HighsSparseMatrix* a_matrix,
-                    HighsInt num_basic, HighsInt* basic_index,
+  void setupGeneral(const HighsSparseMatrix* a_matrix, HighsInt num_basic,
+                    HighsInt* basic_index,
                     const double pivot_threshold = kDefaultPivotThreshold,
                     const double pivot_tolerance = kDefaultPivotTolerance,
                     const HighsInt highs_debug_level = kHighsDebugLevelMin,
@@ -93,7 +93,7 @@ class HFactor {
              const HighsInt* a_start,  //!< Column starts of constraint matrix
              const HighsInt* a_index,  //!< Row indices of constraint matrix
              const double* a_value,    //!< Row values of constraint matrix
-             HighsInt* basic_index,     //!< Indices of basic variables
+             HighsInt* basic_index,    //!< Indices of basic variables
              const double pivot_threshold =
                  kDefaultPivotThreshold,  //!< Pivoting threshold
              const double pivot_tolerance =
@@ -104,13 +104,13 @@ class HFactor {
              const HighsInt update_method = kUpdateMethodFt);
 
   void setupGeneral(
-      const HighsInt num_col,   //!< Number of columns
-      const HighsInt num_row,   //!< Number of rows
+      const HighsInt num_col,  //!< Number of columns
+      const HighsInt num_row,  //!< Number of rows
       const HighsInt num_basic,
       const HighsInt* a_start,  //!< Column starts of constraint matrix
       const HighsInt* a_index,  //!< Row indices of constraint matrix
       const double* a_value,    //!< Row values of constraint matrix
-      HighsInt* basic_index,  //!< Indices of basic variables
+      HighsInt* basic_index,    //!< Indices of basic variables
       const double pivot_threshold =
           kDefaultPivotThreshold,  //!< Pivoting threshold
       const double pivot_tolerance =
@@ -420,13 +420,15 @@ class HFactor {
     mc_value[iput] = value;
   }
   void colStoreN(const HighsInt iCol, const HighsInt iRow, const double value) {
-    const HighsInt iput = mc_start[iCol] + mc_space[iCol] - (++mc_count_n[iCol]);
+    const HighsInt iput =
+        mc_start[iCol] + mc_space[iCol] - (++mc_count_n[iCol]);
     mc_index[iput] = iRow;
     mc_value[iput] = value;
   }
   void colFixMax(const HighsInt iCol) {
     double max_value = 0;
-    for (HighsInt k = mc_start[iCol]; k < mc_start[iCol] + mc_count_a[iCol]; k++)
+    for (HighsInt k = mc_start[iCol]; k < mc_start[iCol] + mc_count_a[iCol];
+         k++)
       max_value = max(max_value, fabs(mc_value[k]));
     mc_min_pivot[iCol] = max_value * pivot_threshold;
   }
