@@ -2314,7 +2314,7 @@ HighsStatus Highs::callSolveMip() {
   assert(!basis_.valid);
   // Get the objective and any KKT failures
   info_.objective_function_value = solver.solution_objective_;
-  const bool use_mip_feasibility_tolerance = false;
+  const bool use_mip_feasibility_tolerance = true;
   double primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
   if (use_mip_feasibility_tolerance) {
     options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
