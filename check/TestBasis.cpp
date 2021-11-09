@@ -7,6 +7,96 @@ const bool dev_run = false;
 const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
+void testBasisReloadModel(Highs& highs, const bool from_file);
+void testBasisRestart(Highs& highs, const bool from_file);
+
+// No commas in test case name.
+TEST_CASE("Basis-file", "[highs_basis_file]") {
+  HighsStatus return_status;
+  std::string model0_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string model1_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  Highs highs;
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  }
+  assert(model0_file != model1_file);
+
+  return_status = highs.readModel(model0_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.writeBasis(basis_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.readBasis("Nobasis.bas");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  // Check error return for some invalid basis files
+  std::string invalid_basis_file = "InvalidBasis.bas";
+  std::ofstream f;
+  // Write and read a file for unsupported HiGHS version
+  f.open(invalid_basis_file, std::ios::out);
+  f << "HiGHS v0" << std::endl;
+  f.close();
+  return_status = highs.readBasis(invalid_basis_file);
+  REQUIRE(return_status == HighsStatus::kError);
+
+  // Write and read a file for an invalid basis
+  f.open(invalid_basis_file, std::ios::out);
+  f << "HiGHS v1" << std::endl;
+  f << "None" << std::endl;
+  f.close();
+  return_status = highs.readBasis(invalid_basis_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  // Write and read a file for incompatible number of columns
+  f.open(invalid_basis_file, std::ios::out);
+  f << "HiGHS v1" << std::endl;
+  f << "Valid" << std::endl;
+  f << "# Columns " << highs.getNumCol() - 1 << std::endl;
+  f.close();
+  return_status = highs.readBasis(invalid_basis_file);
+  REQUIRE(return_status == HighsStatus::kError);
+
+  testBasisRestart(highs, true);
+  testBasisReloadModel(highs, true);
+
+  std::remove(basis_file.c_str());
+  std::remove(invalid_basis_file.c_str());
+}
+
+// No commas in test case name.
+TEST_CASE("Basis-data", "[highs_basis_data]") {
+  HighsStatus return_status;
+  std::string model0_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string model1_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  Highs highs;
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  }
+  assert(model0_file != model1_file);
+
+  return_status = highs.readModel(model0_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  basis_data = highs.getBasis();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  testBasisRestart(highs, false);
+  testBasisReloadModel(highs, false);
+}
+
 void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
@@ -51,6 +141,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Ensure that no simplex iterations are required when solved from
   // the optimal basis
   highs.run();
+  //  highs.writeSolution("", kSolutionStyleRaw);
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 void testBasisRestart(Highs& highs, const bool from_file) {
@@ -59,7 +150,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // - so that the internal basis changes - and then restoring the
   // original LP
   HighsStatus return_status;
-  // highs.writeSolution("", kWriteSolutionStylePretty);
+  // highs.writeSolution("", kSolutionStylePretty);
   // Change a bound and resolve
 
   const HighsLp& lp = highs.getLp();
@@ -87,7 +178,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
            "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
            changeCol, old_lower_bound, new_lower_bound,
            info.simplex_iteration_count, highs.getObjectiveValue());
-    //  highs.writeSolution("", kWriteSolutionStylePretty);
+    //  highs.writeSolution("", kSolutionStylePretty);
   }
   // Make sure that the test requires iterations
   assert(info.simplex_iteration_count > 0);
@@ -116,95 +207,4 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   }
 
   REQUIRE(info.simplex_iteration_count == 0);
-}
-
-// No commas in test case name.
-TEST_CASE("Basis-file", "[highs_basis_file]") {
-  HighsStatus return_status;
-  std::string model0_file =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  std::string model1_file =
-      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-
-  Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
-  assert(model0_file != model1_file);
-
-  return_status = highs.readModel(model0_file);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  return_status = highs.writeBasis(basis_file);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  return_status = highs.readBasis("Nobasis.bas");
-  REQUIRE(return_status == HighsStatus::kError);
-
-  // Check error return for some invalid basis files
-  std::string invalid_basis_file = "InvalidBasis.bas";
-  std::ofstream f;
-  // Write and read a file for unsupported HiGHS version
-  f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 0" << std::endl;
-  f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kError);
-
-  // Write and read a file for incompatible number of columns
-  f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 1" << std::endl;
-  f << highs.getNumCol() - 1 << " " << highs.getNumRow() << std::endl;
-  f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kError);
-
-  // Write and read a file for incompatible number of rows
-  f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 1" << std::endl;
-  f << highs.getNumCol() << " " << 0 << std::endl;
-  f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kError);
-
-  // Write and read a file for incomplete basis
-  f.open(invalid_basis_file, std::ios::out);
-  f << "HiGHS Version 1" << std::endl;
-  f << highs.getNumCol() << " " << highs.getNumRow() << std::endl;
-  f << "1 1" << std::endl;
-  f.close();
-  return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::kError);
-
-  testBasisRestart(highs, true);
-  testBasisReloadModel(highs, true);
-
-  std::remove(basis_file.c_str());
-  std::remove(invalid_basis_file.c_str());
-}
-
-// No commas in test case name.
-TEST_CASE("Basis-data", "[highs_basis_data]") {
-  HighsStatus return_status;
-  std::string model0_file =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  std::string model1_file =
-      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-
-  Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
-  assert(model0_file != model1_file);
-
-  return_status = highs.readModel(model0_file);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  basis_data = highs.getBasis();
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  testBasisRestart(highs, false);
-  testBasisReloadModel(highs, false);
 }

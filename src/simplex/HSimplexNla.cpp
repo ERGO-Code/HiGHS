@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include "parallel/HighsParallel.h"
+#include "pdqsort/pdqsort.h"
 #include "simplex/HSimplex.h"
 
 using std::vector;
@@ -319,7 +320,7 @@ void HSimplexNla::reportVector(const std::string message,
   printf("%s", message.c_str());
   for (HighsInt iX = 0; iX < num_index; iX++) {
     if (iX % 5 == 0) printf("\n");
-    printf("(%4d %10.4g) ", (int)vector_index[iX], vector_value[iX]);
+    printf("[%4d %11.4g] ", (int)vector_index[iX], vector_value[iX]);
   }
   printf("\n");
 }
@@ -338,18 +339,22 @@ void HSimplexNla::reportArraySparse(const std::string message,
   const HighsInt num_row = lp_->num_row_;
   if (vector->count > 25) return;
   if (vector->count < num_row) {
+    std::vector<HighsInt> sorted_index = vector->index;
+    pdqsort(sorted_index.begin(), sorted_index.begin() + vector->count);
     printf("%s", message.c_str());
     for (HighsInt en = 0; en < vector->count; en++) {
-      HighsInt iRow = vector->index[en];
+      HighsInt iRow = sorted_index[en];
       if (en % 5 == 0) printf("\n");
-      printf("(%4d %10.4g) ", (int)(offset + iRow), vector->array[iRow]);
+      printf("[%4d ", (int)(iRow));
+      if (offset) printf("(%4d)", (int)(offset + iRow));
+      printf("%11.4g] ", vector->array[iRow]);
     }
   } else {
     if (num_row > 25) return;
     printf("%s", message.c_str());
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       if (iRow % 5 == 0) printf("\n");
-      printf("%10.4g ", vector->array[iRow]);
+      printf("%11.4g ", vector->array[iRow]);
     }
   }
   printf("\n");
@@ -362,10 +367,12 @@ void HSimplexNla::reportPackValue(const std::string message,
   const HighsInt num_row = lp_->num_row_;
   if (vector->packCount > 25) return;
   printf("%s", message.c_str());
+  std::vector<HighsInt> sorted_index = vector->packIndex;
+  pdqsort(sorted_index.begin(), sorted_index.begin() + vector->packCount);
   for (HighsInt en = 0; en < vector->packCount; en++) {
-    HighsInt iRow = vector->packIndex[en];
+    HighsInt iRow = sorted_index[en];
     if (en % 5 == 0) printf("\n");
-    printf("(%4d %10.4g) ", (int)iRow, vector->packValue[en]);
+    printf("[%4d %11.4g] ", (int)iRow, vector->packValue[en]);
   }
   printf("\n");
 }

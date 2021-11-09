@@ -233,6 +233,10 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     num_heap_chuzc = 0;
     sum_heap_chuzc_size = 0;
     max_heap_chuzc_size = 0;
+
+    num_improve_choose_column_row_call = 0;
+    num_remove_pivot_from_pack = 0;
+
     num_correct_dual_primal_flip = 0;
     min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
     max_correct_dual_primal_flip = 0;
@@ -914,6 +918,15 @@ void HighsSimplexAnalysis::summaryReport() {
          ",%d,%" HIGHSINT_FORMAT "\n",
          model_name_.c_str(), lp_name_.c_str(), num_quad_chuzc, num_heap_chuzc,
          (int)average_heap_chuzc_size, max_heap_chuzc_size);
+
+  if (num_improve_choose_column_row_call >= 0) {
+    printf("\nDual_CHUZC: Number of improve CHUZC row calls =  %d\n",
+           (int)num_improve_choose_column_row_call);
+    printf("Dual_CHUZC: Number of pivots removed from pack = %d\n",
+           (int)num_remove_pivot_from_pack);
+  } else {
+    assert(num_remove_pivot_from_pack == 0);
+  }
 
   if (num_correct_dual_primal_flip + num_correct_dual_cost_shift +
       num_single_cost_shift) {

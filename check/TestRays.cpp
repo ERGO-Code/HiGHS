@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double zero_ray_value_tolerance = 1e-14;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
@@ -357,7 +357,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
 
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is no dual ray

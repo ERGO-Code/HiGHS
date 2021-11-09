@@ -239,4 +239,10 @@ struct HighsSimplexInfo {
   HighsInt num_basic_logicals;
 };
 
+struct HighsSimplexTabooRecord {
+  TabooReason reason;
+  HighsInt index;
+  double save_value;
+};
+
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

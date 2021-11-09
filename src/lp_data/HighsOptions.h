@@ -252,6 +252,7 @@ const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
+const string kRangingString = "ranging";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -261,6 +262,7 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
+  std::string ranging;
   double time_limit;
 
   // Options read from the file
@@ -311,7 +313,6 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
-  HighsInt simplex_infeasiblilty_proof_refinement_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
@@ -321,8 +322,6 @@ struct HighsOptionsStruct {
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
   double dual_simplex_pivot_growth_tolerance;
-  double simplex_infeasibility_proof_scaled_lp_refinement_tolerance;
-  double simplex_infeasibility_proof_unscaled_lp_refinement_tolerance;
   double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
@@ -416,18 +415,29 @@ class HighsOptions : public HighsOptionsStruct {
         kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kSolverString, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
         advanced, &parallel, kHighsChooseString);
     records.push_back(record_string);
+
     record_double =
         new OptionRecordDouble(kTimeLimitString, "Time limit", advanced,
                                &time_limit, 0, kHighsInf, kHighsInf);
     records.push_back(record_double);
+
+    record_string =
+        new OptionRecordString(kRangingString,
+                               "Compute cost, bound, RHS and basic solution "
+                               "ranging: \"off\" or \"on\"",
+                               advanced, &ranging, kHighsOffString);
+    records.push_back(record_string);
+    //
     // Options read from the file
     record_double =
         new OptionRecordDouble("infinite_cost",
@@ -599,11 +609,12 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt(
-        "write_solution_style",
-        "Write the solution in style: 0=>Raw; 1=>Pretty; 2=>Mittlemann",
-        advanced, &write_solution_style, kWriteSolutionStyleMin,
-        kWriteSolutionStyleRaw, kWriteSolutionStyleMax);
+    record_int =
+        new OptionRecordInt("write_solution_style",
+                            "Write the solution in style: 0=>Raw "
+                            "(computer-readable); 1=>Pretty (human-readable) ",
+                            advanced, &write_solution_style, kSolutionStyleMin,
+                            kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("mip_detect_symmetry",
@@ -763,16 +774,6 @@ class HighsOptions : public HighsOptionsStruct {
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "simplex_infeasiblilty_proof_refinement_strategy",
-        "Strategy for refining infeasiblity proof constraint in simplex "
-        "0 => No; 1 => Only for unscaled LP; 2 => Also for scaled LP",
-        advanced, &simplex_infeasiblilty_proof_refinement_strategy,
-        kSimplexInfeasibilityProofRefinementMin,
-        kSimplexInfeasibilityProofRefinementAlsoScaledLp,
-        kSimplexInfeasibilityProofRefinementMax);
-    records.push_back(record_int);
-
     record_int =
         new OptionRecordInt("simplex_unscaled_solution_strategy",
                             "Strategy for solving unscaled LP in simplex",
@@ -833,20 +834,6 @@ class HighsOptions : public HighsOptionsStruct {
         "dual_simplex_pivot_growth_tolerance",
         "Dual simplex pivot growth tolerance", advanced,
         &dual_simplex_pivot_growth_tolerance, 1e-12, 1e-9, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "simplex_infeasibility_proof_scaled_lp_refinement_tolerance",
-        "Simplex infeasiblilty proof refinement tolerance for scaled LP",
-        advanced, &simplex_infeasibility_proof_scaled_lp_refinement_tolerance,
-        0, 1e-9, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "simplex_infeasibility_proof_unscaled_lp_refinement_tolerance",
-        "Simplex infeasiblilty proof refinement tolerance for unscaled LP",
-        advanced, &simplex_infeasibility_proof_unscaled_lp_refinement_tolerance,
-        1e-12, 1e-12, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

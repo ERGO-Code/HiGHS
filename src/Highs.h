@@ -126,9 +126,19 @@ class Highs {
   /**
    * @brief writes the current solution to a file
    */
-  HighsStatus writeSolution(
-      const std::string filename,   //!< the filename
-      const HighsInt style) const;  //!< Style of solution report
+  HighsStatus writeSolution(const std::string filename,  //!< the filename
+                            const HighsInt style);  //!< Style of solution file
+
+  /**
+   * @brief reads a HiGHS solution file
+   */
+  HighsStatus readSolution(const std::string filename,  //!< the filename
+                           const HighsInt style);  //!< Style of solution file
+
+  /**
+   * @brief checks feasibility of the current solution
+   */
+  HighsStatus checkSolutionFeasibility();
 
   /**
    * Methods for HiGHS option input/output
@@ -284,8 +294,10 @@ class Highs {
                            double* primal_ray_value = NULL);
 
   /**
-   * @brief Gets the ranging information for the current LP
+   * @brief Gets the ranging information for the current LP, possibly
+   * returning it, as well as holding it internally
    */
+  HighsStatus getRanging();
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
@@ -1062,6 +1074,7 @@ class Highs {
 
   HighsOptions options_;
   HighsInfo info_;
+  HighsRanging ranging_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
@@ -1132,6 +1145,9 @@ class Highs {
   //
   // Invalidates info_ and resets the values of its members
   void clearInfo();
+  //
+  // Invalidates ranging_ and clears its vectors
+  void clearRanging();
 
   // Invalidates ekk_instance_
   void clearEkk();

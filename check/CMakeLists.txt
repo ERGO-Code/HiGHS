@@ -14,6 +14,7 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 # Make test executable
 set(TEST_SOURCES
     TestDualise.cpp
+    TestCheckSolution.cpp
     TestEkk.cpp
     TestFreezeBasis.cpp
     TestHotStart.cpp
@@ -30,6 +31,7 @@ set(TEST_SOURCES
     TestHighsHash.cpp
     TestHighsIntegers.cpp
     TestHighsParallel.cpp
+    TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
     TestHSet.cpp
@@ -155,12 +157,12 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;3032\; 5.5018458883\;"
+    "25fv47\;3149\; 5.5018458883\;"
     "80bau3b\;3686\; 9.8722419241\;"
     "adlittle\;74\; 2.2549496316\;"
     "afiro\;22\;-4.6475314286\;"
     "etamacro\;540\;-7.5571523330\;"
-    "greenbea\;4710\;-7.2555248130\;"
+    "greenbea\;4907\;-7.2555248130\;"
     "shell\;623\; 1.2088253460\;"
     "stair\;529\;-2.5126695119\;"
     "standata\;72\; 1.2576995000\;"
@@ -194,7 +196,7 @@ set(mipInstances
     "egout\;(568.1007|568.1006999)\;"
     "gt2\;21166\;"
     "rgn\;82.1999992\;"
-    "bell5\;(8966406.49152|8966406.491519)\;"
+    "bell5\;(8966406.49152|8966406.491519|8966406.49151)\;"
     "sp150x300d\;(69|68.9999999)\;"
     "p0548\;(8691|8690.9999999)\;"
     "dcmulti\;188182\;"

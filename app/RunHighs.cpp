@@ -43,6 +43,9 @@ int main(int argc, char** argv) {
   // Solve the model
   HighsStatus run_status = highs.run();
 
+  // Possibly compute the ranging information
+  if (options.ranging == kHighsOnString) highs.getRanging();
+
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
     highs.writeSolution(options.solution_file, options.write_solution_style);

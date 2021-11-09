@@ -195,6 +195,7 @@ class HEkkDual {
    * enter the basis (CHUZC)
    */
   void chooseColumn(HVector* row_ep);
+  void improveChooseColumnRow(HVector* row_ep);
 
   /**
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
@@ -371,6 +372,8 @@ class HEkkDual {
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
+  bool cyclingDetected();
+
   // Devex scalars
   HighsInt num_devex_iterations =
       0;  //!< Number of Devex iterations with the current framework
@@ -446,7 +449,6 @@ class HEkkDual {
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
-  double max_pack_value;
 
   bool check_invert_condition = false;
 

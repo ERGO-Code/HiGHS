@@ -51,8 +51,10 @@ HighsStatus HEkkPrimal::solve() {
   // and the sum of dual infeasiblilities will be very much larger for
   // non-trivial LPs that are primal feasible for a logical or crash
   // basis.
-  const bool near_optimal =
-      info.num_primal_infeasibilities == 0 && info.sum_dual_infeasibilities < 1;
+  const bool near_optimal = info.num_dual_infeasibilities < 1000 &&
+                            info.max_dual_infeasibility < 1e-3 &&
+                            info.sum_dual_infeasibilities < 1 &&
+                            info.num_primal_infeasibilities == 0;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Primal feasible and num / max / sum dual infeasibilities are "
@@ -61,6 +63,9 @@ HighsStatus HEkkPrimal::solve() {
                 "/ %g, so near-optimal\n",
                 info.num_dual_infeasibilities, info.max_dual_infeasibility,
                 info.sum_dual_infeasibilities);
+
+  // Allow taboo columns
+  ekk_instance_.allow_taboo_cols = true;
 
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
@@ -132,11 +137,14 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kInfeasible is set
       //
+      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase1();
-      assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
-             solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
+      assert(
+          solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
+          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
       info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solve_phase == kSolvePhase2) {
@@ -161,13 +169,16 @@ HighsStatus HEkkPrimal::solve() {
       // detected, in which case model_status_ =
       // HighsModelStatus::kUnbounded is set
       //
+      // solve_phase = kSolvePhaseCycling is set if unavoidable cycling occurs
+      //
       // solve_phase = kSolvePhaseError is set if an error occurs
       solvePhase2();
-      assert(solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
-             solve_phase == kSolvePhase2 ||
-             solve_phase == kSolvePhaseOptimalCleanup ||
-             solve_phase == kSolvePhaseUnknown ||
-             solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
+      assert(
+          solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
+          solve_phase == kSolvePhase2 ||
+          solve_phase == kSolvePhaseOptimalCleanup ||
+          solve_phase == kSolvePhaseUnknown || solve_phase == kSolvePhaseExit ||
+          solve_phase == kSolvePhaseCycling || solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
              ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
@@ -183,6 +194,11 @@ HighsStatus HEkkPrimal::solve() {
     // Can have all possible cases of solve_phase
     assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
+    if (solve_phase == kSolvePhaseCycling) {
+      // Cycling so return HighsStatus::kWarning
+      ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
+      return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+    }
     if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
       ekk_instance_.model_status_ = HighsModelStatus::kSolveError;
@@ -213,11 +229,12 @@ HighsStatus HEkkPrimal::solve() {
     ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
 
   if (solve_phase == kSolvePhaseOptimalCleanup) {
-    highsLogDev(
-        options.log_options, HighsLogType::kInfo,
-        "HEkkPrimal:: Using dual simplex to try to clean up %" HIGHSINT_FORMAT
-        " primal infeasibilities\n",
-        info.num_primal_infeasibilities);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "HEkkPrimal:: Using dual simplex to try to clean up num / "
+                "max / sum = %" HIGHSINT_FORMAT
+                " / %g / %g primal infeasibilities\n",
+                info.num_primal_infeasibilities, info.max_primal_infeasibility,
+                info.sum_primal_infeasibilities);
     ekk_instance_.computePrimalObjectiveValue();
     // Use dual to clean up. This almost always yields optimality,
     // and shouldn't yield infeasiblilty - since the current point
@@ -368,6 +385,7 @@ void HEkkPrimal::solvePhase1() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
+      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase1);
       if (rebuild_reason) break;
     }
@@ -455,6 +473,7 @@ void HEkkPrimal::solvePhase2() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solve_phase == kSolvePhaseError) return;
+      if (solve_phase == kSolvePhaseCycling) return;
       assert(solve_phase == kSolvePhase2);
       if (rebuild_reason) break;
     }
@@ -618,7 +637,14 @@ void HEkkPrimal::rebuild() {
       solve_phase = kSolvePhaseError;
       return;
     }
+    // Record the synthetic clock for INVERT, and zero it for UPDATE
+    ekk_instance_.resetSyntheticClock();
   }
+  // Clear any taboo rows/cols
+  ekk_instance_.clearTaboo();
+  // Possibly allow taboo columns
+  ekk_instance_.allow_taboo_cols =
+      ekk_instance_.allowTabooCols(local_rebuild_reason);
   if (!ekk_instance_.status_.has_ar_matrix) {
     // Don't have the row-wise matrix, so reinitialise it
     //
@@ -693,11 +719,18 @@ void HEkkPrimal::rebuild() {
 }
 
 void HEkkPrimal::iterate() {
-  bool check = ekk_instance_.iteration_count_ >= check_iter;
-  if (check) {
-    printf("Iter %" HIGHSINT_FORMAT "\n", ekk_instance_.iteration_count_);
-    ekk_instance_.options_->highs_debug_level = kHighsDebugLevelExpensive;
+  const HighsInt from_check_iter = 15;
+  const HighsInt to_check_iter = from_check_iter + 10;
+  if (ekk_instance_.debug_solve_report_) {
+    ekk_instance_.debug_iteration_report_ =
+        ekk_instance_.iteration_count_ >= from_check_iter &&
+        ekk_instance_.iteration_count_ <= to_check_iter;
+    if (ekk_instance_.debug_iteration_report_) {
+      printf("HEkkDual::iterate Debug iteration %d\n",
+             (int)ekk_instance_.iteration_count_);
+    }
   }
+
   if (debugPrimalSimplex("Before iteration") ==
       HighsDebugStatus::kLogicalError) {
     solve_phase = kSolvePhaseError;
@@ -756,7 +789,10 @@ void HEkkPrimal::iterate() {
   if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
 
+  if (cyclingDetected()) return;
+
   if (row_out >= 0) {
+    //
     // Perform unit BTRAN and PRICE to get pivotal row - and do a
     // numerical check.
     //
@@ -790,20 +826,29 @@ void HEkkPrimal::iterate() {
       solve_phase == kSolvePhase1)
     rebuild_reason = kRebuildReasonPossiblyPhase1Feasible;
 
-  assert(rebuild_reason == kRebuildReasonNo ||
-         rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
-         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
-         rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
-         rebuild_reason == kRebuildReasonUpdateLimitReached);
+  const bool ok_rebuild_reason =
+      rebuild_reason == kRebuildReasonNo ||
+      rebuild_reason == kRebuildReasonPossiblyPhase1Feasible ||
+      rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
+      rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
+      rebuild_reason == kRebuildReasonUpdateLimitReached;
+  if (!ok_rebuild_reason) {
+    printf("HEkkPrimal::rebuild Solve %d; Iter %d: rebuild_reason = %d\n",
+           (int)ekk_instance_.debug_solve_call_num_,
+           (int)ekk_instance_.iteration_count_, (int)rebuild_reason);
+    fflush(stdout);
+  }
+  assert(ok_rebuild_reason);
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2);
 }
 
 void HEkkPrimal::chuzc() {
   if (done_next_chuzc) assert(use_hyper_chuzc);
+  vector<double>& workDual = ekk_instance_.info_.workDual_;
+  ekk_instance_.applyTabooCol(workDual, 0);
   if (use_hyper_chuzc) {
     // Perform hyper-sparse CHUZC and then check result using full CHUZC
     if (!done_next_chuzc) chooseColumn(true);
-    const vector<double>& workDual = ekk_instance_.info_.workDual_;
     const bool check_hyper_chuzc = true;
     if (check_hyper_chuzc) {
       HighsInt hyper_sparse_variable_in = variable_in;
@@ -817,20 +862,22 @@ void HEkkPrimal::chuzc() {
         measure = fabs(workDual[variable_in]) / devex_weight[variable_in];
       double abs_measure_error = fabs(hyper_sparse_measure - measure);
       bool measure_error = abs_measure_error > 1e-12;
-      if (measure_error) {
-        printf("Iteration %" HIGHSINT_FORMAT
-               ": Hyper-sparse CHUZC measure %g != %g = Full "
-               "CHUZC measure (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
-               "): error %g\n",
-               ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
-               hyper_sparse_variable_in, variable_in, abs_measure_error);
-        assert(!measure_error);
-      }
+      // if (measure_error)
+      //   printf("Iteration %" HIGHSINT_FORMAT
+      //          ": Hyper-sparse CHUZC measure %g != %g = Full "
+      //          "CHUZC measure (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
+      //          "): error %g\n",
+      //          ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
+      //          hyper_sparse_variable_in, variable_in, abs_measure_error);
+
+      // todo this fails on some rarer occasions, e.g. on glass4
+      assert(!measure_error);
       variable_in = hyper_sparse_variable_in;
     }
   } else {
     chooseColumn(false);
   }
+  ekk_instance_.unapplyTabooCol(workDual);
 }
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
@@ -1259,7 +1306,8 @@ void HEkkPrimal::assessPivot() {
   //
   // PRICE
   //
-  ekk_instance_.tableauRowPrice(row_ep, row_ap);
+  const bool quad_precision = false;
+  ekk_instance_.tableauRowPrice(quad_precision, row_ep, row_ap);
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
@@ -1323,23 +1371,6 @@ void HEkkPrimal::update() {
   }
 
   assert(row_out >= 0);
-
-  if (ekk_instance_.checkForCycling(variable_in, row_out)) {
-    analysis->num_primal_cycling_detections++;
-    if (ekk_instance_.iteration_count_ ==
-        ekk_instance_.previous_iteration_cycling_detected + 1) {
-      // Cycling detected on successive iterations suggests infinite cycling
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
-                  "Cycling in primal simplex: rebuild\n");
-      rebuild_reason = kRebuildReasonCycling;
-    } else {
-      ekk_instance_.previous_iteration_cycling_detected =
-          ekk_instance_.iteration_count_;
-    }
-    //    printf("Cycling_detected: solve %d\n",
-    //           (int)ekk_instance_.debug_solve_call_num_);
-    //  assert(1 == 0);
-  }
 
   // Now set the value of the entering variable
   info.baseValue_[row_out] = value_in;
@@ -1413,7 +1444,13 @@ void HEkkPrimal::hyperChooseColumn() {
         "",
         max_changed_measure_value, max_changed_measure_column);
   double best_measure = max_changed_measure_value;
-  variable_in = max_changed_measure_column;
+  variable_in = -1;
+  if (max_changed_measure_column >= 0) {
+    // Use max_changed_measure_column if it is well defined and has
+    // nonzero dual. It may have been zeroed because it is taboo
+    if (workDual[max_changed_measure_column])
+      variable_in = max_changed_measure_column;
+  }
   const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
   if (num_hyper_chuzc_candidates) {
     for (HighsInt iEntry = 1; iEntry <= num_hyper_chuzc_candidates; iEntry++) {
@@ -2087,10 +2124,12 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     }
   }
   row_basic_feasibility_change.clear();
+  const bool quad_precision = false;
   if (use_col_price) {
     // Perform column-wise PRICE
     assert(1 == 0);
-    ekk_instance_.lp_.a_matrix_.priceByColumn(row_basic_feasibility_change,
+    ekk_instance_.lp_.a_matrix_.priceByColumn(quad_precision,
+                                              row_basic_feasibility_change,
                                               col_basic_feasibility_change);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of
@@ -2098,12 +2137,14 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     //
     const double switch_density = kHyperPriceDensity;
     ekk_instance_.ar_matrix_.priceByRowWithSwitch(
-        row_basic_feasibility_change, col_basic_feasibility_change,
-        info.row_basic_feasibility_change_density, 0, switch_density);
+        quad_precision, row_basic_feasibility_change,
+        col_basic_feasibility_change, info.row_basic_feasibility_change_density,
+        0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
     assert(1 == 0);
-    ekk_instance_.ar_matrix_.priceByRow(row_basic_feasibility_change,
+    ekk_instance_.ar_matrix_.priceByRow(quad_precision,
+                                        row_basic_feasibility_change,
                                         col_basic_feasibility_change);
   }
   if (use_col_price) {
@@ -2446,16 +2487,16 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
     // The number of primal infeasibliities should be correct
     bool num_primal_infeasibility_ok =
         num_primal_infeasibility == updated_num_primal_infeasibility;
-    if (!num_primal_infeasibility_ok) {
-      printf("In iteration %" HIGHSINT_FORMAT
-             ": num_primal_infeasibility = %" HIGHSINT_FORMAT
-             " != %" HIGHSINT_FORMAT
-             " = "
-             "updated_num_primal_infeasibility\n",
-             ekk_instance_.iteration_count_, num_primal_infeasibility,
-             updated_num_primal_infeasibility);
-      assert(num_primal_infeasibility_ok);
-    }
+    // if (!num_primal_infeasibility_ok)
+    //   printf("In iteration %" HIGHSINT_FORMAT
+    //          ": num_primal_infeasibility = %" HIGHSINT_FORMAT
+    //          " != %" HIGHSINT_FORMAT
+    //          " = "
+    //          "updated_num_primal_infeasibility\n",
+    //          ekk_instance_.iteration_count_, num_primal_infeasibility,
+    //          updated_num_primal_infeasibility);
+
+    assert(num_primal_infeasibility_ok);
   }
   analysis->simplexTimerStop(ComputePrIfsClock);
 }
@@ -2519,4 +2560,22 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
       num_free_col, nonbasic_free_col_set);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   return HighsDebugStatus::kOk;
+}
+
+bool HEkkPrimal::cyclingDetected() {
+  bool cycling_detected = ekk_instance_.cyclingDetected(
+      SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
+  if (cycling_detected) {
+    analysis->num_primal_cycling_detections++;
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+                "Cycling detected in primal simplex:");
+    if (ekk_instance_.allow_taboo_cols) {
+      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
+                  "make column %d taboo\n", (int)variable_in);
+      ekk_instance_.addTabooCol(variable_in, TabooReason::kCycling);
+    } else {
+      solve_phase = kSolvePhaseCycling;
+    }
+  }
+  return cycling_detected;
 }

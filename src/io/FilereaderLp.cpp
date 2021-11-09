@@ -282,18 +282,46 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     }
   }
 
-  // write binary section
-  this->writeToFile(file, "bin");
-  this->writeToFileLineend(file);
+  if (lp.integrality_.size() > 0) {
+    // write binary section
+    this->writeToFile(file, "bin");
+    this->writeToFileLineend(file);
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      if (lp.integrality_[i] == HighsVarType::kInteger ||
+          lp.integrality_[i] == HighsVarType::kSemiInteger) {
+        if (lp.col_lower_[i] == 0.0 && lp.col_upper_[i] == 1.0) {
+          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+          this->writeToFileLineend(file);
+        }
+      }
+    }
 
-  // write general section
-  this->writeToFile(file, "gen");
-  this->writeToFileLineend(file);
+    // write general section
+    this->writeToFile(file, "gen");
+    this->writeToFileLineend(file);
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      if (lp.integrality_[i] == HighsVarType::kInteger ||
+          lp.integrality_[i] == HighsVarType::kSemiInteger) {
+        if (lp.col_lower_[i] != 0.0 || lp.col_upper_[i] != 1.0) {
+          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+          this->writeToFileLineend(file);
+        }
+      }
+    }
 
-  // write semi section
-  this->writeToFile(file, "semi");
-  this->writeToFileLineend(file);
-
+    // write semi section
+    this->writeToFile(file, "semi");
+    this->writeToFileLineend(file);
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      if (lp.integrality_[i] == HighsVarType::kSemiContinuous ||
+          lp.integrality_[i] == HighsVarType::kSemiInteger) {
+        if (lp.col_lower_[i] != 0.0 || lp.col_upper_[i] != 1.0) {
+          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+          this->writeToFileLineend(file);
+        }
+      }
+    }
+  }
   // write end
   this->writeToFile(file, "end");
   this->writeToFileLineend(file);

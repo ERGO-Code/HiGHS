@@ -344,7 +344,6 @@ void HighsMipSolverData::runSetup() {
   lp.getLpSolver().setOptionValue("simplex_initial_condition_check", false);
 
   checkObjIntegrality();
-  basisTransfer();
   rootlpsol.clear();
   firstlpsol.clear();
   HighsInt numBin = 0;
@@ -365,6 +364,9 @@ void HighsMipSolverData::runSetup() {
                    (mipsolver.model_->col_upper_[i] == 1.0));
     }
   }
+
+  basisTransfer();
+
   numintegercols = integer_cols.size();
   detectSymmetries = detectSymmetries && numBin > 0;
 
@@ -693,26 +695,44 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.valid = true;
     HighsInt missingbasic = numRow;
 
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i = 0; i != numRow; ++i) {
       HighsBasisStatus status =
-          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
+          mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
 
       if (status == HighsBasisStatus::kBasic) {
         --missingbasic;
-        firstrootbasis.col_status[i] = status;
-
+        firstrootbasis.row_status[i] = status;
         if (missingbasic == 0) break;
       }
     }
 
     if (missingbasic != 0) {
-      for (HighsInt i = 0; i != numRow; ++i) {
+      for (HighsInt i : continuous_cols) {
         HighsBasisStatus status =
-            mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
+            mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
+
+        if (mipsolver.variableType(i) != HighsVarType::kContinuous) continue;
 
         if (status == HighsBasisStatus::kBasic) {
           --missingbasic;
-          firstrootbasis.row_status[i] = status;
+          firstrootbasis.col_status[i] = status;
+
+          if (missingbasic == 0) break;
+        }
+      }
+    }
+
+    if (missingbasic != 0) {
+      for (HighsInt i : integral_cols) {
+        HighsBasisStatus status =
+            mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
+
+        if (mipsolver.variableType(i) == HighsVarType::kContinuous) continue;
+
+        if (status == HighsBasisStatus::kBasic) {
+          --missingbasic;
+          firstrootbasis.col_status[i] = status;
+
           if (missingbasic == 0) break;
         }
       }
@@ -1386,10 +1406,10 @@ restart:
   }
 }
 
-bool HighsMipSolverData::checkLimits() const {
+bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != kHighsIInf &&
-      num_nodes >= options.mip_max_nodes) {
+      num_nodes + nodeOffset >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached node limit\n");

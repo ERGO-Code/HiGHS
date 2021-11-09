@@ -25,7 +25,7 @@
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
-const double kHighsMacheps = std::ldexp(1, -63);
+const double kHighsMacheps = std::ldexp(1, -52);
 const double kHighsZero = 1e-50;
 const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
@@ -122,11 +122,10 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
-const HighsInt kWriteSolutionStyleRaw = 0;
-const HighsInt kWriteSolutionStylePretty = 1;
-const HighsInt kWriteSolutionStyleMittelmann = 2;
-const HighsInt kWriteSolutionStyleMin = kWriteSolutionStyleRaw;
-const HighsInt kWriteSolutionStyleMax = kWriteSolutionStyleMittelmann;
+const HighsInt kSolutionStyleRaw = 0;
+const HighsInt kSolutionStylePretty = 1;
+const HighsInt kSolutionStyleMin = kSolutionStyleRaw;
+const HighsInt kSolutionStyleMax = kSolutionStylePretty;
 
 const std::string kHighsFilenameDefault = "";
 
@@ -183,7 +182,7 @@ enum class HighsBasisStatus {
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
-const double kHighsIllegalInfeasibilityMeasure = -1;
+const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
 
 // Termination link in linked lists
 const HighsInt kNoLink = -1;

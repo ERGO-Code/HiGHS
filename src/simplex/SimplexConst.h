@@ -52,7 +52,8 @@ enum SimplexSolvePhase {
   kSolvePhase2,                        // 2
   kSolvePhasePrimalInfeasibleCleanup,  // 3
   kSolvePhaseOptimalCleanup,           // 4
-  kSolvePhaseMax = kSolvePhaseOptimalCleanup
+  kSolvePhaseCycling,                  // 5
+  kSolvePhaseMax = kSolvePhaseCycling
 };
 
 enum SimplexCrashStrategy {
@@ -129,7 +130,6 @@ enum RebuildReason {
   kRebuildReasonPossiblySingularBasis,            // 7
   kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
   kRebuildReasonChooseColumnFail,                 // 9
-  kRebuildReasonCycling,                          // 10
   kRebuildReasonCount
 };
 
@@ -190,6 +190,8 @@ enum class LpAction {
   kHotStart,
   kBacktracking
 };
+
+enum class TabooReason { kSingular = 0, kCycling };
 
 //
 // Relation between HiGHS basis and Simplex basis

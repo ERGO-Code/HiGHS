@@ -180,7 +180,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   HighsLp lp_free = highs.getLp();
 
-  REQUIRE(lp_free.integrality_.size() == lp_free.num_col_);
+  REQUIRE((int)lp_free.integrality_.size() == lp_free.num_col_);
   REQUIRE(lp_free.integrality_ == kIntegers);
 
   // Read mps with fixed format parser.
@@ -192,7 +192,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   HighsLp lp_fixed = highs.getLp();
 
-  REQUIRE(lp_fixed.integrality_.size() == lp_fixed.num_col_);
+  REQUIRE((int)lp_fixed.integrality_.size() == lp_fixed.num_col_);
   REQUIRE(lp_fixed.integrality_ == kIntegers);
 
   bool are_the_same = lp_free == lp_fixed;

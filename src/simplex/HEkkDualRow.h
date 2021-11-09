@@ -175,7 +175,6 @@ class HEkkDualRow {
 
   // packed data:
   HighsInt packCount = 0;           //!< number of packed indices/values
-  double max_pack_value = 0;        //!< maximum packed value
   std::vector<HighsInt> packIndex;  //!< Packed indices
   std::vector<double> packValue;    //!< Packed values
 
