@@ -776,6 +776,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::kError;
     }
     case HighsModelStatus::kUnknown:
+      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+      // fall through
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
