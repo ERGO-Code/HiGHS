@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsSparseMatrix.h
+/**@file util/HighsSparseMatrix.h
  * @brief
  */
 #ifndef LP_DATA_HIGHS_SPARSE_MATRIX_H_
@@ -21,11 +21,15 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"  //For  HighsScale
 #include "lp_data/HighsStatus.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
+#include "util/HighsSparseVectorSum.h"
 #include "util/HighsUtils.h"
 
 const double kHyperPriceDensity = 0.1;
+const HighsInt kDebugReportOff = -2;
+const HighsInt kDebugReportAll = -1;
 
 class HighsSparseMatrix {
  public:
@@ -78,18 +82,28 @@ class HighsSparseMatrix {
                    const HighsInt to_col);
   void createColwise(const HighsSparseMatrix& matrix);
   void createRowwise(const HighsSparseMatrix& matrix);
-  void product(vector<double>& result, const vector<double>& row) const;
+  void productQuad(vector<double>& result, const vector<double>& row,
+                   const HighsInt debug_report = kDebugReportOff) const;
+  void productTransposeQuad(
+      vector<double>& result_value, vector<HighsInt>& result_index,
+      const HVector& column,
+      const HighsInt debug_report = kDebugReportOff) const;
   // Methods for PRICE, including the creation and updating of the
   // partitioned row-wise matrix
   void createRowwisePartitioned(const HighsSparseMatrix& matrix,
                                 const int8_t* in_partition = NULL);
   bool debugPartitionOk(const int8_t* in_partition) const;
-  void priceByColumn(HVector& result, const HVector& column) const;
-  void priceByRow(HVector& result, const HVector& column) const;
-  void priceByRowWithSwitch(HVector& result, const HVector& column,
-                            const double expected_density,
-                            const HighsInt from_index,
-                            const double switch_density) const;
+  void priceByColumn(const bool quad_precision, HVector& result,
+                     const HVector& column,
+                     const HighsInt debug_report = kDebugReportOff) const;
+  void priceByRow(const bool quad_precision, HVector& result,
+                  const HVector& column,
+                  const HighsInt debug_report = kDebugReportOff) const;
+  void priceByRowWithSwitch(
+      const bool quad_precision, HVector& result, const HVector& column,
+      const double expected_density, const HighsInt from_index,
+      const double switch_density,
+      const HighsInt debug_report = kDebugReportOff) const;
   void update(const HighsInt var_in, const HighsInt var_out,
               const HighsSparseMatrix& matrix);
   double computeDot(const HVector& column, const HighsInt use_col) const;
@@ -97,8 +111,23 @@ class HighsSparseMatrix {
                  const double multiplier) const;
 
  private:
-  void priceByRowDenseResult(HVector& result, const HVector& column,
-                             const HighsInt from_index) const;
+  void priceByRowDenseResult(
+      std::vector<double>& result, const HVector& column,
+      const HighsInt from_index,
+      const HighsInt debug_report = kDebugReportOff) const;
+  void priceByRowDenseResult(
+      std::vector<HighsCDouble>& result, const HVector& column,
+      const HighsInt from_index,
+      const HighsInt debug_report = kDebugReportOff) const;
+  void debugReportRowPrice(const HighsInt iRow, const double multiplier,
+                           const HighsInt to_iEl,
+                           const vector<double>& result) const;
+  void debugReportRowPrice(const HighsInt iRow, const double multiplier,
+                           const HighsInt to_iEl,
+                           const vector<HighsCDouble>& result) const;
+  void debugReportRowPrice(const HighsInt iRow, const double multiplier,
+                           const HighsInt to_iEl,
+                           HighsSparseVectorSum& sum) const;
 };
 
 #endif

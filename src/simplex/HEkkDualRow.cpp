@@ -72,7 +72,6 @@ void HEkkDualRow::chooseMakepack(const HVector* row, const HighsInt offset) {
   const HighsInt rowCount = row->count;
   const HighsInt* rowIndex = &row->index[0];
   const double* rowArray = &row->array[0];
-
   for (HighsInt i = 0; i < rowCount; i++) {
     const HighsInt index = rowIndex[i];
     const double value = rowArray[index];
@@ -93,6 +92,7 @@ void HEkkDualRow::choosePossible() {
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   workTheta = kHighsInf;
   workCount = 0;
+
   for (HighsInt i = 0; i < packCount; i++) {
     const HighsInt iCol = packIndex[i];
     const HighsInt move = workMove[iCol];
@@ -129,7 +129,15 @@ HighsInt HEkkDualRow::chooseFinal() {
    */
 
   // 1. Reduce by large step BFRT
-  analysis->simplexTimerStart(Chuzc2Clock);
+  analysis->simplexTimerStart(Chuzc3Clock);
+  bool report_bfrt = false;
+  const bool debug_bfrt_report_on = false;
+  if (ekk_instance_.debug_iteration_report_) {
+    report_bfrt = debug_bfrt_report_on;
+    if (report_bfrt)
+      printf("HEkkDualRow::chooseFinal Check iter = %d\n",
+             (int)ekk_instance_.iteration_count_);
+  }
   HighsInt fullCount = workCount;
   workCount = 0;
   double totalChange = 0;
@@ -148,7 +156,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     selectTheta *= 10;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  analysis->simplexTimerStop(Chuzc2Clock);
+  analysis->simplexTimerStop(Chuzc3Clock);
   // 2. Choose by small step BFRT
 
   bool use_quad_sort = false;
@@ -158,6 +166,14 @@ HighsInt HEkkDualRow::chooseFinal() {
   use_quad_sort = true;  // workCount < 100;
   use_heap_sort = !use_quad_sort;
   assert(use_heap_sort || use_quad_sort);
+  if (workCount < 100) {
+    analysis->num_quad_chuzc++;
+  } else {
+    analysis->num_heap_chuzc++;
+    analysis->sum_heap_chuzc_size += workCount;
+    analysis->max_heap_chuzc_size =
+        max(workCount, analysis->max_heap_chuzc_size);
+  }
 
   if (use_heap_sort) {
     printf("CHUZC: Using heap sort\n");
@@ -166,22 +182,22 @@ HighsInt HEkkDualRow::chooseFinal() {
     original_workData = workData;
     alt_workCount = workCount;
   }
-  analysis->simplexTimerStart(Chuzc3Clock);
+  analysis->simplexTimerStart(Chuzc4Clock);
   bool choose_ok;
   if (use_quad_sort) {
     // Use the O(n^2) quadratic sort for the candidates
-    analysis->simplexTimerStart(Chuzc3a0Clock);
+    analysis->simplexTimerStart(Chuzc4a0Clock);
     choose_ok = chooseFinalWorkGroupQuad();
-    analysis->simplexTimerStop(Chuzc3a0Clock);
+    analysis->simplexTimerStop(Chuzc4a0Clock);
   }
   if (use_heap_sort) {
     // Use the O(n log n) heap sort for the candidates
-    analysis->simplexTimerStart(Chuzc3a1Clock);
+    analysis->simplexTimerStart(Chuzc4a1Clock);
     choose_ok = chooseFinalWorkGroupHeap();
-    analysis->simplexTimerStop(Chuzc3a1Clock);
+    analysis->simplexTimerStop(Chuzc4a1Clock);
   }
   if (!choose_ok) {
-    analysis->simplexTimerStop(Chuzc3Clock);
+    analysis->simplexTimerStop(Chuzc4Clock);
     return -1;
   }
   // Make sure that there is at least one group according to sorting procedure
@@ -189,7 +205,7 @@ HighsInt HEkkDualRow::chooseFinal() {
   if (use_heap_sort) assert((HighsInt)alt_workGroup.size() > 1);
 
   // 3. Choose large alpha
-  analysis->simplexTimerStart(Chuzc3bClock);
+  analysis->simplexTimerStart(Chuzc4bClock);
   HighsInt breakIndex;
   HighsInt breakGroup;
   HighsInt alt_breakIndex;
@@ -200,7 +216,7 @@ HighsInt HEkkDualRow::chooseFinal() {
   if (use_heap_sort)
     chooseFinalLargeAlpha(alt_breakIndex, alt_breakGroup, alt_workCount,
                           sorted_workData, alt_workGroup);
-  analysis->simplexTimerStop(Chuzc3bClock);
+  analysis->simplexTimerStop(Chuzc4bClock);
 
   if (!use_quad_sort) {
     // If the quadratic sort is not being used, revert to the heap
@@ -208,7 +224,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     breakIndex = alt_breakIndex;
     breakGroup = alt_breakGroup;
   }
-  analysis->simplexTimerStart(Chuzc3cClock);
+  analysis->simplexTimerStart(Chuzc4cClock);
 
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   assert(breakIndex >= 0);
@@ -225,20 +241,31 @@ HighsInt HEkkDualRow::chooseFinal() {
   } else {
     workTheta = 0;
   }
-  analysis->simplexTimerStop(Chuzc3cClock);
+  analysis->simplexTimerStop(Chuzc4cClock);
 
-  analysis->simplexTimerStart(Chuzc3dClock);
+  analysis->simplexTimerStart(Chuzc4dClock);
 
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;  // Not used
   workCount = 0;
-  const bool report = true;  // ekk_instance_.iteration_count_ == check_iter;
   if (use_quad_sort) {
+    if (report_bfrt) {
+      printf(
+          "CHUZC(%d) breakGroup = %d/%d; breakIndex = %d/%d; workPivot = %d; "
+          "workCount = %d\n",
+          (int)ekk_instance_.iteration_count_, (int)breakGroup,
+          (int)workGroup.size(), (int)breakIndex,
+          (int)workGroup[workGroup.size()], (int)workPivot, (int)workCount);
+      debugReportBfrtVar(-1, workData);
+    }
     for (HighsInt i = 0; i < workGroup[breakGroup]; i++) {
+      if (report_bfrt) debugReportBfrtVar(i, workData);
       const HighsInt iCol = workData[i].first;
       const HighsInt move = workMove[iCol];
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
+    for (HighsInt i = workGroup[breakGroup]; i < workGroup[breakGroup + 1]; i++)
+      if (report_bfrt) debugReportBfrtVar(i, workData);
   } else {
     printf("DebugHeapSortCHUZC: Pivot = %4d; alpha = %11.4g; theta = %11.4g\n",
            (int)workPivot, workAlpha, workTheta);
@@ -273,22 +300,14 @@ HighsInt HEkkDualRow::chooseFinal() {
     }
   }
   if (workTheta == 0) workCount = 0;
-  analysis->simplexTimerStop(Chuzc3dClock);
+  analysis->simplexTimerStop(Chuzc4dClock);
 
-  analysis->simplexTimerStart(Chuzc3eClock);
+  analysis->simplexTimerStart(Chuzc4eClock);
   // Sort workData by .first (iCol) so that columns of A are accessed in order?
   pdqsort(workData.begin(), workData.begin() + workCount);
-  analysis->simplexTimerStop(Chuzc3eClock);
-  analysis->simplexTimerStop(Chuzc3Clock);
+  analysis->simplexTimerStop(Chuzc4eClock);
+  analysis->simplexTimerStop(Chuzc4Clock);
 
-  HighsInt num_infeasibility = debugChooseColumnInfeasibilities();
-  if (num_infeasibility) {
-    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
-                "Heap-based chooseFinal would create %d dual infeasibilities\n",
-                (int)num_infeasibility);
-    analysis->simplexTimerStop(Chuzc3dClock);
-    return -1;
-  }
   return 0;
 }
 
@@ -605,21 +624,21 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
 void HEkkDualRow::debugReportBfrtVar(
     const HighsInt ix,
     const std::vector<std::pair<HighsInt, double>>& pass_workData) const {
-  const HighsInt move_out = workDelta < 0 ? -1 : 1;
-  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
-  const HighsInt iCol = sorted_workData[ix].first;
-  const double value = sorted_workData[ix].second;
-  const HighsInt move = workMove[iCol];
-  const double dual = workDual[iCol];
-  const double new_dual = dual - move_out * move * workTheta * value;
-  const double new_dual_infeasibility = move * new_dual;
-  const bool infeasible = new_dual_infeasibility < -Td;
   if (ix < 0) {
     printf(
         "Ix iCol Mv       Lower      Primal       Upper       Value        "
         "Dual       Ratio      NwDual Ifs\n");
     return;
   }
+  const HighsInt move_out = workDelta < 0 ? -1 : 1;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
+  const HighsInt iCol = pass_workData[ix].first;
+  const double value = pass_workData[ix].second;
+  const HighsInt move = workMove[iCol];
+  const double dual = workDual[iCol];
+  const double new_dual = dual - move_out * move * workTheta * value;
+  const double new_dual_infeasibility = move * new_dual;
+  const bool infeasible = new_dual_infeasibility < -Td;
   printf("%2d %4d %2d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %3d\n",
          (int)ix, (int)iCol, (int)move, ekk_instance_.info_.workLower_[iCol],
          ekk_instance_.info_.workValue_[iCol],

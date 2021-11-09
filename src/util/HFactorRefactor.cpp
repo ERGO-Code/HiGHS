@@ -10,14 +10,15 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactorRefactor.cpp
+/**@file util/HFactorRefactor.cpp
  * @brief Types of solution classes
  */
 #include <cassert>
 #include <cmath>
 #include <iostream>
 
-#include "simplex/HFactor.h"
+#include "util/HFactor.h"
+#include "util/HVectorBase.h"
 
 // std::max and std::min used in HFactor.h for local in-line
 // functions, so HFactor.h has #include <algorithm>
@@ -55,6 +56,10 @@ HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   // Take build_synthetic_tick from the refactor info so that this
   // refactorization doesn't look unrealistically cheap.
   this->build_synthetic_tick = this->refactor_info_.build_synthetic_tick;
+  // Check that the refactorization info has been set up
+  assert((int)this->refactor_info_.pivot_row.size() >= numRow);
+  assert((int)this->refactor_info_.pivot_var.size() >= numRow);
+  assert((int)this->refactor_info_.pivot_type.size() >= numRow);
   for (HighsInt iK = 0; iK < numRow; iK++) {
     HighsInt iRow = this->refactor_info_.pivot_row[iK];
     HighsInt iVar = this->refactor_info_.pivot_var[iK];

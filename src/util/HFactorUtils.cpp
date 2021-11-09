@@ -10,10 +10,10 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HFactorUtils.cpp
+/**@file util/HFactorUtils.cpp
  * @brief Types of solution classes
  */
-#include "simplex/HFactor.h"
+#include "util/HFactor.h"
 
 void HFactor::invalidAMatrixAction() {
   this->a_matrix_valid = false;

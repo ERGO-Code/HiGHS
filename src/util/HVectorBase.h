@@ -10,13 +10,12 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HVector.h
+/**@file util/HVector.h
  * @brief Vector structure for HiGHS
  */
-#ifndef SIMPLEX_HVECTOR_H_
-#define SIMPLEX_HVECTOR_H_
+#ifndef UTIL_HVECTOR_BASE_H_
+#define UTIL_HVECTOR_BASE_H_
 
-#include <map>
 #include <vector>
 
 #include "util/HighsInt.h"
@@ -27,7 +26,8 @@ using std::vector;
 /**
  * @brief Class for the vector structure for HiGHS
  */
-class HVector {
+template <typename Real>
+class HVectorBase {
  public:
   /**
    * @brief Initialise a vector
@@ -44,14 +44,14 @@ class HVector {
   HighsInt size;           //!< Dimension of the vector
   HighsInt count;          //!< Number of nonzeros
   vector<HighsInt> index;  //!< Packed indices of nonzeros
-  vector<double> array;    //!< Full-length array of values
+  vector<Real> array;      //!< Full-length array of values
 
   double synthetic_tick;  //!< Synthetic clock for operations with this vector
 
   // For update
-  vector<char> cwork;      //!< char working buffer for UPDATE
-  vector<HighsInt> iwork;  //!< integer working buffer for UPDATE
-  HVector* next;           //!< Allows vectors to be linked for PAMI
+  vector<char> cwork;       //!< char working buffer for UPDATE
+  vector<HighsInt> iwork;   //!< integer working buffer for UPDATE
+  HVectorBase<Real>* next;  //!< Allows vectors to be linked for PAMI
 
   /*
    * Zero values in Vector.array that exceed kHighsTiny in magnitude
@@ -64,32 +64,36 @@ class HVector {
    *
    */
   void pack();
+
   bool packFlag;               //!< Flag to indicate whether to pack or not
   HighsInt packCount;          //!< Number of nonzeros packed
   vector<HighsInt> packIndex;  //!< Packed indices
-  vector<double> packValue;    //!< Packed values
+  vector<Real> packValue;      //!< Packed values
 
   /**
-   * @brief Copy from another HVector structure to this instance
+   * @brief Copy from another HVector structure to this instanc
    */
-  void copy(const HVector* from  //!< Source of HVector structure to be copied
+  template <typename FromReal>
+  void copy(const HVectorBase<FromReal>*
+                from  //!< Source of HVector structure to be copied
   );
 
   /**
    * @brief Compute the squared 2-norm of the vector
    */
-  double norm2();
+  Real norm2();
 
   /**
    * @brief Add a multiple pivotX of *pivot into this vector,
    * maintaining indices of nonzeros but not tracking cancellation
    */
-  void saxpy(const double pivotX,  //!< The multiple of *pivot to be added
-             const HVector* pivot  //!< The vector whose multiple is to be added
+  template <typename RealPivX, typename RealPiv>
+  void saxpy(const RealPivX pivotX,  //!< The multiple of *pivot to be added
+             const HVectorBase<RealPiv>*
+                 pivot  //!< The vector whose multiple is to be added
   );
-  bool isEqual(HVector& v0);
+
+  bool isEqual(const HVectorBase<Real>& v0);
 };
 
-typedef HVector* HVector_ptr;
-
-#endif /* SIMPLEX_HVECTOR_H_ */
+#endif /* UTIL_HVECTOR_BASE_H_ */

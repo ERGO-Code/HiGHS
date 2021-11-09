@@ -23,8 +23,10 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexConst.h"
+#include "util/HFactor.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "util/HighsInt.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
@@ -234,6 +236,17 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_step_distribution;
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
+
+  HighsInt num_primal_cycling_detections = 0;
+  HighsInt num_dual_cycling_detections = 0;
+
+  HighsInt num_quad_chuzc = 0;
+  HighsInt num_heap_chuzc = 0;
+  double sum_heap_chuzc_size = 0;
+  HighsInt max_heap_chuzc_size = 0;
+
+  HighsInt num_improve_choose_column_row_call = 0;
+  HighsInt num_remove_pivot_from_pack = 0;
 
   HighsInt num_correct_dual_primal_flip = 0;
   double min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;

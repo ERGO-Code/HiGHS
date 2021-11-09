@@ -28,16 +28,20 @@ struct HighsRangingRecord {
 };
 
 struct HighsRanging {
+  bool valid = false;
   HighsRangingRecord col_cost_up;
   HighsRangingRecord col_cost_dn;
   HighsRangingRecord col_bound_up;
   HighsRangingRecord col_bound_dn;
   HighsRangingRecord row_bound_up;
   HighsRangingRecord row_bound_dn;
+  void clear();
 };
 
 HighsStatus getRangingData(HighsRanging& ranging,
                            HighsLpSolverObject& solver_object);
-void writeRanging(const HighsRanging& ranging,
-                  const HighsLpSolverObject& solver_object);
+void writeRangingFile(FILE* file, const HighsLp& lp,
+                      const double objective_function_value,
+                      const HighsBasis& basis, const HighsSolution& solution,
+                      const HighsRanging& ranging, const HighsInt style);
 #endif

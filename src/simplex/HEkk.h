@@ -83,6 +83,17 @@ class HEkk {
   void unscaleSimplex(const HighsLp& incumbent_lp);
   double factorSolveError();
 
+  bool proofOfPrimalInfeasibility();
+  bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
+                                  const HighsInt row_out);
+
+  double getValueScale(const HighsInt count, const vector<double>& value);
+  double getMaxAbsRowValue(HighsInt row);
+
+  void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
+  void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
+                         HVector& residual, double& residual_norm);
+
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
@@ -138,15 +149,23 @@ class HEkk {
   HotStart hot_start_;
 
   double cost_scale_ = 1;
+  double cost_perturbation_base_;
+  double cost_perturbation_max_abs_cost_;
   HighsInt iteration_count_ = 0;
   HighsInt dual_simplex_cleanup_level_ = 0;
   HighsInt dual_simplex_phase1_cleanup_level_ = 0;
+
+  HighsInt previous_iteration_cycling_detected = -kHighsIInf;
 
   bool solve_bailout_;
   bool called_return_from_solve_;
   SimplexAlgorithm exit_algorithm_;
   HighsInt return_primal_solution_status_;
   HighsInt return_dual_solution_status_;
+
+  // Data to be retained after proving primal infeasiblilty
+  vector<HighsInt> proof_index_;
+  vector<double> proof_value_;
 
   // Data to be retained when dualising
   HighsInt original_num_col_;
@@ -172,6 +191,13 @@ class HEkk {
   double build_synthetic_tick_;
   double total_synthetic_tick_;
   HighsInt debug_solve_call_num_ = 0;
+  bool debug_solve_report_ = false;
+  bool debug_iteration_report_ = false;
+
+  bool allow_taboo_cols;
+  bool allow_taboo_rows;
+  std::vector<HighsSimplexTabooRecord> taboo_col;
+  std::vector<HighsSimplexTabooRecord> taboo_row;
 
  private:
   bool isUnconstrainedLp();
@@ -207,7 +233,9 @@ class HEkk {
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
-  void tableauRowPrice(const HVector& row_ep, HVector& row_ap);
+  void tableauRowPrice(const bool quad_precision, const HVector& row_ep,
+                       HVector& row_ap,
+                       const HighsInt debug_report = kDebugReportOff);
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
@@ -230,7 +258,9 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  bool checkForCycling(const HighsInt variable_in, const HighsInt row_out);
+  bool cyclingDetected(const SimplexAlgorithm algorithm,
+                       const HighsInt variable_in, const HighsInt row_out,
+                       const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -250,6 +280,18 @@ class HEkk {
   double computeBasisCondition();
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
+
+  void clearTaboo();
+
+  bool allowTabooRows(const HighsInt rebuild_reason);
+  void addTabooRow(const HighsInt iRow, const TabooReason reason);
+  void applyTabooRow(vector<double>& values, double overwrite_with);
+  void unapplyTabooRow(vector<double>& values);
+
+  bool allowTabooCols(const HighsInt rebuild_reason);
+  void addTabooCol(const HighsInt iCol, const TabooReason reason);
+  void applyTabooCol(vector<double>& values, double overwrite_with);
+  void unapplyTabooCol(vector<double>& values);
 
   // Methods in HEkkControl
   void initialiseControl();
@@ -286,7 +328,8 @@ class HEkk {
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
 
-  HighsDebugStatus debugSimplexDualInfeasible(const bool force_report = false);
+  HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
+                                              const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
   friend class HEkkPrimal;
   friend class HEkkDual;

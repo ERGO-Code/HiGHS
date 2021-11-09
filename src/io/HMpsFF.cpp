@@ -52,7 +52,15 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.row_names_ = std::move(rowNames);
   lp.col_names_ = std::move(colNames);
 
-  lp.integrality_ = std::move(col_integrality);
+  // Only set up lp.integrality_ if non-continuous
+  bool is_mip = false;
+  for (HighsInt iCol = 0; iCol < (int)col_integrality.size(); iCol++) {
+    if (col_integrality[iCol] != HighsVarType::kContinuous) {
+      is_mip = true;
+      break;
+    }
+  }
+  if (is_mip) lp.integrality_ = std::move(col_integrality);
 
   hessian.dim_ = q_dim;
   hessian.format_ = HessianFormat::kTriangular;
@@ -372,6 +380,24 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
                   "readMPS: Read NAME    OK\n");
       return HMpsFF::Parsekey::kNone;
     }
+
+    if (key == HMpsFF::Parsekey::kObjsense) {
+      // Look for Gurobi-style definition of MAX/MIN on OBJSENSE line
+      if (e < (HighsInt)strline.length()) {
+        std::string sense = first_word(strline, e);
+        if (sense.compare("MAX") == 0) {
+          // Found MAX sense on OBJSENSE line
+          objSense = ObjSense::kMaximize;
+        } else if (sense.compare("MIN") == 0) {
+          // Found MIN sense on OBJSENSE line
+          objSense = ObjSense::kMinimize;
+        }
+        // Don't return HMpsFF::Parsekey::kNone; in case there's a
+        // redefinition of OBJSENSE on the "proper" line. If there's
+        // no such line, the ROWS keyword is read OK
+      }
+    }
+
     return key;
   }
   return HMpsFF::Parsekey::kFail;
@@ -875,6 +901,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
   HighsInt num_bv = 0;
   HighsInt num_li = 0;
   HighsInt num_ui = 0;
+  HighsInt num_si = 0;
+  HighsInt num_sc = 0;
   auto parsename = [this](const std::string& name, HighsInt& colidx) {
     auto mit = colname2idx.find(name);
     // assert(mit != colname2idx.end());
@@ -936,54 +964,76 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
             log_options, HighsLogType::kInfo,
             "Number of UI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_ui);
+      if (num_si)
+        highsLogUser(
+            log_options, HighsLogType::kInfo,
+            "Number of SI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_si);
+      if (num_sc)
+        highsLogUser(
+            log_options, HighsLogType::kInfo,
+            "Number of SC entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_sc);
       highsLogDev(log_options, HighsLogType::kInfo,
                   "readMPS: Read BOUNDS  OK\n");
       return key;
     }
-    bool islb = false;
-    bool isub = false;
-    bool isintegral = false;
-    bool isdefaultbound = false;
+    bool is_lb = false;
+    bool is_ub = false;
+    bool is_integral = false;
+    bool is_semi = false;
+    bool is_defaultbound = false;
     if (word == "UP")  // lower bound
-      isub = true;
+      is_ub = true;
     else if (word == "LO")  // upper bound
-      islb = true;
+      is_lb = true;
     else if (word == "FX")  // fixed
     {
-      islb = true;
-      isub = true;
+      is_lb = true;
+      is_ub = true;
     } else if (word == "MI")  // infinite lower bound
     {
-      islb = true;
-      isdefaultbound = true;
+      is_lb = true;
+      is_defaultbound = true;
       num_mi++;
     } else if (word == "PL")  // infinite upper bound (redundant)
     {
-      isub = true;
-      isdefaultbound = true;
+      is_ub = true;
+      is_defaultbound = true;
       num_pl++;
     } else if (word == "BV")  // binary
     {
-      islb = true;
-      isub = true;
-      isintegral = true;
-      isdefaultbound = true;
+      is_lb = true;
+      is_ub = true;
+      is_integral = true;
+      is_defaultbound = true;
       num_bv++;
     } else if (word == "LI")  // integer lower bound
     {
-      islb = true;
-      isintegral = true;
+      is_lb = true;
+      is_integral = true;
       num_li++;
     } else if (word == "UI")  // integer upper bound
     {
-      isub = true;
-      isintegral = true;
+      is_ub = true;
+      is_integral = true;
       num_ui++;
     } else if (word == "FR")  // free variable
     {
-      islb = true;
-      isub = true;
-      isdefaultbound = true;
+      is_lb = true;
+      is_ub = true;
+      is_defaultbound = true;
+    } else if (word == "SI")  // semi-integer variable
+    {
+      is_ub = true;
+      is_integral = true;
+      is_semi = true;
+      num_si++;
+    } else if (word == "SC")  // semi-continuous variable
+    {
+      is_ub = true;
+      is_semi = true;
+      num_sc++;
     } else {
       std::cerr << "unknown bound type " << word << std::endl;
       exit(1);
@@ -1043,17 +1093,17 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       colUpper.push_back(kHighsInf);
       numCol++;
     }
-    if (isdefaultbound) {
+    if (is_defaultbound) {
       // MI, PL, BV or FR
-      if (isintegral)
+      if (is_integral)
       // binary: BV
       {
-        if (!islb || !isub) {
+        if (!is_lb || !is_ub) {
           highsLogUser(log_options, HighsLogType::kError,
-                       "BV row %s but [islb, isub] = [%1" HIGHSINT_FORMAT
+                       "BV row %s but [is_lb, is_ub] = [%1" HIGHSINT_FORMAT
                        ", %1" HIGHSINT_FORMAT "]\n",
-                       marker.c_str(), islb, isub);
-          assert(islb && isub);
+                       marker.c_str(), is_lb, is_ub);
+          assert(is_lb && is_ub);
           return HMpsFF::Parsekey::kFail;
         }
         // Mark the column as integer and binary
@@ -1064,12 +1114,12 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       } else {
         // continuous: MI, PL or FR
         col_binary[colidx] = false;
-        if (islb) colLower[colidx] = -kHighsInf;
-        if (isub) colUpper[colidx] = kHighsInf;
+        if (is_lb) colLower[colidx] = -kHighsInf;
+        if (is_ub) colUpper[colidx] = kHighsInf;
       }
       continue;
     }
-    // Bounds now are UP, LO, FX, LI or UI
+    // Bounds now are UP, LO, FX, LI, UI, SI or SC
     // here marker is the col name and end marks its end
     word = "";
     word = first_word(strline, end_marker);
@@ -1081,22 +1131,31 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       return HMpsFF::Parsekey::kFail;
     }
     double value = atof(word.c_str());
-    if (isintegral) {
+    if (is_integral) {
+      assert(is_lb || is_ub || is_semi);
       // Must be LI or UI, and value should be integer
       HighsInt i_value = static_cast<HighsInt>(value);
       double dl = value - i_value;
       if (dl)
         highsLogUser(log_options, HighsLogType::kError,
-                     "Bound for LI/UI row %s is %g: not integer\n",
+                     "Bound for LI/UI/SI column %s is %g: not integer\n",
                      marker.c_str(), value);
-      // Bound marker LI or UI defines the column as integer
-      col_integrality[colidx] = HighsVarType::kInteger;
+      if (is_semi) {
+        // Bound marker SI defines the column as semi-integer
+        col_integrality[colidx] = HighsVarType::kSemiInteger;
+      } else {
+        // Bound marker LI or UI defines the column as integer
+        col_integrality[colidx] = HighsVarType::kInteger;
+      }
+    } else if (is_semi) {
+      // Bound marker SC defines the column as semi-continuous
+      col_integrality[colidx] = HighsVarType::kSemiContinuous;
     }
+    // Assign the bounds that have been read
+    if (is_lb) colLower[colidx] = value;
+    if (is_ub) colUpper[colidx] = value;
     // Column is not binary by default
     col_binary[colidx] = false;
-    // Assign the bounds that have been read
-    if (islb) colLower[colidx] = value;
-    if (isub) colUpper[colidx] = value;
   }
   return Parsekey::kFail;
 }

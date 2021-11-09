@@ -22,8 +22,8 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
-#include "simplex/HFactorConst.h"
 #include "simplex/SimplexConst.h"
+#include "util/HFactorConst.h"
 
 using std::string;
 
@@ -252,6 +252,7 @@ const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
+const string kRangingString = "ranging";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -261,6 +262,7 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
+  std::string ranging;
   double time_limit;
 
   // Options read from the file
@@ -290,7 +292,6 @@ struct HighsOptionsStruct {
   std::string log_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
-  bool write_solution_pretty;
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
@@ -319,6 +320,7 @@ struct HighsOptionsStruct {
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
+  double dual_simplex_pivot_growth_tolerance;
   double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
@@ -412,18 +414,29 @@ class HighsOptions : public HighsOptionsStruct {
         kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kSolverString, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
         advanced, &parallel, kHighsChooseString);
     records.push_back(record_string);
+
     record_double =
         new OptionRecordDouble(kTimeLimitString, "Time limit", advanced,
                                &time_limit, 0, kHighsInf, kHighsInf);
     records.push_back(record_double);
+
+    record_string =
+        new OptionRecordString(kRangingString,
+                               "Compute cost, bound, RHS and basic solution "
+                               "ranging: \"off\" or \"on\"",
+                               advanced, &ranging, kHighsOffString);
+    records.push_back(record_string);
+    //
     // Options read from the file
     record_double =
         new OptionRecordDouble("infinite_cost",
@@ -587,17 +600,12 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "write_solution_pretty",
-        "Write the solution in a pretty (human-readable) format", advanced,
-        &write_solution_pretty, false);
-    records.push_back(record_bool);
-
-    record_int = new OptionRecordInt(
-        "write_solution_style",
-        "Write the solution in style: 0=>Raw; 1=>Pretty; 2=>Mittlemann",
-        advanced, &write_solution_style, kWriteSolutionStyleMin,
-        kWriteSolutionStyleRaw, kWriteSolutionStyleMax);
+    record_int =
+        new OptionRecordInt("write_solution_style",
+                            "Write the solution in style: 0=>Raw "
+                            "(computer-readable); 1=>Pretty (human-readable) ",
+                            advanced, &write_solution_style, kSolutionStyleMin,
+                            kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("mip_detect_symmetry",
@@ -811,6 +819,12 @@ class HighsOptions : public HighsOptionsStruct {
         "Primal simplex bound perturbation multiplier: 0 => no perturbation",
         advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
         kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_simplex_pivot_growth_tolerance",
+        "Dual simplex pivot growth tolerance", advanced,
+        &dual_simplex_pivot_growth_tolerance, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

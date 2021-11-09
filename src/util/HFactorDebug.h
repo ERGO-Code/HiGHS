@@ -10,11 +10,11 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HFactorDebug.h
+/**@file util/HFactorDebug.h
  * @brief
  */
-#ifndef SIMPLEX_HFACTORDEBUG_H_
-#define SIMPLEX_HFACTORDEBUG_H_
+#ifndef UTIL_HFACTORDEBUG_H_
+#define UTIL_HFACTORDEBUG_H_
 
 #include <vector>
 
@@ -56,4 +56,4 @@ void debugPivotValueAnalysis(const HighsInt highs_debug_level,
                              const HighsInt numRow,
                              const vector<double>& UpivotValue);
 
-#endif  // SIMPLEX_HFACTORDEBUG_H_
+#endif  // UTIL_HFACTORDEBUG_H_

@@ -1127,3 +1127,20 @@ void printScatterDataRegressionComparison(
   printf("%10" HIGHSINT_FORMAT " regression better log\n",
          scatter_data.num_better_log_);
 }
+
+double nearestPowerOfTwoScale(const double value) {
+  int exp_scale;
+  // Decompose value into a normalized fraction and an integral power
+  // of two.
+  //
+  // If arg is zero, returns zero and stores zero in *exp. Otherwise
+  // (if arg is not zero), if no errors occur, returns the value x in
+  // the range (-1;-0.5], [0.5; 1) and stores an integer value in *exp
+  // such that x×2(*exp)=arg
+  std::frexp(value, &exp_scale);
+  exp_scale = -exp_scale;
+  // Multiply a floating point value x(=1) by the number 2 raised to
+  // the exp power
+  double scale = std::ldexp(1, exp_scale);
+  return scale;
+}

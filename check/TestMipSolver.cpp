@@ -1,12 +1,10 @@
 #include "Highs.h"
+#include "SpecialLps.h"
 #include "catch.hpp"
 
-const double inf = kHighsInf;
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
-void rowlessMIP(Highs& highs);
-void distillationMIP(Highs& highs);
 void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
@@ -69,7 +67,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   }
   if (dev_run) highs.writeModel("");
   highs.run();
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   double optimal_objective = info.objective_function_value;
   if (dev_run) printf("Objective = %g\n", optimal_objective);
 
@@ -80,7 +78,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
                                       &integrality[0]) == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   REQUIRE(info.objective_function_value == optimal_objective);
 
   integrality.assign(lp.num_col_, HighsVarType::kContinuous);
@@ -96,8 +94,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
           HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
-  if (dev_run) highs.writeSolution("", kWriteSolutionStylePretty);
-  if (dev_run) highs.writeSolution("", kWriteSolutionStyleMittelmann);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStyleRaw);
   REQUIRE(info.objective_function_value == optimal_objective);
 
   REQUIRE(info.mip_node_count == 1);
@@ -132,7 +130,7 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  const HighsInt style = kWriteSolutionStylePretty;
+  const HighsInt style = kSolutionStylePretty;
   if (dev_run) {
     printf("One variable unconstrained MIP: solution\n");
     highs.writeSolution("", style);
@@ -206,25 +204,11 @@ void solve(Highs& highs, std::string presolve,
 }
 
 void distillationMIP(Highs& highs) {
+  SpecialLps special_lps;
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
-  lp.num_col_ = 2;
-  lp.num_row_ = 3;
-  lp.col_cost_ = {8, 10};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {inf, inf};
-  lp.row_lower_ = {7, 12, 6};
-  lp.row_upper_ = {inf, inf, inf};
-  lp.a_matrix_.start_ = {0, 3, 6};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  lp.sense_ = ObjSense::kMinimize;
-  lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
-  require_model_status = HighsModelStatus::kOptimal;
-  optimal_objective = 32.0;
+  special_lps.distillationMip(lp, require_model_status, optimal_objective);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve doesn't reduce the LP
   solve(highs, "on", require_model_status, optimal_objective);

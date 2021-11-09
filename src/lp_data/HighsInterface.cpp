@@ -1201,6 +1201,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
   basicIndex = hot_start.refactor_info.pivot_var;
   nonbasicFlag.assign(num_tot, kNonbasicFlagTrue);
   ekk_instance_.basis_.nonbasicMove_ = hot_start.nonbasicMove;
+  ekk_instance_.hot_start_.refactor_info = hot_start.refactor_info;
   // Complete nonbasicFlag by setting the entries for basic variables
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     nonbasicFlag[basicIndex[iRow]] = kNonbasicFlagFalse;
@@ -1405,8 +1406,9 @@ HighsStatus Highs::checkOptimality(const std::string solver_type,
   return_status = HighsStatus::kWarning;
   if (info_.max_primal_infeasibility >
           sqrt(options_.primal_feasibility_tolerance) ||
-      info_.max_dual_infeasibility >
-          sqrt(options_.dual_feasibility_tolerance)) {
+      (info_.dual_solution_status != kSolutionStatusNone &&
+       info_.max_dual_infeasibility >
+           sqrt(options_.dual_feasibility_tolerance))) {
     // Check for gross errors
     log_type = HighsLogType::kError;
     return_status = HighsStatus::kError;

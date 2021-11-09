@@ -256,6 +256,13 @@ class SpecialLps {
     optimal_objective = 31.2;
   }
 
+  void distillationMip(HighsLp& lp, HighsModelStatus& require_model_status,
+                       double& optimal_objective) {
+    distillationLp(lp, require_model_status, optimal_objective);
+    lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+    optimal_objective = 32.0;
+  }
+
   void blendingLp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
     lp.model_name_ = "blending";

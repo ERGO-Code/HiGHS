@@ -10,11 +10,11 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/FactorTimer.h
+/**@file util/FactorTimer.h
  * @brief Indices of factor iClocks
  */
-#ifndef SIMPLEX_FACTORTIMER_H_
-#define SIMPLEX_FACTORTIMER_H_
+#ifndef UTIL_FACTORTIMER_H_
+#define UTIL_FACTORTIMER_H_
 
 #include "HConfig.h"
 #include "lp_data/HighsAnalysis.h"
@@ -208,4 +208,4 @@ class FactorTimer {
     reportFactorLevel2Clock(factor_timer_clock);
   }
 };
-#endif /* SIMPLEX_FACTORTIMER_H_ */
+#endif /* UTIL_FACTORTIMER_H_ */

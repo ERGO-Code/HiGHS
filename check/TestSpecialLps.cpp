@@ -1,7 +1,7 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
-#include "lp_data/HConst.h"
+//#include "lp_data/HConst.h"
 
 const bool dev_run = false;
 
