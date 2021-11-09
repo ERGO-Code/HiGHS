@@ -328,9 +328,6 @@ if (IPX_ON)
     target_link_libraries(libhighs libipx)
 endif()
 
-find_package(Threads REQUIRED)
-target_link_libraries(libhighs Threads::Threads)
-
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
@@ -798,3 +795,6 @@ endif()
         "${CMAKE_INSTALL_PREFIX}/lib")
 
 endif()
+
+find_package(Threads REQUIRED)
+target_link_libraries(libhighs Threads::Threads)
