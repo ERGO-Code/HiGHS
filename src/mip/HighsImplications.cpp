@@ -408,8 +408,8 @@ void HighsImplications::separateImpliedBounds(
       }
     }
 
-    printf("numEntries: %d, beforeProbing: %d\n",
-           mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
+    // printf("numEntries: %d, beforeProbing: %d\n",
+    //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
     HighsInt numNewEntries =
         mipsolver.mipdata_->cliquetable.getNumEntries() - oldNumEntries;
 
@@ -418,10 +418,10 @@ void HighsImplications::separateImpliedBounds(
     if (nextCleanupCall < 0) {
       HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
       mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldomain);
-      printf("numEntries: %d, beforeMerging: %d\n",
-             mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
+      // printf("numEntries: %d, beforeMerging: %d\n",
+      //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
       nextCleanupCall = mipsolver.mipdata_->cliquetable.getNumEntries();
-      printf("nextCleanupCall: %d\n", nextCleanupCall);
+      // printf("nextCleanupCall: %d\n", nextCleanupCall);
     }
 
     mipsolver.mipdata_->cliquetable.numNeighborhoodQueries = oldNumQueries;
