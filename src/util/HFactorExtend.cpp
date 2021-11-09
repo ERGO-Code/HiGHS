@@ -163,14 +163,14 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // are no non-pivotal entries
   //
 
-  HighsInt UcountX = u_index.size();
+  HighsInt u_countX = u_index.size();
   HighsInt u_pivot_lookup_offset = u_pivot_index.size() - num_row;
   for (HighsInt iRow = num_row; iRow < new_num_row; iRow++) {
     u_pivot_lookup.push_back(u_pivot_lookup_offset + iRow);
     u_pivot_index.push_back(iRow);
     u_pivot_value.push_back(1);
-    u_start.push_back(UcountX);
-    u_last_p.push_back(UcountX);
+    u_start.push_back(u_countX);
+    u_last_p.push_back(u_countX);
   }
 
   // Now, to extend UR
@@ -208,7 +208,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   for (HighsInt iRow = ur_cur_num_vec; iRow < ur_new_num_vec; iRow++)
     ur_space[iRow] = ur_stuff_size;
   // Compute ur_temp exactly as in buildFinish()
-  for (HighsInt k = 0; k < UcountX; k++) ur_temp[u_pivot_lookup[u_index[k]]]++;
+  for (HighsInt k = 0; k < u_countX; k++) ur_temp[u_pivot_lookup[u_index[k]]]++;
   HighsInt iStart = ur_size;
   ur_start[ur_cur_num_vec] = iStart;
   for (HighsInt iRow = ur_cur_num_vec + 1; iRow < ur_new_num_vec + 1; iRow++) {

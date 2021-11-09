@@ -161,14 +161,14 @@ void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
 }
 
 void HFactor::setupGeneral(const HighsSparseMatrix* a_matrix,
-                           HighsInt num_basic_index, HighsInt* basic_index,
+                           HighsInt num_basic, HighsInt* basic_index,
                            const double pivot_threshold,
                            const double pivot_tolerance,
                            const HighsInt highs_debug_level,
                            const HighsLogOptions* log_options) {
   this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_,
                      &a_matrix->start_[0], &a_matrix->index_[0],
-                     &a_matrix->value_[0], num_basic_index, basic_index,
+                     &a_matrix->value_[0], num_basic, basic_index,
                      pivot_threshold, pivot_tolerance, highs_debug_level,
                      log_options, true, kUpdateMethodFt);
 }
@@ -186,7 +186,7 @@ void HFactor::setup(
 
 void HFactor::setupGeneral(const HighsInt num_col_, const HighsInt num_row_,
                            const HighsInt* a_start_, const HighsInt* a_index_,
-                           const double* a_value_, HighsInt num_basic_index,
+                           const double* a_value_, HighsInt num_basic_,
                            HighsInt* basic_index_, const double pivot_threshold_,
                            const double pivot_tolerance_,
                            const HighsInt highs_debug_level_,
@@ -196,6 +196,7 @@ void HFactor::setupGeneral(const HighsInt num_col_, const HighsInt num_row_,
   // Copy Problem size and (pointer to) coefficient matrix
   num_row = num_row_;
   num_col = num_col_;
+  num_basic = num_basic_;
   this->a_matrix_valid = true;
   a_start = a_start_;
   a_index = a_index_;
@@ -1139,9 +1140,9 @@ void HFactor::buildFinish() {
   u_start.resize(num_row);
 
   // UR space
-  HighsInt UcountX = u_index.size();
+  HighsInt u_countX = u_index.size();
   HighsInt ur_stuff_size = update_method == kUpdateMethodFt ? 5 : 0;
-  HighsInt ur_count_size = UcountX + ur_stuff_size * num_row;
+  HighsInt ur_count_size = u_countX + ur_stuff_size * num_row;
   ur_index.resize(ur_count_size);
   ur_value.resize(ur_count_size);
 
@@ -1151,7 +1152,7 @@ void HFactor::buildFinish() {
   ur_start.assign(num_row + 1, 0);
   ur_lastp.assign(num_row, 0);
   ur_space.assign(num_row, ur_stuff_size);
-  for (HighsInt k = 0; k < UcountX; k++) ur_lastp[u_pivot_lookup[u_index[k]]]++;
+  for (HighsInt k = 0; k < u_countX; k++) ur_lastp[u_pivot_lookup[u_index[k]]]++;
   for (HighsInt i = 1; i <= num_row; i++)
     ur_start[i] = ur_start[i - 1] + ur_lastp[i - 1] + ur_stuff_size;
   ur_start.resize(num_row);
@@ -1171,10 +1172,10 @@ void HFactor::buildFinish() {
   }
 
   // Re-factor merit
-  UmeritX = num_row + (LcountX + UcountX) * 1.5;
-  UtotalX = UcountX;
-  if (update_method == kUpdateMethodPf) UmeritX = num_row + UcountX * 4;
-  if (update_method == kUpdateMethodMpf) UmeritX = num_row + UcountX * 3;
+  u_merit_x = num_row + (LcountX + u_countX) * 1.5;
+  u_total_x = u_countX;
+  if (update_method == kUpdateMethodPf) u_merit_x = num_row + u_countX * 4;
+  if (update_method == kUpdateMethodMpf) u_merit_x = num_row + u_countX * 3;
 
   // Clear update buffer
   pf_pivot_value.clear();
@@ -1190,7 +1191,7 @@ void HFactor::buildFinish() {
     iwork.assign(basic_index, basic_index + num_row);
     for (HighsInt i = 0; i < num_row; i++) basic_index[permute[i]] = iwork[i];
     // Add cost of buildFinish to build_synthetic_tick
-    build_synthetic_tick += num_row * 80 + (LcountX + UcountX) * 60;
+    build_synthetic_tick += num_row * 80 + (LcountX + u_countX) * 60;
   }
 }
 
@@ -1768,20 +1769,20 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
 
     // 2. Update partial FTRAN result by recent FT matrix
     for (HighsInt pp = 0; pp < cp; pp++) {
-      HighsInt pRow = iRow[pp];
-      double value = dwork[pRow];
-      HighsInt PFpp = pp + pf_np0;
-      for (HighsInt i = pf_start[PFpp]; i < pf_start[PFpp + 1]; i++)
+      HighsInt p_row = iRow[pp];
+      double value = dwork[p_row];
+      HighsInt pf_pp = pp + pf_np0;
+      for (HighsInt i = pf_start[pf_pp]; i < pf_start[pf_pp + 1]; i++)
         value -= dwork[pf_index[i]] * pf_value[i];
-      iwork.push_back(pRow);  // OK to duplicate
-      dwork[pRow] = value;
+      iwork.push_back(p_row);  // OK to duplicate
+      dwork[p_row] = value;
     }
 
     // 3. Store the partial FTRAN result to matirx U
     double ppaq = dwork[iRow[cp]];  // pivot of the partial aq
     dwork[iRow[cp]] = 0;
-    HighsInt UcountX = t_start[cp];
-    HighsInt u_startX = UcountX;
+    HighsInt u_countX = t_start[cp];
+    HighsInt u_startX = u_countX;
     for (unsigned i = 0; i < iwork.size(); i++) {
       HighsInt index = iwork[i];
       double value = dwork[index];
@@ -1791,8 +1792,8 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
         u_value.push_back(value);
       }
     }
-    UcountX = u_index.size();
-    t_start[cp + 1] = UcountX;
+    u_countX = u_index.size();
+    t_start[cp + 1] = u_countX;
     t_pivot[cp] = p_value[cp] * p_alpha[cp];
 
     // 4. Expand partial BTRAN result to buffer
@@ -1807,9 +1808,9 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
     // 5. Delete logical later rows (in logical order)
     for (HighsInt isort = 0; isort < cp; isort++) {
       HighsInt pp = sorted_pp[isort].second;
-      HighsInt pRow = iRow[pp];
-      double multiplier = -p_value[pp] * dwork[pRow];
-      if (fabs(dwork[pRow]) > kHighsTiny) {
+      HighsInt p_row = iRow[pp];
+      double multiplier = -p_value[pp] * dwork[p_row];
+      if (fabs(dwork[p_row]) > kHighsTiny) {
         for (HighsInt i = 0; i < ep_work[pp]->packCount; i++) {
           HighsInt index = ep_work[pp]->packIndex[i];
           double value = ep_work[pp]->packValue[i];
@@ -1817,7 +1818,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
           dwork[index] += value * multiplier;
         }
       }
-      dwork[pRow] = 0;  // Force to be 0
+      dwork[p_row] = 0;  // Force to be 0
     }
 
     // 6. Update partial BTRAN result by recent U columns
@@ -1833,7 +1834,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
 
     // 6.x compute current alpha
     double thex = 0;
-    for (HighsInt k = u_startX; k < UcountX; k++) {
+    for (HighsInt k = u_startX; k < u_countX; k++) {
       HighsInt index = u_index[k];
       double value = u_value[k];
       thex += dwork[index] * value;
@@ -1853,7 +1854,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
       }
     }
     pf_pivot_index.push_back(iRow[cp]);
-    UtotalX += pf_index.size() - pf_start.back();
+    u_total_x += pf_index.size() - pf_start.back();
     pf_start.push_back(pf_index.size());
 
     // 8. Update the sorted ep
@@ -1866,38 +1867,38 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
     // 1. Delete pivotal row from U
     HighsInt cIndex = iRow[cp];
     HighsInt cLogic = p_logic[cp];
-    UtotalX -= ur_lastp[cLogic] - ur_start[cLogic];
+    u_total_x -= ur_lastp[cLogic] - ur_start[cLogic];
     for (HighsInt k = ur_start[cLogic]; k < ur_lastp[cLogic]; k++) {
       // Find the pivotal position
       HighsInt i_logic = u_pivot_lookup[ur_index[k]];
-      HighsInt iFind = u_start[i_logic];
-      HighsInt iLast = --u_last_p[i_logic];
-      for (; iFind <= iLast; iFind++)
-        if (u_index[iFind] == cIndex) break;
+      HighsInt i_find = u_start[i_logic];
+      HighsInt i_last = --u_last_p[i_logic];
+      for (; i_find <= i_last; i_find++)
+        if (u_index[i_find] == cIndex) break;
       // Put last to find, and delete last
-      u_index[iFind] = u_index[iLast];
-      u_value[iFind] = u_value[iLast];
+      u_index[i_find] = u_index[i_last];
+      u_value[i_find] = u_value[i_last];
     }
 
     // 2. Delete pivotal column from UR
-    UtotalX -= u_last_p[cLogic] - u_start[cLogic];
+    u_total_x -= u_last_p[cLogic] - u_start[cLogic];
     for (HighsInt k = u_start[cLogic]; k < u_last_p[cLogic]; k++) {
       // Find the pivotal position
       HighsInt i_logic = u_pivot_lookup[u_index[k]];
-      HighsInt iFind = ur_start[i_logic];
-      HighsInt iLast = --ur_lastp[i_logic];
-      for (; iFind <= iLast; iFind++)
-        if (ur_index[iFind] == cIndex) break;
+      HighsInt i_find = ur_start[i_logic];
+      HighsInt i_last = --ur_lastp[i_logic];
+      for (; i_find <= i_last; i_find++)
+        if (ur_index[i_find] == cIndex) break;
       // Put last to find, and delete last
       ur_space[i_logic]++;
-      ur_index[iFind] = ur_index[iLast];
-      ur_value[iFind] = ur_value[iLast];
+      ur_index[i_find] = ur_index[i_last];
+      ur_value[i_find] = ur_value[i_last];
     }
 
     // 3. Insert the (stored) partial FTRAN to the row matrix
     HighsInt u_startX = t_start[cp];
     HighsInt u_endX = t_start[cp + 1];
-    UtotalX += u_endX - u_startX;
+    u_total_x += u_endX - u_startX;
     // Store column as UR elements
     for (HighsInt k = u_startX; k < u_endX; k++) {
       // Which ETA file
@@ -1916,11 +1917,11 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
         ur_value.resize(new_start + new_space);
 
         // Move elements
-        HighsInt iFrom = row_start;
-        HighsInt iEnd = row_start + row_count;
-        HighsInt iTo = new_start;
-        copy(&ur_index[iFrom], &ur_index[iEnd], &ur_index[iTo]);
-        copy(&ur_value[iFrom], &ur_value[iEnd], &ur_value[iTo]);
+        HighsInt i_from = row_start;
+        HighsInt i_end = row_start + row_count;
+        HighsInt i_to = new_start;
+        copy(&ur_index[i_from], &ur_index[i_end], &ur_index[i_to]);
+        copy(&ur_value[i_from], &ur_value[i_end], &ur_value[i_to]);
 
         // Save new pointers
         ur_start[i_logic] = new_start;
@@ -1950,7 +1951,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
   }
 
   //    // See if we want refactor
-  //    if (UtotalX > UmeritX && pf_pivot_index.size() > 100)
+  //    if (u_total_x > u_merit_x && pf_pivot_index.size() > 100)
   //        *hint = 1;
   delete[] aq_work;
   delete[] ep_work;
@@ -1974,27 +1975,27 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
   for (HighsInt k = ur_start[p_logic]; k < ur_lastp[p_logic]; k++) {
     // Find the pivotal position
     HighsInt i_logic = u_pivot_lookup[ur_index[k]];
-    HighsInt iFind = u_start[i_logic];
-    HighsInt iLast = --u_last_p[i_logic];
-    for (; iFind <= iLast; iFind++)
-      if (u_index[iFind] == iRow) break;
+    HighsInt i_find = u_start[i_logic];
+    HighsInt i_last = --u_last_p[i_logic];
+    for (; i_find <= i_last; i_find++)
+      if (u_index[i_find] == iRow) break;
     // Put last to find, and delete last
-    u_index[iFind] = u_index[iLast];
-    u_value[iFind] = u_value[iLast];
+    u_index[i_find] = u_index[i_last];
+    u_value[i_find] = u_value[i_last];
   }
 
   // Delete pivotal column from UR
   for (HighsInt k = u_start[p_logic]; k < u_last_p[p_logic]; k++) {
     // Find the pivotal position
     HighsInt i_logic = u_pivot_lookup[u_index[k]];
-    HighsInt iFind = ur_start[i_logic];
-    HighsInt iLast = --ur_lastp[i_logic];
-    for (; iFind <= iLast; iFind++)
-      if (ur_index[iFind] == iRow) break;
+    HighsInt i_find = ur_start[i_logic];
+    HighsInt i_last = --ur_lastp[i_logic];
+    for (; i_find <= i_last; i_find++)
+      if (ur_index[i_find] == iRow) break;
     // Put last to find, and delete last
     ur_space[i_logic]++;
-    ur_index[iFind] = ur_index[iLast];
-    ur_value[iFind] = ur_value[iLast];
+    ur_index[i_find] = ur_index[i_last];
+    ur_value[i_find] = ur_value[i_last];
   }
 
   // Store column to U
@@ -2007,7 +2008,7 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
   u_last_p.push_back(u_index.size());
   HighsInt u_startX = u_start.back();
   HighsInt u_endX = u_last_p.back();
-  UtotalX += u_endX - u_startX + 1;
+  u_total_x += u_endX - u_startX + 1;
 
   // Store column as UR elements
   for (HighsInt k = u_startX; k < u_endX; k++) {
@@ -2027,11 +2028,11 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
       ur_value.resize(new_start + new_space);
 
       // Move elements
-      HighsInt iFrom = row_start;
-      HighsInt iEnd = row_start + row_count;
-      HighsInt iTo = new_start;
-      copy(&ur_index[iFrom], &ur_index[iEnd], &ur_index[iTo]);
-      copy(&ur_value[iFrom], &ur_value[iEnd], &ur_value[iTo]);
+      HighsInt i_from = row_start;
+      HighsInt i_end = row_start + row_count;
+      HighsInt i_to = new_start;
+      copy(&ur_index[i_from], &ur_index[i_end], &ur_index[i_to]);
+      copy(&ur_value[i_from], &ur_value[i_end], &ur_value[i_to]);
 
       // Save new pointers
       ur_start[i_logic] = new_start;
@@ -2063,18 +2064,18 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
       pf_value.push_back(-ep->packValue[i] * pivot);
     }
   }
-  UtotalX += pf_index.size() - pf_start.back();
+  u_total_x += pf_index.size() - pf_start.back();
 
   // Store R matrix pivot
   pf_pivot_index.push_back(iRow);
   pf_start.push_back(pf_index.size());
 
   // Update total countX
-  UtotalX -= u_last_p[p_logic] - u_start[p_logic];
-  UtotalX -= ur_lastp[p_logic] - ur_start[p_logic];
+  u_total_x -= u_last_p[p_logic] - u_start[p_logic];
+  u_total_x -= ur_lastp[p_logic] - ur_start[p_logic];
 
   //    // See if we want refactor
-  //    if (UtotalX > UmeritX && pf_pivot_index.size() > 100)
+  //    if (u_total_x > u_merit_x && pf_pivot_index.size() > 100)
   //        *hint = 1;
 }
 
@@ -2100,8 +2101,8 @@ void HFactor::updatePF(HVector* aq, HighsInt iRow, HighsInt* hint) {
   pf_start.push_back(pf_index.size());
 
   // Check refactor
-  UtotalX += aq->packCount;
-  if (UtotalX > UmeritX) *hint = 1;
+  u_total_x += aq->packCount;
+  if (u_total_x > u_merit_x) *hint = 1;
 }
 
 void HFactor::updateMPF(HVector* aq, HVector* ep, HighsInt iRow,
@@ -2132,8 +2133,8 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, HighsInt iRow,
   pf_pivot_value.push_back(aq->array[iRow]);
 
   // Refactor or not
-  UtotalX += aq->packCount + ep->packCount;
-  if (UtotalX > UmeritX) *hint = 1;
+  u_total_x += aq->packCount + ep->packCount;
+  if (u_total_x > u_merit_x) *hint = 1;
 }
 
 void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow

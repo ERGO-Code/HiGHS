@@ -82,7 +82,7 @@ class HFactor {
    * count-link-list, L factor and U factor
    */
   void setupGeneral(const HighsSparseMatrix* a_matrix,
-                    HighsInt num_basic_index, HighsInt* basic_index,
+                    HighsInt num_basic, HighsInt* basic_index,
                     const double pivot_threshold = kDefaultPivotThreshold,
                     const double pivot_tolerance = kDefaultPivotTolerance,
                     const HighsInt highs_debug_level = kHighsDebugLevelMin,
@@ -109,7 +109,7 @@ class HFactor {
       const HighsInt* a_start,  //!< Column starts of constraint matrix
       const HighsInt* a_index,  //!< Row indices of constraint matrix
       const double* a_value,    //!< Row values of constraint matrix
-      HighsInt num_basic_index,
+      HighsInt num_basic,
       HighsInt* basic_index,  //!< Indices of basic variables
       const double pivot_threshold =
           kDefaultPivotThreshold,  //!< Pivoting threshold
@@ -262,6 +262,7 @@ class HFactor {
   // Problem size, coefficient matrix and update method
   HighsInt num_row;
   HighsInt num_col;
+  HighsInt num_basic;
 
  private:
   bool a_matrix_valid;
@@ -346,8 +347,8 @@ class HFactor {
   vector<HighsInt> u_pivot_index;
   vector<double> u_pivot_value;
 
-  HighsInt UmeritX;
-  HighsInt UtotalX;
+  HighsInt u_merit_x;
+  HighsInt u_total_x;
   vector<HighsInt> u_start;
   vector<HighsInt> u_last_p;
   vector<HighsInt> u_index;
