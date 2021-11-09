@@ -20,16 +20,11 @@
 #include <thread>
 #include <vector>
 
+#include "libhighs_export.h"
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSplitDeque.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
-#include "libhighs_export.h"
-
-class HighsTaskExecutor;
-
-extern thread_local HighsSplitDeque* threadLocalWorkerDeque;
-extern LIBHIGHS_EXPORT highs::cache_aligned::shared_ptr<HighsTaskExecutor> globalExecutor;
 class HighsTaskExecutor {
  public:
   static constexpr int kNumTryFac = 16;
@@ -39,6 +34,17 @@ class HighsTaskExecutor {
  private:
   using cache_aligned = highs::cache_aligned;
 
+#ifdef _MSC_VER
+  static HighsSplitDeque*& threadLocalWorkerDeque();
+#else
+  static thread_local HighsSplitDeque* threadLocalWorkerDequePtr;
+  static HighsSplitDeque*& threadLocalWorkerDeque() {
+    return threadLocalWorkerDequePtr;
+  }
+#endif
+
+  static LIBHIGHS_EXPORT cache_aligned::shared_ptr<HighsTaskExecutor>
+      globalExecutor;
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
@@ -74,7 +80,7 @@ class HighsTaskExecutor {
 
   void run_worker(int workerId) {
     HighsSplitDeque* localDeque = workerDeques[workerId].get();
-    threadLocalWorkerDeque = localDeque;
+    threadLocalWorkerDeque() = localDeque;
     HighsTask* currentTask = workerBunk->waitForNewTask(localDeque);
     while (true) {
       assert(currentTask != nullptr);
@@ -98,13 +104,13 @@ class HighsTaskExecutor {
       workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
           workerBunk, workerDeques.data(), i, numThreads);
 
-    threadLocalWorkerDeque = workerDeques[0].get();
+    threadLocalWorkerDeque() = workerDeques[0].get();
     for (int i = 1; i < numThreads; ++i)
       std::thread([&](int id) { run_worker(id); }, i).detach();
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
-    return threadLocalWorkerDeque;
+    return threadLocalWorkerDeque();
   }
 
   static HighsTaskExecutor* getGlobalTaskExecutor() {
