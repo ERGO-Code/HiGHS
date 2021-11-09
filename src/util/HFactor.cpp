@@ -246,13 +246,13 @@ void HFactor::setupGeneral(
   permute.resize(permute_max_dim);
 
   // Allocate space for Markowitz matrices
-  const HighsInt mc_max_dim = max(num_row, num_basic);
-  mc_var.resize(mc_max_dim);
-  mc_start.resize(mc_max_dim);
-  mc_count_a.resize(mc_max_dim);
-  mc_count_n.resize(mc_max_dim);
-  mc_space.resize(mc_max_dim);
-  mc_min_pivot.resize(mc_max_dim);
+  const HighsInt mc_dim = num_basic;
+  mc_var.resize(mc_dim);
+  mc_start.resize(mc_dim);
+  mc_count_a.resize(mc_dim);
+  mc_count_n.resize(mc_dim);
+  mc_space.resize(mc_dim);
+  mc_min_pivot.resize(mc_dim);
   mc_index.resize(basis_matrix_limit_size * kMCExtraEntriesMultiplier);
   mc_value.resize(basis_matrix_limit_size * kMCExtraEntriesMultiplier);
 
@@ -267,15 +267,19 @@ void HFactor::setupGeneral(
   mwz_column_array.assign(num_row, 0);
 
   // Allocate space for count-link-list
-  const HighsInt col_link_max_dim = max(num_row, num_basic);
-  col_link_first.assign(num_row + 1, -1);
-  col_link_next.resize(col_link_max_dim);
-  col_link_last.resize(col_link_max_dim);
+  const HighsInt col_link_max_count = num_row;
+  const HighsInt col_link_dim = num_basic;
+  col_link_first.assign(col_link_max_count + 1, -1);
+  col_link_next.resize(col_link_dim);
+  col_link_last.resize(col_link_dim);
 
-  const HighsInt row_link_max_count = max(num_row, num_basic);
+  const HighsInt row_link_max_count = num_basic;
+  const HighsInt row_link_dim = num_row;
+  // Strictly not necessary, but nice if it's the right size
+  row_link_first.resize(row_link_max_count + 1);
   row_link_first.assign(row_link_max_count + 1, -1);
-  row_link_next.resize(num_row);
-  row_link_last.resize(num_row);
+  row_link_next.resize(row_link_dim);
+  row_link_last.resize(row_link_dim);
 
   // Allocate space for L factor
   l_pivot_lookup.resize(num_row);
@@ -353,18 +357,30 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   factor_timer.start(FactorInvertKernel, factor_timer_clock_pointer);
   rank_deficiency = buildKernel();
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
+
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
-    highsLogDev(log_options, HighsLogType::kWarning,
-                "Rank deficiency of %" HIGHSINT_FORMAT
-                " identified in basis matrix\n",
-                rank_deficiency);
+    if (num_basic == num_row)
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "Rank deficiency of %" HIGHSINT_FORMAT
+                  " identified in basis matrix\n",
+                  rank_deficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
     // logical which replaces them
     buildHandleRankDeficiency();
     buildMarkSingC();
     factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
+  }
+  if (num_basic < num_row) {
+    // Completing the factorization is not relevant if the basis
+    // matrix is incomplete, so clear any refactorization information
+    // and return
+    this->refactor_info_.clear();
+    assert(!this->refactor_info_.use);
+    const HighsInt basic_index_rank_deficiency =
+        rank_deficiency - (num_row - num_basic);
+    return basic_index_rank_deficiency;
   }
   // Complete INVERT
   if (report_lu) {
@@ -466,8 +482,10 @@ void HFactor::buildSimple() {
 
   // Set all values of permute to -1 so that unpermuted (rank
   // deficient) columns can be identified
-  const HighsInt permute_max_dim = max(num_row, num_basic);
-  permute.assign(permute_max_dim, -1);
+  const HighsInt permute_dim = num_basic;
+  // Strictly not necessary, but nice if it's the right size
+  permute.resize(permute_dim);
+  permute.assign(permute_dim, -1);
 
   /**
    * 1. Prepare basis matrix and deal with unit columns
@@ -485,8 +503,10 @@ void HFactor::buildSimple() {
   // Compile a vector iwork of the indices within basic_index of the
   // its nwork non-unit structural columns: they will be formed into
   // the B matrix as the kernel
-  const HighsInt iwork_max_dim = max(num_row, num_basic);
-  iwork.assign(iwork_max_dim + 1, 0);
+  const HighsInt iwork_dim = num_basic;
+  // Strictly not necessary, but nice if it's the right size
+  iwork.resize(iwork_dim + 1, 0);
+  iwork.assign(iwork_dim + 1, 0);
   for (HighsInt iCol = 0; iCol < num_basic; iCol++) {
     HighsInt iMat = basic_index[iCol];
     HighsInt iRow = -1;
@@ -695,7 +715,7 @@ void HFactor::buildSimple() {
    * 3. Prepare the kernel parts
    */
   // 3.1 Prepare row links, row matrix spaces
-  row_link_first.assign(num_row + 1, -1);
+  row_link_first.assign(num_basic + 1, -1);
   mr_count.assign(num_row, 0);
   HighsInt mr_countX = 0;
   // Determine the number of entries in the kernel
@@ -714,11 +734,11 @@ void HFactor::buildSimple() {
 
   // 3.2 Prepare column links, kernel matrix
   col_link_first.assign(num_row + 1, -1);
-  const HighsInt mc_max_dim = max(num_row, num_basic);
+  const HighsInt mc_dim = num_basic;
   mc_index.clear();
   mc_value.clear();
-  mc_count_a.assign(mc_max_dim, 0);
-  mc_count_n.assign(mc_max_dim, 0);
+  mc_count_a.assign(mc_dim, 0);
+  mc_count_n.assign(mc_dim, 0);
   HighsInt MCcountX = 0;
   for (HighsInt i = 0; i < nwork; i++) {
     HighsInt iCol = iwork[i];
@@ -744,9 +764,6 @@ void HFactor::buildSimple() {
   build_synthetic_tick += (num_row + nwork + MCcountX) * 40 + mr_countX * 20;
   // Record the kernel dimension
   kernel_dim = nwork;
-  printf("HFactor::buildSimple() nwork = %d; num_row = %d; refactor_info_.pivot_row.size() = %d\n",
-	 (int)nwork, (int)num_row,
-	 (int)this->refactor_info_.pivot_row.size()); fflush(stdout);
   assert((HighsInt)this->refactor_info_.pivot_row.size() == num_basic - nwork);
 }
 
@@ -768,8 +785,7 @@ HighsInt HFactor::buildKernel() {
     HighsInt searchLimit = min(nwork, HighsInt{8});
     HighsInt searchCount = 0;
 
-    const HighsInt max_col_dim = max(num_row, num_basic);
-    double merit_limit = 1.0 * max_col_dim * num_row;
+    double merit_limit = 1.0 * num_basic * num_row;
     double merit_pivot = merit_limit;
 
     // 1.2. Search for local singletons
@@ -793,62 +809,66 @@ HighsInt HFactor::buildKernel() {
     for (HighsInt count = 2; !foundPivot && count <= max_count; count++) {
       // Column count cannot exceed the number of rows
       if (count <= num_row) {
-	// 1.3.1 Search for columns
-	for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
-	  double min_pivot = mc_min_pivot[j];
-	  HighsInt start = mc_start[j];
-	  HighsInt end = start + mc_count_a[j];
-	  for (HighsInt k = start; k < end; k++) {
-	    if (fabs(mc_value[k]) >= min_pivot) {
-	      HighsInt i = mc_index[k];
-	      HighsInt row_count = mr_count[i];
-	      double merit_local = 1.0 * (count - 1) * (row_count - 1);
-	      if (merit_pivot > merit_local) {
-		candidate_pivot_value = fabs(mc_value[k]);
-		merit_pivot = merit_local;
-		jColPivot = j;
-		iRowPivot = i;
-		foundPivot = foundPivot || (row_count < count);
-	      }
-	    }
-	  }
-
-	  if (searchCount++ >= searchLimit && merit_pivot < merit_limit)
-	    foundPivot = true;
-	  if (foundPivot) break;
-	  
-	  fake_search += count;
-	}
-      }
-
-      // 1.3.2 Search for rows
-      for (HighsInt i = row_link_first[count]; i != -1; i = row_link_next[i]) {
-        HighsInt start = mr_start[i];
-        HighsInt end = start + mr_count[i];
-        for (HighsInt k = start; k < end; k++) {
-          HighsInt j = mr_index[k];
-          HighsInt column_count = mc_count_a[j];
-          double merit_local = 1.0 * (count - 1) * (column_count - 1);
-          if (merit_local < merit_pivot) {
-            HighsInt ifind = mc_start[j];
-            while (mc_index[ifind] != i) ifind++;
-            if (fabs(mc_value[ifind]) >= mc_min_pivot[j]) {
-              candidate_pivot_value = fabs(mc_value[ifind]);
-              merit_pivot = merit_local;
-              jColPivot = j;
-              iRowPivot = i;
-              foundPivot = foundPivot || (column_count <= count);
+        // 1.3.1 Search for columns
+        for (HighsInt j = col_link_first[count]; j != -1;
+             j = col_link_next[j]) {
+          double min_pivot = mc_min_pivot[j];
+          HighsInt start = mc_start[j];
+          HighsInt end = start + mc_count_a[j];
+          for (HighsInt k = start; k < end; k++) {
+            if (fabs(mc_value[k]) >= min_pivot) {
+              HighsInt i = mc_index[k];
+              HighsInt row_count = mr_count[i];
+              double merit_local = 1.0 * (count - 1) * (row_count - 1);
+              if (merit_pivot > merit_local) {
+                candidate_pivot_value = fabs(mc_value[k]);
+                merit_pivot = merit_local;
+                jColPivot = j;
+                iRowPivot = i;
+                foundPivot = foundPivot || (row_count < count);
+              }
             }
           }
+
+          if (searchCount++ >= searchLimit && merit_pivot < merit_limit)
+            foundPivot = true;
+          if (foundPivot) break;
+
+          fake_search += count;
         }
-        if (searchCount++ >= searchLimit && merit_pivot < merit_limit)
-          foundPivot = true;
-        if (foundPivot) break;
       }
 
-      fake_search += count;
-    }
+      // Row count cannot exceed the number of basic variables
+      if (count <= num_basic) {
+        // 1.3.2 Search for rows
+        for (HighsInt i = row_link_first[count]; i != -1;
+             i = row_link_next[i]) {
+          HighsInt start = mr_start[i];
+          HighsInt end = start + mr_count[i];
+          for (HighsInt k = start; k < end; k++) {
+            HighsInt j = mr_index[k];
+            HighsInt column_count = mc_count_a[j];
+            double merit_local = 1.0 * (count - 1) * (column_count - 1);
+            if (merit_local < merit_pivot) {
+              HighsInt ifind = mc_start[j];
+              while (mc_index[ifind] != i) ifind++;
+              if (fabs(mc_value[ifind]) >= mc_min_pivot[j]) {
+                candidate_pivot_value = fabs(mc_value[ifind]);
+                merit_pivot = merit_local;
+                jColPivot = j;
+                iRowPivot = i;
+                foundPivot = foundPivot || (column_count <= count);
+              }
+            }
+          }
+          if (searchCount++ >= searchLimit && merit_pivot < merit_limit)
+            foundPivot = true;
+          if (foundPivot) break;
+        }
 
+        fake_search += count;
+      }
+    }
     // 1.4. If we found nothing: tell singular
     if (!foundPivot) {
       rank_deficiency = nwork + 1;
@@ -1049,16 +1069,41 @@ void HFactor::buildHandleRankDeficiency() {
   // will replace singular columns. Once basic_index[i] is read, it can
   // be used to pack up the entries in basic_index which are not
   // permuted anywhere - and so will be singular columns.
+  //
+  // On entry, rank_deficiency is the rank deficiency of basic_index, which is
+  //
+  // * Less than the rank deficiency of the basis matrix if num_basic < num_row
+  //
+  //
+  const HighsInt basic_index_rank_deficiency = rank_deficiency;
+  if (num_basic < num_row) {
+    rank_deficiency += num_row - num_basic;
+  }
   row_with_no_pivot.resize(rank_deficiency);
   col_with_no_pivot.resize(rank_deficiency);
   HighsInt lc_rank_deficiency = 0;
+  if (num_basic < num_row) {
+    // iwork still has to be used to indicate the rows with no pivots, so resize
+    // it
+    iwork.resize(num_row);
+  }
+  // ToDo: surely this is neater as iwork.assign(num_row, -1);
   for (HighsInt i = 0; i < num_row; i++) iwork[i] = -1;
-  for (HighsInt i = 0; i < num_row; i++) {
+  for (HighsInt i = 0; i < num_basic; i++) {
     HighsInt perm_i = permute[i];
     if (perm_i >= 0) {
       iwork[perm_i] = basic_index[i];
     } else {
       col_with_no_pivot[lc_rank_deficiency++] = i;
+    }
+  }
+  if (num_basic < num_row) {
+    // Resize permute and complete iwork and col_with_no_pivot with
+    // fictitious indices and entries of basic_index
+    permute.resize(num_row);
+    for (HighsInt i = num_basic; i < num_row; i++) {
+      col_with_no_pivot[lc_rank_deficiency++] = i;
+      permute[i] = -1;
     }
   }
   assert(lc_rank_deficiency == rank_deficiency);
@@ -1102,6 +1147,8 @@ void HFactor::buildMarkSingC() {
   debugReportMarkSingC(0, highs_debug_level, log_options, num_row, iwork,
                        basic_index);
 
+  const HighsInt basic_index_rank_deficiency =
+      rank_deficiency - (num_row - num_basic);
   var_with_no_pivot.resize(rank_deficiency);
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt ASMrow = row_with_no_pivot[k];
@@ -1111,7 +1158,13 @@ void HFactor::buildMarkSingC() {
     // identified!
     iwork[ASMrow] = -(ASMcol + 1);
     var_with_no_pivot[k] = basic_index[ASMcol];
-    basic_index[ASMcol] = num_col + ASMrow;
+    // Only update basic_index for the true entries
+    if (ASMcol < num_basic) {
+      assert(k < basic_index_rank_deficiency);
+      basic_index[ASMcol] = num_col + ASMrow;
+    } else if (num_basic < num_row) {
+      assert(ASMcol == num_basic + k - 1);
+    }
   }
   debugReportMarkSingC(1, highs_debug_level, log_options, num_row, iwork,
                        basic_index);
@@ -1202,11 +1255,11 @@ void HFactor::buildFinish() {
   pf_index.clear();
   pf_value.clear();
 
-  if (!this->refactor_info_.use) {
-    // Finally, if not calling buildFinish after refactorizing,
-    // permute the base index
-    iwork.assign(basic_index, basic_index + num_row);
-    for (HighsInt i = 0; i < num_row; i++) basic_index[permute[i]] = iwork[i];
+  if (!this->refactor_info_.use && num_basic >= num_row) {
+    // Finally, if not calling buildFinish after refactorizing, and
+    // for a complete basis matrix, permute the basic variables
+    iwork.assign(basic_index, basic_index + num_basic);
+    for (HighsInt i = 0; i < num_basic; i++) basic_index[permute[i]] = iwork[i];
     // Add cost of buildFinish to build_synthetic_tick
     build_synthetic_tick += num_row * 80 + (LcountX + u_countX) * 60;
   }

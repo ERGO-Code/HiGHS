@@ -844,7 +844,7 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0],
                       kDefaultPivotThreshold, kDefaultPivotTolerance,
                       kHighsDebugLevelMin, &options.log_options);
-  factor.build();
+  HighsInt rank_deficiency = factor.build();
   // Deduce the basis from basic_index
   //
   // Set all basic variables to nonbasic
@@ -857,7 +857,7 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
       basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
   }
   // Set all variables in basic_index to basic
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+  for (HighsInt iRow = 0; iRow < num_basic_variables; iRow++) {
     HighsInt iVar = basic_index[iRow];
     if (iVar < num_col) {
       basis.col_status[iVar] = HighsBasisStatus::kBasic;
@@ -865,6 +865,15 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
       basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
     }
   }
+  // Complete the assignment of basic variables using the logicals of
+  // non-pivotal rows
+  const HighsInt num_missing = num_row - num_basic_variables;
+  for (HighsInt k = 0; k < num_missing; k++) {
+    HighsInt iRow = factor.row_with_no_pivot[rank_deficiency + k];
+    basis.row_status[iRow] = HighsBasisStatus::kBasic;
+    num_basic_variables++;
+  }
+  assert(num_basic_variables == num_row);
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
