@@ -31,7 +31,6 @@
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
-
 enum TRAN_STAGE {
   TRAN_STAGE_FTRAN_LOWER = 0,
   TRAN_STAGE_FTRAN_UPPER_FT,

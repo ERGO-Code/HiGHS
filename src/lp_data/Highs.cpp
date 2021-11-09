@@ -2235,9 +2235,9 @@ HighsStatus Highs::callSolveQp() {
   HighsStatus return_status = HighsStatus::kOk;
   model_status_ = runtime.status == ProblemStatus::OPTIMAL
                       ? HighsModelStatus::kOptimal
-                  : runtime.status == ProblemStatus::UNBOUNDED
-                      ? HighsModelStatus::kUnbounded
-                      : HighsModelStatus::kInfeasible;
+                      : runtime.status == ProblemStatus::UNBOUNDED
+                            ? HighsModelStatus::kUnbounded
+                            : HighsModelStatus::kInfeasible;
   scaled_model_status_ = model_status_;
   // Extract the solution
   solution_.col_value.resize(lp.num_col_);

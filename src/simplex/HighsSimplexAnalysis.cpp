@@ -1324,7 +1324,7 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
 
 void HighsSimplexAnalysis::reportThreads(const bool header) {
   assert(analyse_simplex_runtime_data);
-  if (header) {                             
+  if (header) {
     *analysis_log << highsFormatToString(" Concurr.");
   } else if (num_concurrency > 0) {
     *analysis_log << highsFormatToString(

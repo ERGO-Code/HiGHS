@@ -31,8 +31,8 @@
 // Limit on the number of column slices for parallel calculations. SIP
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices
 const HighsInt kHighsSlicedLimit = kSimplexConcurrencyLimit;
-// Was 100, but can't see why this should be higher than kSimplexConcurrencyLimit;
-// const double kMaxOkGrowth = 1e4;
+// Was 100, but can't see why this should be higher than
+// kSimplexConcurrencyLimit; const double kMaxOkGrowth = 1e4;
 
 /**
  * @brief Dual simplex solver for HiGHS
