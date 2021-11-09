@@ -775,6 +775,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::kError;
     }
+    case HighsModelStatus::kUnknown:
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
@@ -783,24 +784,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kOptimal;
-
-      // if (resolve_on_error) {
-      //  // printf(
-      //  //     "error: optimal with unscaled infeasibilities (primal:%g, "
-      //  //     "dual:%g)\n",
-      //  //     info.max_primal_infeasibility, info.max_dual_infeasibility);
-      //  HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
-      //  if (scalestrategy != kSimplexScaleStrategyOff) {
-      //    lpsolver.setOptionValue("simplex_scale_strategy",
-      //                            kSimplexScaleStrategyOff);
-      //    HighsBasis basis = lpsolver.getBasis();
-      //    lpsolver.clearSolver();
-      //    lpsolver.setBasis(basis);
-      //    auto tmp = run(resolve_on_error);
-      //    lpsolver.setOptionValue("simplex_scale_strategy", scalestrategy);
-      //    return tmp;
-      //  }
-      //}
 
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kUnscaledPrimalFeasible;
