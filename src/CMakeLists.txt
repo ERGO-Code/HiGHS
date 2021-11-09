@@ -280,6 +280,7 @@ set(headers
     util/HighsMatrixSlice.h
     util/HighsMatrixUtils.h
     util/HighsRandom.h
+    util/HighsRbTree.h
     util/HighsSort.h
     util/HighsSparseMatrix.h
     util/HighsSparseVectorSum.h
@@ -718,6 +719,7 @@ set(headers_fast_build_
     util/HighsMatrixSlice.h
     util/HighsMatrixUtils.h
     util/HighsRandom.h
+    util/HighsRbTree.h
     util/HighsSort.h
     util/HighsSparseMatrix.h
     util/HighsSparseVectorSum.h

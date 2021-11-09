@@ -1406,8 +1406,9 @@ HighsStatus Highs::checkOptimality(const std::string solver_type,
   return_status = HighsStatus::kWarning;
   if (info_.max_primal_infeasibility >
           sqrt(options_.primal_feasibility_tolerance) ||
-      info_.max_dual_infeasibility >
-          sqrt(options_.dual_feasibility_tolerance)) {
+      (info_.dual_solution_status != kSolutionStatusNone &&
+       info_.max_dual_infeasibility >
+           sqrt(options_.dual_feasibility_tolerance))) {
     // Check for gross errors
     log_type = HighsLogType::kError;
     return_status = HighsStatus::kError;

@@ -246,6 +246,7 @@ HighsInt HighsCliqueTable::runCliqueSubsumption(
         }
       } else {
         ++nremoved;
+        cliques[cliqueid].origin = kHighsIInf;
         removeClique(cliqueid);
       }
     }
@@ -277,27 +278,6 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
   if (Plen == 0 && Xlen == 0) {
     std::vector<CliqueVar> clique = data.R;
 
-#ifdef ADD_ZERO_WEIGHT_VARS
-    auto extensionend = data.Z.end();
-    for (CliqueVar v : clique) {
-      extensionend =
-          std::partition(data.Z.begin(), extensionend,
-                         [&](CliqueVar z) { return haveCommonClique(v, z); });
-      if (data.Z.begin() == extensionend) break;
-    }
-
-    if (data.Z.begin() != extensionend) {
-      randgen.shuffle(data.Z.data(), extensionend - data.Z.begin());
-
-      for (auto it = data.Z.begin(); it != extensionend; ++it) {
-        extensionend = std::partition(it + 1, extensionend, [&](CliqueVar z) {
-          return haveCommonClique(*it, z);
-        });
-      }
-
-      clique.insert(clique.end(), data.Z.begin(), extensionend);
-    }
-#endif
     if (data.minW < w - data.feastol) {
       data.maxcliques -= data.cliques.size();
       data.cliques.clear();
@@ -1710,6 +1690,30 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   std::vector<HighsInt> inds;
   std::vector<double> vals;
   for (std::vector<CliqueVar>& clique : data.cliques) {
+#ifdef ADD_ZERO_WEIGHT_VARS
+    if (true || numNeighborhoodQueries <= data.maxNeighborhoodQueries) {
+      auto extensionend = data.Z.end();
+      for (CliqueVar v : clique) {
+        extensionend =
+            std::partition(data.Z.begin(), extensionend,
+                           [&](CliqueVar z) { return haveCommonClique(v, z); });
+        if (data.Z.begin() == extensionend) break;
+      }
+
+      if (data.Z.begin() != extensionend) {
+        randgen.shuffle(data.Z.data(), extensionend - data.Z.begin());
+
+        for (auto it = data.Z.begin(); it != extensionend; ++it) {
+          extensionend = std::partition(it + 1, extensionend, [&](CliqueVar z) {
+            return haveCommonClique(*it, z);
+          });
+        }
+
+        clique.insert(clique.end(), data.Z.begin(), extensionend);
+      }
+    }
+#endif
+
     double rhs = 1;
     runcliquesubsumption = cliques.size() > 2;
     inds.clear();
@@ -1917,15 +1921,22 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
 void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
                                         std::vector<CliqueVar>& clique,
                                         bool equation) {
-  CliqueVar extensionstart = clique[0];
-  HighsInt numcliques = numcliquesvar[clique[0].index()];
+  CliqueVar extensionstart;
+  HighsInt numcliques = kHighsIInf;
   iscandidate.resize(numcliquesvar.size());
   HighsInt initialCliqueSize = clique.size();
-  for (HighsInt i = 1; i != initialCliqueSize; ++i) {
+  for (HighsInt i = 0; i != initialCliqueSize; ++i) {
+    if (globaldomain.isFixed(cliqueentries[i].col)) continue;
+
     if (numcliquesvar[clique[i].index()] < numcliques) {
       numcliques = numcliquesvar[clique[i].index()];
       extensionstart = clique[i];
     }
+  }
+
+  if (numcliques == kHighsIInf) {
+    clique.clear();
+    return;
   }
 
   for (HighsInt i = 0; i != initialCliqueSize; ++i)
@@ -2205,6 +2216,23 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     if (numEntries >= maxEntries) break;
     // printf("nonzeroDelta: %d, maxNonzeroDelta: %d\n", nonzeroDelta,
     // maxNonzeroDelta);
+  }
+
+  if (!globaldomain.inSubmip()) {
+    for (HighsInt k = 0; k != numcliqueslots; ++k) {
+      if (cliques[k].start == -1) continue;
+      if (cliques[k].equality || cliques[k].origin != kHighsIInf) continue;
+      if (cliques[k].end - cliques[k].start == 2) continue;
+      extensionvars.clear();
+      extensionvars.insert(extensionvars.end(),
+                           cliqueentries.begin() + cliques[k].start,
+                           cliqueentries.begin() + cliques[k].end);
+      removeClique(k);
+      runCliqueMerging(globaldomain, extensionvars);
+
+      if (extensionvars.size() > 1)
+        doAddClique(extensionvars.data(), extensionvars.size());
+    }
   }
 }
 

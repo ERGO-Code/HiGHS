@@ -1748,7 +1748,7 @@ HighsSearch::NodeResult HighsSearch::dive() {
     ++nnodes;
     NodeResult result = evaluateNode();
 
-    if (mipsolver.mipdata_->checkLimits()) return result;
+    if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 
     if (result != NodeResult::kOpen) return result;
 

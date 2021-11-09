@@ -1316,10 +1316,16 @@ void HighsDomain::markPropagateCut(Reason reason) {
 void HighsDomain::markPropagate(HighsInt row) {
   if (!propagateflags_[row]) {
     bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
+                     (activitymininf_[row] != 0 ||
+                      activitymin_[row] < mipsolver->rowLower(row) -
+                                              mipsolver->mipdata_->feastol) &&
                      (activitymaxinf_[row] == 1 ||
                       (double(activitymax_[row]) - mipsolver->rowLower(row)) <=
                           capacityThreshold_[row]);
     bool propupper = mipsolver->rowUpper(row) != kHighsInf &&
+                     (activitymaxinf_[row] != 0 ||
+                      activitymax_[row] > mipsolver->rowUpper(row) +
+                                              mipsolver->mipdata_->feastol) &&
                      (activitymininf_[row] == 1 ||
                       (mipsolver->rowUpper(row) - double(activitymin_[row])) <=
                           capacityThreshold_[row]);
@@ -1767,7 +1773,10 @@ bool HighsDomain::propagate() {
           const HighsInt* Rindex = mipsolver->mipdata_->ARindex_.data() + start;
           const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
 
-          if (mipsolver->rowUpper(i) != kHighsInf) {
+          if (mipsolver->rowUpper(i) != kHighsInf &&
+              (activitymaxinf_[i] != 0 ||
+               activitymax_[i] >
+                   mipsolver->rowUpper(i) + mipsolver->mipdata_->feastol)) {
             // computeMinActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymininf_[i],
             //           activitymin_[i]);
@@ -1777,7 +1786,10 @@ bool HighsDomain::propagate() {
                 activitymininf_[i], &changedbounds[2 * start]);
           }
 
-          if (mipsolver->rowLower(i) != -kHighsInf) {
+          if (mipsolver->rowLower(i) != -kHighsInf &&
+              (activitymininf_[i] != 0 ||
+               activitymin_[i] <
+                   mipsolver->rowLower(i) - mipsolver->mipdata_->feastol)) {
             // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymaxinf_[i],
             //           activitymax_[i]);
