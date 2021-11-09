@@ -1909,17 +1909,17 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
       // Claim rank deficiency to test backtracking
-      printf("Phase1 (Iter %" HIGHSINT_FORMAT
-             ") Claiming rank deficiency to test backtracking\n",
-             iteration_count_);
+      // printf("Phase1 (Iter %" HIGHSINT_FORMAT
+      //        ") Claiming rank deficiency to test backtracking\n",
+      //        iteration_count_);
       rank_deficiency = 1;
       info_.phase1_backtracking_test_done = true;
     } else if (!info_.phase2_backtracking_test_done &&
                solve_phase == kSolvePhase2) {
       // Claim rank deficiency to test backtracking
-      printf("Phase2 (Iter %" HIGHSINT_FORMAT
-             ") Claiming rank deficiency to test backtracking\n",
-             iteration_count_);
+      // printf("Phase2 (Iter %" HIGHSINT_FORMAT
+      //        ") Claiming rank deficiency to test backtracking\n",
+      //        iteration_count_);
       rank_deficiency = 1;
       info_.phase2_backtracking_test_done = true;
     }
@@ -4042,12 +4042,7 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     }
 
     // add up lower bound of proof constraint
-    proof_lower +=
-        row_ep.array[iRow] *
-        (row_ep.array[iRow] > 0 ? lp.row_lower_[iRow] : lp.row_upper_[iRow]);
-    if (!row_ep.array[iRow] && debug_proof_report)
-      printf("Zeroed row_ep.array[%6d] = %11.4g due to infinite bound\n",
-             (int)iRow, row_ep_value);
+    proof_lower += row_ep.array[iRow] * rowBound;
   }
   // Form the proof constraint coefficients
   proof_value_.clear();

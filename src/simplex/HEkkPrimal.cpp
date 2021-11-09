@@ -877,15 +877,16 @@ void HEkkPrimal::chuzc() {
         measure = fabs(workDual[variable_in]) / devex_weight[variable_in];
       double abs_measure_error = fabs(hyper_sparse_measure - measure);
       bool measure_error = abs_measure_error > 1e-12;
-      if (measure_error) {
-        printf("Iteration %" HIGHSINT_FORMAT
-               ": Hyper-sparse CHUZC measure %g != %g = Full "
-               "CHUZC measure (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
-               "): error %g\n",
-               ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
-               hyper_sparse_variable_in, variable_in, abs_measure_error);
-        assert(!measure_error);
-      }
+      // if (measure_error)
+      //   printf("Iteration %" HIGHSINT_FORMAT
+      //          ": Hyper-sparse CHUZC measure %g != %g = Full "
+      //          "CHUZC measure (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
+      //          "): error %g\n",
+      //          ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
+      //          hyper_sparse_variable_in, variable_in, abs_measure_error);
+
+      // todo this fails on some rarer occasions, e.g. on glass4
+      assert(!measure_error);
       variable_in = hyper_sparse_variable_in;
     }
   } else {
@@ -2501,16 +2502,16 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
     // The number of primal infeasibliities should be correct
     bool num_primal_infeasibility_ok =
         num_primal_infeasibility == updated_num_primal_infeasibility;
-    if (!num_primal_infeasibility_ok) {
-      printf("In iteration %" HIGHSINT_FORMAT
-             ": num_primal_infeasibility = %" HIGHSINT_FORMAT
-             " != %" HIGHSINT_FORMAT
-             " = "
-             "updated_num_primal_infeasibility\n",
-             ekk_instance_.iteration_count_, num_primal_infeasibility,
-             updated_num_primal_infeasibility);
-      assert(num_primal_infeasibility_ok);
-    }
+    // if (!num_primal_infeasibility_ok)
+    //   printf("In iteration %" HIGHSINT_FORMAT
+    //          ": num_primal_infeasibility = %" HIGHSINT_FORMAT
+    //          " != %" HIGHSINT_FORMAT
+    //          " = "
+    //          "updated_num_primal_infeasibility\n",
+    //          ekk_instance_.iteration_count_, num_primal_infeasibility,
+    //          updated_num_primal_infeasibility);
+
+    assert(num_primal_infeasibility_ok);
   }
   analysis->simplexTimerStop(ComputePrIfsClock);
 }

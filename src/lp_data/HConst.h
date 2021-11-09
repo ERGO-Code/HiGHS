@@ -182,7 +182,7 @@ enum class HighsBasisStatus {
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
-const double kHighsIllegalInfeasibilityMeasure = -1;
+const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
 
 // Termination link in linked lists
 const HighsInt kNoLink = -1;

@@ -30,6 +30,7 @@ set(TEST_SOURCES
     TestBasis.cpp
     TestBasisSolves.cpp
     TestHighsIntegers.cpp
+    TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
     TestHSet.cpp

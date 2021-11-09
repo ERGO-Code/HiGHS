@@ -2332,13 +2332,22 @@ HighsStatus Highs::callSolveMip() {
   assert(!basis_.valid);
   // Get the objective and any KKT failures
   info_.objective_function_value = solver.solution_objective_;
-  const bool use_mip_feasibility_tolerance = false;
+  const bool use_mip_feasibility_tolerance = true;
   double primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
   if (use_mip_feasibility_tolerance) {
     options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
   }
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(options_, model_, solution_, basis_, info_);
+  // Set the MIP-specific values of info_
+  info_.mip_node_count = solver.node_count_;
+  info_.mip_dual_bound = solver.dual_bound_;
+  info_.mip_gap =
+      100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
+      std::max(1.0, std::abs(info_.objective_function_value));
+  info_.valid = true;
+  if (model_status_ == HighsModelStatus::kOptimal)
+    checkOptimality("MIP", return_status);
   if (use_mip_feasibility_tolerance) {
     // Overwrite max infeasibility to include integrality if there is a solution
     if (solver.solution_objective_ != kHighsInf) {
@@ -2355,15 +2364,6 @@ HighsStatus Highs::callSolveMip() {
     // Recover the primal feasibility tolerance
     options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
   }
-  // Set the MIP-specific values of info_
-  info_.mip_node_count = solver.node_count_;
-  info_.mip_dual_bound = solver.dual_bound_;
-  info_.mip_gap =
-      100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
-      std::max(1.0, std::abs(info_.objective_function_value));
-  info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("MIP", return_status);
   return return_status;
 }
 
