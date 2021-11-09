@@ -55,7 +55,8 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
       // Should have info
       assert(have_info == true);
       if (have_primal_solution) {
-        if (info.num_primal_infeasibilities == kHighsIllegalInfeasibilityCount) {
+        if (info.num_primal_infeasibilities ==
+            kHighsIllegalInfeasibilityCount) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "Have primal solution but num_primal_infeasibilities = "
                       "%" HIGHSINT_FORMAT "\n",
