@@ -106,10 +106,10 @@ class HFactor {
   void setupGeneral(
       const HighsInt num_col,   //!< Number of columns
       const HighsInt num_row,   //!< Number of rows
+      const HighsInt num_basic,
       const HighsInt* a_start,  //!< Column starts of constraint matrix
       const HighsInt* a_index,  //!< Row indices of constraint matrix
       const double* a_value,    //!< Row values of constraint matrix
-      HighsInt num_basic,
       HighsInt* basic_index,  //!< Indices of basic variables
       const double pivot_threshold =
           kDefaultPivotThreshold,  //!< Pivoting threshold

@@ -40,9 +40,11 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   this->analysis_ = analysis;
   this->report_ = false;
   this->factor_.setupGeneral(
-      this->lp_->num_col_, this->lp_->num_row_, &factor_a_matrix->start_[0],
-      &factor_a_matrix->index_[0], &factor_a_matrix->value_[0],
-      this->lp_->num_row_, this->base_index_, factor_pivot_threshold,
+      this->lp_->num_col_, this->lp_->num_row_, this->lp_->num_row_,
+      &factor_a_matrix->start_[0],
+      &factor_a_matrix->index_[0],
+      &factor_a_matrix->value_[0],
+      this->base_index_, factor_pivot_threshold,
       this->options_->factor_pivot_tolerance, this->options_->highs_debug_level,
       &(this->options_->log_options));
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);

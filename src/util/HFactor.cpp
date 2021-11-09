@@ -166,9 +166,9 @@ void HFactor::setupGeneral(const HighsSparseMatrix* a_matrix,
                            const double pivot_tolerance,
                            const HighsInt highs_debug_level,
                            const HighsLogOptions* log_options) {
-  this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_,
+  this->setupGeneral(a_matrix->num_col_, a_matrix->num_row_, num_basic,
                      &a_matrix->start_[0], &a_matrix->index_[0],
-                     &a_matrix->value_[0], num_basic, basic_index,
+                     &a_matrix->value_[0], basic_index,
                      pivot_threshold, pivot_tolerance, highs_debug_level,
                      log_options, true, kUpdateMethodFt);
 }
@@ -179,14 +179,14 @@ void HFactor::setup(
     const double pivot_threshold_, const double pivot_tolerance_,
     const HighsInt highs_debug_level_, const HighsLogOptions* log_options_,
     const bool use_original_HFactor_logic_, const HighsInt update_method_) {
-  setupGeneral(num_col_, num_row_, a_start_, a_index_, a_value_, num_row_, basic_index_,
+  setupGeneral(num_col_, num_row_, num_row_, a_start_, a_index_, a_value_, basic_index_,
                pivot_threshold_, pivot_tolerance_, highs_debug_level_,
                log_options_, use_original_HFactor_logic_, update_method_);
 }
 
-void HFactor::setupGeneral(const HighsInt num_col_, const HighsInt num_row_,
+void HFactor::setupGeneral(const HighsInt num_col_, const HighsInt num_row_, HighsInt num_basic_,
                            const HighsInt* a_start_, const HighsInt* a_index_,
-                           const double* a_value_, HighsInt num_basic_,
+                           const double* a_value_, 
                            HighsInt* basic_index_, const double pivot_threshold_,
                            const double pivot_tolerance_,
                            const HighsInt highs_debug_level_,
