@@ -780,20 +780,20 @@ HighsInt HFactor::buildKernel() {
     for (HighsInt count = 2; !foundPivot && count <= num_row; count++) {
       // 1.3.1 Search for columns
       for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
-        double minpivot = mc_min_pivot[j];
+        double min_pivot = mc_min_pivot[j];
         HighsInt start = mc_start[j];
         HighsInt end = start + mc_count_a[j];
         for (HighsInt k = start; k < end; k++) {
-          if (fabs(mc_value[k]) >= minpivot) {
+          if (fabs(mc_value[k]) >= min_pivot) {
             HighsInt i = mc_index[k];
-            HighsInt rowCount = mr_count[i];
-            double meritLocal = 1.0 * (count - 1) * (rowCount - 1);
-            if (merit_pivot > meritLocal) {
+            HighsInt row_count = mr_count[i];
+            double merit_local = 1.0 * (count - 1) * (row_count - 1);
+            if (merit_pivot > merit_local) {
               candidate_pivot_value = fabs(mc_value[k]);
-              merit_pivot = meritLocal;
+              merit_pivot = merit_local;
               jColPivot = j;
               iRowPivot = i;
-              foundPivot = foundPivot || (rowCount < count);
+              foundPivot = foundPivot || (row_count < count);
             }
           }
         }
@@ -811,17 +811,17 @@ HighsInt HFactor::buildKernel() {
         HighsInt end = start + mr_count[i];
         for (HighsInt k = start; k < end; k++) {
           HighsInt j = mr_index[k];
-          HighsInt columnCount = mc_count_a[j];
-          double meritLocal = 1.0 * (count - 1) * (columnCount - 1);
-          if (meritLocal < merit_pivot) {
+          HighsInt column_count = mc_count_a[j];
+          double merit_local = 1.0 * (count - 1) * (column_count - 1);
+          if (merit_local < merit_pivot) {
             HighsInt ifind = mc_start[j];
             while (mc_index[ifind] != i) ifind++;
             if (fabs(mc_value[ifind]) >= mc_min_pivot[j]) {
               candidate_pivot_value = fabs(mc_value[ifind]);
-              merit_pivot = meritLocal;
+              merit_pivot = merit_local;
               jColPivot = j;
               iRowPivot = i;
-              foundPivot = foundPivot || (columnCount <= count);
+              foundPivot = foundPivot || (column_count <= count);
             }
           }
         }
@@ -1339,20 +1339,20 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
       use_clock = FactorFtranUpperSps0;
     factor_timer.start(use_clock, factor_timer_clock_pointer);
     // Alias to non constant
-    double RHS_synthetic_tick = 0;
+    double rhs_synthetic_tick = 0;
     HighsInt rhs_count = 0;
     HighsInt* rhs_index = &rhs.index[0];
     double* rhs_array = &rhs.array[0];
 
     // Alias to the factor
     const HighsInt* u_start = &this->u_start[0];
-    const HighsInt* Uend = &this->u_last_p[0];
+    const HighsInt* u_end = &this->u_last_p[0];
     const HighsInt* u_index = this->u_index.size() > 0 ? &this->u_index[0] : NULL;
     const double* u_value = this->u_value.size() > 0 ? &this->u_value[0] : NULL;
 
     // Transform
-    HighsInt UpivotCount = u_pivot_index.size();
-    for (HighsInt iLogic = UpivotCount - 1; iLogic >= 0; iLogic--) {
+    HighsInt u_pivot_count = u_pivot_index.size();
+    for (HighsInt iLogic = u_pivot_count - 1; iLogic >= 0; iLogic--) {
       // Skip void
       if (u_pivot_index[iLogic] == -1) continue;
 
@@ -1364,9 +1364,9 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = u_start[iLogic];
-        const HighsInt end = Uend[iLogic];
+        const HighsInt end = u_end[iLogic];
         if (iLogic >= num_row) {
-          RHS_synthetic_tick += (end - start);
+          rhs_synthetic_tick += (end - start);
         }
         for (HighsInt k = start; k < end; k++)
           rhs_array[u_index[k]] -= pivot_multiplier * u_value[k];
@@ -1376,7 +1376,7 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
 
     // Save the count
     rhs.count = rhs_count;
-    rhs.synthetic_tick += RHS_synthetic_tick * 15 + (UpivotCount - num_row) * 10;
+    rhs.synthetic_tick += rhs_synthetic_tick * 15 + (u_pivot_count - num_row) * 10;
     factor_timer.stop(use_clock, factor_timer_clock_pointer);
     if (report_ftran_upper_sparse) {
       const double final_density = 1.0 * rhs.count / num_row;
@@ -1431,20 +1431,20 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
   if (current_density > kHyperCancel || expected_density > kHyperBtranU) {
     factor_timer.start(FactorBtranUpperSps, factor_timer_clock_pointer);
     // Alias to non constant
-    double RHS_synthetic_tick = 0;
+    double rhs_synthetic_tick = 0;
     HighsInt rhs_count = 0;
     HighsInt* rhs_index = &rhs.index[0];
     double* rhs_array = &rhs.array[0];
 
     // Alias to the factor
     const HighsInt* ur_start = &this->ur_start[0];
-    const HighsInt* URend = &this->ur_lastp[0];
+    const HighsInt* ur_end = &this->ur_lastp[0];
     const HighsInt* ur_index = &this->ur_index[0];
     const double* ur_value = &this->ur_value[0];
 
     // Transform
-    HighsInt UpivotCount = u_pivot_index.size();
-    for (HighsInt iLogic = 0; iLogic < UpivotCount; iLogic++) {
+    HighsInt u_pivot_count = u_pivot_index.size();
+    for (HighsInt iLogic = 0; iLogic < u_pivot_count; iLogic++) {
       // Skip void
       if (u_pivot_index[iLogic] == -1) continue;
 
@@ -1456,9 +1456,9 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
         rhs_index[rhs_count++] = pivotRow;
         rhs_array[pivotRow] = pivot_multiplier;
         const HighsInt start = ur_start[iLogic];
-        const HighsInt end = URend[iLogic];
+        const HighsInt end = ur_end[iLogic];
         if (iLogic >= num_row) {
-          RHS_synthetic_tick += (end - start);
+          rhs_synthetic_tick += (end - start);
         }
         for (HighsInt k = start; k < end; k++)
           rhs_array[ur_index[k]] -= pivot_multiplier * ur_value[k];
@@ -1468,7 +1468,7 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
 
     // Save the count
     rhs.count = rhs_count;
-    rhs.synthetic_tick += RHS_synthetic_tick * 15 + (UpivotCount - num_row) * 10;
+    rhs.synthetic_tick += rhs_synthetic_tick * 15 + (u_pivot_count - num_row) * 10;
     factor_timer.stop(FactorBtranUpperSps, factor_timer_clock_pointer);
   } else {
     factor_timer.start(FactorBtranUpperHyper, factor_timer_clock_pointer);
@@ -1548,7 +1548,7 @@ void HFactor::btranFT(HVector& vector) const {
   const double* pf_value = this->pf_value.size() > 0 ? &this->pf_value[0] : NULL;
 
   // Alias to non constant
-  double RHS_synthetic_tick = 0;
+  double rhs_synthetic_tick = 0;
   HighsInt rhs_count = vector.count;
   HighsInt* rhs_index = &vector.index[0];
   double* rhs_array = &vector.array[0];
@@ -1560,7 +1560,7 @@ void HFactor::btranFT(HVector& vector) const {
     if (pivot_multiplier) {
       const HighsInt start = pf_start[i];
       const HighsInt end = pf_start[i + 1];
-      RHS_synthetic_tick += (end - start);
+      rhs_synthetic_tick += (end - start);
       for (HighsInt k = start; k < end; k++) {
         HighsInt iRow = pf_index[k];
         double value0 = rhs_array[iRow];
@@ -1571,7 +1571,7 @@ void HFactor::btranFT(HVector& vector) const {
     }
   }
 
-  vector.synthetic_tick += RHS_synthetic_tick * 15 + PFpivotCount * 10;
+  vector.synthetic_tick += rhs_synthetic_tick * 15 + PFpivotCount * 10;
 
   // Save count back
   vector.count = rhs_count;
@@ -1896,10 +1896,10 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
 
     // 3. Insert the (stored) partial FTRAN to the row matrix
     HighsInt u_startX = Tstart[cp];
-    HighsInt UendX = Tstart[cp + 1];
-    UtotalX += UendX - u_startX;
+    HighsInt u_endX = Tstart[cp + 1];
+    UtotalX += u_endX - u_startX;
     // Store column as UR elements
-    for (HighsInt k = u_startX; k < UendX; k++) {
+    for (HighsInt k = u_startX; k < u_endX; k++) {
       // Which ETA file
       HighsInt iLogic = u_pivot_lookup[u_index[k]];
 
@@ -1937,7 +1937,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
 
     // 4. Save pointers
     u_start.push_back(u_startX);
-    u_last_p.push_back(UendX);
+    u_last_p.push_back(u_endX);
 
     ur_start.push_back(ur_start[cLogic]);
     ur_lastp.push_back(ur_start[cLogic]);
@@ -2006,11 +2006,11 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
     }
   u_last_p.push_back(u_index.size());
   HighsInt u_startX = u_start.back();
-  HighsInt UendX = u_last_p.back();
-  UtotalX += UendX - u_startX + 1;
+  HighsInt u_endX = u_last_p.back();
+  UtotalX += u_endX - u_startX + 1;
 
   // Store column as UR elements
-  for (HighsInt k = u_startX; k < UendX; k++) {
+  for (HighsInt k = u_startX; k < u_endX; k++) {
     // Which ETA file
     HighsInt iLogic = u_pivot_lookup[u_index[k]];
 
@@ -2080,12 +2080,12 @@ void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
 
 void HFactor::updatePF(HVector* aq, HighsInt iRow, HighsInt* hint) {
   // Check space
-  const HighsInt columnCount = aq->packCount;
+  const HighsInt column_count = aq->packCount;
   const HighsInt* variable_index = &aq->packIndex[0];
   const double* columnArray = &aq->packValue[0];
 
   // Copy the pivotal column
-  for (HighsInt i = 0; i < columnCount; i++) {
+  for (HighsInt i = 0; i < column_count; i++) {
     HighsInt index = variable_index[i];
     double value = columnArray[i];
     if (index != iRow) {
@@ -2113,8 +2113,8 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, HighsInt iRow,
   }
   HighsInt pLogic = u_pivot_lookup[iRow];
   HighsInt u_startX = u_start[pLogic];
-  HighsInt UendX = u_start[pLogic + 1];
-  for (HighsInt k = u_startX; k < UendX; k++) {
+  HighsInt u_endX = u_start[pLogic + 1];
+  for (HighsInt k = u_startX; k < u_endX; k++) {
     pf_index.push_back(u_index[k]);
     pf_value.push_back(-u_value[k]);
   }
