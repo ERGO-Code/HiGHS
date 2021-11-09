@@ -428,6 +428,7 @@ foreach ( file ${headers} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
@@ -771,6 +772,7 @@ foreach ( file ${headers_fast_build_} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
