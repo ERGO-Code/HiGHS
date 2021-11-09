@@ -534,7 +534,7 @@ HighsStatus Highs::run() {
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
-  highs::parallel::initialize_scheduler(options_.highs_threads);
+  highs::parallel::initialize_scheduler(options_.threads);
 
   max_threads = highs::parallel::num_threads();
   assert(max_threads > 0);

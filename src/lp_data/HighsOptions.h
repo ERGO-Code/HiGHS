@@ -276,7 +276,7 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt random_seed;
-  HighsInt highs_threads;
+  HighsInt threads;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -498,8 +498,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        kRandomSeedString, "number of threads used by HiGHS (0: automatic)",
-        advanced, &highs_threads, 0, 0, kHighsIInf);
+        "threads", "number of threads used by HiGHS (0: automatic)",
+        advanced, &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int =
