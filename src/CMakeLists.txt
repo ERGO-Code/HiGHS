@@ -783,10 +783,10 @@ if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
     if (UNIX)
-        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-        target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
         target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
-        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
     endif()
 
 endif()

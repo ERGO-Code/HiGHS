@@ -51,6 +51,76 @@ else()
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 endif()
 
+
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles(
+    "int main () {
+        _mm_pause();
+        return 0;
+    }"
+    HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE FAIL_REGEX "implicitly declaring library function")
+if( NOT HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE )
+    check_cxx_source_compiles(
+        "#include <immintrin.h>
+        int main () {
+            _mm_pause();
+            return 0;
+        }" HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
+    if(HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
+        set(HIGHS_HAVE_MM_PAUSE 1)
+    else()
+        set(HIGHS_HAVE_MM_PAUSE 0)
+    endif()
+else()
+    set(HIGHS_HAVE_MM_PAUSE 1)
+endif()
+
+check_cxx_source_compiles(
+    "#include <cstdint>
+     int main () {
+        volatile unsigned int x = 5;
+        volatile unsigned long long y = __builtin_clz(x);
+        x = __builtin_clzll(y);
+        return 0;
+    }"
+     HIGHS_HAVE_BUILTIN_CLZ)
+if( NOT HIGHS_HAVE_BUILTIN_CLZ )
+    check_cxx_source_compiles(
+        "#include <intrin.h>
+        #pragma intrinsic(_BitScanReverse)
+        #pragma intrinsic(_BitScanReverse64)
+        int main () {
+            volatile unsigned long x = 5;
+            volatile unsigned long y;
+            _BitScanReverse(&y, x);
+            _BitScanReverse64(&x, y);
+            return 0;
+        }"
+        HIGHS_HAVE_BITSCAN_REVERSE)
+endif()
+
+
+# Function to set compiler flags on and off easily.
+include(CheckCXXCompilerFlag)
+function(enable_cxx_compiler_flag_if_supported flag)
+    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
+    if(flag_already_set EQUAL -1)
+        check_cxx_compiler_flag("${flag}" flag_supported)
+        if(flag_supported)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
+        endif()
+        unset(flag_supported CACHE)
+    endif()
+endfunction()
+
+# usage: turn pedantic on for even more warnings.
+enable_cxx_compiler_flag_if_supported("-Wall")
+enable_cxx_compiler_flag_if_supported("-Wextra")
+enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
+enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
+enable_cxx_compiler_flag_if_supported("-pedantic")
+
 if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 1)
@@ -234,54 +304,6 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-include(CheckCXXSourceCompiles)
-
-check_cxx_source_compiles(
-    "int main () {
-        _mm_pause();
-        return 0;
-    }"
-    HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE FAIL_REGEX "implicitly declaring library function")
-if( NOT HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE )
-    check_cxx_source_compiles(
-        "#include <immintrin.h>
-        int main () {
-            _mm_pause();
-            return 0;
-        }" HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
-    if(HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
-        set(HIGHS_HAVE_MM_PAUSE 1)
-    else()
-        set(HIGHS_HAVE_MM_PAUSE 0)
-    endif()
-else()
-    set(HIGHS_HAVE_MM_PAUSE 1)
-endif()
-
-check_cxx_source_compiles(
-    "#include <cstdint>
-     int main () {
-        volatile unsigned int x = 5;
-        volatile unsigned long long y = __builtin_clz(x);
-        x = __builtin_clzll(y);
-        return 0;
-    }"
-     HIGHS_HAVE_BUILTIN_CLZ)
-if( NOT HIGHS_HAVE_BUILTIN_CLZ )
-    check_cxx_source_compiles(
-        "#include <intrin.h>
-        #pragma intrinsic(_BitScanReverse)
-        #pragma intrinsic(_BitScanReverse64)
-        int main () {
-            volatile unsigned long x = 5;
-            volatile unsigned long y;
-            _BitScanReverse(&y, x);
-            _BitScanReverse64(&x, y);
-            return 0;
-        }"
-        HIGHS_HAVE_BITSCAN_REVERSE)
-endif()
-
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 include_directories(
     ${HIGHS_BINARY_DIR}
@@ -314,26 +336,6 @@ if(MSVC)
     add_definitions(/wd4100)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
-
-# Function to set compiler flags on and off easily.
-include(CheckCXXCompilerFlag)
-function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-        check_cxx_compiler_flag("${flag}" flag_supported)
-        if(flag_supported)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-        endif()
-        unset(flag_supported CACHE)
-    endif()
-endfunction()
-
-# usage: turn pedantic on for even more warnings.
-enable_cxx_compiler_flag_if_supported("-Wall")
-enable_cxx_compiler_flag_if_supported("-Wextra")
-enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
-enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
-enable_cxx_compiler_flag_if_supported("-pedantic")
 
 #if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
 #    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
@@ -389,10 +391,6 @@ option(JULIA "Build library and executable for Julia" OFF)
 
 # No changes in app/ apart from a relative path
 add_subdirectory(app)
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    target_link_libraries (libhighs "pthread")
-endif()
 
 target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
 
