@@ -2483,7 +2483,7 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
       sum_primal_infeasibility += primal_infeasibility;
     }
   }
-  if (updated_num_primal_infeasibility != kHighsIllegalInfeasibilityCount) {
+  if (updated_num_primal_infeasibility >= 0) {
     // The number of primal infeasibliities should be correct
     bool num_primal_infeasibility_ok =
         num_primal_infeasibility == updated_num_primal_infeasibility;
