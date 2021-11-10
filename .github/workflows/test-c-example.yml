@@ -23,7 +23,7 @@ jobs:
           -DFAST_BUILD=ON \
           -DIPX=OFF \
           $GITHUB_WORKSPACE
-        cmake --build . --config Release --parallel
+        cmake --build . --config Release --parallel 4
         make install
     - name: Compile and test C example
       shell: bash
