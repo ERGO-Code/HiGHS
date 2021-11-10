@@ -118,6 +118,13 @@ if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
     message(STATUS "HIGHSINT64: " ${HIGHSINT64})
 endif()
 
+# If Visual Studio targets are being built.
+if(MSVC)
+    add_definitions(/W4)
+    add_definitions(/wd4061 /wd4100 /wd4244 /wd4365 /wd4514 /wd4820)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 1)
@@ -317,12 +324,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
     endif()
 endif()
 
-# If Visual Studio targets are being built.
-if(MSVC)
-    add_definitions(/W4)
-    add_definitions(/wd4100)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif()
 
 #if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
 #    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
