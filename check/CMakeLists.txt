@@ -96,6 +96,7 @@ add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target unit_tests
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 
@@ -116,6 +117,7 @@ add_test(NAME osi-unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 # Avoid that several build jobs try to concurretly build.

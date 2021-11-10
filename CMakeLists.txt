@@ -393,6 +393,7 @@ add_test(NAME highs-lib-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target libhighs
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 set_tests_properties(highs-lib-build
@@ -403,6 +404,7 @@ add_test(NAME highs-exe-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target highs
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 set_tests_properties(highs-exe-build
