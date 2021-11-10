@@ -48,6 +48,7 @@ class HighsTaskExecutor {
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
+  std::atomic_bool active;
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -79,12 +80,15 @@ class HighsTaskExecutor {
   }
 
   void run_worker(int workerId) {
+    // spin until the global executor pointer is set up
+    while (!active.load(std::memory_order_acquire))
+      HighsSpinMutex::yieldProcessor();
+    // now acquire a reference count of the global executor
+    auto executor = globalExecutor;
     HighsSplitDeque* localDeque = workerDeques[workerId].get();
     threadLocalWorkerDeque() = localDeque;
     HighsTask* currentTask = workerBunk->waitForNewTask(localDeque);
-    while (true) {
-      assert(currentTask != nullptr);
-
+    while (currentTask != nullptr) {
       localDeque->runStolenTask(currentTask);
 
       currentTask = random_steal_loop(localDeque);
@@ -97,9 +101,9 @@ class HighsTaskExecutor {
  public:
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
+    active.store(false, std::memory_order_relaxed);
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
-
     for (int i = 0; i < numThreads; ++i)
       workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
           workerBunk, workerDeques.data(), i, numThreads);
@@ -122,9 +126,25 @@ class HighsTaskExecutor {
   }
 
   static void initialize(int numThreads) {
-    if (!globalExecutor)
+    if (!globalExecutor) {
       globalExecutor =
           cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
+      globalExecutor->active.store(true, std::memory_order_release);
+    }
+  }
+
+  static void shutdown() {
+    // first spin until every worker has acquired its executor reference
+    while (globalExecutor.use_count() !=
+           globalExecutor->workerDeques.size() + 1)
+      HighsSpinMutex::yieldProcessor();
+    // set the active flag to false first with release ordering
+    globalExecutor->active.store(false, std::memory_order_release);
+    // now inject the null task as termination signal to every worker
+    for (auto& workerDeque : globalExecutor->workerDeques)
+      workerDeque->injectTaskAndNotify(nullptr);
+    // finally release the global executor reference
+    globalExecutor.reset();
   }
 
   void sync_stolen_task(HighsSplitDeque* localDeque, HighsTask* stolenTask) {
