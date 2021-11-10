@@ -758,9 +758,9 @@ void Presolve::caseTwoSingletonsDoubletonInequality(const HighsInt row,
   // std::endl; std::cout << "   ly = " << colLower[y] << "  uy = " <<
   // colUpper[y] << std::endl;
 
-  assert(nzRow[row] = 2);
-  assert(nzCol[x] = 1);
-  assert(nzCol[y] = 1);
+  assert(nzRow[row] == 2);
+  assert(nzCol[x] == 1);
+  assert(nzCol[y] == 1);
 
   assert(flagCol[x]);
   assert(flagCol[y]);
