@@ -1083,9 +1083,13 @@ void HFactor::buildHandleRankDeficiency() {
   col_with_no_pivot.resize(rank_deficiency);
   HighsInt lc_rank_deficiency = 0;
   if (num_basic < num_row) {
-    // iwork still has to be used to indicate the rows with no pivots, so resize
-    // it
+    // iwork still has to be used to indicate the rows with no pivots,
+    // so resize it
     iwork.resize(num_row);
+  } else if (num_basic > num_row) {
+    // iwork only has to be used to indicate the rows with no pivots,
+    // so resize it
+    iwork.resize(num_basic);
   }
   // ToDo: surely this is neater as iwork.assign(num_row, -1);
   for (HighsInt i = 0; i < num_row; i++) iwork[i] = -1;
@@ -1118,19 +1122,36 @@ void HFactor::buildHandleRankDeficiency() {
       lc_rank_deficiency++;
     }
   }
+  if (num_row < num_basic) {
+    // Record fictitious rows with no pivots for the excess basic
+    // variables so that permute will be constructed as a permutation
+    // of all entries in basic_index
+    for (HighsInt i = num_row; i < num_basic; i++) {
+      row_with_no_pivot[lc_rank_deficiency] = i;
+      iwork[i] = -(lc_rank_deficiency + 1);
+      lc_rank_deficiency++;
+    }
+  }
   assert(lc_rank_deficiency == rank_deficiency);
   debugReportRankDeficiency(1, highs_debug_level, log_options, num_row, permute,
                             iwork, basic_index, rank_deficiency,
                             row_with_no_pivot, col_with_no_pivot);
+  const HighsInt row_rank_deficiency =
+      rank_deficiency - max(num_basic - num_row, (HighsInt)0);
+  // Complete the permutation using the indices of rows with no pivot,
+  // the last max(num_basic-num_row, 0) of which will be fictitious
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt iRow = row_with_no_pivot[k];
     HighsInt iCol = col_with_no_pivot[k];
     assert(permute[iCol] == -1);
     permute[iCol] = iRow;
-    l_start.push_back(l_index.size());
-    u_pivot_index.push_back(iRow);
-    u_pivot_value.push_back(1);
-    u_start.push_back(u_index.size());
+    if (k < row_rank_deficiency) {
+      // Only correct the factorization for the true rows
+      l_start.push_back(l_index.size());
+      u_pivot_index.push_back(iRow);
+      u_pivot_value.push_back(1);
+      u_start.push_back(u_index.size());
+    }
   }
   debugReportRankDeficiency(2, highs_debug_level, log_options, num_row, permute,
                             iwork, basic_index, rank_deficiency,
@@ -1148,7 +1169,7 @@ void HFactor::buildMarkSingC() {
                        basic_index);
 
   const HighsInt basic_index_rank_deficiency =
-      rank_deficiency - (num_row - num_basic);
+      rank_deficiency - max(num_row - num_basic, (HighsInt)0);
   var_with_no_pivot.resize(rank_deficiency);
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt ASMrow = row_with_no_pivot[k];
@@ -1163,7 +1184,7 @@ void HFactor::buildMarkSingC() {
       assert(k < basic_index_rank_deficiency);
       basic_index[ASMcol] = num_col + ASMrow;
     } else if (num_basic < num_row) {
-      assert(ASMcol == num_basic + k - 1);
+      assert(ASMcol == num_basic + k - basic_index_rank_deficiency);
     }
   }
   debugReportMarkSingC(1, highs_debug_level, log_options, num_row, iwork,
@@ -1171,6 +1192,9 @@ void HFactor::buildMarkSingC() {
 }
 
 void HFactor::buildFinish() {
+  // Must only be called in the case where there are at least as many basic
+  // variables as rows
+  assert(num_basic >= num_row);
   //  debugPivotValueAnalysis(highs_debug_level, log_options, num_row,
   //  u_pivot_value);
   // The look up table
@@ -1255,11 +1279,16 @@ void HFactor::buildFinish() {
   pf_index.clear();
   pf_value.clear();
 
-  if (!this->refactor_info_.use && num_basic >= num_row) {
-    // Finally, if not calling buildFinish after refactorizing, and
-    // for a complete basis matrix, permute the basic variables
+  if (!this->refactor_info_.use) {
+    // Finally, if not calling buildFinish after refactorizing,
+    // permute the basic variables
     iwork.assign(basic_index, basic_index + num_basic);
     for (HighsInt i = 0; i < num_basic; i++) basic_index[permute[i]] = iwork[i];
+    // If there are more basic variables than rows, basic_index
+    // should have been permuted so that its last num_basic-num_row
+    // entries are logicals
+    for (HighsInt i = num_row; i < num_basic; i++)
+      assert(basic_index[i] >= num_col);
     // Add cost of buildFinish to build_synthetic_tick
     build_synthetic_tick += num_row * 80 + (LcountX + u_countX) * 60;
   }

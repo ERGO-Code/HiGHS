@@ -839,7 +839,6 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
       basic_index.push_back(num_col + iRow);
   }
   HighsInt num_basic_variables = basic_index.size();
-  assert(num_basic_variables <= num_row);
   HFactor factor;
   factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0],
                       kDefaultPivotThreshold, kDefaultPivotTolerance,
@@ -856,14 +855,18 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
     if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
       basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
   }
-  // Set all variables in basic_index to basic
-  for (HighsInt iRow = 0; iRow < num_basic_variables; iRow++) {
+  // Set at most the first num_row variables in basic_index to basic
+  const HighsInt use_basic_variables = std::min(num_row, num_basic_variables);
+  // num_basic_variables is no longer needed, so can be used as a check
+  num_basic_variables = 0;
+  for (HighsInt iRow = 0; iRow < use_basic_variables; iRow++) {
     HighsInt iVar = basic_index[iRow];
     if (iVar < num_col) {
       basis.col_status[iVar] = HighsBasisStatus::kBasic;
     } else {
       basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
     }
+    num_basic_variables++;
   }
   // Complete the assignment of basic variables using the logicals of
   // non-pivotal rows
