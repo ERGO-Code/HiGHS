@@ -67,17 +67,7 @@ check_cxx_source_compiles(
     }"
     HIGHS_HAVE_MM_PAUSE)
 
-check_cxx_source_compiles(
-    "#include <cstdint>
-     int main () {
-        unsigned int x = 5;
-        unsigned long long y = __builtin_clz(x);
-        x = __builtin_clzll(y);
-        return 0;
-    }"
-    HIGHS_HAVE_BUILTIN_CLZ)
-
-if( NOT HIGHS_HAVE_BUILTIN_CLZ )
+if(MSVC)
     check_cxx_source_compiles(
         "#include <intrin.h>
         #pragma intrinsic(_BitScanReverse)
@@ -90,6 +80,16 @@ if( NOT HIGHS_HAVE_BUILTIN_CLZ )
             return 0;
         }"
         HIGHS_HAVE_BITSCAN_REVERSE)
+else()
+    check_cxx_source_compiles(
+        "#include <cstdint>
+         int main () {
+            unsigned int x = 5;
+            unsigned long long y = __builtin_clz(x);
+            x = __builtin_clzll(y);
+            return 0;
+        }"
+        HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
 # Function to set compiler flags on and off easily.
