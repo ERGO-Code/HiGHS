@@ -2,6 +2,7 @@
 
 #include "Highs.h"
 #include "catch.hpp"
+#include "util/HFactor.h"
 #include "util/HighsRandom.h"
 
 const double inf = kHighsInf;
@@ -9,13 +10,164 @@ const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void testAlienBasis(const bool avgas, const HighsInt seed);
+void getDependentCols(const HighsSparseMatrix& matrix,
+		      std::vector<HighsInt>& col_set,
+		      std::vector<HighsInt>& dependent_col_set,
+		      const HighsInt required_rank_deficiency);
+void reportColSet(const std::string message,
+		  const std::vector<HighsInt>& col_set);
+void reportDependentCols(const std::vector<HighsInt>& dependent_col_set);
 
-TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
+TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
+  // To find the dependent rows in 
+  //
+  // [1 1  ]
+  // [2 2  ]
+  // [1   1]
+  // [2   2]
+  // [6 3 3]
+  //
+  // Define the transpose of the matrix column-wise
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 5;
+  matrix.num_row_ = 3;
+  matrix.start_ = {0, 2, 4, 6, 8, 11};
+  matrix.index_ = {0, 1, 0, 1, 0, 2, 0, 2, 0, 1, 2};
+  matrix.value_ = {1, 1, 2, 2, 1, 1, 2, 2, 6, 3, 3};
+  std::vector<HighsInt> col_set;
+  std::vector<HighsInt> dependent_col_set;
+  HighsInt required_rank_deficiency;
+  // getDependentCols uses HFactor::build() to determine col_set as
+  // the maximal linearly independent subset of columns defined by the
+  // original col_set, together with the indices of logical columns so
+  // that the returned col_set is of full rank.
+  //
+  // For the transpose of the matrix above, here are the 5 columns and logical columns
+  //
+  // 0 1 2 3 4 | 5 6 7
+  // ----------+------
+  // 1 2 1 2 6 | 1
+  // 1 2     3 |   1
+  //     1 2 3 |     1
+  //
+  // Data about the linearly dependent columns defined by the original
+  // col_set is available in the following data members of HFactor,
+  // that have size rank_deficiency
+  //
+  //   row_with_no_pivot: Rows in which no pivot was found when
+  //   factorizing the matrix
+  //
+  //   col_with_no_pivot: Positions in col_set corresponding to
+  //   columns in which no pivot was found when factorizing the matrix
+  //
+  //   var_with_no_pivot: Entries in col_set for which no pivot was
+  //   found when factorizing the matrix
+  //
+  // The terms "var" and "col" relate to the set of basic variables
+  // and columns of the basis matrix.
+  //  
+  // Case 1
+  // ======
+  //
+  // With all columns in the set, the distinction between "var" and
+  // "col" is not demonstrated, but its still a case worth documenting
+  //
+  // The matrix defined by col_set has rank 2, so the rank deficiency is 3
+  //
+  col_set = {0, 1, 2, 3, 4};
+  required_rank_deficiency = 3;
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  getDependentCols(matrix, col_set, dependent_col_set, required_rank_deficiency);
+  if (dev_run) reportColSet("Returned", col_set);
+  if (dev_run) reportDependentCols(dependent_col_set);
+  //
+  // The entries in the returned column set correspond to the matrix
+  //
+  // 4 6 3 | 8 9
+  // ------+----
+  // 6   2 | 
+  // 3 1   | 
+  // 3   2 | 
+  //       | 1  
+  //       |   1
+  //
+  // The last two entries can be ignored. They are fictitious logical
+  // columns 8 and 9 so that the whole set of size 5 is a non-singular
+  // 5x5 matrix
+  //
+  // Case 2
+  // ======
+  //
+  // With a subset of columns in the set, particularly if the indices
+  // are not ordered, the distinction between "var" and "col" in the
+  // data produced by HFactor::build() is demonstrated
+  //
+  // The matrix defined by col_set has rank 2, so the rank deficiency is 2
+  //
+  col_set = {2, 0, 1, 3};
+  required_rank_deficiency = 2;
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  getDependentCols(matrix, col_set, dependent_col_set, required_rank_deficiency);
+  if (dev_run) reportColSet("Returned", col_set);
+  if (dev_run) reportDependentCols(dependent_col_set);
+  //
+  // The entries in the returned column set correspond to the
+  // matrix
+  //
+  // 1 6 3 | 8
+  // ------+--
+  // 1   2 | 
+  // 1 1   | 
+  //     2 | 
+  //       | 1
+  //
+  // The last entry can be ignored. It is a fictitious logical column
+  // 8 (num_col is still 5!), so that the whole set of size 4 is a
+  // non-singular 4x4 matrix
+  //
+}
+
+TEST_CASE("AlienBasis-LP", "[highs_test_alien_basis]") {
   const HighsInt num_seed = 10;
   bool avgas = true;
   for (HighsInt seed = 0; seed < num_seed; seed++) testAlienBasis(avgas, seed);
   avgas = false;
   for (HighsInt seed = 0; seed < num_seed; seed++) testAlienBasis(avgas, seed);
+}
+
+void getDependentCols(const HighsSparseMatrix& matrix,
+		      std::vector<HighsInt>& col_set,
+		      std::vector<HighsInt>& dependent_col_set,
+		      const HighsInt required_rank_deficiency) {
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  HighsInt rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
+  if (dev_run) {
+  }
+  if (dev_run) printf("Returned rank_deficiency = %d:\n  No pivot in\nk Row Col Var\n", (int)rank_deficiency);
+  dependent_col_set.clear();
+  for (HighsInt k = 0; k <rank_deficiency; k++) {
+    if (dev_run) printf("%1d %3d %3d %3d\n", (int)k,
+			(int)factor.row_with_no_pivot[k],
+			(int)factor.col_with_no_pivot[k],
+			(int)factor.var_with_no_pivot[k]);
+    dependent_col_set.push_back(factor.var_with_no_pivot[k]);
+  }
+}
+
+void reportDependentCols(const std::vector<HighsInt>& dependent_col_set) {
+    printf("Dependent column(s) in col_set:");
+    for (HighsInt k = 0; k < (HighsInt)dependent_col_set.size(); k++)
+      printf(" %1d", (int)dependent_col_set[k]);
+    printf("\n");
+}
+
+void reportColSet(const std::string message, const std::vector<HighsInt>& col_set) {
+printf("%s col_set:\n", message.c_str());
+ for (HighsInt k = 0; k < (HighsInt)col_set.size(); k++)
+   printf(" %1d", (int)col_set[k]);
+ printf("\n");
 }
 
 void testAlienBasis(const bool avgas, const HighsInt seed) {
