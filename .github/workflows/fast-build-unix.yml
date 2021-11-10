@@ -29,14 +29,14 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --parallel --config $BUILD_TYPE
+      run: cmake --build . --parallel 4 --config $BUILD_TYPE
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.  
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest --timeout 100 --output-on-failure -C $BUILD_TYPE
+      run: ctest --parallel 2 --timeout 100 --output-on-failure -C $BUILD_TYPE
 
   release:
     runs-on: ${{ matrix.os }}
@@ -58,7 +58,7 @@ jobs:
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --parallel
+      run: cmake --build . --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
