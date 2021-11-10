@@ -873,22 +873,22 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
     case 3:
     case 4:
     case 5:
-      std::snprintf(printString.data(), 16, "%ld", val);
+      std::snprintf(printString.data(), 16, "%" PRId64, val);
       break;
     case 6:
     case 7:
     case 8:
-      std::snprintf(printString.data(), 16, "%ldk", val / 1000);
+      std::snprintf(printString.data(), 16, "%" PRId64 "k", val / 1000);
       break;
     default:
-      std::snprintf(printString.data(), 16, "%ldm", val / 1000000);
+      std::snprintf(printString.data(), 16, "%" PRId64 "m", val / 1000000);
   }
 
   return printString;
 }
 
-static std::array<char, 32> convertToPrintString(double val) {
-  std::array<char, 32> printString;
+static std::array<char, 16> convertToPrintString(double val) {
+  std::array<char, 16> printString;
   double l = std::abs(val) == kHighsInf
                  ? 0.0
                  : std::log10(std::max(1e-6, std::abs(val)));
@@ -897,23 +897,23 @@ static std::array<char, 32> convertToPrintString(double val) {
     case 1:
     case 2:
     case 3:
-      std::snprintf(printString.data(), 32, "%.10g", val);
+      std::snprintf(printString.data(), 16, "%.10g", val);
       break;
     case 4:
-      std::snprintf(printString.data(), 32, "%.11g", val);
+      std::snprintf(printString.data(), 16, "%.11g", val);
       break;
     case 5:
-      std::snprintf(printString.data(), 32, "%.12g", val);
+      std::snprintf(printString.data(), 16, "%.12g", val);
       break;
     case 6:
     case 7:
     case 8:
     case 9:
     case 10:
-      std::snprintf(printString.data(), 32, "%.13g", val);
+      std::snprintf(printString.data(), 16, "%.13g", val);
       break;
     default:
-      std::snprintf(printString.data(), 32, "%.9g", val);
+      std::snprintf(printString.data(), 16, "%.9g", val);
   }
 
   return printString;
@@ -963,8 +963,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
 
-    std::array<char, 32> lb_string = convertToPrintString(lb);
-    std::array<char, 32> ub_string = convertToPrintString(ub);
+    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> ub_string = convertToPrintString(ub);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -976,8 +976,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   } else {
-    std::array<char, 32> lb_string = convertToPrintString(lb);
-    std::array<char, 32> ub_string = convertToPrintString(ub);
+    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> ub_string = convertToPrintString(ub);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,

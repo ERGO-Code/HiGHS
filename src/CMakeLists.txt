@@ -128,6 +128,7 @@ set(sources
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -235,6 +236,14 @@ set(headers
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsBinarySemaphore.h
+    parallel/HighsCacheAlign.h
+    parallel/HighsMutex.h
+    parallel/HighsParallel.h
+    parallel/HighsSpinMutex.h
+    parallel/HighsSplitDeque.h
+    parallel/HighsTaskExecutor.h
+    parallel/HighsTask.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
@@ -345,8 +354,6 @@ if (IPX_ON)
         MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
-include(CheckLanguage)
-check_language("Fortran")
 if(FORTRAN_FOUND)
     set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
@@ -362,7 +369,6 @@ if(FORTRAN_FOUND)
         "${CMAKE_INSTALL_PREFIX}/lib")
 endif(FORTRAN_FOUND)
 
-check_language("CSharp")
 if(CSHARP_FOUND)
     message(STATUS "CSharp supported")
     set(csharpsources
@@ -419,25 +425,26 @@ foreach ( file ${headers} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
-    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
     target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
     target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
     target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
     target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-    target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
-    target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
-    target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
     target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
     target_compile_options(libipx PRIVATE "-Wno-unused-variable")
     target_compile_options(libipx PRIVATE "-Wno-sign-compare")
-    target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
+    #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
     endif()
 
     install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
@@ -496,9 +503,8 @@ else()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
 
-target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 if (NOT ${BUILD_SHARED_LIBS})
-    target_compile_options(libhighs PRIVATE "-fPIC" )
+    set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 target_sources(libhighs PRIVATE
@@ -553,6 +559,7 @@ target_sources(libhighs PRIVATE
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -674,6 +681,14 @@ set(headers_fast_build_
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsBinarySemaphore.h
+    parallel/HighsCacheAlign.h
+    parallel/HighsMutex.h
+    parallel/HighsParallel.h
+    parallel/HighsSpinMutex.h
+    parallel/HighsSplitDeque.h
+    parallel/HighsTaskExecutor.h
+    parallel/HighsTask.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
@@ -753,6 +768,7 @@ foreach ( file ${headers_fast_build_} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
@@ -765,10 +781,10 @@ if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
     if (UNIX)
-        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-        target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
         target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
-        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
     endif()
 
 endif()
@@ -777,3 +793,6 @@ endif()
         "${CMAKE_INSTALL_PREFIX}/lib")
 
 endif()
+
+find_package(Threads REQUIRED)
+target_link_libraries(libhighs Threads::Threads)

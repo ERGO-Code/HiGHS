@@ -276,6 +276,7 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt random_seed;
+  HighsInt threads;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -285,9 +286,9 @@ struct HighsOptionsStruct {
   HighsInt simplex_primal_edge_weight_strategy;
   HighsInt simplex_iteration_limit;
   HighsInt simplex_update_limit;
+  HighsInt simplex_min_concurrency;
+  HighsInt simplex_max_concurrency;
   HighsInt ipm_iteration_limit;
-  HighsInt highs_min_threads;
-  HighsInt highs_max_threads;
   std::string solution_file;
   std::string log_file;
   bool write_solution_to_file;
@@ -496,6 +497,11 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &random_seed, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "threads", "number of threads used by HiGHS (0: automatic)", advanced,
+        &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
                             advanced, &highs_debug_level, kHighsDebugLevelMin,
@@ -566,13 +572,16 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "highs_min_threads", "Minimum number of threads in parallel execution",
-        advanced, &highs_min_threads, 1, 1, kHighsThreadLimit);
+        "simplex_min_concurrency",
+        "Minimum level of concurrency in parallel simplex", advanced,
+        &simplex_min_concurrency, 1, 1, kSimplexConcurrencyLimit);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "highs_max_threads", "Maximum number of threads in parallel execution",
-        advanced, &highs_max_threads, 1, kHighsThreadLimit, kHighsThreadLimit);
+    record_int =
+        new OptionRecordInt("simplex_max_concurrency",
+                            "Maximum level of concurrency in parallel simplex",
+                            advanced, &simplex_max_concurrency, 1,
+                            kSimplexConcurrencyLimit, kSimplexConcurrencyLimit);
     records.push_back(record_int);
 
     record_bool =

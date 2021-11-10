@@ -2287,8 +2287,6 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
         return explainInfeasibilityConflict(conflict, len);
       }
   }
-
-  return false;
 }
 
 bool HighsDomain::ConflictSet::explainInfeasibilityConflict(

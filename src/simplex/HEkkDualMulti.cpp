@@ -21,6 +21,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
 
@@ -43,8 +44,8 @@ void HEkkDual::iterateMulti() {
     slice_PRICE = 0;
 
   if (slice_PRICE) {
-#pragma omp parallel
-#pragma omp single
+    //#pragma omp parallel
+    //#pragma omp single
     chooseColumnSlice(multi_finish[multi_nFinish].row_ep);
   } else {
     chooseColumn(multi_finish[multi_nFinish].row_ep);
@@ -179,10 +180,10 @@ void HEkkDual::majorChooseRowBtran() {
 
   // 4.1. Prepare BTRAN buffer
   HighsInt multi_ntasks = 0;
-  HighsInt multi_iRow[kHighsThreadLimit];
-  HighsInt multi_iwhich[kHighsThreadLimit];
-  double multi_EdWt[kHighsThreadLimit];
-  HVector_ptr multi_vector[kHighsThreadLimit];
+  HighsInt multi_iRow[kSimplexConcurrencyLimit];
+  HighsInt multi_iwhich[kSimplexConcurrencyLimit];
+  double multi_EdWt[kSimplexConcurrencyLimit];
+  HVector_ptr multi_vector[kSimplexConcurrencyLimit];
   for (HighsInt ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].row_out >= 0) {
       multi_iRow[multi_ntasks] = multi_choice[ich].row_out;
@@ -198,29 +199,43 @@ void HEkkDual::majorChooseRowBtran() {
                                       ekk_instance_.info_.row_ep_density);
   }
   // 4.2 Perform BTRAN
-#pragma omp parallel for schedule(static, 1)
-  for (HighsInt i = 0; i < multi_ntasks; i++) {
-    const HighsInt iRow = multi_iRow[i];
-    HVector_ptr work_ep = multi_vector[i];
-    work_ep->clear();
-    work_ep->count = 1;
-    work_ep->index[0] = iRow;
-    work_ep->array[iRow] = 1;
-    work_ep->packFlag = true;
-    HighsTimerClock* factor_timer_clock_pointer =
-        analysis->getThreadFactorTimerClockPointer();
-    ekk_instance_.simplex_nla_.btran(*work_ep,
-                                     ekk_instance_.info_.row_ep_density,
-                                     factor_timer_clock_pointer);
-    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-      // For Dual steepest edge we know the exact weight as the 2-norm of
-      // work_ep
-      multi_EdWt[i] = work_ep->norm2();
-    } else {
-      // For Devex (and Dantzig) we take the updated edge weight
-      multi_EdWt[i] = dualRHS.workEdWt[iRow];
+  //#pragma omp parallel for schedule(static, 1)
+  // printf("start %d tasks for btran\n", multi_ntasks);
+  // std::vector<HighsInt> tmp(multi_ntasks);
+  highs::parallel::for_each(0, multi_ntasks, [&](HighsInt start, HighsInt end) {
+    for (HighsInt i = start; i < end; i++) {
+      // printf("worker %d runs task %i\n", highs::parallel::thread_num(),
+      // i);
+      // tmp[i] = highs::parallel::thread_num();
+      const HighsInt iRow = multi_iRow[i];
+      HVector_ptr work_ep = multi_vector[i];
+      work_ep->clear();
+      work_ep->count = 1;
+      work_ep->index[0] = iRow;
+      work_ep->array[iRow] = 1;
+      work_ep->packFlag = true;
+      HighsTimerClock* factor_timer_clock_pointer =
+          analysis->getThreadFactorTimerClockPointer();
+      ekk_instance_.simplex_nla_.btran(*work_ep,
+                                       ekk_instance_.info_.row_ep_density,
+                                       factor_timer_clock_pointer);
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
+        // For Dual steepest edge we know the exact weight as the 2-norm of
+        // work_ep
+        multi_EdWt[i] = work_ep->norm2();
+      } else {
+        // For Devex (and Dantzig) we take the updated edge weight
+        multi_EdWt[i] = dualRHS.workEdWt[iRow];
+      }
     }
-  }
+  });
+
+  // printf("multi_ntask task schedule:");
+  // for (HighsInt i = 0; i < multi_ntasks; ++i) {
+  //  printf(" %d->w%d", i, tmp[i]);
+  //}
+  // printf("\n");
+
   if (analysis->analyse_simplex_summary_data) {
     for (HighsInt i = 0; i < multi_ntasks; i++)
       analysis->operationRecordAfter(kSimplexNlaBtranEp,
@@ -451,9 +466,9 @@ void HEkkDual::minorUpdateRows() {
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
   if (updateRows_inDense) {
     HighsInt multi_nTasks = 0;
-    HighsInt multi_iwhich[kHighsThreadLimit];
-    double multi_xpivot[kHighsThreadLimit];
-    HVector_ptr multi_vector[kHighsThreadLimit];
+    HighsInt multi_iwhich[kSimplexConcurrencyLimit];
+    double multi_xpivot[kSimplexConcurrencyLimit];
+    HVector_ptr multi_vector[kSimplexConcurrencyLimit];
 
     /*
      * Dense mode
@@ -475,16 +490,20 @@ void HEkkDual::minorUpdateRows() {
     }
 
     // Perform tasks
-#pragma omp parallel for schedule(dynamic)
-    for (HighsInt i = 0; i < multi_nTasks; i++) {
-      HVector_ptr nextEp = multi_vector[i];
-      const double xpivot = multi_xpivot[i];
-      nextEp->saxpy(xpivot, Row);
-      nextEp->tight();
-      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-        multi_xpivot[i] = nextEp->norm2();
-      }
-    }
+    //#pragma omp parallel for schedule(dynamic)
+    // printf("minorUpdatesRows: starting %d tasks\n", multi_nTasks);
+    highs::parallel::for_each(
+        0, multi_nTasks, [&](HighsInt start, HighsInt end) {
+          for (HighsInt i = start; i < end; i++) {
+            HVector_ptr nextEp = multi_vector[i];
+            const double xpivot = multi_xpivot[i];
+            nextEp->saxpy(xpivot, Row);
+            nextEp->tight();
+            if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
+              multi_xpivot[i] = nextEp->norm2();
+            }
+          }
+        });
 
     // Put weight back
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
@@ -602,8 +621,8 @@ void HEkkDual::majorUpdateFtranParallel() {
 
   // Prepare buffers
   HighsInt multi_ntasks = 0;
-  double multi_density[kHighsThreadLimit * 2 + 1];
-  HVector_ptr multi_vector[kHighsThreadLimit * 2 + 1];
+  double multi_density[kSimplexConcurrencyLimit * 2 + 1];
+  HVector_ptr multi_vector[kSimplexConcurrencyLimit * 2 + 1];
   // BFRT first
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT.count,
@@ -635,14 +654,18 @@ void HEkkDual::majorUpdateFtranParallel() {
   }
 
   // Perform FTRAN
-#pragma omp parallel for schedule(dynamic, 1)
-  for (HighsInt i = 0; i < multi_ntasks; i++) {
-    HVector_ptr rhs = multi_vector[i];
-    double density = multi_density[i];
-    HighsTimerClock* factor_timer_clock_pointer =
-        analysis->getThreadFactorTimerClockPointer();
-    ekk_instance_.simplex_nla_.ftran(*rhs, density, factor_timer_clock_pointer);
-  }
+  //#pragma omp parallel for schedule(dynamic, 1)
+  // printf("majorUpdateFtranParallel: starting %d tasks\n", multi_ntasks);
+  highs::parallel::for_each(0, multi_ntasks, [&](HighsInt start, HighsInt end) {
+    for (HighsInt i = start; i < end; i++) {
+      HVector_ptr rhs = multi_vector[i];
+      double density = multi_density[i];
+      HighsTimerClock* factor_timer_clock_pointer =
+          analysis->getThreadFactorTimerClockPointer();
+      ekk_instance_.simplex_nla_.ftran(*rhs, density,
+                                       factor_timer_clock_pointer);
+    }
+  });
 
   // Update ticks
   for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -695,17 +718,27 @@ void HEkkDual::majorUpdateFtranFinal() {
         // The FTRAN regular buffer
         if (fabs(pivotX1) > kHighsTiny) {
           const double pivot = pivotX1 / pivotAlpha;
-#pragma omp parallel for
-          for (HighsInt i = 0; i < solver_num_row; i++)
-            myCol[i] -= pivot * pivotArray[i];
+          //#pragma omp parallel for
+          highs::parallel::for_each(
+              0, solver_num_row,
+              [&](HighsInt start, HighsInt end) {
+                for (HighsInt i = start; i < end; i++)
+                  myCol[i] -= pivot * pivotArray[i];
+              },
+              100);
           myCol[pivotRow] = pivot;
         }
         // The FTRAN-DSE buffer
         if (fabs(pivotX2) > kHighsTiny) {
           const double pivot = pivotX2 / pivotAlpha;
-#pragma omp parallel for
-          for (HighsInt i = 0; i < solver_num_row; i++)
-            myRow[i] -= pivot * pivotArray[i];
+          //#pragma omp parallel for
+          highs::parallel::for_each(
+              0, solver_num_row,
+              [&](HighsInt start, HighsInt end) {
+                for (HighsInt i = start; i < end; i++)
+                  myRow[i] -= pivot * pivotArray[i];
+              },
+              100);
           myRow[pivotRow] = pivot;
         }
       }
@@ -745,18 +778,23 @@ void HEkkDual::majorUpdatePrimal() {
     // non-pivotal edge weights
     const double* mixArray = &col_BFRT.array[0];
     double* local_work_infeasibility = &dualRHS.work_infeasibility[0];
-#pragma omp parallel for schedule(static)
-    for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
-      baseValue[iRow] -= mixArray[iRow];
-      const double value = baseValue[iRow];
-      const double less = baseLower[iRow] - value;
-      const double more = value - baseUpper[iRow];
-      double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      if (ekk_instance_.info_.store_squared_primal_infeasibility)
-        local_work_infeasibility[iRow] = infeas * infeas;
-      else
-        local_work_infeasibility[iRow] = fabs(infeas);
-    }
+    //#pragma omp parallel for schedule(static)
+    highs::parallel::for_each(
+        0, solver_num_row,
+        [&](HighsInt start, HighsInt end) {
+          for (HighsInt iRow = start; iRow < end; iRow++) {
+            baseValue[iRow] -= mixArray[iRow];
+            const double value = baseValue[iRow];
+            const double less = baseLower[iRow] - value;
+            const double more = value - baseUpper[iRow];
+            double infeas = less > Tp ? less : (more > Tp ? more : 0);
+            if (ekk_instance_.info_.store_squared_primal_infeasibility)
+              local_work_infeasibility[iRow] = infeas * infeas;
+            else
+              local_work_infeasibility[iRow] = fabs(infeas);
+          }
+        },
+        100);
 
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge ||
         (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
@@ -772,13 +810,18 @@ void HEkkDual::majorUpdatePrimal() {
           // Update steepest edge weights
           const double* dseArray = &multi_finish[iFn].row_ep->array[0];
           const double Kai = -2 / multi_finish[iFn].alpha_row;
-#pragma omp parallel for schedule(static)
-          for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
-            const double aa_iRow = colArray[iRow];
-            EdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
-                                     Kai * dseArray[iRow]);
-            if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
-          }
+          //#pragma omp parallel for schedule(static)
+          highs::parallel::for_each(
+              0, solver_num_row,
+              [&](HighsInt start, HighsInt end) {
+                for (HighsInt iRow = start; iRow < end; iRow++) {
+                  const double aa_iRow = colArray[iRow];
+                  EdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
+                                           Kai * dseArray[iRow]);
+                  if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
+                }
+              },
+              100);
         } else {
           // Update Devex weights
           for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
@@ -959,9 +1002,9 @@ void HEkkDual::iterationAnalysisMinor() {
 void HEkkDual::iterationAnalysisMajorData() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->min_threads = info.min_threads;
-  analysis->num_threads = info.num_threads;
-  analysis->max_threads = info.max_threads;
+  analysis->min_concurrency = info.min_concurrency;
+  analysis->num_concurrency = info.num_concurrency;
+  analysis->max_concurrency = info.max_concurrency;
 }
 
 void HEkkDual::iterationAnalysisMajor() {

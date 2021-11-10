@@ -751,8 +751,10 @@ HighsInt HFactor::buildKernel() {
       foundPivot = true;
     }
     const bool singleton_pivot = foundPivot;
-    // 1.3. Major search loop
+#ifndef NDEBUG
     double candidate_pivot_value = 0;
+#endif
+    // 1.3. Major search loop
     for (HighsInt count = 2; !foundPivot && count <= numRow; count++) {
       // 1.3.1 Search for columns
       for (HighsInt j = clinkFirst[count]; j != -1; j = clinkNext[j]) {
@@ -765,7 +767,9 @@ HighsInt HFactor::buildKernel() {
             HighsInt rowCount = MRcount[i];
             double meritLocal = 1.0 * (count - 1) * (rowCount - 1);
             if (meritPivot > meritLocal) {
+#ifndef NDEBUG
               candidate_pivot_value = fabs(MCvalue[k]);
+#endif
               meritPivot = meritLocal;
               jColPivot = j;
               iRowPivot = i;
@@ -793,7 +797,9 @@ HighsInt HFactor::buildKernel() {
             HighsInt ifind = MCstart[j];
             while (MCindex[ifind] != i) ifind++;
             if (fabs(MCvalue[ifind]) >= MCminpivot[j]) {
+#ifndef NDEBUG
               candidate_pivot_value = fabs(MCvalue[ifind]);
+#endif
               meritPivot = meritLocal;
               jColPivot = j;
               iRowPivot = i;

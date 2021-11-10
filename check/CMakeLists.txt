@@ -28,7 +28,9 @@ set(TEST_SOURCES
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
+    TestHighsHash.cpp
     TestHighsIntegers.cpp
+    TestHighsParallel.cpp
     TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
@@ -56,6 +58,12 @@ if (IPX_ON)
 endif()
 
 add_executable(unit_tests ${TEST_SOURCES})
+if (UNIX)
+    target_compile_options(unit_tests PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
+    target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(unit_tests PRIVATE "-Wno-sign-compare")
+endif()
 target_link_libraries(unit_tests libhighs Catch)
 
 if (OSI_FOUND AND BUILD_TESTING)
@@ -88,6 +96,7 @@ add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target unit_tests
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 
@@ -108,6 +117,7 @@ add_test(NAME osi-unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 # Avoid that several build jobs try to concurretly build.
@@ -207,9 +217,9 @@ set(settings
     "--random_seed=1"
     "--random_seed=2"
     "--random_seed=3"
-    "--random_seed=4"
-    "--random_seed=5"
-#    "--parallel=on"
+#   "--random_seed=4"
+#   "--random_seed=5"
+#   "--parallel=on"
     )
 
 # define a macro to add tests

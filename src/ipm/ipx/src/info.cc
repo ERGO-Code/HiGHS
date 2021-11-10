@@ -3,11 +3,6 @@
 #include <map>
 #include <string>
 #include "control.h"
-
-ipx_info::ipx_info() {
-    memset(this, 0, sizeof(ipx_info));
-}
-
 namespace ipx {
 
 template <typename T>

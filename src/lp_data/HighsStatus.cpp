@@ -18,19 +18,14 @@ std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::kOk:
       return "OK";
-      break;
     case HighsStatus::kWarning:
       return "Warning";
-      break;
     case HighsStatus::kError:
       return "Error";
-      break;
     default:
       assert(1 == 0);
       return "Unrecognised HiGHS status";
-      break;
   }
-  return "";
 }
 
 HighsStatus interpretCallStatus(const HighsLogOptions log_options,
