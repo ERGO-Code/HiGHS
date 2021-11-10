@@ -455,7 +455,7 @@ foreach(instance ${${instances}})
             "Model   status      : ${solutionstatus}")
 
     if(${solutionstatus} STREQUAL "Optimal")
-        if(${setting} STREQUAL "--presolve=off")
+        if("${setting}" STREQUAL "--presolve=off")
             set_tests_properties (${name}${setting} PROPERTIES
                     PASS_REGULAR_EXPRESSION
                     "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
@@ -471,10 +471,10 @@ endfunction()
 
 if (NOT JULIA)
     # add tests for success and fail instances
-    add_instance_tests(successInstances "Optimal" " ")
-    add_instance_tests(failInstances "Fail" " ")
-    add_instance_tests(infeasibleInstances "Infeasible" " ")
-#    add_instance_tests(unboundedInstances "Unbounded" " ")
+    add_instance_tests(successInstances "Optimal" "")
+    add_instance_tests(failInstances "Fail" "")
+    add_instance_tests(infeasibleInstances "Infeasible" "")
+#    add_instance_tests(unboundedInstances "Unbounded" "")
 
     if (IPX_ON)
         set(settings ${settings} "--solver=ipm")
