@@ -23,18 +23,11 @@
 #include <set>
 
 #include "lp_data/HighsLpUtils.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/SimplexTimer.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
-using std::cout;
-using std::endl;
 using std::fabs;
-using std::flush;
-using std::runtime_error;
 
 HighsStatus HEkkDual::solve() {
   // Initialise control data for a particular solve
@@ -471,12 +464,12 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
   if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain) return;
 
   // Identify the (current) number of HiGHS tasks to be used
-  const HighsInt num_threads = ekk_instance_.info_.num_threads;
+  const HighsInt num_concurrency = ekk_instance_.info_.num_concurrency;
 
   HighsInt pass_num_slice;
   if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualTasks) {
     // Initialize for tasks
-    pass_num_slice = num_threads - 2;
+    pass_num_slice = num_concurrency - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
@@ -484,13 +477,14 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
                   " slices due to number of "
                   "threads (%" HIGHSINT_FORMAT
                   ") being too small: results unpredictable\n",
-                  pass_num_slice, num_threads);
+                  pass_num_slice, num_concurrency);
     }
   } else {
     // Initialize for multi
-    multi_num = num_threads;
+    multi_num = num_concurrency;
     if (multi_num < 1) multi_num = 1;
-    if (multi_num > kHighsThreadLimit) multi_num = kHighsThreadLimit;
+    if (multi_num > kSimplexConcurrencyLimit)
+      multi_num = kSimplexConcurrencyLimit;
     for (HighsInt i = 0; i < multi_num; i++) {
       multi_choice[i].row_ep.setup(solver_num_row);
       multi_choice[i].col_aq.setup(solver_num_row);
@@ -504,7 +498,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
                   " slices due to number of "
                   "threads (%" HIGHSINT_FORMAT
                   ") being too small: results unpredictable\n",
-                  pass_num_slice, num_threads);
+                  pass_num_slice, num_concurrency);
     }
   }
   // Create the multiple HEkkDualRow instances: one for each column
@@ -538,7 +532,7 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   const HighsInt AcountX = Astart[solver_num_col];
 
   // Figure out partition weight
-  double sliced_countX = AcountX / slice_num;
+  double sliced_countX = AcountX / (double)slice_num;
   slice_start[0] = 0;
   for (HighsInt i = 0; i < slice_num - 1; i++) {
     HighsInt endColumn = slice_start[i] + 1;  // At least one column
@@ -1308,26 +1302,29 @@ void HEkkDual::iterateTasks() {
   if (1.0 * row_ep.count / solver_num_row < 0.01) slice_PRICE = 0;
 
   analysis->simplexTimerStart(Group1Clock);
-#pragma omp parallel
-#pragma omp single
+  //#pragma omp parallel
+  //#pragma omp single
   {
-#pragma omp task
-    {
+    //#pragma omp task
+    highs::parallel::spawn([&]() {
       col_DSE.copy(&row_ep);
       updateFtranDSE(&col_DSE);
-    }
-#pragma omp task
+    });
+    //#pragma omp task
     {
       if (slice_PRICE)
         chooseColumnSlice(&row_ep);
       else
         chooseColumn(&row_ep);
-#pragma omp task
-      updateFtranBFRT();
-#pragma omp task
+      //#pragma omp task
+      highs::parallel::spawn([&]() { updateFtranBFRT(); });
+      //#pragma omp task
       updateFtran();
-#pragma omp taskwait
+      //#pragma omp taskwait
+      highs::parallel::sync();
     }
+
+    highs::parallel::sync();
   }
   analysis->simplexTimerStop(Group1Clock);
 
@@ -1844,28 +1841,20 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   row_ap_thread_id.resize(slice_num);
   */
 
-#pragma omp task
-  {
+  highs::parallel::spawn([&]() {
     dualRow.chooseMakepack(row_ep, solver_num_col);
     dualRow.choosePossible();
-#ifdef OPENMP
-    //    HighsInt row_ep_thread_id = omp_get_thread_num();
-    //    printf("Hello world from Row_ep:         PACK + CC1 thread %"
-    //    HIGHSINT_FORMAT "\n", row_ep_thread_id);
-#endif
-  }
+  });
 
   // Row_ap: PRICE + PACK + CC1
-  const bool quad_precision = false;
-  for (HighsInt i = 0; i < slice_num; i++) {
-#pragma omp task
-    {
-#ifdef OPENMP
+  highs::parallel::for_each(0, slice_num, [&](HighsInt start, HighsInt end) {
+    const bool quad_precision = false;
+    for (HighsInt i = start; i < end; i++) {
       //      HighsInt row_ap_thread_id = omp_get_thread_num();
       //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1"
       //      HIGHSINT_FORMAT "] thread %" HIGHSINT_FORMAT "\n", i,
       //      row_ap_thread_id);
-#endif
+
       slice_row_ap[i].clear();
 
       if (use_col_price) {
@@ -1888,8 +1877,9 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
       slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
       slice_dualRow[i].choosePossible();
     }
-  }
-#pragma omp taskwait
+  });
+
+  highs::parallel::sync();
 
   if (analysis->analyse_simplex_summary_data) {
     // Determine the nonzero count of the whole row

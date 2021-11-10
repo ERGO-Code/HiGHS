@@ -3,6 +3,9 @@
 
 #include "ipx_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct ipx_info {
     ipxint status;
     ipxint status_ipm;
@@ -96,10 +99,10 @@ struct ipx_info {
     double frobnorm_squared;    /* Frobnorm^2 of tbl matrix computed */
     double lambdamax;           /* max eigenval of transformed normal matrix */
     double volume_increase;     /* base-2 log of volume(new)/volume(old) */
-
-    #ifdef __cplusplus
-    ipx_info();                 /* initializes all members to zero */
-    #endif
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* IPX_INFO_H_ */

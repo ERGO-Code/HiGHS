@@ -149,8 +149,8 @@ enum SimplexNlaOperation {
 
 enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
-const HighsInt kDualTasksMinThreads = 3;
-const HighsInt kDualMultiMinThreads = 1;  // 2;
+const HighsInt kDualTasksMinConcurrency = 3;
+const HighsInt kDualMultiMinConcurrency = 1;  // 2;
 
 // Simplex nonbasicFlag status for columns and rows. Don't use enum
 // class since they are used as HighsInt to replace conditional

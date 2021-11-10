@@ -31,10 +31,6 @@
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
-//#ifdef OPENMP
-//#include "omp.h"
-//#endif
-
 enum TRAN_STAGE {
   TRAN_STAGE_FTRAN_LOWER = 0,
   TRAN_STAGE_FTRAN_UPPER_FT,
@@ -213,9 +209,9 @@ class HighsSimplexAnalysis {
   HighsInt multi_iteration_count = 0;
   HighsInt multi_chosen = 0;
   HighsInt multi_finished = 0;
-  HighsInt min_threads = 0;
-  HighsInt num_threads = 0;
-  HighsInt max_threads = 0;
+  HighsInt min_concurrency = 0;
+  HighsInt num_concurrency = 0;
+  HighsInt max_concurrency = 0;
 
   // Unused
   //  HighsInt multi_num = 0; // Useless
@@ -310,7 +306,7 @@ class HighsSimplexAnalysis {
   double last_user_log_time = -kHighsInf;
   double delta_user_log_time = 1e0;
 
-  double average_num_threads;
+  double average_concurrency;
   double average_fraction_of_possible_minor_iterations_performed;
   HighsInt sum_multi_chosen = 0;
   HighsInt sum_multi_finished = 0;

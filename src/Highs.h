@@ -1085,7 +1085,7 @@ class Highs {
 
   // Record of maximum number of OMP threads. If OMP is available then
   // it's set to the correct positive number in Highs::run()
-  HighsInt omp_max_threads = 0;
+  HighsInt max_threads = 0;
 
   // This is strictly for debugging. It's used to check whether
   // returnFromRun() was called after the previous call to

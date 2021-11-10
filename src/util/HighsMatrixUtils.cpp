@@ -260,7 +260,7 @@ HighsStatus assessMatrix(
           matrix_name.c_str(), num_small_values, min_small_value,
           max_small_value, small_matrix_value);
       error_found = true;
-      assert(num_small_values = 0);
+      assert(num_small_values == 0);
     }
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s matrix packed vector contains %" HIGHSINT_FORMAT

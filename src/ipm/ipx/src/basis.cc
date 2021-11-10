@@ -249,7 +249,7 @@ void Basis::TableauRow(Int jb, IndexedVector& btran, IndexedVector& row,
             Int end = AIt.end(i);
             for (Int p = begin; p < end; p++) {
                 Int j = Ati[p];
-                if (map2basis_[j] == -1 || map2basis_[j] == -2 && !ignore_fixed)
+                if (map2basis_[j] == -1 || (map2basis_[j] == -2 && !ignore_fixed))
                 {
                     map2basis_[j] -= 2; // mark column
                     row_pattern[nz++] = j;
@@ -268,7 +268,7 @@ void Basis::TableauRow(Int jb, IndexedVector& btran, IndexedVector& row,
         const double* Ax = AI.values();
         for (Int j = 0; j < n+m; j++) {
             double result = 0.0;
-            if (map2basis_[j] == -1 || map2basis_[j] == -2 && !ignore_fixed) {
+            if (map2basis_[j] == -1 || (map2basis_[j] == -2 && !ignore_fixed)) {
                 Int begin = AI.begin(j);
                 Int end = AI.end(j);
                 for (Int p = begin; p < end; p++)
