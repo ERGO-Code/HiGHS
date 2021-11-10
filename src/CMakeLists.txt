@@ -354,8 +354,6 @@ if (IPX_ON)
         MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
-include(CheckLanguage)
-check_language("Fortran")
 if(FORTRAN_FOUND)
     set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
@@ -371,7 +369,6 @@ if(FORTRAN_FOUND)
         "${CMAKE_INSTALL_PREFIX}/lib")
 endif(FORTRAN_FOUND)
 
-check_language("CSharp")
 if(CSHARP_FOUND)
     message(STATUS "CSharp supported")
     set(csharpsources
