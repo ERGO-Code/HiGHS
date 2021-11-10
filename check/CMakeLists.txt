@@ -217,9 +217,9 @@ set(settings
     "--random_seed=1"
     "--random_seed=2"
     "--random_seed=3"
-    "--random_seed=4"
-    "--random_seed=5"
-#    "--parallel=on"
+#   "--random_seed=4"
+#   "--random_seed=5"
+#   "--parallel=on"
     )
 
 # define a macro to add tests
