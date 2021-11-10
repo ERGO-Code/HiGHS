@@ -1,15 +1,27 @@
 #include "Highs.h"
 #include "catch.hpp"
+#include "util/HighsRandom.h"
 
 const double inf = kHighsInf;
 const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
+void testAlienBasis(const bool avgas);
 TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
+  bool avgas = true;
+  testAlienBasis(avgas);
+  avgas = false;
+  testAlienBasis(avgas);
+}
+
+void testAlienBasis(const bool avgas) {
   std::string filename;
   std::string model;
-  model = "avgas";
-  model = "israel";
+  if (avgas) {
+    model = "avgas";
+  } else {
+    model = "israel";
+  }
 
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
 
@@ -19,6 +31,10 @@ TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
   HighsLp lp = highs.getLp();
   HighsInt num_col = lp.num_col_;
   HighsInt num_row = lp.num_row_;
+  // Assumes that the test LP has fewer columns than rows
+  // (portrait). Lansdcape test is performed on its dual.
+  assert(num_col < num_row);
+  const HighsInt num_var = num_col + num_row;
   HighsBasis basis;
   basis.col_status.resize(num_col);
   basis.row_status.resize(num_row);
@@ -39,16 +55,34 @@ TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
     highs.run();
   }
 
-  const bool run_primal_test = true;
   std::string profile = num_col < num_row ? "portrait" : "landscape";
+  const bool run_primal_test = true;
   if (run_primal_test) {
     // Create a rectangular basis using just struturals
     basis.debug_origin_name = "AlienBasis: " + model + " primal " + profile;
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       basis.col_status[iCol] = HighsBasisStatus::kBasic;
-    assert(num_col < num_row);
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
       basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
+    REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
+    highs.run();
+  }
+  const bool run_primal_random_test = false;
+  if (run_primal_random_test) {
+    // Create a rectangular basis using random selection of num_col variables
+    basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
+    basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);
+    basis.debug_origin_name =
+        "AlienBasis: " + model + " primal random " + profile;
+    HighsRandom random;
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      HighsInt iVar = random.integer(num_var);
+      if (iVar < num_col) {
+        basis.col_status[iVar] = HighsBasisStatus::kBasic;
+      } else {
+        basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
+      }
+    }
     REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
     highs.run();
   }
@@ -98,8 +132,8 @@ TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
   num_row = dual_lp.num_row_;
   basis.col_status.resize(num_col);
   basis.row_status.resize(num_row);
-  const bool run_dual_test = true;
   profile = num_col < num_row ? "portrait" : "landscape";
+  const bool run_dual_test = true;
   if (run_dual_test) {
     // Create a rectangular basis using just struturals
     basis.debug_origin_name = "AlienBasis: " + model + " dual " + profile;
@@ -107,6 +141,25 @@ TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
       basis.col_status[iCol] = HighsBasisStatus::kBasic;
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
       basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
+    REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
+    highs.run();
+  }
+  const bool run_dual_random_test = false;
+  if (run_dual_random_test) {
+    // Create a rectangular basis using random selection of num_col variables
+    basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
+    basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);
+    basis.debug_origin_name =
+        "AlienBasis: " + model + " dual random " + profile;
+    HighsRandom random;
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      HighsInt iVar = random.integer(num_var);
+      if (iVar < num_col) {
+        basis.col_status[iVar] = HighsBasisStatus::kBasic;
+      } else {
+        basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
+      }
+    }
     REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
     highs.run();
   }
