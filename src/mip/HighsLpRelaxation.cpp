@@ -733,8 +733,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         lpsolver.setOptionValue("objective_bound", objbound);
         return result;
       }
-
-      return Status::kError;
     case HighsModelStatus::kInfeasible: {
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
