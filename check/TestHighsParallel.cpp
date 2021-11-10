@@ -181,7 +181,7 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
   std::cout << std::setw(12) << "size" << std::setw(12) << "runtime"
             << std::endl;
 
-  for (int i = 128; i <= 1024; i += 32) {
+  for (int i = 128; i <= 512; i += 128) {
     N = i;
 
     allocate_matrix();
@@ -217,10 +217,10 @@ TEST_CASE("MatrixMultHighs", "[parallel]") {
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
   auto beg = std::chrono::high_resolution_clock::now();
   parallel::initialize_scheduler(numThreads);
-  int64_t result = fib(46);
+  int64_t result = fib(41);
   auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "time elapsed for fib(46) with HiGHS work stealing: "
+  std::cout << "time elapsed for fib(41) with HiGHS work stealing: "
             << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
                     .count() /
                 1e3)
@@ -228,8 +228,8 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
 
   // REQUIRE(result == 4807526976);
   // REQUIRE(result == 20365011074);
-  // fib 46
-  REQUIRE(result == 2971215073);
+  // fib 41
+  REQUIRE(result == 267914296);
 }
 
 #if 0
@@ -243,18 +243,17 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
 #pragma omp parallel num_threads(numThreads)
   {
 #pragma omp single
-    { result = fib_omp(46); }
+    { result = fib_omp(41); }
   }
   auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "time elapsed for fib(46) with omp tasks: "
+  std::cout << "time elapsed for fib(41) with omp tasks: "
             << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
                     .count() /
                 1e3)
             << "ms" << std::endl;
 
-  // REQUIRE(result == 4807526976);
-  // fib 46
-  REQUIRE(result == 2971215073);
+  // fib 41
+  REQUIRE(result == 267914296);
 }
 #endif
