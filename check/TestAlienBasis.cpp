@@ -11,15 +11,15 @@ const double double_equal_tolerance = 1e-5;
 
 void testAlienBasis(const bool avgas, const HighsInt seed);
 void getDependentCols(const HighsSparseMatrix& matrix,
-		      std::vector<HighsInt>& col_set,
-		      std::vector<HighsInt>& dependent_col_set,
-		      const HighsInt required_rank_deficiency);
+                      std::vector<HighsInt>& col_set,
+                      std::vector<HighsInt>& dependent_col_set,
+                      const HighsInt required_rank_deficiency);
 void reportColSet(const std::string message,
-		  const std::vector<HighsInt>& col_set);
+                  const std::vector<HighsInt>& col_set);
 void reportDependentCols(const std::vector<HighsInt>& dependent_col_set);
 
 TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
-  // To find the dependent rows in 
+  // To find the dependent rows in
   //
   // [1 1  ]
   // [2 2  ]
@@ -42,7 +42,8 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   // original col_set, together with the indices of logical columns so
   // that the returned col_set is of full rank.
   //
-  // For the transpose of the matrix above, here are the 5 columns and logical columns
+  // For the transpose of the matrix above, here are the 5 columns and logical
+  // columns
   //
   // 0 1 2 3 4 | 5 6 7
   // ----------+------
@@ -65,7 +66,7 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   //
   // The terms "var" and "col" relate to the set of basic variables
   // and columns of the basis matrix.
-  //  
+  //
   // Case 1
   // ======
   //
@@ -77,7 +78,8 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   col_set = {0, 1, 2, 3, 4};
   required_rank_deficiency = 3;
   if (dev_run) reportColSet("\nOriginal", col_set);
-  getDependentCols(matrix, col_set, dependent_col_set, required_rank_deficiency);
+  getDependentCols(matrix, col_set, dependent_col_set,
+                   required_rank_deficiency);
   if (dev_run) reportColSet("Returned", col_set);
   if (dev_run) reportDependentCols(dependent_col_set);
   //
@@ -85,10 +87,10 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   //
   // 4 6 3 | 8 9
   // ------+----
-  // 6   2 | 
-  // 3 1   | 
-  // 3   2 | 
-  //       | 1  
+  // 6   2 |
+  // 3 1   |
+  // 3   2 |
+  //       | 1
   //       |   1
   //
   // The last two entries can be ignored. They are fictitious logical
@@ -107,7 +109,8 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   col_set = {2, 0, 1, 3};
   required_rank_deficiency = 2;
   if (dev_run) reportColSet("\nOriginal", col_set);
-  getDependentCols(matrix, col_set, dependent_col_set, required_rank_deficiency);
+  getDependentCols(matrix, col_set, dependent_col_set,
+                   required_rank_deficiency);
   if (dev_run) reportColSet("Returned", col_set);
   if (dev_run) reportDependentCols(dependent_col_set);
   //
@@ -116,9 +119,9 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   //
   // 1 6 3 | 8
   // ------+--
-  // 1   2 | 
-  // 1 1   | 
-  //     2 | 
+  // 1   2 |
+  // 1 1   |
+  //     2 |
   //       | 1
   //
   // The last entry can be ignored. It is a fictitious logical column
@@ -136,38 +139,41 @@ TEST_CASE("AlienBasis-LP", "[highs_test_alien_basis]") {
 }
 
 void getDependentCols(const HighsSparseMatrix& matrix,
-		      std::vector<HighsInt>& col_set,
-		      std::vector<HighsInt>& dependent_col_set,
-		      const HighsInt required_rank_deficiency) {
+                      std::vector<HighsInt>& col_set,
+                      std::vector<HighsInt>& dependent_col_set,
+                      const HighsInt required_rank_deficiency) {
   HFactor factor;
   factor.setup(matrix, col_set);
   HighsInt rank_deficiency = factor.build();
   REQUIRE(rank_deficiency == required_rank_deficiency);
   if (dev_run) {
   }
-  if (dev_run) printf("Returned rank_deficiency = %d:\n  No pivot in\nk Row Col Var\n", (int)rank_deficiency);
+  if (dev_run)
+    printf("Returned rank_deficiency = %d:\n  No pivot in\nk Row Col Var\n",
+           (int)rank_deficiency);
   dependent_col_set.clear();
-  for (HighsInt k = 0; k <rank_deficiency; k++) {
-    if (dev_run) printf("%1d %3d %3d %3d\n", (int)k,
-			(int)factor.row_with_no_pivot[k],
-			(int)factor.col_with_no_pivot[k],
-			(int)factor.var_with_no_pivot[k]);
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    if (dev_run)
+      printf("%1d %3d %3d %3d\n", (int)k, (int)factor.row_with_no_pivot[k],
+             (int)factor.col_with_no_pivot[k],
+             (int)factor.var_with_no_pivot[k]);
     dependent_col_set.push_back(factor.var_with_no_pivot[k]);
   }
 }
 
 void reportDependentCols(const std::vector<HighsInt>& dependent_col_set) {
-    printf("Dependent column(s) in col_set:");
-    for (HighsInt k = 0; k < (HighsInt)dependent_col_set.size(); k++)
-      printf(" %1d", (int)dependent_col_set[k]);
-    printf("\n");
+  printf("Dependent column(s) in col_set:");
+  for (HighsInt k = 0; k < (HighsInt)dependent_col_set.size(); k++)
+    printf(" %1d", (int)dependent_col_set[k]);
+  printf("\n");
 }
 
-void reportColSet(const std::string message, const std::vector<HighsInt>& col_set) {
-printf("%s col_set:\n", message.c_str());
- for (HighsInt k = 0; k < (HighsInt)col_set.size(); k++)
-   printf(" %1d", (int)col_set[k]);
- printf("\n");
+void reportColSet(const std::string message,
+                  const std::vector<HighsInt>& col_set) {
+  printf("%s col_set:\n", message.c_str());
+  for (HighsInt k = 0; k < (HighsInt)col_set.size(); k++)
+    printf(" %1d", (int)col_set[k]);
+  printf("\n");
 }
 
 void testAlienBasis(const bool avgas, const HighsInt seed) {

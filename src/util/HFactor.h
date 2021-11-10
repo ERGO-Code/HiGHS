@@ -83,11 +83,11 @@ class HFactor {
    */
 
   void setup(const HighsSparseMatrix& a_matrix,
-	     std::vector<HighsInt>& basic_index,
-	     const double pivot_threshold = kDefaultPivotThreshold,
-	     const double pivot_tolerance = kDefaultPivotTolerance,
-	     const HighsInt highs_debug_level = kHighsDebugLevelMin,
-	     const HighsLogOptions* log_options = NULL);
+             std::vector<HighsInt>& basic_index,
+             const double pivot_threshold = kDefaultPivotThreshold,
+             const double pivot_tolerance = kDefaultPivotTolerance,
+             const HighsInt highs_debug_level = kHighsDebugLevelMin,
+             const HighsLogOptions* log_options = NULL);
 
   void setupGeneral(const HighsSparseMatrix* a_matrix, HighsInt num_basic,
                     HighsInt* basic_index,

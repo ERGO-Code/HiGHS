@@ -162,19 +162,17 @@ void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
 }
 
 void HFactor::setup(const HighsSparseMatrix& a_matrix,
-		    std::vector<HighsInt>& basic_index,
-		    const double pivot_threshold,
-		    const double pivot_tolerance,
-		    const HighsInt highs_debug_level,
-		    const HighsLogOptions* log_options) {
+                    std::vector<HighsInt>& basic_index,
+                    const double pivot_threshold, const double pivot_tolerance,
+                    const HighsInt highs_debug_level,
+                    const HighsLogOptions* log_options) {
   HighsInt basic_index_size = basic_index.size();
   // Nothing to do if basic index has no entries, and mustn't try to
   // pass the pointer to entry 0 of a vector of size 0.
   if (basic_index_size <= 0) return;
-  this->setupGeneral(&a_matrix,
-		     basic_index_size, &basic_index[0],
-		     pivot_threshold, pivot_tolerance,
-		     highs_debug_level, log_options);
+  this->setupGeneral(&a_matrix, basic_index_size, &basic_index[0],
+                     pivot_threshold, pivot_tolerance, highs_debug_level,
+                     log_options);
   return;
 }
 
