@@ -209,12 +209,14 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
 }
 
 TEST_CASE("MatrixMultHighs", "[parallel]") {
+  HighsTaskExecutor::shutdown();
   parallel::initialize_scheduler(numThreads);
   std::cout << "\nhighs workstealing for loop:" << std::endl;
   matrix_multiplication("highs", parallel::num_threads(), 1);
 }
 
 TEST_CASE("FibonacciTasksHighs", "[parallel]") {
+  HighsTaskExecutor::shutdown();
   auto beg = std::chrono::high_resolution_clock::now();
   parallel::initialize_scheduler(numThreads);
   int64_t result = fib(41);

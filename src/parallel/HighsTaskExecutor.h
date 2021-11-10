@@ -134,17 +134,19 @@ class HighsTaskExecutor {
   }
 
   static void shutdown() {
-    // first spin until every worker has acquired its executor reference
-    while (globalExecutor.use_count() !=
-           globalExecutor->workerDeques.size() + 1)
-      HighsSpinMutex::yieldProcessor();
-    // set the active flag to false first with release ordering
-    globalExecutor->active.store(false, std::memory_order_release);
-    // now inject the null task as termination signal to every worker
-    for (auto& workerDeque : globalExecutor->workerDeques)
-      workerDeque->injectTaskAndNotify(nullptr);
-    // finally release the global executor reference
-    globalExecutor.reset();
+    if (globalExecutor) {
+      // first spin until every worker has acquired its executor reference
+      while (globalExecutor.use_count() !=
+             globalExecutor->workerDeques.size())
+        HighsSpinMutex::yieldProcessor();
+      // set the active flag to false first with release ordering
+      globalExecutor->active.store(false, std::memory_order_release);
+      // now inject the null task as termination signal to every worker
+      for (auto& workerDeque : globalExecutor->workerDeques)
+        workerDeque->injectTaskAndNotify(nullptr);
+      // finally release the global executor reference
+      globalExecutor.reset();
+    }
   }
 
   void sync_stolen_task(HighsSplitDeque* localDeque, HighsTask* stolenTask) {
