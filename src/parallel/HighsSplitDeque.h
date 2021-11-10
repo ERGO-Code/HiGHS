@@ -272,6 +272,7 @@ class HighsSplitDeque {
     workerBunkData.ownerId = ownerId;
     ownerData.randgen.initialise(ownerId);
     ownerData.workerBunk = workerBunk;
+    splitRequest.store(false, std::memory_order_relaxed);
 
     assert((reinterpret_cast<uintptr_t>(this) & 63u) == 0);
     static_assert(offsetof(HighsSplitDeque, splitRequest) == 64,
