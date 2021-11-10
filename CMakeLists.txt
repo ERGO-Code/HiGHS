@@ -55,51 +55,37 @@ endif()
 include(CheckCXXSourceCompiles)
 
 check_cxx_source_compiles(
-    "int main () {
+    "#include <immintrin.h>
+    int main () {
         _mm_pause();
         return 0;
     }"
-    HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE FAIL_REGEX "implicitly declaring library function")
-if( NOT HIGHS_HAVE_MM_PAUSE_WITHOUT_INCLUDE )
-    check_cxx_source_compiles(
-        "#include <immintrin.h>
-        int main () {
-            _mm_pause();
-            return 0;
-        }" HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
-    if(HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN)
-        set(HIGHS_HAVE_MM_PAUSE 1)
-    else()
-        set(HIGHS_HAVE_MM_PAUSE 0)
-    endif()
-else()
-    set(HIGHS_HAVE_MM_PAUSE 1)
-endif()
+    HIGHS_HAVE_MM_PAUSE)
 
 check_cxx_source_compiles(
     "#include <cstdint>
      int main () {
-        volatile unsigned int x = 5;
-        volatile unsigned long long y = __builtin_clz(x);
+        unsigned int x = 5;
+        unsigned long long y = __builtin_clz(x);
         x = __builtin_clzll(y);
         return 0;
     }"
-     HIGHS_HAVE_BUILTIN_CLZ)
+    HIGHS_HAVE_BUILTIN_CLZ)
+
 if( NOT HIGHS_HAVE_BUILTIN_CLZ )
     check_cxx_source_compiles(
         "#include <intrin.h>
         #pragma intrinsic(_BitScanReverse)
         #pragma intrinsic(_BitScanReverse64)
         int main () {
-            volatile unsigned long x = 5;
-            volatile unsigned long y;
+            unsigned long x = 5;
+            unsigned long y;
             _BitScanReverse(&y, x);
             _BitScanReverse64(&x, y);
             return 0;
         }"
         HIGHS_HAVE_BITSCAN_REVERSE)
 endif()
-
 
 # Function to set compiler flags on and off easily.
 include(CheckCXXCompilerFlag)

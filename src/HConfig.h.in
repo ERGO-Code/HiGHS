@@ -10,7 +10,6 @@
 #cmakedefine IPX_ON
 #cmakedefine HIGHSINT64
 #cmakedefine HIGHS_HAVE_MM_PAUSE
-#cmakedefine HIGHS_MM_PAUSE_REQUIRES_IMMINTRIN
 #cmakedefine HIGHS_HAVE_BUILTIN_CLZ
 #cmakedefine HIGHS_HAVE_BITSCAN_REVERSE
 
