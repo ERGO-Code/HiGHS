@@ -873,15 +873,15 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
     case 3:
     case 4:
     case 5:
-      std::snprintf(printString.data(), 16, "%ld", val);
+      std::snprintf(printString.data(), 16, "%" PRId64, val);
       break;
     case 6:
     case 7:
     case 8:
-      std::snprintf(printString.data(), 16, "%ldk", val / 1000);
+      std::snprintf(printString.data(), 16, "%" PRId64 "k", val / 1000);
       break;
     default:
-      std::snprintf(printString.data(), 16, "%ldm", val / 1000000);
+      std::snprintf(printString.data(), 16, "%" PRId64 "m", val / 1000000);
   }
 
   return printString;
