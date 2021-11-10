@@ -503,9 +503,8 @@ else()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
 
-target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 if (NOT ${BUILD_SHARED_LIBS})
-    target_compile_options(libhighs PRIVATE "-fPIC" )
+    set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 target_sources(libhighs PRIVATE

@@ -358,7 +358,7 @@ endif()
 add_subdirectory(src)
 
 
-else()
+else(FAST_BUILD)
 
 message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
