@@ -3,6 +3,9 @@
 
 #include "ipx_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct ipx_parameters {
     /* Solver control */
     ipxint display;
@@ -81,5 +84,9 @@ struct ipx_parameters {
     }
     #endif
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* IPX_PARAMETERS_H_ */

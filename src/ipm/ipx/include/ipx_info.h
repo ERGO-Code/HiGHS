@@ -3,6 +3,9 @@
 
 #include "ipx_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct ipx_info {
     ipxint status;
     ipxint status_ipm;
@@ -101,5 +104,9 @@ struct ipx_info {
     ipx_info();                 /* initializes all members to zero */
     #endif
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* IPX_INFO_H_ */
