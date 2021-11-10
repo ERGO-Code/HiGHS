@@ -357,8 +357,12 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   factor_timer.start(FactorInvertKernel, factor_timer_clock_pointer);
   rank_deficiency = buildKernel();
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
-
-  if (rank_deficiency) {
+  // rank_deficiency is the deficiency of the basic variables. If
+  // num_basic < num_row, then have to identify the logicals required
+  // to complete the basis by continuing as if a full-dimension set of
+  // basic variables was rank deficient.
+  const bool incomplete_basis = num_basic < num_row;
+  if (rank_deficiency || incomplete_basis) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
     if (num_basic == num_row)
       highsLogDev(log_options, HighsLogType::kWarning,
@@ -372,7 +376,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
     buildMarkSingC();
     factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
   }
-  if (num_basic < num_row) {
+  if (incomplete_basis) {
     // Completing the factorization is not relevant if the basis
     // matrix is incomplete, so clear any refactorization information
     // and return

@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "Highs.h"
 #include "catch.hpp"
 #include "util/HighsRandom.h"
@@ -6,15 +8,17 @@ const double inf = kHighsInf;
 const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
-void testAlienBasis(const bool avgas);
+void testAlienBasis(const bool avgas, const HighsInt seed);
+
 TEST_CASE("AlienBasis-avgas", "[highs_test_alien_basis]") {
+  const HighsInt num_seed = 10;
   bool avgas = true;
-  testAlienBasis(avgas);
+  for (HighsInt seed = 0; seed < num_seed; seed++) testAlienBasis(avgas, seed);
   avgas = false;
-  testAlienBasis(avgas);
+  for (HighsInt seed = 0; seed < num_seed; seed++) testAlienBasis(avgas, seed);
 }
 
-void testAlienBasis(const bool avgas) {
+void testAlienBasis(const bool avgas, const HighsInt seed) {
   std::string filename;
   std::string model;
   if (avgas) {
@@ -24,6 +28,7 @@ void testAlienBasis(const bool avgas) {
   }
 
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  std::stringstream ss;
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -39,8 +44,10 @@ void testAlienBasis(const bool avgas) {
   basis.col_status.resize(num_col);
   basis.row_status.resize(num_row);
   const bool run_square_test = true;
-  if (run_square_test) {
-    basis.debug_origin_name = "AlienBasis: " + model + " square";
+  if (run_square_test && !seed) {
+    ss.str(std::string());
+    ss << "AlienBasis: " << model << " square";
+    basis.debug_origin_name = ss.str();
     // Create a full-dimension basis using struturals and then enough logicals
     HighsBasisStatus status = HighsBasisStatus::kBasic;
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -54,12 +61,42 @@ void testAlienBasis(const bool avgas) {
     REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
     highs.run();
   }
+  const bool run_square_random_test = true;
+  if (run_square_random_test) {
+    ss.str(std::string());
+    ss << "AlienBasis: " << model << " random-" << seed << " square";
+    basis.debug_origin_name = ss.str();
+    // Create a full-dimension basis using random selection of num_col variables
+    basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
+    basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);
+    HighsRandom random(seed);
+    HighsInt num_basic = 0;
+    for (;;) {
+      HighsInt iVar = random.integer(num_var);
+      if (iVar < num_col) {
+        if (basis.col_status[iVar] == HighsBasisStatus::kNonbasic) {
+          basis.col_status[iVar] = HighsBasisStatus::kBasic;
+          num_basic++;
+        }
+      } else {
+        if (basis.row_status[iVar - num_col] == HighsBasisStatus::kNonbasic) {
+          basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
+          num_basic++;
+        }
+      }
+      if (num_basic == num_row) break;
+    }
+    REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
+    highs.run();
+  }
 
   std::string profile = num_col < num_row ? "portrait" : "landscape";
   const bool run_primal_test = true;
-  if (run_primal_test) {
+  if (run_primal_test && !seed) {
     // Create a rectangular basis using just struturals
-    basis.debug_origin_name = "AlienBasis: " + model + " primal " + profile;
+    ss.str(std::string());
+    ss << "AlienBasis: " << model << " primal " << profile;
+    basis.debug_origin_name = ss.str();
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       basis.col_status[iCol] = HighsBasisStatus::kBasic;
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
@@ -67,14 +104,16 @@ void testAlienBasis(const bool avgas) {
     REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
     highs.run();
   }
-  const bool run_primal_random_test = false;
+  const bool run_primal_random_test = true;
   if (run_primal_random_test) {
     // Create a rectangular basis using random selection of num_col variables
     basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
     basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);
-    basis.debug_origin_name =
-        "AlienBasis: " + model + " primal random " + profile;
-    HighsRandom random;
+    ss.str(std::string());
+    ss << "AlienBasis: " << model << " primal random-" << seed << " "
+       << profile;
+    basis.debug_origin_name = ss.str();
+    HighsRandom random(seed);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       HighsInt iVar = random.integer(num_var);
       if (iVar < num_col) {
@@ -134,9 +173,11 @@ void testAlienBasis(const bool avgas) {
   basis.row_status.resize(num_row);
   profile = num_col < num_row ? "portrait" : "landscape";
   const bool run_dual_test = true;
-  if (run_dual_test) {
+  if (run_dual_test && !seed) {
     // Create a rectangular basis using just struturals
-    basis.debug_origin_name = "AlienBasis: " + model + " dual " + profile;
+    ss.str(std::string());
+    ss << "AlienBasis: " << model << " dual " << profile;
+    basis.debug_origin_name = ss.str();
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       basis.col_status[iCol] = HighsBasisStatus::kBasic;
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
@@ -144,14 +185,17 @@ void testAlienBasis(const bool avgas) {
     REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
     highs.run();
   }
-  const bool run_dual_random_test = false;
+  const bool run_dual_random_test = true;
   if (run_dual_random_test) {
     // Create a rectangular basis using random selection of num_col variables
     basis.col_status.assign(num_col, HighsBasisStatus::kNonbasic);
     basis.row_status.assign(num_row, HighsBasisStatus::kNonbasic);
     basis.debug_origin_name =
         "AlienBasis: " + model + " dual random " + profile;
-    HighsRandom random;
+    ss.str(std::string());
+    ss << "AlienBasis: " << model << " dual random-" << seed << " " << profile;
+    basis.debug_origin_name = ss.str();
+    HighsRandom random(seed);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       HighsInt iVar = random.integer(num_var);
       if (iVar < num_col) {
