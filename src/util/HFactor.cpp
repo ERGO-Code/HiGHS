@@ -914,14 +914,13 @@ HighsInt HFactor::buildKernel() {
     if (!singleton_pivot)
       assert(candidate_pivot_value == fabs(pivot_multiplier));
     if (fabs(pivot_multiplier) < pivot_tolerance) {
-      printf("2.1. Delete the pivot : mu = %g\n", pivot_multiplier); fflush(stdout);
-      printf("2.1. Delete the pivot : nwork = %d\n", (int)nwork); fflush(stdout);
       highsLogDev(log_options, HighsLogType::kWarning,
                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                   fabs(pivot_multiplier), nwork);
       rank_deficiency = nwork + 1;
       assert((HighsInt)this->refactor_info_.pivot_row.size() +
-	     rank_deficiency == num_basic);
+                 rank_deficiency ==
+             num_basic);
       return rank_deficiency;
     }
     rowDelete(jColPivot, iRowPivot);

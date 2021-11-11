@@ -26,7 +26,7 @@
 
 using std::max;
 using std::min;
-//using std::runtime_error;
+// using std::runtime_error;
 
 void SimplexBasis::clear() {
   this->hash = 0;
