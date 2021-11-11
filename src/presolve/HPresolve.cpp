@@ -4222,6 +4222,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   freeCols.reserve(model->num_col_);
 
   for (HighsInt i = 0; i < model->num_col_; ++i) {
+    if (colDeleted[i]) continue;
     if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] == kHighsInf)
       freeCols.push_back(i);
   }
@@ -4238,9 +4239,9 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
   matrix.value_.reserve(maxCapacity);
   matrix.index_.reserve(maxCapacity);
-  HighsInt i = 0;
-  for (HighsInt col : freeCols) {
-    i += 1;
+
+  for (HighsInt i = 0; i < matrix.num_col_; ++i) {
+    HighsInt col = freeCols[i];
     // add entries of free column
     for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
       matrix.value_.push_back(nonz.value());
@@ -4253,7 +4254,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
       matrix.index_.push_back(model->num_row_);
     }
 
-    matrix.start_[i] = matrix.value_.size();
+    matrix.start_[i + 1] = matrix.value_.size();
   }
 
   printf("matrix setup finished\n");
