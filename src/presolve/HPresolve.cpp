@@ -1408,7 +1408,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
           numDel = newNumDel;
           numFail = 0;
         } else if (mipsolver->submip || numNewCliques == 0) {
-          splayContingent -= 100 * numFail;
+          splayContingent -= 1000 * numFail;
           ++numFail;
         } else {
           splayContingent += 10000 * numNewCliques;

@@ -195,6 +195,8 @@ class HighsCliqueTable {
 
   HighsInt partitionNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
 
+  HighsInt shrinkToNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
+
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
   void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,

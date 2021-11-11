@@ -549,6 +549,22 @@ HighsInt HighsCliqueTable::partitionNeighborhood(CliqueVar v, CliqueVar* q,
   return k;
 }
 
+HighsInt HighsCliqueTable::shrinkToNeighborhood(CliqueVar v, CliqueVar* q,
+                                                HighsInt N) {
+  queryNeighborhood(v, q, N);
+
+  HighsInt k = 0;
+  for (HighsInt i = 0; i < N; ++i) {
+    if (neighborhoodFlags[i]) {
+      q[k] = q[i];
+      neighborhoodFlags[i] = false;
+      k += 1;
+    }
+  }
+
+  return k;
+}
+
 bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
                                       CliqueVar v2) {
   if (v1.col == v2.col) {
@@ -1981,11 +1997,16 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
        ++i) {
     if (clique[i] == extensionstart) continue;
 
-    clique.erase(
-        std::remove_if(
-            clique.begin() + initialCliqueSize, clique.end(),
-            [&](CliqueVar v) { return !haveCommonClique(clique[i], v); }),
-        clique.end());
+    HighsInt newSize =
+        initialCliqueSize +
+        shrinkToNeighborhood(clique[i], clique.data() + initialCliqueSize,
+                             clique.size() - initialCliqueSize);
+    clique.erase(clique.begin() + newSize, clique.end());
+    // clique.erase(
+    //     std::remove_if(
+    //         clique.begin() + initialCliqueSize, clique.end(),
+    //         [&](CliqueVar v) { return !haveCommonClique(clique[i], v); }),
+    //     clique.end());
   }
 
   if (clique.size() <= 2) {
@@ -2002,11 +2023,15 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
       CliqueVar extvar = clique[i];
       i += 1;
 
-      clique.erase(std::remove_if(clique.begin() + i, clique.end(),
-                                  [&](CliqueVar v) {
-                                    return !haveCommonClique(extvar, v);
-                                  }),
-                   clique.end());
+      HighsInt newSize = i + shrinkToNeighborhood(extvar, clique.data() + i,
+                                                  clique.size() - i);
+      clique.erase(clique.begin() + newSize, clique.end());
+
+      // clique.erase(std::remove_if(clique.begin() + i, clique.end(),
+      //                             [&](CliqueVar v) {
+      //                               return !haveCommonClique(extvar, v);
+      //                             }),
+      //              clique.end());
     }
   }
 
@@ -2098,11 +2123,9 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     for (HighsInt i = 0; i != numclqvars && !extensionvars.empty(); ++i) {
       if (clqvars[i] == extensionstart) continue;
 
-      extensionvars.erase(
-          std::remove_if(
-              extensionvars.begin(), extensionvars.end(),
-              [&](CliqueVar v) { return !haveCommonClique(clqvars[i], v); }),
-          extensionvars.end());
+      HighsInt newSize = shrinkToNeighborhood(clqvars[i], extensionvars.data(),
+                                              extensionvars.size());
+      extensionvars.erase(extensionvars.begin() + newSize, extensionvars.end());
     }
 
     if (!extensionvars.empty()) {
@@ -2113,11 +2136,16 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
         CliqueVar extvar = extensionvars[i];
         i += 1;
 
-        extensionvars.erase(
-            std::remove_if(
-                extensionvars.begin() + i, extensionvars.end(),
-                [&](CliqueVar v) { return !haveCommonClique(extvar, v); }),
-            extensionvars.end());
+        HighsInt newSize =
+            i + shrinkToNeighborhood(extvar, extensionvars.data() + i,
+                                     extensionvars.size() - i);
+        extensionvars.erase(extensionvars.begin() + newSize,
+                            extensionvars.end());
+        // extensionvars.erase(
+        //     std::remove_if(
+        //         extensionvars.begin() + i, extensionvars.end(),
+        //         [&](CliqueVar v) { return !haveCommonClique(extvar, v); }),
+        //     extensionvars.end());
       }
     }
 
