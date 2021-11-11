@@ -4204,6 +4204,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt redundantRow = eqSet[factor.var_with_no_pivot[k]];
     numRemovedNz += rowsize[redundantRow];
+    postSolveStack.redundantRow(redundantRow);
     removeRow(redundantRow);
   }
 
