@@ -820,8 +820,11 @@ HighsInt HFactor::buildKernel() {
       foundPivot = true;
     }
     const bool singleton_pivot = foundPivot;
-    // 1.3. Major search loop
+#ifndef NDEBUG
     double candidate_pivot_value = 0;
+#endif
+    // 1.3. Major search loop
+    //
     // Row count can be more than the number of rows if num_basic >
     // num_row
     const HighsInt max_count = max(num_row, num_basic);
@@ -840,7 +843,9 @@ HighsInt HFactor::buildKernel() {
               HighsInt row_count = mr_count[i];
               double merit_local = 1.0 * (count - 1) * (row_count - 1);
               if (merit_pivot > merit_local) {
+#ifndef NDEBUG
                 candidate_pivot_value = fabs(mc_value[k]);
+#endif
                 merit_pivot = merit_local;
                 jColPivot = j;
                 iRowPivot = i;
@@ -872,7 +877,9 @@ HighsInt HFactor::buildKernel() {
               HighsInt ifind = mc_start[j];
               while (mc_index[ifind] != i) ifind++;
               if (fabs(mc_value[ifind]) >= mc_min_pivot[j]) {
+#ifndef NDEBUG
                 candidate_pivot_value = fabs(mc_value[ifind]);
+#endif
                 merit_pivot = merit_local;
                 jColPivot = j;
                 iRowPivot = i;

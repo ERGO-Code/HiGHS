@@ -1342,7 +1342,7 @@ void HEkkPrimal::update() {
     alpha_col = 0;
     numericalTrouble = 0;
     info.workValue_[variable_in] = value_in;
-    assert(ekk_instance_.basis_.nonbasicMove_[variable_in] = move_in);
+    assert(ekk_instance_.basis_.nonbasicMove_[variable_in] == move_in);
     ekk_instance_.basis_.nonbasicMove_[variable_in] = -move_in;
   } else {
     // Adjust perturbation if leaving equation

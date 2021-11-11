@@ -7,7 +7,6 @@
 #include "vector.hpp"
 
 class ReducedCosts {
-  Runtime& runtime;
   Basis& basis;
 
   Gradient& gradient;
@@ -22,8 +21,7 @@ class ReducedCosts {
 
  public:
   ReducedCosts(Runtime& rt, Basis& bas, Gradient& grad)
-      : runtime(rt),
-        basis(bas),
+      : basis(bas),
         gradient(grad),
         reducedcosts(Vector(rt.instance.num_var)),
         uptodate(false) {}

@@ -30,16 +30,13 @@
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
 #include "model/HighsHessianUtils.h"
+#include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
 #include "qpsolver/solver.hpp"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
-
-#ifdef OPENMP
-#include "omp.h"
-#endif
 
 Highs::Highs() {}
 
@@ -537,18 +534,18 @@ HighsStatus Highs::run() {
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
-#ifdef OPENMP
-  omp_max_threads = omp_get_max_threads();
-  assert(omp_max_threads > 0);
-  if (omp_max_threads <= 0)
+  highs::parallel::initialize_scheduler(options_.threads);
+
+  max_threads = highs::parallel::num_threads();
+  assert(max_threads > 0);
+  if (max_threads <= 0)
     highsLogDev(options_.log_options, HighsLogType::kWarning,
-                "WARNING: omp_get_max_threads() returns %" HIGHSINT_FORMAT "\n",
-                omp_max_threads);
+                "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
+                max_threads);
 
   highsLogDev(options_.log_options, HighsLogType::kDetailed,
-              "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n",
-              omp_max_threads);
-#endif
+              "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n", max_threads);
+  //#endif
   assert(called_return_from_run);
   if (!called_return_from_run) {
     highsLogDev(options_.log_options, HighsLogType::kError,
@@ -898,8 +895,8 @@ HighsStatus Highs::run() {
           if (options_.solver == kIpmString) options_.solver = kSimplexString;
           options_.simplex_strategy = kSimplexStrategyChoose;
           // Ensure that the parallel solver isn't used
-          options_.highs_min_threads = 1;
-          options_.highs_max_threads = 1;
+          options_.simplex_min_concurrency = 1;
+          options_.simplex_max_concurrency = 1;
           // Use any pivot threshold resulting from solving the presolved LP
           if (factor_pivot_threshold > 0)
             options_.factor_pivot_threshold = factor_pivot_threshold;
@@ -2512,14 +2509,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       clearInfo();
       clearSolution();
       clearBasis();
-      if (model_status_ != scaled_model_status_) {
-        printf(
-            "Highs::returnFromRun Solve %d: %d = model_status_ != "
-            "scaled_model_status_ = %d\n",
-            (int)ekk_instance_.debug_solve_call_num_, (int)model_status_,
-            (int)scaled_model_status_);
-        fflush(stdout);
-      }
+      // if (model_status_ != scaled_model_status_) {
+      //   printf(
+      //       "Highs::returnFromRun Solve %d: %d = model_status_ != "
+      //       "scaled_model_status_ = %d\n",
+      //       (int)ekk_instance_.debug_solve_call_num_, (int)model_status_,
+      //       (int)scaled_model_status_);
+      //   fflush(stdout);
+      // }
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kError);
       break;

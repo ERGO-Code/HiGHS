@@ -518,7 +518,7 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   }
 
   highsLogDev(log_options, HighsLogType::kInfo, "\n%s\n\n", message);
-  HighsInt lastRpCat;
+  HighsInt lastRpCat = -1;
   for (HighsInt cat = 0; cat < maxCat + 1; cat++) {
     if (colCatK[cat]) lastRpCat = cat;
   }

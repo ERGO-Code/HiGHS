@@ -19,12 +19,9 @@
 
 #include <stdio.h>
 
+#include "parallel/HighsParallel.h"
 #include "pdqsort/pdqsort.h"
 #include "simplex/HSimplex.h"
-
-#ifdef OPENMP
-#include "omp.h"
-#endif
 
 using std::vector;
 
@@ -88,8 +85,8 @@ void HSimplexNla::clear() {
 HighsInt HSimplexNla::invert() {
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analysis_->analyse_factor_time) {
-    HighsInt thread_id = 0;
-#ifdef OPENMP
+    HighsInt thread_id = highs::parallel::thread_num();
+#if 0  // def OPENMP
     thread_id = omp_get_thread_num();
 #endif
     factor_timer_clock_pointer =

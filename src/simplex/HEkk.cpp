@@ -19,15 +19,12 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
-
-#ifdef OPENMP
-#include "omp.h"
-#endif
 
 using std::fabs;
 using std::max;
@@ -225,9 +222,9 @@ void HEkk::clearEkkDataInfo() {
   info.primal_phase1_iteration_count = 0;
   info.primal_phase2_iteration_count = 0;
   info.primal_bound_swap = 0;
-  info.min_threads = 1;
-  info.num_threads = 1;
-  info.max_threads = kHighsThreadLimit;
+  info.min_concurrency = 1;
+  info.num_concurrency = 1;
+  info.max_concurrency = kSimplexConcurrencyLimit;
   info.multi_iteration = 0;
   info.update_count = 0;
   info.dual_objective_value = 0;
@@ -1103,17 +1100,15 @@ HighsStatus HEkk::solve() {
                                  true);
     // Solve, depending on the particular strategy
     if (simplex_strategy == kSimplexStrategyDualTasks) {
-      highsLogUser(
-          options_->log_options, HighsLogType::kInfo,
-          "Using EKK parallel dual simplex solver - SIP with %" HIGHSINT_FORMAT
-          " threads\n",
-          info_.num_threads);
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "Using EKK parallel dual simplex solver - SIP with "
+                   "concurrency of %" HIGHSINT_FORMAT "\n",
+                   info_.num_concurrency);
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
-      highsLogUser(
-          options_->log_options, HighsLogType::kInfo,
-          "Using EKK parallel dual simplex solver - PAMI with %" HIGHSINT_FORMAT
-          " threads\n",
-          info_.num_threads);
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+                   "Using EKK parallel dual simplex solver - PAMI with "
+                   "concurrency of %" HIGHSINT_FORMAT "\n",
+                   info_.num_concurrency);
     } else {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK dual simplex solver - serial\n");
@@ -1809,20 +1804,18 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   }
   // Set min/max_threads to correspond to serial code. They will be
   // set to other values if parallel options are used.
-  info.min_threads = 1;
-  info.max_threads = 1;
+  info.min_concurrency = 1;
+  info.max_concurrency = 1;
   // Record the min/max minimum number of HiGHS threads in the options
-  const HighsInt highs_min_threads = options.highs_min_threads;
-  const HighsInt highs_max_threads = options.highs_max_threads;
-  HighsInt omp_max_threads = 0;
-#ifdef OPENMP
-  omp_max_threads = omp_get_max_threads();
-#endif
+  const HighsInt simplex_min_concurrency = options.simplex_min_concurrency;
+  const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
+  HighsInt max_threads = highs::parallel::num_threads();
+
   if (options.parallel == kHighsOnString &&
       simplex_strategy == kSimplexStrategyDual) {
     // The parallel strategy is on and the simplex strategy is dual so use
     // PAMI if there are enough OMP threads
-    if (omp_max_threads >= kDualMultiMinThreads)
+    if (max_threads >= kDualMultiMinConcurrency)
       simplex_strategy = kSimplexStrategyDualMulti;
   }
   //
@@ -1831,46 +1824,47 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   //
   // All this is independent of the number of OMP threads available,
   // since code with multiple HiGHS threads can be run in serial.
-#ifdef OPENMP
+
   if (simplex_strategy == kSimplexStrategyDualTasks) {
-    info.min_threads = max(kDualTasksMinThreads, highs_min_threads);
-    info.max_threads = max(info.min_threads, highs_max_threads);
+    info.min_concurrency =
+        max(kDualTasksMinConcurrency, simplex_min_concurrency);
+    info.max_concurrency = max(info.min_concurrency, simplex_max_concurrency);
   } else if (simplex_strategy == kSimplexStrategyDualMulti) {
-    info.min_threads = max(kDualMultiMinThreads, highs_min_threads);
-    info.max_threads = max(info.min_threads, highs_max_threads);
+    info.min_concurrency =
+        max(kDualMultiMinConcurrency, simplex_min_concurrency);
+    info.max_concurrency = max(info.min_concurrency, simplex_max_concurrency);
   }
-#endif
+
   // Set the number of HiGHS threads to be used to be the maximum
   // number to be used
-  info.num_threads = info.max_threads;
+  info.num_concurrency = info.max_concurrency;
   // Give a warning if the number of threads to be used is fewer than
   // the minimum number of HiGHS threads allowed
-  if (info.num_threads < highs_min_threads) {
+  if (info.num_concurrency < simplex_min_concurrency) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Using %" HIGHSINT_FORMAT
                  " HiGHS threads for parallel strategy rather than "
                  "minimum number (%" HIGHSINT_FORMAT ") specified in options\n",
-                 info.num_threads, highs_min_threads);
+                 info.num_concurrency, simplex_min_concurrency);
   }
   // Give a warning if the number of threads to be used is more than
   // the maximum number of HiGHS threads allowed
-  if (info.num_threads > highs_max_threads) {
+  if (info.num_concurrency > simplex_max_concurrency) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Using %" HIGHSINT_FORMAT
                  " HiGHS threads for parallel strategy rather than "
                  "maximum number (%" HIGHSINT_FORMAT ") specified in options\n",
-                 info.num_threads, highs_max_threads);
+                 info.num_concurrency, simplex_max_concurrency);
   }
   // Give a warning if the number of threads to be used is fewer than
   // the number of OMP threads available
-  if (info.num_threads > omp_max_threads) {
-    highsLogUser(
-        options.log_options, HighsLogType::kWarning,
-        "Number of OMP threads available = %" HIGHSINT_FORMAT
-        " < %" HIGHSINT_FORMAT
-        " = Number of HiGHS threads "
-        "to be used: Parallel performance will be less than anticipated\n",
-        omp_max_threads, info.num_threads);
+  if (info.num_concurrency > max_threads) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Number of threads available = %" HIGHSINT_FORMAT
+                 " < %" HIGHSINT_FORMAT
+                 " = Simplex concurrency to be used: Parallel performance may "
+                 "be less than anticipated\n",
+                 max_threads, info.num_concurrency);
   }
 }
 

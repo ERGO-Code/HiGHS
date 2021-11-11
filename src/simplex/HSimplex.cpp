@@ -21,16 +21,12 @@
 #include <cmath>
 #include <vector>
 
-#include "lp_data/HighsLpUtils.h"
-#include "util/HighsSort.h"
-
-#ifdef OPENMP
-#include "omp.h"
-#endif
+//#include "lp_data/HighsLpUtils.h"
+//#include "util/HighsSort.h"
 
 using std::max;
 using std::min;
-using std::runtime_error;
+//using std::runtime_error;
 
 void SimplexBasis::clear() {
   this->hash = 0;

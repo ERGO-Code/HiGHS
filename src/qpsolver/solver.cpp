@@ -130,6 +130,15 @@ double computemaxsteplength(Runtime& runtime, const Vector& p,
       return numerator / denominator;
     }
   }
+
+  // todo this function is buggy, it must return something here, I added the
+  // return below of NaN so that this does not slip through
+  // Without the return the compiler may assume that fabs(denominator) > 10E-5
+  // is always true and optimize away the check. The program getting here
+  // without a return would be undefined behavior anyways so anything is allowed
+  // to happen. That could lead to a division by zero any ways, so I added the
+  // NaN
+  return std::numeric_limits<double>::signaling_NaN();
 }
 
 void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,

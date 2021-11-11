@@ -30,9 +30,9 @@
 
 // Limit on the number of column slices for parallel calculations. SIP
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices
-const HighsInt kHighsSlicedLimit = kHighsThreadLimit;
-// Was 100, but can't see why this should be higher than kHighsThreadLimit;
-// const double kMaxOkGrowth = 1e4;
+const HighsInt kHighsSlicedLimit = kSimplexConcurrencyLimit;
+// Was 100, but can't see why this should be higher than
+// kSimplexConcurrencyLimit; const double kMaxOkGrowth = 1e4;
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -507,8 +507,8 @@ class HEkkDual {
   HighsInt multi_nFinish;
   HighsInt multi_iteration;
   HighsInt multi_chooseAgain;
-  MChoice multi_choice[kHighsThreadLimit];
-  MFinish multi_finish[kHighsThreadLimit];
+  MChoice multi_choice[kSimplexConcurrencyLimit];
+  MFinish multi_finish[kSimplexConcurrencyLimit];
 
   //  double build_synthetic_tick;
   //  double total_synthetic_tick;

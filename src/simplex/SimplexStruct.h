@@ -219,9 +219,9 @@ struct HighsSimplexInfo {
   HighsInt primal_phase2_iteration_count = 0;
   HighsInt primal_bound_swap = 0;
 
-  HighsInt min_threads = 1;
-  HighsInt num_threads = 1;
-  HighsInt max_threads = kHighsThreadLimit;
+  HighsInt min_concurrency = 1;
+  HighsInt num_concurrency = 1;
+  HighsInt max_concurrency = kSimplexConcurrencyLimit;
 
   // Info on PAMI iterations
   HighsInt multi_iteration = 0;
