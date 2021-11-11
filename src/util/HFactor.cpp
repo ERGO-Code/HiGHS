@@ -909,6 +909,8 @@ HighsInt HFactor::buildKernel() {
     if (!singleton_pivot)
       assert(candidate_pivot_value == fabs(pivot_multiplier));
     if (fabs(pivot_multiplier) < pivot_tolerance) {
+      printf("2.1. Delete the pivot : mu = %g\n", pivot_multiplier); fflush(stdout);
+      printf("2.1. Delete the pivot : nwork = %d\n", (int)nwork); fflush(stdout);
       highsLogDev(log_options, HighsLogType::kWarning,
                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                   fabs(pivot_multiplier), nwork);
@@ -1199,17 +1201,22 @@ void HFactor::buildMarkSingC() {
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt ASMrow = row_with_no_pivot[k];
     HighsInt ASMcol = col_with_no_pivot[k];
+    assert(ASMrow < (HighsInt)iwork.size());
     assert(-iwork[ASMrow] - 1 >= 0 && -iwork[ASMrow] - 1 < rank_deficiency);
     // Store negation of 1+ASMcol so that removing column 0 can be
     // identified!
     iwork[ASMrow] = -(ASMcol + 1);
-    var_with_no_pivot[k] = basic_index[ASMcol];
     // Only update basic_index for the true entries
     if (ASMcol < num_basic) {
       assert(k < basic_index_rank_deficiency);
+      // Record the variable in basic_index that had no pivot, and
+      // replace it with the logical
+      var_with_no_pivot[k] = basic_index[ASMcol];
       basic_index[ASMcol] = num_col + ASMrow;
     } else if (num_basic < num_row) {
       assert(ASMcol == num_basic + k - basic_index_rank_deficiency);
+      // Record an illegal variable when there's no index to displace
+      var_with_no_pivot[k] = -1;
     }
   }
   debugReportMarkSingC(1, highs_debug_level, log_options, num_row, iwork,
