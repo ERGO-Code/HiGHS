@@ -4164,7 +4164,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   HighsSparseMatrix matrix;
   matrix.num_col_ = equations.size();
   printf("got %d equations, checking for dependent equations\n",
-         matrix.num_col_);
+         (int)matrix.num_col_);
   matrix.num_row_ = model->num_col_ + 1;
   matrix.start_.resize(matrix.num_col_ + 1);
   matrix.start_[0] = 0;
@@ -4199,7 +4199,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   factor.setup(matrix, colSet);
   HighsInt rank_deficiency = factor.build();
 
-  printf("number of dependent rows: %d\n", rank_deficiency);
+  printf("number of dependent rows: %d\n", (int)rank_deficiency);
   HighsInt numRemovedNz = 0;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt redundantRow = eqSet[factor.var_with_no_pivot[k]];
@@ -4207,7 +4207,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
     removeRow(redundantRow);
   }
 
-  printf("num removed nonzeros: %d\n", numRemovedNz);
+  printf("num removed nonzeros: %d\n", (int)numRemovedNz);
 
   return Result::kOk;
 }

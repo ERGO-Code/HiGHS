@@ -914,8 +914,7 @@ HighsInt HFactor::buildKernel() {
                   fabs(pivot_multiplier), nwork);
       rank_deficiency = nwork + 1;
       assert((HighsInt)this->refactor_info_.pivot_row.size() +
-                 rank_deficiency ==
-             num_row);
+	     rank_deficiency == num_basic);
       return rank_deficiency;
     }
     rowDelete(jColPivot, iRowPivot);
