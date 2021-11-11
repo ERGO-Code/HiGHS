@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "parallel/HighsCombinable.h"
 #include "util/HighsHash.h"
 #include "util/HighsRandom.h"
 #include "util/HighsRbTree.h"
@@ -100,6 +101,13 @@ class HighsCliqueTable {
   std::vector<uint8_t> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
+  std::vector<uint8_t> neighborhoodFlags;
+  struct ThreadNeighborhoodQueryData {
+    int64_t numQueries{0};
+    std::vector<HighsInt> neighborhoodInds;
+  };
+
+  HighsCombinable<ThreadNeighborhoodQueryData> neighborhoodData;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
@@ -113,7 +121,11 @@ class HighsCliqueTable {
 
   void link(HighsInt node);
 
-  HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2);
+  HighsInt findCommonCliqueId(int64_t& numQueries, CliqueVar v1, CliqueVar v2);
+
+  HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
+    return findCommonCliqueId(numNeighborhoodQueries, v1, v2);
+  }
 
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
@@ -152,13 +164,21 @@ class HighsCliqueTable {
 
   void propagateAndCleanup(HighsDomain& globaldom);
 
+  void queryNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
+
  public:
   int64_t numNeighborhoodQueries;
 
-  HighsCliqueTable(HighsInt ncols) {
+  HighsCliqueTable(HighsInt ncols)
+      : neighborhoodData([ncols]() {
+          ThreadNeighborhoodQueryData d;
+          d.neighborhoodInds.reserve(2 * ncols);
+          return d;
+        }) {
     cliquesetTree.resize(2 * ncols);
     sizeTwoCliquesetTree.resize(2 * ncols);
     numcliquesvar.resize(2 * ncols, 0);
+    neighborhoodFlags.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;
@@ -172,6 +192,8 @@ class HighsCliqueTable {
   bool getPresolveFlag() const { return inPresolve; }
 
   HighsInt getNumEntries() const { return numEntries; }
+
+  HighsInt partitionNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
@@ -232,6 +254,11 @@ class HighsCliqueTable {
   bool haveCommonClique(CliqueVar v1, CliqueVar v2) {
     if (v1.col == v2.col) return false;
     return findCommonCliqueId(v1, v2) != -1;
+  }
+
+  bool haveCommonClique(int64_t& numQueries, CliqueVar v1, CliqueVar v2) {
+    if (v1.col == v2.col) return false;
+    return findCommonCliqueId(numQueries, v1, v2) != -1;
   }
 
   std::pair<const CliqueVar*, HighsInt> findCommonClique(CliqueVar v1,
