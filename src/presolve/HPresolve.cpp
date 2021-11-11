@@ -29,6 +29,7 @@
 #include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "test/DevKkt.h"
+#include "util/HFactor.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
 #include "util/HighsLinearSumBounds.h"
@@ -3901,6 +3902,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     bool tryProbing = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
+    bool dependentEquationsCalled = false;
     HighsInt lastPrintSize = kHighsIInf;
     while (true) {
       HighsInt currSize =
@@ -3956,6 +3958,22 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
       }
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+
+      if (!dependentEquationsCalled) {
+        if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
+                                     numDeletedRows >= 0.5 * model->num_row_)) {
+          shrinkProblem(postSolveStack);
+
+          toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                model->a_matrix_.start_);
+          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                  model->a_matrix_.start_);
+        }
+        storeCurrentProblemSize();
+        HPRESOLVE_CHECKED_CALL(removeDependentEquations(postSolveStack));
+        if (problemSizeReduction() > 0.05) continue;
+        dependentEquationsCalled = true;
+      }
 
       if (mipsolver != nullptr) {
         HighsInt numStrenghtened = strengthenInequalities();
@@ -4137,6 +4155,61 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
     flagRow[i] = 1 - rowDeleted[i];
   for (HighsInt i = 0; i != model->num_col_; ++i)
     flagCol[i] = 1 - colDeleted[i];
+}
+
+HPresolve::Result HPresolve::removeDependentEquations(
+    HighsPostsolveStack& postSolveStack) {
+  if (equations.empty()) return Result::kOk;
+
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = equations.size();
+  printf("got %d equations, checking for dependent equations\n",
+         matrix.num_col_);
+  matrix.num_row_ = model->num_col_ + 1;
+  matrix.start_.resize(matrix.num_col_ + 1);
+  matrix.start_[0] = 0;
+  const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
+  matrix.value_.reserve(maxCapacity);
+  matrix.index_.reserve(maxCapacity);
+
+  std::vector<HighsInt> eqSet(matrix.num_col_);
+  HighsInt i = 0;
+  for (const std::pair<HighsInt, HighsInt>& p : equations) {
+    HighsInt eq = p.second;
+    eqSet[i++] = eq;
+
+    // add entries of equation
+    for (const HighsSliceNonzero& nonz : getRowVector(eq)) {
+      matrix.value_.push_back(nonz.value());
+      matrix.index_.push_back(nonz.index());
+    }
+
+    // add entry for artifical rhs row
+    matrix.value_.push_back(model->row_lower_[eq]);
+    matrix.index_.push_back(model->num_col_);
+
+    matrix.start_[i] = matrix.value_.size();
+  }
+
+  printf("matrix setup finished\n");
+
+  std::vector<HighsInt> colSet(matrix.num_col_);
+  std::iota(colSet.begin(), colSet.end(), 0);
+  HFactor factor;
+  factor.setup(matrix, colSet);
+  HighsInt rank_deficiency = factor.build();
+
+  printf("number of dependent rows: %d\n", rank_deficiency);
+  HighsInt numRemovedNz = 0;
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    HighsInt redundantRow = eqSet[factor.var_with_no_pivot[k]];
+    numRemovedNz += rowsize[redundantRow];
+    removeRow(redundantRow);
+  }
+
+  printf("num removed nonzeros: %d\n", numRemovedNz);
+
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
