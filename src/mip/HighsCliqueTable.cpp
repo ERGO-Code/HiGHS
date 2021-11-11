@@ -1664,11 +1664,10 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        HighsCutPool& cutpool, double feastol) {
   BronKerboschData data(sol);
   data.feastol = feastol;
-  // data.maxNeighborhoodQueries = 10000000 +
-  //                              int64_t{1000} * mipsolver.numNonzero() +
-  //                              mipsolver.mipdata_->total_lp_iterations *
-  //                              10000;
-  // if (numNeighborhoodQueries > data.maxNeighborhoodQueries) return;
+  data.maxNeighborhoodQueries = 10000000 +
+                                int64_t{1000} * mipsolver.numNonzero() +
+                                mipsolver.mipdata_->total_lp_iterations * 10000;
+  if (numNeighborhoodQueries > data.maxNeighborhoodQueries) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
   assert(numcliquesvar.size() == 2 * globaldom.col_lower_.size());
@@ -1713,24 +1712,23 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   std::vector<double> vals;
   for (std::vector<CliqueVar>& clique : data.cliques) {
 #ifdef ADD_ZERO_WEIGHT_VARS
-    auto extensionend = data.Z.end();
+    auto extensionend = data.Z.size();
     for (CliqueVar v : clique) {
-      extensionend =
-          std::partition(data.Z.begin(), extensionend,
-                         [&](CliqueVar z) { return haveCommonClique(v, z); });
-      if (data.Z.begin() == extensionend) break;
+      extensionend = partitionNeighborhood(v, data.Z.data(), extensionend);
+      if (extensionend == 0) break;
     }
 
-    if (data.Z.begin() != extensionend) {
-      randgen.shuffle(data.Z.data(), extensionend - data.Z.begin());
+    if (extensionend != 0) {
+      randgen.shuffle(data.Z.data(), extensionend);
 
-      for (auto it = data.Z.begin(); it != extensionend; ++it) {
-        extensionend = std::partition(it + 1, extensionend, [&](CliqueVar z) {
-          return haveCommonClique(*it, z);
-        });
+      for (HighsInt i = 0; i < extensionend; ++i) {
+        HighsInt k = i + 1;
+        extensionend = k + partitionNeighborhood(data.Z[i], data.Z.data() + k,
+                                                 extensionend - k);
       }
 
-      clique.insert(clique.end(), data.Z.begin(), extensionend);
+      clique.insert(clique.end(), data.Z.begin(),
+                    data.Z.begin() + extensionend);
     }
 #endif
 
