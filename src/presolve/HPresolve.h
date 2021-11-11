@@ -308,6 +308,8 @@ class HPresolve {
 
   Result removeDependentEquations(HighsPostsolveStack& postSolveStack);
 
+  Result removeDependentFreeCols(HighsPostsolveStack& postSolveStack);
+
   Result aggregator(HighsPostsolveStack& postSolveStack);
 
   Result removeRowSingletons(HighsPostsolveStack& postSolveStack);

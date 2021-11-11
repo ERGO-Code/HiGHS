@@ -4001,6 +4001,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         }
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(removeDependentEquations(postSolveStack));
+        HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postSolveStack));
         dependentEquationsCalled = true;
         if (problemSizeReduction() > 0.05) continue;
       }
@@ -4184,9 +4185,11 @@ HPresolve::Result HPresolve::removeDependentEquations(
       matrix.index_.push_back(nonz.index());
     }
 
-    // add entry for artifical rhs row
-    matrix.value_.push_back(model->row_lower_[eq]);
-    matrix.index_.push_back(model->num_col_);
+    // add entry for artifical rhs column
+    if (model->row_lower_[eq] != 0.0) {
+      matrix.value_.push_back(model->row_lower_[eq]);
+      matrix.index_.push_back(model->num_col_);
+    }
 
     matrix.start_[i] = matrix.value_.size();
   }
@@ -4209,6 +4212,67 @@ HPresolve::Result HPresolve::removeDependentEquations(
   }
 
   // printf("num removed nonzeros: %d\n", (int)numRemovedNz);
+
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::removeDependentFreeCols(
+    HighsPostsolveStack& postSolveStack) {
+  std::vector<HighsInt> freeCols;
+  freeCols.reserve(model->num_col_);
+
+  for (HighsInt i = 0; i < model->num_col_; ++i) {
+    if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] == kHighsInf)
+      freeCols.push_back(i);
+  }
+
+  if (freeCols.empty()) return Result::kOk;
+
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = freeCols.size();
+  printf("got %d free cols, checking for dependent free cols\n",
+         (int)matrix.num_col_);
+  matrix.num_row_ = model->num_row_ + 1;
+  matrix.start_.resize(matrix.num_col_ + 1);
+  matrix.start_[0] = 0;
+  const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
+  matrix.value_.reserve(maxCapacity);
+  matrix.index_.reserve(maxCapacity);
+  HighsInt i = 0;
+  for (HighsInt col : freeCols) {
+    i += 1;
+    // add entries of free column
+    for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
+      matrix.value_.push_back(nonz.value());
+      matrix.index_.push_back(nonz.index());
+    }
+
+    // add entry for artifical cost row
+    if (model->col_cost_[col] != 0.0) {
+      matrix.value_.push_back(model->col_cost_[col]);
+      matrix.index_.push_back(model->num_row_);
+    }
+
+    matrix.start_[i] = matrix.value_.size();
+  }
+
+  printf("matrix setup finished\n");
+
+  std::vector<HighsInt> colSet(matrix.num_col_);
+  std::iota(colSet.begin(), colSet.end(), 0);
+  HFactor factor;
+  factor.setup(matrix, colSet);
+  HighsInt rank_deficiency = factor.build();
+
+  printf("number of dependent free cols: %d\n", (int)rank_deficiency);
+  HighsInt numRemovedNz = 0;
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    HighsInt redundantCol = freeCols[factor.var_with_no_pivot[k]];
+    numRemovedNz += colsize[redundantCol];
+    fixColToZero(postSolveStack, redundantCol);
+  }
+
+  printf("num removed nonzeros: %d\n", (int)numRemovedNz);
 
   return Result::kOk;
 }
