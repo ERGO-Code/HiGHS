@@ -452,8 +452,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
     if (pass_num_slice <= 0) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                   "SIP trying to use using %" HIGHSINT_FORMAT
-                  " slices due to number of "
-                  "threads (%" HIGHSINT_FORMAT
+                  " slices due to concurrency (%" HIGHSINT_FORMAT
                   ") being too small: results unpredictable\n",
                   pass_num_slice, num_concurrency);
     }
@@ -473,8 +472,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
     if (pass_num_slice <= 0) {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kWarning,
                   "PAMI trying to use using %" HIGHSINT_FORMAT
-                  " slices due to number of "
-                  "threads (%" HIGHSINT_FORMAT
+                  " slices due to concurrency (%" HIGHSINT_FORMAT
                   ") being too small: results unpredictable\n",
                   pass_num_slice, num_concurrency);
     }

@@ -1806,7 +1806,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // set to other values if parallel options are used.
   info.min_concurrency = 1;
   info.max_concurrency = 1;
-  // Record the min/max minimum number of HiGHS threads in the options
+  // Record the min/max minimum concurrency in the options
   const HighsInt simplex_min_concurrency = options.simplex_min_concurrency;
   const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
   HighsInt max_threads = highs::parallel::num_threads();
@@ -1814,16 +1814,16 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   if (options.parallel == kHighsOnString &&
       simplex_strategy == kSimplexStrategyDual) {
     // The parallel strategy is on and the simplex strategy is dual so use
-    // PAMI if there are enough OMP threads
+    // PAMI if there are enough threads
     if (max_threads >= kDualMultiMinConcurrency)
       simplex_strategy = kSimplexStrategyDualMulti;
   }
   //
-  // If parallel stratgies are used, the minimum number of HiGHS threads used
-  // will be set to be at least the minimum required for the strategy
+  // If parallel stratgies are used, the minimum concurrency will be
+  // set to be at least the minimum required for the strategy
   //
-  // All this is independent of the number of OMP threads available,
-  // since code with multiple HiGHS threads can be run in serial.
+  // All this is independent of the number of threads available, since
+  // code with multiple concurrency can be run in serial.
 
   if (simplex_strategy == kSimplexStrategyDualTasks) {
     info.min_concurrency =
@@ -1835,29 +1835,28 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
     info.max_concurrency = max(info.min_concurrency, simplex_max_concurrency);
   }
 
-  // Set the number of HiGHS threads to be used to be the maximum
-  // number to be used
+  // Set the concurrency to be used to be the maximum number
   info.num_concurrency = info.max_concurrency;
-  // Give a warning if the number of threads to be used is fewer than
-  // the minimum number of HiGHS threads allowed
+  // Give a warning if the concurrency to be used is less than the
+  // minimum concurrency allowed
   if (info.num_concurrency < simplex_min_concurrency) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Using %" HIGHSINT_FORMAT
-                 " HiGHS threads for parallel strategy rather than "
+                 "Using concurrency of %" HIGHSINT_FORMAT
+                 " for parallel strategy rather than "
                  "minimum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  info.num_concurrency, simplex_min_concurrency);
   }
-  // Give a warning if the number of threads to be used is more than
-  // the maximum number of HiGHS threads allowed
+  // Give a warning if the concurrency to be used is more than the
+  // maximum concurrency allowed
   if (info.num_concurrency > simplex_max_concurrency) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Using %" HIGHSINT_FORMAT
-                 " HiGHS threads for parallel strategy rather than "
+                 "Using concurrency of %" HIGHSINT_FORMAT
+                 " for parallel strategy rather than "
                  "maximum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  info.num_concurrency, simplex_max_concurrency);
   }
-  // Give a warning if the number of threads to be used is fewer than
-  // the number of OMP threads available
+  // Give a warning if the concurrency to be used is less than the
+  // number of threads available
   if (info.num_concurrency > max_threads) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Number of threads available = %" HIGHSINT_FORMAT

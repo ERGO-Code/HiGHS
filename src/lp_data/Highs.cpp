@@ -22,8 +22,6 @@
 #include <sstream>
 
 #include "io/Filereader.h"
-//#include "io/HMPSIO.h"
-//#include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
@@ -542,10 +540,8 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kWarning,
                 "WARNING: max_threads() returns %" HIGHSINT_FORMAT "\n",
                 max_threads);
-
   highsLogDev(options_.log_options, HighsLogType::kDetailed,
-              "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n", max_threads);
-  //#endif
+              "Running with %" HIGHSINT_FORMAT " thread(s)\n", max_threads);
   assert(called_return_from_run);
   if (!called_return_from_run) {
     highsLogDev(options_.log_options, HighsLogType::kError,
