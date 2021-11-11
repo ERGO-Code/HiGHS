@@ -306,6 +306,8 @@ class HPresolve {
 
   void removeRow(HighsInt row);
 
+  Result removeDependentEquations(HighsPostsolveStack& postSolveStack);
+
   Result aggregator(HighsPostsolveStack& postSolveStack);
 
   Result removeRowSingletons(HighsPostsolveStack& postSolveStack);
