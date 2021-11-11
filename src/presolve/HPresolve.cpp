@@ -3959,22 +3959,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
 
-      if (!dependentEquationsCalled) {
-        if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
-                                     numDeletedRows >= 0.5 * model->num_row_)) {
-          shrinkProblem(postSolveStack);
-
-          toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                model->a_matrix_.start_);
-          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                  model->a_matrix_.start_);
-        }
-        storeCurrentProblemSize();
-        HPRESOLVE_CHECKED_CALL(removeDependentEquations(postSolveStack));
-        if (problemSizeReduction() > 0.05) continue;
-        dependentEquationsCalled = true;
-      }
-
       if (mipsolver != nullptr) {
         HighsInt numStrenghtened = strengthenInequalities();
         if (numStrenghtened > 0)
@@ -4003,6 +3987,22 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         trySparsify = true;
         if (problemSizeReduction() > 0.05 || tryProbing) continue;
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+      }
+
+      if (!dependentEquationsCalled) {
+        if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
+                                     numDeletedRows >= 0.5 * model->num_row_)) {
+          shrinkProblem(postSolveStack);
+
+          toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                model->a_matrix_.start_);
+          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                  model->a_matrix_.start_);
+        }
+        storeCurrentProblemSize();
+        HPRESOLVE_CHECKED_CALL(removeDependentEquations(postSolveStack));
+        dependentEquationsCalled = true;
+        if (problemSizeReduction() > 0.05) continue;
       }
 
       if (mipsolver != nullptr &&
@@ -4204,6 +4204,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt redundantRow = eqSet[factor.var_with_no_pivot[k]];
     numRemovedNz += rowsize[redundantRow];
+    postSolveStack.redundantRow(redundantRow);
     removeRow(redundantRow);
   }
 

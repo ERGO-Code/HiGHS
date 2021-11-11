@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
-#include <tuple>
 #include <vector>
 
 //#include "HConfig.h"
@@ -282,12 +281,12 @@ class HFactor {
   double pivot_tolerance;
   HighsInt highs_debug_level;
 
-  std::unique_ptr<std::tuple<bool, bool, HighsInt>> log_data;
-
-  FILE* log_file_stream;
-  bool output_flag;
-  bool log_to_console;
-  HighsInt log_dev_level;
+  struct LogData {
+    bool output_flag;
+    bool log_to_console;
+    HighsInt log_dev_level;
+  };
+  std::unique_ptr<LogData> log_data;
   HighsLogOptions log_options;
 
   bool use_original_HFactor_logic;
