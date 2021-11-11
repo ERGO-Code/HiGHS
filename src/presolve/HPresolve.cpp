@@ -3971,8 +3971,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         }
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(removeDependentEquations(postSolveStack));
-        if (problemSizeReduction() > 0.05) continue;
         dependentEquationsCalled = true;
+        if (problemSizeReduction() > 0.05) continue;
       }
 
       if (mipsolver != nullptr) {

@@ -221,18 +221,23 @@ void HFactor::setupGeneral(
   pivot_tolerance =
       max(kMinPivotTolerance, min(pivot_tolerance_, kMaxPivotTolerance));
   highs_debug_level = highs_debug_level_;
+  log_data = decltype(log_data)(new LogData());
+  log_options.output_flag = &log_data->output_flag;
+  log_options.log_to_console = &log_data->log_to_console;
+  log_options.log_dev_level = &log_data->log_dev_level;
+
   if (!log_options_) {
-    output_flag = false;
-    log_file_stream = NULL;
-    log_to_console = true;
-    log_dev_level = 0;
+    log_data->output_flag = false;
+    log_data->log_to_console = true;
+    log_data->log_dev_level = 0;
+    log_options.log_file_stream = nullptr;
   } else {
-    output_flag = *(log_options_->output_flag);
-    log_file_stream = log_options_->log_file_stream;
-    log_to_console = *(log_options_->log_to_console);
-    log_dev_level = *(log_options_->log_dev_level);
-    log_options = *log_options_;
+    log_data->output_flag = *(log_options_->output_flag);
+    log_data->log_to_console = *(log_options_->log_to_console);
+    log_data->log_dev_level = *(log_options_->log_dev_level);
+    log_options.log_file_stream = log_options_->log_file_stream;
   }
+
   use_original_HFactor_logic = use_original_HFactor_logic_;
   update_method = update_method_;
 
