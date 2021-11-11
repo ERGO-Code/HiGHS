@@ -4211,13 +4211,16 @@ HPresolve::Result HPresolve::removeDependentEquations(
     removeRow(redundantRow);
   }
 
-  // printf("num removed nonzeros: %d\n", (int)numRemovedNz);
+  printf("num removed nonzeros: %d\n", (int)numRemovedNz);
 
   return Result::kOk;
 }
 
 HPresolve::Result HPresolve::removeDependentFreeCols(
     HighsPostsolveStack& postSolveStack) {
+  return Result::kOk;
+
+  //todo the postsolve step does not work properly
   std::vector<HighsInt> freeCols;
   freeCols.reserve(model->num_col_);
 
