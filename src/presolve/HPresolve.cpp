@@ -4001,6 +4001,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         }
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(removeDependentEquations(postSolveStack));
+        HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postSolveStack));
         dependentEquationsCalled = true;
         if (problemSizeReduction() > 0.05) continue;
       }
@@ -4184,16 +4185,19 @@ HPresolve::Result HPresolve::removeDependentEquations(
       matrix.index_.push_back(nonz.index());
     }
 
-    // add entry for artifical rhs row
-    matrix.value_.push_back(model->row_lower_[eq]);
-    matrix.index_.push_back(model->num_col_);
+    // add entry for artifical rhs column
+    if (model->row_lower_[eq] != 0.0) {
+      matrix.value_.push_back(model->row_lower_[eq]);
+      matrix.index_.push_back(model->num_col_);
+    }
 
     matrix.start_[i] = matrix.value_.size();
   }
 
-  printf("HPresolve::removeDependentEquations Matrix setup finished [%d rows, %d cols]\n",
-	 (int)matrix.num_row_,
-	 (int)matrix.num_col_);
+  printf(
+      "HPresolve::removeDependentEquations Matrix setup finished [%d rows, %d "
+      "cols]\n",
+      (int)matrix.num_row_, (int)matrix.num_col_);
 
   std::vector<HighsInt> colSet(matrix.num_col_);
   std::iota(colSet.begin(), colSet.end(), 0);
@@ -4201,12 +4205,13 @@ HPresolve::Result HPresolve::removeDependentEquations(
   factor.setup(matrix, colSet);
   HighsInt rank_deficiency = factor.build();
 
-  printf("HPresolve::removeDependentEquations Rank deficiency is %d\n", (int)rank_deficiency);
+  printf("HPresolve::removeDependentEquations Rank deficiency is %d\n",
+         (int)rank_deficiency);
   HighsInt num_removed_row = 0;
   HighsInt num_removed_nz = 0;
   HighsInt num_fictitious_rows_skipped = 0;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
-    if (factor.var_with_no_pivot[k]>=0) {
+    if (factor.var_with_no_pivot[k] >= 0) {
       HighsInt redundant_row = eqSet[factor.var_with_no_pivot[k]];
       num_removed_row++;
       num_removed_nz += rowsize[redundant_row];
@@ -4218,9 +4223,88 @@ HPresolve::Result HPresolve::removeDependentEquations(
   }
 
   printf("HPresolve::removeDependentEquations Removed %d rows and %d nonzeros",
-	 (int)num_removed_row,
-	 (int)num_removed_nz);
-  if (num_fictitious_rows_skipped) printf(", avoiding %d fictitious rows", (int)num_fictitious_rows_skipped);
+         (int)num_removed_row, (int)num_removed_nz);
+  if (num_fictitious_rows_skipped)
+    printf(", avoiding %d fictitious rows", (int)num_fictitious_rows_skipped);
+  printf("\n");
+
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::removeDependentFreeCols(
+    HighsPostsolveStack& postSolveStack) {
+  return Result::kOk;
+
+  // todo the postsolve step does not work properly
+  std::vector<HighsInt> freeCols;
+  freeCols.reserve(model->num_col_);
+
+  for (HighsInt i = 0; i < model->num_col_; ++i) {
+    if (colDeleted[i]) continue;
+    if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] == kHighsInf)
+      freeCols.push_back(i);
+  }
+
+  if (freeCols.empty()) return Result::kOk;
+
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = freeCols.size();
+  printf("got %d free cols, checking for dependent free cols\n",
+         (int)matrix.num_col_);
+  matrix.num_row_ = model->num_row_ + 1;
+  matrix.start_.resize(matrix.num_col_ + 1);
+  matrix.start_[0] = 0;
+  const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
+  matrix.value_.reserve(maxCapacity);
+  matrix.index_.reserve(maxCapacity);
+
+  for (HighsInt i = 0; i < matrix.num_col_; ++i) {
+    HighsInt col = freeCols[i];
+    // add entries of free column
+    for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
+      matrix.value_.push_back(nonz.value());
+      matrix.index_.push_back(nonz.index());
+    }
+
+    // add entry for artifical cost row
+    if (model->col_cost_[col] != 0.0) {
+      matrix.value_.push_back(model->col_cost_[col]);
+      matrix.index_.push_back(model->num_row_);
+    }
+
+    matrix.start_[i + 1] = matrix.value_.size();
+  }
+
+  printf(
+      "HPresolve::removeDependentFreeCols Matrix setup finished [%d rows, %d "
+      "cols]\n",
+      (int)matrix.num_row_, (int)matrix.num_col_);
+
+  std::vector<HighsInt> colSet(matrix.num_col_);
+  std::iota(colSet.begin(), colSet.end(), 0);
+  HFactor factor;
+  factor.setup(matrix, colSet);
+  HighsInt rank_deficiency = factor.build();
+
+  printf("HPresolve::removeDependentFreeCols Rank deficiency is %d\n",
+         (int)rank_deficiency);
+  HighsInt num_removed_row = 0;
+  HighsInt num_removed_nz = 0;
+  HighsInt num_fictitious_cols_skipped = 0;
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    if (factor.var_with_no_pivot[k] >= 0) {
+      HighsInt redundant_col = freeCols[factor.var_with_no_pivot[k]];
+      num_removed_nz += colsize[redundant_col];
+      fixColToZero(postSolveStack, redundant_col);
+    } else {
+      num_fictitious_cols_skipped++;
+    }
+  }
+
+  printf("HPresolve::removeDependentFreeCols Removed %d rows and %d nonzeros",
+         (int)num_removed_row, (int)num_removed_nz);
+  if (num_fictitious_cols_skipped)
+    printf(", avoiding %d fictitious rows", (int)num_fictitious_cols_skipped);
   printf("\n");
 
   return Result::kOk;
