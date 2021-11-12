@@ -80,7 +80,8 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   return addIncumbent(solution, double(obj), source);
 }
 
-void HighsMipSolverData::startAnalyticCenterComputation(const highs::parallel::TaskGroup& taskGroup) {
+void HighsMipSolverData::startAnalyticCenterComputation(
+    const highs::parallel::TaskGroup& taskGroup) {
   taskGroup.spawn([&]() {
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
@@ -100,7 +101,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(const highs::parallel::T
   });
 }
 
-void HighsMipSolverData::finishAnalyticCenterComputation(const highs::parallel::TaskGroup& taskGroup) {
+void HighsMipSolverData::finishAnalyticCenterComputation(
+    const highs::parallel::TaskGroup& taskGroup) {
   taskGroup.sync();
   analyticCenterComputed = true;
   if (analyticCenterStatus == HighsModelStatus::kOptimal) {
@@ -469,6 +471,10 @@ void HighsMipSolverData::runSetup() {
            checkSolution(debugSolution.debugSolution));
   }
 #endif
+
+  if (upper_limit == kHighsInf) analyticCenterComputed = false;
+  analyticCenterStatus = HighsModelStatus::kNotset;
+  analyticCenter.clear();
 
   symmetries.clear();
 
@@ -1161,9 +1167,8 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   highs::parallel::TaskGroup tg;
-  if( !analyticCenterComputed )
-    startAnalyticCenterComputation(tg);
 restart:
+  if (!analyticCenterComputed) startAnalyticCenterComputation(tg);
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
@@ -1346,7 +1351,7 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-  if (!analyticCenterComputed || upper_limit == kHighsInf) {
+  if (!analyticCenterComputed) {
     if (checkLimits()) return;
     finishAnalyticCenterComputation(tg);
     heuristics.centralRounding();
@@ -1454,6 +1459,7 @@ restart:
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
+      if (!analyticCenterComputed) finishAnalyticCenterComputation(tg);
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
