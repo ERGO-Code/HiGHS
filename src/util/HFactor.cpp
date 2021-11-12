@@ -504,6 +504,9 @@ void HFactor::buildSimple() {
    */
   luClear();
 
+  const bool progress_report = num_basic != num_row;
+  const HighsInt progress_frequency = 100000;
+
   // Set all values of permute to -1 so that unpermuted (rank
   // deficient) columns can be identified
   const HighsInt permute_dim = num_basic;
@@ -532,6 +535,12 @@ void HFactor::buildSimple() {
   iwork.resize(iwork_dim + 1, 0);
   iwork.assign(iwork_dim + 1, 0);
   for (HighsInt iCol = 0; iCol < num_basic; iCol++) {
+    
+    if (progress_report && iCol) {
+      if (iCol % progress_frequency == 0)
+	printf("HFactor::buildSimple stage = %6d\n", (int)iCol);
+    }
+    
     HighsInt iMat = basic_index[iCol];
     HighsInt iRow = -1;
     int8_t pivot_type = kPivotIllegal;
@@ -798,6 +807,10 @@ HighsInt HFactor::buildKernel() {
   double fake_fill = 0;
   double fake_eliminate = 0;
 
+  const bool progress_report = num_basic != num_row;
+  const HighsInt progress_frequency = 10000;
+  HighsInt search_k = 0;
+
   while (nwork-- > 0) {
     /**
      * 1. Search for the pivot
@@ -812,6 +825,27 @@ HighsInt HFactor::buildKernel() {
     double merit_limit = 1.0 * num_basic * num_row;
     double merit_pivot = merit_limit;
 
+    if (progress_report && search_k) {
+      if (search_k % progress_frequency == 0) {
+	HighsInt min_col_count = kHighsIInf;
+	HighsInt min_row_count = kHighsIInf;
+	for (HighsInt count = 1; count < num_row; count++) {
+	  if (col_link_first[count] >= 0) {
+	    min_col_count = count;
+	    break;
+	  }
+	}
+	for (HighsInt count = 1; count < num_basic; count++) {
+	  if (row_link_first[count] >= 0) {
+	    min_row_count = count;
+	    break;
+	  }
+	}
+	printf("HFactor::buildKernel stage = %6d: min_col_count = %3d; min_row_count = %3d\n",
+	       (int)search_k, (int)min_col_count, (int)min_row_count);
+      }
+    }    
+    search_k++;
     // 1.2. Search for local singletons
     bool foundPivot = false;
     if (!foundPivot && col_link_first[1] != -1) {
