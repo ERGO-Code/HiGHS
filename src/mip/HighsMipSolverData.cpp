@@ -474,6 +474,7 @@ double HighsMipSolverData::transformNewIncumbent(
   HighsSolution solution;
   solution.col_value = sol;
   calculateRowValues(*mipsolver.model_, solution);
+  solution.value_valid = true;
 
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
   calculateRowValues(*mipsolver.orig_model_, solution);
