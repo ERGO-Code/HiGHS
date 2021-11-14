@@ -2321,7 +2321,8 @@ HighsStatus Highs::callSolveMip() {
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
   // model status
-  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus return_status =
+      highsStatusFromHighsModelStatus(solver.modelstatus_);
   model_status_ = solver.modelstatus_;
   scaled_model_status_ = model_status_;
   // Extract the solution
