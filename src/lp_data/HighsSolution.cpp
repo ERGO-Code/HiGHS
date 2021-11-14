@@ -469,6 +469,12 @@ HighsStatus ipxSolutionToHighsSolution(
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
+  // No dual solution is deduced - ToDo why not? - but still ensure
+  // that it is the correct size and assigned
+  //  highs_solution.col_dual.assign(lp.num_col_, 0);
+  //  highs_solution.row_dual.assign(lp.num_row_, 0);
+  // However, ensure that it is recorded as being invalid
+  //  highs_solution.dual_valid = false;
 
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;

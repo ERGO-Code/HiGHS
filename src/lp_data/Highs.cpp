@@ -627,6 +627,10 @@ HighsStatus Highs::run() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
+  const bool force_crossover_after_presolve = false;
+  const bool ipx_no_crossover = options_.solver == kIpmString &&
+                                !options_.run_crossover &&
+                                !force_crossover_after_presolve;
 
   if (basis_.valid || options_.presolve == kHighsOffString) {
     // There is a valid basis for the problem or presolve is off
@@ -649,7 +653,8 @@ HighsStatus Highs::run() {
     //
     // If using IPX to solve the reduced LP, crossover must be run
     // since a basic solution is required by postsolve
-    if (options_.solver == kIpmString && !options_.run_crossover) {
+    if (force_crossover_after_presolve && options_.solver == kIpmString &&
+        !options_.run_crossover) {
       highsLogUser(options_.log_options, HighsLogType::kWarning,
                    "Forcing IPX to use crossover after presolve\n");
       options_.run_crossover = true;
@@ -756,6 +761,9 @@ HighsStatus Highs::run() {
         solution_.clear();
         basis_.clear();
         basis_.debug_origin_name = "Presolve to empty";
+        basis_.valid = true;
+        solution_.value_valid = true;
+        solution_.dual_valid = true;
         have_optimal_solution = true;
         break;
       }
@@ -844,8 +852,7 @@ HighsStatus Highs::run() {
         // solution(?) and basis that is, hopefully, optimal. This is
         // confirmed or corrected by hot-starting the simplex solver
         presolve_.data_.recovered_solution_ = solution_;
-        presolve_.data_.recovered_basis_.col_status = basis_.col_status;
-        presolve_.data_.recovered_basis_.row_status = basis_.row_status;
+        presolve_.data_.recovered_basis_ = basis_;
 
         this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
@@ -857,72 +864,78 @@ HighsStatus Highs::run() {
         if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
           highsLogDev(log_options, HighsLogType::kVerbose,
                       "Postsolve finished\n");
-          //
-          // Now hot-start the simplex solver for the incumbent LP
-          //
           // Set solution and its status
+          solution_.clear();
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
-          solution_.dual_valid = true;
-
-          // Set basis and its status
-          basis_.valid = true;
-          basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-          basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-          basis_.debug_origin_name += ": after postsolve";
-          // Possibly force debug to perform KKT check on what's
-          // returned from postsolve
-          const bool force_debug = false;
-          HighsInt save_highs_debug_level = options_.highs_debug_level;
-          if (force_debug) options_.highs_debug_level = kHighsDebugLevelCostly;
-          if (debugHighsSolution("After returning from postsolve", options_,
-                                 model_, solution_,
-                                 basis_) == HighsDebugStatus::kLogicalError)
-            return returnFromRun(HighsStatus::kError);
-          options_.highs_debug_level = save_highs_debug_level;
-
-          // Save the options to allow the best simplex strategy to
-          // be used
-          HighsOptions save_options = options_;
-          const bool full_logging = false;
-          if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
-          // Force the use of simplex to clean up if IPM has been used
-          // to solve the presolved problem
-          if (options_.solver == kIpmString) options_.solver = kSimplexString;
-          options_.simplex_strategy = kSimplexStrategyChoose;
-          // Ensure that the parallel solver isn't used
-          options_.simplex_min_concurrency = 1;
-          options_.simplex_max_concurrency = 1;
-          // Use any pivot threshold resulting from solving the presolved LP
-          if (factor_pivot_threshold > 0)
-            options_.factor_pivot_threshold = factor_pivot_threshold;
-
-          // The basis returned from postsolve is just basic/nonbasic
-          // and EKK expects a refined basis, so set it up now
-          refineBasis(incumbent_lp, solution_, basis_);
-
-          // Scrap the EKK data from solving the presolved LP
-          ekk_instance_.invalidate();
-          ekk_instance_.lp_name_ = "Postsolve LP";
-          // Set up the iteration count and timing records so that
-          // adding the corresponding values after callSolveLp gives
-          // difference
-          postsolve_iteration_count = -info_.simplex_iteration_count;
-          this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-          timer_.start(timer_.solve_clock);
-          call_status = callSolveLp(
-              incumbent_lp,
-              "Solving the original LP from the solution after postsolve");
-          timer_.stop(timer_.solve_clock);
-          // Determine the iteration count and timing records
-          postsolve_iteration_count += info_.simplex_iteration_count;
-          this_solve_original_lp_time += timer_.read(timer_.solve_clock);
-          return_status = interpretCallStatus(options_.log_options, call_status,
-                                              return_status, "callSolveLp");
-          // Recover the options
-          options_ = save_options;
-          if (return_status == HighsStatus::kError)
-            return returnFromRun(return_status);
+          if (ipx_no_crossover) {
+            // IPX was used without crossover, so only have a primal solution
+            solution_.dual_valid = false;
+            basis_.clear();
+            basis_.valid = false;
+          } else {
+            //
+            // Hot-start the simplex solver for the incumbent LP
+            //
+            solution_.dual_valid = true;
+            // Set basis and its status
+            basis_.valid = true;
+            basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+            basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+            basis_.debug_origin_name += ": after postsolve";
+            // Possibly force debug to perform KKT check on what's
+            // returned from postsolve
+            const bool force_debug = false;
+            HighsInt save_highs_debug_level = options_.highs_debug_level;
+            if (force_debug)
+              options_.highs_debug_level = kHighsDebugLevelCostly;
+            if (debugHighsSolution("After returning from postsolve", options_,
+                                   model_, solution_,
+                                   basis_) == HighsDebugStatus::kLogicalError)
+              return returnFromRun(HighsStatus::kError);
+            options_.highs_debug_level = save_highs_debug_level;
+            // Save the options to allow the best simplex strategy to
+            // be used
+            HighsOptions save_options = options_;
+            const bool full_logging = false;
+            if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
+            // Force the use of simplex to clean up if IPM has been used
+            // to solve the presolved problem
+            if (options_.solver == kIpmString) options_.solver = kSimplexString;
+            options_.simplex_strategy = kSimplexStrategyChoose;
+            // Ensure that the parallel solver isn't used
+            options_.simplex_min_concurrency = 1;
+            options_.simplex_max_concurrency = 1;
+            // Use any pivot threshold resulting from solving the presolved LP
+            if (factor_pivot_threshold > 0)
+              options_.factor_pivot_threshold = factor_pivot_threshold;
+            // The basis returned from postsolve is just basic/nonbasic
+            // and EKK expects a refined basis, so set it up now
+            refineBasis(incumbent_lp, solution_, basis_);
+            // Scrap the EKK data from solving the presolved LP
+            ekk_instance_.invalidate();
+            ekk_instance_.lp_name_ = "Postsolve LP";
+            // Set up the iteration count and timing records so that
+            // adding the corresponding values after callSolveLp gives
+            // difference
+            postsolve_iteration_count = -info_.simplex_iteration_count;
+            this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+            timer_.start(timer_.solve_clock);
+            call_status = callSolveLp(
+                incumbent_lp,
+                "Solving the original LP from the solution after postsolve");
+            timer_.stop(timer_.solve_clock);
+            // Determine the iteration count and timing records
+            postsolve_iteration_count += info_.simplex_iteration_count;
+            this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+            return_status =
+                interpretCallStatus(options_.log_options, call_status,
+                                    return_status, "callSolveLp");
+            // Recover the options
+            options_ = save_options;
+            if (return_status == HighsStatus::kError)
+              return returnFromRun(return_status);
+          }
         } else {
           highsLogUser(log_options, HighsLogType::kError,
                        "Postsolve return status is %d\n",
@@ -2083,15 +2096,23 @@ HighsPresolveStatus Highs::runPresolve() {
 
 HighsPostsolveStatus Highs::runPostsolve() {
   // assert(presolve_.has_run_);
-  bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
-                                         presolve_.data_.recovered_solution_);
-  if (!solution_ok) return HighsPostsolveStatus::kReducedSolutionDimenionsError;
-
+  const bool have_primal_solution =
+      presolve_.data_.recovered_solution_.value_valid;
+  if (have_primal_solution)
+    assert(isPrimalSolutionRightSize(presolve_.getReducedProblem(),
+                                     presolve_.data_.recovered_solution_));
+  // Need at least a primal solution
+  if (!have_primal_solution)
+    return HighsPostsolveStatus::kReducedSolutionDimenionsError;
+  const bool have_dual_solution = isDualSolutionRightSize(
+      presolve_.getReducedProblem(), presolve_.data_.recovered_solution_);
+  assert(have_dual_solution == presolve_.data_.recovered_solution_.dual_valid);
+  assert(have_dual_solution == presolve_.data_.recovered_basis_.valid);
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
 
-  if (model_.lp_.sense_ == ObjSense::kMaximize)
+  if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
     presolve_.negateReducedLpColDuals(true);
 
   // Ensure that the postsolve status is used to set

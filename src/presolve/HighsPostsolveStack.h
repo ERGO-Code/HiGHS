@@ -479,9 +479,18 @@ class HighsPostsolveStack {
             HighsBasis& basis) {
     reductionValues.resetPosition();
 
+    // Do these returns ever happen? How is it known that undo has not
+    // been performed?
+    assert(solution.col_value.size() == origColIndex.size());
+    assert(solution.row_value.size() == origRowIndex.size());
+    // This should be a better measure of whether undo can be
+    // performed
+    assert(solution.value_valid);
     if (solution.col_value.size() != origColIndex.size()) return;
     if (solution.row_value.size() != origRowIndex.size()) return;
-    bool dualPostSolve = solution.col_dual.size() == solution.col_value.size();
+
+    bool perform_dual_postsolve = solution.dual_valid;
+    if (perform_dual_postsolve) assert(basis.valid);
 
     // expand solution to original index space
     solution.col_value.resize(origNumCol);
@@ -496,7 +505,7 @@ class HighsPostsolveStack {
       solution.row_value[origRowIndex[i]] = solution.row_value[i];
     }
 
-    if (dualPostSolve) {
+    if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       solution.col_dual.resize(origNumCol);
@@ -731,10 +740,20 @@ class HighsPostsolveStack {
                  HighsBasis& basis, HighsInt numReductions) {
     reductionValues.resetPosition();
 
+    // Do these returns ever happen? How is it known that undo has not
+    // been performed?
+    assert(solution.col_value.size() == origColIndex.size());
+    assert(solution.row_value.size() == origRowIndex.size());
+    // This should be a better measure of whether undo can be
+    // performed
+    assert(solution.value_valid);
     if (solution.col_value.size() != origColIndex.size()) return;
     if (solution.row_value.size() != origRowIndex.size()) return;
 
-    bool dualPostSolve = solution.col_dual.size() == solution.col_value.size();
+    bool perform_dual_postsolve = solution.dual_valid;
+    assert((solution.col_dual.size() == solution.col_value.size()) ==
+           perform_dual_postsolve);
+    if (perform_dual_postsolve) assert(basis.valid);
 
     // expand solution to original index space
     solution.col_value.resize(origNumCol);
@@ -749,7 +768,7 @@ class HighsPostsolveStack {
       solution.row_value[origRowIndex[i]] = solution.row_value[i];
     }
 
-    if (dualPostSolve) {
+    if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       solution.col_dual.resize(origNumCol);
