@@ -620,6 +620,13 @@ class HighsPostsolveStack {
   void undoPrimal(const HighsOptions& options, HighsSolution& solution) {
     reductionValues.resetPosition();
 
+    // Do these returns ever happen? How is it known that undo has not
+    // been performed?
+    assert(solution.col_value.size() == origColIndex.size());
+    assert(solution.row_value.size() == origRowIndex.size());
+    // This should be a better measure of whether undo can be
+    // performed
+    assert(solution.value_valid);
     if (solution.col_value.size() != origColIndex.size()) return;
     if (solution.row_value.size() != origRowIndex.size()) return;
 
