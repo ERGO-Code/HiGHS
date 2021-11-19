@@ -60,13 +60,13 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   }
 
   // else use fixed format parser
-  FilereaderRetcode return_code = readMps(
-      options.log_options, filename, -1, -1, lp.num_row_, lp.num_col_,
-      lp.sense_, lp.offset_, lp.a_start_, lp.a_index_, lp.a_value_,
-      lp.col_cost_, lp.col_lower_, lp.col_upper_, lp.row_lower_, lp.row_upper_,
-      lp.integrality_, lp.col_names_, lp.row_names_,
-      hessian.dim_, hessian.q_start_, hessian.q_index_, hessian.q_value_,
-      options.keep_n_rows);
+  FilereaderRetcode return_code =
+      readMps(options.log_options, filename, -1, -1, lp.num_row_, lp.num_col_,
+              lp.sense_, lp.offset_, lp.a_start_, lp.a_index_, lp.a_value_,
+              lp.col_cost_, lp.col_lower_, lp.col_upper_, lp.row_lower_,
+              lp.row_upper_, lp.integrality_, lp.col_names_, lp.row_names_,
+              hessian.dim_, hessian.q_start_, hessian.q_index_,
+              hessian.q_value_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) {
     lp.format_ = MatrixFormat::kColwise;
     if (setFormat(lp) != HighsStatus::kOk)
