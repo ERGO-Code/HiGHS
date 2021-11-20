@@ -868,7 +868,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
-    HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 27);
+    HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 59);
+    assert(rowHashedPos < 32);
     signatures[col].first |= rowLowerFinite << rowHashedPos;
     signatures[col].second |= rowUpperFinite << rowHashedPos;
   };
