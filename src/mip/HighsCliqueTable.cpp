@@ -514,23 +514,29 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
 
 void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
                                          HighsInt N) {
-  highs::parallel::for_each(
-      0, N,
-      [this, v, q](HighsInt start, HighsInt end) {
-        ThreadNeighborhoodQueryData& d = neighborhoodData.local();
-        for (HighsInt i = start; i < end; ++i) {
-          if (haveCommonClique(d.numQueries, v, q[i]))
-            d.neighborhoodInds.push_back(i);
-        }
-      },
-      10);
+  if (numEntries < 100000) {
+    //printf("numEntries: %d\n", numEntries);
+    for (HighsInt i = 0; i < N; ++i)
+      neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
+  } else {
+    highs::parallel::for_each(
+        0, N,
+        [this, v, q](HighsInt start, HighsInt end) {
+          ThreadNeighborhoodQueryData& d = neighborhoodData.local();
+          for (HighsInt i = start; i < end; ++i) {
+            if (haveCommonClique(d.numQueries, v, q[i]))
+              d.neighborhoodInds.push_back(i);
+          }
+        },
+        10);
 
-  neighborhoodData.combine_each([&](ThreadNeighborhoodQueryData& d) {
-    for (HighsInt i : d.neighborhoodInds) neighborhoodFlags[i] = true;
-    d.neighborhoodInds.clear();
-    numNeighborhoodQueries += d.numQueries;
-    d.numQueries = 0;
-  });
+    neighborhoodData.combine_each([&](ThreadNeighborhoodQueryData& d) {
+      for (HighsInt i : d.neighborhoodInds) neighborhoodFlags[i] = true;
+      d.neighborhoodInds.clear();
+      numNeighborhoodQueries += d.numQueries;
+      d.numQueries = 0;
+    });
+  }
 }
 
 HighsInt HighsCliqueTable::partitionNeighborhood(CliqueVar v, CliqueVar* q,
