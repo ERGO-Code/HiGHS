@@ -150,9 +150,13 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // double firstobj = lp->getObjective();
     double currBound =
         std::min(lp->getObjective(), mipsolver.mipdata_->lower_bound);
-    double firstobj = currBound - mipsolver.mipdata_->feastol *
-                                      std::max(1.0, std::abs(currBound));
-
+    double firstobj =
+        currBound - mipsolver.mipdata_->feastol *
+                        std::max(1.0, std::min(std::abs(currBound),
+                                               mipsolver.mipdata_->upper_limit -
+                                                   currBound));
+    // printf("currbound: %.15g, firstobj: %.15g,  upper limit: %.15g\n",
+    //        currBound, firstobj, mipsolver.mipdata_->upper_limit);
     while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
       double lastobj = lp->getObjective();
 
