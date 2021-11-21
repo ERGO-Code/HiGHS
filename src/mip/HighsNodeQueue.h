@@ -105,9 +105,9 @@ class HighsNodeQueue {
                    std::vector<HighsInt>&& branchings, double lower_bound,
                    double estimate, HighsInt depth);
 
-  OpenNode popBestNode();
+  OpenNode&& popBestNode();
 
-  OpenNode popBestBoundNode();
+  OpenNode&& popBestBoundNode();
 
   int64_t numNodesUp(HighsInt col) const { return colLowerNodes[col].size(); }
 
@@ -145,7 +145,7 @@ class HighsNodeQueue {
   void clear() {
     HighsNodeQueue nodequeue;
     nodequeue.setNumCol(colUpperNodes.size());
-    std::swap(*this, nodequeue);
+    *this = std::move(nodequeue);
   }
 
   bool empty() const { return nodes.size() == freeslots.size(); }

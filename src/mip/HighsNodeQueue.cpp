@@ -281,7 +281,7 @@ void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
   link(pos);
 }
 
-HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
+HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestNode() {
   HighsInt bestNode = hybridEstimMin;
 
   unlink(bestNode);
@@ -289,7 +289,7 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
   return std::move(nodes[bestNode]);
 }
 
-HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
+HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestBoundNode() {
   HighsInt bestBoundNode = lowerMin;
 
   unlink(bestBoundNode);
