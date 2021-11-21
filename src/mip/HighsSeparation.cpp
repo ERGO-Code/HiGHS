@@ -176,7 +176,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
           lp->getFractionalIntegers().empty())
         break;
 
-      assert(lastobj - firstobj >= mipsolver.mipdata_->feastol);
+      assert(lastobj >= firstobj + mipsolver.mipdata_->feastol);
 
       // if the objective improved considerably we continue
       if ((lp->getObjective() - firstobj) <= (lastobj - firstobj) * 1.01) break;
