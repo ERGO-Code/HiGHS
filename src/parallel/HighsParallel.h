@@ -67,6 +67,7 @@ inline void sync() { sync(HighsTaskExecutor::getThisWorkerDeque()); }
 class TaskGroup {
   HighsSplitDeque* workerDeque;
   int dequeHead;
+  std::atomic_bool cancelFlag;
 
  public:
   TaskGroup() {
@@ -89,7 +90,14 @@ class TaskGroup {
       highs::parallel::sync(workerDeque);
   }
 
-  ~TaskGroup() { taskWait(); }
+  bool isCancelled() const { cancelFlag.load(std::memory_order_acquire); }
+
+  void cancel() { cancelFlag.store(true, std::memory_order_release); }
+
+  ~TaskGroup() {
+    cancel();
+    taskWait();
+  }
 };
 
 template <typename F>

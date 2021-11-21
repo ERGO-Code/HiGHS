@@ -50,7 +50,6 @@ struct HighsMipSolverData {
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
-  std::atomic_bool cancelAnalyticCenterComputation;
   HighsModelStatus analyticCenterStatus;
   bool detectSymmetries;
   HighsInt numRestarts;
