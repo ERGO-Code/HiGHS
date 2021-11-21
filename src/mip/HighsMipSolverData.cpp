@@ -83,6 +83,9 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
 void HighsMipSolverData::startAnalyticCenterComputation(
     const highs::parallel::TaskGroup& taskGroup) {
   taskGroup.spawn([&]() {
+    // first check if the analytic center computation should be cancelled, e.g.
+    // due to early return in the root node evaluation
+    if (cancelAnalyticCenterComputation.load(std::memory_order_relaxed)) return;
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", false);
@@ -1177,9 +1180,23 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   } while (true);
 }
 
+struct FlagGuard {
+  std::atomic_bool& flag;
+
+  FlagGuard(std::atomic_bool& flag) : flag(flag) {
+    flag.store(false, std::memory_order_relaxed);
+  }
+
+  ~FlagGuard() { flag.store(true, std::memory_order_relaxed); }
+};
+
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   highs::parallel::TaskGroup tg;
+  // FlagGuard will set the flag to true before the task group is destroyed
+  // so that the analytic center computation is not unnecessarily started during
+  // destruction of the task group when returning prematurely.
+  FlagGuard fg(this->cancelAnalyticCenterComputation);
 restart:
   // subMIP problems have a much higher chance of being infeasible so we only
   // start solving the analytic center problem once the first LP is feasible,
