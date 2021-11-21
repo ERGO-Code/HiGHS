@@ -1180,16 +1180,6 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   } while (true);
 }
 
-struct FlagGuard {
-  std::atomic_bool& flag;
-
-  FlagGuard(std::atomic_bool& flag) : flag(flag) {
-    flag.store(false, std::memory_order_relaxed);
-  }
-
-  ~FlagGuard() { flag.store(true, std::memory_order_relaxed); }
-};
-
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   highs::parallel::TaskGroup tg;

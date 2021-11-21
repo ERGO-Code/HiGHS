@@ -73,6 +73,7 @@ class TaskGroup {
   TaskGroup() {
     workerDeque = HighsTaskExecutor::getThisWorkerDeque();
     dequeHead = workerDeque->getCurrentHead();
+    cancelFlag.store(false, std::memory_order_release);
   }
 
   template <typename F>
@@ -90,7 +91,9 @@ class TaskGroup {
       highs::parallel::sync(workerDeque);
   }
 
-  bool isCancelled() const { cancelFlag.load(std::memory_order_acquire); }
+  bool isCancelled() const {
+    return cancelFlag.load(std::memory_order_acquire);
+  }
 
   void cancel() { cancelFlag.store(true, std::memory_order_release); }
 
