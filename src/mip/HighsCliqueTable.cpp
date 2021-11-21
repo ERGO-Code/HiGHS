@@ -515,7 +515,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
 void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
                                          HighsInt N) {
   if (numEntries < 100000) {
-    //printf("numEntries: %d\n", numEntries);
+    // printf("numEntries: %d\n", numEntries);
     for (HighsInt i = 0; i < N; ++i)
       neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
   } else {

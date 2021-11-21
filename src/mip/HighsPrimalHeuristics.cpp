@@ -1059,14 +1059,18 @@ void HighsPrimalHeuristics::feasibilityPump() {
 }
 
 void HighsPrimalHeuristics::centralRounding() {
-  if (HighsInt(mipsolver.mipdata_->analyticCenter.size()) != mipsolver.numCol()) return;
+  if (HighsInt(mipsolver.mipdata_->analyticCenter.size()) != mipsolver.numCol())
+    return;
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
-    linesearchRounding(mipsolver.mipdata_->firstlpsol, mipsolver.mipdata_->analyticCenter, 'C');
+    linesearchRounding(mipsolver.mipdata_->firstlpsol,
+                       mipsolver.mipdata_->analyticCenter, 'C');
   else if (!mipsolver.mipdata_->rootlpsol.empty())
-    linesearchRounding(mipsolver.mipdata_->rootlpsol, mipsolver.mipdata_->analyticCenter, 'C');
+    linesearchRounding(mipsolver.mipdata_->rootlpsol,
+                       mipsolver.mipdata_->analyticCenter, 'C');
   else
-    linesearchRounding(mipsolver.mipdata_->analyticCenter, mipsolver.mipdata_->analyticCenter, 'C');
+    linesearchRounding(mipsolver.mipdata_->analyticCenter,
+                       mipsolver.mipdata_->analyticCenter, 'C');
 }
 
 #if 0
