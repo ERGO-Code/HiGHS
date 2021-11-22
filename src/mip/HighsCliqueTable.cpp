@@ -528,9 +528,9 @@ void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
       neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
   } else {
     auto neighborhoodData =
-        makeHighsCombinable<ThreadNeighborhoodQueryData>([&]() {
+        makeHighsCombinable<ThreadNeighborhoodQueryData>([N]() {
           ThreadNeighborhoodQueryData d;
-          d.neighborhoodInds.reserve(cliquesetTree.size());
+          d.neighborhoodInds.reserve(N);
           return d;
         });
     highs::parallel::for_each(
