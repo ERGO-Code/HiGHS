@@ -21,14 +21,18 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
+#include "parallel/HighsCombinable.h"
 #include "parallel/HighsParallel.h"
 #include "pdqsort/pdqsort.h"
 #include "util/HighsSplay.h"
 
+namespace highs {
 template <>
-struct highs::RbTreeTraits<HighsCliqueTable::CliqueSet> {
+struct RbTreeTraits<HighsCliqueTable::CliqueSet> {
   using KeyType = HighsInt;
 };
+
+}  // namespace highs
 
 class HighsCliqueTable::CliqueSet : public highs::CacheMinRbTree<CliqueSet> {
   HighsCliqueTable* clqtable;
@@ -511,17 +515,27 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
                    cliqueentries[cliques[cliqueid].start + 1]),
         cliqueid);
 }
+struct ThreadNeighborhoodQueryData {
+  int64_t numQueries{0};
+  std::vector<HighsInt> neighborhoodInds;
+};
 
 void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
                                          HighsInt N) {
-  if (numEntries < 100000) {
+  if (numEntries < 10000) {
     // printf("numEntries: %d\n", numEntries);
     for (HighsInt i = 0; i < N; ++i)
       neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
   } else {
+    auto neighborhoodData =
+        makeHighsCombinable<ThreadNeighborhoodQueryData>([&]() {
+          ThreadNeighborhoodQueryData d;
+          d.neighborhoodInds.reserve(cliquesetTree.size());
+          return d;
+        });
     highs::parallel::for_each(
         0, N,
-        [this, v, q](HighsInt start, HighsInt end) {
+        [this, &neighborhoodData, v, q](HighsInt start, HighsInt end) {
           ThreadNeighborhoodQueryData& d = neighborhoodData.local();
           for (HighsInt i = start; i < end; ++i) {
             if (haveCommonClique(d.numQueries, v, q[i]))
@@ -532,9 +546,7 @@ void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
 
     neighborhoodData.combine_each([&](ThreadNeighborhoodQueryData& d) {
       for (HighsInt i : d.neighborhoodInds) neighborhoodFlags[i] = true;
-      d.neighborhoodInds.clear();
       numNeighborhoodQueries += d.numQueries;
-      d.numQueries = 0;
     });
   }
 }
@@ -1688,7 +1700,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   data.feastol = feastol;
   data.maxNeighborhoodQueries = 10000000 +
                                 int64_t{1000} * mipsolver.numNonzero() +
-                                mipsolver.mipdata_->total_lp_iterations * 10000;
+                                mipsolver.mipdata_->total_lp_iterations * 2000;
   if (numNeighborhoodQueries > data.maxNeighborhoodQueries) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 

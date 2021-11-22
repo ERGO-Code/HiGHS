@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
-#include "parallel/HighsCombinable.h"
 #include "util/HighsHash.h"
 #include "util/HighsRandom.h"
 #include "util/HighsRbTree.h"
@@ -102,12 +101,6 @@ class HighsCliqueTable {
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
   std::vector<uint8_t> neighborhoodFlags;
-  struct ThreadNeighborhoodQueryData {
-    int64_t numQueries{0};
-    std::vector<HighsInt> neighborhoodInds;
-  };
-
-  HighsCombinable<ThreadNeighborhoodQueryData> neighborhoodData;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
@@ -169,12 +162,7 @@ class HighsCliqueTable {
  public:
   int64_t numNeighborhoodQueries;
 
-  HighsCliqueTable(HighsInt ncols)
-      : neighborhoodData([ncols]() {
-          ThreadNeighborhoodQueryData d;
-          d.neighborhoodInds.reserve(2 * ncols);
-          return d;
-        }) {
+  HighsCliqueTable(HighsInt ncols) {
     cliquesetTree.resize(2 * ncols);
     sizeTwoCliquesetTree.resize(2 * ncols);
     numcliquesvar.resize(2 * ncols, 0);

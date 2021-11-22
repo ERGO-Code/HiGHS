@@ -19,9 +19,9 @@
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsTaskExecutor.h"
 
-template <typename T>
+template <typename T, typename FConstruct_ = std::function<T(void)>>
 class HighsCombinable {
-  std::function<T(void)> construct_;
+  FConstruct_ construct_;
   struct PaddedData {
     alignas(highs::cache_aligned::alignment()) bool initialized_;
     T data_;
@@ -47,8 +47,9 @@ class HighsCombinable {
     for (int i = 0; i < numThreads; ++i) threadCopies_[i].initialized_ = false;
   }
 
-  HighsCombinable& operator=(HighsCombinable&&) = default;
-  HighsCombinable(HighsCombinable<T>&&) = default;
+  HighsCombinable<T, FConstruct_>& operator=(
+      HighsCombinable<T, FConstruct_>&&) = default;
+  HighsCombinable(HighsCombinable<T, FConstruct_>&&) = default;
 
   void clear() {
     for (int i = 0; i < numThreads; ++i) {
@@ -60,6 +61,16 @@ class HighsCombinable {
   }
 
   T& local() {
+    int threadId = HighsTaskExecutor::getThisWorkerDeque()->getOwnerId();
+    if (!threadCopies_[threadId].initialized_) {
+      threadCopies_[threadId].initialized_ = true;
+      new (&threadCopies_[threadId].data_) T(construct_());
+    }
+
+    return threadCopies_[threadId].data_;
+  }
+
+  const T& local() const {
     int threadId = HighsTaskExecutor::getThisWorkerDeque()->getOwnerId();
     if (!threadCopies_[threadId].initialized_) {
       threadCopies_[threadId].initialized_ = true;
@@ -101,5 +112,10 @@ class HighsCombinable {
     if (threadCopies_) clear();
   }
 };
+
+template <typename U, typename FConstruct>
+HighsCombinable<U, FConstruct> makeHighsCombinable(FConstruct&& fconstruct) {
+  return HighsCombinable<U, FConstruct>(std::forward<FConstruct>(fconstruct));
+}
 
 #endif
