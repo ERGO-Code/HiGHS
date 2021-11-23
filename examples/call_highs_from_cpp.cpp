@@ -69,24 +69,24 @@ int main() {
   // column-wise matrix.
   //
   HighsModel model;
-  model.lp_.numCol_ = 2;
-  model.lp_.numRow_ = 3;
+  model.lp_.num_col_ = 2;
+  model.lp_.num_row_ = 3;
   model.lp_.sense_ = ObjSense::kMinimize;
   model.lp_.offset_ = 3;
-  model.lp_.colCost_ = {1.0, 1.0};
-  model.lp_.colLower_ = {0.0, 1.0};
-  model.lp_.colUpper_ = {4.0, 1.0e30};
-  model.lp_.rowLower_ = {-1.0e30, 5.0, 6.0};
-  model.lp_.rowUpper_ = {7.0, 15.0, 1.0e30};
+  model.lp_.col_cost_ = {1.0, 1.0};
+  model.lp_.col_lower_ = {0.0, 1.0};
+  model.lp_.col_upper_ = {4.0, 1.0e30};
+  model.lp_.row_lower_ = {-1.0e30, 5.0, 6.0};
+  model.lp_.row_upper_ = {7.0, 15.0, 1.0e30};
   //
   // Here the orientation of the matrix is column-wise
-  model.lp_.orientation_ = MatrixOrientation::kColwise;
+  model.lp_.a_matrix_.format_ = MatrixFormat::kColwise;
   // a_start_ has num_col_1 entries, and the last entry is the number
   // of nonzeros in A, allowing the number of nonzeros in the last
   // column to be defined
-  model.lp_.Astart_ = {0, 2, 5};
-  model.lp_.Aindex_ = {1, 2, 0, 1, 2};
-  model.lp_.Avalue_ = {1.0, 3.0, 1.0, 2.0, 2.0};
+  model.lp_.a_matrix_.start_ = {0, 2, 5};
+  model.lp_.a_matrix_.index_ = {1, 2, 0, 1, 2};
+  model.lp_.a_matrix_.value_ = {1.0, 3.0, 1.0, 2.0, 2.0};
   //
   // Create a Highs instance
   Highs highs;
@@ -124,20 +124,40 @@ int main() {
   const HighsBasis& basis = highs.getBasis();
   //
   // Report the 
-  for (int col=0; col < lp.numCol_; col++) {
+  for (int col=0; col < lp.num_col_; col++) {
     cout << "Column " << col;
     if (has_values) cout << "; value = " << solution.col_value[col];
     if (has_duals) cout << "; dual = " << solution.col_dual[col];
     if (has_basis) cout << "; status: " << highs.basisStatusToString(basis.col_status[col]);
     cout << endl;
   }
-  for (int row=0; row < lp.numRow_; row++) {
+  for (int row=0; row < lp.num_row_; row++) {
     cout << "Row    " << row;
     if (has_values) cout << "; value = " << solution.row_value[row];
     if (has_duals) cout << "; dual = " << solution.row_dual[row];
     if (has_basis) cout << "; status: " << highs.basisStatusToString(basis.row_status[row]);
     cout << endl;
   }
- 
+
+  // Now indicate that all the variables must take integer values
+  model.lp_.integrality_.resize(lp.num_col_);
+  for (int col=0; col < lp.num_col_; col++)
+    model.lp_.integrality_[col] = HighsVarType::kInteger;
+
+  highs.passModel(model);
+  // Solve the model
+  return_status = highs.run();
+  assert(return_status==HighsStatus::kOk);
+  for (int col=0; col < lp.num_col_; col++) {
+    cout << "Column " << col;
+    if (info.primal_solution_status) cout << "; value = " << solution.col_value[col];
+    cout << endl;
+  }
+  for (int row=0; row < lp.num_row_; row++) {
+    cout << "Row    " << row;
+    if (info.primal_solution_status) cout << "; value = " << solution.row_value[row];
+    cout << endl;
+  }
+
   return 0;
 }
