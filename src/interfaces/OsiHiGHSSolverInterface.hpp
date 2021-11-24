@@ -16,7 +16,7 @@
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H
 
-#include "OsiSolverInterface.hpp"
+#include "../../../dist/include/coin-or/OsiSolverInterface.hpp"
 
 // forward declarations
 class Highs;
@@ -321,23 +321,23 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
                              double*& rowrhs, double*& rowrng);
 
   /// Load in a problem by copying the arguments.
-  virtual void loadProblem(const int numcols, const int numrows,
+  virtual void loadProblem(const int numcols, const int numrows, 
                            const CoinBigIndex* start, const int* index,
                            const double* value, const double* collb,
                            const double* colub, const double* obj,
                            const double* rowlb, const double* rowub);
 
   /// Load in a problem by copying the arguments.
-  virtual void loadProblem(const int numcols, const int numrows,
+  virtual void loadProblem(const int numcols, const int numrows, 
                            const CoinBigIndex* start, const int* index,
                            const double* value, const double* collb,
                            const double* colub, const double* obj,
                            const char* rowsen, const double* rowrhs,
                            const double* rowrng);
 
-  /// Read a problem in MPS format from the given filename.
-  //  int readMps(const char *filename,
-  //    const char *extension = "mps");
+  // Read a problem in MPS format from the given filename.
+  int readMps(const char *filename,
+	      const char *extension = "mps");
 
   /// Write the problem into an mps file of the given filename.
   virtual void writeMps(const char* filename, const char* extension = "mps",
