@@ -45,7 +45,9 @@ class HighsNodeQueue {
           domchglinks(),
           lower_bound(-kHighsInf),
           estimate(-kHighsInf),
-          depth(0) {}
+          depth(0),
+          lowerLinks(),
+          hybridEstimLinks() {}
 
     OpenNode(std::vector<HighsDomainChange>&& domchgstack,
              std::vector<HighsInt>&& branchings, double lower_bound,
@@ -54,7 +56,9 @@ class HighsNodeQueue {
           branchings(branchings),
           lower_bound(lower_bound),
           estimate(estimate),
-          depth(depth) {}
+          depth(depth),
+          lowerLinks(),
+          hybridEstimLinks() {}
 
     OpenNode& operator=(OpenNode&& other) = default;
     OpenNode(OpenNode&&) = default;
