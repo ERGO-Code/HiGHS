@@ -449,7 +449,7 @@ void HighsMipSolverData::runSetup() {
                      (HighsInt)symmetries.columnToOrbitope.size());
       }
       for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
-        orbitope.determineOrbitopeType(cliquetable, domain);
+        orbitope.determineOrbitopeType(cliquetable);
 
       if (!domain.getChangedCols().empty()) {
         domain.propagate();
