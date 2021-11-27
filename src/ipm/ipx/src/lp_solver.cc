@@ -54,6 +54,7 @@ Int LpSolver::Solve() {
     control_.ResetTimer();
     control_.OpenLogfile();
     control_.Log() << "IPX version 1.0\n";
+    timer_.setup();
     try {
         InteriorPointSolve();
         if ((info_.status_ipm == IPX_STATUS_optimal ||
