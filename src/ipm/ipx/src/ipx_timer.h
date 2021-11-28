@@ -14,6 +14,17 @@ class IpxTimer {
     HighsTimer timer_;
 #endif
     HighsInt ipx_solve_clock_;
+    HighsInt ipm_solve_clock_;
+    HighsInt start_crossover_clock_;
+    HighsInt run_crossover_clock_;
+    HighsInt ipm_start_point_clock_;
+    HighsInt ipm_run_initial_clock_;
+    HighsInt ipm_start_basis_clock_;
+    HighsInt ipm_run_main_clock_;
+    HighsInt ipm_driver_factorize_clock_;
+    HighsInt ipm_driver_predictor_clock_;
+    HighsInt ipm_driver_corrector_clock_;
+    HighsInt ipm_driver_step_clock_;
     void setup();
     void start(const HighsInt clock);
     void stop(const HighsInt clock);

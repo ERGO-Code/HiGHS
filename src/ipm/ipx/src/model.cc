@@ -814,19 +814,20 @@ void Model::FindDenseColumns() {
         colcount[j] = AI_.end(j)-AI_.begin(j);
     pdqsort(colcount.begin(), colcount.end());
 
+    const int nz_for_dense = 40; //40
+    const int multiplier_for_dense = 5; //10
+    const int max_num_dense_col = 1000;
     for (Int j = 1; j < num_cols_; j++) {
         if (colcount[j] > 
-              std::max((ipx::Int)40l, (ipx::Int)10l*colcount[j-1])) {
+	    // std::max((ipx::Int)40l, (ipx::Int)10l*colcount[j-1])) {
+              std::max((ipx::Int)nz_for_dense, (ipx::Int)multiplier_for_dense*colcount[j-1])) {
             // j is the first dense column
             num_dense_cols_ = num_cols_ - j;
             nz_dense_ = colcount[j];
+	    printf("Col %5d: counts [this = %5d; prev = %5d] dense [num = %5d; nz = %5d]\n",
+		   (int)j, (int)colcount[j], (int)colcount[j-1], (int)num_dense_cols_, (int)nz_dense_);
             break;
         }
-    }
-
-    if (num_dense_cols_ > 1000) {
-        num_dense_cols_ = 0;
-        nz_dense_ = rows() + 1;
     }
 }
 

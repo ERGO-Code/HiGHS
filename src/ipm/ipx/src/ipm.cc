@@ -64,16 +64,24 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         }
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
+	timer_->start(timer_->ipm_driver_factorize_clock_);
         kkt->Factorize(iterate, info);
+	timer_->stop(timer_->ipm_driver_factorize_clock_);
         if (info->errflag)
             break;
+	timer_->start(timer_->ipm_driver_predictor_clock_);
         Predictor(step);
+	timer_->stop(timer_->ipm_driver_predictor_clock_);
         if (info->errflag)
             break;
+	timer_->start(timer_->ipm_driver_corrector_clock_);
         AddCorrector(step);
+	timer_->stop(timer_->ipm_driver_corrector_clock_);
         if (info->errflag)
             break;
+	timer_->start(timer_->ipm_driver_step_clock_);
         MakeStep(step);
+	timer_->stop(timer_->ipm_driver_step_clock_);
         info->iter++;
         PrintOutput();
     }
