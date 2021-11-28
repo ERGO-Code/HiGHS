@@ -105,14 +105,24 @@ Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
                                      NewCholeskyFactor& factor,
                                      const Vector& yp, Gradient& gradient,
                                      Vector& gyp, Vector& l, Vector& p) {
-  runtime.instance.Q.mat_vec(yp, gyp);
+  Vector yyp = yp;
+  // if (gradient.getGradient().dot(yp) > 0.0) {
+  //   yyp.scale(-1.0);
+  // }
+  runtime.instance.Q.mat_vec(yyp, gyp);
   if (basis.getnumactive() < runtime.instance.num_var) {
     basis.Ztprod(gyp, l);
     factor.solveL(l);
     Vector v = l;
     factor.solveLT(v);
     basis.Zprod(v, p);
-    return p.saxpy(-1.0, 1.0, yp);
+    if (gradient.getGradient().dot(yyp) < 0.0) {
+      return p.saxpy(-1.0, 1.0, yyp);
+    } else {
+      return p.saxpy(-1.0, -1.0, yyp);
+    }
+    
+    
   } else {
     return p.repopulate(yp).scale(-gradient.getGradient().dot(yp));
     // return -yp;
@@ -120,7 +130,7 @@ Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
 }
 
 double computemaxsteplength(Runtime& runtime, const Vector& p,
-                            Gradient& gradient, Vector& buffer_Qp) {
+                            Gradient& gradient, Vector& buffer_Qp, bool& zcd) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
   if (fabs(denominator) > 10E-5) {
     double numerator = -(p * gradient.getGradient());
@@ -129,7 +139,11 @@ double computemaxsteplength(Runtime& runtime, const Vector& p,
     } else {
       return numerator / denominator;
     }
+  } else {
+    zcd = true;
+    return std::numeric_limits<double>::infinity();
   }
+  
 }
 
 void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
@@ -210,6 +224,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
     runtime.statistics.num_iterations++;
 
+    bool zero_curvature_direction = false;
     double maxsteplength = 1.0;
     if (atfsep) {
       HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
@@ -230,11 +245,12 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
       maxsteplength = std::numeric_limits<double>::infinity();
-      if (runtime.instance.Q.mat.value.size() > 0) {
+      // if (runtime.instance.Q.mat.value.size() > 0) {
         double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
-        maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp);
-        factor.expand(buffer_yp, buffer_gyp, buffer_l);
-      }
+        maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp, zero_curvature_direction);
+        if (!zero_curvature_direction)
+          factor.expand(buffer_yp, buffer_gyp, buffer_l);
+      // }
       redgrad.expand(buffer_yp);
     } else {
       computesearchdirection_minor(runtime, basis, factor, redgrad, p);
@@ -255,7 +271,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         HighsInt maxabsd;
         reduce(runtime, basis, stepres.limitingconstraint, buffer_d, maxabsd,
                constrainttodrop);
-        if (runtime.instance.Q.mat.value.size() > 0) {
+        if (!zero_curvature_direction) {
           factor.reduce(
               buffer_d, maxabsd,
               indexof(basis.getinactive(), stepres.limitingconstraint) != -1);
