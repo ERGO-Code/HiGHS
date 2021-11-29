@@ -12,7 +12,7 @@ struct ipx_parameters {
     const char* logfile;
     double print_interval;
     double time_limit;
-
+    bool use_timer;
     /* Preprocessing */
     ipxint dualize;
     ipxint scale;

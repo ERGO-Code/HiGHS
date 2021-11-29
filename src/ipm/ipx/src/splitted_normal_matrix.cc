@@ -87,6 +87,7 @@ void SplittedNormalMatrix::reset_time() {
 
 void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
                                   double* rhs_dot_lhs) {
+    timer_->start(timer_->splitted_normal_matrix_clock_);
     assert(prepared_);
     Timer timer;
 
@@ -118,6 +119,7 @@ void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
         lhs[i] = 0.0;
     if (rhs_dot_lhs)
         *rhs_dot_lhs = Dot(rhs,lhs);
+    timer_->stop(timer_->splitted_normal_matrix_clock_);
 }
 
 }  // namespace ipx

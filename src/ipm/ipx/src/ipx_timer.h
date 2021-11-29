@@ -13,6 +13,7 @@ class IpxTimer {
 #ifdef NDEBUG
     HighsTimer timer_;
 #endif
+    bool use_timer_;
     HighsInt ipx_solve_clock_;
     HighsInt ipm_solve_clock_;
     HighsInt start_crossover_clock_;
@@ -42,10 +43,11 @@ class IpxTimer {
     HighsInt cr_p_solve_basis_apply_p_clock_;  
     HighsInt cr_p_solve_basis_apply_c_clock_;  
     HighsInt kkt_basis_solve_dense_clock_;
+    HighsInt splitted_normal_matrix_clock_;
     HighsInt splitted_normal_matrix_btran_clock_;
     HighsInt splitted_normal_matrix_nnt_clock_;
     HighsInt splitted_normal_matrix_ftran_clock_;
-    void setup();
+    void setup(const bool use_timer = false);
     void start(const HighsInt clock);
     void stop(const HighsInt clock);
     void reportOuter();

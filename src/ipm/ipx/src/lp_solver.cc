@@ -54,7 +54,8 @@ Int LpSolver::Solve() {
     control_.ResetTimer();
     control_.OpenLogfile();
     control_.Log() << "IPX version 1.0\n";
-    timer_.setup();
+    const bool use_timer = control_.useTimer();
+    timer_.setup(use_timer);
     timer_.start(timer_.ipx_solve_clock_);
     try {
         timer_.start(timer_.ipm_solve_clock_);

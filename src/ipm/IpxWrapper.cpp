@@ -583,6 +583,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
   parameters.crossover_start = options.start_crossover_tolerance;
+  parameters.use_timer = kHighsAnalysisLevelSolverTime & options.highs_analysis_level;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
   parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
@@ -621,9 +622,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Use IPX to solve the LP!
   ipx::Int solve_status = lps.Solve();
 
+  const bool report_solve_data = kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
+  if (report_solve_data) reportSolveData(options.log_options, ipx_info);
   highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
   highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
   // highs_info.crossover_iteration_count += (int)ipx_info.pushes_crossover;
@@ -812,4 +815,162 @@ HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
                     solver_object.basis_, solver_object.solution_, 
                     solver_object.unscaled_model_status_, solver_object.highs_info_);
+}
+
+void reportSolveData(const HighsLogOptions& log_options, const ipx::Info& ipx_info) {
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "\nIPX       status = %4d\n", (int)ipx_info.status);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "IPM       status = %4d\n", (int)ipx_info.status_ipm);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Crossover status = %4d\n", (int)ipx_info.status_crossover);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "IPX errflag      = %4d\n\n", (int)ipx_info.errflag);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "LP variables   = %8d\n", (int)ipx_info.num_var);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "LP constraints = %8d\n", (int)ipx_info.num_constr);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "LP entries     = %8d\n", (int)ipx_info.num_entries);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Solver rows    = %8d\n", (int)ipx_info.num_rows_solver);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Solver columns = %8d\n", (int)ipx_info.num_cols_solver);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Solver entries = %8d\n\n", (int)ipx_info.num_entries_solver);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Dualized = %d\n", (int)ipx_info.dualized);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Number of dense columns detected = %d\n\n", (int)ipx_info.dense_cols);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Dependent rows    = %d\n", (int)ipx_info.dependent_rows);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Dependent cols    = %d\n", (int)ipx_info.dependent_cols);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Inconsistent rows = %d\n", (int)ipx_info.rows_inconsistent);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Inconsistent cols = %d\n", (int)ipx_info.cols_inconsistent);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Primal dropped    = %d\n", (int)ipx_info.primal_dropped);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Dual   dropped    = %d\n\n", (int)ipx_info.dual_dropped);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|Absolute primal residual| = %11.4g\n", ipx_info.abs_presidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|Absolute   dual residual| = %11.4g\n", ipx_info.abs_dresidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|Relative primal residual| = %11.4g\n", ipx_info.rel_presidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|Relative   dual residual| = %11.4g\n", ipx_info.rel_dresidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Primal objective value     = %11.4g\n", ipx_info.pobjval);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Dual   objective value     = %11.4g\n", ipx_info.dobjval);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Relative objective gap     = %11.4g\n", ipx_info.rel_objgap);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Complementarity            = %11.4g\n\n", ipx_info.complementarity);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|x| = %11.4g\n", ipx_info.normx);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|y| = %11.4g\n", ipx_info.normy);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "|z| = %11.4g\n\n", ipx_info.normz);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Objective value       = %11.4g\n", ipx_info.objval);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Primal infeasiblility = %11.4g\n", ipx_info.primal_infeas);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Dual infeasiblility   = %11.4g\n\n", ipx_info.dual_infeas);
+  
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "IPM iter   = %d\n", (int)ipx_info.iter);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "KKT iter 1 = %d\n", (int)ipx_info.kktiter1);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "KKT iter 2 = %d\n", (int)ipx_info.kktiter2);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Basis repairs = %d\n", (int)ipx_info.basis_repairs);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Updates start     = %d\n", (int)ipx_info.updates_start);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Updates ipm       = %d\n", (int)ipx_info.updates_ipm);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Updates crossover = %d\n\n", (int)ipx_info.updates_crossover);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time total          = %8.2f\n", ipx_info.time_total);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time IPM 1          = %8.2f\n", ipx_info.time_ipm1);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time IPM 2          = %8.2f\n", ipx_info.time_ipm2);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time starting basis = %8.2f\n", ipx_info.time_starting_basis);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time crossover      = %8.2f\n", ipx_info.time_crossover);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time kkt_factorize  = %8.2f\n", ipx_info.time_kkt_factorize);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time kkt_solve      = %8.2f\n", ipx_info.time_kkt_solve);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time maxvol         = %8.2f\n", ipx_info.time_maxvol);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr1            = %8.2f\n", ipx_info.time_cr1);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr1_AAt        = %8.2f\n", ipx_info.time_cr1_AAt);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr1_pre        = %8.2f\n", ipx_info.time_cr1_pre);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr2            = %8.2f\n", ipx_info.time_cr2);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr2_NNt        = %8.2f\n", ipx_info.time_cr2_NNt);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr2_B          = %8.2f\n", ipx_info.time_cr2_B);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time cr2_Bt         = %8.2f\n\n", ipx_info.time_cr2_Bt);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Proportion of sparse FTRAN = %11.4g\n", ipx_info.ftran_sparse);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Proportion of sparse BTRAN = %11.4g\n", ipx_info.btran_sparse);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time FTRAN       = %8.2f\n", ipx_info.time_ftran);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time BTRAN       = %8.2f\n", ipx_info.time_btran);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time LU INVERT   = %8.2f\n", ipx_info.time_lu_invert);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time LU UPDATE   = %8.2f\n", ipx_info.time_lu_update);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Mean fill-in     = %11.4g\n", ipx_info.mean_fill);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Max fill-in      = %11.4g\n", ipx_info.max_fill);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Time symb INVERT = %11.4g\n\n", ipx_info.time_symb_invert);
+  
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Maxvol updates       = %d\n", (int)ipx_info.maxvol_updates);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Maxvol skipped       = %d\n", (int)ipx_info.maxvol_skipped);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Maxvol passes        = %d\n", (int)ipx_info.maxvol_passes);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Tableau num nonzeros = %d\n", (int)ipx_info.tbl_nnz);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Tbl max?             = %11.4g\n", ipx_info.tbl_max);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Frobnorm squared     = %11.4g\n", ipx_info.frobnorm_squared);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Lambda max           = %11.4g\n", ipx_info.lambdamax);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "Volume increase      = %11.4g\n\n", ipx_info.volume_increase);
+
 }

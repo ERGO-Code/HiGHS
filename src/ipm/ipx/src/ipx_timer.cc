@@ -1,6 +1,7 @@
 #include "ipx_timer.h"
   
-void IpxTimer::setup() {
+void IpxTimer::setup(const bool use_timer) {
+  use_timer_ = use_timer;
 #ifdef NDEBUG
   this->ipx_solve_clock_ = this->timer_.clock_def("IPX Solve");
   this->ipm_solve_clock_ = this->timer_.clock_def("IPM Solve");
@@ -28,6 +29,7 @@ void IpxTimer::setup() {
   this->kkt_basis_solve_dense_clock_ = this->timer_.clock_def("KKT basis solve dense");
   this->cr_solve_basis_clock_ = this->timer_.clock_def("KKT CR solve basis");
   this->cr_solve_basis_apply_clock_ = this->timer_.clock_def("KKT CR   solve basis apply");
+  this->splitted_normal_matrix_clock_ = this->timer_.clock_def("KKT CR   solve basis apply inner");
   this->splitted_normal_matrix_btran_clock_ = this->timer_.clock_def("KKT CR   solve basis apply BTRAN");
   this->splitted_normal_matrix_nnt_clock_ = this->timer_.clock_def("KKT CR   solve basis apply NNT");
   this->splitted_normal_matrix_ftran_clock_ = this->timer_.clock_def("KKT CR   solve basis apply FTRAN");
@@ -39,31 +41,34 @@ void IpxTimer::setup() {
 }
 
 void IpxTimer::start(const HighsInt clock) {
+  if (!use_timer_) return;
 #ifdef NDEBUG
   this->timer_.start(clock);
 #endif
 }
 
 void IpxTimer::stop(const HighsInt clock) {
+  if (!use_timer_) return;
 #ifdef NDEBUG
   this->timer_.stop(clock);
 #endif
 }
 
 void IpxTimer::reportOuter() {
+  if (!use_timer_) return;
 #ifdef NDEBUG
   double ideal = this->timer_.read(ipx_solve_clock_);
   std::vector<HighsInt> clock_list = {this->ipm_start_point_clock_,
 				      this->ipm_start_basis_clock_,
 
-				      this->ipm_driver_factorize_clock_,
-				      // this->kkt_diag_factorize_setup_clock_,
-				      // this->kkt_diag_factorize_normal_prep_clock_,
-				      // this->kkt_diag_factorize_precond_clock_,
-				      // this->kkt_basis_factorize_setup_clock_,
-				      // this->kkt_basis_factorize_maxvol_clock_,
-				      // this->kkt_basis_factorize_clock_,
-				      // this->kkt_basis_factorize_normal_prep_clock_,
+				      // this->ipm_driver_factorize_clock_,
+				      this->kkt_diag_factorize_setup_clock_,
+				      this->kkt_diag_factorize_normal_prep_clock_,
+				      this->kkt_diag_factorize_precond_clock_,
+				      this->kkt_basis_factorize_setup_clock_,
+				      this->kkt_basis_factorize_maxvol_clock_,
+				      this->kkt_basis_factorize_clock_,
+				      this->kkt_basis_factorize_normal_prep_clock_,
 
 				      // this->ipm_driver_predictor_clock_,
 				      // this->ipm_driver_corrector_clock_,
@@ -77,12 +82,13 @@ void IpxTimer::reportOuter() {
 
 				      this->kkt_basis_solve_dense_clock_,
 
-				      this->cr_solve_basis_clock_,
-				      // this->cr_solve_basis_aux_clock_,
-				      // this->cr_solve_basis_apply_clock_,
-				      //    this->splitted_normal_matrix_btran_clock_,
-				      //    this->splitted_normal_matrix_nnt_clock_,
-				      //    this->splitted_normal_matrix_ftran_clock_,
+				      // this->cr_solve_basis_clock_,
+				       this->cr_solve_basis_aux_clock_,
+				      //  this->cr_solve_basis_apply_clock_,
+				      this->splitted_normal_matrix_clock_,
+				      this->splitted_normal_matrix_btran_clock_,
+				      this->splitted_normal_matrix_nnt_clock_,
+				      this->splitted_normal_matrix_ftran_clock_,
 
 				      this->cr_p_solve_basis_apply_p_clock_,
 				      this->cr_p_solve_basis_apply_c_clock_,
