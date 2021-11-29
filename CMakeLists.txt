@@ -4,6 +4,15 @@
 
 cmake_minimum_required(VERSION 3.15)
 
+# set preference for clang compiler and intel compiler over gcc and other compilers
+include(Platform/${CMAKE_SYSTEM_NAME}-Determine-C OPTIONAL)
+include(Platform/${CMAKE_SYSTEM_NAME}-C OPTIONAL)
+set(CMAKE_C_COMPILER_NAMES clang icc cc ${CMAKE_C_COMPILER_NAMES})
+
+include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
+include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
+set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
+
 project(HIGHS VERSION 1.1 LANGUAGES CXX C)
 set(HIGHS_VERSION_PATCH 1)
 
