@@ -11,6 +11,7 @@
 //     (2018)
 
 #include "control.h"
+#include "ipx_timer.h"
 #include "linear_operator.h"
 
 namespace ipx {
@@ -60,12 +61,14 @@ public:
 
     // Returns the runtime of the last call to Solve().
     double time() const;
+    void passTimer(IpxTimer* timer) {timer_ = timer;}
 
 private:
     const Control& control_;
     Int errflag_{0};
     Int iter_{0};
     double time_{0.0};
+    IpxTimer* timer_;
 };
 
 }  // namespace ipx

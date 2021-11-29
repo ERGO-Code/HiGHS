@@ -25,6 +25,7 @@ public:
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int new_maxiter) { maxiter_ = new_maxiter; }
+    void passTimer(IpxTimer* timer) {timer_ = timer;}
 
 private:
     // DropPrimal() and DropDual() do not choose entries as pivots that are <=
@@ -59,6 +60,7 @@ private:
     Int maxiter_{-1};
     Int iter_{0};
     Int basis_changes_{0};
+    IpxTimer* timer_;
 };
 
 }  // namespace ipx

@@ -93,18 +93,24 @@ void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
     // Compute work = inverse(B') * rhs.
     work_ = rhs;
     timer.Reset();
+    timer_->start(timer_->splitted_normal_matrix_btran_clock_);
     BackwardSolve(L_, U_, work_);
+    timer_->stop(timer_->splitted_normal_matrix_btran_clock_);
     time_Bt_ += timer.Elapsed();
 
     // Compute lhs = N*N' * work.
     lhs = 0.0;
     timer.Reset();
+    timer_->start(timer_->splitted_normal_matrix_nnt_clock_);
     AddNormalProduct(N_, nullptr, work_, lhs);
+    timer_->stop(timer_->splitted_normal_matrix_nnt_clock_);
     time_NNt_ += timer.Elapsed();
 
     // Compute lhs := inverse(B) * lhs.
     timer.Reset();
+    timer_->start(timer_->splitted_normal_matrix_ftran_clock_);
     ForwardSolve(L_, U_, lhs);
+    timer_->stop(timer_->splitted_normal_matrix_ftran_clock_);
     time_B_ += timer.Elapsed();
 
     lhs += rhs;

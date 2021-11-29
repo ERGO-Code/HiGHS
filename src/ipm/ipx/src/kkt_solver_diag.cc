@@ -16,6 +16,7 @@ KKTSolverDiag::KKTSolverDiag(const Control& control, const Model& model) :
 }
 
 void KKTSolverDiag::_Factorize(Iterate* pt, Info* info) {
+    timer_->start(timer_->kkt_diag_factorize_setup_clock_);
     const Int m = model_.rows();
     const Int n = model_.cols();
     iter_ = 0;
@@ -55,9 +56,14 @@ void KKTSolverDiag::_Factorize(Iterate* pt, Info* info) {
     for (Int i = 0; i < m; i++)
         resscale_[i] = 1.0 / std::sqrt(W_[n+i]);
 
+    timer_->stop(timer_->kkt_diag_factorize_setup_clock_);
     // Build normal matrix and preconditioner.
+    timer_->start(timer_->kkt_diag_factorize_normal_prep_clock_);
     normal_matrix_.Prepare(&W_[0]);
+    timer_->stop(timer_->kkt_diag_factorize_normal_prep_clock_);
+    timer_->start(timer_->kkt_diag_factorize_precond_clock_);
     precond_.Factorize(&W_[0], info);
+    timer_->stop(timer_->kkt_diag_factorize_precond_clock_);
     if (info->errflag)
         return;
 
@@ -96,7 +102,10 @@ void KKTSolverDiag::_Solve(const Vector& a, const Vector& b, double tol,
     normal_matrix_.reset_time();
     precond_.reset_time();
     ConjugateResiduals cr(control_);
+    cr.passTimer(timer_);
+    timer_->start(timer_->cr_solve_diag_clock_);
     cr.Solve(normal_matrix_, precond_, rhs, tol, &resscale_[0], maxiter_, y);
+    timer_->stop(timer_->cr_solve_diag_clock_);
     info->errflag = cr.errflag();
     info->kktiter1 += cr.iter();
     info->time_cr1 += cr.time();

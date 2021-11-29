@@ -16,6 +16,7 @@ KKTSolverBasis::KKTSolverBasis(const Control& control, Basis& basis)
 }
 
 void KKTSolverBasis::_Factorize(Iterate* iterate, Info* info) {
+    timer_->start(timer_->kkt_basis_factorize_setup_clock_);
     const Int m = model_.rows();
     const Int n = model_.cols();
     info->errflag = 0;
@@ -40,6 +41,8 @@ void KKTSolverBasis::_Factorize(Iterate* iterate, Info* info) {
             return;
     }
 
+    timer_->stop(timer_->kkt_basis_factorize_setup_clock_);
+    timer_->start(timer_->kkt_basis_factorize_maxvol_clock_);
     // Run maxvolume ("Russian algorithm").
     Maxvolume maxvol(control_);
     if (control_.update_heuristic() == 0) {
@@ -50,17 +53,22 @@ void KKTSolverBasis::_Factorize(Iterate* iterate, Info* info) {
     info->updates_ipm += maxvol.updates();
     info->time_maxvol += maxvol.time();
     basis_changes_ += maxvol.updates();
+    timer_->stop(timer_->kkt_basis_factorize_maxvol_clock_);
     if (info->errflag)
         return;
 
     // Refactorize and build preconditioned normal matrix.
     if (!basis_.FactorizationIsFresh()) {
+        timer_->start(timer_->kkt_basis_factorize_clock_);
         info->errflag = basis_.Factorize();
+        timer_->stop(timer_->kkt_basis_factorize_clock_);
         if (info->errflag)
             return;
     }
+    timer_->start(timer_->kkt_basis_factorize_normal_prep_clock_);
     splitted_normal_matrix_.Prepare(basis_, &colscale_[0]);
-
+    timer_->stop(timer_->kkt_basis_factorize_normal_prep_clock_);
+    splitted_normal_matrix_.passTimer(timer_);
     factorized_ = true;
 }
 
@@ -91,8 +99,11 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
             num_free++;
         }
     }
-    if (num_free > 0)
-        basis_.SolveDense(work, work, 'T');
+    if (num_free > 0) {
+      timer_->start(timer_->kkt_basis_solve_dense_clock_);
+      basis_.SolveDense(work, work, 'T');
+      timer_->stop(timer_->kkt_basis_solve_dense_clock_);
+    }
 
     // Compute rhs = inverse(B)*(N*D2[nonbasic]*(a[nonbasic]-N'*work)).
     rhs = 0.0;
@@ -116,10 +127,12 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
             }
         }
     }
+    timer_->start(timer_->kkt_basis_solve_dense_clock_);
     basis_.SolveDense(rhs, rhs, 'N');
 
     // Compute work = inverse(B)*b.
     basis_.SolveDense(b, work, 'N');
+    timer_->stop(timer_->kkt_basis_solve_dense_clock_);
 
     // Build rhs[p] = (rhs[p]-work[p])/D[j] + D[j]*a[j], where j = basis[p]
     // is not a free variable, and rhs[p] = 0 otherwise.
@@ -145,7 +158,10 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
     Vector lhs = std::move(rhs); // don't need rhs any more
     lhs = 0.0;
     ConjugateResiduals cr(control_);
+    cr.passTimer(timer_);
+    timer_->start(timer_->cr_solve_basis_clock_);
     cr.Solve(splitted_normal_matrix_, work, tol, nullptr, maxiter_, lhs);
+    timer_->stop(timer_->cr_solve_basis_clock_);
     info->errflag = cr.errflag();
     info->kktiter2 += cr.iter();
     info->time_cr2 += cr.time();
@@ -170,7 +186,9 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
             y[p] = a[j];        // slot in solution to free basic variable
         }
     }
+    timer_->start(timer_->kkt_basis_solve_dense_clock_);
     basis_.SolveDense(y, y, 'T');
+    timer_->stop(timer_->kkt_basis_solve_dense_clock_);
 
     // Compute x[nonbasic] and work = b - N*x[nonbasic].
     work = b;
@@ -186,7 +204,9 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
     }
 
     // Compute x[basic].
+    timer_->start(timer_->kkt_basis_solve_dense_clock_);
     basis_.SolveDense(work, work, 'N');
+    timer_->stop(timer_->kkt_basis_solve_dense_clock_);
     for (Int p = 0; p < m; p++)
         x[basis_[p]] = work[p];
 }

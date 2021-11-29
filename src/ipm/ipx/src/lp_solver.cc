@@ -455,6 +455,7 @@ void LpSolver::MakeIPMStartingPointValid() {
 void LpSolver::ComputeStartingPoint(IPM& ipm) {
     Timer timer;
     KKTSolverDiag kkt(control_, model_);
+    kkt.passTimer(&timer_);
 
     // If the starting point procedure fails, then iterate_ remains as
     // initialized by the constructor, which is a valid state for
@@ -466,6 +467,7 @@ void LpSolver::ComputeStartingPoint(IPM& ipm) {
 void LpSolver::RunInitialIPM(IPM& ipm) {
     Timer timer;
     KKTSolverDiag kkt(control_, model_);
+    kkt.passTimer(&timer_);
 
     Int switchiter = control_.switchiter();
     if (switchiter < 0) {
@@ -537,6 +539,7 @@ void LpSolver::BuildStartingBasis() {
 
 void LpSolver::RunMainIPM(IPM& ipm) {
     KKTSolverBasis kkt(control_, *basis_);
+    kkt.passTimer(&timer_);
     Timer timer;
     ipm.maxiter(control_.ipm_maxiter());
     ipm.Driver(&kkt, iterate_.get(), &info_);

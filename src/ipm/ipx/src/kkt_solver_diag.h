@@ -24,6 +24,7 @@ public:
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int new_maxiter) { maxiter_ = new_maxiter; }
+    void passTimer(IpxTimer* timer) {timer_ = timer;}
 
 private:
     void _Factorize(Iterate* iterate, Info* info) override;
@@ -41,6 +42,7 @@ private:
     bool factorized_{false}; // KKT matrix factorized?
     Int maxiter_{-1};
     Int iter_{0};               // # CR iterations since last Factorize()
+    IpxTimer* timer_;
 };
 
 }  // namespace ipx
