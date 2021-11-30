@@ -148,15 +148,8 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
 
   if (lp->scaledOptimal(status) && !lp->getFractionalIntegers().empty()) {
     // double firstobj = lp->getObjective();
-    double currBound =
-        std::min(lp->getObjective(), mipsolver.mipdata_->lower_bound);
-    double firstobj =
-        currBound - mipsolver.mipdata_->feastol *
-                        std::max(1.0, std::min(std::abs(currBound),
-                                               mipsolver.mipdata_->upper_limit -
-                                                   currBound));
-    // printf("currbound: %.15g, firstobj: %.15g,  upper limit: %.15g\n",
-    //        currBound, firstobj, mipsolver.mipdata_->upper_limit);
+    double firstobj = mipsolver.mipdata_->rootlpsolobj;
+
     while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
       double lastobj = lp->getObjective();
 
@@ -176,10 +169,10 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
           lp->getFractionalIntegers().empty())
         break;
 
-      assert(lastobj >= firstobj + mipsolver.mipdata_->feastol);
-
       // if the objective improved considerably we continue
-      if ((lp->getObjective() - firstobj) <= (lastobj - firstobj) * 1.01) break;
+      if ((lp->getObjective() - firstobj) <=
+          std::max((lastobj - firstobj), mipsolver.mipdata_->feastol) * 1.01)
+        break;
     }
 
     // printf("done separating\n");
