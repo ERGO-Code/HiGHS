@@ -61,9 +61,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   implications.reserve(implstart + numImplications);
 
+  HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
+  HighsInt maxEntries = 100000 + mipsolver.numNonzero();
+
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
-        (domchgreason[i].index >> 1) == col)
+        ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
     implications.push_back(domchgstack[i]);

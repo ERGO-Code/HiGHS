@@ -24,69 +24,93 @@
 #define ESTIMATE_WEIGHT .5
 #define LOWERBOUND_WEIGHT .5
 
+namespace highs {
+template <>
+struct RbTreeTraits<HighsNodeQueue::NodeLowerRbTree> {
+  using KeyType = std::tuple<double, double, HighsInt>;
+};
+
+template <>
+struct RbTreeTraits<HighsNodeQueue::NodeHybridEstimRbTree> {
+  using KeyType = std::tuple<double, HighsInt, HighsInt>;
+};
+}  // namespace highs
+
+using namespace highs;
+
+class HighsNodeQueue::NodeLowerRbTree : public CacheMinRbTree<NodeLowerRbTree> {
+  HighsNodeQueue* nodeQueue;
+
+ public:
+  NodeLowerRbTree(HighsNodeQueue* nodeQueue)
+      : CacheMinRbTree<NodeLowerRbTree>(nodeQueue->lowerRoot,
+                                        nodeQueue->lowerMin),
+        nodeQueue(nodeQueue) {}
+
+  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+    return nodeQueue->nodes[node].lowerLinks;
+  }
+  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+    return nodeQueue->nodes[node].lowerLinks;
+  }
+  std::tuple<double, double, HighsInt> getKey(HighsInt node) const {
+    return std::make_tuple(nodeQueue->nodes[node].lower_bound,
+                           nodeQueue->nodes[node].estimate, node);
+  }
+};
+
+class HighsNodeQueue::NodeHybridEstimRbTree
+    : public CacheMinRbTree<NodeHybridEstimRbTree> {
+  HighsNodeQueue* nodeQueue;
+
+ public:
+  NodeHybridEstimRbTree(HighsNodeQueue* nodeQueue)
+      : CacheMinRbTree<NodeHybridEstimRbTree>(nodeQueue->hybridEstimRoot,
+                                              nodeQueue->hybridEstimMin),
+        nodeQueue(nodeQueue) {}
+
+  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+    return nodeQueue->nodes[node].hybridEstimLinks;
+  }
+  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+    return nodeQueue->nodes[node].hybridEstimLinks;
+  }
+  std::tuple<double, HighsInt, HighsInt> getKey(HighsInt node) const {
+    constexpr double kLbWeight = 0.5;
+    constexpr double kEstimWeight = 0.5;
+    return std::make_tuple(kLbWeight * nodeQueue->nodes[node].lower_bound +
+                               kEstimWeight * nodeQueue->nodes[node].estimate,
+                           -HighsInt(nodeQueue->nodes[node].domchgstack.size()),
+                           node);
+  }
+};
+
 void HighsNodeQueue::link_estim(HighsInt node) {
-  auto get_left = [&](HighsInt n) -> HighsInt& {
-    return nodes[n].leftestimate;
-  };
-  auto get_right = [&](HighsInt n) -> HighsInt& {
-    return nodes[n].rightestimate;
-  };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
-                               ESTIMATE_WEIGHT * nodes[n].estimate,
-                           -int(nodes[n].domchgstack.size()), n);
-  };
-
   assert(node != -1);
-
-  highs_splay_link(node, estimroot, get_left, get_right, get_key);
+  NodeHybridEstimRbTree rbTree(this);
+  rbTree.link(node);
 }
 
 void HighsNodeQueue::unlink_estim(HighsInt node) {
-  auto get_left = [&](HighsInt n) -> HighsInt& {
-    return nodes[n].leftestimate;
-  };
-  auto get_right = [&](HighsInt n) -> HighsInt& {
-    return nodes[n].rightestimate;
-  };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
-                               ESTIMATE_WEIGHT * nodes[n].estimate,
-                           -int(nodes[n].domchgstack.size()), n);
-  };
-
-  assert(estimroot != -1);
   assert(node != -1);
-
-  highs_splay_unlink(node, estimroot, get_left, get_right, get_key);
+  NodeHybridEstimRbTree rbTree(this);
+  rbTree.unlink(node);
 }
 
 void HighsNodeQueue::link_lower(HighsInt node) {
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftlower; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightlower; };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
-  };
-
   assert(node != -1);
-
-  highs_splay_link(node, lowerroot, get_left, get_right, get_key);
+  NodeLowerRbTree rbTree(this);
+  rbTree.link(node);
 }
 
 void HighsNodeQueue::unlink_lower(HighsInt node) {
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftlower; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightlower; };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
-  };
-
-  assert(lowerroot != -1);
   assert(node != -1);
-
-  highs_splay_unlink(node, lowerroot, get_left, get_right, get_key);
+  NodeLowerRbTree rbTree(this);
+  rbTree.unlink(node);
 }
 
 void HighsNodeQueue::link_domchgs(HighsInt node) {
+  assert(node != -1);
   HighsInt numchgs = nodes[node].domchgstack.size();
   nodes[node].domchglinks.resize(numchgs);
 
@@ -106,6 +130,7 @@ void HighsNodeQueue::link_domchgs(HighsInt node) {
 }
 
 void HighsNodeQueue::unlink_domchgs(HighsInt node) {
+  assert(node != -1);
   HighsInt numchgs = nodes[node].domchgstack.size();
 
   for (HighsInt i = 0; i != numchgs; ++i) {
@@ -215,61 +240,18 @@ double HighsNodeQueue::pruneNode(HighsInt nodeId) {
 }
 
 double HighsNodeQueue::performBounding(double upper_limit) {
-  if (lowerroot == -1) return 0.0;
+  NodeLowerRbTree lowerTree(this);
+
+  if (lowerTree.empty()) return 0.0;
 
   HighsCDouble treeweight = 0.0;
 
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftlower; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightlower; };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
-  };
-
-  // split the lower bound tree along the bounding value
-  lowerroot = highs_splay(std::make_tuple(upper_limit, -kHighsInf, 0),
-                          lowerroot, get_left, get_right, get_key);
-  HighsInt delroot;
-
-  if (nodes[lowerroot].lower_bound < upper_limit) {
-    delroot = get_right(lowerroot);
-    get_right(lowerroot) = -1;
-  } else {
-    delroot = lowerroot;
-    lowerroot = get_left(delroot);
-    get_left(delroot) = -1;
-  }
-
-  // now unlink all removed nodes from the estimate tree
-  if (delroot != -1) {
-    std::vector<HighsInt> stack;
-    stack.reserve(numNodes());
-    stack.push_back(delroot);
-
-    while (!stack.empty()) {
-      assert(nodes[delroot].lower_bound >= upper_limit);
-
-      delroot = stack.back();
-      stack.pop_back();
-
-      // unlink the node from the best estimate tree
-      // and add up the tree weight
-      unlink_estim(delroot);
-      unlink_domchgs(delroot);
-      treeweight += std::ldexp(1.0, 1 - nodes[delroot].depth);
-
-      // put the nodes children on the stack for subsequent processing
-      if (get_left(delroot) != -1) stack.push_back(get_left(delroot));
-      if (get_right(delroot) != -1) stack.push_back(get_right(delroot));
-
-      // release the memory for domain changes
-      nodes[delroot].domchgstack.clear();
-      nodes[delroot].branchings.clear();
-      nodes[delroot].domchgstack.shrink_to_fit();
-      nodes[delroot].branchings.shrink_to_fit();
-
-      // remember the free position for reuse
-      freeslots.push(delroot);
-    }
+  HighsInt maxLbNode = lowerTree.last();
+  while (maxLbNode != -1) {
+    if (nodes[maxLbNode].lower_bound < upper_limit) break;
+    HighsInt next = lowerTree.predecessor(maxLbNode);
+    treeweight += pruneNode(maxLbNode);
+    maxLbNode = next;
   }
 
   return double(treeweight);
@@ -299,54 +281,24 @@ void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
   link(pos);
 }
 
-HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
-  auto get_left = [&](HighsInt n) -> HighsInt& {
-    return nodes[n].leftestimate;
-  };
-  auto get_right = [&](HighsInt n) -> HighsInt& {
-    return nodes[n].rightestimate;
-  };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
-                               ESTIMATE_WEIGHT * nodes[n].estimate,
-                           -int(nodes[n].domchgstack.size()), n);
-  };
+HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestNode() {
+  HighsInt bestNode = hybridEstimMin;
 
-  estimroot = highs_splay(std::make_tuple(-kHighsInf, -kHighsIInf, 0),
-                          estimroot, get_left, get_right, get_key);
-  HighsInt bestestimnode = estimroot;
+  unlink(bestNode);
 
-  unlink(bestestimnode);
-
-  return std::move(nodes[bestestimnode]);
+  return std::move(nodes[bestNode]);
 }
 
-HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftlower; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightlower; };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
-  };
+HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestBoundNode() {
+  HighsInt bestBoundNode = lowerMin;
 
-  lowerroot = highs_splay(std::make_tuple(-kHighsInf, -kHighsInf, 0), lowerroot,
-                          get_left, get_right, get_key);
-  HighsInt bestboundnode = lowerroot;
+  unlink(bestBoundNode);
 
-  unlink(bestboundnode);
-
-  return std::move(nodes[bestboundnode]);
+  return std::move(nodes[bestBoundNode]);
 }
 
 double HighsNodeQueue::getBestLowerBound() {
-  if (lowerroot == -1) return kHighsInf;
+  if (lowerMin == -1) return kHighsInf;
 
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftlower; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightlower; };
-  auto get_key = [&](HighsInt n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
-  };
-
-  lowerroot = highs_splay(std::make_tuple(-kHighsInf, -kHighsInf, 0), lowerroot,
-                          get_left, get_right, get_key);
-  return nodes[lowerroot].lower_bound;
+  return nodes[lowerMin].lower_bound;
 }

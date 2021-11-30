@@ -312,8 +312,7 @@ bool StabilizerOrbits::isStabilized(HighsInt col) const {
          std::binary_search(stabilizedCols.begin(), stabilizedCols.end(), col);
 }
 
-void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
-                                                HighsDomain& domain) {
+void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numRows; ++i) {
       columnToRow.insert(entry(i, j), i);
