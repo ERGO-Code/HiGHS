@@ -994,7 +994,9 @@ class HighsHashTable {
   }
 
  public:
-  void clear() { makeEmptyTable(128); }
+  void clear() {
+    if (numElements) makeEmptyTable(128);
+  }
 
   const ValueType* find(const KeyType& key) const {
     u64 pos, startPos, maxPos;

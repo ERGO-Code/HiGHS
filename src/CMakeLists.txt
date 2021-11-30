@@ -365,7 +365,7 @@ if(FORTRAN_FOUND)
         ARCHIVE DESTINATION lib
         INCLUDES DESTINATION include
         MODULES DESTINATION modules)
-    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_lp_solver.mod DESTINATION include/fortran)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
 endif(FORTRAN_FOUND)

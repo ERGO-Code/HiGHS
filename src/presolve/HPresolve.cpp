@@ -869,7 +869,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
-    HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 27);
+    HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 59);
+    assert(rowHashedPos < 32);
     signatures[col].first |= rowLowerFinite << rowHashedPos;
     signatures[col].second |= rowUpperFinite << rowHashedPos;
   };
@@ -3897,7 +3898,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 #if ENABLE_SPARSIFY_FOR_LP
     bool trySparsify = true;  // mipsolver != nullptr;
 #else
-    bool trySparsify = mipsolver != nullptr;
+    bool trySparsify =
+        mipsolver != nullptr || !options->lp_presolve_requires_basis_postsolve;
 #endif
     bool tryProbing = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
@@ -5587,7 +5589,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     HighsInt numSingleton = numSingletonPtr ? *numSingletonPtr : 0;
 
 #if !ENABLE_SPARSIFY_FOR_LP
-    if (mipsolver == nullptr && numSingleton != 0) continue;
+    if (mipsolver == nullptr && options->lp_presolve_requires_basis_postsolve &&
+        numSingleton != 0)
+      continue;
 #endif
     HighsInt delRow = -1;
     if (it == buckets.end())
@@ -5602,7 +5606,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       const HighsInt numSingletonCandidate =
           numSingletonPtr ? *numSingletonPtr : 0;
 #if !ENABLE_SPARSIFY_FOR_LP
-      if (mipsolver == nullptr && numSingletonCandidate != 0) continue;
+      if (mipsolver == nullptr &&
+          options->lp_presolve_requires_basis_postsolve &&
+          numSingletonCandidate != 0)
+        continue;
 #endif
       if (rowsize[i] - numSingleton !=
           rowsize[parallelRowCand] - numSingletonCandidate)
