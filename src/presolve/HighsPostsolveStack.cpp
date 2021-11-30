@@ -624,13 +624,11 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   if (solution.col_value[duplicateCol] > duplicateColUpper) {
     solution.col_value[duplicateCol] = duplicateColUpper;
     recomputeCol = true;
-    if (basis.valid)
-      basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
+    if (basis.valid) basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
   } else if (solution.col_value[duplicateCol] < duplicateColLower) {
     solution.col_value[duplicateCol] = duplicateColLower;
     recomputeCol = true;
-    if (basis.valid)
-      basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
+    if (basis.valid) basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
   } else if (duplicateColIntegral) {
     double roundVal = std::round(solution.col_value[duplicateCol]);
     if (std::abs(roundVal - solution.col_value[duplicateCol]) >
