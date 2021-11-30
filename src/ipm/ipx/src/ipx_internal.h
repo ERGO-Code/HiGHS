@@ -23,6 +23,7 @@ struct Parameters : public ipx_parameters {
     logfile = nullptr;
     print_interval = 5.0;
     use_timer = false;
+    analyse_basis_data = false;
     time_limit = -1.0;
     dualize = -1;
     scale = 1;

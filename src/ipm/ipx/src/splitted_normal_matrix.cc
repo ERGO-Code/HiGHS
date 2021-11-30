@@ -114,11 +114,13 @@ void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
     timer_->stop(timer_->splitted_normal_matrix_ftran_clock_);
     time_B_ += timer.Elapsed();
 
+    timer_->start(timer_->splitted_normal_matrix_aux_clock_);
     lhs += rhs;
     for (Int i : free_positions_)
         lhs[i] = 0.0;
     if (rhs_dot_lhs)
         *rhs_dot_lhs = Dot(rhs,lhs);
+    timer_->stop(timer_->splitted_normal_matrix_aux_clock_);
     timer_->stop(timer_->splitted_normal_matrix_clock_);
 }
 

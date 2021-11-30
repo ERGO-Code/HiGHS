@@ -30,9 +30,10 @@ void IpxTimer::setup(const bool use_timer) {
   this->cr_solve_basis_clock_ = this->timer_.clock_def("KKT CR solve basis");
   this->cr_solve_basis_apply_clock_ = this->timer_.clock_def("KKT CR   solve basis apply");
   this->splitted_normal_matrix_clock_ = this->timer_.clock_def("KKT CR   solve basis apply inner");
-  this->splitted_normal_matrix_btran_clock_ = this->timer_.clock_def("KKT CR   solve basis apply BTRAN");
-  this->splitted_normal_matrix_nnt_clock_ = this->timer_.clock_def("KKT CR   solve basis apply NNT");
-  this->splitted_normal_matrix_ftran_clock_ = this->timer_.clock_def("KKT CR   solve basis apply FTRAN");
+  this->splitted_normal_matrix_btran_clock_ = this->timer_.clock_def("KKT CR   normal BTRAN");
+  this->splitted_normal_matrix_nnt_clock_ = this->timer_.clock_def("KKT CR   normal NNT");
+  this->splitted_normal_matrix_ftran_clock_ = this->timer_.clock_def("KKT CR   normal FTRAN");
+  this->splitted_normal_matrix_aux_clock_ = this->timer_.clock_def("KKT CR   normal aux");
   this->cr_solve_basis_aux_clock_ = this->timer_.clock_def("KKT CR   solve basis aux");
   this->cr_p_solve_basis_apply_p_clock_ = this->timer_.clock_def("KKT CR P solve basis apply P");
   this->cr_p_solve_basis_apply_c_clock_ = this->timer_.clock_def("KKT CR P solve basis apply C");
@@ -85,10 +86,11 @@ void IpxTimer::reportOuter() {
 				      // this->cr_solve_basis_clock_,
 				       this->cr_solve_basis_aux_clock_,
 				      //  this->cr_solve_basis_apply_clock_,
-				      this->splitted_normal_matrix_clock_,
+				      //  this->splitted_normal_matrix_clock_,
 				      this->splitted_normal_matrix_btran_clock_,
 				      this->splitted_normal_matrix_nnt_clock_,
 				      this->splitted_normal_matrix_ftran_clock_,
+				      this->splitted_normal_matrix_aux_clock_,
 
 				      this->cr_p_solve_basis_apply_p_clock_,
 				      this->cr_p_solve_basis_apply_c_clock_,

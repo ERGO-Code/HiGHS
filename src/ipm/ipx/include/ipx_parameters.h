@@ -13,6 +13,7 @@ struct ipx_parameters {
     double print_interval;
     double time_limit;
     bool use_timer;
+    bool analyse_basis_data;
     /* Preprocessing */
     ipxint dualize;
     ipxint scale;

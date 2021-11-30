@@ -47,6 +47,7 @@ class IpxTimer {
     HighsInt splitted_normal_matrix_btran_clock_;
     HighsInt splitted_normal_matrix_nnt_clock_;
     HighsInt splitted_normal_matrix_ftran_clock_;
+    HighsInt splitted_normal_matrix_aux_clock_;
     void setup(const bool use_timer = false);
     void start(const HighsInt clock);
     void stop(const HighsInt clock);

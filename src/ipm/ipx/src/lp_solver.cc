@@ -113,6 +113,8 @@ Int LpSolver::Solve() {
     control_.CloseLogfile();
     timer_.stop(timer_.ipx_solve_clock_);
     timer_.reportOuter();
+    if (control_.reportBasisData())
+      basis_->reportBasisData();
     return info_.status;
 }
 

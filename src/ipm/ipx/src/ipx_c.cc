@@ -11,6 +11,7 @@ struct ipx_parameters ipx_default_parameters() {
     p.print_interval = 5.0;
     p.time_limit = -1.0;
     p.use_timer = false;
+    p.analyse_basis_data = false;
     p.dualize = -1;
     p.scale = 1;
     p.ipm_maxiter = 300;
