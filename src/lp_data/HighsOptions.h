@@ -302,6 +302,7 @@ struct HighsOptionsStruct {
   bool run_crossover;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
+  bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
@@ -712,6 +713,13 @@ class HighsOptions : public HighsOptionsStruct {
         "use_implied_bounds_from_presolve",
         "Use relaxed implied bounds from presolve", advanced,
         &use_implied_bounds_from_presolve, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "lp_presolve_requires_basis_postsolve",
+        "When false LP presolve steps that yield a primal and dual feasible "
+        "solution after postsolve but no basis are allowed",
+        advanced, &lp_presolve_requires_basis_postsolve, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("mps_parser_type_free",
