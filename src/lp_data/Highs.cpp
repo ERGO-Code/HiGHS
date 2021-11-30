@@ -627,10 +627,8 @@ HighsStatus Highs::run() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool force_crossover_after_presolve = false;
   const bool ipx_no_crossover = options_.solver == kIpmString &&
-                                !options_.run_crossover &&
-                                !force_crossover_after_presolve;
+                                !options_.run_crossover;
 
   if (basis_.valid || options_.presolve == kHighsOffString) {
     // There is a valid basis for the problem or presolve is off
@@ -651,14 +649,13 @@ HighsStatus Highs::run() {
   } else {
     // No HiGHS basis so consider presolve
     //
-    // If using IPX to solve the reduced LP, crossover must be run
-    // since a basic solution is required by postsolve
-    if (force_crossover_after_presolve && options_.solver == kIpmString &&
-        !options_.run_crossover) {
-      highsLogUser(options_.log_options, HighsLogType::kWarning,
-                   "Forcing IPX to use crossover after presolve\n");
-      options_.run_crossover = true;
-    }
+    // If using IPX to solve the reduced LP, but not crossover, set
+    // lp_presolve_requires_basis_postsolve so that presolve can use
+    // rules for which postsolve does not generate a basis.
+    const bool lp_presolve_requires_basis_postsolve =
+      options_.lp_presolve_requires_basis_postsolve;
+    if (ipx_no_crossover)
+      options_.lp_presolve_requires_basis_postsolve = false;
     // Possibly presolve - according to option_.presolve
     const double from_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time = -from_presolve_time;
@@ -668,6 +665,8 @@ HighsStatus Highs::run() {
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time += to_presolve_time;
     presolve_.info_.presolve_time = this_presolve_time;
+    // Recover any modified options
+    options_.lp_presolve_requires_basis_postsolve = lp_presolve_requires_basis_postsolve;
 
     // Set an illegal local pivot threshold value that's updated after
     // solving the presolved LP - if simplex is used

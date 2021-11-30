@@ -3934,6 +3934,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         HPRESOLVE_CHECKED_CALL(sparsify(postSolveStack));
         double nzReduction = 100.0 * (1.0 - (numNonzeros() / (double)numNz));
 
+	printf("HPresolve::presolve Sparsify removes %.1f%% nonzeros\n", nzReduction);
         if (nzReduction > 0) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
