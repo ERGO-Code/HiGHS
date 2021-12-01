@@ -138,7 +138,8 @@ class HEkk {
   SimplexBasis basis_;
   HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
-
+  std::vector<double> dual_edge_weight_;
+  std::vector<double> scattered_dual_edge_weight_;
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
@@ -216,6 +217,11 @@ class HEkk {
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
+  void computeDualSteepestEdgeWeights();
+  void updateDualSteepestEdgeWeights(const HVector* column,
+				     const double new_pivotal_edge_weight, 
+				     const double Kai,
+				     const double* dual_steepest_edge_array);
   void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
@@ -327,10 +333,14 @@ class HEkk {
   HighsDebugStatus debugNonbasicFreeColumnSet(
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
+  HighsDebugStatus debugSteepestEdgeWeights(const double* true_dual_edge_weight);
+  HighsDebugStatus debugSteepestEdgeWeightsDifference(const std::string message,
+						      const double* true_dual_edge_weight);
 
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
+
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

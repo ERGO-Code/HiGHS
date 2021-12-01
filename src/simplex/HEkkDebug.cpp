@@ -1354,6 +1354,46 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
   return HighsDebugStatus::kOk;
 }
 
+HighsDebugStatus HEkk::debugSteepestEdgeWeights(const double* true_dual_edge_weight) {
+  //  const HighsOptions& options = *(this->options_);
+  //  const HighsLp& lp = this->lp_;
+  //  if (options.highs_debug_level < kHighsDebugLevelCheap) return HighsDebugStatus::kNotChecked;
+  if (true_dual_edge_weight) {
+    HighsDebugStatus return_status = debugSteepestEdgeWeightsDifference("From updates", true_dual_edge_weight);
+    if (return_status != HighsDebugStatus::kOk) return return_status;
+  }
+  //  if (options.highs_debug_level < kHighsDebugLevelMax) return HighsDebugStatus::kOk;
+  std::vector<double> save_dual_edge_weight = this->dual_edge_weight_;
+  computeDualSteepestEdgeWeights();
+  HighsDebugStatus return_status =
+    debugSteepestEdgeWeightsDifference("From computed", &save_dual_edge_weight[0]);
+  this->dual_edge_weight_ = save_dual_edge_weight;
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugSteepestEdgeWeightsDifference(const std::string message,
+							  const double* true_dual_edge_weight) {
+  const HighsLp& lp = this->lp_;
+  double dual_edge_weight_norm = 0;
+  double dual_edge_weight_error = 0;
+  for (HighsInt iRow=0; iRow < lp.num_row_; iRow++) {
+    dual_edge_weight_norm += std::fabs(true_dual_edge_weight[iRow]);
+    dual_edge_weight_error += std::fabs(this->dual_edge_weight_[iRow]-
+					true_dual_edge_weight[iRow]);
+  }
+  assert(dual_edge_weight_norm>0);
+  double relative_dual_edge_weight_error = dual_edge_weight_error / dual_edge_weight_norm;
+  if (relative_dual_edge_weight_error>1e-4) {
+    printf("HEkk::debugSteepestEdgeWeights %s Error = %g; Norm = %g; Relative error = %g\n",
+	   message.c_str(),
+	   dual_edge_weight_error,
+	   dual_edge_weight_norm,
+	   relative_dual_edge_weight_error);
+    return HighsDebugStatus::kLargeError;
+  }
+  return HighsDebugStatus::kOk;
+}
+
 HighsDebugStatus HEkk::debugRowMatrix() const {
   /*
   printf("Checking row-wise matrix\n");
@@ -1460,3 +1500,4 @@ HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string message,
         info.sum_dual_infeasibilities);
   return HighsDebugStatus::kOk;
 }
+

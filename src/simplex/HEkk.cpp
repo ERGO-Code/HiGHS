@@ -1846,8 +1846,10 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   // gathered according to the new permutation of basicIndex
   if (handle_edge_weights) {
     analysis_.simplexTimerStart(PermWtClock);
-    for (HighsInt i = 0; i < lp_.num_row_; i++)
+    for (HighsInt i = 0; i < lp_.num_row_; i++) {
+      scattered_dual_edge_weight_[basicIndex[i]] = dual_edge_weight_[i];
       workEdWtFull_[basicIndex[i]] = workEdWt_[i];
+    }
     analysis_.simplexTimerStop(PermWtClock);
   }
 
@@ -1920,8 +1922,10 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     // Gather the edge weights according to the permutation of
     // basicIndex after INVERT
     analysis_.simplexTimerStart(PermWtClock);
-    for (HighsInt i = 0; i < lp_.num_row_; i++)
+    for (HighsInt i = 0; i < lp_.num_row_; i++) {
+      dual_edge_weight_[i] = scattered_dual_edge_weight_[basicIndex[i]];
       workEdWt_[i] = workEdWtFull_[basicIndex[i]];
+    }
     analysis_.simplexTimerStop(PermWtClock);
   }
   return true;
@@ -2106,6 +2110,74 @@ HighsInt HEkk::computeFactor() {
   info_.update_count = 0;
 
   return rank_deficiency;
+}
+
+void HEkk::computeDualSteepestEdgeWeights() {
+  if (analysis_.analyse_simplex_time) {
+    analysis_.simplexTimerStart(SimplexIzDseWtClock);
+    analysis_.simplexTimerStart(DseIzClock);
+  }
+  const HighsInt num_row = lp_.num_row_;
+  HVector row_ep;
+  row_ep.setup(num_row);
+  assert(dual_edge_weight_.size() >= num_row);
+  for (HighsInt i = 0; i < num_row; i++) {
+    row_ep.clear();
+    row_ep.count = 1;
+    row_ep.index[0] = i;
+    row_ep.array[i] = 1;
+    row_ep.packFlag = false;
+    simplex_nla_.btran(row_ep, info_.row_ep_density,
+		       analysis_.pointer_serial_factor_clocks);
+    const double local_row_ep_density =
+      (double)row_ep.count / num_row;
+    updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
+    dual_edge_weight_[i] = row_ep.norm2();
+  }
+  if (analysis_.analyse_simplex_time) {
+    analysis_.simplexTimerStop(SimplexIzDseWtClock);
+    analysis_.simplexTimerStop(DseIzClock);
+    double IzDseWtTT =
+      analysis_.simplexTimerRead(SimplexIzDseWtClock);
+    highsLogDev(options_->log_options, HighsLogType::kDetailed,
+		"Computed %" HIGHSINT_FORMAT
+		" initial DSE weights in %gs\n",
+		num_row, IzDseWtTT);
+  }
+}
+
+// Update the DSE weights
+void HEkk::updateDualSteepestEdgeWeights(const HVector* column,
+					 const double new_pivotal_edge_weight, 
+					 const double Kai,
+					 const double* dual_steepest_edge_array) {
+  analysis_.simplexTimerStart(DseUpdateWeightClock);
+
+  const HighsInt num_row = lp_.num_row_;
+  const HighsInt column_count = column->count;
+  const HighsInt* variable_index = &column->index[0];
+  const double* column_array = &column->array[0];
+
+  bool updateWeight_inDense = column_count < 0 || column_count > 0.4 * num_row;
+  if (updateWeight_inDense) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      const double aa_iRow = column_array[iRow];
+      dual_edge_weight_[iRow] +=
+          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dual_steepest_edge_array[iRow]);
+      if (dual_edge_weight_[iRow] < minDualSteepestEdgeWeight)
+        dual_edge_weight_[iRow] = minDualSteepestEdgeWeight;
+    }
+  } else {
+    for (HighsInt i = 0; i < column_count; i++) {
+      const HighsInt iRow = variable_index[i];
+      const double aa_iRow = column_array[iRow];
+      dual_edge_weight_[iRow] +=
+          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dual_steepest_edge_array[iRow]);
+      if (dual_edge_weight_[iRow] < minDualSteepestEdgeWeight)
+        dual_edge_weight_[iRow] = minDualSteepestEdgeWeight;
+    }
+  }
+  analysis_.simplexTimerStop(DseUpdateWeightClock);
 }
 
 void HEkk::resetSyntheticClock() {

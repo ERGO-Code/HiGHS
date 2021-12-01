@@ -171,6 +171,8 @@ const HighsInt kIllegalMoveValue =
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
 
+const double minDualSteepestEdgeWeight = 1e-4;
+
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 
