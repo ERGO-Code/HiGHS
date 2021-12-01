@@ -883,6 +883,7 @@ void HEkkDual::majorUpdatePrimal() {
       // The weight for this pivot is known, but weights for rows
       // pivotal earlier need to be updated
       if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
+	// Steepest edge
         const double* dseArray = &multi_finish[iFn].row_ep->array[0];
         double Kai = -2 / multi_finish[iFn].alpha_row;
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
@@ -894,10 +895,12 @@ void HEkkDual::majorUpdatePrimal() {
           if (EdWt < min_dual_steepest_edge_weight)
             EdWt = min_dual_steepest_edge_weight;
           dualRHS.workEdWt[jRow] = EdWt;
-	  //	  ekk_instance_.dual_edge_weight_[jRow] = EdWt;
+	  ekk_instance_.dual_steepest_edge_weight_[jRow] = EdWt;
         }
         dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
+	ekk_instance_.dual_steepest_edge_weight_[iRow] = new_pivotal_edge_weight;
       } else {
+	// Devex
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
           HighsInt jRow = multi_finish[jFn].row_out;
           const double aa_iRow = colArray[iRow];

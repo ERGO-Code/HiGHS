@@ -37,6 +37,7 @@ void HEkkDualRHS::setup() {
   work_infeasibility.resize(numRow);
   workEdWt.assign(numRow, 1);
   workEdWtFull.resize(numTot);
+  ekk_instance_.status_.has_dual_steepest_edge_weights = false;
   partNum = 0;
   partSwitch = 0;
   analysis = &ekk_instance_.analysis_;
