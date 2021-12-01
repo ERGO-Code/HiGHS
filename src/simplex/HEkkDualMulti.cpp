@@ -225,7 +225,7 @@ void HEkkDual::majorChooseRowBtran() {
         multi_EdWt[i] = work_ep->norm2();
       } else {
         // For Devex (and Dantzig) we take the updated edge weight
-        multi_EdWt[i] = dualRHS.workEdWt[iRow];
+        multi_EdWt[i] = dualRHS.use_edge_weight_[iRow];
       }
     }
   });
@@ -397,7 +397,7 @@ void HEkkDual::minorUpdatePrimal() {
     if (row_out < 0)
       printf("ERROR: row_out = %" HIGHSINT_FORMAT " in minorUpdatePrimal\n",
              row_out);
-    const double updated_edge_weight = dualRHS.workEdWt[row_out];
+    const double updated_edge_weight = dualRHS.use_edge_weight_[row_out];
     new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
     // Transform the edge weight of the pivotal row according to the
@@ -897,18 +897,18 @@ void HEkkDual::majorUpdatePrimal() {
           dualRHS.use_edge_weight_[jRow] = EdWt;
 	  ekk_instance_.dual_steepest_edge_weight_[jRow] = EdWt;
         }
-        dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
+        dualRHS.use_edge_weight_[iRow] = new_pivotal_edge_weight;
 	ekk_instance_.dual_steepest_edge_weight_[iRow] = new_pivotal_edge_weight;
       } else {
 	// Devex
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
           HighsInt jRow = multi_finish[jFn].row_out;
           const double aa_iRow = colArray[iRow];
-          double EdWt = dualRHS.workEdWt[jRow];
+          double EdWt = dualRHS.use_edge_weight_[jRow];
           EdWt = max(EdWt, new_pivotal_edge_weight * aa_iRow * aa_iRow);
-          dualRHS.workEdWt[jRow] = EdWt;
+          dualRHS.use_edge_weight_[jRow] = EdWt;
         }
-        dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
+        dualRHS.use_edge_weight_[iRow] = new_pivotal_edge_weight;
         num_devex_iterations++;
       }
     }
@@ -978,7 +978,7 @@ bool HEkkDual::checkNonUnitWeightError(std::string message) {
   if (dual_edge_weight_mode == DualEdgeWeightMode::kDantzig) {
     double unit_wt_error = 0;
     for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
-      unit_wt_error += fabs(dualRHS.workEdWt[iRow] - 1.0);
+      unit_wt_error += fabs(dualRHS.use_edge_weight_[iRow] - 1.0);
     }
     error_found = unit_wt_error > 1e-4;
     if (error_found)
