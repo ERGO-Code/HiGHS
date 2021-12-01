@@ -138,11 +138,11 @@ class HEkkDualRHS {
                                //!< greatest primal infeasibilities
   std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
-  std::vector<double>
-      work_infeasibility;            //!< Vector of all primal infeasiblities
-  std::vector<double> workEdWt;      //!< DSE or Dvx weight
-  std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
-                                     //!< are scattered during INVERT
+  std::vector<double> work_infeasibility;            
+  std::vector<double> workEdWt;      
+  std::vector<double> workEdWtFull;
+  // Pointer to the edge weights being used in chooseRow
+  double* use_edge_weight_;
 
   HighsInt partNum;
   HighsInt partNumRow;

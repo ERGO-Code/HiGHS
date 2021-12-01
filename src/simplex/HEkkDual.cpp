@@ -197,6 +197,11 @@ HighsStatus HEkkDual::solve() {
       assert(!status.has_dual_steepest_edge_weights);
     }
   }
+  if (status.has_dual_steepest_edge_weights) {
+    dualRHS.use_edge_weight_ = &ekk_instance_.dual_steepest_edge_weight_[0];
+  } else {
+    dualRHS.use_edge_weight_ = &dualRHS.workEdWt[0];
+  }
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weights_.resize(solver_num_tot);
 
