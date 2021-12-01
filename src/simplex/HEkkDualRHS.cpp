@@ -74,7 +74,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
       for (HighsInt iRow = start; iRow < end; iRow++) {
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = workEdWt[iRow];
+          const double myWeight = use_edge_weight_[iRow];
           //	  printf("Dense: Row %4" HIGHSINT_FORMAT " weight = %g\n", iRow,
           // myWeight);
           if (bestMerit * myWeight < myInfeas) {
@@ -105,7 +105,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
         HighsInt iRow = workIndex[i];
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = workEdWt[iRow];
+          const double myWeight = use_edge_weight_[iRow];
           /*
           const double myMerit = myInfeas / myWeight;
           printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
@@ -161,7 +161,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
         // Continue
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = workEdWt[iRow];
+          const double myWeight = use_edge_weight_[iRow];
           if (cutoffMerit * myWeight < myInfeas) {
             // Save
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
@@ -196,7 +196,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
         HighsInt iRow = workIndex[i];
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = workEdWt[iRow];
+          const double myWeight = use_edge_weight_[iRow];
           /*
           const double myMerit = myInfeas / myWeight;
           printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
@@ -265,7 +265,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
         if (work_infeasibility[iRow] > kHighsZero) {
           HighsInt iPart = workPartition[iRow];
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = workEdWt[iRow];
+          const double myWeight = use_edge_weight_[iRow];
           if (bestMerit[iPart] * myWeight < myInfeas) {
             bestMerit[iPart] = myInfeas / myWeight;
             bestIndex[iPart] = iRow;
@@ -298,7 +298,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
         if (work_infeasibility[iRow] > kHighsZero) {
           HighsInt iPart = workPartition[iRow];
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = workEdWt[iRow];
+          const double myWeight = use_edge_weight_[iRow];
           if (bestMerit[iPart] * myWeight < myInfeas) {
             bestMerit[iPart] = myInfeas / myWeight;
             bestIndex[iPart] = iRow;
@@ -471,7 +471,7 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
     for (HighsInt i = 0; i < columnCount; i++) {
       HighsInt iRow = variable_index[i];
       if (workMark[iRow] == 0) {
-        if (work_infeasibility[iRow] > workEdWt[iRow] * workCutoff) {
+        if (work_infeasibility[iRow] > use_edge_weight_[iRow] * workCutoff) {
           workIndex[workCount++] = iRow;
           workMark[iRow] = 1;
         }
@@ -523,7 +523,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
     double maxMerit = 0;
     for (HighsInt iRow = 0, iPut = 0; iRow < numRow; iRow++)
       if (workMark[iRow]) {
-        double myMerit = work_infeasibility[iRow] / workEdWt[iRow];
+        double myMerit = work_infeasibility[iRow] / use_edge_weight_[iRow];
         if (maxMerit < myMerit) maxMerit = myMerit;
         dwork[iPut++] = -myMerit;
       }
@@ -535,7 +535,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
     fill_n(&workMark[0], numRow, 0);
     workCount = 0;
     for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      if (work_infeasibility[iRow] >= workEdWt[iRow] * workCutoff) {
+      if (work_infeasibility[iRow] >= use_edge_weight_[iRow] * workCutoff) {
         workIndex[workCount++] = iRow;
         workMark[iRow] = 1;
       }
@@ -548,7 +548,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
       workCount = icutoff;
       for (HighsInt i = icutoff; i < fullCount; i++) {
         HighsInt iRow = workIndex[i];
-        if (work_infeasibility[iRow] > workEdWt[iRow] * cutMerit) {
+        if (work_infeasibility[iRow] > use_edge_weight_[iRow] * cutMerit) {
           workIndex[workCount++] = iRow;
         } else {
           workMark[iRow] = 0;

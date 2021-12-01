@@ -105,7 +105,7 @@ HighsStatus HEkkDual::solve() {
 
   // Consider initialising edge weights
   //
-  // NB workEdWt is assigned and initialised to 1s in
+  // NB use_edge_weight_ is assigned and initialised to 1s in
   // dualRHS.setup(ekk_instance_) so that CHUZR is well defined, even for
   // Dantzig pricing
   //
@@ -1450,7 +1450,10 @@ void HEkkDual::chooseRow() {
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-    HighsDebugStatus return_status = ekk_instance_.debugSteepestEdgeWeights(&dualRHS.workEdWt[0]);
+    HighsDebugStatus return_status;
+    return_status = ekk_instance_.debugSteepestEdgeWeights(dualRHS.use_edge_weight_);
+    if (return_status != HighsDebugStatus::kOk) exit(0);
+    return_status = ekk_instance_.debugSteepestEdgeWeights(&dualRHS.workEdWt[0]);
     if (return_status != HighsDebugStatus::kOk) exit(0);
   }
   for (;;) {
