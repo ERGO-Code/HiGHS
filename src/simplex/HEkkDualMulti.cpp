@@ -100,7 +100,7 @@ void HEkkDual::majorChooseRow() {
     HighsInt choiceCount = 0;
     for (HighsInt i = 0; i < initialCount; i++) {
       HighsInt iRow = choiceIndex[i];
-      if (dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow] >=
+      if (dualRHS.work_infeasibility[iRow] / dualRHS.use_edge_weight_[iRow] >=
           dualRHS.workCutoff) {
         choiceIndex[choiceCount++] = iRow;
       }
@@ -137,8 +137,8 @@ void HEkkDual::majorChooseRow() {
       for (HighsInt i = 0; i < multi_num; i++) {
         const HighsInt iRow = multi_choice[i].row_out;
         if (iRow < 0) continue;
-        double updated_edge_weight = dualRHS.workEdWt[iRow];
-        computed_edge_weight = dualRHS.workEdWt[iRow] =
+        double updated_edge_weight = dualRHS.use_edge_weight_[iRow];
+        computed_edge_weight = dualRHS.use_edge_weight_[iRow] =
             multi_choice[i].infeasEdWt;
         //      if (updated_edge_weight < 0.25 * computed_edge_weight) {
         if (!acceptDualSteepestEdgeWeight(updated_edge_weight)) {
@@ -165,9 +165,9 @@ void HEkkDual::majorChooseRow() {
     multi_choice[i].baseLower = baseLower[iRow];
     multi_choice[i].baseUpper = baseUpper[iRow];
     multi_choice[i].infeasValue = dualRHS.work_infeasibility[iRow];
-    multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
+    multi_choice[i].infeasEdWt = dualRHS.use_edge_weight_[iRow];
     multi_choice[i].infeasLimit =
-        dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow];
+        dualRHS.work_infeasibility[iRow] / dualRHS.use_edge_weight_[iRow];
     multi_choice[i].infeasLimit *= kPamiCutoff;
   }
 
@@ -805,7 +805,7 @@ void HEkkDual::majorUpdatePrimal() {
         // the new basis
         const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
         const double* colArray = &multi_finish[iFn].col_aq->array[0];
-        double* EdWt = &dualRHS.workEdWt[0];
+        double* EdWt = &dualRHS.use_edge_weight_[0];
         if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
           // Update steepest edge weights
           const double* dseArray = &multi_finish[iFn].row_ep->array[0];
@@ -889,12 +889,12 @@ void HEkkDual::majorUpdatePrimal() {
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
           HighsInt jRow = multi_finish[jFn].row_out;
           double value = colArray[jRow];
-          double EdWt = dualRHS.workEdWt[jRow];
+          double EdWt = dualRHS.use_edge_weight_[jRow];
           EdWt +=
               value * (new_pivotal_edge_weight * value + Kai * dseArray[jRow]);
           if (EdWt < min_dual_steepest_edge_weight)
             EdWt = min_dual_steepest_edge_weight;
-          dualRHS.workEdWt[jRow] = EdWt;
+          dualRHS.use_edge_weight_[jRow] = EdWt;
 	  ekk_instance_.dual_steepest_edge_weight_[jRow] = EdWt;
         }
         dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
