@@ -35,9 +35,6 @@ void HEkkDualRHS::setup() {
   workMark.resize(numRow);
   workIndex.resize(numRow);
   work_infeasibility.resize(numRow);
-  workEdWt.assign(numRow, 1);
-  workEdWtFull.resize(numTot);
-  ekk_instance_.status_.has_dual_steepest_edge_weights = false;
   partNum = 0;
   partSwitch = 0;
   analysis = &ekk_instance_.analysis_;
@@ -362,66 +359,6 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
   }
 
   analysis->simplexTimerStop(UpdatePrimalClock);
-}
-
-// Update the DSE weights
-void HEkkDualRHS::updateWeightDualSteepestEdge(
-    HVector* column, const double new_pivotal_edge_weight, double Kai,
-    double* dseArray) {
-  analysis->simplexTimerStart(DseUpdateWeightClock);
-
-  const HighsInt numRow = ekk_instance_.lp_.num_row_;
-  const HighsInt columnCount = column->count;
-  const HighsInt* variable_index = &column->index[0];
-  const double* columnArray = &column->array[0];
-
-  bool updateWeight_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
-  if (updateWeight_inDense) {
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      const double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] +=
-          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
-      if (workEdWt[iRow] < min_dual_steepest_edge_weight)
-        workEdWt[iRow] = min_dual_steepest_edge_weight;
-    }
-  } else {
-    for (HighsInt i = 0; i < columnCount; i++) {
-      const HighsInt iRow = variable_index[i];
-      const double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] +=
-          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
-      if (workEdWt[iRow] < min_dual_steepest_edge_weight)
-        workEdWt[iRow] = min_dual_steepest_edge_weight;
-    }
-  }
-  analysis->simplexTimerStop(DseUpdateWeightClock);
-}
-// Update the Devex weights
-void HEkkDualRHS::updateWeightDevex(HVector* column,
-                                    const double new_pivotal_edge_weight) {
-  analysis->simplexTimerStart(DevexUpdateWeightClock);
-
-  const HighsInt numRow = ekk_instance_.lp_.num_row_;
-  const HighsInt columnCount = column->count;
-  const HighsInt* variable_index = &column->index[0];
-  const double* columnArray = &column->array[0];
-
-  bool updateWeight_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
-  if (updateWeight_inDense) {
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] =
-          max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
-    }
-  } else {
-    for (HighsInt i = 0; i < columnCount; i++) {
-      HighsInt iRow = variable_index[i];
-      double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] =
-          max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
-    }
-  }
-  analysis->simplexTimerStop(DevexUpdateWeightClock);
 }
 
 void HEkkDualRHS::updatePivots(HighsInt iRow, double value) {

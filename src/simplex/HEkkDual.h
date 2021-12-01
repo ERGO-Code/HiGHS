@@ -369,9 +369,6 @@ class HEkkDual {
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);
-  double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
-  double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
-
   bool cyclingDetected();
 
   // Devex scalars

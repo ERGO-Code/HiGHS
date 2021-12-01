@@ -149,34 +149,6 @@ HighsStatus HEkkDual::solve() {
 	    ekk_instance_.dual_steepest_edge_weight_.resize(solver_num_row);
 	    ekk_instance_.scattered_dual_steepest_edge_weight_.resize(solver_num_tot);
 	    ekk_instance_.computeDualSteepestEdgeWeights();
-            if (analysis->analyse_simplex_time) {
-              analysis->simplexTimerStart(SimplexIzDseWtClock);
-              analysis->simplexTimerStart(DseIzClock);
-            }
-            for (HighsInt i = 0; i < solver_num_row; i++) {
-              row_ep.clear();
-              row_ep.count = 1;
-              row_ep.index[0] = i;
-              row_ep.array[i] = 1;
-              row_ep.packFlag = false;
-              simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
-                                 analysis->pointer_serial_factor_clocks);
-              const double local_row_ep_density =
-                  (double)row_ep.count / solver_num_row;
-              ekk_instance_.updateOperationResultDensity(local_row_ep_density,
-                                                         info.row_ep_density);
-              dualRHS.workEdWt[i] = row_ep.norm2();
-            }
-            if (analysis->analyse_simplex_time) {
-              analysis->simplexTimerStop(SimplexIzDseWtClock);
-              analysis->simplexTimerStop(DseIzClock);
-              double IzDseWtTT =
-                  analysis->simplexTimerRead(SimplexIzDseWtClock);
-              highsLogDev(options.log_options, HighsLogType::kDetailed,
-                          "Computed %" HIGHSINT_FORMAT
-                          " initial DSE weights in %gs\n",
-                          solver_num_row, IzDseWtTT);
-            }
 	    status.has_dual_steepest_edge_weights = true;
           }
         } else {
@@ -197,13 +169,9 @@ HighsStatus HEkkDual::solve() {
       assert(!status.has_dual_steepest_edge_weights);
     }
   }
-  if (status.has_dual_steepest_edge_weights) {
-    dualRHS.use_edge_weight_ = &ekk_instance_.dual_steepest_edge_weight_[0];
-  } else {
-    dualRHS.use_edge_weight_ = &dualRHS.use_edge_weight_[0];
-  }
+  dualRHS.use_edge_weight_ = &ekk_instance_.dual_steepest_edge_weight_[0];
   // Resize the copy of scattered edge weights for backtracking
-  info.backtracking_basis_edge_weights_.resize(solver_num_tot);
+  info.backtracking_basis_edge_weight_.resize(solver_num_tot);
 
   // Compute the dual values
   ekk_instance_.computeDual();
@@ -1453,8 +1421,6 @@ void HEkkDual::chooseRow() {
     HighsDebugStatus return_status;
     return_status = ekk_instance_.debugSteepestEdgeWeights(dualRHS.use_edge_weight_);
     if (return_status != HighsDebugStatus::kOk) exit(0);
-    return_status = ekk_instance_.debugSteepestEdgeWeights(&dualRHS.workEdWt[0]);
-    if (return_status != HighsDebugStatus::kOk) exit(0);
   }
   for (;;) {
     // Choose the index of a good row to leave the basis
@@ -2182,12 +2148,9 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   dualRHS.updatePrimal(&col_aq, theta_primal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     const double new_pivotal_edge_weight =
-        dualRHS.workEdWt[row_out] / (alpha_col * alpha_col);
+        ekk_instance_.dual_steepest_edge_weight_[row_out] / (alpha_col * alpha_col);
     const double Kai = -2 / alpha_col;
-    dualRHS.updateWeightDualSteepestEdge(&col_aq, new_pivotal_edge_weight, Kai,
-                                         &DSE_Vector->array[0]);
     ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
-    dualRHS.workEdWt[row_out] = new_pivotal_edge_weight;
     ekk_instance_.dual_steepest_edge_weight_[row_out] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
     // Pivotal row is for the current basis: weights are required for
@@ -2205,7 +2168,7 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
     // new_pivotal_edge_weight*columnArray[iRow]^2);
     //
     // Update rest of weights
-    dualRHS.updateWeightDevex(&col_aq, new_pivotal_edge_weight);
+    ekk_instance_.updateDualDevexWeights(&col_aq, new_pivotal_edge_weight);
     dualRHS.use_edge_weight_[row_out] = new_pivotal_edge_weight;
     num_devex_iterations++;
   }

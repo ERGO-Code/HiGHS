@@ -86,22 +86,6 @@ class HEkkDualRHS {
   );
 
   /**
-   * @brief Update the DSE weights
-   */
-  void updateWeightDualSteepestEdge(
-      HVector* column,             //!< Pivotal column
-      const double row_outWeight,  //!< (Edge weight of leaving row)/alpha^2
-      double Kai,                  //!< -2/alpha
-      double* dse                  //!< DSE std::vector
-  );
-  /**
-   * @brief Update the Devex weights
-   */
-  void updateWeightDevex(HVector* column,            //!< Pivotal column
-                         const double row_outWeight  //!< max(1, (Edge weight of
-                                                     //!< leaving row)/alpha^2)
-  );
-  /**
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
@@ -139,8 +123,6 @@ class HEkkDualRHS {
   std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
   std::vector<double> work_infeasibility;            
-  std::vector<double> workEdWt;      
-  std::vector<double> workEdWtFull;
   // Pointer to the edge weights being used in chooseRow
   double* use_edge_weight_;
 

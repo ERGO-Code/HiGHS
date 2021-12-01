@@ -93,6 +93,8 @@ HighsStatus HEkkPrimal::solve() {
   if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
+  // Resize the copy of scattered edge weights for backtracking
+  info.backtracking_basis_edge_weight_.resize(num_tot);
 
   // The major solving loop
   //
@@ -344,7 +346,14 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.exit_algorithm_ = SimplexAlgorithm::kPrimal;
 
   rebuild_reason = kRebuildReasonNo;
-
+  if (!ekk_instance_.status_.has_dual_steepest_edge_weights) {
+    // No dual weights to maintain, so ensure that the vectors are
+    // assigned since they are used around factorization and when
+    // seeting up the backtracking information. ToDo Eliminate this
+    // opacity
+    ekk_instance_.dual_steepest_edge_weight_.assign(num_row, 1.0);
+    ekk_instance_.scattered_dual_steepest_edge_weight_.resize(num_tot);
+  }
   resetDevex();
 }
 

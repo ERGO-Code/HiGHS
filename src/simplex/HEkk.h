@@ -141,8 +141,6 @@ class HEkk {
   HighsRandom random_;
   std::vector<double> dual_steepest_edge_weight_;
   std::vector<double> scattered_dual_steepest_edge_weight_;
-  double* workEdWt_ = NULL;      //!< DSE or Dvx weight
-  double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
   bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
@@ -211,11 +209,9 @@ class HEkk {
   void initialiseSimplexLpRandomVectors();
   void setNonbasicMove();
   bool getNonsingularInverse(const HighsInt solve_phase = 0);
-  bool getBacktrackingBasis(double* scattered_edge_weights);
+  bool getBacktrackingBasis();
   void putBacktrackingBasis();
-  void putBacktrackingBasis(
-      const vector<HighsInt>& basicIndex_before_compute_factor,
-      double* scattered_edge_weights);
+  void putBacktrackingBasis(const vector<HighsInt>& basicIndex_before_compute_factor);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
@@ -225,6 +221,8 @@ class HEkk {
 				     const double new_pivotal_edge_weight, 
 				     const double Kai,
 				     const double* dual_steepest_edge_array);
+  void updateDualDevexWeights(const HVector* column,
+			      const double new_pivotal_edge_weight);
   void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
