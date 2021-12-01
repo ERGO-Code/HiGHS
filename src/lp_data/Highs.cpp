@@ -2678,6 +2678,15 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
+  if (ekk_instance_.status_.has_dual_steepest_edge_weights) {
+    if ((int)ekk_instance_.dual_edge_weight_.size() <= 0) {
+      printf("returnFromHighs: (solve %d)Has dual_steepest_edge_weights, but ekk_instance_.dual_edge_weight_.size = %d\n",
+	     (int)ekk_instance_.debug_solve_call_num_,
+	     (int)ekk_instance_.dual_edge_weight_.size());
+      fflush(stdout);
+    }
+    assert(ekk_instance_.dual_edge_weight_.size() > 0);
+  }
   return return_status;
 }
 

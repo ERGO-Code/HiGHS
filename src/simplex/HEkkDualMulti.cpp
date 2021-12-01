@@ -853,8 +853,7 @@ void HEkkDual::majorUpdatePrimal() {
         double Kai = -2 / finish->alpha_row;
         dualRHS.updateWeightDualSteepestEdge(Col, new_pivotal_edge_weight, Kai,
                                              &Row->array[0]);
-        ekk_instance_.updateDualSteepestEdgeWeights(Col, new_pivotal_edge_weight, Kai,
-						    &Row->array[0]);
+	//        ekk_instance_.updateDualSteepestEdgeWeights(Col, new_pivotal_edge_weight, Kai, &Row->array[0]);
       } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
                  !new_devex_framework) {
         // Update Devex weights
@@ -895,7 +894,7 @@ void HEkkDual::majorUpdatePrimal() {
           if (EdWt < min_dual_steepest_edge_weight)
             EdWt = min_dual_steepest_edge_weight;
           dualRHS.workEdWt[jRow] = EdWt;
-	  ekk_instance_.dual_edge_weight_[jRow] = EdWt;
+	  //	  ekk_instance_.dual_edge_weight_[jRow] = EdWt;
         }
         dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
       } else {

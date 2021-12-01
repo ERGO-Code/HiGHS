@@ -145,6 +145,9 @@ HighsStatus HEkkDual::solve() {
             // Basis is not logical and DSE weights are to be initialised
             highsLogDev(options.log_options, HighsLogType::kDetailed,
                         "Basis is not logical, so compute exact DSE weights\n");
+	    // Ensure that there is space for the weights
+	    ekk_instance_.dual_edge_weight_.resize(solver_num_row);
+	    ekk_instance_.scattered_dual_edge_weight_.resize(solver_num_tot);
 	    ekk_instance_.computeDualSteepestEdgeWeights();
             if (analysis->analyse_simplex_time) {
               analysis->simplexTimerStart(SimplexIzDseWtClock);
@@ -174,18 +177,25 @@ HighsStatus HEkkDual::solve() {
                           " initial DSE weights in %gs\n",
                           solver_num_row, IzDseWtTT);
             }
+	    status.has_dual_steepest_edge_weights = true;
           }
         } else {
-	  ekk_instance_.dual_edge_weight_.assign(solver_num_row, 1.0);
-	  ekk_instance_.scattered_dual_edge_weight_.resize(solver_num_tot);
           highsLogDev(
               options.log_options, HighsLogType::kDetailed,
               "solve:: Starting from B=I so unit initial DSE weights\n");
+	  ekk_instance_.dual_edge_weight_.assign(solver_num_row, 1.0);
+	  ekk_instance_.scattered_dual_edge_weight_.resize(solver_num_tot);
+	  status.has_dual_steepest_edge_weights = true;
         }
       }
     }
-    // Indicate that edge weights are known
-    status.has_dual_steepest_edge_weights = true;
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
+      // Using steepest edge, so ensure that the weights are known
+      assert(status.has_dual_steepest_edge_weights);
+    } else {
+      // Not using steepest edge, so ensure that the weights are not known
+      assert(!status.has_dual_steepest_edge_weights);
+    }
   }
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weights_.resize(solver_num_tot);
@@ -1434,9 +1444,8 @@ void HEkkDual::chooseRow() {
   ekk_instance_.applyTabooRow(dualRHS.work_infeasibility, 0);
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
-  HighsDebugStatus return_status =
-    ekk_instance_.debugSteepestEdgeWeights(&dualRHS.workEdWt[0]);
-  if (return_status != HighsDebugStatus::kOk) exit(0);
+  //  HighsDebugStatus return_status = ekk_instance_.debugSteepestEdgeWeights(&dualRHS.workEdWt[0]);
+  //  if (return_status != HighsDebugStatus::kOk) exit(0);
   for (;;) {
     // Choose the index of a good row to leave the basis
     dualRHS.chooseNormal(&row_out);
@@ -2166,10 +2175,9 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
     const double Kai = -2 / alpha_col;
     dualRHS.updateWeightDualSteepestEdge(&col_aq, new_pivotal_edge_weight, Kai,
                                          &DSE_Vector->array[0]);
-    ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight, Kai,
-						&DSE_Vector->array[0]);
+    ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
     dualRHS.workEdWt[row_out] = new_pivotal_edge_weight;
-    ekk_instance_.dual_edge_weight_[row_out] = new_pivotal_edge_weight;
+    //    ekk_instance_.dual_edge_weight_[row_out] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by

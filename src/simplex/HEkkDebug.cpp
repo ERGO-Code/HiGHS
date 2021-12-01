@@ -1354,6 +1354,7 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
   return HighsDebugStatus::kOk;
 }
 
+/*
 HighsDebugStatus HEkk::debugSteepestEdgeWeights(const double* true_dual_edge_weight) {
   //  const HighsLp& lp = this->lp_;
   //  if (options.highs_debug_level < kHighsDebugLevelCheap) return HighsDebugStatus::kNotChecked;
@@ -1393,7 +1394,7 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeightsDifference(const std::string mess
   }
   return HighsDebugStatus::kOk;
 }
-
+*/
 HighsDebugStatus HEkk::debugRowMatrix() const {
   /*
   printf("Checking row-wise matrix\n");
