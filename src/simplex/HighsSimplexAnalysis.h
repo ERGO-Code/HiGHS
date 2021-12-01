@@ -175,6 +175,7 @@ class HighsSimplexAnalysis {
   double reduced_rhs_value = 0;
   double reduced_cost_value = 0;
   double edge_weight = 0;
+  double edge_weight_error = 0;
   double primal_delta = 0;
   double primal_step = 0;
   double dual_step = 0;
@@ -364,6 +365,7 @@ class HighsSimplexAnalysis {
   HighsValueDistribution simplex_pivot_distribution;
   HighsValueDistribution numerical_trouble_distribution;
   HighsValueDistribution factor_pivot_threshold_distribution;
+  HighsValueDistribution edge_weight_error_distribution;
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXANALYSIS_H_ */

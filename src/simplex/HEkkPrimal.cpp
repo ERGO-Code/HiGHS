@@ -2290,6 +2290,7 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_column = alpha_col;
   analysis->pivot_value_from_row = alpha_row;
   analysis->numerical_trouble = numericalTrouble;
+  analysis->edge_weight_error = ekk_instance_.edge_weight_error;
   analysis->objective_value = info.updated_primal_objective_value;
   analysis->num_primal_infeasibility = info.num_primal_infeasibilities;
   analysis->num_dual_infeasibility = info.num_dual_infeasibilities;

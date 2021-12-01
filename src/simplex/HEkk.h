@@ -189,6 +189,8 @@ class HEkk {
   vector<HighsInt> upper_bound_col_;
   vector<HighsInt> upper_bound_row_;
 
+  double edge_weight_error;
+
   double build_synthetic_tick_;
   double total_synthetic_tick_;
   HighsInt debug_solve_call_num_ = 0;

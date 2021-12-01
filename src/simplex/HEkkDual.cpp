@@ -1360,6 +1360,7 @@ void HEkkDual::iterationAnalysisData() {
   analysis->pivot_value_from_row = alpha_row;
   analysis->factor_pivot_threshold = info.factor_pivot_threshold;
   analysis->numerical_trouble = numericalTrouble;
+  analysis->edge_weight_error = ekk_instance_.edge_weight_error;
   analysis->objective_value = info.updated_dual_objective_value;
   // Since maximization is achieved by minimizing the LP with negated
   // costs, in phase 2 the dual objective value is negated, so flip

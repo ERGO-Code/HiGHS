@@ -1355,14 +1355,13 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
 }
 
 HighsDebugStatus HEkk::debugSteepestEdgeWeights(const double* true_dual_edge_weight) {
-  //  const HighsOptions& options = *(this->options_);
   //  const HighsLp& lp = this->lp_;
   //  if (options.highs_debug_level < kHighsDebugLevelCheap) return HighsDebugStatus::kNotChecked;
   if (true_dual_edge_weight) {
     HighsDebugStatus return_status = debugSteepestEdgeWeightsDifference("From updates", true_dual_edge_weight);
     if (return_status != HighsDebugStatus::kOk) return return_status;
   }
-  //  if (options.highs_debug_level < kHighsDebugLevelMax) return HighsDebugStatus::kOk;
+  if (options_->highs_debug_level < kHighsDebugLevelMax) return HighsDebugStatus::kOk;
   std::vector<double> save_dual_edge_weight = this->dual_edge_weight_;
   computeDualSteepestEdgeWeights();
   HighsDebugStatus return_status =
@@ -1373,6 +1372,7 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeights(const double* true_dual_edge_wei
 
 HighsDebugStatus HEkk::debugSteepestEdgeWeightsDifference(const std::string message,
 							  const double* true_dual_edge_weight) {
+  const double kWeightErrorTol = kHighsInf;//1e-4;
   const HighsLp& lp = this->lp_;
   double dual_edge_weight_norm = 0;
   double dual_edge_weight_error = 0;
@@ -1383,7 +1383,7 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeightsDifference(const std::string mess
   }
   assert(dual_edge_weight_norm>0);
   double relative_dual_edge_weight_error = dual_edge_weight_error / dual_edge_weight_norm;
-  if (relative_dual_edge_weight_error>1e-4) {
+  if (relative_dual_edge_weight_error>kWeightErrorTol) {
     printf("HEkk::debugSteepestEdgeWeights %s Error = %g; Norm = %g; Relative error = %g\n",
 	   message.c_str(),
 	   dual_edge_weight_error,
