@@ -2132,7 +2132,7 @@ void HEkk::computeDualSteepestEdgeWeights() {
     const double local_row_ep_density =
       (double)row_ep.count / num_row;
     updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
-    dual_edge_weight_[i] = row_ep.norm2();
+    dual_edge_weight_[i] = row_ep.quad_norm2();
   }
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStop(SimplexIzDseWtClock);
@@ -2158,24 +2158,50 @@ void HEkk::updateDualSteepestEdgeWeights(const HVector* column,
   const HighsInt* variable_index = &column->index[0];
   const double* column_array = &column->array[0];
 
-  bool updateWeight_inDense = column_count < 0 || column_count > 0.4 * num_row;
-  if (updateWeight_inDense) {
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      const double aa_iRow = column_array[iRow];
-      dual_edge_weight_[iRow] +=
-          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dual_steepest_edge_array[iRow]);
-      if (dual_edge_weight_[iRow] < minDualSteepestEdgeWeight)
-        dual_edge_weight_[iRow] = minDualSteepestEdgeWeight;
+  HighsInt to_entry;
+  const bool use_row_indices = sparseLoopStyle(column_count, num_row, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    HighsInt iRow;
+    if (use_row_indices) {
+      iRow = variable_index[iEntry];
+    } else {
+      iRow = iEntry;
     }
-  } else {
-    for (HighsInt i = 0; i < column_count; i++) {
-      const HighsInt iRow = variable_index[i];
-      const double aa_iRow = column_array[iRow];
-      dual_edge_weight_[iRow] +=
-          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dual_steepest_edge_array[iRow]);
-      if (dual_edge_weight_[iRow] < minDualSteepestEdgeWeight)
-        dual_edge_weight_[iRow] = minDualSteepestEdgeWeight;
+    const double previous_weight = dual_edge_weight_[iRow];
+    const double kDeltaTol = 1e-4;
+    const HighsCDouble quad_aa_iRow = column_array[iRow];
+    const HighsCDouble quad_Kai = Kai;
+    const HighsCDouble quad_dual_steepest_edge_array_iRow = dual_steepest_edge_array[iRow];
+    const HighsCDouble quad_new_pivotal_edge_weight = new_pivotal_edge_weight;
+    HighsCDouble quad_update = quad_new_pivotal_edge_weight * quad_aa_iRow;
+    quad_update += quad_Kai * quad_dual_steepest_edge_array_iRow;
+    quad_update *= quad_aa_iRow;
+    HighsCDouble quad_updated_weight = dual_edge_weight_[iRow];
+    quad_updated_weight += quad_update;
+    quad_updated_weight = std::max((HighsCDouble)minDualSteepestEdgeWeight, quad_updated_weight);
+    const double updated_weight = (double)quad_updated_weight;
+    const double aa_iRow = column_array[iRow];
+    const double update = aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dual_steepest_edge_array[iRow]);
+    dual_edge_weight_[iRow] +=
+      aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dual_steepest_edge_array[iRow]);
+    dual_edge_weight_[iRow] = std::max(minDualSteepestEdgeWeight, dual_edge_weight_[iRow]);
+    const double delta = std::fabs(updated_weight-dual_edge_weight_[iRow]);
+    if (delta > kDeltaTol) {
+      printf("HEkk::updateDualSteepestEdgeWeights quad-double difference for %d is %g\n", (int)iRow, delta);
+      printf("new_pivotal_edge_weight              = %g\n", new_pivotal_edge_weight);
+      printf("                          aa_iRow    = %g\n", aa_iRow);
+      printf("new_pivotal_edge_weight * aa_iRow    = %g\n", new_pivotal_edge_weight * aa_iRow);
+      printf("Kai                                  = %g\n", Kai);
+      printf("      dual_steepest_edge_array[iRow] = %g\n", dual_steepest_edge_array[iRow]);
+      printf("Kai * dual_steepest_edge_array[iRow] = %g\n", Kai * dual_steepest_edge_array[iRow]);
+      printf("update                               = %g\n", update);
+      printf("previous_weight                      = %g\n", previous_weight);
+      printf("new_weight                           = %g\n", previous_weight + update);
+      fflush(stdout);
+      assert(delta < kDeltaTol);
     }
+    dual_edge_weight_[iRow] = updated_weight;
+	     
   }
   analysis_.simplexTimerStop(DseUpdateWeightClock);
 }
