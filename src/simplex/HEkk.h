@@ -211,18 +211,19 @@ class HEkk {
   bool getNonsingularInverse(const HighsInt solve_phase = 0);
   bool getBacktrackingBasis();
   void putBacktrackingBasis();
-  void putBacktrackingBasis(const vector<HighsInt>& basicIndex_before_compute_factor);
+  void putBacktrackingBasis(
+      const vector<HighsInt>& basicIndex_before_compute_factor);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
   void computeDualSteepestEdgeWeights();
   void updateDualSteepestEdgeWeights(const HVector* column,
-				     const double new_pivotal_edge_weight, 
-				     const double Kai,
-				     const double* dual_steepest_edge_array);
+                                     const double new_pivotal_edge_weight,
+                                     const double Kai,
+                                     const double* dual_steepest_edge_array);
   void updateDualDevexWeights(const HVector* column,
-			      const double new_pivotal_edge_weight);
+                              const double new_pivotal_edge_weight);
   void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
@@ -334,10 +335,11 @@ class HEkk {
   HighsDebugStatus debugNonbasicFreeColumnSet(
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
-  HighsDebugStatus debugSteepestEdgeWeights(const double* true_dual_steepest_edge_weight);
-  HighsDebugStatus debugSteepestEdgeWeightsDifference(const std::string message,
-						      const double* true_dual_steepest_edge_weight,
-						      const double tolerance);
+  HighsDebugStatus debugSteepestEdgeWeights(
+      const double* true_dual_steepest_edge_weight);
+  HighsDebugStatus debugSteepestEdgeWeightsDifference(
+      const std::string message, const double* true_dual_steepest_edge_weight,
+      const double tolerance);
 
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
                                               const bool force_report = false);

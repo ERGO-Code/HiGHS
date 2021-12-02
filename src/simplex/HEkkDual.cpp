@@ -145,19 +145,21 @@ HighsStatus HEkkDual::solve() {
             // Basis is not logical and DSE weights are to be initialised
             highsLogDev(options.log_options, HighsLogType::kDetailed,
                         "Basis is not logical, so compute exact DSE weights\n");
-	    // Ensure that there is space for the weights
-	    ekk_instance_.dual_steepest_edge_weight_.resize(solver_num_row);
-	    ekk_instance_.scattered_dual_steepest_edge_weight_.resize(solver_num_tot);
-	    ekk_instance_.computeDualSteepestEdgeWeights();
-	    status.has_dual_steepest_edge_weights = true;
+            // Ensure that there is space for the weights
+            ekk_instance_.dual_steepest_edge_weight_.resize(solver_num_row);
+            ekk_instance_.scattered_dual_steepest_edge_weight_.resize(
+                solver_num_tot);
+            ekk_instance_.computeDualSteepestEdgeWeights();
+            status.has_dual_steepest_edge_weights = true;
           }
         } else {
           highsLogDev(
               options.log_options, HighsLogType::kDetailed,
               "solve:: Starting from B=I so unit initial DSE weights\n");
-	  ekk_instance_.dual_steepest_edge_weight_.assign(solver_num_row, 1.0);
-	  ekk_instance_.scattered_dual_steepest_edge_weight_.resize(solver_num_tot);
-	  status.has_dual_steepest_edge_weights = true;
+          ekk_instance_.dual_steepest_edge_weight_.assign(solver_num_row, 1.0);
+          ekk_instance_.scattered_dual_steepest_edge_weight_.resize(
+              solver_num_tot);
+          status.has_dual_steepest_edge_weights = true;
         }
       }
     }
@@ -1419,7 +1421,8 @@ void HEkkDual::chooseRow() {
   // detected
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     HighsDebugStatus return_status;
-    return_status = ekk_instance_.debugSteepestEdgeWeights(dualRHS.use_edge_weight_);
+    return_status =
+        ekk_instance_.debugSteepestEdgeWeights(dualRHS.use_edge_weight_);
     if (return_status != HighsDebugStatus::kOk) exit(0);
   }
   for (;;) {
@@ -2148,9 +2151,11 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   dualRHS.updatePrimal(&col_aq, theta_primal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     const double new_pivotal_edge_weight =
-        ekk_instance_.dual_steepest_edge_weight_[row_out] / (alpha_col * alpha_col);
+        ekk_instance_.dual_steepest_edge_weight_[row_out] /
+        (alpha_col * alpha_col);
     const double Kai = -2 / alpha_col;
-    ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
+    ekk_instance_.updateDualSteepestEdgeWeights(
+        &col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
     ekk_instance_.dual_steepest_edge_weight_[row_out] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
     // Pivotal row is for the current basis: weights are required for

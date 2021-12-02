@@ -52,9 +52,8 @@ void HEkk::updateOperationResultDensity(const double local_density,
 
 void HEkk::assessDSEWeightError(const double computed_edge_weight,
                                 const double updated_edge_weight) {
-  edge_weight_error =
-    std::fabs(updated_edge_weight-computed_edge_weight) /
-    std::max(1.0, computed_edge_weight);
+  edge_weight_error = std::fabs(updated_edge_weight - computed_edge_weight) /
+                      std::max(1.0, computed_edge_weight);
   double weight_error;
   if (updated_edge_weight < computed_edge_weight) {
     // Updated weight is low
