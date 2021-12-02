@@ -2310,7 +2310,7 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  Runtime runtime(instance);
+  Runtime runtime(instance, timer_);
 
   runtime.settings.reportingfequency = 1000;
   runtime.endofiterationevent.subscribe([this](Runtime& rt) {
@@ -2326,6 +2326,8 @@ HighsStatus Highs::callSolveQp() {
                  rt.statistics.density_nullspace[rep],
                  rt.statistics.density_factor[rep]);
   });
+
+  runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
   runtime.settings.ratiotest =
       new RatiotestTwopass(instance, 0.000000001, 0.000001);

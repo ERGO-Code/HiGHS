@@ -5,6 +5,7 @@
 #include "instance.hpp"
 #include "settings.hpp"
 #include "statistics.hpp"
+#include "HighsTimer.h"
 
 enum class ProblemStatus { INDETERMINED, OPTIMAL, UNBOUNDED, INFEASIBLE };
 
@@ -12,6 +13,8 @@ struct Runtime {
   Instance instance;
   Settings settings;
   Statistics statistics;
+
+  HighsTimer& timer;
 
   Eventhandler<Runtime&> endofiterationevent;
 
@@ -21,8 +24,9 @@ struct Runtime {
   Vector dualcon;
   ProblemStatus status = ProblemStatus::INDETERMINED;
 
-  Runtime(Instance& inst)
+  Runtime(Instance& inst, HighsTimer& ht)
       : instance(inst),
+        timer(ht),
         primal(Vector(instance.num_var)),
         rowactivity(Vector(instance.num_con)),
         dualvar(instance.num_var),

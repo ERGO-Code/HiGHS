@@ -10,6 +10,7 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 
   // set HiGHS to be silent
   highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("Time limit", runtime.settings.timelimit - runtime.timer.readRunHighsClock());
 
   HighsLp lp;
   lp.a_index_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);

@@ -37,10 +37,7 @@ void Solver::loginformation(Runtime& rt, Basis& basis,
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
   rt.statistics.objval.push_back(rt.instance.objval(rt.primal));
-  rt.statistics.time.push_back(
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          std::chrono::high_resolution_clock::now() - rt.statistics.time_start)
-          .count());
+  rt.statistics.time.push_back(runtime.timer.readRunHighsClock());
   SumNum sm =
       rt.instance.sumnumprimalinfeasibilities(rt.primal, rt.rowactivity);
   rt.statistics.sum_primal_infeasibilities.push_back(sm.sum);
@@ -211,10 +208,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true &&
          runtime.statistics.num_iterations < runtime.settings.iterationlimit &&
-         std::chrono::duration_cast<std::chrono::duration<double>>(
-             std::chrono::high_resolution_clock::now() -
-             runtime.statistics.time_start)
-                 .count() < runtime.settings.timelimit) {
+         runtime.timer.readRunHighsClock() < runtime.settings.timelimit) {
     // LOGGING
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
