@@ -1355,48 +1355,34 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
 }
 
 HighsDebugStatus HEkk::debugSteepestEdgeWeights(
-    const double* true_dual_steepest_edge_weight) {
-  //  const HighsLp& lp = this->lp_;
-  //  if (options.highs_debug_level < kHighsDebugLevelCheap) return
-  //  HighsDebugStatus::kNotChecked;
-  if (true_dual_steepest_edge_weight) {
-    HighsDebugStatus return_status = debugSteepestEdgeWeightsDifference(
-        "From updates", true_dual_steepest_edge_weight, 1e-6);
-    if (return_status != HighsDebugStatus::kOk) return return_status;
-  }
-  if (options_->highs_debug_level < kHighsDebugLevelMax)
-    return HighsDebugStatus::kOk;
-  std::vector<double> save_dual_steepest_edge_weight =
-      this->dual_edge_weight_;
-  computeDualSteepestEdgeWeights();
-  HighsDebugStatus return_status = debugSteepestEdgeWeightsDifference(
-      "From computed", &save_dual_steepest_edge_weight[0], 1e-3);
-  this->dual_edge_weight_ = save_dual_steepest_edge_weight;
-  return return_status;
-}
-
-HighsDebugStatus HEkk::debugSteepestEdgeWeightsDifference(
-    const std::string message, const double* true_dual_steepest_edge_weight,
-    const double tolerance) {
+    const HighsInt alt_debug_level) {
+  const HighsInt use_debug_level = alt_debug_level >= 0
+                                       ? alt_debug_level
+                                       : this->options_->highs_debug_level;
+  if (use_debug_level < kHighsDebugLevelExpensive)
+    return HighsDebugStatus::kNotChecked;
   const HighsLp& lp = this->lp_;
+  std::vector<double> save_dual_edge_weight = this->dual_edge_weight_;
+  computeDualSteepestEdgeWeights();
+  std::vector<double>& true_dual_steepest_edge_weight = this->dual_edge_weight_;
   double dual_steepest_edge_weight_norm = 0;
   double dual_steepest_edge_weight_error = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     dual_steepest_edge_weight_norm +=
         std::fabs(true_dual_steepest_edge_weight[iRow]);
-    dual_steepest_edge_weight_error +=
-        std::fabs(this->dual_edge_weight_[iRow] -
-                  true_dual_steepest_edge_weight[iRow]);
+    dual_steepest_edge_weight_error += std::fabs(
+        this->dual_edge_weight_[iRow] - true_dual_steepest_edge_weight[iRow]);
   }
+  this->dual_edge_weight_ = save_dual_edge_weight;
+  // Now assess the relative error
   assert(dual_steepest_edge_weight_norm > 0);
   double relative_dual_steepest_edge_weight_error =
       dual_steepest_edge_weight_error / dual_steepest_edge_weight_norm;
-  if (relative_dual_steepest_edge_weight_error > tolerance) {
+  if (relative_dual_steepest_edge_weight_error > 1e-3) {
     printf(
-        "HEkk::debugSteepestEdgeWeights %s Error = %g; Norm = %g; Relative "
+        "HEkk::debugSteepestEdgeWeights Error = %g; Norm = %g; Relative "
         "error = %g\n",
-        message.c_str(), dual_steepest_edge_weight_error,
-        dual_steepest_edge_weight_norm,
+        dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,
         relative_dual_steepest_edge_weight_error);
     return HighsDebugStatus::kLargeError;
   }

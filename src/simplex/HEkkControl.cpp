@@ -19,10 +19,10 @@
 void HEkk::initialiseControl() {
   // Copy tolerances from options
   info_.allow_dual_steepest_edge_to_devex_switch =
-      (*options_).simplex_dual_edge_weight_strategy ==
+      options_->simplex_dual_edge_weight_strategy ==
       kSimplexDualEdgeWeightStrategyChoose;
   info_.dual_steepest_edge_weight_log_error_threshold =
-      (*options_).dual_steepest_edge_weight_log_error_threshold;
+      options_->dual_steepest_edge_weight_log_error_threshold;
   info_.control_iteration_count0 = iteration_count_;
   // Initialise the densities
   info_.col_aq_density = 0;
@@ -52,21 +52,28 @@ void HEkk::updateOperationResultDensity(const double local_density,
 
 void HEkk::assessDSEWeightError(const double computed_edge_weight,
                                 const double updated_edge_weight) {
+  // Compute the (relative) dual steepest edge weight error for
+  // analysis and debugging
   edge_weight_error = std::fabs(updated_edge_weight - computed_edge_weight) /
                       std::max(1.0, computed_edge_weight);
-  double weight_error;
+  if (edge_weight_error > options_->dual_steepest_edge_weight_error_tolerance)
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                "Dual steepest edge weight error is %g\n", edge_weight_error);
+  // Compute the relative deviation in the updated weight compared
+  // with the computed weight
+  double weight_relative_deviation;
   if (updated_edge_weight < computed_edge_weight) {
     // Updated weight is low
-    weight_error = computed_edge_weight / updated_edge_weight;
+    weight_relative_deviation = computed_edge_weight / updated_edge_weight;
     info_.average_log_low_DSE_weight_error =
         0.99 * info_.average_log_low_DSE_weight_error +
-        0.01 * log(weight_error);
+        0.01 * log(weight_relative_deviation);
   } else {
     // Updated weight is correct or high
-    weight_error = updated_edge_weight / computed_edge_weight;
+    weight_relative_deviation = updated_edge_weight / computed_edge_weight;
     info_.average_log_high_DSE_weight_error =
         0.99 * info_.average_log_high_DSE_weight_error +
-        0.01 * log(weight_error);
+        0.01 * log(weight_relative_deviation);
   }
 }
 
@@ -112,7 +119,7 @@ bool HEkk::switchToDevex() {
          kCostlyDseFractionNumTotalIterationBeforeSwitch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogDev((*options_).log_options, HighsLogType::kInfo,
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
                   " costly DSE iterations of %" HIGHSINT_FORMAT
                   " with "
@@ -132,7 +139,7 @@ bool HEkk::switchToDevex() {
     switch_to_devex = info_.allow_dual_steepest_edge_to_devex_switch &&
                       local_measure > local_threshold;
     if (switch_to_devex) {
-      highsLogDev((*options_).log_options, HighsLogType::kInfo,
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
                   "Switch from DSE to Devex with log error measure of %g > "
                   "%g = threshold\n",
                   local_measure, local_threshold);

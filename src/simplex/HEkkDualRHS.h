@@ -123,8 +123,6 @@ class HEkkDualRHS {
   std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
   std::vector<double> work_infeasibility;
-  // Pointer to the edge weights being used in chooseRow
-  double* use_edge_weight_;
 
   HighsInt partNum;
   HighsInt partNumRow;
@@ -132,7 +130,6 @@ class HEkkDualRHS {
   HighsInt partNumCut;
   HighsInt partSwitch;
   std::vector<HighsInt> workPartition;
-  const double min_dual_steepest_edge_weight = 1e-4;
   HighsSimplexAnalysis* analysis;
 };
 

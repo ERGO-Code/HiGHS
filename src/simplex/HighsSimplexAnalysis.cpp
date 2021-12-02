@@ -137,9 +137,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   const HighsInt dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
-      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge ||
-      dual_edge_weight_strategy ==
-          kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
+      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge) {
     // Initialise the measures used to analyse accuracy of steepest edge weights
     num_dual_steepest_edge_weight_check = 0;
     num_dual_steepest_edge_weight_reject = 0;

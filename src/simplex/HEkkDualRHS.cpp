@@ -59,6 +59,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
     analysis->simplexTimerStart(ChuzrDualClock);
   }
 
+  std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   if (workCount < 0) {
     // DENSE mode
     const HighsInt numRow = -workCount;
@@ -71,7 +72,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
       for (HighsInt iRow = start; iRow < end; iRow++) {
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = use_edge_weight_[iRow];
+          const double myWeight = edge_weight[iRow];
           //	  printf("Dense: Row %4" HIGHSINT_FORMAT " weight = %g\n", iRow,
           // myWeight);
           if (bestMerit * myWeight < myInfeas) {
@@ -95,6 +96,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
     HighsInt randomStart = ekk_instance_.random_.integer(workCount);
     double bestMerit = 0;
     HighsInt bestIndex = -1;
+    std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
     for (HighsInt section = 0; section < 2; section++) {
       const HighsInt start = (section == 0) ? randomStart : 0;
       const HighsInt end = (section == 0) ? workCount : randomStart;
@@ -102,7 +104,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
         HighsInt iRow = workIndex[i];
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = use_edge_weight_[iRow];
+          const double myWeight = edge_weight[iRow];
           /*
           const double myMerit = myInfeas / myWeight;
           printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
@@ -143,6 +145,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   vector<pair<double, int>> setP;
   setP.reserve(chooseCHECK);
 
+  std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   if (workCount < 0) {
     // DENSE mode
     const HighsInt numRow = -workCount;
@@ -158,7 +161,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
         // Continue
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = use_edge_weight_[iRow];
+          const double myWeight = edge_weight[iRow];
           if (cutoffMerit * myWeight < myInfeas) {
             // Save
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
@@ -193,7 +196,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
         HighsInt iRow = workIndex[i];
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = use_edge_weight_[iRow];
+          const double myWeight = edge_weight[iRow];
           /*
           const double myMerit = myInfeas / myWeight;
           printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
@@ -249,6 +252,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
   for (HighsInt i = 0; i < chLimit; i++) chIndex[i] = -1;
   *chCount = 0;
 
+  std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   if (workCount < 0) {
     // DENSE mode
     const HighsInt numRow = -workCount;
@@ -262,7 +266,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
         if (work_infeasibility[iRow] > kHighsZero) {
           HighsInt iPart = workPartition[iRow];
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = use_edge_weight_[iRow];
+          const double myWeight = edge_weight[iRow];
           if (bestMerit[iPart] * myWeight < myInfeas) {
             bestMerit[iPart] = myInfeas / myWeight;
             bestIndex[iPart] = iRow;
@@ -295,7 +299,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
         if (work_infeasibility[iRow] > kHighsZero) {
           HighsInt iPart = workPartition[iRow];
           const double myInfeas = work_infeasibility[iRow];
-          const double myWeight = use_edge_weight_[iRow];
+          const double myWeight = edge_weight[iRow];
           if (bestMerit[iPart] * myWeight < myInfeas) {
             bestMerit[iPart] = myInfeas / myWeight;
             bestIndex[iPart] = iRow;
@@ -392,6 +396,7 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
 
   analysis->simplexTimerStart(UpdatePrimalClock);
 
+  std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   if (workCutoff <= 0) {
     // The regular sparse way
     for (HighsInt i = 0; i < columnCount; i++) {
@@ -408,7 +413,7 @@ void HEkkDualRHS::updateInfeasList(HVector* column) {
     for (HighsInt i = 0; i < columnCount; i++) {
       HighsInt iRow = variable_index[i];
       if (workMark[iRow] == 0) {
-        if (work_infeasibility[iRow] > use_edge_weight_[iRow] * workCutoff) {
+        if (work_infeasibility[iRow] > edge_weight[iRow] * workCutoff) {
           workIndex[workCount++] = iRow;
           workMark[iRow] = 1;
         }
@@ -455,12 +460,13 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
 
   // 2. See if it worth to try to go sparse
   //    (Many candidates, really sparse RHS)
+  std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   if (workCount > max(numRow * 0.01, 500.0) && columnDensity < 0.05) {
     HighsInt icutoff = max(workCount * 0.001, 500.0);
     double maxMerit = 0;
     for (HighsInt iRow = 0, iPut = 0; iRow < numRow; iRow++)
       if (workMark[iRow]) {
-        double myMerit = work_infeasibility[iRow] / use_edge_weight_[iRow];
+        double myMerit = work_infeasibility[iRow] / edge_weight[iRow];
         if (maxMerit < myMerit) maxMerit = myMerit;
         dwork[iPut++] = -myMerit;
       }
@@ -472,7 +478,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
     fill_n(&workMark[0], numRow, 0);
     workCount = 0;
     for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      if (work_infeasibility[iRow] >= use_edge_weight_[iRow] * workCutoff) {
+      if (work_infeasibility[iRow] >= edge_weight[iRow] * workCutoff) {
         workIndex[workCount++] = iRow;
         workMark[iRow] = 1;
       }
@@ -485,7 +491,7 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
       workCount = icutoff;
       for (HighsInt i = icutoff; i < fullCount; i++) {
         HighsInt iRow = workIndex[i];
-        if (work_infeasibility[iRow] > use_edge_weight_[iRow] * cutMerit) {
+        if (work_infeasibility[iRow] > edge_weight[iRow] * cutMerit) {
           workIndex[workCount++] = iRow;
         } else {
           workMark[iRow] = 0;
