@@ -45,6 +45,7 @@ struct FrozenBasis {
   HighsInt next_;
   ProductFormUpdate update_;
   SimplexBasis basis_;
+  std::vector<double> dual_edge_weight_;
   void clear();
 };
 

@@ -3753,12 +3753,28 @@ void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
   assert(this->status_.has_invert);
   frozen_basis_id =
       this->simplex_nla_.freeze(this->basis_, info_.col_aq_density);
+  FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
+  if (this->status_.has_dual_steepest_edge_weights) {
+    // Copy the dual edge weights
+    frozen_basis.dual_edge_weight_ = this->dual_steepest_edge_weight_;
+  } else {
+    // Clear to indicate no weights
+    frozen_basis.dual_edge_weight_.clear();
+  }
 }
 
 HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   // Check that the ID passed is valid
   const bool valid_id = this->simplex_nla_.frozenBasisIdValid(frozen_basis_id);
   if (!valid_id) return HighsStatus::kError;
+  // Copy any dual edge weights now - because the frozen basis is
+  // cleared in simplex_nla_.unfreeze
+  FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
+  if (frozen_basis.dual_edge_weight_.size()) {
+    this->dual_steepest_edge_weight_ = frozen_basis.dual_edge_weight_;
+  } else {
+    this->status_.has_dual_steepest_edge_weights = false;
+  }
   const bool will_have_invert =
       this->simplex_nla_.frozenBasisHasInvert(frozen_basis_id);
   this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
