@@ -2282,6 +2282,7 @@ HighsStatus Highs::callSolveQp() {
   instance.A.mat.index = lp.a_index_;
   instance.A.mat.value = lp.a_value_;
   instance.c.value = lp.col_cost_;
+  instance.offset = lp.offset_;
   instance.con_lo = lp.row_lower_;
   instance.con_up = lp.row_upper_;
   instance.var_lo = lp.col_lower_;
