@@ -1367,11 +1367,11 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeights(
   if (options_->highs_debug_level < kHighsDebugLevelMax)
     return HighsDebugStatus::kOk;
   std::vector<double> save_dual_steepest_edge_weight =
-      this->dual_steepest_edge_weight_;
+      this->dual_edge_weight_;
   computeDualSteepestEdgeWeights();
   HighsDebugStatus return_status = debugSteepestEdgeWeightsDifference(
       "From computed", &save_dual_steepest_edge_weight[0], 1e-3);
-  this->dual_steepest_edge_weight_ = save_dual_steepest_edge_weight;
+  this->dual_edge_weight_ = save_dual_steepest_edge_weight;
   return return_status;
 }
 
@@ -1385,7 +1385,7 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeightsDifference(
     dual_steepest_edge_weight_norm +=
         std::fabs(true_dual_steepest_edge_weight[iRow]);
     dual_steepest_edge_weight_error +=
-        std::fabs(this->dual_steepest_edge_weight_[iRow] -
+        std::fabs(this->dual_edge_weight_[iRow] -
                   true_dual_steepest_edge_weight[iRow]);
   }
   assert(dual_steepest_edge_weight_norm > 0);

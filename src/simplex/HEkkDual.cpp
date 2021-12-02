@@ -146,9 +146,8 @@ HighsStatus HEkkDual::solve() {
             highsLogDev(options.log_options, HighsLogType::kDetailed,
                         "Basis is not logical, so compute exact DSE weights\n");
             // Ensure that there is space for the weights
-            ekk_instance_.dual_steepest_edge_weight_.resize(solver_num_row);
-            ekk_instance_.scattered_dual_steepest_edge_weight_.resize(
-                solver_num_tot);
+            ekk_instance_.dual_edge_weight_.resize(solver_num_row);
+            ekk_instance_.scattered_dual_edge_weight_.resize(solver_num_tot);
             ekk_instance_.computeDualSteepestEdgeWeights();
             status.has_dual_steepest_edge_weights = true;
           }
@@ -156,9 +155,8 @@ HighsStatus HEkkDual::solve() {
           highsLogDev(
               options.log_options, HighsLogType::kDetailed,
               "solve:: Starting from B=I so unit initial DSE weights\n");
-          ekk_instance_.dual_steepest_edge_weight_.assign(solver_num_row, 1.0);
-          ekk_instance_.scattered_dual_steepest_edge_weight_.resize(
-              solver_num_tot);
+          ekk_instance_.dual_edge_weight_.assign(solver_num_row, 1.0);
+          ekk_instance_.scattered_dual_edge_weight_.resize(solver_num_tot);
           status.has_dual_steepest_edge_weights = true;
         }
       }
@@ -171,7 +169,7 @@ HighsStatus HEkkDual::solve() {
       assert(!status.has_dual_steepest_edge_weights);
     }
   }
-  dualRHS.use_edge_weight_ = &ekk_instance_.dual_steepest_edge_weight_[0];
+  dualRHS.use_edge_weight_ = &ekk_instance_.dual_edge_weight_[0];
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weight_.resize(solver_num_tot);
 
@@ -1457,7 +1455,7 @@ void HEkkDual::chooseRow() {
       double updated_edge_weight = dualRHS.use_edge_weight_[row_out];
       // Compute the weight from row_ep and over-write the updated weight
       computed_edge_weight = dualRHS.use_edge_weight_[row_out] = row_ep.norm2();
-      ekk_instance_.dual_steepest_edge_weight_[row_out] = computed_edge_weight;
+      ekk_instance_.dual_edge_weight_[row_out] = computed_edge_weight;
       // If the weight error is acceptable then break out of the
       // loop. All we worry about is accepting rows with weights
       // which are not too small, since this can make the row look
@@ -2151,12 +2149,12 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   dualRHS.updatePrimal(&col_aq, theta_primal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     const double new_pivotal_edge_weight =
-        ekk_instance_.dual_steepest_edge_weight_[row_out] /
+        ekk_instance_.dual_edge_weight_[row_out] /
         (alpha_col * alpha_col);
     const double Kai = -2 / alpha_col;
     ekk_instance_.updateDualSteepestEdgeWeights(
         &col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
-    ekk_instance_.dual_steepest_edge_weight_[row_out] = new_pivotal_edge_weight;
+    ekk_instance_.dual_edge_weight_[row_out] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
@@ -2290,7 +2288,7 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
   // Set all initial weights to 1, zero the count of iterations with
   // this Devex framework, increment the number of Devex frameworks
   // and indicate that there's no need for a new Devex framework
-  ekk_instance_.dual_steepest_edge_weight_.assign(solver_num_row, 1.0);
+  ekk_instance_.dual_edge_weight_.assign(solver_num_row, 1.0);
   num_devex_iterations = 0;
   new_devex_framework = false;
   minor_new_devex_framework = false;

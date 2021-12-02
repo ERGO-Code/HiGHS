@@ -894,10 +894,10 @@ void HEkkDual::majorUpdatePrimal() {
           if (EdWt < min_dual_steepest_edge_weight)
             EdWt = min_dual_steepest_edge_weight;
           dualRHS.use_edge_weight_[jRow] = EdWt;
-          ekk_instance_.dual_steepest_edge_weight_[jRow] = EdWt;
+          ekk_instance_.dual_edge_weight_[jRow] = EdWt;
         }
         dualRHS.use_edge_weight_[iRow] = new_pivotal_edge_weight;
-        ekk_instance_.dual_steepest_edge_weight_[iRow] =
+        ekk_instance_.dual_edge_weight_[iRow] =
             new_pivotal_edge_weight;
       } else {
         // Devex

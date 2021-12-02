@@ -440,7 +440,7 @@ void HEkkDualRHS::createArrayOfPrimalInfeasibilities() {
 
 void HEkkDualRHS::createInfeasList(double columnDensity) {
   HighsInt numRow = ekk_instance_.lp_.num_row_;
-  double* dwork = &ekk_instance_.scattered_dual_steepest_edge_weight_[0];
+  double* dwork = &ekk_instance_.scattered_dual_edge_weight_[0];
 
   // 1. Build the full list
   fill_n(&workMark[0], numRow, 0);

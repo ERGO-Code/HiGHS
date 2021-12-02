@@ -106,8 +106,8 @@ void HEkk::clearEkkDualise() {
 }
 
 void HEkk::clearEkkDualEdgeWeightData() {
-  this->dual_steepest_edge_weight_.clear();
-  this->scattered_dual_steepest_edge_weight_.clear();
+  this->dual_edge_weight_.clear();
+  this->scattered_dual_edge_weight_.clear();
 }
 
 void HEkk::clearEkkData() {
@@ -1840,8 +1840,8 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   // permutation of basicIndex
   analysis_.simplexTimerStart(PermWtClock);
   for (HighsInt i = 0; i < lp_.num_row_; i++)
-    scattered_dual_steepest_edge_weight_[basicIndex[i]] =
-        dual_steepest_edge_weight_[i];
+    scattered_dual_edge_weight_[basicIndex[i]] =
+        dual_edge_weight_[i];
   analysis_.simplexTimerStop(PermWtClock);
 
   // Call computeFactor to perform INVERT
@@ -1913,8 +1913,8 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   // basicIndex after INVERT
   analysis_.simplexTimerStart(PermWtClock);
   for (HighsInt i = 0; i < lp_.num_row_; i++)
-    dual_steepest_edge_weight_[i] =
-        scattered_dual_steepest_edge_weight_[basicIndex[i]];
+    dual_edge_weight_[i] =
+        scattered_dual_edge_weight_[basicIndex[i]];
   analysis_.simplexTimerStop(PermWtClock);
   return true;
 }
@@ -1927,7 +1927,7 @@ bool HEkk::getBacktrackingBasis() {
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++)
-    scattered_dual_steepest_edge_weight_[iVar] =
+    scattered_dual_edge_weight_[iVar] =
         info_.backtracking_basis_edge_weight_[iVar];
   return true;
 }
@@ -1936,8 +1936,8 @@ void HEkk::putBacktrackingBasis() {
   const vector<HighsInt>& basicIndex = basis_.basicIndex_;
   analysis_.simplexTimerStart(PermWtClock);
   for (HighsInt i = 0; i < lp_.num_row_; i++)
-    scattered_dual_steepest_edge_weight_[basicIndex[i]] =
-        dual_steepest_edge_weight_[i];
+    scattered_dual_edge_weight_[basicIndex[i]] =
+        dual_edge_weight_[i];
   analysis_.simplexTimerStop(PermWtClock);
   putBacktrackingBasis(basicIndex);
 }
@@ -1954,7 +1954,7 @@ void HEkk::putBacktrackingBasis(
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++)
     info_.backtracking_basis_edge_weight_[iVar] =
-        scattered_dual_steepest_edge_weight_[iVar];
+        scattered_dual_edge_weight_[iVar];
 }
 
 void HEkk::computePrimalObjectiveValue() {
@@ -2099,7 +2099,7 @@ void HEkk::computeDualSteepestEdgeWeights() {
   const HighsInt num_row = lp_.num_row_;
   HVector row_ep;
   row_ep.setup(num_row);
-  assert(dual_steepest_edge_weight_.size() >= num_row);
+  assert(dual_edge_weight_.size() >= num_row);
   for (HighsInt i = 0; i < num_row; i++) {
     row_ep.clear();
     row_ep.count = 1;
@@ -2110,7 +2110,7 @@ void HEkk::computeDualSteepestEdgeWeights() {
                        analysis_.pointer_serial_factor_clocks);
     const double local_row_ep_density = (double)row_ep.count / num_row;
     updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
-    dual_steepest_edge_weight_[i] = row_ep.norm2();
+    dual_edge_weight_[i] = row_ep.norm2();
   }
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStop(SimplexIzDseWtClock);
@@ -2133,25 +2133,25 @@ void HEkk::updateDualSteepestEdgeWeights(
   const HighsInt* variable_index = &column->index[0];
   const double* column_array = &column->array[0];
 
-  if ((HighsInt)dual_steepest_edge_weight_.size() < num_row) {
+  if ((HighsInt)dual_edge_weight_.size() < num_row) {
     printf(
         "HEkk::updateDualSteepestEdgeWeights solve %d: "
-        "dual_steepest_edge_weight_.size() = %d < %d\n",
-        (int)debug_solve_call_num_, (int)dual_steepest_edge_weight_.size(),
+        "dual_edge_weight_.size() = %d < %d\n",
+        (int)debug_solve_call_num_, (int)dual_edge_weight_.size(),
         (int)num_row);
     fflush(stdout);
   }
-  assert(dual_steepest_edge_weight_.size() >= num_row);
+  assert(dual_edge_weight_.size() >= num_row);
   HighsInt to_entry;
   const bool use_row_indices = sparseLoopStyle(column_count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
     const double aa_iRow = column_array[iRow];
-    dual_steepest_edge_weight_[iRow] +=
+    dual_edge_weight_[iRow] +=
         aa_iRow * (new_pivotal_edge_weight * aa_iRow +
                    Kai * dual_steepest_edge_array[iRow]);
-    dual_steepest_edge_weight_[iRow] =
-        std::max(minDualSteepestEdgeWeight, dual_steepest_edge_weight_[iRow]);
+    dual_edge_weight_[iRow] =
+        std::max(minDualSteepestEdgeWeight, dual_edge_weight_[iRow]);
   }
   analysis_.simplexTimerStop(DseUpdateWeightClock);
 }
@@ -2166,22 +2166,22 @@ void HEkk::updateDualDevexWeights(const HVector* column,
   const HighsInt* variable_index = &column->index[0];
   const double* column_array = &column->array[0];
 
-  if ((HighsInt)dual_steepest_edge_weight_.size() < num_row) {
+  if ((HighsInt)dual_edge_weight_.size() < num_row) {
     printf(
         "HEkk::updateDualDevexWeights solve %d: "
-        "dual_steepest_edge_weight_.size() = %d < %d\n",
-        (int)debug_solve_call_num_, (int)dual_steepest_edge_weight_.size(),
+        "dual_edge_weight_.size() = %d < %d\n",
+        (int)debug_solve_call_num_, (int)dual_edge_weight_.size(),
         (int)num_row);
     fflush(stdout);
   }
-  assert(dual_steepest_edge_weight_.size() >= num_row);
+  assert(dual_edge_weight_.size() >= num_row);
   HighsInt to_entry;
   const bool use_row_indices = sparseLoopStyle(column_count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
     const double aa_iRow = column_array[iRow];
-    dual_steepest_edge_weight_[iRow] =
-        max(dual_steepest_edge_weight_[iRow],
+    dual_edge_weight_[iRow] =
+        max(dual_edge_weight_[iRow],
             new_pivotal_edge_weight * aa_iRow * aa_iRow);
   }
   analysis_.simplexTimerStop(DevexUpdateWeightClock);
@@ -3765,7 +3765,7 @@ void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
   FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
   if (this->status_.has_dual_steepest_edge_weights) {
     // Copy the dual edge weights
-    frozen_basis.dual_edge_weight_ = this->dual_steepest_edge_weight_;
+    frozen_basis.dual_edge_weight_ = this->dual_edge_weight_;
   } else {
     // Clear to indicate no weights
     frozen_basis.dual_edge_weight_.clear();
@@ -3780,7 +3780,7 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   // cleared in simplex_nla_.unfreeze
   FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
   if (frozen_basis.dual_edge_weight_.size()) {
-    this->dual_steepest_edge_weight_ = frozen_basis.dual_edge_weight_;
+    this->dual_edge_weight_ = frozen_basis.dual_edge_weight_;
   } else {
     this->status_.has_dual_steepest_edge_weights = false;
   }

@@ -351,8 +351,8 @@ void HEkkPrimal::initialiseSolve() {
     // assigned since they are used around factorization and when
     // seeting up the backtracking information. ToDo Eliminate this
     // opacity
-    ekk_instance_.dual_steepest_edge_weight_.assign(num_row, 1.0);
-    ekk_instance_.scattered_dual_steepest_edge_weight_.resize(num_tot);
+    ekk_instance_.dual_edge_weight_.assign(num_row, 1.0);
+    ekk_instance_.scattered_dual_edge_weight_.resize(num_tot);
   }
   resetDevex();
 }

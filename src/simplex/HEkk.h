@@ -139,8 +139,8 @@ class HEkk {
   SimplexBasis basis_;
   HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
-  std::vector<double> dual_steepest_edge_weight_;
-  std::vector<double> scattered_dual_steepest_edge_weight_;
+  std::vector<double> dual_edge_weight_;
+  std::vector<double> scattered_dual_edge_weight_;
 
   bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
