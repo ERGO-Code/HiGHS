@@ -85,6 +85,9 @@ class HEkkPrimal {
 
   void resetDevex();
   void updateDevex();
+  void updateDualSteepestEdgeWeights();
+  void updateFtranDSE(HVector& DSE_vector);
+
   void updateVerify();
 
   void iterationAnalysisData();
@@ -166,6 +169,7 @@ class HEkkPrimal {
   HVector col_aq;
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
+  HVector col_DSE;
 
   const HighsInt primal_correction_strategy =
       kSimplexPrimalCorrectionStrategyAlways;

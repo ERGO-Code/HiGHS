@@ -310,6 +310,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         //    if (status.has_basis || basis.valid) {
         // ToDo Track whether steepest edge weights are known &&
         // !status.has_dual_steepest_edge_weights) {
+	if (status.has_dual_steepest_edge_weights) {
+	  printf("HApp.h: Solving unscaled LP with dual simplex after solving scaled LP."
+		 " Using Devex despite having dual steepest edge weights\n");fflush(stdout);
+	  assert(909==0);
+	}
         ekk_info.dual_edge_weight_strategy =
             kSimplexDualEdgeWeightStrategyDevex;
         // options.dual_simplex_cost_perturbation_multiplier = 0;

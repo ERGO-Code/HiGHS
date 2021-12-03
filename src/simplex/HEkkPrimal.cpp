@@ -21,8 +21,13 @@
 #include "util/HighsSort.h"
 
 HighsStatus HEkkPrimal::solve() {
+  if (ekk_instance_.status_.has_dual_steepest_edge_weights) {
+    printf("HEkkPrimal::solve have dual steepest edge weights\n");fflush(stdout);
+  }
   // Initialise control data for a particular solve
   initialiseSolve();
+  ekk_instance_.dual_edge_weight_.assign(num_row, 1.0);
+  ekk_instance_.status_.has_dual_steepest_edge_weights = true;
 
   // Assumes that the LP has a positive number of rows
   if (ekk_instance_.isUnconstrainedLp())
@@ -296,6 +301,7 @@ void HEkkPrimal::initialiseInstance() {
   row_ap.setup(num_col);
   col_basic_feasibility_change.setup(num_row);
   row_basic_feasibility_change.setup(num_col);
+  col_DSE.setup(num_row);
 
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
@@ -830,7 +836,7 @@ void HEkkPrimal::iterate() {
   // set in updateFactor() if it is considered to be more efficient to
   // reinvert.
   update();
-  // Crude way to force rebuild if there are no infeasibilities in phase 1
+  // Force rebuild if there are no infeasibilities in phase 1
   if (!ekk_instance_.info_.num_primal_infeasibilities &&
       solve_phase == kSolvePhase1)
     rebuild_reason = kRebuildReasonPossiblyPhase1Feasible;
@@ -1405,6 +1411,10 @@ void HEkkPrimal::update() {
   // just changed
   hyperChooseColumnDualChange();
 
+  if (ekk_instance_.status_.has_dual_steepest_edge_weights) {
+    ekk_instance_.devDebugSteepestEdgeWeights("before update");
+    updateDualSteepestEdgeWeights();
+  }
   // Perform pivoting
   //
   // Transform the vectors used in updateFactor if the simplex NLA involves
@@ -1416,6 +1426,9 @@ void HEkkPrimal::update() {
   //
   // Update the invertible representation of the basis matrix
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
+
+  if (ekk_instance_.status_.has_dual_steepest_edge_weights) 
+    ekk_instance_.devDebugSteepestEdgeWeights("after  update");
   //
   // Update the row-wise representation of the nonbasic columns
   ekk_instance_.updateMatrix(variable_in, variable_out);
@@ -2237,12 +2250,38 @@ void HEkkPrimal::updateDevex() {
       devex_weight[iCol] = devex;
     }
   }
-
   // Update devex weight for the pivots
   devex_weight[variable_out] = max(1.0, dPivotWeight);
   devex_weight[variable_in] = 1.0;
   num_devex_iterations++;
   analysis->simplexTimerStop(DevexUpdateWeightClock);
+}
+
+void HEkkPrimal::updateDualSteepestEdgeWeights() {
+  col_DSE.copy(&row_ep);
+  updateFtranDSE(col_DSE);
+  std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
+  const double new_pivotal_edge_weight =
+    edge_weight[row_out] / (alpha_col * alpha_col);
+  const double Kai = -2 / alpha_col;
+  ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight, Kai, &col_DSE.array[0]);
+  edge_weight[row_out] = new_pivotal_edge_weight;
+}
+
+void HEkkPrimal::updateFtranDSE(HVector& col_DSE) {
+  analysis->simplexTimerStart(FtranDseClock);
+  if (analysis->analyse_simplex_summary_data)
+    analysis->operationRecordBefore(kSimplexNlaFtranDse, col_DSE,
+                                    ekk_instance_.info_.row_DSE_density);
+  // Perform FTRAN DSE
+  ekk_instance_.simplex_nla_.ftran(col_DSE, ekk_instance_.info_.row_DSE_density,
+                     analysis->pointer_serial_factor_clocks);
+  if (analysis->analyse_simplex_summary_data)
+    analysis->operationRecordAfter(kSimplexNlaFtranDse, col_DSE);
+  analysis->simplexTimerStop(FtranDseClock);
+  const double local_row_DSE_density = (1.0 * col_DSE.count) / num_row;
+  ekk_instance_.updateOperationResultDensity(
+      local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
 }
 
 void HEkkPrimal::updateVerify() {

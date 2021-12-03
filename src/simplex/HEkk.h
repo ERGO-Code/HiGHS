@@ -218,6 +218,7 @@ class HEkk {
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
   void computeDualSteepestEdgeWeights();
+  double computeDualSteepestEdgeWeight(const HighsInt iRow, HVector& row_ep);
   void updateDualSteepestEdgeWeights(const HVector* column,
                                      const double new_pivotal_edge_weight,
                                      const double Kai,
@@ -335,6 +336,7 @@ class HEkk {
   HighsDebugStatus debugNonbasicFreeColumnSet(
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
+  HighsDebugStatus devDebugSteepestEdgeWeights(const std::string message);
   HighsDebugStatus debugSteepestEdgeWeights(
       const HighsInt alt_debug_level = -1);
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,

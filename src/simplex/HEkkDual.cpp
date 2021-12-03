@@ -108,16 +108,7 @@ HighsStatus HEkkDual::solve() {
     // Dual steepest edge weights are known, so possibly check
     assert(ekk_instance_.dual_edge_weight_.size() >= solver_num_row);
     assert(ekk_instance_.scattered_dual_edge_weight_.size() >= solver_num_tot);
-    // Possibly force the expensive check for development work
-    const bool check_dual_edge_weights = false;
-    const HighsInt alt_debug_level = check_dual_edge_weights
-                                         ? (HighsInt)kHighsDebugLevelExpensive
-                                         : options.highs_debug_level;
-    if (check_dual_edge_weights)
-      printf(
-          "\n!! Performing expensive check for dual steepest edge weights "
-          "!!\n\n");
-    ekk_instance_.debugSteepestEdgeWeights(alt_debug_level);
+    ekk_instance_.devDebugSteepestEdgeWeights("before solve");
   } else {
     // Set up edge weights
     //
