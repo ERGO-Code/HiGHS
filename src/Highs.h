@@ -268,7 +268,8 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
-   * @brief Sets the basis to the supplied hot start basis
+   * @brief Gets the hot start basis data from the most recent simplex
+   * solve. Advanced method: for HiGHS MIP solver
    */
   const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
 
@@ -890,24 +891,27 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Sets the basis to the supplied hot start basis
+   * @brief Sets up for simpelx using the supplied hot start
+   * data. Advanced method: for HiGHS MIP solver
    */
   HighsStatus setHotStart(const HotStart& hot_start);
 
   /**
    * @brief Freezes the current basis and standard NLA, returning a
    * value to be used to recover this basis and standard NLA at
-   * minimal cost
+   * minimal cost. Advanced method: for HiGHS MIP solver
    */
   HighsStatus freezeBasis(HighsInt& frozen_basis_id);
 
   /**
-   * @brief Unfreeze a frozen basis and standard NLA (if possible)
+   * @brief Unfreeze a frozen basis and standard NLA (if
+   * possible). Advanced method: for HiGHS MIP solver
    */
   HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
 
   /**
-   * @brief Checks that all frozen basis data has been cleared
+   * @brief Checks that all frozen basis data has been
+   * cleared. Advanced method: for HiGHS MIP solver
    */
   HighsStatus frozenBasisAllDataClear() {
     return ekk_instance_.frozenBasisAllDataClear();
