@@ -206,9 +206,19 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Vector buffer_d(runtime.instance.num_var);
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
-  while (true &&
-         runtime.statistics.num_iterations < runtime.settings.iterationlimit &&
-         runtime.timer.readRunHighsClock() < runtime.settings.timelimit) {
+  while (true) {
+    // check iteration limit
+    if (runtime.statistics.num_iterations >= runtime.settings.iterationlimit) {
+      runtime.status = ProblemStatus::ITERATIONLIMIT;
+      break;
+    }
+
+    // check time limit
+    if (runtime.timer.readRunHighsClock() >= runtime.settings.timelimit) {
+      runtime.status = ProblemStatus::TIMELIMIT;
+      break;
+    }
+
     // LOGGING
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==

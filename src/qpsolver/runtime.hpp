@@ -7,7 +7,7 @@
 #include "statistics.hpp"
 #include "HighsTimer.h"
 
-enum class ProblemStatus { INDETERMINED, OPTIMAL, UNBOUNDED, INFEASIBLE };
+enum class ProblemStatus { INDETERMINED, OPTIMAL, UNBOUNDED, INFEASIBLE, ITERATIONLIMIT, TIMELIMIT };
 
 struct Runtime {
   Instance instance;
