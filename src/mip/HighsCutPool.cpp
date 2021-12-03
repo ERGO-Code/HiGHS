@@ -134,9 +134,9 @@ void HighsCutPool::performAging() {
   HighsInt cutIndexEnd = matrix_.getNumRows();
 
   HighsInt agelim = agelim_;
-  HighsInt numActiveCuts = getNumCuts() - numLpCuts;
-  while (agelim > 5 && numActiveCuts > softlimit_) {
-    numActiveCuts -= ageDistribution[agelim];
+  HighsInt numAvailableCuts = getNumAvailableCuts();
+  while (agelim > 5 && numAvailableCuts > softlimit_) {
+    numAvailableCuts -= ageDistribution[agelim];
     --agelim;
   }
 

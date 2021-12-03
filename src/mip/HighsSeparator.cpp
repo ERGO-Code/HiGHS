@@ -28,7 +28,7 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
                          HighsLpAggregator& lpAggregator,
                          HighsTransformedLp& transLp, HighsCutPool& cutpool) {
   ++numCalls;
-  std::size_t currNumCuts = cutpool.getNumCuts();
+  HighsInt currNumCuts = cutpool.getNumCuts();
 
   lpRelaxation.getMipSolver().timer_.start(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);
