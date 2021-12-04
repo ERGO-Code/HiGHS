@@ -144,13 +144,13 @@ class HighsCutPool {
     return matrix_.getNumRows() - matrix_.getNumDelRows();
   }
 
-  HighsInt getNumAvailableCuts() const {
-    return getNumCuts() - numLpCuts;
-  }
+  HighsInt getNumAvailableCuts() const { return getNumCuts() - numLpCuts; }
 
   double getMaxAbsCutCoef(HighsInt cut) const { return maxabscoef_[cut]; }
 
-  double getRowNormalization(HighsInt cut) const { return rownormalization_[cut]; }
+  double getRowNormalization(HighsInt cut) const {
+    return rownormalization_[cut];
+  }
 
   HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                   double* Rvalue, HighsInt Rlen, double rhs,

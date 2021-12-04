@@ -100,9 +100,10 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   //  maxTries = std::min(maxTries, int64_t{1000});
 
   if (fractionalBasisvars.size() > maxTries) {
-    // todo check for edge weights from simplex to prioritize
-    const double* edgeWt = nullptr;// lpRelaxation.getLpSolver().getEdgeWeights();
+    const double* edgeWt = lpRelaxation.getLpSolver().getDualEdgeWeights();
     if (edgeWt) {
+      // printf("choosing %ld/%zu with DSE weights\n", maxTries,
+      // fractionalBasisvars.size());
       pdqsort(
           fractionalBasisvars.begin(), fractionalBasisvars.end(),
           [&](const FractionalInteger& fracint1,
@@ -119,6 +120,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                               numTries + fracint2.basisIndex));
           });
     } else {
+      // printf("choosing %ld/%zu without DSE weights\n", maxTries,
+      // fractionalBasisvars.size());
       pdqsort(
           fractionalBasisvars.begin(), fractionalBasisvars.end(),
           [&](const FractionalInteger& fracint1,

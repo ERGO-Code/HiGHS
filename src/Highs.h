@@ -1067,6 +1067,10 @@ class Highs {
   void deprecationMessage(const std::string method_name,
                           const std::string alt_method_name) const;
 
+  const double* getDualEdgeWeights() const {
+    if (ekk_instance_.dual_edge_weight_.empty()) return nullptr;
+    return ekk_instance_.dual_edge_weight_.data();
+  }
   // End of deprecated methods
  private:
   HighsSolution solution_;
