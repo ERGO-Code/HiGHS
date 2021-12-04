@@ -490,7 +490,7 @@ void reportIpmNoProgress(const HighsOptions& options,
                ipx_info.abs_dresidual);
 }
 
-void getHighsNonVertexSolution(const HighsLogOptions& log_options,
+void getHighsNonVertexSolution(const HighsOptions& options,
                                const HighsLp& lp, const ipx::Int num_col,
                                const ipx::Int num_row,
                                const std::vector<double>& rhs,
@@ -512,8 +512,8 @@ void getHighsNonVertexSolution(const HighsLogOptions& log_options,
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
 
-  ipxSolutionToHighsSolution(log_options, lp, rhs, constraint_type, num_col,
-                             num_row, x, slack, highs_solution);
+  ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
+                             num_row, x, slack, y, zl, zu, highs_solution);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
@@ -669,8 +669,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (solve_status == IPX_STATUS_stopped) {
     // IPX stopped, so there's certainly no basic solution. Get the
     // non-vertex solution, though.
-    //    assert(0==1);
-    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
+    assert(0==1);
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
     //
     // Look at the reason why IPX stopped
@@ -743,8 +743,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
       model_status = HighsModelStatus::kUnboundedOrInfeasible;
     }
-    //    assert(0==2);
-    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
+    assert(0==2);
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
     return HighsStatus::kOk;
   }
@@ -795,8 +795,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
-    //    assert(0==3);
-    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
     assert(!highs_basis.valid);
   }

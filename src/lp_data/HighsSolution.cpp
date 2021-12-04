@@ -459,23 +459,25 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
 }
 
 #ifdef IPX_ON
-HighsStatus ipxSolutionToHighsSolution(
-    const HighsLogOptions& log_options, const HighsLp& lp,
-    const std::vector<double>& rhs, const std::vector<char>& constraint_type,
-    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
-    const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
-    // const std::vector<double>& ipx_y,
-    HighsSolution& highs_solution) {
+HighsStatus ipxSolutionToHighsSolution(const HighsOptions& options,
+				       const HighsLp& lp,
+				       const std::vector<double>& rhs,
+				       const std::vector<char>& constraint_type,
+				       const HighsInt ipx_num_col, const HighsInt ipx_num_row,
+				       const std::vector<double>& ipx_x,
+				       const std::vector<double>& ipx_slack_vars,
+				       const std::vector<double>& ipx_y,
+				       const std::vector<double>& ipx_zl,
+				       const std::vector<double>& ipx_zu,
+				       HighsSolution& highs_solution) {
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
-  // No dual solution is deduced - ToDo why not? - but still ensure
-  // that it is the correct size and assigned
-  //  highs_solution.col_dual.assign(lp.num_col_, 0);
-  //  highs_solution.row_dual.assign(lp.num_row_, 0);
-  // However, ensure that it is recorded as being invalid
-  //  highs_solution.dual_valid = false;
+  highs_solution.col_dual.resize(lp.num_col_);
+  highs_solution.row_dual.resize(lp.num_row_);
 
+  const double primal_feasiblility_tolerance = options.primal_feasibility_tolerance;
+  const double dual_feasiblility_tolerance = options.dual_feasibility_tolerance;
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;
   //  const std::vector<double>& ipx_col_dual = ipx_x;
@@ -497,6 +499,17 @@ HighsStatus ipxSolutionToHighsSolution(
             highs_solution.col_value[col] * lp.a_matrix_.value_[el];
       }
     }
+    // Now for the dual values
+    double lower_dual = std::fabs(ipx_zl[col]) > dual_feasiblility_tolerance ? ipx_zl[col] : 0;
+    double upper_dual = std::fabs(ipx_zu[col]) > dual_feasiblility_tolerance ? -ipx_zu[col] : 0;
+    printf("Column %2d: [%11.4g, %11.4g, %11.4g] duals [%11.4g, %11.4g]\n",
+	   (int)col, lp.col_lower_[col], ipx_col_value[col], lp.col_upper_[col],
+	   lower_dual, upper_dual); fflush(stdout);
+    // Should have one dual value being zero
+    assert(lower_dual * upper_dual == 0);
+    assert(lower_dual >= 0);
+    assert(upper_dual <= 0);
+    highs_solution.col_dual[col] = ipx_zl[col] - ipx_zu[col];
   }
   HighsInt ipx_row = 0;
   HighsInt ipx_slack = lp.num_col_;
@@ -507,6 +520,7 @@ HighsStatus ipxSolutionToHighsSolution(
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
       highs_solution.row_value[row] = row_activity[row];
+      highs_solution.row_dual[row] = 0;
     } else {
       // Non-free row, so IPX will have it
       if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
@@ -518,23 +532,31 @@ HighsStatus ipxSolutionToHighsSolution(
       } else {
         highs_solution.row_value[row] = rhs[ipx_row] - ipx_row_value[ipx_row];
       }
+      // Now for the dual values
+      double row_dual = std::fabs(ipx_y[ipx_row]) > dual_feasiblility_tolerance ? ipx_y[ipx_row] : 0;
+      printf("Row %2d: [%11.4g, %11.4g, %11.4g] dual %11.4g\n",
+	     (int)row, lp.row_lower_[row], ipx_row_value[row], lp.row_upper_[row],
+	     row_dual); fflush(stdout);
+      highs_solution.row_dual[row] = row_dual;      
       // Update the IPX row index
       ipx_row++;
     }
   }
   assert(ipx_row == ipx_num_row);
   assert(ipx_slack == ipx_num_col);
-  // Indicate that the primal, but not dual solution is known
+  // Indicate that the primal and dual solution are known
   highs_solution.value_valid = true;
-  highs_solution.dual_valid = false;
+  highs_solution.dual_valid = true;
   return HighsStatus::kOk;
 }
 
-HighsStatus ipxBasicSolutionToHighsBasicSolution(
-    const HighsLogOptions& log_options, const HighsLp& lp,
-    const std::vector<double>& rhs, const std::vector<char>& constraint_type,
-    const IpxSolution& ipx_solution, HighsBasis& highs_basis,
-    HighsSolution& highs_solution) {
+HighsStatus ipxBasicSolutionToHighsBasicSolution(const HighsLogOptions& log_options,
+						 const HighsLp& lp,
+						 const std::vector<double>& rhs,
+						 const std::vector<char>& constraint_type,
+						 const IpxSolution& ipx_solution,
+						 HighsBasis& highs_basis,
+						 HighsSolution& highs_solution) {
   // Resize the HighsSolution and HighsBasis
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
