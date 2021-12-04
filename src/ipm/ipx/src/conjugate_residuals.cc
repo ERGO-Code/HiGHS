@@ -12,7 +12,6 @@ ConjugateResiduals::ConjugateResiduals(const Control& control) :
 void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
                               double tol, const double* resscale, Int maxiter,
                               Vector& lhs) {
-    timer_->start(timer_->cr_solve_basis_aux_clock_);
     const Int m = rhs.size();
     Vector residual(m);  // rhs - C*lhs
     Vector step(m);      // update to lhs
@@ -27,20 +26,14 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
     if (maxiter < 0)
         maxiter = m+100;
 
-    timer_->stop(timer_->cr_solve_basis_aux_clock_);
     // Initialize residual, step and Cstep.
     if (Infnorm(lhs) == 0.0) {
         residual = rhs;         // saves a matrix-vector op
     } else {
-        timer_->start(timer_->cr_solve_basis_apply_clock_);
         C.Apply(lhs, residual, nullptr);
-        timer_->stop(timer_->cr_solve_basis_apply_clock_);
         residual = rhs-residual;
     }
-    timer_->start(timer_->cr_solve_basis_apply_clock_);
     C.Apply(residual, Cresidual, &cdot);
-    timer_->stop(timer_->cr_solve_basis_apply_clock_);
-    timer_->start(timer_->cr_solve_basis_aux_clock_);
     step = residual;
     Cstep = Cresidual;
 
@@ -77,11 +70,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
         lhs += alpha*step;
         residual -= alpha*Cstep;
         double cdotnew;
-	timer_->stop(timer_->cr_solve_basis_aux_clock_);
-        timer_->start(timer_->cr_solve_basis_apply_clock_);
         C.Apply(residual, Cresidual, &cdotnew);
-        timer_->stop(timer_->cr_solve_basis_apply_clock_);
-	timer_->start(timer_->cr_solve_basis_aux_clock_);
 
         // Update step and Cstep.
         const double beta = cdotnew/cdot;
@@ -93,7 +82,6 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
         if ((errflag_ = control_.InterruptCheck()) != 0)
             break;
     }
-    timer_->stop(timer_->cr_solve_basis_aux_clock_);
     time_ = timer.Elapsed();
 }
 
@@ -128,17 +116,11 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
     if (Infnorm(lhs) == 0.0) {
         residual = rhs;         // saves a matrix-vector op
     } else {
-        timer_->start(timer_->cr_p_solve_basis_apply_c_clock_);
         C.Apply(lhs, residual, nullptr);
-        timer_->stop(timer_->cr_p_solve_basis_apply_c_clock_);
         residual = rhs-residual;
     }
-    timer_->start(timer_->cr_p_solve_basis_apply_p_clock_);
     P.Apply(residual, sresidual, &resnorm_precond_system);
-    timer_->stop(timer_->cr_p_solve_basis_apply_p_clock_);
-    timer_->start(timer_->cr_p_solve_basis_apply_c_clock_);
     C.Apply(sresidual, Csresidual, &cdot);
-    timer_->stop(timer_->cr_p_solve_basis_apply_c_clock_);
     step = sresidual;
     Cstep = Csresidual;
 
@@ -176,9 +158,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
             // Uses Csresidual as storage for preconditioned Cstep.
             Vector& precond_Cstep = Csresidual;
             double pdot;
-	    timer_->start(timer_->cr_p_solve_basis_apply_p_clock_);
             P.Apply(Cstep, precond_Cstep, &pdot);
-	    timer_->stop(timer_->cr_p_solve_basis_apply_p_clock_);
            if (pdot <= 0.0) {
                 errflag_ = IPX_ERROR_cr_precond_not_posdef;
                 break;
@@ -191,9 +171,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
             lhs += alpha*step;
             residual -= alpha*Cstep;
             sresidual -= alpha*precond_Cstep;
-	    timer_->start(timer_->cr_p_solve_basis_apply_c_clock_);
             C.Apply(sresidual, Csresidual, &cdotnew);
-	    timer_->stop(timer_->cr_p_solve_basis_apply_c_clock_);
             // Now Csresidual is restored and alias goes out of scope.
         }
 
@@ -213,9 +191,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
             // As a second safeguard, we check that resnorm_precond_system
             // decreased during the last 5 iterations.
             double rsdot;
-	    timer_->start(timer_->cr_p_solve_basis_apply_p_clock_);
             P.Apply(residual, sresidual, &rsdot);
-	    timer_->stop(timer_->cr_p_solve_basis_apply_p_clock_);
             if (rsdot >= resnorm_precond_system) {
                 control_.Debug(3)
                     << " resnorm_precond_system old = "

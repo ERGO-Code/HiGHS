@@ -3,7 +3,6 @@
 
 #include "control.h"
 #include "kkt_solver.h"
-#include "ipx_timer.h"
 #include "iterate.h"
 
 namespace ipx {
@@ -38,7 +37,6 @@ public:
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int i) { maxiter_ = i; }
-    void passTimer(IpxTimer* timer) {timer_ = timer;}
 
 private:
     struct Step;
@@ -68,7 +66,6 @@ private:
     KKTSolver* kkt_{nullptr};
     Iterate* iterate_{nullptr};
     Info* info_{nullptr};
-    IpxTimer* timer_;
  
     double step_primal_{0.0}, step_dual_{0.0};
     // Counts the # bad iterations since the last good iteration. An iteration

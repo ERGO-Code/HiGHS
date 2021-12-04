@@ -64,24 +64,16 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         }
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
-	timer_->start(timer_->ipm_driver_factorize_clock_);
         kkt->Factorize(iterate, info);
-	timer_->stop(timer_->ipm_driver_factorize_clock_);
         if (info->errflag)
             break;
-	timer_->start(timer_->ipm_driver_predictor_clock_);
         Predictor(step);
-	timer_->stop(timer_->ipm_driver_predictor_clock_);
         if (info->errflag)
             break;
-	timer_->start(timer_->ipm_driver_corrector_clock_);
         AddCorrector(step);
-	timer_->stop(timer_->ipm_driver_corrector_clock_);
         if (info->errflag)
             break;
-	timer_->start(timer_->ipm_driver_step_clock_);
         MakeStep(step);
-	timer_->stop(timer_->ipm_driver_step_clock_);
         info->iter++;
         PrintOutput();
     }
@@ -282,11 +274,9 @@ void IPM::Predictor(Step& step) {
             su[j] = 0.0;
     assert(AllFinite(su));
 
-    timer_->start(timer_->predictor_solve_newton_clock_);
     SolveNewtonSystem(&iterate_->rb()[0], &iterate_->rc()[0],
                       &iterate_->rl()[0], &iterate_->ru()[0], &sl[0], &su[0],
                       step);
-    timer_->stop(timer_->predictor_solve_newton_clock_);
 }
 
 void IPM::AddCorrector(Step& step) {
@@ -349,11 +339,9 @@ void IPM::AddCorrector(Step& step) {
             su[j] = 0.0;
     assert(AllFinite(su));
 
-    timer_->start(timer_->corrector_solve_newton_clock_);
     SolveNewtonSystem(&iterate_->rb()[0], &iterate_->rc()[0],
                       &iterate_->rl()[0], &iterate_->ru()[0], &sl[0], &su[0],
                       step);
-    timer_->stop(timer_->corrector_solve_newton_clock_);
 }
 
 void IPM::StepSizes(const Step& step) {
@@ -490,9 +478,7 @@ void IPM::SolveNewtonSystem(const double* rb, const double* rc,
 
     // Solve KKT system.
     double tol =  control_.kkt_tol() * std::sqrt(iterate_->mu());
-    timer_->start(timer_->kkt_solve_clock_);
     kkt_->Solve(rhs1, rhs2, tol, dx, dy, info_);
-    timer_->stop(timer_->kkt_solve_clock_);
     if (info_->errflag)
         return;
 

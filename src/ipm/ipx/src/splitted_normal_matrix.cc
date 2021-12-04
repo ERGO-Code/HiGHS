@@ -87,41 +87,31 @@ void SplittedNormalMatrix::reset_time() {
 
 void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
                                   double* rhs_dot_lhs) {
-    timer_->start(timer_->splitted_normal_matrix_clock_);
     assert(prepared_);
     Timer timer;
 
     // Compute work = inverse(B') * rhs.
     work_ = rhs;
     timer.Reset();
-    timer_->start(timer_->splitted_normal_matrix_btran_clock_);
     BackwardSolve(L_, U_, work_);
-    timer_->stop(timer_->splitted_normal_matrix_btran_clock_);
     time_Bt_ += timer.Elapsed();
 
     // Compute lhs = N*N' * work.
     lhs = 0.0;
     timer.Reset();
-    timer_->start(timer_->splitted_normal_matrix_nnt_clock_);
     AddNormalProduct(N_, nullptr, work_, lhs);
-    timer_->stop(timer_->splitted_normal_matrix_nnt_clock_);
     time_NNt_ += timer.Elapsed();
 
     // Compute lhs := inverse(B) * lhs.
     timer.Reset();
-    timer_->start(timer_->splitted_normal_matrix_ftran_clock_);
     ForwardSolve(L_, U_, lhs);
-    timer_->stop(timer_->splitted_normal_matrix_ftran_clock_);
     time_B_ += timer.Elapsed();
 
-    timer_->start(timer_->splitted_normal_matrix_aux_clock_);
     lhs += rhs;
     for (Int i : free_positions_)
         lhs[i] = 0.0;
     if (rhs_dot_lhs)
         *rhs_dot_lhs = Dot(rhs,lhs);
-    timer_->stop(timer_->splitted_normal_matrix_aux_clock_);
-    timer_->stop(timer_->splitted_normal_matrix_clock_);
 }
 
 }  // namespace ipx

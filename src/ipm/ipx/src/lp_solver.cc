@@ -55,21 +55,13 @@ Int LpSolver::Solve() {
     control_.OpenLogfile();
     control_.Log() << "IPX version 1.0\n";
     const bool use_timer = control_.useTimer();
-    timer_.setup(use_timer);
-    timer_.start(timer_.ipx_solve_clock_);
     try {
-        timer_.start(timer_.ipm_solve_clock_);
         InteriorPointSolve();
-        timer_.stop(timer_.ipm_solve_clock_);
         if ((info_.status_ipm == IPX_STATUS_optimal ||
              info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover()) {
             control_.Log() << "Crossover\n";
-	    timer_.start(timer_.start_crossover_clock_);
             BuildCrossoverStartingPoint();
-	    timer_.stop(timer_.start_crossover_clock_);
-	    timer_.start(timer_.run_crossover_clock_);
             RunCrossover();
-	    timer_.stop(timer_.run_crossover_clock_);
         }
         if (basis_) {
             info_.ftran_sparse = basis_->frac_ftran_sparse();
@@ -111,8 +103,6 @@ Int LpSolver::Solve() {
     info_.time_total = control_.Elapsed();
     control_.Debug(2) << info_;
     control_.CloseLogfile();
-    timer_.stop(timer_.ipx_solve_clock_);
-    timer_.reportOuter();
     if (control_.reportBasisData())
       basis_->reportBasisData();
     return info_.status;
@@ -370,7 +360,6 @@ void LpSolver::InteriorPointSolve() {
 
 void LpSolver::RunIPM() {
     IPM ipm(control_);
-    ipm.passTimer(&timer_);
 
     if (x_start_.size() != 0) {
         control_.Log() << " Using starting point provided by user."
@@ -379,25 +368,17 @@ void LpSolver::RunIPM() {
                              y_start_, zl_start_, zu_start_);
     }
     else {
-        timer_.start(timer_.ipm_start_point_clock_);
         ComputeStartingPoint(ipm);
-        timer_.stop(timer_.ipm_start_point_clock_);
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
-        timer_.start(timer_.ipm_run_initial_clock_);
         RunInitialIPM(ipm);
-        timer_.stop(timer_.ipm_run_initial_clock_);
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
     }
-    timer_.start(timer_.ipm_start_basis_clock_);
     BuildStartingBasis();
-    timer_.stop(timer_.ipm_start_basis_clock_);
     if (info_.status_ipm != IPX_STATUS_not_run)
         return;
-    timer_.start(timer_.ipm_run_main_clock_);
     RunMainIPM(ipm);
-    timer_.stop(timer_.ipm_run_main_clock_);
 }
 
 void LpSolver::MakeIPMStartingPointValid() {
@@ -458,7 +439,6 @@ void LpSolver::MakeIPMStartingPointValid() {
 void LpSolver::ComputeStartingPoint(IPM& ipm) {
     Timer timer;
     KKTSolverDiag kkt(control_, model_);
-    kkt.passTimer(&timer_);
 
     // If the starting point procedure fails, then iterate_ remains as
     // initialized by the constructor, which is a valid state for
@@ -470,7 +450,6 @@ void LpSolver::ComputeStartingPoint(IPM& ipm) {
 void LpSolver::RunInitialIPM(IPM& ipm) {
     Timer timer;
     KKTSolverDiag kkt(control_, model_);
-    kkt.passTimer(&timer_);
 
     Int switchiter = control_.switchiter();
     if (switchiter < 0) {
@@ -542,7 +521,6 @@ void LpSolver::BuildStartingBasis() {
 
 void LpSolver::RunMainIPM(IPM& ipm) {
     KKTSolverBasis kkt(control_, *basis_);
-    kkt.passTimer(&timer_);
     Timer timer;
     ipm.maxiter(control_.ipm_maxiter());
     ipm.Driver(&kkt, iterate_.get(), &info_);

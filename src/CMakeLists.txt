@@ -49,7 +49,6 @@ set(ipx_sources
     ipm/ipx/src/info.cc
     ipm/ipx/src/ipm.cc
     ipm/ipx/src/ipx_c.cc
-    ipm/ipx/src/ipx_timer.cc
     ipm/ipx/src/iterate.cc
     ipm/ipx/src/kkt_solver.cc
     ipm/ipx/src/kkt_solver_basis.cc

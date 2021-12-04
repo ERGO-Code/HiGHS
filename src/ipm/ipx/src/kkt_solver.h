@@ -2,7 +2,6 @@
 #define IPX_KKT_SOLVER_H_
 
 #include "basis.h"
-#include "ipx_timer.h"
 #include "iterate.h"
 
 namespace ipx {
@@ -56,7 +55,6 @@ public:
     // If a basis matrix is maintained, returns a pointer to it.
     // Otherwise returns NULL.
     const Basis* basis() const;
-  //    IpxTimer* timer_;
 
 private:
     virtual void _Factorize(Iterate* iterate, Info* info) = 0;

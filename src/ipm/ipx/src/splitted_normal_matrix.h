@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "basis.h"
-#include "ipx_timer.h"
 #include "linear_operator.h"
 #include "model.h"
 #include "sparse_matrix.h"
@@ -41,7 +40,6 @@ public:
     double time_Bt() const;
     double time_NNt() const;
     void reset_time();
-    void passTimer(IpxTimer* timer) {timer_ = timer;}
 
 private:
     void _Apply(const Vector& rhs, Vector& lhs, double* rhs_dot_lhs) override;
@@ -58,7 +56,6 @@ private:
     double time_B_{0.0};              // time solves with B
     double time_Bt_{0.0};             // time solves with B'
     double time_NNt_{0.0};            // time matrix-vector products with NN'
-    IpxTimer* timer_;
 };
 
 }  // namespace ipx
