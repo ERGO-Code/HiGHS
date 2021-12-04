@@ -137,9 +137,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   const HighsInt dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
-      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge ||
-      dual_edge_weight_strategy ==
-          kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
+      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge) {
     // Initialise the measures used to analyse accuracy of steepest edge weights
     num_dual_steepest_edge_weight_check = 0;
     num_dual_steepest_edge_weight_reject = 0;
@@ -268,6 +266,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                 factor_pivot_threshold_distribution);
     initialiseValueDistribution("Numerical trouble summary", "", 1e-16, 1.0,
                                 10.0, numerical_trouble_distribution);
+    initialiseValueDistribution("Edge weight error summary", "", 1e-16, 1.0,
+                                10.0, edge_weight_error_distribution);
     initialiseValueDistribution("", "1 ", 1e-16, 1e16, 10.0,
                                 cost_perturbation1_distribution);
     initialiseValueDistribution("", "2 ", 1e-16, 1e16, 10.0,
@@ -690,6 +690,7 @@ void HighsSimplexAnalysis::iterationRecord() {
   // known in minor iterations
   if (numerical_trouble >= 0)
     updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
+  updateValueDistribution(edge_weight_error, edge_weight_error_distribution);
 }
 
 void HighsSimplexAnalysis::iterationRecordMajor() {
@@ -992,6 +993,7 @@ void HighsSimplexAnalysis::summaryReport() {
   logValueDistribution(log_options, simplex_pivot_distribution);
   logValueDistribution(log_options, factor_pivot_threshold_distribution);
   logValueDistribution(log_options, numerical_trouble_distribution);
+  logValueDistribution(log_options, edge_weight_error_distribution);
   logValueDistribution(log_options, cleanup_dual_change_distribution);
   logValueDistribution(log_options, cleanup_primal_step_distribution);
   logValueDistribution(log_options, cleanup_dual_step_distribution);

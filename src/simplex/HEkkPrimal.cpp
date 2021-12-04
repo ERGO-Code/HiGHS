@@ -93,6 +93,8 @@ HighsStatus HEkkPrimal::solve() {
   if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
+  // Resize the copy of scattered edge weights for backtracking
+  info.backtracking_basis_edge_weight_.resize(num_tot);
 
   // The major solving loop
   //
@@ -344,7 +346,14 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.exit_algorithm_ = SimplexAlgorithm::kPrimal;
 
   rebuild_reason = kRebuildReasonNo;
-
+  if (!ekk_instance_.status_.has_dual_steepest_edge_weights) {
+    // No dual weights to maintain, so ensure that the vectors are
+    // assigned since they are used around factorization and when
+    // seeting up the backtracking information. ToDo Eliminate this
+    // opacity
+    ekk_instance_.dual_edge_weight_.assign(num_row, 1.0);
+    ekk_instance_.scattered_dual_edge_weight_.resize(num_tot);
+  }
   resetDevex();
 }
 
@@ -2290,6 +2299,7 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_column = alpha_col;
   analysis->pivot_value_from_row = alpha_row;
   analysis->numerical_trouble = numericalTrouble;
+  analysis->edge_weight_error = ekk_instance_.edge_weight_error;
   analysis->objective_value = info.updated_primal_objective_value;
   analysis->num_primal_infeasibility = info.num_primal_infeasibilities;
   analysis->num_dual_infeasibility = info.num_dual_infeasibilities;

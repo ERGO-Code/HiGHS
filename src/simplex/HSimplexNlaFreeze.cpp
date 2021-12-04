@@ -25,6 +25,7 @@ void FrozenBasis::clear() {
   this->next_ = kNoLink;
   this->update_.clear();
   this->basis_.clear();
+  this->dual_edge_weight_.clear();
 }
 
 bool HSimplexNla::frozenBasisAllDataClear() {

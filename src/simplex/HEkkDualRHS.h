@@ -86,22 +86,6 @@ class HEkkDualRHS {
   );
 
   /**
-   * @brief Update the DSE weights
-   */
-  void updateWeightDualSteepestEdge(
-      HVector* column,             //!< Pivotal column
-      const double row_outWeight,  //!< (Edge weight of leaving row)/alpha^2
-      double Kai,                  //!< -2/alpha
-      double* dse                  //!< DSE std::vector
-  );
-  /**
-   * @brief Update the Devex weights
-   */
-  void updateWeightDevex(HVector* column,            //!< Pivotal column
-                         const double row_outWeight  //!< max(1, (Edge weight of
-                                                     //!< leaving row)/alpha^2)
-  );
-  /**
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
@@ -138,11 +122,7 @@ class HEkkDualRHS {
                                //!< greatest primal infeasibilities
   std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
-  std::vector<double>
-      work_infeasibility;            //!< Vector of all primal infeasiblities
-  std::vector<double> workEdWt;      //!< DSE or Dvx weight
-  std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
-                                     //!< are scattered during INVERT
+  std::vector<double> work_infeasibility;
 
   HighsInt partNum;
   HighsInt partNumRow;
@@ -150,7 +130,6 @@ class HEkkDualRHS {
   HighsInt partNumCut;
   HighsInt partSwitch;
   std::vector<HighsInt> workPartition;
-  const double min_dual_steepest_edge_weight = 1e-4;
   HighsSimplexAnalysis* analysis;
 };
 

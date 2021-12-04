@@ -34,8 +34,9 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   // alt_debug_level, either to force debugging, or to limit
   // debugging. If no value is passed, then alt_debug_level = -1, and
   // highs_debug_level is used
-  HighsInt use_debug_level = alt_debug_level;
-  if (use_debug_level < 0) use_debug_level = this->options_->highs_debug_level;
+  const HighsInt use_debug_level = alt_debug_level >= 0
+                                       ? alt_debug_level
+                                       : this->options_->highs_debug_level;
   if (use_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   // If highs_debug_level isn't being used, then indicate that it's

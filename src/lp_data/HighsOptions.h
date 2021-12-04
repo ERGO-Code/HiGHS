@@ -318,6 +318,7 @@ struct HighsOptionsStruct {
   bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
+  double dual_steepest_edge_weight_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
@@ -807,6 +808,12 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex rebuild",
         advanced, &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8,
         kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_steepest_edge_weight_error_tolerance",
+        "Tolerance on dual steepest edge weight errors", advanced,
+        &dual_steepest_edge_weight_error_tolerance, 0.0, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

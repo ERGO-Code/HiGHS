@@ -369,9 +369,6 @@ class HEkkDual {
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);
-  double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
-  double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
-
   bool cyclingDetected();
 
   // Devex scalars
@@ -408,10 +405,7 @@ class HEkkDual {
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
-  bool initialise_dual_steepest_edge_weights;
   bool allow_dual_steepest_edge_to_devex_switch;
-
-  const double min_dual_steepest_edge_weight = 1e-4;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;

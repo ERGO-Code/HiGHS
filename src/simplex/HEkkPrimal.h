@@ -132,6 +132,7 @@ class HEkkPrimal {
   double alpha_col;
   double alpha_row;
   double numericalTrouble;
+
   HighsInt num_flip_since_rebuild;
   // Primal phase 1 tools
   vector<pair<double, int> > ph1SorterR;

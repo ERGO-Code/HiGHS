@@ -131,7 +131,7 @@ struct HighsSimplexInfo {
   std::vector<double> backtracking_basis_workShift_;
   std::vector<double> backtracking_basis_workLowerShift_;
   std::vector<double> backtracking_basis_workUpperShift_;
-  std::vector<double> backtracking_basis_edge_weights_;
+  std::vector<double> backtracking_basis_edge_weight_;
 
   // Dual and primal ray vectors
   HighsInt dual_ray_row_;

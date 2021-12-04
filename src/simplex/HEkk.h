@@ -34,6 +34,7 @@ class HEkk {
   void clearEkkLp();
   void clearEkkData();
   void clearEkkDualise();
+  void clearEkkDualEdgeWeightData();
   void clearEkkPointers();
   void clearEkkDataInfo();
   void clearEkkControlInfo();
@@ -138,9 +139,8 @@ class HEkk {
   SimplexBasis basis_;
   HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
-
-  double* workEdWt_ = NULL;      //!< DSE or Dvx weight
-  double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
+  std::vector<double> dual_edge_weight_;
+  std::vector<double> scattered_dual_edge_weight_;
 
   bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
@@ -188,6 +188,8 @@ class HEkk {
   vector<HighsInt> upper_bound_col_;
   vector<HighsInt> upper_bound_row_;
 
+  double edge_weight_error;
+
   double build_synthetic_tick_;
   double total_synthetic_tick_;
   HighsInt debug_solve_call_num_ = 0;
@@ -207,15 +209,21 @@ class HEkk {
   void initialiseSimplexLpRandomVectors();
   void setNonbasicMove();
   bool getNonsingularInverse(const HighsInt solve_phase = 0);
-  bool getBacktrackingBasis(double* scattered_edge_weights);
+  bool getBacktrackingBasis();
   void putBacktrackingBasis();
   void putBacktrackingBasis(
-      const vector<HighsInt>& basicIndex_before_compute_factor,
-      double* scattered_edge_weights);
+      const vector<HighsInt>& basicIndex_before_compute_factor);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
+  void computeDualSteepestEdgeWeights();
+  void updateDualSteepestEdgeWeights(const HVector* column,
+                                     const double new_pivotal_edge_weight,
+                                     const double Kai,
+                                     const double* dual_steepest_edge_array);
+  void updateDualDevexWeights(const HVector* column,
+                              const double new_pivotal_edge_weight);
   void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
@@ -327,10 +335,12 @@ class HEkk {
   HighsDebugStatus debugNonbasicFreeColumnSet(
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
-
+  HighsDebugStatus debugSteepestEdgeWeights(
+      const HighsInt alt_debug_level = -1);
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
+
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

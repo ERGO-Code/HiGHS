@@ -78,9 +78,7 @@ enum SimplexDualEdgeWeightStrategy {
   kSimplexDualEdgeWeightStrategyDantzig,
   kSimplexDualEdgeWeightStrategyDevex,
   kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial,
-  kSimplexDualEdgeWeightStrategyMax =
-      kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial
+  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
@@ -170,6 +168,8 @@ const HighsInt kIllegalMoveValue =
 
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
+
+const double kMinDualSteepestEdgeWeight = 1e-4;
 
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
