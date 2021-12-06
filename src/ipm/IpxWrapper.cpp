@@ -112,17 +112,10 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   Ap[0] = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     Ap[col + 1] = Ap[col] + sizes[col];
-    //    printf("Struc Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT ";
-    //    Al[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n", col,
-    //    (int)Ap[col], col, (int)sizes[col]);
   }
   for (HighsInt col = lp.num_col_; col < (HighsInt)num_col; col++) {
     Ap[col + 1] = Ap[col] + 1;
-    //    printf("Slack Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
-    //    col, (int)Ap[col]);
   }
-  //  printf("Fictn Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
-  //  (int)num_col, (int)Ap[num_col]);
   for (HighsInt k = 0; k < nnz; k++) {
     HighsInt row = lp.a_matrix_.index_[k];
     if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf) {
@@ -161,18 +154,6 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
     obj[col] = (HighsInt)lp.sense_ * lp.col_cost_[col];
   }
   obj.insert(obj.end(), num_slack, 0);
-  /*
-  for (int col = 0; col < num_col; col++)
-    printf("Col %2" HIGHSINT_FORMAT ": [%11.4g, %11.4g] Cost = %11.4g; Start =
-  %" HIGHSINT_FORMAT "\n", col, col_lb[col], col_ub[col], obj[col],
-  (int)Ap[col]); for (int row = 0; row < num_row; row++) printf("Row %2"
-  HIGHSINT_FORMAT ": RHS = %11.4g; Type = %" HIGHSINT_FORMAT "\n", row,
-  rhs[row], constraint_type[row]); for (int col = 0; col < num_col; col++) { for
-  (int el = Ap[col]; el < Ap[col+1]; el++) { printf("El %2" HIGHSINT_FORMAT ":
-  [%2" HIGHSINT_FORMAT ", %11.4g]\n", el, (int)Ai[el], Ax[el]);
-    }
-  }
-  */
 }
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
