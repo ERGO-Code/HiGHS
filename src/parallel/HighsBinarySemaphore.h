@@ -25,7 +25,7 @@
 
 class HighsBinarySemaphore {
   struct Data {
-    std::atomic_int count;
+    std::atomic<int> count;
     alignas(64) std::mutex mutex;
     std::condition_variable condvar;
 

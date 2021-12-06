@@ -25,7 +25,7 @@
 #endif
 
 class HighsSpinMutex {
-  std::atomic_bool flag{false};
+  std::atomic<bool> flag{false};
 
  public:
   static void yieldProcessor() {

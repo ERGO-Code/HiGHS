@@ -71,8 +71,8 @@ class HighsSplitDeque {
   struct StealerData {
     HighsBinarySemaphore semaphore{0};
     HighsTask* injectedTask{nullptr};
-    std::atomic_uint64_t ts{0};
-    std::atomic_bool allStolen{true};
+    std::atomic<uint64_t> ts{0};
+    std::atomic<bool> allStolen{true};
   };
 
   struct TaskMetadata {
@@ -97,8 +97,8 @@ class HighsSplitDeque {
   struct WorkerBunk {
     static constexpr uint64_t kAbaTagShift = 20;
     static constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-    alignas(64) std::atomic_int haveJobs;
-    alignas(64) std::atomic_uint64_t sleeperStack;
+    alignas(64) std::atomic<int> haveJobs;
+    alignas(64) std::atomic<uint64_t> sleeperStack;
 
     WorkerBunk() : haveJobs{0}, sleeperStack(0) {}
 
@@ -196,7 +196,7 @@ class HighsSplitDeque {
                 "sizeof(GlobalQueueData) exceeds cache line size");
 
   alignas(64) OwnerData ownerData;
-  alignas(64) std::atomic_bool splitRequest;
+  alignas(64) std::atomic<bool> splitRequest;
   alignas(64) StealerData stealerData;
   alignas(64) WorkerBunkData workerBunkData;
   alignas(64) std::array<HighsTask, kTaskArraySize> taskArray;
