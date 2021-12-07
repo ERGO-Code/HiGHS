@@ -570,10 +570,12 @@ HighsStatus ipxSolutionToHighsSolution(const HighsOptions& options,
     // Update the IPX row index
     ipx_row++;
   }
+  double col_dual_truncation_norm = 0;
   if (force_dual_feasibility || minimal_truncation) {
     HighsInt col, row;
     double lower, upper, value, dual, residual;
     for (HighsInt var = 0; var < lp.num_col_ + lp.num_row_; var++) {
+      if (var == lp.num_col_) col_dual_truncation_norm = dual_truncation_norm;
       const bool is_col = var < lp.num_col_;
       if (is_col) {
 	col = var;
@@ -619,6 +621,7 @@ HighsStatus ipxSolutionToHighsSolution(const HighsOptions& options,
       } else if (minimal_truncation) {
 	assert(1==0);
       }
+      dual_truncation_norm = std::max(dual_truncation, dual_truncation_norm);
       if (dual_truncation > 1e-4)
 	printf("%s %4d: [%11.4g, %11.4g, %11.4g] residual = %11.4g | "
 	       "dual = %11.4g; truncation = %11.4g\n",
@@ -646,6 +649,9 @@ HighsStatus ipxSolutionToHighsSolution(const HighsOptions& options,
 		  delta_norm);
   // Assess the dual truncations
       //  if (dual_truncation_norm >= dual_feasibility_tolerance) 
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+		  "ipxSolutionToHighsSolution: Norm of truncated col  duals is %10.4g\n",
+		  col_dual_truncation_norm);
       highsLogDev(options.log_options, HighsLogType::kInfo,
 		  "ipxSolutionToHighsSolution: Norm of truncated row  duals is %10.4g\n",
 		  dual_truncation_norm);
