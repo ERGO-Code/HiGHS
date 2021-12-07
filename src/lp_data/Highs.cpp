@@ -2106,7 +2106,6 @@ HighsPostsolveStatus Highs::runPostsolve() {
   const bool have_dual_solution = isDualSolutionRightSize(
       presolve_.getReducedProblem(), presolve_.data_.recovered_solution_);
   assert(have_dual_solution == presolve_.data_.recovered_solution_.dual_valid);
-  assert(have_dual_solution == presolve_.data_.recovered_basis_.valid);
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);

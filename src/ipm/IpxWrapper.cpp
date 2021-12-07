@@ -477,6 +477,7 @@ void getHighsNonVertexSolution(const HighsOptions& options,
                                const std::vector<double>& rhs,
                                const std::vector<char>& constraint_type,
                                const ipx::LpSolver& lps,
+			       const HighsModelStatus model_status,
                                HighsSolution& highs_solution) {
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
@@ -494,7 +495,8 @@ void getHighsNonVertexSolution(const HighsOptions& options,
                           &zu[0]);
 
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
-                             num_row, x, slack, y, zl, zu, highs_solution);
+                             num_row, x, slack, y, zl, zu,
+			     model_status, highs_solution);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
@@ -532,7 +534,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   highs_basis.valid = false;
   highs_solution.value_valid = false;
   highs_solution.dual_valid = false;
-  // Indicate that no imprecise soluition hs (yet) been found
+  // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
   // Create the LpSolver instance
   ipx::LpSolver lps;
@@ -649,10 +651,12 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   if (solve_status == IPX_STATUS_stopped) {
     // IPX stopped, so there's certainly no basic solution. Get the
-    // non-vertex solution, though.
-    assert(0==1);
+    // non-vertex solution, though. This needs the model status to
+    // know whether to worry about dual infeasibilities.
+    const HighsModelStatus local_model_status = HighsModelStatus::kUnknown;
     getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
-                              constraint_type, lps, highs_solution);
+                              constraint_type, lps,
+			      local_model_status, highs_solution);
     //
     // Look at the reason why IPX stopped
     //
@@ -724,9 +728,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
       model_status = HighsModelStatus::kUnboundedOrInfeasible;
     }
-    assert(0==2);
     getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
-                              constraint_type, lps, highs_solution);
+                              constraint_type, lps,
+			      model_status, highs_solution);
     return HighsStatus::kOk;
   }
 
@@ -776,8 +780,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
+    // No basic solution, so get a non-vertex HiGHS solution. This
+    // needs the model status to know whether to worry about dual
+    // infeasibilities.
+    const HighsModelStatus local_model_status = imprecise_solution ? HighsModelStatus::kUnknown : HighsModelStatus::kOptimal;
     getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
-                              constraint_type, lps, highs_solution);
+                              constraint_type, lps,
+			      local_model_status, highs_solution);
     assert(!highs_basis.valid);
   }
   highs_info.basis_validity = highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
