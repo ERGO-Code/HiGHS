@@ -3934,8 +3934,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         HPRESOLVE_CHECKED_CALL(sparsify(postSolveStack));
         double nzReduction = 100.0 * (1.0 - (numNonzeros() / (double)numNz));
 
-        printf("HPresolve::presolve Sparsify removes %.1f%% nonzeros\n",
-               nzReduction);
         if (nzReduction > 0) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
@@ -4197,20 +4195,11 @@ HPresolve::Result HPresolve::removeDependentEquations(
 
     matrix.start_[i] = matrix.value_.size();
   }
-
-  printf(
-      "HPresolve::removeDependentEquations Matrix setup finished [%d rows, %d "
-      "cols]\n",
-      (int)matrix.num_row_, (int)matrix.num_col_);
-
   std::vector<HighsInt> colSet(matrix.num_col_);
   std::iota(colSet.begin(), colSet.end(), 0);
   HFactor factor;
   factor.setup(matrix, colSet);
   HighsInt rank_deficiency = factor.build();
-
-  printf("HPresolve::removeDependentEquations Rank deficiency is %d\n",
-         (int)rank_deficiency);
   HighsInt num_removed_row = 0;
   HighsInt num_removed_nz = 0;
   HighsInt num_fictitious_rows_skipped = 0;
@@ -4226,11 +4215,15 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
 
-  printf("HPresolve::removeDependentEquations Removed %d rows and %d nonzeros",
-         (int)num_removed_row, (int)num_removed_nz);
+  highsLogDev(
+      options->log_options, HighsLogType::kInfo,
+      "HPresolve::removeDependentEquations Removed %d rows and %d nonzeros",
+      (int)num_removed_row, (int)num_removed_nz);
   if (num_fictitious_rows_skipped)
-    printf(", avoiding %d fictitious rows", (int)num_fictitious_rows_skipped);
-  printf("\n");
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                ", avoiding %d fictitious rows",
+                (int)num_fictitious_rows_skipped);
+  highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
   return Result::kOk;
 }
@@ -4253,8 +4246,10 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
 
   HighsSparseMatrix matrix;
   matrix.num_col_ = freeCols.size();
-  printf("got %d free cols, checking for dependent free cols\n",
-         (int)matrix.num_col_);
+  highsLogDev(options->log_options, HighsLogType::kInfo,
+              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
+              "for dependent free cols\n",
+              (int)matrix.num_col_);
   matrix.num_row_ = model->num_row_ + 1;
   matrix.start_.resize(matrix.num_col_ + 1);
   matrix.start_[0] = 0;
@@ -4278,20 +4273,11 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
 
     matrix.start_[i + 1] = matrix.value_.size();
   }
-
-  printf(
-      "HPresolve::removeDependentFreeCols Matrix setup finished [%d rows, %d "
-      "cols]\n",
-      (int)matrix.num_row_, (int)matrix.num_col_);
-
   std::vector<HighsInt> colSet(matrix.num_col_);
   std::iota(colSet.begin(), colSet.end(), 0);
   HFactor factor;
   factor.setup(matrix, colSet);
   HighsInt rank_deficiency = factor.build();
-
-  printf("HPresolve::removeDependentFreeCols Rank deficiency is %d\n",
-         (int)rank_deficiency);
   HighsInt num_removed_row = 0;
   HighsInt num_removed_nz = 0;
   HighsInt num_fictitious_cols_skipped = 0;
@@ -4304,12 +4290,15 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
       num_fictitious_cols_skipped++;
     }
   }
-
-  printf("HPresolve::removeDependentFreeCols Removed %d rows and %d nonzeros",
-         (int)num_removed_row, (int)num_removed_nz);
+  highsLogDev(
+      options->log_options, HighsLogType::kInfo,
+      "HPresolve::removeDependentFreeCols Removed %d rows and %d nonzeros",
+      (int)num_removed_row, (int)num_removed_nz);
   if (num_fictitious_cols_skipped)
-    printf(", avoiding %d fictitious rows", (int)num_fictitious_cols_skipped);
-  printf("\n");
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                ", avoiding %d fictitious rows",
+                (int)num_fictitious_cols_skipped);
+  highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
   return Result::kOk;
 }

@@ -12,7 +12,7 @@
 using namespace highs;
 
 const int numThreads = (std::thread::hardware_concurrency() + 1) / 2;
-// const bool dev_run = false;
+const bool dev_run = false;
 
 int64_t fib_sequential(const int64_t n) {
   if (n <= 1) return 1;
@@ -178,8 +178,9 @@ double **a = nullptr, **b = nullptr, **c = nullptr;
 
 void matrix_multiplication(const std::string& model, const unsigned num_threads,
                            const unsigned num_rounds) {
-  std::cout << std::setw(12) << "size" << std::setw(12) << "runtime"
-            << std::endl;
+  if (dev_run)
+    std::cout << std::setw(12) << "size" << std::setw(12) << "runtime"
+              << std::endl;
 
   for (int i = 128; i <= 512; i += 128) {
     N = i;
@@ -201,8 +202,9 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
 #endif
     }
 
-    std::cout << std::setw(12) << N << std::setw(12)
-              << runtime / num_rounds / 1e3 << std::endl;
+    if (dev_run)
+      std::cout << std::setw(12) << N << std::setw(12)
+                << runtime / num_rounds / 1e3 << std::endl;
 
     deallocate_matrix();
   }
@@ -211,7 +213,7 @@ void matrix_multiplication(const std::string& model, const unsigned num_threads,
 TEST_CASE("MatrixMultHighs", "[parallel]") {
   HighsTaskExecutor::shutdown();
   parallel::initialize_scheduler(numThreads);
-  std::cout << "\nhighs workstealing for loop:" << std::endl;
+  if (dev_run) std::cout << "\nhighs workstealing for loop:" << std::endl;
   matrix_multiplication("highs", parallel::num_threads(), 1);
 }
 
@@ -222,11 +224,13 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
   int64_t result = fib(41);
   auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "time elapsed for fib(41) with HiGHS work stealing: "
-            << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
-                    .count() /
-                1e3)
-            << "ms" << std::endl;
+  if (dev_run)
+    std::cout << "time elapsed for fib(41) with HiGHS work stealing: "
+              << (std::chrono::duration_cast<std::chrono::microseconds>(end -
+                                                                        beg)
+                      .count() /
+                  1e3)
+              << "ms" << std::endl;
 
   // REQUIRE(result == 4807526976);
   // REQUIRE(result == 20365011074);
@@ -236,7 +240,7 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
 
 #if 0
 TEST_CASE("MatrixMultOmp", "[parallel]") {
-  std::cout << "\nomp for loop:" << std::endl;
+  if (dev_run) std::cout << "\nomp for loop:" << std::endl;
   matrix_multiplication("omp", numThreads, 1);
 }
 TEST_CASE("FibonacciTasksOmp", "[parallel]") {
@@ -249,7 +253,7 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   }
   auto end = std::chrono::high_resolution_clock::now();
 
-  std::cout << "time elapsed for fib(41) with omp tasks: "
+  if (dev_run) std::cout << "time elapsed for fib(41) with omp tasks: "
             << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
                     .count() /
                 1e3)
