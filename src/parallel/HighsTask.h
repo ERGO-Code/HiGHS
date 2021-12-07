@@ -16,10 +16,17 @@
 #include <atomic>
 #include <cassert>
 #include <cstring>
+#include <type_traits>
 
 #include "parallel/HighsSpinMutex.h"
 
 class HighsSplitDeque;
+
+#if __GNUG__ && __GNUC__ < 5
+#define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
+#else
+#define IS_TRIVIALLY_COPYABLE(T) std::is_trivially_copyable<T>::value
+#endif
 
 class HighsTask {
   friend class HighsSplitDeque;
@@ -84,7 +91,7 @@ class HighsTask {
                   "given task type exceeds maximum size allowed for deque\n");
     static_assert(std::is_trivially_destructible<F>::value,
                   "given task type must be trivially destructible\n");
-    static_assert(std::is_trivially_copyable<F>::value,
+    static_assert(IS_TRIVIALLY_COPYABLE(F),
                   "given task type must be trivially copyable\n");
     metadata.stealer.store(nullptr, std::memory_order_relaxed);
 
