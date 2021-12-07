@@ -251,12 +251,12 @@ HighsStatus assessMatrix(
   }
   if (num_small_values) {
     if (partitioned) {
-      // Shouldn't happen with a parttioned row-wise matrix since its
+      // Shouldn't happen with a partitioned row-wise matrix since its
       // values should be OK and the code above doesn't handle p_end
       highsLogUser(
           log_options, HighsLogType::kError,
           "%s matrix packed partitioned vector contains %" HIGHSINT_FORMAT
-          " |values| in [%g, %g] less than %g: ignored\n",
+          " |values| in [%g, %g] less than or equal to %g: ignored\n",
           matrix_name.c_str(), num_small_values, min_small_value,
           max_small_value, small_matrix_value);
       error_found = true;
@@ -265,7 +265,7 @@ HighsStatus assessMatrix(
     highsLogUser(log_options, HighsLogType::kWarning,
                  "%s matrix packed vector contains %" HIGHSINT_FORMAT
                  " |values| in [%g, %g] "
-                 "less than %g: ignored\n",
+                 "less than or equal to %g: ignored\n",
                  matrix_name.c_str(), num_small_values, min_small_value,
                  max_small_value, small_matrix_value);
     warning_found = true;

@@ -18,7 +18,7 @@
 #include "parallel/HighsTaskExecutor.h"
 
 class HighsMutex {
-  std::atomic_uint state{0u};
+  std::atomic<unsigned int> state{0u};
   enum Constants { kNumSpinTries = 10 };
 
  public:

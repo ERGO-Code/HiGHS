@@ -439,7 +439,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
         HighsCDouble uih = u[i] + h;
         HighsCDouble mihplusdeltai = mih + a[i] - cplusthreshold;
         if (z <= mihplusdeltai) {
-          assert(mih <= z);
+          assert(mih <= z + epsilon);
           return double(uih * ulminusetaplusone * (al - r));
         }
 

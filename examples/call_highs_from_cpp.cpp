@@ -123,7 +123,7 @@ int main() {
   const HighsSolution& solution = highs.getSolution();
   const HighsBasis& basis = highs.getBasis();
   //
-  // Report the 
+  // Report the primal and solution values and basis
   for (int col=0; col < lp.num_col_; col++) {
     cout << "Column " << col;
     if (has_values) cout << "; value = " << solution.col_value[col];
@@ -148,6 +148,7 @@ int main() {
   // Solve the model
   return_status = highs.run();
   assert(return_status==HighsStatus::kOk);
+  // Report the primal solution values
   for (int col=0; col < lp.num_col_; col++) {
     cout << "Column " << col;
     if (info.primal_solution_status) cout << "; value = " << solution.col_value[col];
