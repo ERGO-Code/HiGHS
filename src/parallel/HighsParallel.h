@@ -112,8 +112,8 @@ void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
 
     do {
       HighsInt split = (start + end) >> 1;
-      tg.spawn([split, end, grainSize, f]() {
-        for_each(split, end, std::move(f), grainSize);
+      tg.spawn([split, end, grainSize, &f]() {
+        for_each(split, end, f, grainSize);
       });
       end = split;
     } while (end - start > grainSize);
