@@ -122,8 +122,8 @@ class HighsSplitDeque {
         newStackState = (stackState >> kAbaTagShift) + 1;
         newStackState = (newStackState << kAbaTagShift) | uint64_t(newHeadId);
       } while (!sleeperStack.compare_exchange_weak(stackState, newStackState,
-                                                   std::memory_order_relaxed,
-                                                   std::memory_order_acquire));
+                                                   std::memory_order_acquire,
+                                                   std::memory_order_relaxed));
 
       head->workerBunkData.nextSleeper.store(nullptr,
                                              std::memory_order_relaxed);
