@@ -32,24 +32,6 @@
 class HighsSplitDeque {
   using cache_aligned = highs::cache_aligned;
 
-  class CallableBase {
-   public:
-    virtual void operator()() = 0;
-  };
-
-  template <typename F>
-  class Callable : public CallableBase {
-    F functor;
-
-   public:
-    Callable(F&& f) : functor(std::forward<F>(f)) {}
-
-    virtual void operator()() {
-      F callFunctor = std::move(functor);
-      callFunctor();
-    }
-  };
-
  public:
   enum Constants {
     kTaskArraySize = 8192,
