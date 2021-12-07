@@ -815,8 +815,8 @@ void Model::FindDenseColumns() {
     pdqsort(colcount.begin(), colcount.end());
 
     for (Int j = 1; j < num_cols_; j++) {
-        if (colcount[j] >
-	      std::max((ipx::Int)40l, (ipx::Int)10l*colcount[j-1])) {
+        if (colcount[j] > 
+              std::max((ipx::Int)40l, (ipx::Int)10l*colcount[j-1])) {
             // j is the first dense column
             num_dense_cols_ = num_cols_ - j;
             nz_dense_ = colcount[j];
