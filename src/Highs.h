@@ -927,6 +927,16 @@ class Highs {
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
 
+  /**
+   * @brief Gets the dual edge weights (steepest/devex) in the order of the
+   * basic indices or NULL when they are not available.
+   */
+  const double* getDualEdgeWeights() const {
+    return ekk_instance_.dual_edge_weight_.empty()
+               ? nullptr
+               : ekk_instance_.dual_edge_weight_.data();
+  }
+
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string solutionStatusToString(const HighsInt solution_status) const;
@@ -1067,10 +1077,6 @@ class Highs {
   void deprecationMessage(const std::string method_name,
                           const std::string alt_method_name) const;
 
-  const double* getDualEdgeWeights() const {
-    if (ekk_instance_.dual_edge_weight_.empty()) return nullptr;
-    return ekk_instance_.dual_edge_weight_.data();
-  }
   // End of deprecated methods
  private:
   HighsSolution solution_;
