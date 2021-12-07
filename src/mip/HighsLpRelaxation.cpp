@@ -793,7 +793,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       return Status::kUnscaledInfeasible;
     case HighsModelStatus::kIterationLimit: {
-      if (resolve_on_error) {
+      if (!mipsolver.submip && resolve_on_error) {
         // printf(
         //     "error: lpsolver reached iteration limit, resolving with basis "
         //     "from ipm\n");
