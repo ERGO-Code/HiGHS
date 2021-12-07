@@ -4060,8 +4060,6 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     simplex_nla_.reportVector("Proof", proof_num_nz, proof_value, proof_index,
                               true);
   }
-  HighsCDouble implied_upper = 0.0;
-  bool infinite_implied_upper = false;
   if (debug_proof_report)
     printf(
         "HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = "
@@ -4077,31 +4075,29 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       }
     }
   }
+  HighsCDouble implied_upper = 0.0;
+  HighsCDouble sumInf = 0.0;
   for (HighsInt i = 0; i < proof_num_nz; ++i) {
     const HighsInt iCol = proof_index[i];
     const double value = proof_value[i];
     if (value > 0) {
       if (highs_isInfinity(lp.col_upper_[iCol])) {
+        sumInf += value;
+        if (sumInf > options_->small_matrix_value) break;
+        continue;
         if (value <= options_->small_matrix_value) continue;
-        infinite_implied_upper = true;
-        if (debug_proof_report)
-          printf("%6d: proof (index = %6d; value = %11.4g) has UB = %11.4g\n",
-                 (int)i, (int)iCol, value, lp.col_upper_[iCol]);
-        if (!debug_proof_report) break;
       }
       implied_upper += value * lp.col_upper_[iCol];
     } else {
       if (highs_isInfinity(-lp.col_lower_[iCol])) {
-        if (value >= -options_->small_matrix_value) continue;
-        infinite_implied_upper = true;
-        if (debug_proof_report)
-          printf("%6d: proof (index = %6d; value = %11.4g) has LB = %11.4g\n",
-                 (int)i, (int)iCol, value, lp.col_upper_[iCol]);
-        if (!debug_proof_report) break;
+        sumInf += -value;
+        if (sumInf > options_->small_matrix_value) break;
+        continue;
       }
       implied_upper += value * lp.col_lower_[iCol];
     }
   }
+  bool infinite_implied_upper = sumInf > options_->small_matrix_value;
   const double gap = double(proof_lower - implied_upper);
   const bool gap_ok = gap > options_->primal_feasibility_tolerance;
   const bool proof_of_primal_infeasibility = !infinite_implied_upper && gap_ok;
