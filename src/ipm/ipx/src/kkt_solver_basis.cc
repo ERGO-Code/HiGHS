@@ -92,7 +92,7 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
         }
     }
     if (num_free > 0)
-      basis_.SolveDense(work, work, 'T');
+        basis_.SolveDense(work, work, 'T');
 
     // Compute rhs = inverse(B)*(N*D2[nonbasic]*(a[nonbasic]-N'*work)).
     rhs = 0.0;
