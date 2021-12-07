@@ -81,9 +81,9 @@ public:
     Int num_dense_cols() const { return num_dense_cols_; }
 
     // Returns true if column j is classified as dense (0 <= j < n+m).
-    // bool IsDenseColumn(Int j) const {
-    //     return AI_.entries(j) >= nz_dense_;
-    // }
+    bool IsDenseColumn(Int j) const {
+        return AI_.entries(j) >= nz_dense_;
+    }
 
     // Returns true if the user model was dualized in preprocessing.
     bool dualized() const { return dualized_; }

@@ -717,8 +717,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "lp_presolve_requires_basis_postsolve",
-        "When false LP presolve steps that yield a primal and dual feasible "
-        "solution after postsolve but no basis are allowed",
+        "Prevents LP presolve steps for which postsolve cannot maintain a "
+        "basis",
         advanced, &lp_presolve_requires_basis_postsolve, true);
     records.push_back(record_bool);
 

@@ -177,6 +177,7 @@ private:
     Model model_;
     std::unique_ptr<Iterate> iterate_;
     std::unique_ptr<Basis> basis_;
+
     // Basic solution computed by crossover and basic status of each variable
     // (one of IPX_nonbasic_lb, IPX_nonbasic_ub, IPX_basic, IPX_superbasic).
     // If crossover was not run or failed, then basic_statuses_ is empty.

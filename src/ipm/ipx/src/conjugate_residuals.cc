@@ -159,7 +159,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
             Vector& precond_Cstep = Csresidual;
             double pdot;
             P.Apply(Cstep, precond_Cstep, &pdot);
-           if (pdot <= 0.0) {
+            if (pdot <= 0.0) {
                 errflag_ = IPX_ERROR_cr_precond_not_posdef;
                 break;
             }

@@ -66,7 +66,7 @@ private:
     KKTSolver* kkt_{nullptr};
     Iterate* iterate_{nullptr};
     Info* info_{nullptr};
- 
+
     double step_primal_{0.0}, step_dual_{0.0};
     // Counts the # bad iterations since the last good iteration. An iteration
     // is bad if the primal or dual step size is < 0.05.

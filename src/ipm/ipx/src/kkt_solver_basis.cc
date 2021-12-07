@@ -60,6 +60,7 @@ void KKTSolverBasis::_Factorize(Iterate* iterate, Info* info) {
             return;
     }
     splitted_normal_matrix_.Prepare(basis_, &colscale_[0]);
+
     factorized_ = true;
 }
 
@@ -90,9 +91,8 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
             num_free++;
         }
     }
-    if (num_free > 0) {
+    if (num_free > 0)
       basis_.SolveDense(work, work, 'T');
-    }
 
     // Compute rhs = inverse(B)*(N*D2[nonbasic]*(a[nonbasic]-N'*work)).
     rhs = 0.0;
