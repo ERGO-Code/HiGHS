@@ -2095,17 +2095,11 @@ HighsPresolveStatus Highs::runPresolve() {
 
 HighsPostsolveStatus Highs::runPostsolve() {
   // assert(presolve_.has_run_);
-  const bool have_primal_solution =
-      presolve_.data_.recovered_solution_.value_valid;
-  if (have_primal_solution)
-    assert(isPrimalSolutionRightSize(presolve_.getReducedProblem(),
-                                     presolve_.data_.recovered_solution_));
+  const bool have_primal_solution = presolve_.data_.recovered_solution_.value_valid;
   // Need at least a primal solution
   if (!have_primal_solution)
-    return HighsPostsolveStatus::kReducedSolutionDimenionsError;
-  const bool have_dual_solution = isDualSolutionRightSize(
-      presolve_.getReducedProblem(), presolve_.data_.recovered_solution_);
-  assert(have_dual_solution == presolve_.data_.recovered_solution_.dual_valid);
+    return HighsPostsolveStatus::kNoPrimalSolutionError;
+  const bool have_dual_solution = presolve_.data_.recovered_solution_.dual_valid;
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
