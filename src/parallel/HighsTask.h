@@ -15,6 +15,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstring>
 
 #include "parallel/HighsSpinMutex.h"
 
@@ -22,6 +23,7 @@ class HighsSplitDeque;
 
 class HighsTask {
   friend class HighsSplitDeque;
+  using TaskPtr = void (*)(const char*);
 
  public:
   enum Constants {
@@ -31,26 +33,31 @@ class HighsTask {
  private:
   struct Metadata {
     std::atomic<HighsSplitDeque*> stealer;
+    TaskPtr taskPtr;
   };
 
   Metadata metadata;
   char taskData[kMaxTaskSize - sizeof(Metadata)];
 
-  class CallableBase {
-   public:
-    virtual void operator()() = 0;
-  };
-
   template <typename F>
-  class Callable : public CallableBase {
-    F functor;
+  class CallableAdaptor {
+    // this union is used to declare space for a functor of type F
+    // on the stack but avoid calling it constructor since it is usually not
+    // default constructible. Since it is stacically asserted to be trivially
+    // copyable and trivially destructible the functor member f can still be
+    // assigned by memcopying the functors bytes into it and does not need to be
+    // destructed.
+    union FunctorSpace {
+      char dummyMember;
+      F f;
+    };
 
    public:
-    Callable(F&& f) : functor(std::forward<F>(f)) {}
-
-    virtual void operator()() {
-      F callFunctor = std::move(functor);
-      callFunctor();
+    static void do_call(const char* functorBytes) {
+      // declaring F f would fail as type F is not default constructible
+      FunctorSpace s{};
+      std::memcpy(&s.f, functorBytes, sizeof(F));
+      s.f();
     }
   };
 
@@ -58,7 +65,7 @@ class HighsTask {
   /// waiting and needs to be signaled
   HighsSplitDeque* run(HighsSplitDeque* stealer) {
     metadata.stealer.store(stealer, std::memory_order_relaxed);
-    reinterpret_cast<CallableBase*>(taskData)->operator()();
+    metadata.taskPtr(taskData);
     HighsSplitDeque* waitingOwner = metadata.stealer.exchange(
         reinterpret_cast<HighsSplitDeque*>(uintptr_t{1}),
         std::memory_order_release);
@@ -77,12 +84,16 @@ class HighsTask {
                   "given task type exceeds maximum size allowed for deque\n");
     static_assert(std::is_trivially_destructible<F>::value,
                   "given task type must be trivially destructible\n");
+    static_assert(std::is_trivially_copyable<F>::value,
+                  "given task type must be trivially copyable\n");
     metadata.stealer.store(nullptr, std::memory_order_relaxed);
-    new (taskData) Callable<F>(std::forward<F>(f));
+
+    std::memcpy(taskData, &f, sizeof(F));
+    metadata.taskPtr = &CallableAdaptor<F>::do_call;
   }
 
   /// run task as owner
-  void run() { reinterpret_cast<CallableBase*>(taskData)->operator()(); }
+  void run() { metadata.taskPtr(taskData); }
 
   /// request notification of the owner when the is finished.
   /// Should be called while the owner holds its wait mutex
