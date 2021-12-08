@@ -233,7 +233,8 @@ void HighsMipSolverData::init() {
   postSolveStack.initializeIndexMaps(mipsolver.model_->num_row_,
                                      mipsolver.model_->num_col_);
   mipsolver.orig_model_ = mipsolver.model_;
-  if (mipsolver.clqtableinit) cliquetable.buildFrom(*mipsolver.clqtableinit);
+  if (mipsolver.clqtableinit)
+    cliquetable.buildFrom(mipsolver.orig_model_, *mipsolver.clqtableinit);
   if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;

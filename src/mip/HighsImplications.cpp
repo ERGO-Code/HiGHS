@@ -101,6 +101,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   numNewCliques += cliquetable.numCliques();
 
+#if 0
   if (!cliquetable.getPresolveFlag() &&
       cliquetable.getNumEntries() > 1000000 + 4 * mipsolver.numNonzero() &&
       numNewCliques > 100) {
@@ -120,6 +121,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
     cliquetable.numNeighborhoodQueries = savedNumQueries;
   }
+#endif
 
   // store variable bounds derived from implications
   for (auto i = implications.begin() + implstart; i != binstart; ++i) {

@@ -25,6 +25,7 @@
 class HighsCutPool;
 class HighsDomain;
 class HighsMipSolver;
+class HighsLp;
 
 class HighsCliqueTable {
  public:
@@ -288,7 +289,7 @@ class HighsCliqueTable {
                const std::vector<HighsInt>& cIndex,
                const std::vector<HighsInt>& rIndex);
 
-  void buildFrom(const HighsCliqueTable& init);
+  void buildFrom(const HighsLp* origModel, const HighsCliqueTable& init);
 
   HighsInt numCliques() const { return cliques.size() - freeslots.size(); }
 
