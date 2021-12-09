@@ -39,37 +39,15 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
       kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   analyse_simplex_runtime_data =
       kHighsAnalysisLevelSolverRuntimeData & options.highs_analysis_level;
-  analyse_simplex_time =
-      kHighsAnalysisLevelSolverTime & options.highs_analysis_level;
   analyse_factor_data =
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
-  analyse_factor_time =
-      kHighsAnalysisLevelNlaTime & options.highs_analysis_level;
   analyse_simplex_data =
       analyse_simplex_summary_data || analyse_simplex_runtime_data;
   last_user_log_time = -kHighsInf;
   delta_user_log_time = 5e0;
 
-  // Set up the thread clocks
-  HighsInt max_threads = highs::parallel::num_threads();
-
-  if (analyse_simplex_time) {
-    for (HighsInt i = 0; i < max_threads; i++) {
-      HighsTimerClock clock;
-      clock.timer_pointer_ = timer_;
-      thread_simplex_clocks.push_back(clock);
-    }
-  }
-  if (analyse_factor_time) {
-    for (HighsInt i = 0; i < max_threads; i++) {
-      HighsTimerClock clock;
-      clock.timer_pointer_ = timer_;
-      thread_factor_clocks.push_back(clock);
-    }
-    pointer_serial_factor_clocks = &thread_factor_clocks[0];
-  } else {
-    pointer_serial_factor_clocks = NULL;
-  }
+  setupSimplexTime(options);
+  setupFactorTime(options);
 
   // Copy tolerances from options
   //  allow_dual_steepest_edge_to_devex_switch =
@@ -137,9 +115,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   const HighsInt dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
-      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge ||
-      dual_edge_weight_strategy ==
-          kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
+      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge) {
     // Initialise the measures used to analyse accuracy of steepest edge weights
     num_dual_steepest_edge_weight_check = 0;
     num_dual_steepest_edge_weight_reject = 0;
@@ -289,16 +265,44 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
                                 10.0, cleanup_dual_step_distribution);
   }
+}
 
+void HighsSimplexAnalysis::setupSimplexTime(const HighsOptions& options) {
+  analyse_simplex_time =
+      kHighsAnalysisLevelSolverTime & options.highs_analysis_level;
   if (analyse_simplex_time) {
+    // Set up the thread clocks
+    HighsInt max_threads = highs::parallel::num_threads();
+    thread_simplex_clocks.clear();
+    for (HighsInt i = 0; i < max_threads; i++) {
+      HighsTimerClock clock;
+      clock.timer_pointer_ = timer_;
+      thread_simplex_clocks.push_back(clock);
+    }
     SimplexTimer simplex_timer;
     for (HighsTimerClock& clock : thread_simplex_clocks)
       simplex_timer.initialiseSimplexClocks(clock);
   }
+}
+
+void HighsSimplexAnalysis::setupFactorTime(const HighsOptions& options) {
+  analyse_factor_time =
+      kHighsAnalysisLevelNlaTime & options.highs_analysis_level;
   if (analyse_factor_time) {
+    // Set up the thread clocks
+    HighsInt max_threads = highs::parallel::num_threads();
+    thread_factor_clocks.clear();
+    for (HighsInt i = 0; i < max_threads; i++) {
+      HighsTimerClock clock;
+      clock.timer_pointer_ = timer_;
+      thread_factor_clocks.push_back(clock);
+    }
+    pointer_serial_factor_clocks = &thread_factor_clocks[0];
     FactorTimer factor_timer;
     for (HighsTimerClock& clock : thread_factor_clocks)
       factor_timer.initialiseFactorClocks(clock);
+  } else {
+    pointer_serial_factor_clocks = NULL;
   }
 }
 
@@ -628,9 +632,6 @@ HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analyse_factor_time) {
     HighsInt thread_id = highs::parallel::thread_num();
-#if 0  // def OPENMP
-    thread_id = omp_get_thread_num();
-#endif
     factor_timer_clock_pointer = &thread_factor_clocks[thread_id];
   }
   return factor_timer_clock_pointer;
@@ -1156,24 +1157,21 @@ void HighsSimplexAnalysis::reportSimplexTimer() {
 void HighsSimplexAnalysis::reportFactorTimer() {
   assert(analyse_factor_time);
   FactorTimer factor_timer;
-  HighsInt omp_max_threads = highs::parallel::num_threads();
-#if 0  // def OPENMP
-  omp_max_threads = omp_get_max_threads();
-#endif
-  for (HighsInt i = 0; i < omp_max_threads; i++) {
+  HighsInt max_threads = highs::parallel::num_threads();
+  for (HighsInt i = 0; i < max_threads; i++) {
     //  for (HighsTimerClock clock : thread_factor_clocks) {
-    printf("reportFactorTimer: HFactor clocks for OMP thread %" HIGHSINT_FORMAT
+    printf("reportFactorTimer: HFactor clocks for thread %" HIGHSINT_FORMAT
            " / %" HIGHSINT_FORMAT "\n",
-           i, omp_max_threads - 1);
+           i, max_threads - 1);
     factor_timer.reportFactorClock(thread_factor_clocks[i]);
   }
-  if (omp_max_threads > 1) {
+  if (max_threads > 1) {
     HighsTimer* timer_pointer = thread_factor_clocks[0].timer_pointer_;
     HighsTimerClock all_factor_clocks;
     all_factor_clocks.timer_pointer_ = timer_pointer;
     vector<HighsInt>& clock = all_factor_clocks.clock_;
     factor_timer.initialiseFactorClocks(all_factor_clocks);
-    for (HighsInt i = 0; i < omp_max_threads; i++) {
+    for (HighsInt i = 0; i < max_threads; i++) {
       vector<HighsInt>& thread_clock = thread_factor_clocks[i].clock_;
       for (HighsInt clock_id = 0; clock_id < FactorNumClock; clock_id++) {
         HighsInt all_factor_iClock = clock[clock_id];
@@ -1186,7 +1184,7 @@ void HighsSimplexAnalysis::reportFactorTimer() {
     }
     printf("reportFactorTimer: HFactor clocks for all %" HIGHSINT_FORMAT
            " threads\n",
-           omp_max_threads);
+           max_threads);
     factor_timer.reportFactorClock(all_factor_clocks);
   }
 }

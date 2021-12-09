@@ -12,6 +12,7 @@ struct ipx_parameters {
     const char* logfile;
     double print_interval;
     double time_limit;
+    bool analyse_basis_data;
 
     /* Preprocessing */
     ipxint dualize;

@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <vector>
 
+//#include "lp_data/HighsLp.h"
 #include "lp_data/HConst.h"
 #include "simplex/SimplexConst.h"
 
@@ -32,7 +33,11 @@ struct SimplexBasis {
   std::vector<int8_t> nonbasicFlag_;
   std::vector<int8_t> nonbasicMove_;
   uint64_t hash;
+  HighsInt debug_id = -1;
+  HighsInt debug_update_count = -1;
+  std::string debug_origin_name = "";
   void clear();
+  void setup(const HighsInt num_col, const HighsInt num_row);
 };
 
 struct HighsSimplexStatus {
@@ -239,9 +244,12 @@ struct HighsSimplexInfo {
   HighsInt num_basic_logicals;
 };
 
-struct HighsSimplexTabooRecord {
-  TabooReason reason;
-  HighsInt index;
+struct HighsSimplexBadBasisChangeRecord {
+  bool taboo;
+  HighsInt row_out;
+  HighsInt variable_out;
+  HighsInt variable_in;
+  BadBasisChangeReason reason;
   double save_value;
 };
 

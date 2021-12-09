@@ -173,14 +173,14 @@ class PresolveTimer {
     ideal_time_rule = kTotalPresolveTime;
     ideal_time = getRuleTime(ideal_time_rule);
     std::cout << std::endl;
-    timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
+    timer_.reportOnTolerance("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
     clocks.push_back(rules_[kRunPresolvers].clock_id);
     clocks.push_back(rules_[kResizeMatrix].clock_id);
     std::cout << std::endl;
-    timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
+    timer_.reportOnTolerance("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
@@ -191,7 +191,7 @@ class PresolveTimer {
     clocks.push_back(rules_[kRemoveColumnSingletons].clock_id);
     clocks.push_back(rules_[kRemoveDoubletonEquations].clock_id);
     clocks.push_back(rules_[kRemoveDominatedColumns].clock_id);
-    timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
+    timer_.reportOnTolerance("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
@@ -199,7 +199,7 @@ class PresolveTimer {
     ideal_time = getRuleTime(ideal_time_rule);
     clocks.push_back(rules_[kForcingRow].clock_id);
     clocks.push_back(rules_[kRedundantRow].clock_id);
-    timer_.report_tl("grep--RmFrcCs", clocks, ideal_time, 0);
+    timer_.reportOnTolerance("grep--RmFrcCs", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
@@ -208,7 +208,7 @@ class PresolveTimer {
     clocks.push_back(rules_[kFreeSingCol].clock_id);
     clocks.push_back(rules_[kSingColDoubletonIneq].clock_id);
     clocks.push_back(rules_[kImpliedFreeSingCol].clock_id);
-    timer_.report_tl("grep-RmColSng", clocks, ideal_time, 0);
+    timer_.reportOnTolerance("grep-RmColSng", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
@@ -216,7 +216,7 @@ class PresolveTimer {
     ideal_time = getRuleTime(ideal_time_rule);
     clocks.push_back(rules_[kDominatedCols].clock_id);
     clocks.push_back(rules_[kWeaklyDominatedCols].clock_id);
-    timer_.report_tl("grep-RmDomCol", clocks, ideal_time, 0);
+    timer_.reportOnTolerance("grep-RmDomCol", clocks, ideal_time, 0);
     std::cout << std::endl;
   }
 

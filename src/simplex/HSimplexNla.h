@@ -50,7 +50,7 @@ struct FrozenBasis {
 
 class HSimplexNla {
  private:
-  void setup(const HighsLp* lp, HighsInt* base_index,
+  void setup(const HighsLp* lp, HighsInt* basic_index,
              const HighsOptions* options, HighsTimer* timer,
              HighsSimplexAnalysis* analysis,
              const HighsSparseMatrix* factor_a_matrix,
@@ -60,7 +60,7 @@ class HSimplexNla {
   void setBasicIndexPointers(HighsInt* basic_index);
   void setPointers(const HighsLp* for_lp,
                    const HighsSparseMatrix* factor_a_matrix = NULL,
-                   HighsInt* base_index = NULL,
+                   HighsInt* basic_index = NULL,
                    const HighsOptions* options = NULL, HighsTimer* timer = NULL,
                    HighsSimplexAnalysis* analysis = NULL);
   void clear();
@@ -91,7 +91,7 @@ class HSimplexNla {
   void applyBasisMatrixColScale(HVector& rhs) const;
   void applyBasisMatrixRowScale(HVector& rhs) const;
   void addCols(const HighsLp* updated_lp);
-  void addRows(const HighsLp* updated_lp, HighsInt* base_index,
+  void addRows(const HighsLp* updated_lp, HighsInt* basic_index,
                const HighsSparseMatrix* scaled_ar_matrix);
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
                        HighsInt& to_entry) const;
@@ -133,7 +133,7 @@ class HSimplexNla {
   // Class data members
   const HighsLp* lp_;
   const HighsScale* scale_;
-  HighsInt* base_index_;
+  HighsInt* basic_index_;
   const HighsOptions* options_;
   HighsTimer* timer_;
   HighsSimplexAnalysis* analysis_;

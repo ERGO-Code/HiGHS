@@ -16,18 +16,36 @@
 
 #include "simplex/HSimplex.h"
 
-#include "lp_data/HighsLpUtils.h"
-#include "util/HighsSort.h"
-
-using std::runtime_error;
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <vector>
 
+//#include "lp_data/HighsLpUtils.h"
+//#include "util/HighsSort.h"
+
+using std::max;
+using std::min;
+// using std::runtime_error;
+
 void SimplexBasis::clear() {
-  hash = 0;
-  basicIndex_.clear();
-  nonbasicFlag_.clear();
-  nonbasicMove_.clear();
+  this->hash = 0;
+  this->basicIndex_.clear();
+  this->nonbasicFlag_.clear();
+  this->nonbasicMove_.clear();
+  this->debug_id = -1;
+  this->debug_update_count = -1;
+  this->debug_origin_name = "None";
+}
+
+void SimplexBasis::setup(const HighsInt num_col, const HighsInt num_row) {
+  this->hash = 0;
+  this->basicIndex_.resize(num_row);
+  this->nonbasicFlag_.resize(num_col + num_row);
+  this->nonbasicMove_.resize(num_col + num_row);
+  this->debug_id = -1;
+  this->debug_update_count = -1;
+  this->debug_origin_name = "None";
 }
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,

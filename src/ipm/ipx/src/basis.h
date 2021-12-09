@@ -222,6 +222,8 @@ public:
     double mean_fill() const;         // geom. mean of LU fill factors
     double max_fill() const;          // max LU fill factor
     
+    void reportBasisData() const;
+  
 private:
     // Basis repair terminates when the maximum absolute entry in inverse(B)
     // is smaller than kBasisRepairThreshold. At most kMaxBasisRepair repair
@@ -306,6 +308,8 @@ private:
     double time_update_{0.0};      // time for LU updates
     double time_factorize_{0.0};   // time for LU factorizations
     std::vector<double> fill_factors_; // fill factors from LU factorizations
+    double sum_ftran_density_{0.0};
+    double sum_btran_density_{0.0};
 };
 
 #include <cassert>

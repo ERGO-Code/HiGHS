@@ -39,8 +39,8 @@ struct PresolveComponentData : public HighsComponentData {
     postSolveStack = presolve::HighsPostsolveStack();
 
     reduced_lp_.clear();
-    clearSolutionUtil(recovered_solution_);
-    clearBasisUtil(recovered_basis_);
+    recovered_solution_.clear();
+    recovered_basis_.clear();
   }
 
   virtual ~PresolveComponentData() = default;

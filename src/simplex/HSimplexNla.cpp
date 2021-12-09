@@ -25,24 +25,23 @@
 
 using std::vector;
 
-void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
+void HSimplexNla::setup(const HighsLp* lp, HighsInt* basic_index,
                         const HighsOptions* options, HighsTimer* timer,
                         HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
   this->setLpAndScalePointers(lp);
-  this->base_index_ = base_index;
+  this->basic_index_ = basic_index;
   this->options_ = options;
   this->timer_ = timer;
   this->analysis_ = analysis;
   this->report_ = false;
-  this->factor_.setup(
-      this->lp_->num_col_, this->lp_->num_row_, &factor_a_matrix->start_[0],
-      &factor_a_matrix->index_[0], &factor_a_matrix->value_[0],
-      this->base_index_, factor_pivot_threshold,
+  this->factor_.setupGeneral(
+      this->lp_->num_col_, this->lp_->num_row_, this->lp_->num_row_,
+      &factor_a_matrix->start_[0], &factor_a_matrix->index_[0],
+      &factor_a_matrix->value_[0], this->basic_index_, factor_pivot_threshold,
       this->options_->factor_pivot_tolerance, this->options_->highs_debug_level,
-      this->options_->output_flag, this->options_->log_file_stream,
-      this->options_->log_to_console, this->options_->log_dev_level);
+      &(this->options_->log_options));
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
@@ -54,18 +53,18 @@ void HSimplexNla::setLpAndScalePointers(const HighsLp* for_lp) {
 }
 
 void HSimplexNla::setBasicIndexPointers(HighsInt* basic_index) {
-  this->base_index_ = basic_index;
-  this->factor_.baseIndex = basic_index;
+  this->basic_index_ = basic_index;
+  this->factor_.basic_index = basic_index;
 }
 
 void HSimplexNla::setPointers(const HighsLp* for_lp,
                               const HighsSparseMatrix* factor_a_matrix,
-                              HighsInt* base_index, const HighsOptions* options,
-                              HighsTimer* timer,
+                              HighsInt* basic_index,
+                              const HighsOptions* options, HighsTimer* timer,
                               HighsSimplexAnalysis* analysis) {
   this->setLpAndScalePointers(for_lp);
   if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
-  if (base_index) base_index_ = base_index;
+  if (basic_index) basic_index_ = basic_index;
   if (options) options_ = options;
   if (timer) timer_ = timer;
   if (analysis) analysis_ = analysis;
@@ -74,7 +73,7 @@ void HSimplexNla::setPointers(const HighsLp* for_lp,
 void HSimplexNla::clear() {
   lp_ = NULL;
   scale_ = NULL;
-  base_index_ = NULL;
+  basic_index_ = NULL;
   options_ = NULL;
   timer_ = NULL;
   analysis_ = NULL;
@@ -190,7 +189,7 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   aq->array[row_out] *= scale_factor;
   //
   // Also have to unscale by cp
-  HighsInt variable_out = base_index_[row_out];
+  HighsInt variable_out = basic_index_[row_out];
   if (variable_out < lp_->num_col_) {
     scale_factor = scale_->col[variable_out];
   } else {
@@ -241,7 +240,7 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
     } else {
       iCol = iEntry;
     }
-    HighsInt iVar = base_index_[iCol];
+    HighsInt iVar = basic_index_[iCol];
     if (iVar < lp_->num_col_) {
       rhs.array[iCol] *= col_scale[iVar];
     } else {
@@ -260,15 +259,15 @@ void HSimplexNla::addCols(const HighsLp* updated_lp) {
   setLpAndScalePointers(updated_lp);
 }
 
-void HSimplexNla::addRows(const HighsLp* updated_lp, HighsInt* base_index,
+void HSimplexNla::addRows(const HighsLp* updated_lp, HighsInt* basic_index,
                           const HighsSparseMatrix* scaled_ar_matrix) {
   // Adding rows is not so easy, since their slacks are basic
   //
   // Set the pointers for the LP, scaling and basic variables. The
   // HFactor matrix isn't needed until reinversion has to be performed
   setLpAndScalePointers(updated_lp);
-  base_index_ = base_index;
-  factor_.baseIndex = base_index;
+  basic_index_ = basic_index;
+  factor_.basic_index = basic_index;
   factor_.addRows(scaled_ar_matrix);
 }
 

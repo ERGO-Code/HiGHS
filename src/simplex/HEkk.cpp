@@ -40,7 +40,7 @@ void HEkk::clear() {
   this->clearEkkDualise();
   this->clearEkkData();
   this->clearEkkPointers();
-  this->clearSimplexBasis(this->basis_);
+  this->basis_.clear();
   this->simplex_nla_.clear();
   this->clearEkkAllStatus();
 }
@@ -145,6 +145,8 @@ void HEkk::clearEkkData() {
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
+
+  clearBadBasisChange();
 }
 
 void HEkk::clearEkkDataInfo() {
@@ -171,7 +173,7 @@ void HEkk::clearEkkDataInfo() {
   info.phase2_backtracking_test_done = false;
   info.backtracking_ = false;
   info.valid_backtracking_basis_ = false;
-  this->clearSimplexBasis(info.backtracking_basis_);
+  info.backtracking_basis_.clear();
   info.backtracking_basis_costs_shifted_ = false;
   info.backtracking_basis_costs_perturbed_ = false;
   info.backtracking_basis_bounds_perturbed_ = false;
@@ -255,14 +257,6 @@ void HEkk::clearEkkNlaInfo() {
   HighsSimplexInfo& info = this->info_;
   info.factor_pivot_threshold = 0;
   info.update_limit = 0;
-}
-
-void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
-  // Clear a given simplex basis. Needs an argument because it's used
-  // to clear the backtracking basis
-  simplex_basis.basicIndex_.clear();
-  simplex_basis.nonbasicFlag_.clear();
-  simplex_basis.nonbasicMove_.clear();
 }
 
 void HotStart::clear() {
@@ -402,7 +396,7 @@ void HEkk::setNlaPointersForTrans(const HighsLp& lp) {
   assert(status_.has_nla);
   assert(status_.has_basis);
   simplex_nla_.setLpAndScalePointers(&lp);
-  simplex_nla_.base_index_ = &basis_.basicIndex_[0];
+  simplex_nla_.basic_index_ = &basis_.basicIndex_[0];
 }
 
 void HEkk::setNlaRefactorInfo() {
@@ -1019,6 +1013,28 @@ HighsStatus HEkk::unpermute() {
 
 HighsStatus HEkk::solve() {
   debug_solve_call_num_++;
+  const HighsInt debug_from_solve_call_num = -607;
+  const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
+  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
+                        debug_solve_call_num_ <= debug_to_solve_call_num;
+  const HighsInt time_from_solve_call_num = -1;
+  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
+  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
+                 debug_solve_call_num_ <= time_to_solve_call_num;
+  const HighsInt debug_basis_id = -999;
+  debug_basis_report_ = basis_.debug_id == debug_basis_id;
+  if (debug_solve_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    debugReporting(-1);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
+  }
+  if (time_report_) {
+    timeReporting(-1);
+    timeReporting(0);
+  }
+  if (debug_basis_report_) {
+    printf("HEkk::solve basis %d\n", (int)debug_basis_id);
+  }
   initialiseAnalysis();
   initialiseControl();
 
@@ -1029,8 +1045,7 @@ HighsStatus HEkk::solve() {
 
   previous_iteration_cycling_detected = -kHighsIInf;
 
-  HighsStatus call_status = initialiseForSolve();
-  if (call_status == HighsStatus::kError) return HighsStatus::kError;
+  initialiseForSolve();
 
   const HighsDebugStatus simplex_nla_status =
       simplex_nla_.debugCheckData("Before HEkk::solve()");
@@ -1039,15 +1054,17 @@ HighsStatus HEkk::solve() {
     highsLogUser(options_->log_options, HighsLogType::kError,
                  "Error in simplex NLA data\n");
     assert(simplex_nla_ok);
-    return HighsStatus::kError;
+    return returnFromEkkSolve(HighsStatus::kError);
   }
 
   assert(status_.has_basis);
   assert(status_.has_invert);
   assert(status_.initialised_for_solve);
-  if (model_status_ == HighsModelStatus::kOptimal) return HighsStatus::kOk;
+  if (model_status_ == HighsModelStatus::kOptimal)
+    return returnFromEkkSolve(HighsStatus::kOk);
 
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
@@ -1062,15 +1079,6 @@ HighsStatus HEkk::solve() {
 
   chooseSimplexStrategyThreads(*options_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
-  const HighsInt debug_from_solve_call_num = -160;
-  const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
-  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
-                        debug_solve_call_num_ <= debug_to_solve_call_num;
-  if (debug_solve_report_) {
-    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    debugReporting(-1);
-    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
-  }
 
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
@@ -1126,13 +1134,9 @@ HighsStatus HEkk::solve() {
     }
   }
 
-  if (debug_solve_report_) {
-    // Restore any modified development output settings
-    debugReporting(1);
-  }
-
   reportSimplexPhaseIterations(options_->log_options, iteration_count_, info_);
-  if (return_status == HighsStatus::kError) return return_status;
+  if (return_status == HighsStatus::kError)
+    return returnFromEkkSolve(return_status);
   highsLogDev(options_->log_options, HighsLogType::kInfo,
               "EKK %s simplex solver returns %" HIGHSINT_FORMAT
               " primal and %" HIGHSINT_FORMAT
@@ -1144,14 +1148,10 @@ HighsStatus HEkk::solve() {
   // Can model_status_ = HighsModelStatus::kNotset be returned?
   assert(model_status_ != HighsModelStatus::kNotset);
 
-  if (analysis_.analyse_simplex_time) {
-    analysis_.simplexTimerStop(SimplexTotalClock);
-    analysis_.reportSimplexTimer();
-  }
   if (analysis_.analyse_simplex_summary_data) analysis_.summaryReport();
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
   if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
-  return return_status;
+  return returnFromEkkSolve(return_status);
 }
 
 HighsStatus HEkk::cleanup() {
@@ -1199,10 +1199,10 @@ HighsStatus HEkk::setBasis() {
   const HighsInt num_col = lp_.num_col_;
   const HighsInt num_row = lp_.num_row_;
   const HighsInt num_tot = num_col + num_row;
-  basis_.hash = 0;
-  basis_.nonbasicFlag_.resize(num_tot);
-  basis_.nonbasicMove_.resize(num_tot);
-  basis_.basicIndex_.resize(num_row);
+
+  basis_.setup(num_col, num_row);
+  basis_.debug_origin_name = "HEkk::setBasis - logical";
+
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     basis_.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     double lower = lp_.col_lower_[iCol];
@@ -1253,6 +1253,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   //
+  // The HighsBasis instance must not be alien
+  //  assert(!highs_basis.alien);
   HighsOptions& options = *options_;
   if (debugHighsBasisConsistent(options, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
@@ -1263,16 +1265,19 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   HighsInt num_col = lp_.num_col_;
   HighsInt num_row = lp_.num_row_;
   HighsInt num_tot = num_col + num_row;
-  // Resize the basis in case none has yet been defined for this LP
-  basis_.nonbasicFlag_.resize(num_tot);
-  basis_.nonbasicMove_.resize(num_tot);
-  basis_.basicIndex_.resize(num_row);
+  // Set up the basis in case it has not yet been done for this LP
+  basis_.setup(num_col, num_row);
+  basis_.debug_id = highs_basis.debug_id;
+  basis_.debug_update_count = highs_basis.debug_update_count;
+  basis_.debug_origin_name = highs_basis.debug_origin_name;
+  assert(basis_.debug_origin_name != "");
+  //  printf("HEkk::setBasis Id = %9d; UpdateCount = %4d; Origin (%s)\n",
+  //	 (int)basis_.debug_id, (int)basis_.debug_update_count,
+  //	 basis_.debug_origin_name.c_str());
 
-  basis_.hash = 0;
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
-
     const double lower = lp_.col_lower_[iCol];
     const double upper = lp_.col_upper_[iCol];
     if (highs_basis.col_status[iCol] == HighsBasisStatus::kBasic) {
@@ -1518,27 +1523,46 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
+  highs_basis.alien = false;
+  highs_basis.debug_id =
+      (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
+  highs_basis.debug_update_count = info_.update_count;
+  highs_basis.debug_origin_name = basis_.debug_origin_name;
   return highs_basis;
 }
 
-HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
+HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
     const bool only_from_known_basis) {
-  // If there's no basis, return error if the basis has to be known,
-  // otherwise set a logical basis
+  // This is normally called only from HEkk::initialiseForSolve, with
+  // only_from_known_basis = false.
   //
-  // If the basis has to be known, then non-negative return value is
-  // rank deficiency; negative return value is error. Otherwise, any
-  // rank deficiency is handled and return is 0
-  if (!status_.has_basis) {
-    if (only_from_known_basis) {
-      highsLogDev(options_->log_options, HighsLogType::kError,
-                  "Simplex basis should be known but isn't\n");
-      return -1;
-    }
-    setBasis();
-  }
-
+  // In this case, if there is no existing simplex basis then a
+  // logical basis is set up. Otherwise the existing simplex basis is
+  // factorized, with logicals introduced to handle rank deficiency.
   //
+  // It is also called from HighsSolution's
+  // formSimplexLpBasisAndFactor, with only_from_known_basis = true or
+  // false. In both cases a simplex basis is known.
+  //
+  // Calls with only_from_known_basis = true originate from
+  // Highs::getBasicVariablesInterface, and are made when
+  // Highs::getBasicVariables has been called and there is no
+  // factorization of the current basis matrix. No rank deficiency
+  // handling is permitted so, if it occurs, an error must be
+  // returned.
+  //
+  // Calls with only_from_known_basis = false originate from
+  // Highs::setBasis. The simplex basis should be non-singular since
+  // it's come from a HighsBasis that is either non-alien, or from an
+  // alien HighsBasis that's been checked/completed. However, it's
+  // conceivable that a singularity could occur, and it's fine to
+  // accommodate it.
+  //
+  // If only_from_known_basis is true, then there should be a simplex
+  // basis to use
+  if (only_from_known_basis) assert(status_.has_basis);
+  // If there is no simplex basis, set up a logical basis
+  if (!status_.has_basis) setBasis();
   // The simplex NLA operates in the scaled space if the LP has
   // scaling factors. If they exist but haven't been applied, then the
   // simplex NLA needs a separate, scaled constraint matrix. Thus
@@ -1576,11 +1600,17 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
+      printf(
+          "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency %d: Id "
+          "= "
+          "%d; UpdateCount = %d\n",
+          basis_.debug_origin_name.c_str(), (int)rank_deficiency,
+          (int)basis_.debug_id, (int)basis_.debug_update_count);
       if (only_from_known_basis) {
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,
                     "Supposed to be a full-rank basis, but incorrect\n");
-        return rank_deficiency;
+        return HighsStatus::kError;
       }
       // Account for rank deficiency by correcing nonbasicFlag
       handleRankDeficiency();
@@ -1592,25 +1622,36 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     }
     // Record the synthetic clock for INVERT, and zero it for UPDATE
     resetSyntheticClock();
-    // Clear any taboo rows/cols
-    clearTaboo();
-    // Allow taboo rows
-    allow_taboo_rows = true;
   }
   assert(status_.has_invert);
-  return 0;
+  return HighsStatus::kOk;
 }
 
 void HEkk::handleRankDeficiency() {
   HFactor& factor = simplex_nla_.factor_;
   HighsInt rank_deficiency = factor.rank_deficiency;
-  vector<HighsInt>& noPvC = factor.noPvC;
-  vector<HighsInt>& noPvR = factor.noPvR;
+  vector<HighsInt>& row_with_no_pivot = factor.row_with_no_pivot;
+  vector<HighsInt>& col_with_no_pivot = factor.col_with_no_pivot;
+  vector<HighsInt>& var_with_no_pivot = factor.var_with_no_pivot;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
-    HighsInt variable_in = lp_.num_col_ + noPvR[k];
-    HighsInt variable_out = noPvC[k];
+    HighsInt row_in = row_with_no_pivot[k];
+    HighsInt variable_in = lp_.num_col_ + row_in;
+    HighsInt variable_out = var_with_no_pivot[k];
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
+    HighsInt row_out = row_with_no_pivot[k];
+    assert(basis_.basicIndex_[row_out] == variable_in);
+    printf(
+        "HEkk::handleRankDeficiency: %4d: Basic row of leaving variable (%4d "
+        "is %s %4d) is "
+        "%4d; Entering logical = %4d is variable %d)\n",
+        (int)k, (int)variable_out,
+        variable_out < lp_.num_col_ ? " column" : "logical",
+        variable_out < lp_.num_col_ ? (int)variable_out
+                                    : (int)(variable_out - lp_.num_col_),
+        (int)row_out, (int)(row_in), (int)variable_in);
+    addBadBasisChange(row_out, variable_in, variable_out,
+                      BadBasisChangeReason::kSingular, true);
   }
   status_.has_ar_matrix = false;
 }
@@ -1623,6 +1664,7 @@ void HEkk::initialiseEkk() {
   initialiseControl();
   initialiseSimplexLpRandomVectors();
   simplex_nla_.clear();
+  clearBadBasisChange();
   status_.initialised_for_new_lp = true;
 }
 
@@ -1638,10 +1680,9 @@ bool HEkk::isUnconstrainedLp() {
   return is_unconstrained_lp;
 }
 
-HighsStatus HEkk::initialiseForSolve() {
-  const HighsInt error_return = initialiseSimplexLpBasisAndFactor();
-  assert(!error_return);
-  if (error_return) return HighsStatus::kError;
+void HEkk::initialiseForSolve() {
+  const HighsStatus return_status = initialiseSimplexLpBasisAndFactor();
+  assert(return_status == HighsStatus::kOk);
   assert(status_.has_basis);
 
   updateSimplexOptions();
@@ -1665,7 +1706,6 @@ HighsStatus HEkk::initialiseForSolve() {
   model_status_ = HighsModelStatus::kNotset;
   if (primal_feasible && dual_feasible)
     model_status_ = HighsModelStatus::kOptimal;
-  return HighsStatus::kOk;
 }
 
 void HEkk::setSimplexOptions() {
@@ -1766,7 +1806,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // set to other values if parallel options are used.
   info.min_concurrency = 1;
   info.max_concurrency = 1;
-  // Record the min/max minimum number of HiGHS threads in the options
+  // Record the min/max minimum concurrency in the options
   const HighsInt simplex_min_concurrency = options.simplex_min_concurrency;
   const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
   HighsInt max_threads = highs::parallel::num_threads();
@@ -1774,16 +1814,16 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   if (options.parallel == kHighsOnString &&
       simplex_strategy == kSimplexStrategyDual) {
     // The parallel strategy is on and the simplex strategy is dual so use
-    // PAMI if there are enough OMP threads
+    // PAMI if there are enough threads
     if (max_threads >= kDualMultiMinConcurrency)
       simplex_strategy = kSimplexStrategyDualMulti;
   }
   //
-  // If parallel stratgies are used, the minimum number of HiGHS threads used
-  // will be set to be at least the minimum required for the strategy
+  // If parallel stratgies are used, the minimum concurrency will be
+  // set to be at least the minimum required for the strategy
   //
-  // All this is independent of the number of OMP threads available,
-  // since code with multiple HiGHS threads can be run in serial.
+  // All this is independent of the number of threads available, since
+  // code with multiple concurrency can be run in serial.
 
   if (simplex_strategy == kSimplexStrategyDualTasks) {
     info.min_concurrency =
@@ -1795,29 +1835,28 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
     info.max_concurrency = max(info.min_concurrency, simplex_max_concurrency);
   }
 
-  // Set the number of HiGHS threads to be used to be the maximum
-  // number to be used
+  // Set the concurrency to be used to be the maximum number
   info.num_concurrency = info.max_concurrency;
-  // Give a warning if the number of threads to be used is fewer than
-  // the minimum number of HiGHS threads allowed
+  // Give a warning if the concurrency to be used is less than the
+  // minimum concurrency allowed
   if (info.num_concurrency < simplex_min_concurrency) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Using %" HIGHSINT_FORMAT
-                 " HiGHS threads for parallel strategy rather than "
+                 "Using concurrency of %" HIGHSINT_FORMAT
+                 " for parallel strategy rather than "
                  "minimum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  info.num_concurrency, simplex_min_concurrency);
   }
-  // Give a warning if the number of threads to be used is more than
-  // the maximum number of HiGHS threads allowed
+  // Give a warning if the concurrency to be used is more than the
+  // maximum concurrency allowed
   if (info.num_concurrency > simplex_max_concurrency) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Using %" HIGHSINT_FORMAT
-                 " HiGHS threads for parallel strategy rather than "
+                 "Using concurrency of %" HIGHSINT_FORMAT
+                 " for parallel strategy rather than "
                  "maximum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  info.num_concurrency, simplex_max_concurrency);
   }
-  // Give a warning if the number of threads to be used is fewer than
-  // the number of OMP threads available
+  // Give a warning if the concurrency to be used is less than the
+  // number of threads available
   if (info.num_concurrency > max_threads) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Number of threads available = %" HIGHSINT_FORMAT
@@ -1853,11 +1892,12 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
-  // if (rank_deficiency)
-  //   printf(
-  //       "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
-  //       "%d)\n",
-  //       (int)debug_solve_call_num_, (int)iteration_count_);
+  if (rank_deficiency)
+    printf(
+        "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
+        "%d)\n",
+        (int)debug_solve_call_num_, (int)iteration_count_);
+  fflush(stdout);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
@@ -2071,6 +2111,8 @@ bool HEkk::rebuildRefactor(HighsInt rebuild_reason) {
 HighsInt HEkk::computeFactor() {
   assert(status_.has_nla);
   if (status_.has_fresh_invert) return 0;
+  // Clear any bad basis changes
+  clearBadBasisChange();
   //
   // Perform INVERT
   analysis_.simplexTimerStart(InvertClock);
@@ -3124,11 +3166,13 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
-                           const HighsInt variable_in, const HighsInt row_out,
-                           const HighsInt rebuild_reason) {
-  if (rebuild_reason) return false;
-  if (variable_in == -1 || row_out == -1) return false;
+HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
+                              const HighsInt variable_in,
+                              const HighsInt row_out,
+                              const HighsInt rebuild_reason) {
+  HighsInt bad_basis_change_num = -1;
+  if (rebuild_reason) return bad_basis_change_num;
+  if (variable_in == -1 || row_out == -1) return bad_basis_change_num;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
 
@@ -3140,26 +3184,50 @@ bool HEkk::cyclingDetected(const SimplexAlgorithm algorithm,
   if (posible_cycling) {
     if (iteration_count_ == previous_iteration_cycling_detected + 1) {
       // Cycling detected on successive iterations suggests infinite cycling
-      highsLogDev(options_->log_options, HighsLogType::kWarning,
-                  "Cycling detected in %s simplex solve %d (Iteration %d)\n",
-                  algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-                  (int)debug_solve_call_num_, (int)iteration_count_);
+      //      highsLogDev(options_->log_options, HighsLogType::kWarning,
+      //		  "Cycling detected in %s simplex:");
+      // printf("Cycling detected in %s simplex solve %d (Iteration %d)",
+      //        algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+      //        (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
     } else {
-      //      printf("Possible cycling in %s simplex solve %d (Iteration %d)\n",
-      //             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-      //             (int)debug_solve_call_num_, (int)iteration_count_);
       previous_iteration_cycling_detected = iteration_count_;
     }
   }
-  return cycling_detected;
+  if (cycling_detected) {
+    if (algorithm == SimplexAlgorithm::kDual) {
+      analysis_.num_dual_cycling_detections++;
+    } else {
+      analysis_.num_primal_cycling_detections++;
+    }
+    //    highsLogDev(options_->log_options, HighsLogType::kWarning,
+    printf(" basis change (%d out; %d in) is bad\n", (int)variable_out,
+           (int)variable_in);
+    addBadBasisChange(row_out, variable_out, variable_in,
+                      BadBasisChangeReason::kCycling);
+    bad_basis_change_num = bad_basis_change_.size() - 1;
+  } else {
+    // Look to see whether this basis change is in the list of bad
+    // ones
+    for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+      if (bad_basis_change_[iX].variable_out == variable_out &&
+          bad_basis_change_[iX].variable_in == variable_in) {
+        bad_basis_change_num = iX;
+        break;
+      }
+    }
+  }
+  if (bad_basis_change_num >= 0) {
+    bad_basis_change_[bad_basis_change_num].taboo = true;
+  }
+  return bad_basis_change_num;
 }
 
 void HEkk::updateMatrix(const HighsInt variable_in,
                         const HighsInt variable_out) {
   analysis_.simplexTimerStart(UpdateMatrixClock);
   ar_matrix_.update(variable_in, variable_out, lp_.a_matrix_);
-  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
+  //  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(UpdateMatrixClock);
 }
 
@@ -3406,6 +3474,23 @@ bool HEkk::bailoutOnTimeIterations() {
     model_status_ = HighsModelStatus::kIterationLimit;
   }
   return solve_bailout_;
+}
+
+HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
+  if (analysis_.analyse_simplex_time)
+    analysis_.simplexTimerStop(SimplexTotalClock);
+  // Restore any modified development or timing settings and analyse
+  // solver timing
+  if (debug_solve_report_) debugReporting(1);
+  if (time_report_) timeReporting(1);
+  // Note that in timeReporting(1), analysis_.analyse_simplex_time
+  // reverts to its value given by options_
+  if (analysis_.analyse_simplex_time) {
+    analysis_.reportSimplexTimer();
+    assert(!analysis_.analyse_simplex_time);
+  }
+
+  return return_status;
 }
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
@@ -3719,7 +3804,7 @@ double HEkk::factorSolveError() {
   const HighsInt num_col = this->lp_.num_col_;
   const HighsInt num_row = this->lp_.num_row_;
   const HighsSparseMatrix& a_matrix = this->lp_.a_matrix_;
-  const vector<HighsInt>& base_index = this->basis_.basicIndex_;
+  const vector<HighsInt>& basic_index = this->basis_.basicIndex_;
   const HighsSparseMatrix& ar_matrix = this->ar_matrix_;
   HVector btran_rhs;
   HVector ftran_rhs;
@@ -3745,7 +3830,7 @@ double HEkk::factorSolveError() {
     solution_value.push_back(value);
     solution_index.push_back(iRow);
     solution_nonzero[iRow] = 1;
-    HighsInt iCol = base_index[iRow];
+    HighsInt iCol = basic_index[iRow];
     a_matrix.collectAj(ftran_rhs, iCol, value);
     if ((int)solution_value.size() == solution_num_nz) break;
   }
@@ -3769,7 +3854,7 @@ double HEkk::factorSolveError() {
       btran_scattered_rhs[iCol] = solution_value[iX];
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    HighsInt iCol = base_index[iRow];
+    HighsInt iCol = basic_index[iRow];
     if (btran_scattered_rhs[iCol] == 0) continue;
     btran_rhs.array[iRow] = btran_scattered_rhs[iCol];
     btran_rhs.index[btran_rhs.count++] = iRow;
@@ -3793,69 +3878,70 @@ double HEkk::factorSolveError() {
   return solution_error;
 }
 
-void HEkk::clearTaboo() {
-  taboo_col.clear();
-  taboo_row.clear();
-}
-
-bool HEkk::allowTabooRows(const HighsInt rebuild_reason) {
-  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
-           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
-}
-
-void HEkk::addTabooRow(const HighsInt iRow, const TabooReason reason) {
-  assert(iRow <= lp_.num_row_);
-  HighsSimplexTabooRecord record;
+void HEkk::addBadBasisChange(const HighsInt row_out,
+                             const HighsInt variable_out,
+                             const HighsInt variable_in,
+                             const BadBasisChangeReason reason,
+                             const bool taboo) {
+  assert(0 <= row_out && row_out <= lp_.num_row_);
+  assert(0 <= variable_out && variable_out <= lp_.num_col_ + lp_.num_row_);
+  assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
+  HighsSimplexBadBasisChangeRecord record;
+  record.taboo = taboo;
+  record.row_out = row_out;
+  record.variable_out = variable_out;
+  record.variable_in = variable_in;
   record.reason = reason;
-  record.index = iRow;
-  taboo_row.push_back(record);
+  bad_basis_change_.push_back(record);
 }
 
-void HEkk::applyTabooRow(vector<double>& values, double overwrite_with) {
+void HEkk::clearBadBasisChangeTabooFlag() {
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+    bad_basis_change_[iX].taboo = false;
+}
+
+bool HEkk::tabooBadBasisChange() {
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+    if (bad_basis_change_[iX].taboo) return true;
+  }
+  return false;
+}
+
+void HEkk::applyTabooRowOut(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++) {
-    HighsInt iRow = taboo_row[iX].index;
-    taboo_row[iX].save_value = values[iRow];
-    values[iRow] = overwrite_with;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+    if (bad_basis_change_[iX].taboo) {
+      HighsInt iRow = bad_basis_change_[iX].row_out;
+      bad_basis_change_[iX].save_value = values[iRow];
+      values[iRow] = overwrite_with;
+    }
   }
 }
 
-void HEkk::unapplyTabooRow(vector<double>& values) {
+void HEkk::unapplyTabooRowOut(vector<double>& values) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_row.size(); iX++)
-    values[taboo_row[iX].index] = taboo_row[iX].save_value;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+    if (bad_basis_change_[iX].taboo)
+      values[bad_basis_change_[iX].row_out] = bad_basis_change_[iX].save_value;
 }
 
-bool HEkk::allowTabooCols(const HighsInt rebuild_reason) {
-  return !(rebuild_reason == kRebuildReasonPossiblyOptimal ||
-           rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded ||
-           rebuild_reason == kRebuildReasonPossiblyDualUnbounded ||
-           rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
-}
-
-void HEkk::addTabooCol(const HighsInt iCol, const TabooReason reason) {
-  assert(iCol <= lp_.num_col_ + lp_.num_row_);
-  HighsSimplexTabooRecord record;
-  record.reason = reason;
-  record.index = iCol;
-  taboo_col.push_back(record);
-}
-
-void HEkk::applyTabooCol(vector<double>& values, double overwrite_with) {
+void HEkk::applyTabooVariableIn(vector<double>& values, double overwrite_with) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_col.size(); iX++) {
-    HighsInt iCol = taboo_col[iX].index;
-    taboo_col[iX].save_value = values[iCol];
-    values[iCol] = overwrite_with;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
+    if (bad_basis_change_[iX].taboo) {
+      HighsInt iCol = bad_basis_change_[iX].variable_in;
+      bad_basis_change_[iX].save_value = values[iCol];
+      values[iCol] = overwrite_with;
+    }
   }
 }
 
-void HEkk::unapplyTabooCol(vector<double>& values) {
+void HEkk::unapplyTabooVariableIn(vector<double>& values) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)taboo_col.size(); iX++)
-    values[taboo_col[iX].index] = taboo_col[iX].save_value;
+  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+    if (bad_basis_change_[iX].taboo)
+      values[bad_basis_change_[iX].variable_in] =
+          bad_basis_change_[iX].save_value;
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {
