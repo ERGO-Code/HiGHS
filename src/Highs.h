@@ -883,7 +883,7 @@ class Highs {
   /**
    * @brief Uses the HighsBasis passed to set basis_
    */
-  HighsStatus setBasis(const HighsBasis& basis);
+  HighsStatus setBasis(const HighsBasis& basis, const std::string origin = "");
 
   /**
    * @brief Clears basis_
@@ -1097,8 +1097,6 @@ class Highs {
 
   HEkk ekk_instance_;
 
-  // Record of maximum number of OMP threads. If OMP is available then
-  // it's set to the correct positive number in Highs::run()
   HighsInt max_threads = 0;
 
   // This is strictly for debugging. It's used to check whether

@@ -103,7 +103,7 @@ class HEkkPrimal {
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);
-  bool cyclingDetected();
+  bool badBasisChange();
 
   // References:
   HEkk& ekk_instance_;

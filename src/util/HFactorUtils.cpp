@@ -27,54 +27,54 @@ void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
     if (full) printf(" - full");
     printf(":\n");
 
-    if (full) reportIntVector("LpivotLookup", LpivotLookup);
-    if (full) reportIntVector("LpivotIndex", LpivotIndex);
-    reportIntVector("Lstart", Lstart);
-    reportIntVector("Lindex", Lindex);
-    reportDoubleVector("Lvalue", Lvalue);
+    if (full) reportIntVector("l_pivot_lookup", l_pivot_lookup);
+    if (full) reportIntVector("l_pivot_index", l_pivot_index);
+    reportIntVector("l_start", l_start);
+    reportIntVector("l_index", l_index);
+    reportDoubleVector("l_value", l_value);
     if (full) {
-      reportIntVector("LRstart", LRstart);
-      reportIntVector("LRindex", LRindex);
-      reportDoubleVector("LRvalue", LRvalue);
+      reportIntVector("lr_start", lr_start);
+      reportIntVector("lr_index", lr_index);
+      reportDoubleVector("lr_value", lr_value);
     }
   }
   if (l_u_or_both & 2) {
     printf("U");
     if (full) printf(" - full");
     printf(":\n");
-    if (full) reportIntVector("UpivotLookup", UpivotLookup);
-    reportIntVector("UpivotIndex", UpivotIndex);
-    reportDoubleVector("UpivotValue", UpivotValue);
-    reportIntVector("Ustart", Ustart);
-    if (full) reportIntVector("Ulastp", Ulastp);
-    reportIntVector("Uindex", Uindex);
-    reportDoubleVector("Uvalue", Uvalue);
+    if (full) reportIntVector("u_pivot_lookup", u_pivot_lookup);
+    reportIntVector("u_pivot_index", u_pivot_index);
+    reportDoubleVector("u_pivot_value", u_pivot_value);
+    reportIntVector("u_start", u_start);
+    if (full) reportIntVector("u_last_p", u_last_p);
+    reportIntVector("u_index", u_index);
+    reportDoubleVector("u_value", u_value);
     if (full) {
-      reportIntVector("URstart", URstart);
-      reportIntVector("URlastp", URlastp);
-      reportIntVector("URspace", URspace);
-      for (HighsInt iRow = 0; iRow < URstart.size(); iRow++) {
-        const HighsInt start = URstart[iRow];
-        const HighsInt end = URlastp[iRow];
+      reportIntVector("ur_start", ur_start);
+      reportIntVector("ur_lastp", ur_lastp);
+      reportIntVector("ur_space", ur_space);
+      for (HighsInt iRow = 0; iRow < ur_start.size(); iRow++) {
+        const HighsInt start = ur_start[iRow];
+        const HighsInt end = ur_lastp[iRow];
         if (start >= end) continue;
         printf("UR    Row %2d: ", (int)iRow);
         for (HighsInt iEl = start; iEl < end; iEl++)
-          printf("%11d ", (int)URindex[iEl]);
+          printf("%11d ", (int)ur_index[iEl]);
         printf("\n              ");
         for (HighsInt iEl = start; iEl < end; iEl++)
-          printf("%11.4g ", URvalue[iEl]);
+          printf("%11.4g ", ur_value[iEl]);
         printf("\n");
       }
-      //      reportIntVector("URindex", URindex);
-      //      reportDoubleVector("URvalue", URvalue);
+      //      reportIntVector("ur_index", ur_index);
+      //      reportDoubleVector("ur_value", ur_value);
     }
   }
   if (l_u_or_both == 3 && full) {
-    reportDoubleVector("PFpivotValue", PFpivotValue);
-    reportIntVector("PFpivotIndex", PFpivotIndex);
-    reportIntVector("PFstart", PFstart);
-    reportIntVector("PFindex", PFindex);
-    reportDoubleVector("PFvalue", PFvalue);
+    reportDoubleVector("pf_pivot_value", pf_pivot_value);
+    reportIntVector("pf_pivot_index", pf_pivot_index);
+    reportIntVector("pf_start", pf_start);
+    reportIntVector("pf_index", pf_index);
+    reportDoubleVector("pf_value", pf_value);
   }
 }
 

@@ -54,7 +54,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   const vector<HighsInt>& a_matrix_start = this->lp_->a_matrix_.start_;
   const vector<HighsInt>& a_matrix_index = this->lp_->a_matrix_.index_;
   const vector<double>& a_matrix_value = this->lp_->a_matrix_.value_;
-  const HighsInt* base_index = this->base_index_;
+  const HighsInt* basic_index = this->basic_index_;
   const HighsOptions* options = this->options_;
   // Make sure that this isn't called between the matrix and LP resizing
   assert(num_row == this->lp_->a_matrix_.num_row_);
@@ -86,7 +86,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
       rhs.index[rhs.count++] = iRow;
       double value = random.fraction();
       column.array[iRow] = value;
-      HighsInt iCol = base_index[iRow];
+      HighsInt iCol = basic_index[iRow];
       if (report_basis)
         highsLogDev(options_->log_options, HighsLogType::kInfo, " %1d",
                     (int)iCol);
@@ -121,7 +121,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
     rhs.clear();
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       rhs.index[rhs.count++] = iRow;
-      HighsInt iCol = base_index[iRow];
+      HighsInt iCol = basic_index[iRow];
       if (iCol < num_col) {
         for (HighsInt iEl = a_matrix_start[iCol];
              iEl < a_matrix_start[iCol + 1]; iEl++) {
@@ -151,7 +151,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
     // Solve BX=B
     HighsInt check_col = -1;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      HighsInt iCol = base_index[iRow];
+      HighsInt iCol = basic_index[iRow];
       column.clear();
       column.packFlag = true;
       if (iCol < num_col) {
@@ -207,7 +207,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
       column.clear();
       column.packFlag = true;
       for (HighsInt iCol = 0; iCol < num_row; iCol++) {
-        HighsInt iVar = base_index[iCol];
+        HighsInt iVar = basic_index[iCol];
         if (iVar < num_col) {
           for (HighsInt k = a_matrix_start[iVar]; k < a_matrix_start[iVar + 1];
                k++) {
@@ -266,11 +266,11 @@ double HSimplexNla::debugInvertResidualError(const bool transposed,
   const vector<HighsInt>& a_matrix_start = this->lp_->a_matrix_.start_;
   const vector<HighsInt>& a_matrix_index = this->lp_->a_matrix_.index_;
   const vector<double>& a_matrix_value = this->lp_->a_matrix_.value_;
-  const HighsInt* base_index = this->base_index_;
+  const HighsInt* basic_index = this->basic_index_;
 
   if (transposed) {
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      HighsInt iCol = base_index[iRow];
+      HighsInt iCol = basic_index[iRow];
       if (iCol < num_col) {
         for (HighsInt iEl = a_matrix_start[iCol];
              iEl < a_matrix_start[iCol + 1]; iEl++) {
@@ -287,7 +287,7 @@ double HSimplexNla::debugInvertResidualError(const bool transposed,
   } else {
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       double value = solution.array[iRow];
-      HighsInt iCol = base_index[iRow];
+      HighsInt iCol = basic_index[iRow];
       if (iCol < num_col) {
         for (HighsInt iEl = a_matrix_start[iCol];
              iEl < a_matrix_start[iCol + 1]; iEl++) {

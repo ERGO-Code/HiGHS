@@ -102,6 +102,8 @@ Int LpSolver::Solve() {
     info_.time_total = control_.Elapsed();
     control_.Debug(2) << info_;
     control_.CloseLogfile();
+    if (control_.reportBasisData())
+      basis_->reportBasisData();
     return info_.status;
 }
 
