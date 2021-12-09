@@ -804,10 +804,10 @@ void HEkkDual::solvePhase1() {
   const bool solve_phase_ok = solve_phase == kSolvePhase1 ||
                               solve_phase == kSolvePhase2 ||
                               solve_phase == kSolvePhaseExit;
-  if (!solve_phase_ok)
-    printf("HEkkDual::solvePhase1 solve_phase == %d (solve call %d; iter %d)\n",
-           (int)solve_phase, (int)ekk_instance_.debug_solve_call_num_,
-           (int)ekk_instance_.iteration_count_);
+  // if (!solve_phase_ok)
+  //   printf("HEkkDual::solvePhase1 solve_phase == %d (solve call %d; iter %d)\n",
+  //          (int)solve_phase, (int)ekk_instance_.debug_solve_call_num_,
+  //          (int)ekk_instance_.iteration_count_);
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
          solve_phase == kSolvePhaseExit);
   if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {

@@ -1596,12 +1596,13 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
-      printf(
-          "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency %d: Id "
-          "= "
-          "%d; UpdateCount = %d\n",
-          basis_.debug_origin_name.c_str(), (int)rank_deficiency,
-          (int)basis_.debug_id, (int)basis_.debug_update_count);
+      // printf(
+      //     "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency %d:
+      //     Id "
+      //     "= "
+      //     "%d; UpdateCount = %d\n",
+      //     basis_.debug_origin_name.c_str(), (int)rank_deficiency,
+      //     (int)basis_.debug_id, (int)basis_.debug_update_count);
       if (only_from_known_basis) {
         // If only this basis should be used, then return error
         highsLogDev(options_->log_options, HighsLogType::kError,
@@ -1637,15 +1638,15 @@ void HEkk::handleRankDeficiency() {
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
     assert(basis_.basicIndex_[row_out] == variable_in);
-    printf(
-        "HEkk::handleRankDeficiency: %4d: Basic row of leaving variable (%4d "
-        "is %s %4d) is "
-        "%4d; Entering logical = %4d is variable %d)\n",
-        (int)k, (int)variable_out,
-        variable_out < lp_.num_col_ ? " column" : "logical",
-        variable_out < lp_.num_col_ ? (int)variable_out
-                                    : (int)(variable_out - lp_.num_col_),
-        (int)row_out, (int)(row_in), (int)variable_in);
+    // printf(
+    //     "HEkk::handleRankDeficiency: %4d: Basic row of leaving variable (%4d
+    //     " "is %s %4d) is "
+    //     "%4d; Entering logical = %4d is variable %d)\n",
+    //     (int)k, (int)variable_out,
+    //     variable_out < lp_.num_col_ ? " column" : "logical",
+    //     variable_out < lp_.num_col_ ? (int)variable_out
+    //                                 : (int)(variable_out - lp_.num_col_),
+    //     (int)row_out, (int)(row_in), (int)variable_in);
     addBadBasisChange(row_out, variable_in, variable_out,
                       BadBasisChangeReason::kSingular, true);
   }
@@ -1884,12 +1885,12 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
-  if (rank_deficiency)
-    printf(
-        "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
-        "%d)\n",
-        (int)debug_solve_call_num_, (int)iteration_count_);
-  fflush(stdout);
+  // if (rank_deficiency)
+  //   printf(
+  //       "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
+  //       "%d)\n",
+  //       (int)debug_solve_call_num_, (int)iteration_count_);
+  // fflush(stdout);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
@@ -3274,9 +3275,9 @@ HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
     } else {
       analysis_.num_primal_cycling_detections++;
     }
-    //    highsLogDev(options_->log_options, HighsLogType::kWarning,
-    printf(" basis change (%d out; %d in) is bad\n", (int)variable_out,
-           (int)variable_in);
+    highsLogDev(options_->log_options, HighsLogType::kWarning,
+                " basis change (%d out; %d in) is bad\n", (int)variable_out,
+                (int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
                       BadBasisChangeReason::kCycling);
     bad_basis_change_num = bad_basis_change_.size() - 1;
