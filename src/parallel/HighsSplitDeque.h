@@ -32,24 +32,6 @@
 class HighsSplitDeque {
   using cache_aligned = highs::cache_aligned;
 
-  class CallableBase {
-   public:
-    virtual void operator()() = 0;
-  };
-
-  template <typename F>
-  class Callable : public CallableBase {
-    F functor;
-
-   public:
-    Callable(F&& f) : functor(std::forward<F>(f)) {}
-
-    virtual void operator()() {
-      F callFunctor = std::move(functor);
-      callFunctor();
-    }
-  };
-
  public:
   enum Constants {
     kTaskArraySize = 8192,
@@ -71,8 +53,8 @@ class HighsSplitDeque {
   struct StealerData {
     HighsBinarySemaphore semaphore{0};
     HighsTask* injectedTask{nullptr};
-    std::atomic_uint64_t ts{0};
-    std::atomic_bool allStolen{true};
+    std::atomic<uint64_t> ts{0};
+    std::atomic<bool> allStolen{true};
   };
 
   struct TaskMetadata {
@@ -97,8 +79,8 @@ class HighsSplitDeque {
   struct WorkerBunk {
     static constexpr uint64_t kAbaTagShift = 20;
     static constexpr uint64_t kIndexMask = (uint64_t{1} << kAbaTagShift) - 1;
-    alignas(64) std::atomic_int haveJobs;
-    alignas(64) std::atomic_uint64_t sleeperStack;
+    alignas(64) std::atomic<int> haveJobs;
+    alignas(64) std::atomic<uint64_t> sleeperStack;
 
     WorkerBunk() : haveJobs{0}, sleeperStack(0) {}
 
@@ -140,8 +122,8 @@ class HighsSplitDeque {
         newStackState = (stackState >> kAbaTagShift) + 1;
         newStackState = (newStackState << kAbaTagShift) | uint64_t(newHeadId);
       } while (!sleeperStack.compare_exchange_weak(stackState, newStackState,
-                                                   std::memory_order_relaxed,
-                                                   std::memory_order_acquire));
+                                                   std::memory_order_acquire,
+                                                   std::memory_order_relaxed));
 
       head->workerBunkData.nextSleeper.store(nullptr,
                                              std::memory_order_relaxed);
@@ -196,7 +178,7 @@ class HighsSplitDeque {
                 "sizeof(GlobalQueueData) exceeds cache line size");
 
   alignas(64) OwnerData ownerData;
-  alignas(64) std::atomic_bool splitRequest;
+  alignas(64) std::atomic<bool> splitRequest;
   alignas(64) StealerData stealerData;
   alignas(64) WorkerBunkData workerBunkData;
   alignas(64) std::array<HighsTask, kTaskArraySize> taskArray;

@@ -2,11 +2,12 @@
 #define __SRC_LIB_NEWFACTOR_HPP__
 
 #include <cassert>
-#include <cmath>
 #include <vector>
 
 #include "matrix.hpp"
 #include "runtime.hpp"
+
+using std::min;
 
 class NewCholeskyFactor {
  private:

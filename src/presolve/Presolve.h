@@ -36,7 +36,7 @@ using std::string;
 
 enum class HighsPostsolveStatus {
   kNotPresolved = -1,
-  kReducedSolutionDimenionsError,
+  kNoPrimalSolutionError,
   kSolutionRecovered,
   kBasisError
 };

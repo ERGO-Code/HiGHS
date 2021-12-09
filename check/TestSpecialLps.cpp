@@ -471,6 +471,16 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
+void smallValue(Highs& highs) {
+  REQUIRE(highs.addCol(0, 0, kHighsInf, 0, nullptr, nullptr) ==
+          HighsStatus::kOk);
+  const HighsInt index = 0;
+  const double value = 1e-9;
+  REQUIRE(highs.addRow(-kHighsInf, 1, 1, &index, &value) ==
+          HighsStatus::kWarning);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+}
+
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -561,4 +571,10 @@ TEST_CASE("LP-unconstrained", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   unconstrained(highs);
+}
+
+TEST_CASE("LP-small-value", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  smallValue(highs);
 }

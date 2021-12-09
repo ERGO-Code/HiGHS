@@ -22,6 +22,8 @@
 
 #include "lp_data/HighsModelUtils.h"
 
+using std::min;
+
 void HighsRanging::clear() {
   valid = false;
   this->col_cost_up.value_.clear();

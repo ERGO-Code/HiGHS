@@ -3,6 +3,8 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
+using std::min;
+
 const bool dev_run = false;
 
 HighsStatus quietRun(Highs& highs);
