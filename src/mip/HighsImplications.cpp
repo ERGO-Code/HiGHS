@@ -396,7 +396,7 @@ void HighsImplications::separateImpliedBounds(
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
-  if (!mipsolver.submip) {
+  if (!mipsolver.submip && !mipsolver.mipdata_->cliquetable.isFull()) {
     auto oldNumQueries = mipsolver.mipdata_->cliquetable.numNeighborhoodQueries;
     HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
 
@@ -411,10 +411,13 @@ void HighsImplications::separateImpliedBounds(
       if (runProbing(col, numboundchgs)) {
         if (globaldomain.infeasible()) return;
       }
+
+      if (mipsolver.mipdata_->cliquetable.isFull()) break;
     }
 
-    // printf("numEntries: %d, beforeProbing: %d\n",
-    //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
+    // if (!mipsolver.submip)
+    //   printf("numEntries: %d, beforeProbing: %d\n",
+    //          mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
     HighsInt numNewEntries =
         mipsolver.mipdata_->cliquetable.getNumEntries() - oldNumEntries;
 
@@ -425,7 +428,9 @@ void HighsImplications::separateImpliedBounds(
       mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldomain);
       // printf("numEntries: %d, beforeMerging: %d\n",
       //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
-      nextCleanupCall = mipsolver.mipdata_->cliquetable.getNumEntries();
+      nextCleanupCall =
+          std::min(mipsolver.mipdata_->numCliqueEntriesAfterFirstPresolve,
+                   mipsolver.mipdata_->cliquetable.getNumEntries());
       // printf("nextCleanupCall: %d\n", nextCleanupCall);
     }
 

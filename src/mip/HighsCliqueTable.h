@@ -109,6 +109,7 @@ class HighsCliqueTable {
   HighsRandom randgen;
   HighsInt nfixings;
   HighsInt numEntries;
+  HighsInt maxEntries;
   bool inPresolve;
 
   void unlink(HighsInt node);
@@ -173,6 +174,7 @@ class HighsCliqueTable {
     nfixings = 0;
     numNeighborhoodQueries = 0;
     numEntries = 0;
+    maxEntries = kHighsIInf;
     inPresolve = false;
   }
 
@@ -224,6 +226,12 @@ class HighsCliqueTable {
       const {
     return cliqueextensions;
   }
+
+  void setMaxEntries(HighsInt numNz) {
+    this->maxEntries = 1000000 + 10 * numNz;
+  }
+
+  bool isFull() const { return numEntries >= maxEntries; }
 
   HighsInt getNumFixings() const { return nfixings; }
 

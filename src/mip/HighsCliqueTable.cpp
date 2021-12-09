@@ -516,7 +516,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
         cliqueid);
 }
 struct ThreadNeighborhoodQueryData {
-  int64_t numQueries{0};
+  int64_t numQueries;
   std::vector<HighsInt> neighborhoodInds;
 };
 
@@ -531,6 +531,7 @@ void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
         makeHighsCombinable<ThreadNeighborhoodQueryData>([N]() {
           ThreadNeighborhoodQueryData d;
           d.neighborhoodInds.reserve(N);
+          d.numQueries = 0;
           return d;
         });
     highs::parallel::for_each(
@@ -1128,6 +1129,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
                                              const HighsInt* inds,
                                              const double* vals, HighsInt len,
                                              double rhs) {
+  if (isFull()) return;
+
   HighsImplications& implics = mipsolver.mipdata_->implications;
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
@@ -1349,7 +1352,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         continue;
       }
     }
-    if (!transformRows) continue;
+    if (!transformRows || isFull())
+      continue;
 
     offset = 0;
     for (HighsInt j = start; j != end; ++j) {
@@ -1703,7 +1707,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   data.feastol = feastol;
   data.maxNeighborhoodQueries = 10000000 +
                                 int64_t{1000} * mipsolver.numNonzero() +
-                                mipsolver.mipdata_->total_lp_iterations * 2000;
+                                mipsolver.mipdata_->total_lp_iterations * 10000;
   if (numNeighborhoodQueries > data.maxNeighborhoodQueries) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
