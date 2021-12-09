@@ -276,7 +276,7 @@ HighsStatus HEkkDual::solve() {
     // Look for scenarios when the major solving loop ends
     if (solve_phase == kSolvePhaseTabooBasis) {
       // Only basis change is taboo
-      printf("HEkkDual::solve Only basis change is taboo\n");
+      // printf("HEkkDual::solve Only basis change is taboo\n");
       ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
     }
@@ -731,9 +731,9 @@ void HEkkDual::solvePhase1() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
-    printf(
-        "HEkkDual::solvePhase1 kRebuildReasonChooseColumnFail "
-        "dual-phase-1-not-solved\n");
+    // printf(
+    //     "HEkkDual::solvePhase1 kRebuildReasonChooseColumnFail "
+    //     "dual-phase-1-not-solved\n");
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
@@ -758,9 +758,9 @@ void HEkkDual::solvePhase1() {
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       model_status = HighsModelStatus::kSolveError;
-      printf(
-          "HEkkDual::solvePhase1 dual phase 1 unbounded "
-          "dual-phase-1-not-solved\n");
+      // printf(
+      //     "HEkkDual::solvePhase1 dual phase 1 unbounded "
+      //     "dual-phase-1-not-solved\n");
     }
   }
 
@@ -1240,18 +1240,20 @@ void HEkkDual::iterate() {
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
 
-  if (row_out == 238 && variable_out == 297) {
-    printf("HEkkDual::iterate row_out = %d variable_out = %d\n", (int)row_out,
-           (int)variable_out);
-  }
+  // if (row_out == 238 && variable_out == 297) {
+  //   printf("HEkkDual::iterate row_out = %d variable_out = %d\n",
+  //   (int)row_out,
+  //          (int)variable_out);
+  // }
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
-  if (rebuild_reason == kRebuildReasonChooseColumnFail) {
-    printf("HEkkDual::iterate row_out = %d: kRebuildReasonChooseColumnFail\n",
-           (int)row_out);
-  }
+  // if (rebuild_reason == kRebuildReasonChooseColumnFail) {
+  //   printf("HEkkDual::iterate row_out = %d:
+  //   kRebuildReasonChooseColumnFail\n",
+  //          (int)row_out);
+  // }
   if (badBasisChange()) return;
 
   analysis->simplexTimerStart(IterateFtranClock);

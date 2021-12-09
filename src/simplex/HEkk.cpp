@@ -3186,9 +3186,9 @@ HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
       // Cycling detected on successive iterations suggests infinite cycling
       //      highsLogDev(options_->log_options, HighsLogType::kWarning,
       //		  "Cycling detected in %s simplex:");
-      printf("Cycling detected in %s simplex solve %d (Iteration %d)",
-             algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
-             (int)debug_solve_call_num_, (int)iteration_count_);
+      // printf("Cycling detected in %s simplex solve %d (Iteration %d)",
+      //        algorithm == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+      //        (int)debug_solve_call_num_, (int)iteration_count_);
       cycling_detected = true;
     } else {
       previous_iteration_cycling_detected = iteration_count_;
