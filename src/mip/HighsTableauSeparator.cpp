@@ -92,12 +92,18 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   }
 
   if (fractionalBasisvars.empty()) return;
-  int64_t maxTries = 0.1 * (mip.mipdata_->total_lp_iterations -
-                            mip.mipdata_->heuristic_lp_iterations);
+  int64_t maxTries = 5000 + getNumCalls() * 50 +
+                     int64_t(0.1 * (mip.mipdata_->total_lp_iterations -
+                                    mip.mipdata_->heuristic_lp_iterations));
   if (numTries >= maxTries) return;
 
   maxTries -= numTries;
-  //  maxTries = std::min(maxTries, int64_t{1000});
+
+  maxTries = std::min(
+      {maxTries,
+       200 + int64_t(0.1 *
+                     std::min(numrow,
+                              (HighsInt)mip.mipdata_->integral_cols.size()))});
 
   if (fractionalBasisvars.size() > maxTries) {
     const double* edgeWt = lpRelaxation.getLpSolver().getDualEdgeWeights();
