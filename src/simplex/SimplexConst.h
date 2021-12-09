@@ -52,8 +52,8 @@ enum SimplexSolvePhase {
   kSolvePhase2,                        // 2
   kSolvePhasePrimalInfeasibleCleanup,  // 3
   kSolvePhaseOptimalCleanup,           // 4
-  kSolvePhaseCycling,                  // 5
-  kSolvePhaseMax = kSolvePhaseCycling
+  kSolvePhaseTabooBasis,               // 5
+  kSolvePhaseMax = kSolvePhaseTabooBasis
 };
 
 enum SimplexCrashStrategy {
@@ -78,9 +78,7 @@ enum SimplexDualEdgeWeightStrategy {
   kSimplexDualEdgeWeightStrategyDantzig,
   kSimplexDualEdgeWeightStrategyDevex,
   kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial,
-  kSimplexDualEdgeWeightStrategyMax =
-      kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial
+  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
@@ -174,6 +172,8 @@ const double kAcceptDseWeightThreshold = 0.25;
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 
+const double minDualSteepestEdgeWeight = 1e-4;
+
 enum class LpAction {
   kScale = 0,
   kNewCosts,
@@ -191,7 +191,7 @@ enum class LpAction {
   kBacktracking
 };
 
-enum class TabooReason { kSingular = 0, kCycling };
+enum class BadBasisChangeReason { kSingular = 0, kCycling };
 
 //
 // Relation between HiGHS basis and Simplex basis

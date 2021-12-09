@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
-#include <tuple>
 #include <vector>
 
 //#include "HConfig.h"
@@ -31,7 +30,7 @@
 
 // Uses max and min for local in-line functions
 using std::max;
-using std::min;
+// using std::min;
 using std::vector;
 
 /**
@@ -81,34 +80,57 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setup(const HighsSparseMatrix* a_matrix, HighsInt* baseIndex,
+
+  void setup(const HighsSparseMatrix& a_matrix,
+             std::vector<HighsInt>& basic_index,
              const double pivot_threshold = kDefaultPivotThreshold,
              const double pivot_tolerance = kDefaultPivotTolerance,
              const HighsInt highs_debug_level = kHighsDebugLevelMin,
-             const bool output_flag = false, FILE* log_file_stream_ = NULL,
-             const bool log_to_console = true,
-             const HighsInt log_dev_level = 0);
+             const HighsLogOptions* log_options = NULL);
 
-  void setup(const HighsInt numCol,   //!< Number of columns
-             const HighsInt numRow,   //!< Number of rows
-             const HighsInt* Astart,  //!< Column starts of constraint matrix
-             const HighsInt* Aindex,  //!< Row indices of constraint matrix
-             const double* Avalue,    //!< Row values of constraint matrix
-             HighsInt* baseIndex,     //!< Indices of basic variables
+  void setupGeneral(const HighsSparseMatrix* a_matrix, HighsInt num_basic,
+                    HighsInt* basic_index,
+                    const double pivot_threshold = kDefaultPivotThreshold,
+                    const double pivot_tolerance = kDefaultPivotTolerance,
+                    const HighsInt highs_debug_level = kHighsDebugLevelMin,
+                    const HighsLogOptions* log_options = NULL);
+
+  void setup(const HighsInt num_col,   //!< Number of columns
+             const HighsInt num_row,   //!< Number of rows
+             const HighsInt* a_start,  //!< Column starts of constraint matrix
+             const HighsInt* a_index,  //!< Row indices of constraint matrix
+             const double* a_value,    //!< Row values of constraint matrix
+             HighsInt* basic_index,    //!< Indices of basic variables
              const double pivot_threshold =
                  kDefaultPivotThreshold,  //!< Pivoting threshold
              const double pivot_tolerance =
                  kDefaultPivotTolerance,  //!< Min absolute pivot
              const HighsInt highs_debug_level = kHighsDebugLevelMin,
-             const bool output_flag = false, FILE* logfile = NULL,
-             const bool log_to_console = true, const HighsInt log_dev_level = 0,
+             const HighsLogOptions* log_options = NULL,
              const bool use_original_HFactor_logic = true,
-             const HighsInt updateMethod = kUpdateMethodFt);
+             const HighsInt update_method = kUpdateMethodFt);
+
+  void setupGeneral(
+      const HighsInt num_col,  //!< Number of columns
+      const HighsInt num_row,  //!< Number of rows
+      const HighsInt num_basic,
+      const HighsInt* a_start,  //!< Column starts of constraint matrix
+      const HighsInt* a_index,  //!< Row indices of constraint matrix
+      const double* a_value,    //!< Row values of constraint matrix
+      HighsInt* basic_index,    //!< Indices of basic variables
+      const double pivot_threshold =
+          kDefaultPivotThreshold,  //!< Pivoting threshold
+      const double pivot_tolerance =
+          kDefaultPivotTolerance,  //!< Min absolute pivot
+      const HighsInt highs_debug_level = kHighsDebugLevelMin,
+      const HighsLogOptions* log_options = NULL,
+      const bool use_original_HFactor_logic = true,
+      const HighsInt update_method = kUpdateMethodFt);
 
   void setupMatrix(
-      const HighsInt* Astart,  //!< Column starts of constraint matrix
-      const HighsInt* Aindex,  //!< Row indices of constraint matrix
-      const double* Avalue);   //!< Row values of constraint matrix
+      const HighsInt* a_start,  //!< Column starts of constraint matrix
+      const HighsInt* a_index,  //!< Row indices of constraint matrix
+      const double* a_value);   //!< Row values of constraint matrix
   void setupMatrix(const HighsSparseMatrix* a_matrix);
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
@@ -194,32 +216,37 @@ class HFactor {
   /**
    * @brief Rows not pivoted on
    */
-  vector<HighsInt> noPvR;
+  vector<HighsInt> row_with_no_pivot;
 
   /**
-   * @brief Columns not pivoted on
+   * @brief (Basis matrix) columns not pivoted on
    */
-  vector<HighsInt> noPvC;
+  vector<HighsInt> col_with_no_pivot;
 
   /**
-   * @brief Gets baseIndex since it is private
+   * @brief Variables not pivoted on
    */
-  const HighsInt* getBaseIndex() const { return baseIndex; }
+  vector<HighsInt> var_with_no_pivot;
 
   /**
-   * @brief Gets Astart since it is private
+   * @brief Gets basic_index since it is private
    */
-  const HighsInt* getAstart() const { return Astart; }
+  const HighsInt* getBaseIndex() const { return basic_index; }
 
   /**
-   * @brief Gets Aindex since it is private
+   * @brief Gets a_start since it is private
    */
-  const HighsInt* getAindex() const { return Aindex; }
+  const HighsInt* getAstart() const { return a_start; }
 
   /**
-   * @brief Gets Avalue since it is private
+   * @brief Gets a_index since it is private
    */
-  const double* getAvalue() const { return Avalue; }
+  const HighsInt* getAindex() const { return a_index; }
+
+  /**
+   * @brief Gets a_value since it is private
+   */
+  const double* getAvalue() const { return a_value; }
 
   void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
                 const bool full = true) const;
@@ -240,24 +267,31 @@ class HFactor {
 
   // private:
   // Problem size, coefficient matrix and update method
-  HighsInt numRow;
-  HighsInt numCol;
+  HighsInt num_row;
+  HighsInt num_col;
+  HighsInt num_basic;
 
  private:
   bool a_matrix_valid;
-  const HighsInt* Astart;
-  const HighsInt* Aindex;
-  const double* Avalue;
-  HighsInt* baseIndex;
+  const HighsInt* a_start;
+  const HighsInt* a_index;
+  const double* a_value;
+  HighsInt* basic_index;
   double pivot_threshold;
   double pivot_tolerance;
   HighsInt highs_debug_level;
 
-  std::unique_ptr<std::tuple<bool, bool, HighsInt>> log_data;
+  struct LogData {
+    bool output_flag;
+    bool log_to_console;
+    HighsInt log_dev_level;
+  };
+  std::unique_ptr<LogData> log_data;
   HighsLogOptions log_options;
+
   bool use_original_HFactor_logic;
-  HighsInt BlimitX;
-  HighsInt updateMethod;
+  HighsInt basis_matrix_limit_size;
+  HighsInt update_method;
 
   // Working buffer
   HighsInt nwork;
@@ -265,30 +299,30 @@ class HFactor {
   vector<double> dwork;
 
   // Basis matrix
-  vector<HighsInt> Bvar;  // Temp
-  vector<HighsInt> Bstart;
-  vector<HighsInt> Bindex;
-  vector<double> Bvalue;
+  vector<HighsInt> b_var;  // Temp
+  vector<HighsInt> b_start;
+  vector<HighsInt> b_index;
+  vector<double> b_value;
 
   // Permutation
   vector<HighsInt> permute;
 
   // Kernel matrix
-  vector<HighsInt> MCvar;  // Temp
-  vector<HighsInt> MCstart;
-  vector<HighsInt> MCcountA;
-  vector<HighsInt> MCcountN;
-  vector<HighsInt> MCspace;
-  vector<HighsInt> MCindex;
-  vector<double> MCvalue;
-  vector<double> MCminpivot;
+  vector<HighsInt> mc_var;  // Temp
+  vector<HighsInt> mc_start;
+  vector<HighsInt> mc_count_a;
+  vector<HighsInt> mc_count_n;
+  vector<HighsInt> mc_space;
+  vector<HighsInt> mc_index;
+  vector<double> mc_value;
+  vector<double> mc_min_pivot;
 
   // Row wise kernel matrix
-  vector<HighsInt> MRstart;
-  vector<HighsInt> MRcount;
-  vector<HighsInt> MRspace;
-  vector<HighsInt> MRcountb4;
-  vector<HighsInt> MRindex;
+  vector<HighsInt> mr_start;
+  vector<HighsInt> mr_count;
+  vector<HighsInt> mr_space;
+  vector<HighsInt> mr_count_before;
+  vector<HighsInt> mr_index;
 
   // Kernel column buffer
   vector<HighsInt> mwz_column_index;
@@ -296,48 +330,48 @@ class HFactor {
   vector<double> mwz_column_array;
 
   // Count link list
-  vector<HighsInt> clinkFirst;
-  vector<HighsInt> clinkNext;
-  vector<HighsInt> clinkLast;
+  vector<HighsInt> col_link_first;
+  vector<HighsInt> col_link_next;
+  vector<HighsInt> col_link_last;
 
-  vector<HighsInt> rlinkFirst;
-  vector<HighsInt> rlinkNext;
-  vector<HighsInt> rlinkLast;
+  vector<HighsInt> row_link_first;
+  vector<HighsInt> row_link_next;
+  vector<HighsInt> row_link_last;
 
   // Factor L
-  vector<HighsInt> LpivotLookup;
-  vector<HighsInt> LpivotIndex;
+  vector<HighsInt> l_pivot_lookup;
+  vector<HighsInt> l_pivot_index;
 
-  vector<HighsInt> Lstart;
-  vector<HighsInt> Lindex;
-  vector<double> Lvalue;
-  vector<HighsInt> LRstart;
-  vector<HighsInt> LRindex;
-  vector<double> LRvalue;
+  vector<HighsInt> l_start;
+  vector<HighsInt> l_index;
+  vector<double> l_value;
+  vector<HighsInt> lr_start;
+  vector<HighsInt> lr_index;
+  vector<double> lr_value;
 
   // Factor U
-  vector<HighsInt> UpivotLookup;
-  vector<HighsInt> UpivotIndex;
-  vector<double> UpivotValue;
+  vector<HighsInt> u_pivot_lookup;
+  vector<HighsInt> u_pivot_index;
+  vector<double> u_pivot_value;
 
-  HighsInt UmeritX;
-  HighsInt UtotalX;
-  vector<HighsInt> Ustart;
-  vector<HighsInt> Ulastp;
-  vector<HighsInt> Uindex;
-  vector<double> Uvalue;
-  vector<HighsInt> URstart;
-  vector<HighsInt> URlastp;
-  vector<HighsInt> URspace;
-  vector<HighsInt> URindex;
-  vector<double> URvalue;
+  HighsInt u_merit_x;
+  HighsInt u_total_x;
+  vector<HighsInt> u_start;
+  vector<HighsInt> u_last_p;
+  vector<HighsInt> u_index;
+  vector<double> u_value;
+  vector<HighsInt> ur_start;
+  vector<HighsInt> ur_lastp;
+  vector<HighsInt> ur_space;
+  vector<HighsInt> ur_index;
+  vector<double> ur_value;
 
   // Update buffer
-  vector<double> PFpivotValue;
-  vector<HighsInt> PFpivotIndex;
-  vector<HighsInt> PFstart;
-  vector<HighsInt> PFindex;
-  vector<double> PFvalue;
+  vector<double> pf_pivot_value;
+  vector<HighsInt> pf_pivot_index;
+  vector<HighsInt> pf_start;
+  vector<HighsInt> pf_index;
+  vector<double> pf_value;
 
   // Implementation
   void buildSimple();
@@ -388,78 +422,80 @@ class HFactor {
    * Local in-line functions
    */
   void colInsert(const HighsInt iCol, const HighsInt iRow, const double value) {
-    const HighsInt iput = MCstart[iCol] + MCcountA[iCol]++;
-    MCindex[iput] = iRow;
-    MCvalue[iput] = value;
+    const HighsInt iput = mc_start[iCol] + mc_count_a[iCol]++;
+    mc_index[iput] = iRow;
+    mc_value[iput] = value;
   }
   void colStoreN(const HighsInt iCol, const HighsInt iRow, const double value) {
-    const HighsInt iput = MCstart[iCol] + MCspace[iCol] - (++MCcountN[iCol]);
-    MCindex[iput] = iRow;
-    MCvalue[iput] = value;
+    const HighsInt iput =
+        mc_start[iCol] + mc_space[iCol] - (++mc_count_n[iCol]);
+    mc_index[iput] = iRow;
+    mc_value[iput] = value;
   }
   void colFixMax(const HighsInt iCol) {
-    double maxValue = 0;
-    for (HighsInt k = MCstart[iCol]; k < MCstart[iCol] + MCcountA[iCol]; k++)
-      maxValue = max(maxValue, fabs(MCvalue[k]));
-    MCminpivot[iCol] = maxValue * pivot_threshold;
+    double max_value = 0;
+    for (HighsInt k = mc_start[iCol]; k < mc_start[iCol] + mc_count_a[iCol];
+         k++)
+      max_value = max(max_value, fabs(mc_value[k]));
+    mc_min_pivot[iCol] = max_value * pivot_threshold;
   }
 
   double colDelete(const HighsInt iCol, const HighsInt iRow) {
-    HighsInt idel = MCstart[iCol];
-    HighsInt imov = idel + (--MCcountA[iCol]);
-    while (MCindex[idel] != iRow) idel++;
-    double pivotX = MCvalue[idel];
-    MCindex[idel] = MCindex[imov];
-    MCvalue[idel] = MCvalue[imov];
-    return pivotX;
+    HighsInt idel = mc_start[iCol];
+    HighsInt imov = idel + (--mc_count_a[iCol]);
+    while (mc_index[idel] != iRow) idel++;
+    double pivot_multiplier = mc_value[idel];
+    mc_index[idel] = mc_index[imov];
+    mc_value[idel] = mc_value[imov];
+    return pivot_multiplier;
   }
 
   void rowInsert(const HighsInt iCol, const HighsInt iRow) {
-    HighsInt iput = MRstart[iRow] + MRcount[iRow]++;
-    MRindex[iput] = iCol;
+    HighsInt iput = mr_start[iRow] + mr_count[iRow]++;
+    mr_index[iput] = iCol;
   }
 
   void rowDelete(const HighsInt iCol, const HighsInt iRow) {
-    HighsInt idel = MRstart[iRow];
-    HighsInt imov = idel + (--MRcount[iRow]);
-    while (MRindex[idel] != iCol) idel++;
-    MRindex[idel] = MRindex[imov];
+    HighsInt idel = mr_start[iRow];
+    HighsInt imov = idel + (--mr_count[iRow]);
+    while (mr_index[idel] != iCol) idel++;
+    mr_index[idel] = mr_index[imov];
   }
 
   void clinkAdd(const HighsInt index, const HighsInt count) {
-    const HighsInt mover = clinkFirst[count];
-    clinkLast[index] = -2 - count;
-    clinkNext[index] = mover;
-    clinkFirst[count] = index;
-    if (mover >= 0) clinkLast[mover] = index;
+    const HighsInt mover = col_link_first[count];
+    col_link_last[index] = -2 - count;
+    col_link_next[index] = mover;
+    col_link_first[count] = index;
+    if (mover >= 0) col_link_last[mover] = index;
   }
 
   void clinkDel(const HighsInt index) {
-    const HighsInt xlast = clinkLast[index];
-    const HighsInt xnext = clinkNext[index];
+    const HighsInt xlast = col_link_last[index];
+    const HighsInt xnext = col_link_next[index];
     if (xlast >= 0)
-      clinkNext[xlast] = xnext;
+      col_link_next[xlast] = xnext;
     else
-      clinkFirst[-xlast - 2] = xnext;
-    if (xnext >= 0) clinkLast[xnext] = xlast;
+      col_link_first[-xlast - 2] = xnext;
+    if (xnext >= 0) col_link_last[xnext] = xlast;
   }
 
   void rlinkAdd(const HighsInt index, const HighsInt count) {
-    const HighsInt mover = rlinkFirst[count];
-    rlinkLast[index] = -2 - count;
-    rlinkNext[index] = mover;
-    rlinkFirst[count] = index;
-    if (mover >= 0) rlinkLast[mover] = index;
+    const HighsInt mover = row_link_first[count];
+    row_link_last[index] = -2 - count;
+    row_link_next[index] = mover;
+    row_link_first[count] = index;
+    if (mover >= 0) row_link_last[mover] = index;
   }
 
   void rlinkDel(const HighsInt index) {
-    const HighsInt xlast = rlinkLast[index];
-    const HighsInt xnext = rlinkNext[index];
+    const HighsInt xlast = row_link_last[index];
+    const HighsInt xnext = row_link_next[index];
     if (xlast >= 0)
-      rlinkNext[xlast] = xnext;
+      row_link_next[xlast] = xnext;
     else
-      rlinkFirst[-xlast - 2] = xnext;
-    if (xnext >= 0) rlinkLast[xnext] = xlast;
+      row_link_first[-xlast - 2] = xnext;
+    if (xnext >= 0) row_link_last[xnext] = xlast;
   }
   friend class HSimplexNla;
 };

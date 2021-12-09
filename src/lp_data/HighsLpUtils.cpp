@@ -2195,16 +2195,15 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   average_col_num_en = average_col_num_en / lp.num_col_;
   LiDSE_candidate =
       LiDSE_candidate && average_col_num_en <= max_average_col_num_en;
-  std::string logic1 = "is not";
-  if (LiDSE_candidate) logic1 = "is";
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "LP %s has all |entries|=1; max column count = %" HIGHSINT_FORMAT
-               " (limit %" HIGHSINT_FORMAT
-               "); average "
-               "column count = %0.2g (limit %" HIGHSINT_FORMAT
-               "): So %s a candidate for LiDSE\n",
-               lp.model_name_.c_str(), max_col_num_en, max_allowed_col_num_en,
-               average_col_num_en, max_average_col_num_en, logic1.c_str());
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "LP %s has all |entries|=1; max column count = %" HIGHSINT_FORMAT
+              " (limit %" HIGHSINT_FORMAT
+              "); average "
+              "column count = %0.2g (limit %" HIGHSINT_FORMAT
+              "): LP is %s a candidate for LiDSE\n",
+              lp.model_name_.c_str(), max_col_num_en, max_allowed_col_num_en,
+              average_col_num_en, max_average_col_num_en,
+              LiDSE_candidate ? "is" : "is not");
   return LiDSE_candidate;
 }
 
