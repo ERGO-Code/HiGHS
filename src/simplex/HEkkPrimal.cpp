@@ -199,7 +199,8 @@ HighsStatus HEkkPrimal::solve() {
     // Look for scenarios when the major solving loop ends
     if (solve_phase == kSolvePhaseTabooBasis) {
       // Only basis change is taboo so return HighsStatus::kWarning
-      printf("HEkkPrimal::solve Only basis change is taboo\n");
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "HEkkPrimal::solve Only basis change is taboo\n");
       ekk_instance_.model_status_ = HighsModelStatus::kUnknown;
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
     }
