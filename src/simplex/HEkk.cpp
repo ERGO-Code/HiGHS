@@ -1600,7 +1600,7 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
-      printf(
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
           "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency %d: Id "
           "= "
           "%d; UpdateCount = %d\n",
@@ -1641,7 +1641,7 @@ void HEkk::handleRankDeficiency() {
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
     assert(basis_.basicIndex_[row_out] == variable_in);
-    printf(
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
         "HEkk::handleRankDeficiency: %4d: Basic row of leaving variable (%4d "
         "is %s %4d) is "
         "%4d; Entering logical = %4d is variable %d)\n",
@@ -1893,10 +1893,10 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
   if (rank_deficiency)
-    printf(
-        "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
-        "%d)\n",
-        (int)debug_solve_call_num_, (int)iteration_count_);
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+		"HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
+		"%d)\n",
+		(int)debug_solve_call_num_, (int)iteration_count_);
   fflush(stdout);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
@@ -3200,9 +3200,9 @@ HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
     } else {
       analysis_.num_primal_cycling_detections++;
     }
-    //    highsLogDev(options_->log_options, HighsLogType::kWarning,
-    printf(" basis change (%d out; %d in) is bad\n", (int)variable_out,
-           (int)variable_in);
+    highsLogDev(options_->log_options, HighsLogType::kWarning,
+		" basis change (%d out; %d in) is bad\n", (int)variable_out,
+		(int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
                       BadBasisChangeReason::kCycling);
     bad_basis_change_num = bad_basis_change_.size() - 1;
