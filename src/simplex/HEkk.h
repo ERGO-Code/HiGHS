@@ -102,6 +102,7 @@ class HEkk {
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
   void initialisePartitionedRowwiseMatrix();
+  bool lpFactorRowCompatible();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -124,6 +125,7 @@ class HEkk {
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
+  HighsInt getFactorNumRow() { return this->simplex_nla_.factor_.num_row; }
 
   // Data members
   HighsOptions* options_;

@@ -1580,6 +1580,7 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
   // If simplex NLA is not set up, then it will be done if
   //
   if (this->status_.has_nla) {
+    assert(lpFactorRowCompatible());
     this->simplex_nla_.setPointers(&(this->lp_), local_scaled_a_matrix,
                                    &this->basis_.basicIndex_[0], this->options_,
                                    this->timer_, &(this->analysis_));
@@ -1600,7 +1601,8 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
     const HighsInt rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
-      highsLogDev(options_->log_options, HighsLogType::kInfo,
+      highsLogDev(
+          options_->log_options, HighsLogType::kInfo,
           "HEkk::initialiseSimplexLpBasisAndFactor (%s) Rank_deficiency %d: Id "
           "= "
           "%d; UpdateCount = %d\n",
@@ -1641,7 +1643,8 @@ void HEkk::handleRankDeficiency() {
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     HighsInt row_out = row_with_no_pivot[k];
     assert(basis_.basicIndex_[row_out] == variable_in);
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
+    highsLogDev(
+        options_->log_options, HighsLogType::kInfo,
         "HEkk::handleRankDeficiency: %4d: Basic row of leaving variable (%4d "
         "is %s %4d) is "
         "%4d; Entering logical = %4d is variable %d)\n",
@@ -1893,10 +1896,11 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
   if (rank_deficiency)
-    highsLogDev(options_->log_options, HighsLogType::kInfo,
-		"HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
-		"%d)\n",
-		(int)debug_solve_call_num_, (int)iteration_count_);
+    highsLogDev(
+        options_->log_options, HighsLogType::kInfo,
+        "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
+        "%d)\n",
+        (int)debug_solve_call_num_, (int)iteration_count_);
   fflush(stdout);
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
@@ -2113,7 +2117,8 @@ HighsInt HEkk::computeFactor() {
   if (status_.has_fresh_invert) return 0;
   // Clear any bad basis changes
   clearBadBasisChange();
-  //
+  highsAssert(lpFactorRowCompatible(),
+              "HEkk::computeFactor: lpFactorRowCompatible");
   // Perform INVERT
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
@@ -2162,6 +2167,20 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;
+}
+
+bool HEkk::lpFactorRowCompatible() {
+  // Check for LP-HFactor row compatibility
+  const HighsInt factor_num_row = getFactorNumRow();
+  const bool consistent_num_row = factor_num_row == this->lp_.num_row_;
+  if (!consistent_num_row) {
+    highsLogDev(options_->log_options, HighsLogType::kError,
+                "HEkk::initialiseSimplexLpBasisAndFactor: LP(%6d, %6d) has "
+                "factor_num_row = %d\n",
+                (int)this->lp_.num_col_, (int)this->lp_.num_row_,
+                (int)factor_num_row);
+  }
+  return consistent_num_row;
 }
 
 void HEkk::setNonbasicMove() {
@@ -3201,8 +3220,8 @@ HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
       analysis_.num_primal_cycling_detections++;
     }
     highsLogDev(options_->log_options, HighsLogType::kWarning,
-		" basis change (%d out; %d in) is bad\n", (int)variable_out,
-		(int)variable_in);
+                " basis change (%d out; %d in) is bad\n", (int)variable_out,
+                (int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
                       BadBasisChangeReason::kCycling);
     bad_basis_change_num = bad_basis_change_.size() - 1;
