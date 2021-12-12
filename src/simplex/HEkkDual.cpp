@@ -62,14 +62,36 @@ HighsStatus HEkkDual::solve() {
     }
   }
 
+  assert(status.has_invert);
+  if (!status.has_invert) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "HDual:: Should enter solve with INVERT\n");
+    return ekk_instance_.returnFromSolve(HighsStatus::kError);
+  }
+
+  const bool favour_dual_phase2 = true;
+  if (favour_dual_phase2) {
+    // Determine the duals without cost perturbation
+    ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown);
+    ekk_instance_.computeDual();
+    ekk_instance_.computeSimplexDualInfeasible();
+  }
   // Record whether the solution with unperturbed costs is dual feasible
-  const bool dual_feasible_without_unperturbed_costs =
+  const bool dual_feasible_with_unperturbed_costs =
       info.num_dual_infeasibilities == 0;
+  // Force phase 2 to be used if feasible with unperturbed costs, or
+  // if the maximum infeasibility is small. First of these tests is
+  // redundant if favour_dual_phase2 = true;
+  force_phase2 = dual_feasible_with_unperturbed_costs ||
+                 info.max_dual_infeasibility * info.max_dual_infeasibility <
+                     ekk_instance_.options_->dual_feasibility_tolerance;
+
   // Determine whether the solution is near-optimal.
-  const bool near_optimal = dual_feasible_without_unperturbed_costs &&
+  const bool near_optimal = dual_feasible_with_unperturbed_costs &&
                             info.num_primal_infeasibilities < 1000 &&
                             info.max_primal_infeasibility < 1e-3;
-  // Save a copy of info for the LP without cost perturbations
+  // For reporting, save a copy of info for the LP without cost
+  // perturbations
   HighsSimplexInfo unperturbed_info = info;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
@@ -88,13 +110,6 @@ HighsStatus HEkkDual::solve() {
                 "Near-optimal, so don't use cost perturbation\n");
   ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown,
                                perturb_costs);
-  assert(status.has_invert);
-  if (!status.has_invert) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "HDual:: Should enter solve with INVERT\n");
-    return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  }
-
   // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
   if (ekk_instance_.bailoutOnTimeIterations())
@@ -189,10 +204,10 @@ HighsStatus HEkkDual::solve() {
                                      info.max_dual_infeasibility < 1e-2) ||
                                     (info.num_dual_infeasibilities <= 100 &&
                                      info.max_dual_infeasibility < 1e-3);
-    if (dual_feasible_without_unperturbed_costs || near_dual_feasible) {
+    if (dual_feasible_with_unperturbed_costs || near_dual_feasible) {
       solve_phase = kSolvePhase2;
       const bool local_report = false;
-      if (!dual_feasible_without_unperturbed_costs && local_report) {
+      if (!dual_feasible_with_unperturbed_costs && local_report) {
         printf(
             "Solve %d: Near dual feasible with perturbed costs but not dual "
             "feasible "
@@ -215,6 +230,24 @@ HighsStatus HEkkDual::solve() {
           "num / max / sum dual infeasiblitiles of %d / %11.4g / %11.4g\n",
           (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
           info.sum_dual_infeasibilities);
+    }
+  }
+  if (force_phase2) {
+    solve_phase = kSolvePhase2;
+    const bool local_report = false;
+    if (!dual_feasible_with_unperturbed_costs && local_report) {
+      printf(
+          "Solve %d: Forcing phase 2 since near dual feasible with unperturbed "
+          "costs\n"
+          "num / max / sum dual infeasiblitiles\n"
+          "%d / %11.4g / %11.4g (  perturbed costs with    flips)\n"
+          "%d / %11.4g / %11.4g (unperturbed costs without flips)\n",
+          (int)ekk_instance_.debug_solve_call_num_,
+          (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+          info.sum_dual_infeasibilities,
+          (int)unperturbed_info.num_dual_infeasibilities,
+          unperturbed_info.max_dual_infeasibility,
+          unperturbed_info.sum_dual_infeasibilities);
     }
   }
   if (ekk_instance_.debugOkForSolve(SimplexAlgorithm::kDual, solve_phase) ==

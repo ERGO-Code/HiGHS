@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-//#include "HConfig.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
@@ -423,6 +422,7 @@ class HEkkDual {
   double dual_feasibility_tolerance;
   double objective_bound;
 
+  bool force_phase2;
   HighsInt solve_phase;
   HighsInt rebuild_reason;
 
@@ -509,9 +509,6 @@ class HEkkDual {
   HighsInt multi_chooseAgain;
   MChoice multi_choice[kSimplexConcurrencyLimit];
   MFinish multi_finish[kSimplexConcurrencyLimit];
-
-  //  double build_synthetic_tick;
-  //  double total_synthetic_tick;
 };
 
 #endif /* SIMPLEX_HEKKDUAL_H_ */
