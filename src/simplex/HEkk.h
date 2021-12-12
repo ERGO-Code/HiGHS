@@ -125,7 +125,6 @@ class HEkk {
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
-  HighsInt getFactorNumRow() { return this->simplex_nla_.factor_.num_row; }
 
   // Data members
   HighsOptions* options_;
