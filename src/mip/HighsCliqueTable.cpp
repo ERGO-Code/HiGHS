@@ -868,19 +868,19 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
       }
     }
     if (!hasNewEdge && origin == kHighsIInf) return;
-    CliqueVar* unfixedend =
-        std::remove_if(cliquevars, cliquevars + numcliquevars,
-                       [&](CliqueVar v) { return globaldom.isFixed(v.col); });
-    numcliquevars = unfixedend - cliquevars;
-    if (numcliquevars < 2) return;
   }
+  CliqueVar* unfixedend =
+      std::remove_if(cliquevars, cliquevars + numcliquevars,
+                     [&](CliqueVar v) { return globaldom.isFixed(v.col); });
+  numcliquevars = unfixedend - cliquevars;
+  if (numcliquevars < 2) return;
 
   doAddClique(cliquevars, numcliquevars, equality, origin);
   processInfeasibleVertices(globaldom);
 }
 
 void HighsCliqueTable::removeClique(HighsInt cliqueid) {
-  if (cliques[cliqueid].origin != kHighsIInf)
+  if (cliques[cliqueid].origin != kHighsIInf && cliques[cliqueid].origin != -1)
     deletedrows.push_back(cliques[cliqueid].origin);
 
   HighsInt start = cliques[cliqueid].start;
@@ -1736,13 +1736,12 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 
   if (runcliquesubsumption) {
     if (cliquehits.size() < cliques.size()) cliquehits.resize(cliques.size());
-    assert(stack.empty());
 
     for (std::vector<CliqueVar>& clique : data.cliques) {
       HighsInt nremoved = runCliqueSubsumption(globaldom, clique);
 
       if (clique.empty()) continue;
-      if (nremoved != 0) doAddClique(clique.data(), clique.size(), false);
+      if (nremoved != 0) doAddClique(clique.data(), clique.size(), false, -1);
     }
   }
 }
@@ -2030,11 +2029,14 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
   HighsInt numcliqueslots = cliques.size();
   const HighsInt maxEntries = numEntries + globaldomain.numModelNonzeros();
-
+  bool haveNonModelCliquesToMerge = false;
   for (HighsInt k = 0; k != numcliqueslots; ++k) {
     if (cliques[k].start == -1) continue;
     if (!cliques[k].equality && cliques[k].origin == kHighsIInf) continue;
-
+    if (cliques[k].origin == -1) {
+      haveNonModelCliquesToMerge = true;
+      continue;
+    }
     HighsInt numclqvars = cliques[k].end - cliques[k].start;
     assert(numclqvars != 0);
     if (numclqvars == 0) continue;
@@ -2123,7 +2125,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
                            cliqueentries.begin() + cliques[k].end);
       extensionvars.erase(
           std::remove_if(
-              extensionvars.begin(), extensionvars.end(),
+              extensionvars.begin() + numExtensions, extensionvars.end(),
               [&](CliqueVar clqvar) { return colDeleted[clqvar.col]; }),
           extensionvars.end());
       removeClique(k);
@@ -2159,7 +2161,8 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
         if (hits == extensionvars.size()) {
           redundant = true;
-          if (cliques[cliqueid].origin != kHighsIInf)
+          if (cliques[cliqueid].origin != kHighsIInf &&
+              cliques[cliqueid].origin != -1)
             dominatingOrigin = cliques[cliqueid].origin;
         } else if (cliques[cliqueid].end - cliques[cliqueid].start -
                        cliques[cliqueid].numZeroFixed ==
@@ -2206,7 +2209,16 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
                       originrow);
       } else {
         // the extended clique is redundant, check if the row can be removed
-        if (dominatingOrigin != kHighsIInf) deletedrows.push_back(originrow);
+        if (dominatingOrigin != kHighsIInf)
+          deletedrows.push_back(originrow);
+        else {
+          // this clique is redundant in the cliquetable but its row is not
+          // necessarily. Also there might be rows that have been deleted due to
+          // being dominated by this row after adding the lifted entries so they
+          // must be added to the cliqueextension vector
+          for (HighsInt i = 0; i < numExtensions; ++i)
+            cliqueextensions.emplace_back(originrow, extensionvars[i]);
+        }
       }
     }
 
@@ -2218,11 +2230,13 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     // maxNonzeroDelta);
   }
 
-  if (!globaldomain.inSubmip()) {
+  if (haveNonModelCliquesToMerge) {
     for (HighsInt k = 0; k != numcliqueslots; ++k) {
       if (cliques[k].start == -1) continue;
-      if (cliques[k].equality || cliques[k].origin != kHighsIInf) continue;
-      if (cliques[k].end - cliques[k].start == 2) continue;
+      if (cliques[k].origin != -1) continue;
+      // if (cliques[k].end - cliques[k].start <= 1000) continue;
+
+      // printf("numEntries before: %d\n", numEntries);
       extensionvars.clear();
       extensionvars.insert(extensionvars.end(),
                            cliqueentries.begin() + cliques[k].start,
@@ -2262,27 +2276,46 @@ void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
     // since we do not know how variables in the clique that have been deleted
     // are replaced (i.e. are they fixed to 0 or 1, or substituted) we relax
     // them out which means the equality status needs to be set to false
-    if (numvars >= 2)
-      newCliqueTable.doAddClique(&cliqueentries[cliques[i].start], numvars,
-                                 false, kHighsIInf);
+    if (numvars <= 1) continue;
+
+    HighsInt origin = cliques[i].origin != kHighsIInf ? -1 : kHighsIInf;
+    newCliqueTable.doAddClique(&cliqueentries[cliques[i].start], numvars, false,
+                               origin);
   }
 
   *this = std::move(newCliqueTable);
 }
 
-void HighsCliqueTable::buildFrom(const HighsCliqueTable& init) {
+void HighsCliqueTable::buildFrom(const HighsLp* origModel,
+                                 const HighsCliqueTable& init) {
   assert(init.colsubstituted.size() == colsubstituted.size());
   HighsInt ncols = init.colsubstituted.size();
   HighsCliqueTable newCliqueTable(ncols);
   newCliqueTable.setPresolveFlag(inPresolve);
   HighsInt ncliques = init.cliques.size();
+  std::vector<CliqueVar> clqBuffer;
+  clqBuffer.reserve(2 * origModel->num_col_);
   for (HighsInt i = 0; i != ncliques; ++i) {
     if (init.cliques[i].start == -1) continue;
 
     HighsInt numvars = init.cliques[i].end - init.cliques[i].start;
 
-    newCliqueTable.doAddClique(&init.cliqueentries[init.cliques[i].start],
-                               numvars, init.cliques[i].equality, kHighsIInf);
+    if (numvars - init.cliques[i].numZeroFixed <= 1) continue;
+
+    clqBuffer.assign(init.cliqueentries.begin() + init.cliques[i].start,
+                     init.cliqueentries.begin() + init.cliques[i].end);
+    clqBuffer.erase(std::remove_if(clqBuffer.begin(), clqBuffer.end(),
+                                   [origModel](CliqueVar v) {
+                                     return origModel->col_lower_[v.col] !=
+                                                0.0 ||
+                                            origModel->col_upper_[v.col] != 1.0;
+                                   }),
+                    clqBuffer.end());
+    if (clqBuffer.size() <= 1) continue;
+
+    HighsInt origin = init.cliques[i].origin != kHighsIInf ? -1 : kHighsIInf;
+    newCliqueTable.doAddClique(clqBuffer.data(), clqBuffer.size(), false,
+                               origin);
   }
 
   newCliqueTable.colsubstituted = init.colsubstituted;
