@@ -35,7 +35,8 @@ sortedEdge(HighsCliqueTable::CliqueVar v1, HighsCliqueTable::CliqueVar v2) {
   return std::make_pair(v1, v2);
 }
 
-HighsInt HighsCliqueTable::splay(HighsInt cliqueid, HighsInt root) {
+HighsInt HighsCliqueTable::splay(int64_t& numQueries, HighsInt cliqueid,
+                                 HighsInt root) {
   auto get_left = [&](HighsInt node) -> HighsInt& {
     return cliquesets[node].left;
   };
@@ -43,7 +44,7 @@ HighsInt HighsCliqueTable::splay(HighsInt cliqueid, HighsInt root) {
     return cliquesets[node].right;
   };
   auto get_key = [&](HighsInt node) { return cliquesets[node].cliqueid; };
-  ++numNeighborhoodQueries;
+  ++numQueries;
   return highs_splay(cliqueid, root, get_left, get_right, get_key);
 }
 
@@ -86,10 +87,11 @@ void HighsCliqueTable::link(HighsInt node) {
   return highs_splay_link(node, root, get_left, get_right, get_key);
 }
 
-HighsInt HighsCliqueTable::findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
+HighsInt HighsCliqueTable::findCommonCliqueId(int64_t& numQueries, CliqueVar v1,
+                                              CliqueVar v2) {
   if (sizeTwoCliquesetRoot[v1.index()] != -1 &&
       sizeTwoCliquesetRoot[v2.index()] != -1) {
-    ++numNeighborhoodQueries;
+    ++numQueries;
     HighsInt* sizeTwoCliqueId = sizeTwoCliques.find(sortedEdge(v1, v2));
     if (sizeTwoCliqueId != nullptr) return *sizeTwoCliqueId;
   }
@@ -122,7 +124,7 @@ HighsInt HighsCliqueTable::findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
 
     // splay the root clique of the tree with root r2 in the splay tree with
     // root r1
-    r1 = splay(cliqueid2, r1);
+    r1 = splay(numQueries, cliqueid2, r1);
     cliqueid1 = cliquesets[r1].cliqueid;
 
     // if it was a common clique we have found it
@@ -236,11 +238,12 @@ HighsInt HighsCliqueTable::runCliqueSubsumption(
           HighsInt node;
           if (cliques[cliqueid].end - cliques[cliqueid].start == 2) {
             sizeTwoCliquesetRoot[v.index()] =
-                splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
+                splay(numNeighborhoodQueries, cliqueid,
+                      sizeTwoCliquesetRoot[v.index()]);
             node = sizeTwoCliquesetRoot[v.index()];
           } else {
-            cliquesetroot[v.index()] =
-                splay(cliqueid, cliquesetroot[v.index()]);
+            cliquesetroot[v.index()] = splay(numNeighborhoodQueries, cliqueid,
+                                             cliquesetroot[v.index()]);
             node = cliquesetroot[v.index()];
           }
           if (node == -1 || cliquesets[node].cliqueid != cliqueid)
@@ -454,11 +457,12 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     // x = 0
     HighsInt node;
     if (numcliquevars == 2) {
-      sizeTwoCliquesetRoot[v.index()] =
-          splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
+      sizeTwoCliquesetRoot[v.index()] = splay(numNeighborhoodQueries, cliqueid,
+                                              sizeTwoCliquesetRoot[v.index()]);
       node = sizeTwoCliquesetRoot[v.index()];
     } else {
-      cliquesetroot[v.index()] = splay(cliqueid, cliquesetroot[v.index()]);
+      cliquesetroot[v.index()] =
+          splay(numNeighborhoodQueries, cliqueid, cliquesetroot[v.index()]);
       node = cliquesetroot[v.index()];
     }
     if (node != -1 && cliquesets[node].cliqueid == cliqueid) {
@@ -473,11 +477,13 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     //   <=>             ... <= 0
     if (numcliquevars == 2) {
       sizeTwoCliquesetRoot[v.complement().index()] =
-          splay(cliqueid, sizeTwoCliquesetRoot[v.complement().index()]);
+          splay(numNeighborhoodQueries, cliqueid,
+                sizeTwoCliquesetRoot[v.complement().index()]);
       node = sizeTwoCliquesetRoot[v.complement().index()];
     } else {
       cliquesetroot[v.complement().index()] =
-          splay(cliqueid, cliquesetroot[v.complement().index()]);
+          splay(numNeighborhoodQueries, cliqueid,
+                cliquesetroot[v.complement().index()]);
       node = cliquesetroot[v.complement().index()];
     }
 
@@ -2232,11 +2238,12 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
               HighsInt node;
               if (cliques[cliqueid].end - cliques[cliqueid].start == 2) {
                 sizeTwoCliquesetRoot[v.index()] =
-                    splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
+                    splay(numNeighborhoodQueries, cliqueid,
+                          sizeTwoCliquesetRoot[v.index()]);
                 node = sizeTwoCliquesetRoot[v.index()];
               } else {
-                cliquesetroot[v.index()] =
-                    splay(cliqueid, cliquesetroot[v.index()]);
+                cliquesetroot[v.index()] = splay(
+                    numNeighborhoodQueries, cliqueid, cliquesetroot[v.index()]);
                 node = cliquesetroot[v.index()];
               }
               if (node == -1 || cliquesets[node].cliqueid != cliqueid)

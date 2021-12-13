@@ -109,13 +109,17 @@ class HighsCliqueTable {
   HighsInt numEntries;
   HighsInt maxEntries;
   bool inPresolve;
-  HighsInt splay(HighsInt cliqueid, HighsInt root);
+  HighsInt splay(int64_t& numQueries, HighsInt cliqueid, HighsInt root);
 
   void unlink(HighsInt node);
 
   void link(HighsInt node);
 
-  HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2);
+  HighsInt findCommonCliqueId(int64_t& numQueries, CliqueVar v1, CliqueVar v2);
+
+  HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
+    return findCommonCliqueId(numNeighborhoodQueries, v1, v2);
+  }
 
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
@@ -243,6 +247,11 @@ class HighsCliqueTable {
   bool haveCommonClique(CliqueVar v1, CliqueVar v2) {
     if (v1.col == v2.col) return false;
     return findCommonCliqueId(v1, v2) != -1;
+  }
+
+  bool haveCommonClique(int64_t& numQueries, CliqueVar v1, CliqueVar v2) {
+    if (v1.col == v2.col) return false;
+    return findCommonCliqueId(numQueries, v1, v2) != -1;
   }
 
   std::pair<const CliqueVar*, HighsInt> findCommonClique(CliqueVar v1,
