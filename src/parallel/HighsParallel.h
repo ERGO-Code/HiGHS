@@ -64,23 +64,62 @@ inline void sync(HighsSplitDeque* localDeque) {
 }
 
 inline void sync() { sync(HighsTaskExecutor::getThisWorkerDeque()); }
+class TaskGroup {
+  HighsSplitDeque* workerDeque;
+  int dequeHead;
+  std::atomic_bool cancelFlag;
+
+ public:
+  TaskGroup() {
+    workerDeque = HighsTaskExecutor::getThisWorkerDeque();
+    dequeHead = workerDeque->getCurrentHead();
+    cancelFlag.store(false, std::memory_order_relaxed);
+  }
+
+  template <typename F>
+  void spawn(F&& f) const {
+    highs::parallel::spawn(workerDeque, std::forward<F>(f));
+  }
+
+  void sync() const {
+    assert(workerDeque->getCurrentHead() > dequeHead);
+    highs::parallel::sync(workerDeque);
+  }
+
+  void taskWait() const {
+    while (workerDeque->getCurrentHead() > dequeHead)
+      highs::parallel::sync(workerDeque);
+  }
+
+  bool isCancelled() const {
+    return cancelFlag.load(std::memory_order_relaxed);
+  }
+
+  void cancel() { cancelFlag.store(true, std::memory_order_relaxed); }
+
+  ~TaskGroup() {
+    cancel();
+    taskWait();
+  }
+};
 
 template <typename F>
 void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
   if (end - start <= grainSize) {
     f(start, end);
-    return;
+  } else {
+    TaskGroup tg;
+
+    do {
+      HighsInt split = (start + end) >> 1;
+      tg.spawn([split, end, grainSize, &f]() {
+        for_each(split, end, f, grainSize);
+      });
+      end = split;
+    } while (end - start > grainSize);
+
+    f(start, end);
   }
-
-  HighsSplitDeque* workerDeque = HighsTaskExecutor::getThisWorkerDeque();
-
-  HighsInt split = (start + end) >> 1;
-  spawn(workerDeque,
-        [split, end, grainSize, &f]() { for_each(split, end, f, grainSize); });
-
-  for_each(start, split, f, grainSize);
-
-  sync(workerDeque);
 }
 
 }  // namespace parallel
