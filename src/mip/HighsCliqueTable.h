@@ -98,6 +98,7 @@ class HighsCliqueTable {
   std::vector<uint8_t> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
+  std::vector<HighsInt> stack;
   std::vector<uint8_t> neighborhoodFlags;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
