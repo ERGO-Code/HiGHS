@@ -96,9 +96,9 @@ class HighsCliqueTable {
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<uint8_t> iscandidate;
   std::vector<uint8_t> colDeleted;
-  std::vector<uint16_t> cliquehits;
+  std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
-  std::vector<HighsInt> stack;
+  std::vector<uint8_t> neighborhoodFlags;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
@@ -106,6 +106,7 @@ class HighsCliqueTable {
   HighsRandom randgen;
   HighsInt nfixings;
   HighsInt numEntries;
+  HighsInt maxEntries;
   bool inPresolve;
   HighsInt splay(HighsInt cliqueid, HighsInt root);
 
@@ -155,6 +156,8 @@ class HighsCliqueTable {
   void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,
                    bool equality = false, HighsInt origin = kHighsIInf);
 
+  void queryNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
+
  public:
   int64_t numNeighborhoodQueries;
 
@@ -162,17 +165,23 @@ class HighsCliqueTable {
     cliquesetroot.resize(2 * ncols, -1);
     sizeTwoCliquesetRoot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
+    neighborhoodFlags.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;
     numNeighborhoodQueries = 0;
     numEntries = 0;
+    maxEntries = kHighsIInf;
     inPresolve = false;
   }
 
   void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
 
   HighsInt getNumEntries() const { return numEntries; }
+
+  HighsInt partitionNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
+
+  HighsInt shrinkToNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
@@ -209,6 +218,12 @@ class HighsCliqueTable {
       const {
     return cliqueextensions;
   }
+
+  void setMaxEntries(HighsInt numNz) {
+    this->maxEntries = 1000000 + 10 * numNz;
+  }
+
+  bool isFull() const { return numEntries >= maxEntries; }
 
   HighsInt getNumFixings() const { return nfixings; }
 

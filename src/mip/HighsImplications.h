@@ -26,6 +26,7 @@ class HighsLpRelaxation;
 
 class HighsImplications {
   std::vector<HighsDomainChange> implications;
+  HighsInt nextCleanupCall;
 
   struct Implics {
     HighsInt start;
@@ -58,6 +59,7 @@ class HighsImplications {
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
+    nextCleanupCall = mipsolver.numNonzero();
   }
 
   void reset() {
@@ -75,6 +77,8 @@ class HighsImplications {
     vlbs.clear();
     vlbs.shrink_to_fit();
     vlbs.resize(numcol);
+
+    nextCleanupCall = mipsolver.numNonzero();
   }
 
   HighsInt getImplications(HighsInt col, bool val,

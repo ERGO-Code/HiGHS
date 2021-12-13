@@ -53,6 +53,7 @@ struct HighsMipSolverData {
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
   HighsInt numCliqueEntriesAfterPresolve;
+  HighsInt numCliqueEntriesAfterFirstPresolve;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
