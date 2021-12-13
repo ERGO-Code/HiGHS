@@ -395,7 +395,7 @@ void HighsImplications::separateImpliedBounds(
     HighsInt numNewEntries =
         mipsolver.mipdata_->cliquetable.getNumEntries() - oldNumEntries;
 
-    nextCleanupCall -= std::max(0, numNewEntries);
+    nextCleanupCall -= std::max(HighsInt{0}, numNewEntries);
 
     if (nextCleanupCall < 0) {
       HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
