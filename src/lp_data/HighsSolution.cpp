@@ -1194,19 +1194,10 @@ void HighsSolution::clear() {
 void HighsBasis::clear() {
   this->valid = false;
   this->alien = true;
+  this->debug_dual_feasible = false;
   this->debug_id = -1;
   this->debug_update_count = -1;
   this->debug_origin_name = "None";
   this->row_status.clear();
   this->col_status.clear();
 }
-
-/*
-void HighsBasis::copy(const HighsBasis& basis) {
-  this->valid = basis.valid;
-  this->debug_id = basis.debug_id;
-  this->debug_update_count = basis.debug_update_count;
-  this->row_status = basis.row_status;
-  this->col_status = basis.col_status;
-}
-*/

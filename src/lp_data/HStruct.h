@@ -56,13 +56,13 @@ struct HotStart {
 struct HighsBasis {
   bool valid = false;
   bool alien = true;
+  bool debug_dual_feasible = false;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
   void clear();
-  //  void copy(const HighsBasis& basis);
 };
 
 struct HighsScale {
