@@ -1486,40 +1486,41 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     HighsInt iVar = iCol;
     const double lower = use_lp.col_lower_[iCol];
     const double upper = use_lp.col_upper_[iCol];
+    const double dual = (HighsInt)lp_.sense_ * info_.workDual_[iCol];
     HighsBasisStatus basis_status = HighsBasisStatus::kNonbasic;
-    if (!basis_.nonbasicFlag_[iVar]) {
+    if (!basis_.nonbasicFlag_[iVar])
       basis_status = HighsBasisStatus::kBasic;
-    } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveUp) {
+    else if (lower == upper)
+      basis_status =
+          dual < 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
+    else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveUp)
       basis_status = HighsBasisStatus::kLower;
-    } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveDn) {
+    else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveDn)
       basis_status = HighsBasisStatus::kUpper;
-    } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe) {
-      if (lower == upper) {
-        basis_status = HighsBasisStatus::kLower;
-      } else {
-        basis_status = HighsBasisStatus::kZero;
-      }
-    }
+    else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe)
+      basis_status = HighsBasisStatus::kZero;
+
     highs_basis.col_status[iCol] = basis_status;
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
     const double lower = use_lp.row_lower_[iRow];
     const double upper = use_lp.row_upper_[iRow];
+    const double dual =
+        -(HighsInt)lp_.sense_ * info_.workDual_[lp_.num_col_ + iRow];
     HighsBasisStatus basis_status = HighsBasisStatus::kNonbasic;
-    if (!basis_.nonbasicFlag_[iVar]) {
+    if (!basis_.nonbasicFlag_[iVar])
       basis_status = HighsBasisStatus::kBasic;
-    } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveUp) {
+    else if (lower == upper)
+      basis_status =
+          dual < 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
+    else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveUp)
       basis_status = HighsBasisStatus::kUpper;
-    } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveDn) {
+    else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveDn)
       basis_status = HighsBasisStatus::kLower;
-    } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe) {
-      if (lower == upper) {
-        basis_status = HighsBasisStatus::kLower;
-      } else {
-        basis_status = HighsBasisStatus::kZero;
-      }
-    }
+    else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe)
+      basis_status = HighsBasisStatus::kZero;
+
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
