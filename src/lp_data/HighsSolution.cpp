@@ -1208,7 +1208,6 @@ void HighsSolution::clear() {
 void HighsBasis::clear() {
   this->valid = false;
   this->alien = true;
-  this->debug_dual_feasible = false;
   this->debug_id = -1;
   this->debug_update_count = -1;
   this->debug_origin_name = "None";

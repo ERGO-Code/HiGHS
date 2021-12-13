@@ -79,6 +79,10 @@ HighsStatus HEkkDual::solve() {
   // Record whether the solution with unperturbed costs is dual feasible
   const bool dual_feasible_with_unperturbed_costs =
       info.num_dual_infeasibilities == 0;
+  if (ekk_instance_.debug_dual_feasible && !dual_feasible_with_unperturbed_costs) {
+    printf("Basis should be dual feasible but duals without cost perturbation have %4d infeasibilities\n",
+	   (int)info.num_dual_infeasibilities);
+  }
   // Force phase 2 to be used if feasible with unperturbed costs, or
   // if the maximum infeasibility is small. First of these tests is
   // redundant if favour_dual_phase2 = true;

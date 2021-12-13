@@ -197,6 +197,7 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
   bool debug_basis_report_ = false;
+  bool debug_dual_feasible = false;
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
