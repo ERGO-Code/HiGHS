@@ -11,6 +11,13 @@ public enum HighsStatus
    kError
 }
 
+public enum HighsMatrixFormat 
+{ 
+   kNone = 0, 
+   kColwise, 
+   kRowwise 
+}
+
 public enum HighsBasisStatus
 {
   kLower = 0,
@@ -48,11 +55,14 @@ public enum HighsModelStatus
 
 public class HighsModel
 {
+   public HighsObjectiveSense sense;
    public double[] colcost;
+   public double offset;
    public double[] collower;
    public double[] colupper;
    public double[] rowlower;
    public double[] rowupper;
+   public HighsMatrixFormat a_format;
    public int[] astart;
    public int[] aindex;
    public double[] avalue;
@@ -63,7 +73,7 @@ public class HighsModel
    }
 
    public HighsModel(double[] colcost, double[] collower, double[] colupper, double[] rowlower, double[] rowupper,
-   int[] astart, int[] aindex, double[] avalue)
+   int[] astart, int[] aindex, double[] avalue, double offset = 0, HighsMatrixFormat a_format = HighsMatrixFormat.kColwise, HighsObjectiveSense sense = HighsObjectiveSense.kMinimize)
    {
       this.colcost = colcost;
       this.collower = collower;
@@ -73,6 +83,9 @@ public class HighsModel
       this.astart = astart;
       this.aindex = aindex;
       this.avalue = avalue;
+      this.offset = offset;
+      this.a_format = a_format;
+      this.sense = sense;
    }
 }
 
@@ -145,7 +158,7 @@ public unsafe class HighsLpSolver
    private static extern int Highs_writeModel(void* highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_passLp(void* highs, int numcol, int numrow, int numnz, double[] colcost,
+   private static extern int Highs_passLp(void* highs, int numcol, int numrow, int numnz, int aformat, int sense, double offset, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue);
 
    [DllImport(highslibname)]
@@ -337,7 +350,7 @@ public unsafe class HighsLpSolver
    public HighsStatus passLp(HighsModel model)
    {
       return (HighsStatus)HighsLpSolver.Highs_passLp(this.highs, model.colcost.Length, model.rowlower.Length, model.avalue.Length,
-      model.colcost, model.collower, model.colupper, model.rowlower, model.rowupper, model.astart, model.aindex, model.avalue);
+      (int)model.a_format, (int)model.sense, model.offset, model.colcost, model.collower, model.colupper, model.rowlower, model.rowupper, model.astart, model.aindex, model.avalue);
    }
 
    public HighsStatus setOptionValue(string option, string value)
