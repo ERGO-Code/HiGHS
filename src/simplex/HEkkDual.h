@@ -356,6 +356,10 @@ class HEkkDual {
   void majorRollback();
 
   // private:
+  void computeInevitableDualInfeasibilities();
+  void correctDualInfeasibilities(HighsInt& free_infeasibility_count);
+  void flipBound(const HighsInt iCol);
+
   bool proofOfPrimalInfeasibility();
   void saveDualRay();
   void assessPhase1Optimality();
