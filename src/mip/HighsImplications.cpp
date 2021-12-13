@@ -84,8 +84,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   pdqsort(implications.begin() + implstart, binstart);
 
-  HighsInt numNewCliques = -cliquetable.numCliques();
-
   HighsCliqueTable::CliqueVar clique[2];
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
@@ -98,30 +96,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     cliquetable.addClique(mipsolver, clique, 2);
     if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   }
-
-  numNewCliques += cliquetable.numCliques();
-
-#if 0
-  if (!cliquetable.getPresolveFlag() &&
-      cliquetable.getNumEntries() > 1000000 + 4 * mipsolver.numNonzero() &&
-      numNewCliques > 100) {
-    // printf("numNewCliques: %d\n", numNewCliques);
-    std::vector<HighsCliqueTable::CliqueVar> x;
-    x.reserve(implications.end() - binstart);
-    x.push_back(clique[0]);
-    cliquetable.resolveSubstitution(x[0]);
-    auto savedNumQueries = cliquetable.numNeighborhoodQueries;
-    cliquetable.runCliqueMerging(globaldomain, x);
-    if (x.size() > 2) {
-      // printf("clique merging succeeded size = %ld, numentries = %d\n",
-      // x.size(),
-      //       cliquetable.getNumEntries());
-      cliquetable.doAddClique(x.data(), x.size());
-    }
-
-    cliquetable.numNeighborhoodQueries = savedNumQueries;
-  }
-#endif
 
   // store variable bounds derived from implications
   for (auto i = implications.begin() + implstart; i != binstart; ++i) {
@@ -396,7 +370,7 @@ void HighsImplications::separateImpliedBounds(
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
-  if (!mipsolver.submip && !mipsolver.mipdata_->cliquetable.isFull()) {
+  if (!mipsolver.mipdata_->cliquetable.isFull()) {
     auto oldNumQueries = mipsolver.mipdata_->cliquetable.numNeighborhoodQueries;
     HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
 
@@ -421,7 +395,7 @@ void HighsImplications::separateImpliedBounds(
     HighsInt numNewEntries =
         mipsolver.mipdata_->cliquetable.getNumEntries() - oldNumEntries;
 
-    nextCleanupCall -= std::max(0, numNewEntries);
+    nextCleanupCall -= std::max(HighsInt{0}, numNewEntries);
 
     if (nextCleanupCall < 0) {
       HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
@@ -491,7 +465,7 @@ void HighsImplications::separateImpliedBounds(
           cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                          mipsolver.variableType(implics[i].column) !=
                              HighsVarType::kContinuous,
-                         false, false);
+                         false, false, false);
         }
       }
     }
@@ -539,7 +513,7 @@ void HighsImplications::separateImpliedBounds(
           cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                          mipsolver.variableType(implics[i].column) !=
                              HighsVarType::kContinuous,
-                         false, false);
+                         false, false, false);
         }
       }
     }

@@ -276,7 +276,6 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
 
   std::vector<CliqueVar> PminusNu;
   PminusNu.reserve(Plen);
-#if PARALLEL_NEIGHBORHOOD
   queryNeighborhood(pivot, data.P.data(), Plen);
   for (HighsInt i = 0; i != Plen; ++i) {
     if (neighborhoodFlags[i])
@@ -284,13 +283,6 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
     else
       PminusNu.push_back(data.P[i]);
   }
-#else
-  for (HighsInt i = 0; i != Plen; ++i) {
-    if (haveCommonClique(pivot, data.P[i])) continue;
-
-    PminusNu.push_back(data.P[i]);
-  }
-#endif
 
   pdqsort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
     return std::make_pair(a.weight(data.sol), a.index()) >
@@ -301,21 +293,9 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
   localX.insert(localX.end(), X, X + Xlen);
 
   for (CliqueVar v : PminusNu) {
-#if PARALLEL_NEIGHBORHOOD
     HighsInt newPlen = partitionNeighborhood(v, data.P.data(), Plen);
-
     HighsInt newXlen = partitionNeighborhood(v, localX.data(), localX.size());
-#else
-    HighsInt newPlen =
-        std::partition(data.P.begin(), data.P.begin() + Plen,
-                       [&](CliqueVar p) { return haveCommonClique(v, p); }) -
-        data.P.begin();
 
-    HighsInt newXlen =
-        std::partition(localX.begin(), localX.end(),
-                       [&](CliqueVar x) { return haveCommonClique(v, x); }) -
-        localX.begin();
-#endif
     // add v to R, update the weight, and do the recursive call
     data.R.push_back(v);
     double wv = v.weight(data.sol);
@@ -522,7 +502,8 @@ struct ThreadNeighborhoodQueryData {
 
 void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
                                          HighsInt N) {
-  if (numEntries < 10000) {
+  // todo, check performance impact of parallelism here
+  if (true || numEntries < 10000) {
     // printf("numEntries: %d\n", numEntries);
     for (HighsInt i = 0; i < N; ++i)
       neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
@@ -1252,12 +1233,12 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       double(rhs - minact + feastol))
     return;
 
-  HighsInt maxEntries =
+  HighsInt maxNewEntries =
       std::min(mipsolver.mipdata_->numCliqueEntriesAfterPresolve + 100000 +
                    4 * globaldom.numModelNonzeros(),
                numEntries + 10 * nbin);
 
-  for (HighsInt k = nbin - 1; k != 0 && numEntries < maxEntries; --k) {
+  for (HighsInt k = nbin - 1; k != 0 && numEntries < maxNewEntries; --k) {
     double mincliqueval =
         double(rhs - minact - std::abs(vals[perm[k]]) + feastol);
     auto cliqueend = std::partition_point(
@@ -1289,7 +1270,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
 
       addClique(mipsolver, clique.data(), clique.size());
-      if (globaldom.infeasible() || numEntries >= maxEntries) return;
+      if (globaldom.infeasible() || numEntries >= maxNewEntries) return;
     }
 
     // further cliques are just subsets of this clique
@@ -1352,8 +1333,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         continue;
       }
     }
-    if (!transformRows || isFull())
-      continue;
+    if (!transformRows || isFull()) continue;
 
     offset = 0;
     for (HighsInt j = start; j != end; ++j) {
@@ -2027,16 +2007,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
         shrinkToNeighborhood(clique[i], clique.data() + initialCliqueSize,
                              clique.size() - initialCliqueSize);
     clique.erase(clique.begin() + newSize, clique.end());
-    // clique.erase(
-    //     std::remove_if(
-    //         clique.begin() + initialCliqueSize, clique.end(),
-    //         [&](CliqueVar v) { return !haveCommonClique(clique[i], v); }),
-    //     clique.end());
-  }
-
-  if (clique.size() <= 2) {
-    clique.clear();
-    return;
   }
 
   if (initialCliqueSize < (HighsInt)clique.size()) {
@@ -2051,12 +2021,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
       HighsInt newSize = i + shrinkToNeighborhood(extvar, clique.data() + i,
                                                   clique.size() - i);
       clique.erase(clique.begin() + newSize, clique.end());
-
-      // clique.erase(std::remove_if(clique.begin() + i, clique.end(),
-      //                             [&](CliqueVar v) {
-      //                               return !haveCommonClique(extvar, v);
-      //                             }),
-      //              clique.end());
     }
   }
 
@@ -2088,7 +2052,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   if (cliquehits.size() < cliques.size()) cliquehits.resize(cliques.size());
 
   HighsInt numcliqueslots = cliques.size();
-  const HighsInt maxEntries = numEntries + globaldomain.numModelNonzeros();
+  const HighsInt maxNewEntries = numEntries + globaldomain.numModelNonzeros();
   bool haveNonModelCliquesToMerge = false;
   for (HighsInt k = 0; k != numcliqueslots; ++k) {
     if (cliques[k].start == -1) continue;
@@ -2169,11 +2133,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
                                      extensionvars.size() - i);
         extensionvars.erase(extensionvars.begin() + newSize,
                             extensionvars.end());
-        // extensionvars.erase(
-        //     std::remove_if(
-        //         extensionvars.begin() + i, extensionvars.end(),
-        //         [&](CliqueVar v) { return !haveCommonClique(extvar, v); }),
-        //     extensionvars.end());
       }
     }
 
@@ -2284,7 +2243,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     extensionvars.clear();
     processInfeasibleVertices(globaldomain);
 
-    if (numEntries >= maxEntries) break;
+    if (numEntries >= maxNewEntries) break;
     // printf("nonzeroDelta: %d, maxNonzeroDelta: %d\n", nonzeroDelta,
     // maxNonzeroDelta);
   }

@@ -228,7 +228,7 @@ class HighsCliqueTable {
   }
 
   void setMaxEntries(HighsInt numNz) {
-    this->maxEntries = 1000000 + 10 * numNz;
+    this->maxEntries = 2000000 + 10 * numNz;
   }
 
   bool isFull() const { return numEntries >= maxEntries; }
