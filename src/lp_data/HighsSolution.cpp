@@ -937,7 +937,13 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
           highs_solution.row_dual[row] = dual;
         } else if (constraint_type[ipx_row] == '=') {
           // Row is at its fixed value: set HighsBasisStatus according
-          // to sign of dual
+          // to sign of dual.
+	  //
+	  // Don't worry about maximization problems. IPX solves them
+          // as minimizations with negated costs, so a negative dual
+          // yields HighsBasisStatus::kUpper here, and dual signs are
+          // then flipped below, so HighsBasisStatus::kUpper will have
+          // corresponding positive dual.
           highs_basis.row_status[row] =
               dual >= 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
           highs_solution.row_value[row] = value;
