@@ -370,7 +370,7 @@ void HighsImplications::separateImpliedBounds(
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
-  if (!mipsolver.submip && !mipsolver.mipdata_->cliquetable.isFull()) {
+  if (!mipsolver.mipdata_->cliquetable.isFull()) {
     auto oldNumQueries = mipsolver.mipdata_->cliquetable.numNeighborhoodQueries;
     HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
 
