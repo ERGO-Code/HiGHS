@@ -3148,13 +3148,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             HighsIntegers::integralScale(rowCoefs, deltaDown, deltaUp);
 
         if (intScale != 0.0) {
+          HighsInt numRowCoefs = rowCoefs.size();
           if (model->row_lower_[row] == -kHighsInf) {
             // <= inequality
             HighsCDouble rhs = model->row_upper_[row] * intScale;
             bool success = true;
             double minRhsTightening = 0.0;
             double maxVal = 0.0;
-            for (HighsInt i = 0; i != rowsize[row]; ++i) {
+            for (HighsInt i = 0; i < numRowCoefs; ++i) {
               double coef = rowCoefs[i];
               HighsCDouble scaleCoef = HighsCDouble(coef) * intScale;
               HighsCDouble intCoef = floor(scaleCoef + 0.5);
@@ -3188,9 +3189,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   // the scale value is reasonably small, change the row values
                   // to be integral
                   model->row_upper_[row] = double(roundRhs);
-                  for (HighsInt i = 0; i != rowsize[row]; ++i)
+                  for (HighsInt i = 0; i < numRowCoefs; ++i) {
                     addToMatrix(row, rowIndex[i],
                                 rowCoefs[i] - Avalue[rowpositions[i]]);
+                  }
                 } else if (rhs - roundRhs <
                            minRhsTightening -
                                options->mip_feasibility_tolerance) {
@@ -3204,7 +3206,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   // the original constraint for this to make sense with is
                   // checked with the condition above
                   model->row_upper_[row] = double(roundRhs / intScale);
-                  for (HighsInt i = 0; i != rowsize[row]; ++i) {
+                  for (HighsInt i = 0; i < numRowCoefs; ++i) {
                     double delta = double(HighsCDouble(rowCoefs[i]) / intScale -
                                           Avalue[rowpositions[i]]);
                     if (std::abs(delta) > options->small_matrix_value)
@@ -3219,7 +3221,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             bool success = true;
             double minRhsTightening = 0.0;
             double maxVal = 0.0;
-            for (HighsInt i = 0; i != rowsize[row]; ++i) {
+            for (HighsInt i = 0; i < numRowCoefs; ++i) {
               double coef = rowCoefs[i];
               HighsCDouble scaleCoef = HighsCDouble(coef) * intScale;
               HighsCDouble intCoef = floor(scaleCoef + 0.5);
@@ -3253,7 +3255,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   // the scale value is reasonably small, change the row values
                   // to be integral
                   model->row_lower_[row] = double(roundRhs);
-                  for (HighsInt i = 0; i != rowsize[row]; ++i)
+                  for (HighsInt i = 0; i < numRowCoefs; ++i)
                     addToMatrix(row, rowIndex[i],
                                 rowCoefs[i] - Avalue[rowpositions[i]]);
                 } else if (rhs - roundRhs >
@@ -3269,7 +3271,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   //     model->row_lower_[row], double(roundRhs / intScale),
                   //     intScale);
                   model->row_lower_[row] = double(roundRhs / intScale);
-                  for (HighsInt i = 0; i != rowsize[row]; ++i) {
+                  for (HighsInt i = 0; i < numRowCoefs; ++i) {
                     double delta = double(HighsCDouble(rowCoefs[i]) / intScale -
                                           Avalue[rowpositions[i]]);
                     if (std::abs(delta) > options->small_matrix_value)
@@ -3286,7 +3288,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             double minRhsTightening = 0.0;
             double minLhsTightening = 0.0;
             double maxVal = 0.0;
-            for (HighsInt i = 0; i != rowsize[row]; ++i) {
+            for (HighsInt i = 0; i < numRowCoefs; ++i) {
               double coef = rowCoefs[i];
               HighsCDouble scaleCoef = HighsCDouble(coef) * intScale;
               HighsCDouble intCoef = floor(scaleCoef + 0.5);
@@ -3350,7 +3352,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   // to be integral
                   model->row_lower_[row] = double(roundLhs);
                   model->row_upper_[row] = double(roundRhs);
-                  for (HighsInt i = 0; i != rowsize[row]; ++i)
+                  for (HighsInt i = 0; i < numRowCoefs; ++i)
                     addToMatrix(row, rowIndex[i],
                                 rowCoefs[i] - Avalue[rowpositions[i]]);
                 } else {
