@@ -1271,14 +1271,6 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   basis_.debug_update_count = highs_basis.debug_update_count;
   basis_.debug_origin_name = highs_basis.debug_origin_name;
   assert(basis_.debug_origin_name != "");
-  if (highs_basis.was_alien) {
-    printf(
-        " HEkk::setBasis Was alien = %-5s; Id = %9d; UpdateCount = %4d; Origin "
-        "(%s)\n",
-        highsBoolToString(highs_basis.was_alien).c_str(), (int)basis_.debug_id,
-        (int)basis_.debug_update_count, basis_.debug_origin_name.c_str());
-  }
-
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
@@ -1515,8 +1507,8 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
-  highs_basis.was_alien = false;
   highs_basis.alien = false;
+  highs_basis.was_alien = false;
   highs_basis.debug_id =
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
   highs_basis.debug_update_count = info_.update_count;

@@ -819,6 +819,8 @@ HighsStatus Highs::run() {
         basis_.clear();
         basis_.debug_origin_name = "Presolve to empty";
         basis_.valid = true;
+        basis_.alien = false;
+        basis_.was_alien = false;
         solution_.value_valid = true;
         solution_.dual_valid = true;
         have_optimal_solution = true;
