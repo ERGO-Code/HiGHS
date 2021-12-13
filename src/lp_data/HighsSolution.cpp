@@ -788,34 +788,40 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   HighsInt num_basic_variables = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     bool unrecognised = false;
+    const double lower = lp.col_lower_[col];
+    const double upper = lp.col_upper_[col];
     if (ipx_col_status[col] == ipx_basic) {
       // Column is basic
       highs_basis.col_status[col] = HighsBasisStatus::kBasic;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = 0;
-    } else if (ipx_col_status[col] == ipx_nonbasic_at_lb) {
-      // Column is nonbasic at lower bound
-      highs_basis.col_status[col] = HighsBasisStatus::kLower;
-      highs_solution.col_value[col] = ipx_col_value[col];
-      highs_solution.col_dual[col] = ipx_col_dual[col];
-    } else if (ipx_col_status[col] == ipx_nonbasic_at_ub) {
-      // Column is nonbasic at upper bound
-      highs_basis.col_status[col] = HighsBasisStatus::kUpper;
-      highs_solution.col_value[col] = ipx_col_value[col];
-      highs_solution.col_dual[col] = ipx_col_dual[col];
-    } else if (ipx_col_status[col] == ipx_superbasic) {
-      // Column is superbasic
-      highs_basis.col_status[col] = HighsBasisStatus::kZero;
-      highs_solution.col_value[col] = ipx_col_value[col];
-      highs_solution.col_dual[col] = ipx_col_dual[col];
     } else {
-      unrecognised = true;
-      highsLogDev(log_options, HighsLogType::kError,
-                  "\nError in IPX conversion: Unrecognised value "
-                  "ipx_col_status[%2" HIGHSINT_FORMAT
-                  "] = "
-                  "%" HIGHSINT_FORMAT "\n",
-                  col, (HighsInt)ipx_col_status[col]);
+      // Column is nonbasic. Setting of ipx_col_status is consistent
+      // with dual value for fixed columns
+      if (ipx_col_status[col] == ipx_nonbasic_at_lb) {
+        // Column is at lower bound
+        highs_basis.col_status[col] = HighsBasisStatus::kLower;
+        highs_solution.col_value[col] = ipx_col_value[col];
+        highs_solution.col_dual[col] = ipx_col_dual[col];
+      } else if (ipx_col_status[col] == ipx_nonbasic_at_ub) {
+        // Column is at upper bound
+        highs_basis.col_status[col] = HighsBasisStatus::kUpper;
+        highs_solution.col_value[col] = ipx_col_value[col];
+        highs_solution.col_dual[col] = ipx_col_dual[col];
+      } else if (ipx_col_status[col] == ipx_superbasic) {
+        // Column is superbasic
+        highs_basis.col_status[col] = HighsBasisStatus::kZero;
+        highs_solution.col_value[col] = ipx_col_value[col];
+        highs_solution.col_dual[col] = ipx_col_dual[col];
+      } else {
+        unrecognised = true;
+        highsLogDev(log_options, HighsLogType::kError,
+                    "\nError in IPX conversion: Unrecognised value "
+                    "ipx_col_status[%2" HIGHSINT_FORMAT
+                    "] = "
+                    "%" HIGHSINT_FORMAT "\n",
+                    col, (HighsInt)ipx_col_status[col]);
+      }
     }
     if (unrecognised) {
       highsLogDev(log_options, HighsLogType::kError,
@@ -930,8 +936,10 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else if (constraint_type[ipx_row] == '=') {
-          // Row is at its fixed value
-          highs_basis.row_status[row] = HighsBasisStatus::kLower;
+          // Row is at its fixed value: set HighsBasisStatus according
+          // to sign of dual
+          highs_basis.row_status[row] =
+              dual >= 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else {

@@ -1495,7 +1495,9 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
       basis_status = HighsBasisStatus::kUpper;
     } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe) {
       if (lower == upper) {
-        basis_status = HighsBasisStatus::kLower;
+        const double dual = (HighsInt)lp_.sense_ * info_.workDual_[iCol];
+        basis_status =
+            dual >= 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
       } else {
         basis_status = HighsBasisStatus::kZero;
       }
@@ -1515,7 +1517,9 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
       basis_status = HighsBasisStatus::kLower;
     } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe) {
       if (lower == upper) {
-        basis_status = HighsBasisStatus::kLower;
+        const double dual = (HighsInt)lp_.sense_ * info_.workDual_[iVar];
+        basis_status =
+            dual >= 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
       } else {
         basis_status = HighsBasisStatus::kZero;
       }
