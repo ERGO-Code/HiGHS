@@ -1271,9 +1271,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   basis_.debug_update_count = highs_basis.debug_update_count;
   basis_.debug_origin_name = highs_basis.debug_origin_name;
   assert(basis_.debug_origin_name != "");
-  //  printf("HEkk::setBasis Id = %9d; UpdateCount = %4d; Origin (%s)\n",
-  //	 (int)basis_.debug_id, (int)basis_.debug_update_count,
-  //	 basis_.debug_origin_name.c_str());
+  printf(" HEkk::setBasis Alien = %-5s; Id = %9d; UpdateCount = %4d; Origin (%s)\n",
+	 highsBoolToString(highs_basis.alien).c_str(),
+  	 (int)basis_.debug_id, (int)basis_.debug_update_count,
+  	 basis_.debug_origin_name.c_str());
 
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -1288,6 +1289,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
       if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
+	// ToDo Don't assume lower == upper only corresponds to HighsBasisStatus::kLower
         if (lower == upper) {
           basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
         } else {
@@ -1326,29 +1328,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       }
     }
   }
+  basis_.debug_dual = highs_basis.debug_dual;
   status_.has_basis = true;
   return HighsStatus::kOk;
 }
-
-/*
-HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
-  // Shouldn't have to check the incoming basis since this is an
-  // internal call, but it may be a basis that's set up internally
-  // with errors :-) ...
-  if (this->debugBasisConsistent() ==
-      HighsDebugStatus::kLogicalError) {
-    highsLogDev(this->options_->log_options, HighsLogType::kError,
-                "Supposed to be a Highs basis, but not valid\n");
-    return HighsStatus::kError;
-  }
-  this->basis_.nonbasicFlag_ = basis.nonbasicFlag_;
-  this->basis_.nonbasicMove_ = basis.nonbasicMove_;
-  this->basis_.basicIndex_ = basis.basicIndex_;
-  this->basis_.hash = basis.hash;
-  this->status_.has_basis = true;
-  return HighsStatus::kOk;
-}
-*/
 
 void HEkk::addCols(const HighsLp& lp,
                    const HighsSparseMatrix& scaled_a_matrix) {
@@ -1444,6 +1427,7 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
   }
   this->simplex_in_scaled_space_ = false;
 }
+
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values
@@ -1532,6 +1516,7 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
   highs_basis.debug_update_count = info_.update_count;
   highs_basis.debug_origin_name = basis_.debug_origin_name;
+  highs_basis.debug_dual = basis_.debug_dual;
   return highs_basis;
 }
 

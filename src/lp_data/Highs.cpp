@@ -1391,6 +1391,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
+  const bool was_alien_basis = basis.alien;
   if (basis.alien) {
     highsLogDev(
         options_.log_options, HighsLogType::kInfo,
@@ -1418,7 +1419,12 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   basis_.valid = true;
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
-  // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());
+  assert(!basis_.alien);
+  printf("Highs::setBasis Alien = %-5s; Id = %9d; UpdateCount = %4d; Origin (%s)\n",
+	 highsBoolToString(was_alien_basis).c_str(),
+  	 (int)basis.debug_id, (int)basis.debug_update_count,
+  	 basis.debug_origin_name.c_str());
+ 
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
