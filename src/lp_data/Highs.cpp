@@ -1391,7 +1391,6 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
-  const bool was_alien_basis = basis.alien;
   if (basis.alien) {
     highsLogDev(
         options_.log_options, HighsLogType::kInfo,
@@ -1400,6 +1399,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
     HighsBasis modifiable_basis = basis;
+    modifiable_basis.was_alien = true;
     HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                       info_, ekk_instance_, options_, timer_);
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
@@ -1420,11 +1420,14 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
   assert(!basis_.alien);
-  printf("Highs::setBasis Alien = %-5s; Id = %9d; UpdateCount = %4d; Origin (%s)\n",
-	 highsBoolToString(was_alien_basis).c_str(),
-  	 (int)basis.debug_id, (int)basis.debug_update_count,
-  	 basis.debug_origin_name.c_str());
- 
+  if (basis_.was_alien) {
+    printf(
+        "Highs::setBasis Was alien = %-5s; Id = %9d; UpdateCount = %4d; Origin "
+        "(%s)\n",
+        highsBoolToString(basis_.was_alien).c_str(), (int)basis_.debug_id,
+        (int)basis_.debug_update_count, basis_.debug_origin_name.c_str());
+  }
+
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...

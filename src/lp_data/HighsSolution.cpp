@@ -938,8 +938,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         } else if (constraint_type[ipx_row] == '=') {
           // Row is at its fixed value: set HighsBasisStatus according
           // to sign of dual.
-	  //
-	  // Don't worry about maximization problems. IPX solves them
+          //
+          // Don't worry about maximization problems. IPX solves them
           // as minimizations with negated costs, so a negative dual
           // yields HighsBasisStatus::kUpper here, and dual signs are
           // then flipped below, so HighsBasisStatus::kUpper will have
@@ -1208,6 +1208,7 @@ void HighsSolution::clear() {
 void HighsBasis::clear() {
   this->valid = false;
   this->alien = true;
+  this->was_alien = true;
   this->debug_id = -1;
   this->debug_update_count = -1;
   this->debug_origin_name = "None";

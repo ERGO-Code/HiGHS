@@ -79,16 +79,19 @@ HighsStatus HEkkDual::solve() {
   // Record whether the solution with unperturbed costs is dual feasible
   const bool dual_feasible_with_unperturbed_costs =
       info.num_dual_infeasibilities == 0;
-  if (ekk_instance_.debug_dual_feasible && !dual_feasible_with_unperturbed_costs) {
+  if (ekk_instance_.debug_dual_feasible &&
+      !dual_feasible_with_unperturbed_costs) {
     SimplexBasis& basis = ekk_instance_.basis_;
-    printf("Basis should be dual feasible but duals without cost perturbation have num / max / sum = %4d / %g / %g infeasibilities\n",
-	   (int)info.num_dual_infeasibilities,
-	   info.max_dual_infeasibility,
-	   info.sum_dual_infeasibilities);
+    printf(
+        "Basis should be dual feasible but duals without cost perturbation "
+        "have num / max / sum = %4d / %g / %g infeasibilities\n",
+        (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+        info.sum_dual_infeasibilities);
     printf("dual solve() basis Id = %d; update count = %d; name = %s\n",
-	   (int)basis.debug_id, (int)basis.debug_update_count, basis.debug_origin_name.c_str());
+           (int)basis.debug_id, (int)basis.debug_update_count,
+           basis.debug_origin_name.c_str());
     fflush(stdout);
-    assert((int)basis.debug_dual.size() == solver_num_tot);
+    //    assert((int)basis.debug_dual.size() == solver_num_tot);
   }
   // Force phase 2 to be used if feasible with unperturbed costs, or
   // if the maximum infeasibility is small. First of these tests is

@@ -1254,7 +1254,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // with errors :-) ...
   //
   // The basis should be dual faeible unless it's alien
-  debug_dual_feasible = !highs_basis.alien;
+  debug_dual_feasible = !highs_basis.was_alien;
   HighsOptions& options = *options_;
   if (debugHighsBasisConsistent(options, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
@@ -1271,10 +1271,13 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   basis_.debug_update_count = highs_basis.debug_update_count;
   basis_.debug_origin_name = highs_basis.debug_origin_name;
   assert(basis_.debug_origin_name != "");
-  printf(" HEkk::setBasis Alien = %-5s; Id = %9d; UpdateCount = %4d; Origin (%s)\n",
-	 highsBoolToString(highs_basis.alien).c_str(),
-  	 (int)basis_.debug_id, (int)basis_.debug_update_count,
-  	 basis_.debug_origin_name.c_str());
+  if (highs_basis.was_alien) {
+    printf(
+        " HEkk::setBasis Was alien = %-5s; Id = %9d; UpdateCount = %4d; Origin "
+        "(%s)\n",
+        highsBoolToString(highs_basis.was_alien).c_str(), (int)basis_.debug_id,
+        (int)basis_.debug_update_count, basis_.debug_origin_name.c_str());
+  }
 
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -1289,7 +1292,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
       if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
-	// ToDo Don't assume lower == upper only corresponds to HighsBasisStatus::kLower
+        // ToDo Don't assume lower == upper only corresponds to
+        // HighsBasisStatus::kLower
         if (lower == upper) {
           basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
         } else {
@@ -1328,7 +1332,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       }
     }
   }
-  basis_.debug_dual = highs_basis.debug_dual;
+  //  basis_.debug_dual = highs_basis.debug_dual;
   status_.has_basis = true;
   return HighsStatus::kOk;
 }
@@ -1511,12 +1515,13 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
     highs_basis.row_status[iRow] = basis_status;
   }
   highs_basis.valid = true;
+  highs_basis.was_alien = false;
   highs_basis.alien = false;
   highs_basis.debug_id =
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
   highs_basis.debug_update_count = info_.update_count;
   highs_basis.debug_origin_name = basis_.debug_origin_name;
-  highs_basis.debug_dual = basis_.debug_dual;
+  //  highs_basis.debug_dual = basis_.debug_dual;
   return highs_basis;
 }
 

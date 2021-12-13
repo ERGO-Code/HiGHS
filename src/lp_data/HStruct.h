@@ -56,12 +56,13 @@ struct HotStart {
 struct HighsBasis {
   bool valid = false;
   bool alien = true;
+  bool was_alien = true;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  std::vector<double> debug_dual;
+  //  std::vector<double> debug_dual;
   void clear();
 };
 
