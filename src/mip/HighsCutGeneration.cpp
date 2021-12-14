@@ -873,7 +873,7 @@ bool HighsCutGeneration::postprocessCut() {
     // the support is not integral, scale cut to have the largest coefficient
     // around 1.0
     int expshift;
-    std::frexp(maxAbsValue, &expshift);
+    std::frexp(maxAbsValue - epsilon, &expshift);
     expshift = -expshift;
     rhs = std::ldexp((double)rhs, expshift);
 

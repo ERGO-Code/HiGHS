@@ -103,6 +103,7 @@ class HEkk {
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
   void initialisePartitionedRowwiseMatrix();
+  bool lpFactorRowCompatible();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -198,6 +199,7 @@ class HEkk {
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
   bool debug_basis_report_ = false;
+  bool debug_dual_feasible = false;
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
@@ -248,10 +250,8 @@ class HEkk {
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
-  void computeDualInfeasibleWithFlips();
   double computeDualForTableauColumn(const HighsInt iVar,
                                      const HVector& tableau_column);
-  void correctDual(HighsInt* free_infeasibility_count);
   bool reinvertOnNumericalTrouble(const std::string method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,

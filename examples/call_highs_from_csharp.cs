@@ -12,8 +12,11 @@ class Program {
       int[] astart = {0, 2};
       int[] aindex = {0, 1, 0, 1};
       double[] avalue = {1, 2, 1, 3};
+      HighsObjectiveSense sense = HighsObjectiveSense.kMinimize;
+      double offset = 0;
+      HighsMatrixFormat a_format = HighsMatrixFormat.kColwise;
 
-      HighsModel model = new HighsModel(cc, cl, cu, rl, ru, astart, aindex, avalue);
+      HighsModel model = new HighsModel(cc, cl, cu, rl, ru, astart, aindex, avalue, offset, a_format, sense);
 
       HighsLpSolver solver = new HighsLpSolver();
 

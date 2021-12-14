@@ -46,8 +46,12 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
   assert(!incumbent_lp.is_scaled_);
-  // Cannot expect any more with an error return
-  if (return_status == HighsStatus::kError) return return_status;
+  // Cannot expect any more with an error return, and safer to clear
+  // HEkk than try to retain any data
+  if (return_status == HighsStatus::kError) {
+    ekk_instance.clear();
+    return return_status;
+  }
   //
   // Ensure that there is an invert for the current LP
   assert(ekk_instance.status_.has_invert);
