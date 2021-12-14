@@ -2144,14 +2144,15 @@ void HEkk::computeDualSteepestEdgeWeights() {
   }
 }
 
-double HEkk::computeDualSteepestEdgeWeight(const HighsInt iRow, HVector& row_ep) {
+double HEkk::computeDualSteepestEdgeWeight(const HighsInt iRow,
+                                           HVector& row_ep) {
   row_ep.clear();
   row_ep.count = 1;
   row_ep.index[0] = iRow;
   row_ep.array[iRow] = 1;
   row_ep.packFlag = false;
   simplex_nla_.btran(row_ep, info_.row_ep_density,
-		     analysis_.pointer_serial_factor_clocks);
+                     analysis_.pointer_serial_factor_clocks);
   const double local_row_ep_density = (1.0 * row_ep.count) / lp_.num_row_;
   updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
   return row_ep.norm2();

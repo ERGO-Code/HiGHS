@@ -24,7 +24,8 @@ using std::min;
 
 HighsStatus HEkkPrimal::solve() {
   if (ekk_instance_.status_.has_dual_steepest_edge_weights) {
-    printf("HEkkPrimal::solve have dual steepest edge weights\n");fflush(stdout);
+    printf("HEkkPrimal::solve have dual steepest edge weights\n");
+    fflush(stdout);
   }
   // Initialise control data for a particular solve
   initialiseSolve();
@@ -1443,7 +1444,7 @@ void HEkkPrimal::update() {
   // Update the invertible representation of the basis matrix
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
 
-  if (ekk_instance_.status_.has_dual_steepest_edge_weights) 
+  if (ekk_instance_.status_.has_dual_steepest_edge_weights)
     ekk_instance_.devDebugSteepestEdgeWeights("after  update");
   //
   // Update the row-wise representation of the nonbasic columns
@@ -2278,9 +2279,10 @@ void HEkkPrimal::updateDualSteepestEdgeWeights() {
   updateFtranDSE(col_DSE);
   std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   const double new_pivotal_edge_weight =
-    edge_weight[row_out] / (alpha_col * alpha_col);
+      edge_weight[row_out] / (alpha_col * alpha_col);
   const double Kai = -2 / alpha_col;
-  ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight, Kai, &col_DSE.array[0]);
+  ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight,
+                                              Kai, &col_DSE.array[0]);
   edge_weight[row_out] = new_pivotal_edge_weight;
 }
 
@@ -2291,7 +2293,7 @@ void HEkkPrimal::updateFtranDSE(HVector& col_DSE) {
                                     ekk_instance_.info_.row_DSE_density);
   // Perform FTRAN DSE
   ekk_instance_.simplex_nla_.ftran(col_DSE, ekk_instance_.info_.row_DSE_density,
-                     analysis->pointer_serial_factor_clocks);
+                                   analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, col_DSE);
   analysis->simplexTimerStop(FtranDseClock);
