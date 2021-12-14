@@ -1157,8 +1157,8 @@ void HEkkDual::rebuild() {
     return;
   }
   analysis->simplexTimerStart(CorrectDualClock);
-  //  correctDualInfeasibilities(dualInfeasCount);
-  ekk_instance_.correctDual(&dualInfeasCount);
+  correctDualInfeasibilities(dualInfeasCount);
+  //  ekk_instance_.correctDual(&dualInfeasCount);
   analysis->simplexTimerStop(CorrectDualClock);
 
   // Recompute primal solution
