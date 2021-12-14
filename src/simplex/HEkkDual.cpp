@@ -2434,24 +2434,16 @@ void HEkkDual::computeInevitableDualInfeasibilities() {
     // Nonbasic column
     const double lower = info.workLower_[iVar];
     const double upper = info.workUpper_[iVar];
-    const double dual = info.workDual_[iVar];
+    const double current_dual = info.workDual_[iVar];
+    const HighsInt move = basis.nonbasicMove_[iVar];
     const bool fixed = lower == upper;
     const bool boxed = lower > -kHighsInf && upper < kHighsInf;
     const bool free = lower == -kHighsInf && upper == kHighsInf;
     double dual_infeasibility = 0;
-    const bool non_free = highs_isInfinity(-lower) || highs_isInfinity(upper);
-    if (lower == -kHighsInf && upper == kHighsInf) {
-      // Free: any nonzero dual value is infeasible
-      dual_infeasibility = fabs(dual);
-    } else if (highs_isInfinity(-lower) || highs_isInfinity(upper)) {
-      assert(non_free);
-      // Not free or boxed: any dual infeasibility is given by value
-      // signed by nonbasicMove.
-      //
-      // For boxed variables, nonbasicMove may have the wrong sign for
-      // dual, but nonbasicMove and the primal value can be flipped to
-      // achieve dual feasiblility.
-      dual_infeasibility = -basis.nonbasicMove_[iVar] * dual;
+    if (free) {
+      dual_infeasibility = fabs(current_dual);
+    } else {
+      dual_infeasibility = -move * current_dual;
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= options->dual_feasibility_tolerance)
@@ -2475,8 +2467,8 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
   HighsOptions* options = ekk_instance_.options_;
 
   const double dual_feasibility_tolerance = options->dual_feasibility_tolerance;
-  const double inf = kHighsInf;
-  HighsInt workCount = 0;
+
+  free_infeasibility_count = 0;
   double flip_dual_objective_value_change = 0;
   double shift_dual_objective_value_change = 0;
   HighsInt num_flip = 0;
@@ -2499,23 +2491,19 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
     // Nonbasic column
     const double lower = info.workLower_[iVar];
     const double upper = info.workUpper_[iVar];
-    const double dual = info.workDual_[iVar];
+    const double current_dual = info.workDual_[iVar];
+    const HighsInt move = basis.nonbasicMove_[iVar];
     const bool fixed = lower == upper;
     const bool boxed = lower > -kHighsInf && upper < kHighsInf;
     const bool free = lower == -kHighsInf && upper == kHighsInf;
     double dual_infeasibility = 0;
-    if (lower == -kHighsInf && upper == kHighsInf) {
-      // Free: any nonzero dual value is infeasible
-      dual_infeasibility = fabs(dual);
-      workCount += dual_infeasibility >= dual_feasibility_tolerance;
+    if (free) {
+      dual_infeasibility = fabs(current_dual);
+      if (dual_infeasibility >= dual_feasibility_tolerance) free_infeasibility_count++;
       continue;
     }
-    const HighsInt move = basis.nonbasicMove_[iVar];
-    const double current_dual = info.workDual_[iVar];
     dual_infeasibility = -move * current_dual;
-    const double kDualInfeasibilityMargin = 1;
-    if (kDualInfeasibilityMargin * dual_infeasibility <
-        dual_feasibility_tolerance)
+    if (dual_infeasibility < dual_feasibility_tolerance)
       continue;
     // There is a dual infeasiblity to remove so, if boxed, consider doing so
     // via flip
@@ -2539,7 +2527,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
         // Positive dual at upper bound (move=-1): flip to lower
         // bound so objective contribution is change in value
         // (-flip) times dual, being move*flip*dual
-        const double flip = info.workUpper_[iVar] - info.workLower_[iVar];
+        const double flip = upper - lower;
         double local_dual_objective_change = move * flip * current_dual;
         local_dual_objective_change *= ekk_instance_.cost_scale_;
         flip_dual_objective_value_change += local_dual_objective_change;
@@ -2613,7 +2601,6 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
         num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
         max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
         shift_dual_objective_value_change);
-  free_infeasibility_count = workCount;
 }
 
 void HEkkDual::flipBound(const HighsInt iCol) {
