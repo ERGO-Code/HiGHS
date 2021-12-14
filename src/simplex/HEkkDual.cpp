@@ -285,8 +285,8 @@ HighsStatus HEkkDual::solve() {
       ekk_instance_.initialiseBound(SimplexAlgorithm::kDual,
                                     kSolvePhaseUnknown);
       ekk_instance_.initialiseNonbasicValueAndMove();
-      // Determine the number of dual infeasibilities, and hence the solve phase
-
+      // Determine the number of unavoidable dual infeasibilities, and
+      // hence the solve phase
       computeInevitableDualInfeasibilities();
 
       dualInfeasCount = info.num_dual_infeasibilities;
@@ -1158,7 +1158,6 @@ void HEkkDual::rebuild() {
   }
   analysis->simplexTimerStart(CorrectDualClock);
   correctDualInfeasibilities(dualInfeasCount);
-  //  ekk_instance_.correctDual(&dualInfeasCount);
   analysis->simplexTimerStop(CorrectDualClock);
 
   // Recompute primal solution
@@ -2444,6 +2443,7 @@ void HEkkDual::computeInevitableDualInfeasibilities() {
       dual_infeasibility = fabs(current_dual);
     } else {
       dual_infeasibility = -move * current_dual;
+      
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= options->dual_feasibility_tolerance)
@@ -2513,7 +2513,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
     // There is a dual infeasiblity to remove so, if boxed, consider doing so
     // via flip
     if (boxed && (fixed || large_dual_infeasibility)) {
-      flipBound(iVar);
+      ekk_instance_.flipBound(iVar);
       // Negative dual at lower bound (move=1): flip to upper
       // bound so objective contribution is change in value (flip)
       // times dual, being move*flip*dual
@@ -2581,7 +2581,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
   analysis.min_correct_dual_primal_flip_dual_infeasibility =
       std::min(min_dual_infeasibility_for_flip,
                analysis.min_correct_dual_primal_flip_dual_infeasibility);
-  if (num_flip &&
+  if (num_flip && force_phase2 &&
       max_dual_infeasibility_for_flip > large_dual_feasibility_tolerance) {
     //    highsLogDev(options->log_options, HighsLogType::kDetailed,
     printf("Performed num / max / sum = %" HIGHSINT_FORMAT
@@ -2598,22 +2598,21 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
       max(max_dual_infeasibility_for_shift,
           analysis.max_correct_dual_cost_shift_dual_infeasibility);
   if (num_shift) {
-    //    highsLogDev(options->log_options, HighsLogType::kDetailed,
-    printf("Performed num / max / sum = %" HIGHSINT_FORMAT
-           " / %g / %g shift(s) for num / max / sum dual infeasibility of "
-           "%" HIGHSINT_FORMAT " / %g / %g; objective change = %g\n",
-           num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
-           max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
-           shift_dual_objective_value_change);
+    highsLogDev(options->log_options, HighsLogType::kDetailed,
+		"Performed num / max / sum = %" HIGHSINT_FORMAT
+		" / %g / %g shift(s) for num / max / sum dual infeasibility of "
+		"%" HIGHSINT_FORMAT " / %g / %g; objective change = %g\n",
+		num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
+		max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
+		shift_dual_objective_value_change);
   }
-}
-
-void HEkkDual::flipBound(const HighsInt iCol) {
-  HighsSimplexInfo& info = ekk_instance_.info_;
-  vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
-  const int8_t move = nonbasicMove[iCol] = -nonbasicMove[iCol];
-  info.workValue_[iCol] =
-      move == 1 ? info.workLower_[iCol] : info.workUpper_[iCol];
+  if (force_phase2) {
+    // If force_phase2 was set in solve(), then it should have been
+    // possible to use dual phase 2 without doing any (initial) flips
+    // to get dual feasiblility
+    assert(num_dual_infeasibilities_for_flip==0);
+    force_phase2 = false;
+  }
 }
 
 bool HEkkDual::proofOfPrimalInfeasibility() {

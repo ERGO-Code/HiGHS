@@ -241,10 +241,8 @@ class HEkk {
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
-  void computeDualInfeasibleWithFlips();
   double computeDualForTableauColumn(const HighsInt iVar,
                                      const HVector& tableau_column);
-  void correctDual(HighsInt* free_infeasibility_count);
   bool reinvertOnNumericalTrouble(const std::string method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,
