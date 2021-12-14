@@ -1013,7 +1013,7 @@ HighsStatus HEkk::unpermute() {
 
 HighsStatus HEkk::solve() {
   debug_solve_call_num_++;
-  const HighsInt debug_from_solve_call_num = 10;//-607;
+  const HighsInt debug_from_solve_call_num = -607;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num;
@@ -1318,7 +1318,6 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       }
     }
   }
-  //  basis_.debug_dual = highs_basis.debug_dual;
   status_.has_basis = true;
   return HighsStatus::kOk;
 }
@@ -1507,7 +1506,6 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
   highs_basis.debug_update_count = info_.update_count;
   highs_basis.debug_origin_name = basis_.debug_origin_name;
-  //  highs_basis.debug_dual = basis_.debug_dual;
   return highs_basis;
 }
 

@@ -62,7 +62,6 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  //  std::vector<double> debug_dual;
   void clear();
 };
 

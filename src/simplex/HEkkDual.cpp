@@ -45,23 +45,15 @@ HighsStatus HEkkDual::solve() {
   HighsSimplexStatus& status = ekk_instance_.status_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
 
-  bool dual_info_ok = dualInfoOk(ekk_instance_.lp_);
-  if (!dual_info_ok) {
+  if (!dualInfoOk(ekk_instance_.lp_)) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "HPrimalDual::solve has error in dual information\n");
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
 
-  // Decide whether to use LiDSE by not storing squared primal infeasibilities
-  info.store_squared_primal_infeasibility = true;
-  if (options.less_infeasible_DSE_check) {
-    if (isLessInfeasibleDSECandidate(options.log_options, ekk_instance_.lp_)) {
-      // LP is a candidate for LiDSE
-      if (options.less_infeasible_DSE_choose_row)
-        // Use LiDSE
-        info.store_squared_primal_infeasibility = false;
-    }
-  }
+  // Possibly use Li dual steepest edge weights by not storing squared
+  // primal infeasibilities
+  possiblyUseLiDualSteepestEdge();
 
   assert(status.has_invert);
   if (!status.has_invert) {
@@ -70,36 +62,34 @@ HighsStatus HEkkDual::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
 
-  const bool favour_dual_phase2 = true;
-  if (favour_dual_phase2) {
-    // Determine the duals without cost perturbation
-    ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown);
-    ekk_instance_.computeDual();
-    ekk_instance_.computeSimplexDualInfeasible();
-  }
+  // Determine the duals without cost perturbation
+  ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown);
+  ekk_instance_.computeDual();
+  ekk_instance_.computeSimplexDualInfeasible();
   // Record whether the solution with unperturbed costs is dual feasible
   const bool dual_feasible_with_unperturbed_costs =
       info.num_dual_infeasibilities == 0;
+  // Force phase 2 if dual infeasiblilities without cost perturbation
+  // involved fixed variables or were (at most) small
+  force_phase2 = info.max_dual_infeasibility * info.max_dual_infeasibility <
+                 ekk_instance_.options_->dual_feasibility_tolerance;
   if (ekk_instance_.debug_dual_feasible &&
       !dual_feasible_with_unperturbed_costs) {
     SimplexBasis& basis = ekk_instance_.basis_;
     printf(
         "Basis should be dual feasible but duals without cost perturbation "
-        "have num / max / sum = %4d / %g / %g infeasibilities\n",
+        "have num / max / sum = %4d / %g / %g infeasibilities",
         (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
         info.sum_dual_infeasibilities);
-    printf("dual solve() basis Id = %d; update count = %d; name = %s\n",
-           (int)basis.debug_id, (int)basis.debug_update_count,
-           basis.debug_origin_name.c_str());
-    fflush(stdout);
-    //    assert((int)basis.debug_dual.size() == solver_num_tot);
+    if (!force_phase2) {
+      printf(" !!Not forcing phase 2!!");
+      printf(" basis Id = %d; update count = %d; name = %s\n",
+             (int)basis.debug_id, (int)basis.debug_update_count,
+             basis.debug_origin_name.c_str());
+    } else {
+      printf("\n");
+    }
   }
-  // Force phase 2 to be used if feasible with unperturbed costs, or
-  // if the maximum infeasibility is small. First of these tests is
-  // redundant if favour_dual_phase2 = true;
-  force_phase2 = dual_feasible_with_unperturbed_costs ||
-                 info.max_dual_infeasibility * info.max_dual_infeasibility <
-                     ekk_instance_.options_->dual_feasibility_tolerance;
 
   // Determine whether the solution is near-optimal.
   const bool near_optimal = dual_feasible_with_unperturbed_costs &&
@@ -195,62 +185,21 @@ HighsStatus HEkkDual::solve() {
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weights_.resize(solver_num_tot);
 
-  // Compute the dual values
-  ekk_instance_.computeDual();
-  // Determine the number of inevitable dual infeasibilities, and
-  // hence the solve phase
-
-  computeInevitableDualInfeasibilities();
-
-  dualInfeasCount = info.num_dual_infeasibilities;
-  solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
-  // Allow phase 2 if the infeasibilities are minor - and can be
-  // removed by shifts. This can happen when using cost perturbation
-  // for a basis that, without it, is dual feasible.
-  //
-  // NB the case of lseu: A single dual infeasibility for a LB variable
-  // put it at its nonzero phase 1 bound. One iteration made it basic
-  // and solved the phase 1 problem. The first phase 2 iteration put
-  // the variable at its bound - returning to the initial basis. Not
-  // true cycling, but something to be avoided numerically.
-  //
-  // Perhaps the answer is to go straight to phase 2 when dual
-  // feasible without perturbed costs. Hence any shifts required in
-  // phase 2 are due to perturbed costs
-  if (solve_phase == kSolvePhase1) {
-    const bool near_dual_feasible = (info.num_dual_infeasibilities <= 1 &&
-                                     info.max_dual_infeasibility < 1e-1) ||
-                                    (info.num_dual_infeasibilities <= 10 &&
-                                     info.max_dual_infeasibility < 1e-2) ||
-                                    (info.num_dual_infeasibilities <= 100 &&
-                                     info.max_dual_infeasibility < 1e-3);
-    if (dual_feasible_with_unperturbed_costs || near_dual_feasible) {
-      solve_phase = kSolvePhase2;
-      const bool local_report = false;
-      if (!dual_feasible_with_unperturbed_costs && local_report) {
-        printf(
-            "Solve %d: Near dual feasible with perturbed costs but not dual "
-            "feasible "
-            "with unperturbed costs\n"
-            "num / max / sum dual infeasiblitiles\n"
-            "%d / %11.4g / %11.4g (  perturbed costs with    flips)\n"
-            "%d / %11.4g / %11.4g (unperturbed costs without flips)\n",
-            (int)ekk_instance_.debug_solve_call_num_,
-            (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
-            info.sum_dual_infeasibilities, (int)unperturbed_num_infeasibilities,
-            unperturbed_max_infeasibility, unperturbed_sum_infeasibilities);
-      }
-      highsLogDev(
-          options.log_options, HighsLogType::kInfo,
-          "Dual feasible with unperturbed costs, or small dual "
-          "infeasibilities, "
-          "so use shifts in phase 2 with "
-          "num / max / sum dual infeasiblitiles of %d / %11.4g / %11.4g\n",
-          (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
-          info.sum_dual_infeasibilities);
-    }
+  if (perturb_costs) {
+    // Compute the dual values with perturbed costs
+    ekk_instance_.computeDual();
+    // Determine the number of dual infeasibilities after fixed
+    // variable flips
+    computeDualInfeasibilitiesWithFixedVariableFlips();
+    dualInfeasCount = info.num_dual_infeasibilities;
   }
+
+  // Determine the solve phase. Either forced phase 2, or dependent on
+  // the number of dual infeasibilities after fixed variable flips
   if (force_phase2) {
+    // Dual infeasiblilities without cost perturbation involved
+    // fixed variables or were (at most) small, so can easily be
+    // removed by flips for and fixed variables shifts for the rest
     solve_phase = kSolvePhase2;
     const bool local_report = false;
     if (!dual_feasible_with_unperturbed_costs && local_report) {
@@ -265,7 +214,10 @@ HighsStatus HEkkDual::solve() {
           info.sum_dual_infeasibilities, (int)unperturbed_num_infeasibilities,
           unperturbed_max_infeasibility, unperturbed_sum_infeasibilities);
     }
+  } else {
+    solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
   }
+
   if (ekk_instance_.debugOkForSolve(SimplexAlgorithm::kDual, solve_phase) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
@@ -287,8 +239,7 @@ HighsStatus HEkkDual::solve() {
       ekk_instance_.initialiseNonbasicValueAndMove();
       // Determine the number of unavoidable dual infeasibilities, and
       // hence the solve phase
-      computeInevitableDualInfeasibilities();
-
+      computeDualInfeasibilitiesWithFixedVariableFlips();
       dualInfeasCount = info.num_dual_infeasibilities;
       solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
       if (info.backtracking_) {
@@ -2406,18 +2357,33 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
   }
 }
 
-void HEkkDual::computeInevitableDualInfeasibilities() {
-  // Computes num/max/sum of dual infeasibliities that are inevitable,
-  // whatever flips and shifts are performed, so that decisions on the
-  // dual simplex phase can be taken. It must be compatible with
-  // correctDualInfeasibilities since that's where the flips and
-  // shifts are performed. Both are driven by the use of nonbasicMove
-  // to identify dual infeasibilities, using the bounds only to
-  // identify free variables and non-boxed. Fixed variables are
-  // assumed to have nonbasicMove=0 so that no dual infeasibility is
-  // counted for them. Indeed, when called from cleanup() at the end
-  // of dual phase 1, nonbasicMove relates to the phase 1 bounds, but
-  // workLower and workUpper will have been set to phase 2 values!
+void HEkkDual::possiblyUseLiDualSteepestEdge() {
+  // Decide whether to use LiDSE by not storing squared primal infeasibilities
+  HighsOptions& options = *ekk_instance_.options_;
+  HighsSimplexInfo& info = ekk_instance_.info_;
+  info.store_squared_primal_infeasibility = true;
+  if (options.less_infeasible_DSE_check) {
+    if (isLessInfeasibleDSECandidate(options.log_options, ekk_instance_.lp_)) {
+      // LP is a candidate for LiDSE
+      if (options.less_infeasible_DSE_choose_row)
+        // Use LiDSE
+        info.store_squared_primal_infeasibility = false;
+    }
+  }
+}
+
+void HEkkDual::computeDualInfeasibilitiesWithFixedVariableFlips() {
+  // Computes num/max/sum of dual infeasibliities, ignoring fixed
+  // variables whose infeasibilities can be corrected by flipping at
+  // the fixed value, so that decisions on the dual simplex phase can
+  // be taken. It is driven by the use of nonbasicMove to identify
+  // dual infeasibilities, using the bounds only to identify free
+  // variables. Fixed variables are assumed to have nonbasicMove=0 so
+  // that no dual infeasibility is counted for them. Indeed, when
+  // called from cleanup() at the end of dual phase 1, nonbasicMove
+  // relates to the phase 1 bounds, but workLower and workUpper will
+  // have been set to phase 2 values! Note that there can be no free
+  // variables in dual phase 1.
   HighsInt num_dual_infeasibility = 0;
   double max_dual_infeasibility = 0;
   double sum_dual_infeasibility = 0;
@@ -2427,23 +2393,18 @@ void HEkkDual::computeInevitableDualInfeasibilities() {
   HighsOptions* options = ekk_instance_.options_;
   const HighsInt num_tot = lp.num_col_ + lp.num_row_;
   // Possibly verify that nonbasicMove is correct for fixed variables
-  //  debugFixedNonbasicMove(ekk_instance_);
+  // debugFixedNonbasicMove(ekk_instance_);
   for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
     if (!basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
     const double lower = info.workLower_[iVar];
     const double upper = info.workUpper_[iVar];
-    const double current_dual = info.workDual_[iVar];
-    const HighsInt move = basis.nonbasicMove_[iVar];
-    const bool fixed = lower == upper;
-    const bool boxed = lower > -kHighsInf && upper < kHighsInf;
-    const bool free = lower == -kHighsInf && upper == kHighsInf;
+    const double dual = info.workDual_[iVar];
     double dual_infeasibility = 0;
-    if (free) {
-      dual_infeasibility = fabs(current_dual);
+    if (lower == -kHighsInf && upper == kHighsInf) {
+      dual_infeasibility = fabs(dual);
     } else {
-      dual_infeasibility = -move * current_dual;
-      
+      dual_infeasibility = -basis.nonbasicMove_[iVar] * dual;
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= options->dual_feasibility_tolerance)
@@ -2459,6 +2420,10 @@ void HEkkDual::computeInevitableDualInfeasibilities() {
 }
 
 void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
+  // Removes dual infeasiblilities for all but free variables. For
+  // fixed variables, dual infeasibilities are removed by flipping at
+  // the bound. Otherwise, dual infeasibilities are removed by
+  // shifting costs.
   HighsLp& lp = ekk_instance_.lp_;
   SimplexBasis& basis = ekk_instance_.basis_;
   HighsSimplexInfo& info = ekk_instance_.info_;
@@ -2466,12 +2431,8 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
   HighsRandom& random = ekk_instance_.random_;
   HighsOptions* options = ekk_instance_.options_;
 
-  const double dual_feasibility_tolerance = options->dual_feasibility_tolerance;
-  const double kUseFlipMultiplier = 1000;
-  const double large_dual_feasibility_tolerance =
-      kUseFlipMultiplier * dual_feasibility_tolerance;
-
   free_infeasibility_count = 0;
+  const double dual_feasibility_tolerance = options->dual_feasibility_tolerance;
   double flip_dual_objective_value_change = 0;
   double shift_dual_objective_value_change = 0;
   HighsInt num_flip = 0;
@@ -2507,12 +2468,13 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
     }
     dual_infeasibility = -move * current_dual;
     if (dual_infeasibility < dual_feasibility_tolerance) continue;
-    const bool large_dual_infeasibility =
-        dual_infeasibility > large_dual_feasibility_tolerance;
-
-    // There is a dual infeasiblity to remove so, if boxed, consider doing so
-    // via flip
-    if (boxed && (fixed || large_dual_infeasibility)) {
+    // There is a dual infeasiblity to remove
+    //
+    // force_phase2 is set true to prevent fipping of non-fixed
+    // (boxed) variables when correcting infeasibilities in the first
+    // set of duals computed after cost perturbation
+    if (fixed || (boxed && !force_phase2)) {
+      // Flip for fixed variables and boxed variables when not forcing phase 2
       ekk_instance_.flipBound(iVar);
       // Negative dual at lower bound (move=1): flip to upper
       // bound so objective contribution is change in value (flip)
@@ -2528,9 +2490,9 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
       num_flip++;
       max_flip = max(fabs(flip), max_flip);
       sum_flip += fabs(flip);
+      // Flipping fixed variables is trivial, so only track the
+      // infeasibilities involved when flipping boxed variables
       if (!fixed) {
-        // Flipping fixed variables is trivial, since there's no
-        // primal change, so don't track the infeasibilities involved
         min_dual_infeasibility_for_flip =
             std::min(dual_infeasibility, min_dual_infeasibility_for_flip);
         if (dual_infeasibility >= dual_feasibility_tolerance)
@@ -2541,7 +2503,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
       }
       continue;
     }
-    // Either one-sided or flip not performed, so shift
+    // Either boxed but not fixed, of one-sided, so shift
     //
     // Cost shifting must always be possible
     assert(info.allow_cost_shifting);
@@ -2581,8 +2543,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
   analysis.min_correct_dual_primal_flip_dual_infeasibility =
       std::min(min_dual_infeasibility_for_flip,
                analysis.min_correct_dual_primal_flip_dual_infeasibility);
-  if (num_flip && force_phase2 &&
-      max_dual_infeasibility_for_flip > large_dual_feasibility_tolerance) {
+  if (num_flip && force_phase2) {
     //    highsLogDev(options->log_options, HighsLogType::kDetailed,
     printf("Performed num / max / sum = %" HIGHSINT_FORMAT
            " / %g / %g flip(s) for num / min / max / sum dual infeasibility of "
@@ -2598,21 +2559,16 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
       max(max_dual_infeasibility_for_shift,
           analysis.max_correct_dual_cost_shift_dual_infeasibility);
   if (num_shift) {
-    highsLogDev(options->log_options, HighsLogType::kDetailed,
-		"Performed num / max / sum = %" HIGHSINT_FORMAT
-		" / %g / %g shift(s) for num / max / sum dual infeasibility of "
-		"%" HIGHSINT_FORMAT " / %g / %g; objective change = %g\n",
-		num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
-		max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
-		shift_dual_objective_value_change);
+    highsLogDev(
+        options->log_options, HighsLogType::kDetailed,
+        "Performed num / max / sum = %" HIGHSINT_FORMAT
+        " / %g / %g shift(s) for num / max / sum dual infeasibility of "
+        "%" HIGHSINT_FORMAT " / %g / %g; objective change = %g\n",
+        num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
+        max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
+        shift_dual_objective_value_change);
   }
-  if (force_phase2) {
-    // If force_phase2 was set in solve(), then it should have been
-    // possible to use dual phase 2 without doing any (initial) flips
-    // to get dual feasiblility
-    assert(num_dual_infeasibilities_for_flip==0);
-    force_phase2 = false;
-  }
+  force_phase2 = false;
 }
 
 bool HEkkDual::proofOfPrimalInfeasibility() {

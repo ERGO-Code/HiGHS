@@ -356,7 +356,8 @@ class HEkkDual {
   void majorRollback();
 
   // private:
-  void computeInevitableDualInfeasibilities();
+  void possiblyUseLiDualSteepestEdge();
+  void computeDualInfeasibilitiesWithFixedVariableFlips();
   void correctDualInfeasibilities(HighsInt& free_infeasibility_count);
 
   bool proofOfPrimalInfeasibility();
