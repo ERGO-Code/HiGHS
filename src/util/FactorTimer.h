@@ -168,7 +168,8 @@ class FactorTimer {
     ideal_sum_time += timer_pointer->read(clock[FactorInvert]);
     ideal_sum_time += timer_pointer->read(clock[FactorFtran]);
     ideal_sum_time += timer_pointer->read(clock[FactorBtran]);
-    timer_pointer->report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
+    timer_pointer->reportOnTolerance(grepStamp, clockList, ideal_sum_time,
+                                     1e-8);
   };
 
   void reportFactorLevel0Clock(HighsTimerClock& factor_timer_clock) {

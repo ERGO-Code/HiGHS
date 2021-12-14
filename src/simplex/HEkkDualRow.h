@@ -91,6 +91,7 @@ class HEkkDualRow {
    * heap sort of ratios
    */
   bool chooseFinalWorkGroupQuad();
+  bool quadChooseFinalWorkGroupQuad();
   bool chooseFinalWorkGroupHeap();
 
   void chooseFinalLargeAlpha(

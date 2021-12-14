@@ -20,13 +20,11 @@
 
 #include "io/HighsIO.h"
 #include "ipm/IpxSolution.h"
-#include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolutionDebug.h"
-
-#ifdef IPX_ON
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
-#endif
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolutionDebug.h"
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
@@ -262,8 +260,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
     if (iVar < lp.num_col_ && get_residuals) {
       HighsInt iCol = iVar;
-      if (have_dual_solution)
-        dual_activities[iCol] = gradient[iCol];  // lp.col_cost_[iCol];
+      if (have_dual_solution) dual_activities[iCol] = gradient[iCol];
       for (HighsInt el = lp.a_matrix_.start_[iCol];
            el < lp.a_matrix_.start_[iCol + 1]; el++) {
         HighsInt iRow = lp.a_matrix_.index_[el];
@@ -457,69 +454,303 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
   }
 }
 
-#ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(
-    const HighsLogOptions& log_options, const HighsLp& lp,
+    const HighsOptions& options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
-    // const std::vector<double>& ipx_y,
+    const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
+    const std::vector<double>& ipx_zu, const HighsModelStatus model_status,
     HighsSolution& highs_solution) {
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
+  highs_solution.col_dual.resize(lp.num_col_);
+  highs_solution.row_dual.resize(lp.num_row_);
 
+  const double primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;
-  //  const std::vector<double>& ipx_col_dual = ipx_x;
-  //  const std::vector<double>& ipx_row_dual = ipx_y;
 
   // Row activities are needed to set activity values of free rows -
   // which are ignored by IPX
   vector<double> row_activity;
-  bool get_row_activities = ipx_num_row < lp.num_row_;
+  const bool get_row_activities = true;  // ipx_num_row < lp.num_row_;
   if (get_row_activities) row_activity.assign(lp.num_row_, 0);
+  HighsInt ipx_slack = lp.num_col_;
+  assert(ipx_num_row == lp.num_row_);
+  double dual_residual_norm = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    highs_solution.col_value[col] = ipx_col_value[col];
+    double lower = lp.col_lower_[col];
+    double upper = lp.col_upper_[col];
+    double value = ipx_col_value[col];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
+      double check_dual = lp.col_cost_[col];
       for (HighsInt el = lp.a_matrix_.start_[col];
            el < lp.a_matrix_.start_[col + 1]; el++) {
         HighsInt row = lp.a_matrix_.index_[el];
-        row_activity[row] +=
-            highs_solution.col_value[col] * lp.a_matrix_.value_[el];
+        row_activity[row] += value * lp.a_matrix_.value_[el];
+        check_dual -= ipx_y[row] * lp.a_matrix_.value_[el];
       }
+      double dual_residual =
+          std::fabs(check_dual - (ipx_zl[col] - ipx_zu[col]));
+      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
     }
+    double dual = ipx_zl[col] - ipx_zu[col];
+    highs_solution.col_value[col] = value;
+    highs_solution.col_dual[col] = dual;
   }
   HighsInt ipx_row = 0;
-  HighsInt ipx_slack = lp.num_col_;
-  HighsInt num_boxed_rows = 0;
+  ipx_slack = lp.num_col_;
+  double delta_norm = 0;
   for (HighsInt row = 0; row < lp.num_row_; row++) {
     double lower = lp.row_lower_[row];
     double upper = lp.row_upper_[row];
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
       highs_solution.row_value[row] = row_activity[row];
-    } else {
-      // Non-free row, so IPX will have it
-      if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
-        // Boxed row - look at its slack
-        num_boxed_rows++;
-        highs_solution.row_value[row] = ipx_col_value[ipx_slack];
-        // Update the slack to be used for boxed rows
-        ipx_slack++;
-      } else {
-        highs_solution.row_value[row] = rhs[ipx_row] - ipx_row_value[ipx_row];
-      }
-      // Update the IPX row index
-      ipx_row++;
+      highs_solution.row_dual[row] = 0;
+      continue;
     }
+    // Non-free row, so IPX will have it
+    double value = 0;
+    double dual = 0;
+    if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
+      assert(constraint_type[ipx_row] == '=');
+      // Boxed row - look at its slack
+      value = ipx_col_value[ipx_slack];
+      dual = ipx_zl[ipx_slack] - ipx_zu[ipx_slack];
+      // Update the slack to be used for boxed rows
+      ipx_slack++;
+    } else {
+      value = rhs[ipx_row] - ipx_row_value[ipx_row];
+      dual = ipx_y[ipx_row];
+    }
+    delta_norm = std::max(std::fabs(value - row_activity[row]), delta_norm);
+    highs_solution.row_value[row] = value;
+    highs_solution.row_dual[row] = dual;
+    // Update the IPX row index
+    ipx_row++;
   }
+  //  if (delta_norm >= dual_feasibility_tolerance)
+  highsLogDev(
+      options.log_options, HighsLogType::kInfo,
+      "ipxSolutionToHighsSolution: Norm of dual residual values is %10.4g\n",
+      dual_residual_norm);
+  highsLogDev(
+      options.log_options, HighsLogType::kInfo,
+      "ipxSolutionToHighsSolution: Norm of delta     row values is %10.4g\n",
+      delta_norm);
+  const bool force_dual_feasibility = false;  // true;
+  const bool minimal_truncation = true;
+  if (model_status == HighsModelStatus::kOptimal &&
+      (force_dual_feasibility || minimal_truncation)) {
+    double primal_truncation_norm = 0;
+    double dual_truncation_norm = 0;
+    double col_primal_truncation_norm = 0;
+    double col_dual_truncation_norm = 0;
+    HighsInt num_primal_truncations = 0;
+    HighsInt num_dual_truncations = 0;
+    HighsInt num_col_primal_truncations = 0;
+    HighsInt num_col_dual_truncations = 0;
+    HighsInt col = 0, row = 0;
+    double lower, upper, value, dual, residual;
+    const HighsInt check_col = -127;
+    const HighsInt check_row = -37;
+    // Truncating to tolerances can lead to infeasibilities by margin
+    // of machine precision
+    const double primal_margin = 0;  // primal_feasibility_tolerance;
+    const double dual_margin = 0;    // dual_feasibility_tolerance;
+    for (HighsInt var = 0; var < lp.num_col_ + lp.num_row_; var++) {
+      if (var == lp.num_col_) {
+        col_primal_truncation_norm = primal_truncation_norm;
+        col_dual_truncation_norm = dual_truncation_norm;
+        num_col_primal_truncations = num_primal_truncations;
+        num_col_dual_truncations = num_dual_truncations;
+        primal_truncation_norm = 0;
+        dual_truncation_norm = 0;
+        num_primal_truncations = 0;
+        num_dual_truncations = 0;
+      }
+      const bool is_col = var < lp.num_col_;
+      if (is_col) {
+        col = var;
+        lower = lp.col_lower_[col];
+        upper = lp.col_upper_[col];
+        value = highs_solution.col_value[col];
+        dual = highs_solution.col_dual[col];
+        if (col == check_col) {
+          printf("Column %d\n", (int)check_col);
+        }
+      } else {
+        row = var - lp.num_col_;
+        lower = lp.row_lower_[row];
+        upper = lp.row_upper_[row];
+        value = highs_solution.row_value[row];
+        dual = highs_solution.row_dual[row];
+        if (row == check_row) {
+          printf("Row %d\n", (int)check_row);
+        }
+      }
+      // Continue if equality: cannot have dual infeasibility
+      if (lower >= upper) continue;
+      double dual_truncation = 0;
+      double primal_truncation = 0;
+      double dual_infeasibility = 0;
+      double residual = std::fabs(std::max(lower - value, value - upper));
+      double new_value = value;
+      double new_dual = dual;
+      const bool at_lower = value <= lower + primal_feasibility_tolerance;
+      const bool at_upper = value >= upper - primal_feasibility_tolerance;
+      // Continue if at distinct bounds: cannot have dual infeasibility
+      if (at_lower && at_upper) continue;
+      if (at_lower) {
+        dual_infeasibility = -dual;
+      } else if (at_upper) {
+        dual_infeasibility = dual;
+      } else {
+        dual_infeasibility = std::fabs(dual);
+      }
+      // Continue if no dual infeasibility
+      if (dual_infeasibility <= dual_feasibility_tolerance) continue;
+      if (residual < dual_infeasibility && !force_dual_feasibility) {
+        // Residual is less than dual infeasibility, or not forcing
+        // dual feasibility, so truncate value
+        if (at_lower) {
+          assert(10 == 50);
+        } else if (at_upper) {
+          assert(11 == 50);
+        } else {
+          // Off bound
+          if (lower <= -kHighsInf) {
+            if (upper >= kHighsInf) {
+              // Free shouldn't be possible, as residual would be inf
+              assert(12 == 50);
+            } else {
+              // Upper bounded, so assume dual is negative
+              if (dual > 0) assert(13 == 50);
+            }
+          } else if (upper >= kHighsInf) {
+            // Lower bounded, so assume dual is positive
+            if (dual < 0) assert(14 == 50);
+          }
+        }
+        num_primal_truncations++;
+        if (dual > 0) {
+          // Put closest to lower
+          if (value < lower) {
+            new_value = lower - primal_margin;
+          } else {
+            new_value = lower + primal_margin;
+          }
+        } else {
+          // Put closest to upper
+          if (value < upper) {
+            new_value = upper - primal_margin;
+          } else {
+            new_value = upper + primal_margin;
+          }
+        }
+      } else {
+        // Residual is greater than dual infeasibility, or forcing
+        // dual feasibility, so truncate dual
+        num_dual_truncations++;
+        if (at_lower) {
+          // At lower bound, so possibly truncate to -dual_margin
+          new_dual = -dual_margin;
+        } else if (at_upper) {
+          // At upper bound, so possibly truncate to dual_margin
+          new_dual = dual_margin;
+        } else {
+          // Between bounds so possibly set dual to signed dual_margin
+          if (dual > 0) {
+            new_dual = dual_margin;
+          } else {
+            new_dual = -dual_margin;
+          }
+        }
+      }
+      primal_truncation = std::fabs(value - new_value);
+      dual_truncation = std::fabs(dual - new_dual);
+      primal_truncation_norm =
+          std::max(primal_truncation, primal_truncation_norm);
+      dual_truncation_norm = std::max(dual_truncation, dual_truncation_norm);
+      if (dual_truncation > 1e-2 || primal_truncation > 1e-2)
+        printf(
+            "%s %4d: [%11.4g, %11.4g, %11.4g] residual = %11.4g; new = %11.4g; "
+            "truncation = %11.4g | "
+            "dual = %11.4g; new = %11.4g; truncation = %11.4g\n",
+            is_col ? "Col" : "Row", (int)(is_col ? col : row), lower, value,
+            upper, residual, new_value, primal_truncation, dual, new_dual,
+            dual_truncation);
+      if (is_col) {
+        highs_solution.col_value[col] = new_value;
+        highs_solution.col_dual[col] = new_dual;
+      } else {
+        highs_solution.row_value[row] = new_value;
+        highs_solution.row_dual[row] = new_dual;
+      }
+    }
+    // Assess the truncations
+    //  if (dual_truncation_norm >= dual_margin)
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "ipxSolutionToHighsSolution: Norm of %4d col  primal "
+                "truncations is %10.4g\n",
+                num_col_primal_truncations, col_primal_truncation_norm);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "ipxSolutionToHighsSolution: Norm of %4d row  primal "
+                "truncations is %10.4g\n",
+                num_primal_truncations, primal_truncation_norm);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "ipxSolutionToHighsSolution: Norm of %4d col    dual "
+                "truncations is %10.4g\n",
+                num_col_dual_truncations, col_dual_truncation_norm);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "ipxSolutionToHighsSolution: Norm of %4d row    dual "
+                "truncations is %10.4g\n",
+                num_dual_truncations, dual_truncation_norm);
+    // Determine the new residuals
+
+    vector<double> final_row_activity;
+    final_row_activity.assign(lp.num_row_, 0);
+    dual_residual_norm = 0;
+    for (HighsInt col = 0; col < lp.num_col_; col++) {
+      double check_dual = lp.col_cost_[col];
+      for (HighsInt el = lp.a_matrix_.start_[col];
+           el < lp.a_matrix_.start_[col + 1]; el++) {
+        HighsInt row = lp.a_matrix_.index_[el];
+        final_row_activity[row] +=
+            highs_solution.col_value[col] * lp.a_matrix_.value_[el];
+        check_dual -= highs_solution.row_dual[row] * lp.a_matrix_.value_[el];
+      }
+      double dual_residual =
+          std::fabs(check_dual - highs_solution.col_dual[col]);
+      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
+    }
+    double primal_residual_norm = 0;
+    for (HighsInt row = 0; row < lp.num_row_; row++) {
+      double primal_residual =
+          std::fabs(final_row_activity[row] - highs_solution.row_value[row]);
+      primal_residual_norm = std::max(primal_residual, primal_residual_norm);
+    }
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "ipxSolutionToHighsSolution: Final norm of primal residual "
+                "values is %10.4g\n",
+                primal_residual_norm);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "ipxSolutionToHighsSolution: Final norm of dual   residual "
+                "values is %10.4g\n",
+                dual_residual_norm);
+  }
+
   assert(ipx_row == ipx_num_row);
   assert(ipx_slack == ipx_num_col);
-  // Indicate that the primal, but not dual solution is known
+  // Indicate that the primal and dual solution are known
   highs_solution.value_valid = true;
-  highs_solution.dual_valid = false;
+  highs_solution.dual_valid = true;
   return HighsStatus::kOk;
 }
 
@@ -761,7 +992,121 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   highs_basis.valid = true;
   return HighsStatus::kOk;
 }
-#endif
+
+HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
+                                        const bool only_from_known_basis) {
+  // Ideally, forms a SimplexBasis from the HighsBasis in the
+  // HighsLpSolverObject
+  //
+  // If only_from_known_basis is true and
+  // initialiseSimplexLpBasisAndFactor finds that there is no simplex
+  // basis, then its error return is passed down
+  //
+  // If only_from_known_basis is false, then the basis is completed
+  // with logicals if it is rank deficient (from singularity or being
+  // incomplete)
+  //
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+  HighsLp& lp = solver_object.lp_;
+  HighsBasis& basis = solver_object.basis_;
+  HighsOptions& options = solver_object.options_;
+  HEkk& ekk_instance = solver_object.ekk_instance_;
+  HighsLp& ekk_lp = ekk_instance.lp_;
+  HighsSimplexStatus& ekk_status = ekk_instance.status_;
+  lp.ensureColwise();
+  // Consider scaling the LP
+  const bool new_scaling = considerScaling(options, lp);
+  // If new scaling is performed, the hot start information is
+  // no longer valid
+  if (new_scaling) ekk_instance.clearHotStart();
+  if (basis.alien) {
+    // An alien basis needs to be checked for rank deficiency, and
+    // possibly completed if it is rectangular
+    assert(!only_from_known_basis);
+    accommodateAlienBasis(solver_object);
+    basis.alien = false;
+    lp.unapplyScale();
+    return HighsStatus::kOk;
+  }
+  // Move the HighsLpSolverObject's LP to EKK
+  ekk_instance.moveLp(solver_object);
+  if (!ekk_status.has_basis) {
+    // The Ekk instance has no simplex basis, so pass the HiGHS basis
+    HighsStatus call_status = ekk_instance.setBasis(basis);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "setBasis");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  // Now form the invert
+  assert(ekk_status.has_basis);
+  call_status =
+      ekk_instance.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
+  if (call_status != HighsStatus::kOk) return HighsStatus::kError;
+  // Once the invert is formed, move back the LP and remove any scaling.
+  lp.moveBackLpAndUnapplyScaling(ekk_lp);
+  // If the current basis cannot be inverted, return an error
+  return HighsStatus::kOk;
+}
+
+void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
+  HighsLp& lp = solver_object.lp_;
+  HighsBasis& basis = solver_object.basis_;
+  HighsOptions& options = solver_object.options_;
+  assert(basis.alien);
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_col = lp.num_col_;
+  assert((int)basis.col_status.size() >= num_col);
+  assert((int)basis.row_status.size() >= num_row);
+  std::vector<HighsInt> basic_index;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      basic_index.push_back(iCol);
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      basic_index.push_back(num_col + iRow);
+  }
+  HighsInt num_basic_variables = basic_index.size();
+  HFactor factor;
+  factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0],
+                      kDefaultPivotThreshold, kDefaultPivotTolerance,
+                      kHighsDebugLevelMin, &options.log_options);
+  HighsInt rank_deficiency = factor.build();
+  // Deduce the basis from basic_index
+  //
+  // Set all basic variables to nonbasic
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
+  }
+  // Set at most the first num_row variables in basic_index to basic
+  const HighsInt use_basic_variables = std::min(num_row, num_basic_variables);
+  // num_basic_variables is no longer needed, so can be used as a check
+  num_basic_variables = 0;
+  for (HighsInt iRow = 0; iRow < use_basic_variables; iRow++) {
+    HighsInt iVar = basic_index[iRow];
+    if (iVar < num_col) {
+      basis.col_status[iVar] = HighsBasisStatus::kBasic;
+    } else {
+      basis.row_status[iVar - num_col] = HighsBasisStatus::kBasic;
+    }
+    num_basic_variables++;
+  }
+  // Complete the assignment of basic variables using the logicals of
+  // non-pivotal rows
+  const HighsInt num_missing = num_row - num_basic_variables;
+  for (HighsInt k = 0; k < num_missing; k++) {
+    HighsInt iRow = factor.row_with_no_pivot[rank_deficiency + k];
+    basis.row_status[iRow] = HighsBasisStatus::kBasic;
+    num_basic_variables++;
+  }
+  assert(num_basic_variables == num_row);
+}
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
@@ -837,25 +1182,31 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          (HighsInt)basis.row_status.size() == lp.num_row_;
 }
 
-void clearPrimalSolutionUtil(HighsSolution& solution) {
-  solution.col_value.clear();
-  solution.row_value.clear();
-  solution.value_valid = false;
+void HighsSolution::clear() {
+  this->col_value.clear();
+  this->row_value.clear();
+  this->value_valid = false;
+  this->col_dual.clear();
+  this->row_dual.clear();
+  this->dual_valid = false;
 }
 
-void clearDualSolutionUtil(HighsSolution& solution) {
-  solution.col_dual.clear();
-  solution.row_dual.clear();
-  solution.dual_valid = false;
+void HighsBasis::clear() {
+  this->valid = false;
+  this->alien = true;
+  this->debug_id = -1;
+  this->debug_update_count = -1;
+  this->debug_origin_name = "None";
+  this->row_status.clear();
+  this->col_status.clear();
 }
 
-void clearSolutionUtil(HighsSolution& solution) {
-  clearPrimalSolutionUtil(solution);
-  clearDualSolutionUtil(solution);
+/*
+void HighsBasis::copy(const HighsBasis& basis) {
+  this->valid = basis.valid;
+  this->debug_id = basis.debug_id;
+  this->debug_update_count = basis.debug_update_count;
+  this->row_status = basis.row_status;
+  this->col_status = basis.col_status;
 }
-
-void clearBasisUtil(HighsBasis& basis) {
-  basis.row_status.clear();
-  basis.col_status.clear();
-  basis.valid = false;
-}
+*/

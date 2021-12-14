@@ -48,7 +48,7 @@ class HighsTaskExecutor {
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
-  std::atomic_bool active;
+  std::atomic<bool> active;
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();

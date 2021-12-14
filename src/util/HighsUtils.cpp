@@ -23,12 +23,6 @@
 
 #include "util/HighsSort.h"
 
-/*
-HighsInt getOmpNumThreads() {
-  return omp_get_num_threads()
-}
-*/
-
 bool create(HighsIndexCollection& index_collection, const HighsInt from_col,
             const HighsInt to_col, const HighsInt dimension) {
   if (from_col < 0) return false;

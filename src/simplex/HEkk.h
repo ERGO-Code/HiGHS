@@ -43,7 +43,6 @@ class HEkk {
   void clearEkkDataStatus();
   void clearNlaStatus();
   void clearNlaInvertStatus();
-  void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void invalidate();
   void invalidateBasisMatrix();
@@ -100,7 +99,7 @@ class HEkk {
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
 
-  HighsInt initialiseSimplexLpBasisAndFactor(
+  HighsStatus initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
   void initialisePartitionedRowwiseMatrix();
@@ -121,6 +120,7 @@ class HEkk {
   void debugReporting(
       const HighsInt save_mod_recover,
       const HighsInt log_dev_level_ = kHighsLogDevLevelDetailed);
+  void timeReporting(const HighsInt save_mod_recover);
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
@@ -193,17 +193,17 @@ class HEkk {
   double build_synthetic_tick_;
   double total_synthetic_tick_;
   HighsInt debug_solve_call_num_ = 0;
+  HighsInt debug_basis_id_ = 0;
+  bool time_report_ = false;
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
+  bool debug_basis_report_ = false;
 
-  bool allow_taboo_cols;
-  bool allow_taboo_rows;
-  std::vector<HighsSimplexTabooRecord> taboo_col;
-  std::vector<HighsSimplexTabooRecord> taboo_row;
+  std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
  private:
   bool isUnconstrainedLp();
-  HighsStatus initialiseForSolve();
+  void initialiseForSolve();
   void setSimplexOptions();
   void updateSimplexOptions();
   void initialiseSimplexLpRandomVectors();
@@ -267,9 +267,9 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  bool cyclingDetected(const SimplexAlgorithm algorithm,
-                       const HighsInt variable_in, const HighsInt row_out,
-                       const HighsInt rebuild_reason);
+  HighsInt badBasisChange(const SimplexAlgorithm algorithm,
+                          const HighsInt variable_in, const HighsInt row_out,
+                          const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -284,23 +284,25 @@ class HEkk {
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
   bool bailoutOnTimeIterations();
+  HighsStatus returnFromEkkSolve(const HighsStatus return_status);
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
   double computeBasisCondition();
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
 
-  void clearTaboo();
+  void clearBadBasisChange() { bad_basis_change_.clear(); };
 
-  bool allowTabooRows(const HighsInt rebuild_reason);
-  void addTabooRow(const HighsInt iRow, const TabooReason reason);
-  void applyTabooRow(vector<double>& values, double overwrite_with);
-  void unapplyTabooRow(vector<double>& values);
-
-  bool allowTabooCols(const HighsInt rebuild_reason);
-  void addTabooCol(const HighsInt iCol, const TabooReason reason);
-  void applyTabooCol(vector<double>& values, double overwrite_with);
-  void unapplyTabooCol(vector<double>& values);
+  void addBadBasisChange(const HighsInt row_out, const HighsInt variable_out,
+                         const HighsInt variable_in,
+                         const BadBasisChangeReason reason,
+                         const bool taboo = false);
+  void clearBadBasisChangeTabooFlag();
+  bool tabooBadBasisChange();
+  void applyTabooRowOut(vector<double>& values, double overwrite_with);
+  void unapplyTabooRowOut(vector<double>& values);
+  void applyTabooVariableIn(vector<double>& values, double overwrite_with);
+  void unapplyTabooVariableIn(vector<double>& values);
 
   // Methods in HEkkControl
   void initialiseControl();

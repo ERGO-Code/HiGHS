@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include "HConfig.h"
+//#include "HConfig.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
@@ -369,7 +369,8 @@ class HEkkDual {
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);
-  bool cyclingDetected();
+
+  bool badBasisChange();
 
   // Devex scalars
   HighsInt num_devex_iterations =
@@ -402,6 +403,9 @@ class HEkkDual {
   double* rowLower;
   double* rowUpper;
   int8_t* nonbasicFlag;
+
+  // Retained value
+  bool initial_basis_is_logical_;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;

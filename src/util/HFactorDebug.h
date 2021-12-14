@@ -24,24 +24,25 @@ using std::vector;
 
 void debugReportRankDeficiency(
     const HighsInt call_id, const HighsInt highs_debug_level,
-    const HighsLogOptions& log_options, const HighsInt numRow,
+    const HighsLogOptions& log_options, const HighsInt num_row,
     const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
-    const HighsInt* baseIndex, const HighsInt rank_deficiency,
-    const vector<HighsInt>& noPvR, const vector<HighsInt>& noPvC);
+    const HighsInt* basic_index, const HighsInt rank_deficiency,
+    const vector<HighsInt>& row_with_no_pivot,
+    const vector<HighsInt>& col_with_no_pivot);
 
 void debugReportRankDeficientASM(
     const HighsInt highs_debug_level, const HighsLogOptions& log_options,
-    const HighsInt numRow, const vector<HighsInt>& MCstart,
-    const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
-    const vector<double>& MCvalue, const vector<HighsInt>& iwork,
-    const HighsInt rank_deficiency, const vector<HighsInt>& noPvC,
-    const vector<HighsInt>& noPvR);
+    const HighsInt num_row, const vector<HighsInt>& mc_start,
+    const vector<HighsInt>& mc_count_a, const vector<HighsInt>& mc_index,
+    const vector<double>& mc_value, const vector<HighsInt>& iwork,
+    const HighsInt rank_deficiency, const vector<HighsInt>& col_with_no_pivot,
+    const vector<HighsInt>& row_with_no_pivot);
 
 void debugReportMarkSingC(const HighsInt call_id,
                           const HighsInt highs_debug_level,
                           const HighsLogOptions& log_options,
-                          const HighsInt numRow, const vector<HighsInt>& iwork,
-                          const HighsInt* baseIndex);
+                          const HighsInt num_row, const vector<HighsInt>& iwork,
+                          const HighsInt* basic_index);
 
 void debugLogRankDeficiency(const HighsInt highs_debug_level,
                             const HighsLogOptions& log_options,
@@ -53,7 +54,7 @@ void debugLogRankDeficiency(const HighsInt highs_debug_level,
 
 void debugPivotValueAnalysis(const HighsInt highs_debug_level,
                              const HighsLogOptions& log_options,
-                             const HighsInt numRow,
-                             const vector<double>& UpivotValue);
+                             const HighsInt num_row,
+                             const vector<double>& u_pivot_value);
 
 #endif  // UTIL_HFACTORDEBUG_H_
