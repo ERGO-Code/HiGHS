@@ -201,13 +201,6 @@ HighsStatus HEkkDual::solve() {
   // hence the solve phase
 
   computeInevitableDualInfeasibilities();
-  HighsInt alt_num_infeasibilities = info.num_dual_infeasibilities;
-  double alt_max_infeasibility = info.max_dual_infeasibility;
-  double alt_sum_infeasibilities = info.sum_dual_infeasibilities;
-  ekk_instance_.computeDualInfeasibleWithFlips();
-  assert(alt_num_infeasibilities == info.num_dual_infeasibilities);
-  assert(alt_max_infeasibility == info.max_dual_infeasibility);
-  assert(alt_sum_infeasibilities == info.sum_dual_infeasibilities);
 
   dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -295,13 +288,6 @@ HighsStatus HEkkDual::solve() {
       // Determine the number of dual infeasibilities, and hence the solve phase
 
       computeInevitableDualInfeasibilities();
-      HighsInt alt_num_infeasibilities = info.num_dual_infeasibilities;
-      double alt_max_infeasibility = info.max_dual_infeasibility;
-      double alt_sum_infeasibilities = info.sum_dual_infeasibilities;
-      ekk_instance_.computeDualInfeasibleWithFlips();
-      assert(alt_num_infeasibilities == info.num_dual_infeasibilities);
-      assert(alt_max_infeasibility == info.max_dual_infeasibility);
-      assert(alt_sum_infeasibilities == info.sum_dual_infeasibilities);
 
       dualInfeasCount = info.num_dual_infeasibilities;
       solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -2449,11 +2435,16 @@ void HEkkDual::computeInevitableDualInfeasibilities() {
     const double lower = info.workLower_[iVar];
     const double upper = info.workUpper_[iVar];
     const double dual = info.workDual_[iVar];
+    const bool fixed = lower == upper;
+    const bool boxed = lower > -kHighsInf && upper < kHighsInf;
+    const bool free = lower == -kHighsInf && upper == kHighsInf;
     double dual_infeasibility = 0;
-    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+    const bool non_free = highs_isInfinity(-lower) || highs_isInfinity(upper);
+    if (lower == -kHighsInf && upper == kHighsInf) {
       // Free: any nonzero dual value is infeasible
       dual_infeasibility = fabs(dual);
     } else if (highs_isInfinity(-lower) || highs_isInfinity(upper)) {
+      assert(non_free);
       // Not free or boxed: any dual infeasibility is given by value
       // signed by nonbasicMove.
       //
@@ -2503,25 +2494,31 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
   double sum_dual_infeasibilities_for_shift = 0;
   const double kUseFlipMultiplier = 1000;
   const HighsInt num_tot = lp.num_col_ + lp.num_row_;
-  for (HighsInt i = 0; i < num_tot; i++) {
-    if (!basis.nonbasicFlag_[i]) continue;
-    // Nonbasic
-    if (info.workLower_[i] == -inf && info.workUpper_[i] == inf) {
-      // FREE variable
-      workCount += (fabs(info.workDual_[i]) >= dual_feasibility_tolerance);
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
+    if (!basis.nonbasicFlag_[iVar]) continue;
+    // Nonbasic column
+    const double lower = info.workLower_[iVar];
+    const double upper = info.workUpper_[iVar];
+    const double dual = info.workDual_[iVar];
+    const bool fixed = lower == upper;
+    const bool boxed = lower > -kHighsInf && upper < kHighsInf;
+    const bool free = lower == -kHighsInf && upper == kHighsInf;
+    double dual_infeasibility = 0;
+    if (lower == -kHighsInf && upper == kHighsInf) {
+      // Free: any nonzero dual value is infeasible
+      dual_infeasibility = fabs(dual);
+      workCount += dual_infeasibility >= dual_feasibility_tolerance;
       continue;
     }
-    const HighsInt move = basis.nonbasicMove_[i];
-    const double current_dual = info.workDual_[i];
-    const double dual_infeasibility = -move * current_dual;
+    const HighsInt move = basis.nonbasicMove_[iVar];
+    const double current_dual = info.workDual_[iVar];
+    dual_infeasibility = -move * current_dual;
     const double kDualInfeasibilityMargin = 1;
     if (kDualInfeasibilityMargin * dual_infeasibility <
         dual_feasibility_tolerance)
       continue;
     // There is a dual infeasiblity to remove so, if boxed, consider doing so
     // via flip
-    const bool fixed = info.workLower_[i] == info.workUpper_[i];
-    const bool boxed = info.workLower_[i] != -inf && info.workUpper_[i] != inf;
     if (boxed) {
       // Boxed variable, so could flip
       if (fixed || dual_infeasibility >
@@ -2534,7 +2531,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
         sum_dual_infeasibilities_for_flip += dual_infeasibility;
         max_dual_infeasibility_for_flip =
             std::max(dual_infeasibility, max_dual_infeasibility_for_flip);
-        flipBound(i);
+        flipBound(iVar);
         // Negative dual at lower bound (move=1): flip to upper
         // bound so objective contribution is change in value (flip)
         // times dual, being move*flip*dual
@@ -2542,7 +2539,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
         // Positive dual at upper bound (move=-1): flip to lower
         // bound so objective contribution is change in value
         // (-flip) times dual, being move*flip*dual
-        const double flip = info.workUpper_[i] - info.workLower_[i];
+        const double flip = info.workUpper_[iVar] - info.workLower_[iVar];
         double local_dual_objective_change = move * flip * current_dual;
         local_dual_objective_change *= ekk_instance_.cost_scale_;
         flip_dual_objective_value_change += local_dual_objective_change;
@@ -2567,15 +2564,15 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
     if (move == kNonbasicMoveUp) {
       double new_dual = (1 + random.fraction()) * dual_feasibility_tolerance;
       shift = new_dual - current_dual;
-      info.workDual_[i] = new_dual;
-      info.workCost_[i] = info.workCost_[i] + shift;
+      info.workDual_[iVar] = new_dual;
+      info.workCost_[iVar] = info.workCost_[iVar] + shift;
     } else {
       double new_dual = -(1 + random.fraction()) * dual_feasibility_tolerance;
       shift = new_dual - current_dual;
-      info.workDual_[i] = new_dual;
-      info.workCost_[i] = info.workCost_[i] + shift;
+      info.workDual_[iVar] = new_dual;
+      info.workCost_[iVar] = info.workCost_[iVar] + shift;
     }
-    double local_dual_objective_change = shift * info.workValue_[i];
+    double local_dual_objective_change = shift * info.workValue_[iVar];
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     shift_dual_objective_value_change += local_dual_objective_change;
     num_shift++;
