@@ -1283,14 +1283,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
-      if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
-        // ToDo Don't assume lower == upper only corresponds to
-        // HighsBasisStatus::kLower
-        if (lower == upper) {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
-        } else {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
-        }
+      if (lower == upper) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
+      } else if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
       } else if (highs_basis.col_status[iCol] == HighsBasisStatus::kUpper) {
         basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
       } else {
@@ -1310,12 +1306,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
-      if (highs_basis.row_status[iRow] == HighsBasisStatus::kLower) {
-        if (lower == upper) {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
-        } else {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
-        }
+      if (lower == upper) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
+      } else if (highs_basis.row_status[iRow] == HighsBasisStatus::kLower) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
       } else if (highs_basis.row_status[iRow] == HighsBasisStatus::kUpper) {
         basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
       } else {
