@@ -1394,10 +1394,6 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
-    highsLogDev(
-        options_.log_options, HighsLogType::kInfo,
-        "Highs::setBasis Alien basis origin_name = (%s); origin =  (%s)\n",
-        basis.debug_origin_name.c_str(), origin.c_str());
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
     HighsBasis modifiable_basis = basis;
@@ -1423,7 +1419,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   assert(basis_.debug_origin_name != "");
   assert(!basis_.alien);
   if (basis_.was_alien) {
-    printf(
+    highsLogDev(
+        options_.log_options, HighsLogType::kInfo,
         "Highs::setBasis Was alien = %-5s; Id = %9d; UpdateCount = %4d; Origin "
         "(%s)\n",
         highsBoolToString(basis_.was_alien).c_str(), (int)basis_.debug_id,
