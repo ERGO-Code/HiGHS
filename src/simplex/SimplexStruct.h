@@ -16,7 +16,11 @@
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
 
-#include "HConfig.h"
+#include <cstdint>
+#include <vector>
+
+//#include "lp_data/HighsLp.h"
+#include "lp_data/HConst.h"
 #include "simplex/SimplexConst.h"
 
 struct SimplexBasis {
@@ -28,20 +32,24 @@ struct SimplexBasis {
   std::vector<HighsInt> basicIndex_;
   std::vector<int8_t> nonbasicFlag_;
   std::vector<int8_t> nonbasicMove_;
+  uint64_t hash;
+  HighsInt debug_id = -1;
+  HighsInt debug_update_count = -1;
+  std::string debug_origin_name = "";
+  void clear();
+  void setup(const HighsInt num_col, const HighsInt num_row);
 };
 
 struct HighsSimplexStatus {
   // Status of LP solved by the simplex method and its data
-  bool initialised = false;
-  bool valid = false;
-  bool scaling_tried = false;
-  bool has_basis = false;   // The simplex LP has a valid simplex basis
-  bool has_matrix = false;  // The HMatrix matrices are valid
-  bool has_factor_arrays =
-      false;  // Has the arrays for the representation of B^{-1}
+  bool initialised_for_new_lp = false;
+  bool is_dualised = false;
+  bool is_permuted = false;
+  bool initialised_for_solve = false;
+  bool has_basis = false;      // The simplex LP has a valid simplex basis
+  bool has_ar_matrix = false;  // HEkk has the row-wise matrix
+  bool has_nla = false;        // SimplexNla is set up
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known
-  bool has_nonbasic_dual_values = false;  // The nonbasic dual values are known
-  bool has_basic_primal_values = false;   // The basic primal values are known
   bool has_invert =
       false;  // The representation of B^{-1} corresponds to the current basis
   bool has_fresh_invert = false;  // The representation of B^{-1} corresponds to
@@ -69,8 +77,7 @@ struct HighsSimplexInfo {
   //
   // workDual: Values of the dual variables corresponding to
   // workCost. Latter not known until solve() is called since B^{-1}
-  // is required to compute them. Knowledge of them is indicated by
-  // has_nonbasic_dual_values
+  // is required to compute them.
   //
   // workShift: Values added to workCost in order that workDual
   // remains feasible, thereby remaining dual feasible in phase 2
@@ -97,8 +104,7 @@ struct HighsSimplexInfo {
   //
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
-  // is called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by has_basic_primal_values
+  // is called since B^{-1} is required to compute them.
   //
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
@@ -113,12 +119,18 @@ struct HighsSimplexInfo {
 
   std::vector<HighsInt> devex_index_;
 
+  // Records of the row chosen by dual simplex or column chosen by
+  // primal simplex, plus the pivot values - since last revinversion
+  std::vector<HighsInt> index_chosen_;
+  std::vector<double> pivot_;
+
   // Data for backtracking in the event of a singular basis
   HighsInt phase1_backtracking_test_done = false;
   HighsInt phase2_backtracking_test_done = false;
   bool backtracking_ = false;
   bool valid_backtracking_basis_ = false;
   SimplexBasis backtracking_basis_;
+  HighsInt backtracking_basis_costs_shifted_;
   HighsInt backtracking_basis_costs_perturbed_;
   HighsInt backtracking_basis_bounds_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
@@ -160,6 +172,8 @@ struct HighsSimplexInfo {
   double dual_steepest_edge_weight_log_error_threshold;
   double costly_DSE_frequency;
   HighsInt num_costly_DSE_iteration;
+  double costly_DSE_measure;
+
   double average_log_low_DSE_weight_error;
   double average_log_high_DSE_weight_error;
   // Needed globally??
@@ -184,17 +198,19 @@ struct HighsSimplexInfo {
   //  bool analyse_rebuild_time = false;
 
   // Simplex runtime information
+  bool allow_cost_shifting = true;
   bool allow_cost_perturbation = true;
   bool allow_bound_perturbation = true;
+  bool costs_shifted = false;
   bool costs_perturbed = false;
   bool bounds_perturbed = false;
 
-  HighsInt num_primal_infeasibility = -1;
+  HighsInt num_primal_infeasibilities = -1;
   double max_primal_infeasibility;
-  double sum_primal_infeasibility;
-  HighsInt num_dual_infeasibility = -1;
+  double sum_primal_infeasibilities;
+  HighsInt num_dual_infeasibilities = -1;
   double max_dual_infeasibility;
-  double sum_dual_infeasibility;
+  double sum_dual_infeasibilities;
 
   // Records of cumulative iteration counts - updated at the end of a phase
   HighsInt dual_phase1_iteration_count = 0;
@@ -203,9 +219,9 @@ struct HighsSimplexInfo {
   HighsInt primal_phase2_iteration_count = 0;
   HighsInt primal_bound_swap = 0;
 
-  HighsInt min_threads = 1;
-  HighsInt num_threads = 1;
-  HighsInt max_threads = kHighsThreadLimit;
+  HighsInt min_concurrency = 1;
+  HighsInt num_concurrency = 1;
+  HighsInt max_concurrency = kSimplexConcurrencyLimit;
 
   // Info on PAMI iterations
   HighsInt multi_iteration = 0;
@@ -226,6 +242,15 @@ struct HighsSimplexInfo {
   double updated_primal_objective_value;
   // Number of logical variables in the basis
   HighsInt num_basic_logicals;
+};
+
+struct HighsSimplexBadBasisChangeRecord {
+  bool taboo;
+  HighsInt row_out;
+  HighsInt variable_out;
+  HighsInt variable_in;
+  BadBasisChangeReason reason;
+  double save_value;
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

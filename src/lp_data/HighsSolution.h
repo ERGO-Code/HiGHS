@@ -22,13 +22,13 @@
 #include "io/HighsIO.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsInfo.h"
+#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsStatus.h"
 #include "model/HighsModel.h"
 
 class HighsLp;
 struct IpxSolution;
 class HighsOptions;
-class HighsModelObject;
 
 using std::string;
 
@@ -48,29 +48,30 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-void getKktFailures(const HighsModel& model, const HighsSolution& solution,
-                    const HighsBasis& basis,
-                    HighsSolutionParams& solution_params);
+void getKktFailures(const HighsOptions& options, const HighsModel& model,
+                    const HighsSolution& solution, const HighsBasis& basis,
+                    HighsInfo& highs_info);
 
-void getKktFailures(const HighsModel& model, const HighsSolution& solution,
-                    const HighsBasis& basis,
-                    HighsSolutionParams& solution_params,
+void getKktFailures(const HighsOptions& options, const HighsModel& model,
+                    const HighsSolution& solution, const HighsBasis& basis,
+                    HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
-void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
-                      const HighsBasis& basis,
-                      HighsSolutionParams& solution_params);
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
+                      const HighsSolution& solution, const HighsBasis& basis,
+                      HighsInfo& highs_info);
 
-void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
-                      const HighsBasis& basis,
-                      HighsSolutionParams& solution_params,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
+                      const HighsSolution& solution, const HighsBasis& basis,
+                      HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals = false);
 
-void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
+void getKktFailures(const HighsOptions& options, const HighsLp& lp,
+                    const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
-                    HighsSolutionParams& solution_params,
+                    HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
@@ -88,41 +89,29 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis);
 
 HighsStatus ipxSolutionToHighsSolution(
-    const HighsLogOptions& log_options, const HighsLp& lp,
+    const HighsOptions& options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
-    // const std::vector<double>& ipx_y,
+    const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
+    const std::vector<double>& ipx_zu, const HighsModelStatus model_status,
     HighsSolution& highs_solution);
+
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
-std::string iterationsToString(const HighsIterationCounts& iterations_counts);
+HighsStatus formSimplexLpBasisAndFactor(
+    HighsLpSolverObject& solver_object,
+    const bool only_from_known_basis = false);
 
-void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
-void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
-                                       HighsSolutionParams& solution_params,
-                                       const HighsOptions& options);
-void resetSolutionParams(HighsSolutionParams& solution_params,
-                         const HighsOptions& options);
+void accommodateAlienBasis(HighsLpSolverObject& solver_object);
 
-void invalidateSolutionParams(HighsSolutionParams& solution_params);
-void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);
-void invalidateSolutionInfeasibilityParams(
-    HighsSolutionParams& solution_params);
-
-void copySolutionObjectiveParams(
-    const HighsSolutionParams& from_solution_params,
-    HighsSolutionParams& to_solution_params);
-
-void copyFromSolutionParams(HighsInfo& highs_info,
-                            const HighsSolutionParams& solution_params);
-void copyFromInfo(HighsSolutionParams& solution_params,
-                  const HighsInfo& highs_info);
-
+void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
+void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
+                                  HighsInfo& highs_info);
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 
 bool isPrimalSolutionRightSize(const HighsLp& lp,
@@ -130,10 +119,5 @@ bool isPrimalSolutionRightSize(const HighsLp& lp,
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
-
-void clearPrimalSolutionUtil(HighsSolution& solution);
-void clearDualSolutionUtil(HighsSolution& solution);
-void clearSolutionUtil(HighsSolution& solution);
-void clearBasisUtil(HighsBasis& solution);
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_

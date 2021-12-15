@@ -4,7 +4,21 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-project(HIGHS VERSION 1.0 LANGUAGES CXX C)
+# set preference for clang compiler and intel compiler over gcc and other compilers
+include(Platform/${CMAKE_SYSTEM_NAME}-Determine-C OPTIONAL)
+include(Platform/${CMAKE_SYSTEM_NAME}-C OPTIONAL)
+set(CMAKE_C_COMPILER_NAMES clang icc cc ${CMAKE_C_COMPILER_NAMES})
+
+include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
+include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
+set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
+
+project(HIGHS VERSION 1.1 LANGUAGES CXX C)
+set(HIGHS_VERSION_PATCH 1)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -16,13 +30,7 @@ if(EXISTS "${LOC_PATH}")
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
 
-# Use OpenMP if version is high enough.
-option(OPENMP "OpenMP" OFF)
-find_package(OpenMP 3.0)
-if(OpenMP_CXX_FOUND)
-    message(STATUS "Linking with OpenMP... ")
-    set(OPENMP ON)
-endif()
+option(BUILD_TESTING "Build Tests" ON)
 
 if(LINUX AND NOT MSVC)
     include(CheckIPOSupported)
@@ -57,15 +65,111 @@ else()
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 endif()
 
-if (NOT FAST_BUILD)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
-set(HIGHS_VERSION_PATCH 0)
+include(CheckCXXSourceCompiles)
 
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
+check_cxx_source_compiles(
+    "#include <immintrin.h>
+    int main () {
+        _mm_pause();
+        return 0;
+    }"
+    HIGHS_HAVE_MM_PAUSE)
 
+if(MSVC)
+    check_cxx_source_compiles(
+        "#include <intrin.h>
+        #pragma intrinsic(_BitScanReverse)
+        #pragma intrinsic(_BitScanReverse64)
+        int main () {
+            unsigned long x = 5;
+            unsigned long y;
+            _BitScanReverse(&y, x);
+            _BitScanReverse64(&x, y);
+            return 0;
+        }"
+        HIGHS_HAVE_BITSCAN_REVERSE)
+else()
+    check_cxx_source_compiles(
+        "#include <cstdint>
+         int main () {
+            unsigned int x = 5;
+            unsigned long long y = __builtin_clz(x);
+            x = __builtin_clzll(y);
+            return 0;
+        }"
+        HIGHS_HAVE_BUILTIN_CLZ)
+endif()
+
+# Function to set compiler flags on and off easily.
+include(CheckCXXCompilerFlag)
+function(enable_cxx_compiler_flag_if_supported flag)
+    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
+    if(flag_already_set EQUAL -1)
+        check_cxx_compiler_flag("${flag}" flag_supported)
+        if(flag_supported)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
+        endif()
+        unset(flag_supported CACHE)
+    endif()
+endfunction()
+
+# usage: turn pedantic on for even more warnings.
+enable_cxx_compiler_flag_if_supported("-Wall")
+enable_cxx_compiler_flag_if_supported("-Wextra")
+enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
+enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
+enable_cxx_compiler_flag_if_supported("-pedantic")
+
+option(DEBUGSOL "check the debug solution" OFF)
+
+if(DEBUGSOL)
+  add_definitions("-DHIGHS_DEBUGSOL")
+endif()
+
+option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
+if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
+    message(STATUS "HIGHSINT64: " ${HIGHSINT64})
+endif()
+
+# If Visual Studio targets are being built.
+if(MSVC)
+    add_definitions(/W4)
+    add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+endif()
+
+include(CheckLanguage)
+if(NOT MSVC)
+    check_language("Fortran")
+endif()
+if(CMAKE_Fortran_COMPILER)
+    enable_language(Fortran)
+    set(FORTRAN_FOUND ON)
+else()
+    set(FORTRAN_FOUND OFF)
+endif(CMAKE_Fortran_COMPILER)
+
+check_language("CSharp")
+if(CMAKE_CSharp_COMPILER)
+    enable_language(CSharp)
+    set(CSHARP_FOUND ON)
+else()
+    set(CSHARP_FOUND OFF)
+endif(CMAKE_CSharp_COMPILER)
+
+check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
+if(NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
+else()
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+endif()
 
 # uncomment for memory debugging
 # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
@@ -73,7 +177,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
 # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 
-find_package(PkgConfig)
+if (NOT FAST_BUILD)
 
 include(CPack)
 set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
@@ -81,11 +185,6 @@ set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-
 
 find_program(GIT git)
 if((GIT) AND (EXISTS ${HIGHS_SOURCE_DIR}/.git))
@@ -102,11 +201,6 @@ message(STATUS "Git hash: " ${GITHASH})
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
 
-option(DEBUGSOL "check the debug solution" OFF)
-
-if(DEBUGSOL)
-  add_definitions("-DHIGHS_DEBUGSOL")
-endif()
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)
 
@@ -179,48 +273,27 @@ if (HIGHS_COVERAGE)
   endif()
 endif ()
 
-option(HiGHSDEV "HiGHS development" OFF)
-if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
-    message(STATUS "HiGHS development: " ${HiGHSDEV})
+if(NOT MSVC)
+    set(OSI_ROOT "" CACHE PATH "Osi root folder.")
+    if (NOT "${OSI_ROOT}" STREQUAL "")
+        # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
+        message(STATUS "OSI root folder set: " ${OSI_ROOT})
+        set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+    endif ()
+    unset(OSI_ROOT CACHE)
+    find_package(PkgConfig)
+
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(OSI osi)
+        if (OSI_FOUND)
+            # need to come before adding any targets (add_executable, add_library)
+            link_directories(${OSI_LIBRARY_DIRS})
+            include_directories(${OSITEST_INCLUDE_DIRS})
+        endif (OSI_FOUND)
+    endif()
 endif()
-
-option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
-if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
-    message(STATUS "HIGHSINT64: " ${HIGHSINT64})
-endif()
-
-set(OSI_ROOT "" CACHE PATH "Osi root folder.")
-if (NOT "${OSI_ROOT}" STREQUAL "")
-    # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
-    message(STATUS "OSI root folder set: " ${OSI_ROOT})
-    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
-endif ()
-unset(OSI_ROOT CACHE)
-
-pkg_check_modules(OSI osi)
-if (OSI_FOUND)
-    # need to come before adding any targets (add_executable, add_library)
-    link_directories(${OSI_LIBRARY_DIRS})
-    include_directories(${OSITEST_INCLUDE_DIRS})
-endif (OSI_FOUND)
 
 set(IPX_ON ON)
-include(CheckLanguage)
-check_language("Fortran")
-if(CMAKE_Fortran_COMPILER)
-    enable_language(Fortran)
-    set(FORTRAN_FOUND ON)
-else()
-    set(FORTRAN_FOUND OFF)
-endif(CMAKE_Fortran_COMPILER)
-
-check_language("CSharp")
-if(CMAKE_CSharp_COMPILER)
-    enable_language(CSharp)
-    set(CSHARP_FOUND ON)
-else()
-    set(CSHARP_FOUND OFF)
-endif(CMAKE_CSharp_COMPILER)
 
 option(GAMS_ROOT "GAMS root folder." "OFF")
 if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
@@ -259,10 +332,6 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/model
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/qpsolver
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver
-    ${HIGHS_SOURCE_DIR}/src/qpsolver
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver
     ${HIGHS_SOURCE_DIR}/src/simplex
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)
@@ -275,31 +344,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
     endif()
 endif()
 
-# If Visual Studio targets are being built.
-if(MSVC)
-    add_definitions(/W4)
-    add_definitions(/wd4100)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif()
-
-# Function to set compiler flags on and off easily.
-include(CheckCXXCompilerFlag)
-function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-        check_cxx_compiler_flag("${flag}" flag_supported)
-        if(flag_supported)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-        endif()
-        unset(flag_supported CACHE)
-    endif()
-endfunction()
-
-# usage: turn pedantic on for even more warnings.
-enable_cxx_compiler_flag_if_supported("-Wall")
-enable_cxx_compiler_flag_if_supported("-Wextra")
-enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
-enable_cxx_compiler_flag_if_supported("-pedantic")
 
 #if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
 #    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
@@ -318,19 +362,17 @@ endif()
 # Targets
 enable_testing()
 add_subdirectory(app)
-add_subdirectory(check)
+if(BUILD_TESTING)
+    add_subdirectory(check)
+endif()
 add_subdirectory(src)
 
 
-else()
+else(FAST_BUILD)
 
 message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
-
-# todo: remove patch once release is official. 
-# add here to avoid compile errors.
-set(HIGHS_VERSION_PATCH 0)
 
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
 option(IPX "Use interior point solver" ON)
@@ -353,10 +395,6 @@ option(JULIA "Build library and executable for Julia" OFF)
 # No changes in app/ apart from a relative path
 add_subdirectory(app)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    target_link_libraries (libhighs "pthread")
-endif()
-
 target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
 
 # check/ not added here, instead define fewer tests:
@@ -370,6 +408,7 @@ add_test(NAME highs-lib-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target libhighs
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 set_tests_properties(highs-lib-build
@@ -380,6 +419,7 @@ add_test(NAME highs-exe-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target highs
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 set_tests_properties(highs-exe-build
@@ -392,7 +432,7 @@ set(successInstances
     "greenbea\;5249\;-7.2555248130\;")
 
 set(optionsInstances
-    "adlittle\;83\; 2.2549496316\;")
+    "adlittle\;74\; 2.2549496316\;")
 
 set(infeasibleInstances
     "bgetam\;        infeasible")
@@ -433,7 +473,7 @@ foreach(instance ${${instances}})
             "Model   status      : ${solutionstatus}")
 
     if(${solutionstatus} STREQUAL "Optimal")
-        if(${setting} STREQUAL "--presolve=off")
+        if("${setting}" STREQUAL "--presolve=off")
             set_tests_properties (${name}${setting} PROPERTIES
                     PASS_REGULAR_EXPRESSION
                     "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
@@ -449,10 +489,10 @@ endfunction()
 
 if (NOT JULIA)
     # add tests for success and fail instances
-    add_instance_tests(successInstances "Optimal" " ")
-    add_instance_tests(failInstances "Fail" " ")
-    add_instance_tests(infeasibleInstances "Infeasible" " ")
-#    add_instance_tests(unboundedInstances "Unbounded" " ")
+    add_instance_tests(successInstances "Optimal" "")
+    add_instance_tests(failInstances "Fail" "")
+    add_instance_tests(infeasibleInstances "Infeasible" "")
+#    add_instance_tests(unboundedInstances "Unbounded" "")
 
     if (IPX_ON)
         set(settings ${settings} "--solver=ipm")
@@ -491,16 +531,8 @@ endif()
 
 endif()
 
-# Modern CMake link in FAST_BUILD mode
-# All uses of target_link_libraries with a target must be either 
-# all-keyword or all-plain.
-if (OPENMP)
-    if (FAST_BUILD)
-        target_link_libraries(libhighs PUBLIC OpenMP::OpenMP_CXX)
-    else()
-        target_link_libraries(libhighs OpenMP::OpenMP_CXX)
-    endif()
-endif()
+include(GenerateExportHeader)
+generate_export_header(libhighs)
 
 # # Comment out for scaffold/ tests
 # add_subdirectory(scaffold)

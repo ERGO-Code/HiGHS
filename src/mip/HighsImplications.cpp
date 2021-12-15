@@ -61,9 +61,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   implications.reserve(implstart + numImplications);
 
+  HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
+  HighsInt maxEntries = 100000 + mipsolver.numNonzero();
+
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
-        (domchgreason[i].index >> 1) == col)
+        ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
     implications.push_back(domchgstack[i]);
@@ -330,6 +333,8 @@ void HighsImplications::rebuild(HighsInt ncols,
 
 void HighsImplications::buildFrom(const HighsImplications& init) {
   return;
+#if 0
+  // todo check if this should be done
   HighsInt numcol = mipsolver.numCol();
 
   for (HighsInt i = 0; i != numcol; ++i) {
@@ -348,6 +353,7 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
     // weaker then newly computed ones and adding them would block computation
     // of new implications
   }
+#endif
 }
 
 void HighsImplications::separateImpliedBounds(

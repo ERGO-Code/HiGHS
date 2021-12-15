@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
-#include "util/HighsInt.h"
 
 using std::vector;
 
@@ -116,23 +115,22 @@ void maxHeapify(double* heap_v, HighsInt* heap_i, HighsInt i, HighsInt n);
 /**
  * @brief Check that a set of integers is in increasing order and in bounds
  */
-bool increasingSetOk(const HighsInt* set, const HighsInt set_num_entries,
+bool increasingSetOk(const vector<HighsInt>& set,
                      const HighsInt set_entry_lower,
                      const HighsInt set_entry_upper, bool strict);
 
 /**
  * @brief Check that a set of doubles is in increasing order and in bounds
  */
-bool increasingSetOk(const double* set, const HighsInt set_num_entries,
-                     const double set_entry_lower, const double set_entry_upper,
-                     bool strict);
+bool increasingSetOk(const vector<double>& set, const double set_entry_lower,
+                     const double set_entry_upper, bool strict);
 
-void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
                  const double* data0, const double* data1, const double* data2,
                  double* sorted_data0, double* sorted_data1,
                  double* sorted_data2);
 
-void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
                  const HighsVarType* data0, HighsVarType* sorted_data0);
 
 #endif /* UTIL_HIGHSSORT_H_ */

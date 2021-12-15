@@ -23,25 +23,30 @@
 #include "io/HMPSIO.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
+#include "util/HighsCDouble.h"
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
 
+using std::fabs;
+using std::max;
+using std::min;
+
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  // Assess the LP dimensions and vector sizes, returning on error
-  call_status = assessLpDimensions(options, lp);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessLpDimensions");
+  HighsStatus call_status =
+      lp.dimensionsOk("assessLp") ? HighsStatus::kOk : HighsStatus::kError;
+  return_status = interpretCallStatus(options.log_options, call_status,
+                                      return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the LP has no columns there is nothing left to test
   if (lp.num_col_ == 0) return HighsStatus::kOk;
-  assert(lp.format_ == MatrixFormat::kColwise);
+  assert(lp.a_matrix_.isColwise());
 
-  // From here, any LP has lp.num_col_ > 0 and lp.a_start_[lp.num_col_] exists
-  // (as the number of nonzeros)
+  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
+  // exists (as the number of nonzeros)
   assert(lp.num_col_ > 0);
 
   // Assess the LP column costs
@@ -52,14 +57,14 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   index_collection.to_ = lp.num_col_ - 1;
   call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
                             options.infinite_cost);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessCosts");
+  return_status = interpretCallStatus(options.log_options, call_status,
+                                      return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the LP column bounds
   call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
                              lp.col_upper_, options.infinite_bound);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessBounds");
+  return_status = interpretCallStatus(options.log_options, call_status,
+                                      return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   if (lp.num_row_) {
     // Assess the LP row bounds
@@ -70,23 +75,28 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     call_status =
         assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
                      lp.row_upper_, options.infinite_bound);
-    return_status =
-        interpretCallStatus(call_status, return_status, "assessBounds");
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
   // Assess the LP matrix - even if there are no rows!
   call_status =
-      assessMatrix(options.log_options, "LP", lp.num_row_, lp.num_col_,
-                   lp.a_start_, lp.a_index_, lp.a_value_,
-                   options.small_matrix_value, options.large_matrix_value);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrix");
+      lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
+                          options.large_matrix_value);
+  return_status = interpretCallStatus(options.log_options, call_status,
+                                      return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
-  HighsInt lp_num_nz = lp.a_start_[lp.num_col_];
+  HighsInt lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
-  if ((HighsInt)lp.a_index_.size() > lp_num_nz) lp.a_index_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_value_.size() > lp_num_nz) lp.a_value_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
+    lp.a_matrix_.index_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
+    lp.a_matrix_.value_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
+    lp.a_matrix_.index_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
+    lp.a_matrix_.value_.resize(lp_num_nz);
 
   if (return_status == HighsStatus::kError)
     return_status = HighsStatus::kError;
@@ -99,112 +109,14 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
-HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
-  HighsStatus return_status = HighsStatus::kOk;
-
-  // Use error_found to track whether an error has been found in multiple tests
-  bool error_found = false;
-
-  // Don't expect the matrix_start_size to be legal if there are no columns
-  bool check_matrix_start_size = lp.num_col_ > 0;
-
-  // Assess column-related dimensions
-  bool legal_num_col = lp.num_col_ >= 0;
-  if (!legal_num_col) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "LP has illegal number of cols = %" HIGHSINT_FORMAT "\n",
-                 lp.num_col_);
-    error_found = true;
-  } else {
-    // Check the size of the column vectors
-    HighsInt col_cost_size = lp.col_cost_.size();
-    HighsInt col_lower_size = lp.col_lower_.size();
-    HighsInt col_upper_size = lp.col_upper_.size();
-    HighsInt matrix_start_size = lp.a_start_.size();
-    bool legal_col_cost_size = col_cost_size >= lp.num_col_;
-    bool legal_col_lower_size = col_lower_size >= lp.num_col_;
-    bool legal_col_upper_size = col_lower_size >= lp.num_col_;
-
-    if (!legal_col_cost_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal colCost size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   col_cost_size, lp.num_col_);
-      error_found = true;
-    }
-    if (!legal_col_lower_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal colLower size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   col_lower_size, lp.num_col_);
-      error_found = true;
-    }
-    if (!legal_col_upper_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal colUpper size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   col_upper_size, lp.num_col_);
-      error_found = true;
-    }
-  }
-
-  // Assess row-related dimensions
-  bool legal_num_row = lp.num_row_ >= 0;
-  if (!legal_num_row) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "LP has illegal number of rows = %" HIGHSINT_FORMAT "\n",
-                 lp.num_row_);
-    error_found = true;
-  } else {
-    HighsInt row_lower_size = lp.row_lower_.size();
-    HighsInt row_upper_size = lp.row_upper_.size();
-    bool legal_row_lower_size = row_lower_size >= lp.num_row_;
-    bool legal_row_upper_size = row_lower_size >= lp.num_row_;
-    if (!legal_row_lower_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal rowLower size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   row_lower_size, lp.num_row_);
-      error_found = true;
-    }
-    if (!legal_row_upper_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal rowUpper size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   row_upper_size, lp.num_row_);
-      error_found = true;
-    }
-  }
-
-  // Assess matrix-related dimensions
-  if (assessMatrixDimensions(options.log_options, "LP", lp.num_col_,
-                             lp.a_start_, lp.a_index_,
-                             lp.a_value_) == HighsStatus::kError) {
-    error_found = true;
-  }
-  assert(!error_found);
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
-
-  return return_status;
-}
-
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, const double infinite_cost) {
   HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options.log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(options.log_options, index_collection, from_k,
-                                to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
+  limits(index_collection, from_k, to_k);
   if (from_k > to_k) return return_status;
 
   return_status = HighsStatus::kOk;
@@ -272,16 +184,10 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound) {
   HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options.log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(options.log_options, index_collection, from_k,
-                                to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
+  limits(index_collection, from_k, to_k);
   if (from_k > to_k) return HighsStatus::kOk;
 
   return_status = HighsStatus::kOk;
@@ -397,6 +303,62 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
+HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
+  const double kMaxSemiVariableUpper = 1e6;
+  HighsStatus return_status = HighsStatus::kOk;
+  if (!lp.integrality_.size()) return return_status;
+  assert(lp.integrality_.size() == lp.num_col_);
+  HighsInt num_illegal_upper = 0;
+  HighsInt num_non_semi = 0;
+  HighsInt num_non_continuous_variables = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      // Semi-variables with zero lower bound aren't semi
+      if (lp.col_lower_[iCol] == 0) {
+        num_non_semi++;
+        if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+          // Semi-continuous become continuous
+          lp.integrality_[iCol] = HighsVarType::kContinuous;
+        } else {
+          // Semi-integer become integer
+          lp.integrality_[iCol] = HighsVarType::kInteger;
+          num_non_continuous_variables++;
+        }
+        continue;
+      }
+      // Semi-variables must have upper bound that's not too large
+      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
+      num_non_continuous_variables++;
+    } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+      num_non_continuous_variables++;
+    }
+  }
+  if (!num_non_continuous_variables) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-integer/integer variables in model with non-empty "
+                 "integrality\n");
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_non_semi) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) have zero lower bound "
+                 "so are continuous/integer\n",
+                 num_non_semi);
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_illegal_upper) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) have upper bounds "
+                 "exceeding %12g\n",
+                 num_illegal_upper, kMaxSemiVariableUpper);
+    return_status = HighsStatus::kError;
+  }
+  return return_status;
+}
+
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   double max_residual = 0;
   HighsInt num_change = 0;
@@ -445,235 +407,524 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
-                             const HighsScale& scale) {
-  if (!scale.is_scaled) return HighsStatus::kOk;
-  if ((HighsInt)scale.col.size() < lp.num_col_) return HighsStatus::kError;
-  if ((HighsInt)scale.row.size() < lp.num_row_) return HighsStatus::kError;
-  bool scale_error = false;
-  // Set up column and row index collections for scaling
-  HighsIndexCollection all_cols;
-  all_cols.is_interval_ = true;
-  all_cols.dimension_ = lp.num_col_;
-  all_cols.from_ = 0;
-  all_cols.to_ = lp.num_col_ - 1;
-  HighsIndexCollection all_rows;
-  all_rows.is_interval_ = true;
-  all_rows.dimension_ = lp.num_row_;
-  all_rows.from_ = 0;
-  all_rows.to_ = lp.num_row_ - 1;
-
-  scale_error = applyScalingToLpColCost(log_options, lp, scale.col, all_cols) !=
-                    HighsStatus::kOk ||
-                scale_error;
-  scale_error = applyScalingToLpColBounds(log_options, lp, scale.col,
-                                          all_cols) != HighsStatus::kOk ||
-                scale_error;
-  scale_error = applyScalingToLpRowBounds(log_options, lp, scale.row,
-                                          all_rows) != HighsStatus::kOk ||
-                scale_error;
-  scale_error = applyScalingToLpMatrix(log_options, lp, &scale.col[0],
-                                       &scale.row[0], 0, lp.num_col_ - 1, 0,
-                                       lp.num_row_ - 1) != HighsStatus::kOk ||
-                scale_error;
-  if (scale_error) return HighsStatus::kError;
-  return HighsStatus::kOk;
-}
-
-HighsStatus applyScalingToLpColCost(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const vector<double>& colScale,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
-
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  const bool& interval = index_collection.is_interval_;
-  const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
-
-  HighsInt local_col;
-  HighsInt ml_col;
-  const HighsInt ml_col_os = 0;
-  for (HighsInt k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
-      local_col = k;
-    } else {
-      local_col = col_set[k];
-    }
-    ml_col = ml_col_os + local_col;
-    if (mask && !col_mask[local_col]) continue;
-    lp.col_cost_[ml_col] *= colScale[ml_col];
+bool considerScaling(const HighsOptions& options, HighsLp& lp) {
+  // Indicate whether new scaling has been determined in the return value.
+  bool new_scaling = false;
+  // Consider scaling the LP - either by finding new factors or by
+  // applying any existing factors
+  const bool allow_scaling =
+      lp.num_col_ > 0 &&
+      options.simplex_scale_strategy != kSimplexScaleStrategyOff;
+  const bool scaling_not_tried = lp.scale_.strategy == kSimplexScaleStrategyOff;
+  const bool new_scaling_strategy =
+      options.simplex_scale_strategy != lp.scale_.strategy &&
+      options.simplex_scale_strategy != kSimplexScaleStrategyChoose;
+  const bool try_scaling =
+      allow_scaling && (scaling_not_tried || new_scaling_strategy);
+  if (try_scaling) {
+    // Scaling will be tried, so ensure that any previous scaling is not applied
+    lp.unapplyScale();
+    const bool analyse_lp_data =
+        kHighsAnalysisLevelModelData & options.highs_analysis_level;
+    if (analyse_lp_data) analyseLp(options.log_options, lp);
+    scaleLp(options, lp);
+    // If the LP is now scaled, then the scaling is new
+    new_scaling = lp.is_scaled_;
+    if (analyse_lp_data && lp.is_scaled_) analyseLp(options.log_options, lp);
+  } else if (lp.scale_.has_scaling) {
+    // Scaling factors are known, so ensure that they are applied
+    lp.applyScale();
   }
-
-  return HighsStatus::kOk;
+  // Ensure that either the LP has scale factors and is scaled, or
+  // it doesn't have scale factors and isn't scaled
+  assert(lp.scale_.has_scaling == lp.is_scaled_);
+  return new_scaling;
 }
 
-HighsStatus applyScalingToLpColBounds(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const vector<double>& colScale,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+void scaleLp(const HighsOptions& options, HighsLp& lp) {
+  lp.clearScaling();
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  // Scaling not well defined for models with no columns
+  assert(numCol > 0);
+  vector<double>& colCost = lp.col_cost_;
+  vector<double>& colLower = lp.col_lower_;
+  vector<double>& colUpper = lp.col_upper_;
+  vector<double>& rowLower = lp.row_lower_;
+  vector<double>& rowUpper = lp.row_upper_;
 
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  const bool& interval = index_collection.is_interval_;
-  const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
-
-  HighsInt local_col;
-  HighsInt ml_col;
-  const HighsInt ml_col_os = 0;
-  for (HighsInt k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
-      local_col = k;
-    } else {
-      local_col = col_set[k];
-    }
-    ml_col = ml_col_os + local_col;
-    if (mask && !col_mask[local_col]) continue;
-    if (!highs_isInfinity(-lp.col_lower_[ml_col]))
-      lp.col_lower_[ml_col] /= colScale[ml_col];
-    if (!highs_isInfinity(lp.col_upper_[ml_col]))
-      lp.col_upper_[ml_col] /= colScale[ml_col];
+  // Save the simplex_scale_strategy so that the option can be
+  // modified for the course of this method
+  HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
+  // Determine the actual strategy to use
+  HighsInt use_scale_strategy = simplex_scale_strategy;
+  if (use_scale_strategy == kSimplexScaleStrategyChoose) {
+    // HiGHS is left to choose: currently use forced equilibration, but maybe do
+    // something more intelligent
+    use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
   }
-
-  return HighsStatus::kOk;
-}
-
-HighsStatus applyScalingToLpRowBounds(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const vector<double>& rowScale,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
-
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  const bool& interval = index_collection.is_interval_;
-  const bool& mask = index_collection.is_mask_;
-  const HighsInt* row_set = index_collection.set_;
-  const HighsInt* row_mask = index_collection.mask_;
-
-  HighsInt local_row;
-  HighsInt ml_row;
-  const HighsInt ml_row_os = 0;
-  for (HighsInt k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
-      local_row = k;
-    } else {
-      local_row = row_set[k];
-    }
-    ml_row = ml_row_os + local_row;
-    if (mask && !row_mask[local_row]) continue;
-    if (!highs_isInfinity(-lp.row_lower_[ml_row]))
-      lp.row_lower_[ml_row] *= rowScale[ml_row];
-    if (!highs_isInfinity(lp.row_upper_[ml_row]))
-      lp.row_upper_[ml_row] *= rowScale[ml_row];
+  bool allow_cost_scaling = options.allowed_cost_scale_factor > 0;
+  // Find out range of matrix values and skip matrix scaling if all
+  // |values| are in [0.2, 5]
+  const double no_scaling_original_matrix_min_value = 0.2;
+  const double no_scaling_original_matrix_max_value = 5.0;
+  double original_matrix_min_value = kHighsInf;
+  double original_matrix_max_value = 0;
+  lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
+  bool no_scaling =
+      (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
+      (original_matrix_max_value <= no_scaling_original_matrix_max_value);
+  const bool force_scaling = false;
+  if (force_scaling) {
+    no_scaling = false;
+    printf("!!!! FORCE SCALING !!!!\n");
   }
-
-  return HighsStatus::kOk;
-}
-
-HighsStatus applyScalingToLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp, const double* colScale,
-    const double* rowScale, const HighsInt from_col, const HighsInt to_col,
-    const HighsInt from_row, const HighsInt to_row) {
-  if (from_col < 0) return HighsStatus::kError;
-  if (to_col >= lp.num_col_) return HighsStatus::kError;
-  if (from_row < 0) return HighsStatus::kError;
-  if (to_row >= lp.num_row_) return HighsStatus::kError;
-  if (colScale != NULL) {
-    if (rowScale != NULL) {
-      for (HighsInt iCol = from_col; iCol <= to_col; iCol++) {
-        for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1];
-             iEl++) {
-          HighsInt iRow = lp.a_index_[iEl];
-          if (iRow < from_row || iRow > to_row) continue;
-          lp.a_value_[iEl] *= (colScale[iCol] * rowScale[iRow]);
-        }
-      }
-    } else {
-      // No row scaling
-      for (HighsInt iCol = from_col; iCol <= to_col; iCol++) {
-        for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1];
-             iEl++) {
-          HighsInt iRow = lp.a_index_[iEl];
-          if (iRow < from_row || iRow > to_row) continue;
-          lp.a_value_[iEl] *= colScale[iCol];
-        }
-      }
-    }
+  bool scaled_matrix = false;
+  if (no_scaling) {
+    // No matrix scaling, but possible cost scaling
+    if (options.highs_analysis_level)
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Matrix has [min, max] values of [%g, %g] within "
+                  "[%g, %g] so no scaling performed\n",
+                  original_matrix_min_value, original_matrix_max_value,
+                  no_scaling_original_matrix_min_value,
+                  no_scaling_original_matrix_max_value);
   } else {
-    // No column scaling
-    if (rowScale != NULL) {
-      for (HighsInt iCol = from_col; iCol <= to_col; iCol++) {
-        for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1];
-             iEl++) {
-          HighsInt iRow = lp.a_index_[iEl];
-          if (iRow < from_row || iRow > to_row) continue;
-          lp.a_value_[iEl] *= rowScale[iRow];
-        }
+    // Try scaling, so assign unit factors - partly because initial
+    // factors may be assumed by the scaling method, but also because
+    // scaling factors may not be computed for empty rows/columns
+    HighsScale& scale = lp.scale_;
+    scale.col.assign(numCol, 1);
+    scale.row.assign(numRow, 1);
+    const bool equilibration_scaling =
+        use_scale_strategy == kSimplexScaleStrategyEquilibration ||
+        use_scale_strategy == kSimplexScaleStrategyForcedEquilibration;
+    // Try scaling. Value of scaled_matrix indicates whether scaling
+    // was considered valuable (and performed). If it's not valuable
+    // then the matrix remains unscaled
+    if (equilibration_scaling) {
+      scaled_matrix = equilibrationScaleMatrix(options, lp, use_scale_strategy);
+    } else {
+      scaled_matrix = maxValueScaleMatrix(options, lp, use_scale_strategy);
+    }
+    if (scaled_matrix) {
+      // Matrix is scaled, so scale the bounds and costs
+      for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+        colLower[iCol] /= scale.col[iCol];
+        colUpper[iCol] /= scale.col[iCol];
+        colCost[iCol] *= scale.col[iCol];
+      }
+      for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+        rowLower[iRow] *= scale.row[iRow];
+        rowUpper[iRow] *= scale.row[iRow];
+      }
+      scale.has_scaling = true;
+      scale.num_col = numCol;
+      scale.num_row = numRow;
+      scale.cost = 1.0;
+      lp.is_scaled_ = true;
+    } else {
+      // Matrix is not scaled, so clear the scaling
+      lp.clearScaling();
+    }
+  }
+  // Record the scaling strategy used
+  lp.scale_.strategy = use_scale_strategy;
+  // Possibly scale the costs
+  //  if (allow_cost_scaling) scaleSimplexCost(options, lp, scale.cost);
+
+  // If matrix is unscaled, then LP is only scaled if there is a cost scaling
+  // factor
+  //  if (!scaled_matrix) lp.is_scaled_ = scale.cost != 1;
+}
+
+bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
+                              const HighsInt use_scale_strategy) {
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  HighsScale& scale = lp.scale_;
+  vector<double>& colScale = scale.col;
+  vector<double>& rowScale = scale.row;
+  vector<HighsInt>& Astart = lp.a_matrix_.start_;
+  vector<HighsInt>& Aindex = lp.a_matrix_.index_;
+  vector<double>& Avalue = lp.a_matrix_.value_;
+  vector<double>& colCost = lp.col_cost_;
+
+  HighsInt simplex_scale_strategy = use_scale_strategy;
+
+  double original_matrix_min_value = kHighsInf;
+  double original_matrix_max_value = 0;
+  for (HighsInt k = 0, AnX = Astart[numCol]; k < AnX; k++) {
+    double value = fabs(Avalue[k]);
+    original_matrix_min_value = min(original_matrix_min_value, value);
+    original_matrix_max_value = max(original_matrix_max_value, value);
+  }
+
+  // Include cost in scaling if minimum nonzero cost is less than 0.1
+  double min_nonzero_cost = kHighsInf;
+  for (HighsInt i = 0; i < numCol; i++) {
+    if (colCost[i]) min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
+  }
+  bool include_cost_in_scaling = false;
+  include_cost_in_scaling = min_nonzero_cost < 0.1;
+
+  // Limits on scaling factors
+  double max_allow_scale;
+  double min_allow_scale;
+  // Now that kHighsInf =
+  // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
+  // work so, in recognition, use the old value of kHighsInf
+  const double finite_infinity = 1e200;
+  max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
+  min_allow_scale = 1 / max_allow_scale;
+
+  double min_allow_col_scale = min_allow_scale;
+  double max_allow_col_scale = max_allow_scale;
+  double min_allow_row_scale = min_allow_scale;
+  double max_allow_row_scale = max_allow_scale;
+
+  // Search up to 6 times
+  vector<double> row_min_value(numRow, finite_infinity);
+  vector<double> row_max_value(numRow, 1 / finite_infinity);
+  for (HighsInt search_count = 0; search_count < 6; search_count++) {
+    // Find column scale, prepare row data
+    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+      // For column scale (find)
+      double col_min_value = finite_infinity;
+      double col_max_value = 1 / finite_infinity;
+      double abs_col_cost = fabs(colCost[iCol]);
+      if (include_cost_in_scaling && abs_col_cost != 0) {
+        col_min_value = min(col_min_value, abs_col_cost);
+        col_max_value = max(col_max_value, abs_col_cost);
+      }
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        double value = fabs(Avalue[k]) * rowScale[Aindex[k]];
+        col_min_value = min(col_min_value, value);
+        col_max_value = max(col_max_value, value);
+      }
+      double col_equilibration = 1 / sqrt(col_min_value * col_max_value);
+      // Ensure that column scale factor is not excessively large or small
+      colScale[iCol] =
+          min(max(min_allow_col_scale, col_equilibration), max_allow_col_scale);
+      // For row scale (only collect)
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        HighsInt iRow = Aindex[k];
+        double value = fabs(Avalue[k]) * colScale[iCol];
+        row_min_value[iRow] = min(row_min_value[iRow], value);
+        row_max_value[iRow] = max(row_max_value[iRow], value);
+      }
+    }
+    // For row scale (find)
+    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+      double row_equilibration =
+          1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+      // Ensure that row scale factor is not excessively large or small
+      rowScale[iRow] =
+          min(max(min_allow_row_scale, row_equilibration), max_allow_row_scale);
+    }
+    row_min_value.assign(numRow, finite_infinity);
+    row_max_value.assign(numRow, 1 / finite_infinity);
+  }
+  // Make it numerically better
+  // Also determine the max and min row and column scaling factors
+  double min_col_scale = finite_infinity;
+  double max_col_scale = 1 / finite_infinity;
+  double min_row_scale = finite_infinity;
+  double max_row_scale = 1 / finite_infinity;
+  const double log2 = log(2.0);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / log2 + 0.5));
+    min_col_scale = min(colScale[iCol], min_col_scale);
+    max_col_scale = max(colScale[iCol], max_col_scale);
+  }
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / log2 + 0.5));
+    min_row_scale = min(rowScale[iRow], min_row_scale);
+    max_row_scale = max(rowScale[iRow], max_row_scale);
+  }
+  // Apply scaling to matrix and bounds
+  double matrix_min_value = finite_infinity;
+  double matrix_max_value = 0;
+  double min_original_col_equilibration = finite_infinity;
+  double sum_original_log_col_equilibration = 0;
+  double max_original_col_equilibration = 0;
+  double min_original_row_equilibration = finite_infinity;
+  double sum_original_log_row_equilibration = 0;
+  double max_original_row_equilibration = 0;
+  double min_col_equilibration = finite_infinity;
+  double sum_log_col_equilibration = 0;
+  double max_col_equilibration = 0;
+  double min_row_equilibration = finite_infinity;
+  double sum_log_row_equilibration = 0;
+  double max_row_equilibration = 0;
+  vector<double> original_row_min_value(numRow, finite_infinity);
+  vector<double> original_row_max_value(numRow, 1 / finite_infinity);
+  row_min_value.assign(numRow, finite_infinity);
+  row_max_value.assign(numRow, 1 / finite_infinity);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    double original_col_min_value = finite_infinity;
+    double original_col_max_value = 1 / finite_infinity;
+    double col_min_value = finite_infinity;
+    double col_max_value = 1 / finite_infinity;
+    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      HighsInt iRow = Aindex[k];
+      const double original_value = fabs(Avalue[k]);
+      original_col_min_value = min(original_value, original_col_min_value);
+      original_col_max_value = max(original_value, original_col_max_value);
+      original_row_min_value[iRow] =
+          min(original_row_min_value[iRow], original_value);
+      original_row_max_value[iRow] =
+          max(original_row_max_value[iRow], original_value);
+      Avalue[k] *= (colScale[iCol] * rowScale[iRow]);
+      const double value = fabs(Avalue[k]);
+      col_min_value = min(value, col_min_value);
+      col_max_value = max(value, col_max_value);
+      row_min_value[iRow] = min(row_min_value[iRow], value);
+      row_max_value[iRow] = max(row_max_value[iRow], value);
+    }
+    matrix_min_value = min(matrix_min_value, col_min_value);
+    matrix_max_value = max(matrix_max_value, col_max_value);
+
+    const double original_col_equilibration =
+        1 / sqrt(original_col_min_value * original_col_max_value);
+    min_original_col_equilibration =
+        min(original_col_equilibration, min_original_col_equilibration);
+    sum_original_log_col_equilibration += log(original_col_equilibration);
+    max_original_col_equilibration =
+        max(original_col_equilibration, max_original_col_equilibration);
+    const double col_equilibration = 1 / sqrt(col_min_value * col_max_value);
+    min_col_equilibration = min(col_equilibration, min_col_equilibration);
+    sum_log_col_equilibration += log(col_equilibration);
+    max_col_equilibration = max(col_equilibration, max_col_equilibration);
+  }
+
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    const double original_row_equilibration =
+        1 / sqrt(original_row_min_value[iRow] * original_row_max_value[iRow]);
+    min_original_row_equilibration =
+        min(original_row_equilibration, min_original_row_equilibration);
+    sum_original_log_row_equilibration += log(original_row_equilibration);
+    max_original_row_equilibration =
+        max(original_row_equilibration, max_original_row_equilibration);
+    const double row_equilibration =
+        1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+    min_row_equilibration = min(row_equilibration, min_row_equilibration);
+    sum_log_row_equilibration += log(row_equilibration);
+    max_row_equilibration = max(row_equilibration, max_row_equilibration);
+  }
+  const double geomean_original_col_equilibration =
+      exp(sum_original_log_col_equilibration / numCol);
+  const double geomean_original_row_equilibration =
+      exp(sum_original_log_row_equilibration / numRow);
+  const double geomean_col_equilibration =
+      exp(sum_log_col_equilibration / numCol);
+  const double geomean_row_equilibration =
+      exp(sum_log_row_equilibration / numRow);
+  if (options.highs_analysis_level) {
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
+        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
+        min_original_col_equilibration, geomean_original_col_equilibration,
+        max_original_col_equilibration, min_original_row_equilibration,
+        geomean_original_row_equilibration, max_original_row_equilibration);
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Final    equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
+        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
+        min_col_equilibration, geomean_col_equilibration, max_col_equilibration,
+        min_row_equilibration, geomean_row_equilibration,
+        max_row_equilibration);
+  }
+
+  // Compute the mean equilibration improvement
+  const double geomean_original_col =
+      max(geomean_original_col_equilibration,
+          1 / geomean_original_col_equilibration);
+  const double geomean_original_row =
+      max(geomean_original_row_equilibration,
+          1 / geomean_original_row_equilibration);
+  const double geomean_col =
+      max(geomean_col_equilibration, 1 / geomean_col_equilibration);
+  const double geomean_row =
+      max(geomean_row_equilibration, 1 / geomean_row_equilibration);
+  const double mean_equilibration_improvement =
+      sqrt((geomean_original_col * geomean_original_row) /
+           (geomean_col * geomean_row));
+  // Compute the extreme equilibration improvement
+  const double original_col_ratio =
+      max_original_col_equilibration / min_original_col_equilibration;
+  const double original_row_ratio =
+      max_original_row_equilibration / min_original_row_equilibration;
+  const double col_ratio = max_col_equilibration / min_col_equilibration;
+  const double row_ratio = max_row_equilibration / min_row_equilibration;
+  const double extreme_equilibration_improvement =
+      (original_col_ratio + original_row_ratio) / (col_ratio + row_ratio);
+  // Compute the max/min matrix value improvement
+  const double matrix_value_ratio = matrix_max_value / matrix_min_value;
+  const double original_matrix_value_ratio =
+      original_matrix_max_value / original_matrix_min_value;
+  const double matrix_value_ratio_improvement =
+      original_matrix_value_ratio / matrix_value_ratio;
+  if (options.highs_analysis_level) {
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Extreme equilibration improvement =      ( %11.4g + "
+        "%11.4g) / ( %11.4g + %11.4g)  =      %11.4g / %11.4g  = %11.4g\n",
+        original_col_ratio, original_row_ratio, col_ratio, row_ratio,
+        (original_col_ratio + original_row_ratio), (col_ratio + row_ratio),
+        extreme_equilibration_improvement);
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Mean    equilibration improvement = sqrt(( %11.4g * "
+        "%11.4g) / ( %11.4g * %11.4g)) = sqrt(%11.4g / %11.4g) = %11.4g\n",
+        geomean_original_col, geomean_original_row, geomean_col, geomean_row,
+        (geomean_original_col * geomean_original_row),
+        (geomean_col * geomean_row), mean_equilibration_improvement);
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
+        "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
+        matrix_min_value, matrix_max_value, matrix_value_ratio,
+        original_matrix_min_value, original_matrix_max_value,
+        original_matrix_value_ratio, matrix_value_ratio_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves    mean equilibration by a factor %0.4g\n",
+                mean_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves extreme equilibration by a factor %0.4g\n",
+                extreme_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves max/min matrix values by a factor %0.4g\n",
+                matrix_value_ratio_improvement);
+  }
+  const bool possibly_abandon_scaling =
+      simplex_scale_strategy != kSimplexScaleStrategyForcedEquilibration;
+  const double improvement_factor = extreme_equilibration_improvement *
+                                    mean_equilibration_improvement *
+                                    matrix_value_ratio_improvement;
+
+  const double improvement_factor_required = 1.0;
+  const bool poor_improvement =
+      improvement_factor < improvement_factor_required;
+
+  // Possibly abandon scaling if it's not improved equlibration significantly
+  if (possibly_abandon_scaling && poor_improvement) {
+    // Unscale the matrix
+    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        HighsInt iRow = Aindex[k];
+        Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
+      }
+    }
+    if (options.highs_analysis_level)
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor %0.4g < %0.4g required, so no "
+                  "scaling applied\n",
+                  improvement_factor, improvement_factor_required);
+    return false;
+  } else {
+    if (options.highs_analysis_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
+                  improvement_factor, improvement_factor_required);
+      if (extreme_equilibration_improvement < 1.0) {
+        highsLogDev(
+            options.log_options, HighsLogType::kWarning,
+            "Scaling: Applying scaling with extreme improvement of %0.4g\n",
+            extreme_equilibration_improvement);
+      }
+      if (mean_equilibration_improvement < 1.0) {
+        highsLogDev(
+            options.log_options, HighsLogType::kWarning,
+            "Scaling: Applying scaling with mean improvement of %0.4g\n",
+            mean_equilibration_improvement);
+      }
+      if (matrix_value_ratio_improvement < 1.0) {
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "Scaling: Applying scaling with matrix value ratio "
+                    "improvement of %0.4g\n",
+                    matrix_value_ratio_improvement);
+      }
+      if (improvement_factor < 10 * improvement_factor_required) {
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "Scaling: Applying scaling with improvement factor %0.4g "
+                    "< 10*(%0.4g) improvement\n",
+                    improvement_factor, improvement_factor_required);
       }
     }
   }
-  return HighsStatus::kOk;
+  return true;
 }
 
-void applyRowScalingToMatrix(const vector<double>& rowScale,
-                             const HighsInt numCol,
-                             const vector<HighsInt>& Astart,
-                             const vector<HighsInt>& Aindex,
-                             vector<double>& Avalue) {
-  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    for (HighsInt el = Astart[iCol]; el < Astart[iCol + 1]; el++) {
-      Avalue[el] *= rowScale[Aindex[el]];
-    }
-  }
-}
+bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
+                         const HighsInt use_scale_strategy) {
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  HighsScale& scale = lp.scale_;
+  vector<double>& colScale = scale.col;
+  vector<double>& rowScale = scale.row;
+  vector<HighsInt>& Astart = lp.a_matrix_.start_;
+  vector<HighsInt>& Aindex = lp.a_matrix_.index_;
+  vector<double>& Avalue = lp.a_matrix_.value_;
 
-void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
-                    const HighsInt numCol, const vector<HighsInt>& Astart,
-                    const vector<HighsInt>& Aindex, vector<double>& Avalue) {
+  HighsInt simplex_scale_strategy = use_scale_strategy;
+
+  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
+         options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
   const double log2 = log(2.0);
-  const double max_allow_scale = pow(2.0, max_scale_factor_exponent);
+  const double max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
   const double min_allow_scale = 1 / max_allow_scale;
 
   const double min_allow_col_scale = min_allow_scale;
   const double max_allow_col_scale = max_allow_scale;
+  const double min_allow_row_scale = min_allow_scale;
+  const double max_allow_row_scale = max_allow_scale;
 
+  double min_row_scale = kHighsInf;
+  double max_row_scale = 0;
+  double original_matrix_min_value = kHighsInf;
+  double original_matrix_max_value = 0;
+  // Determine the row scaling. Also determine the max/min row scaling
+  // factors, and max/min original matrix values
+  vector<double> row_max_value(numRow, 0);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      const HighsInt iRow = Aindex[k];
+      const double value = fabs(Avalue[k]);
+      row_max_value[iRow] = max(row_max_value[iRow], value);
+      original_matrix_min_value = min(original_matrix_min_value, value);
+      original_matrix_max_value = max(original_matrix_max_value, value);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    if (row_max_value[iRow]) {
+      double row_scale_value = 1 / row_max_value[iRow];
+      // Convert the row scale factor to the nearest power of two, and
+      // ensure that it is not excessively large or small
+      row_scale_value = pow(2.0, floor(log(row_scale_value) / log2 + 0.5));
+      row_scale_value =
+          min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
+      min_row_scale = min(row_scale_value, min_row_scale);
+      max_row_scale = max(row_scale_value, max_row_scale);
+      rowScale[iRow] = row_scale_value;
+    }
+  }
+  // Determine the column scaling, whilst applying the row scaling
+  // Also determine the max/min column scaling factors, and max/min
+  // matrix values
+  double min_col_scale = kHighsInf;
+  double max_col_scale = 0;
+  double matrix_min_value = kHighsInf;
+  double matrix_max_value = 0;
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     double col_max_value = 0;
-    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++)
-      col_max_value = max(fabs(Avalue[k]), col_max_value);
+    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      const HighsInt iRow = Aindex[k];
+      Avalue[k] *= rowScale[iRow];
+      const double value = fabs(Avalue[k]);
+      col_max_value = max(col_max_value, value);
+    }
     if (col_max_value) {
       double col_scale_value = 1 / col_max_value;
       // Convert the col scale factor to the nearest power of two, and
@@ -681,25 +932,71 @@ void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
       col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
       col_scale_value =
           min(max(min_allow_col_scale, col_scale_value), max_allow_col_scale);
+      min_col_scale = min(col_scale_value, min_col_scale);
+      max_col_scale = max(col_scale_value, max_col_scale);
       colScale[iCol] = col_scale_value;
-      // Scale the column
-      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++)
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         Avalue[k] *= colScale[iCol];
-    } else {
-      // Empty column
-      colScale[iCol] = 1;
+        const double value = fabs(Avalue[k]);
+        matrix_min_value = min(matrix_min_value, value);
+        matrix_max_value = max(matrix_max_value, value);
+      }
     }
+  }
+  const double matrix_value_ratio = matrix_max_value / matrix_min_value;
+  const double original_matrix_value_ratio =
+      original_matrix_max_value / original_matrix_min_value;
+  const double matrix_value_ratio_improvement =
+      original_matrix_value_ratio / matrix_value_ratio;
+
+  const double improvement_factor = matrix_value_ratio_improvement;
+
+  const double improvement_factor_required = 1.0;
+  const bool poor_improvement =
+      improvement_factor < improvement_factor_required;
+
+  if (poor_improvement) {
+    // Unscale the matrix
+    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        HighsInt iRow = Aindex[k];
+        Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
+      }
+    }
+    if (options.highs_analysis_level)
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor %0.4g < %0.4g required, so no "
+                  "scaling applied\n",
+                  improvement_factor, improvement_factor_required);
+    return false;
+  } else {
+    if (options.highs_analysis_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+                  "[%0.4g, %0.4g] for rows\n",
+                  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
+      highsLogDev(
+          options.log_options, HighsLogType::kInfo,
+          "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
+          "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
+          matrix_min_value, matrix_max_value, matrix_value_ratio,
+          original_matrix_min_value, original_matrix_max_value,
+          original_matrix_value_ratio, matrix_value_ratio_improvement);
+    }
+    return true;
   }
 }
 
-HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
-                                const HighsInt col, const double colScale) {
+HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
+                                const double colScale) {
   if (col < 0) return HighsStatus::kError;
   if (col >= lp.num_col_) return HighsStatus::kError;
   if (!colScale) return HighsStatus::kError;
 
-  for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++)
-    lp.a_value_[el] *= colScale;
+  for (HighsInt el = lp.a_matrix_.start_[col];
+       el < lp.a_matrix_.start_[col + 1]; el++)
+    lp.a_matrix_.value_[el] *= colScale;
+  lp.a_matrix_.scaleCol(col, colScale);
   lp.col_cost_[col] *= colScale;
   if (colScale > 0) {
     lp.col_lower_[col] /= colScale;
@@ -712,17 +1009,19 @@ HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
   return HighsStatus::kOk;
 }
 
-HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
-                                const HighsInt row, const double rowScale) {
+HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
+                                const double rowScale) {
   if (row < 0) return HighsStatus::kError;
   if (row >= lp.num_row_) return HighsStatus::kError;
   if (!rowScale) return HighsStatus::kError;
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-      if (lp.a_index_[el] == row) lp.a_value_[el] *= rowScale;
+    for (HighsInt el = lp.a_matrix_.start_[col];
+         el < lp.a_matrix_.start_[col + 1]; el++) {
+      if (lp.a_matrix_.index_[el] == row) lp.a_matrix_.value_[el] *= rowScale;
     }
   }
+  lp.a_matrix_.scaleRow(row, rowScale);
   if (rowScale > 0) {
     lp.row_lower_[row] /= rowScale;
     lp.row_upper_[row] /= rowScale;
@@ -734,12 +1033,12 @@ HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
   return HighsStatus::kOk;
 }
 
-HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
-                                  const vector<double>& colCost,
-                                  const vector<double>& colLower,
-                                  const vector<double>& colUpper) {
-  if (num_new_col < 0) return HighsStatus::kError;
-  if (num_new_col == 0) return HighsStatus::kOk;
+void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
+                           const vector<double>& colCost,
+                           const vector<double>& colLower,
+                           const vector<double>& colUpper) {
+  assert(num_new_col >= 0);
+  if (num_new_col == 0) return;
   HighsInt new_num_col = lp.num_col_ + num_new_col;
   lp.col_cost_.resize(new_num_col);
   lp.col_lower_.resize(new_num_col);
@@ -754,14 +1053,13 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
-                                  const vector<double>& rowLower,
-                                  const vector<double>& rowUpper) {
-  if (num_new_row < 0) return HighsStatus::kError;
-  if (num_new_row == 0) return HighsStatus::kOk;
+void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
+                           const vector<double>& rowLower,
+                           const vector<double>& rowUpper) {
+  assert(num_new_row >= 0);
+  if (num_new_row == 0) return;
   HighsInt new_num_row = lp.num_row_ + num_new_row;
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
@@ -775,228 +1073,26 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.row_names_[iRow] = "";
   }
-  return HighsStatus::kOk;
 }
 
-void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
-                    const HighsInt num_new_vec, const HighsInt num_new_nz,
-                    const HighsInt* XAstart, const HighsInt* XAindex,
-                    const double* XAvalue) {
-  // Append packed vectors to a matrix
-  // Determine the new number of vectors in the matrix and resize the
-  // starts accordingly.
-  HighsInt new_num_vec = num_vec + num_new_vec;
-  lp.a_start_.resize(new_num_vec + 1);
-  // If adding vectors to an empty matrix then introduce the start for the
-  // fictitious vector 0
-  if (num_vec == 0) lp.a_start_[0] = 0;
-
-  // Determine the current number of nonzeros and the new number of nonzeros
-  HighsInt current_num_nz = lp.a_start_[num_vec];
-  HighsInt new_num_nz = current_num_nz + num_new_nz;
-
-  // Append the starts of the new vectors
-  if (num_new_nz) {
-    // Nontrivial number of nonzeros being added, so use XAstart
-    assert(XAstart != NULL);
-    for (HighsInt vec = 0; vec < num_new_vec; vec++)
-      lp.a_start_[num_vec + vec] = current_num_nz + XAstart[vec];
-  } else {
-    // No nonzeros being added, so XAstart may be null, but entries of
-    // zero are implied.
-    for (HighsInt vec = 0; vec < num_new_vec; vec++)
-      lp.a_start_[num_vec + vec] = current_num_nz;
-  }
-  lp.a_start_[num_vec + num_new_vec] = new_num_nz;
-
-  // If no nonzeros are being added then there's nothing else to do
-  if (num_new_nz <= 0) return;
-
-  // Adding a non-trivial matrix: resize the matrix arrays accordingly
-  lp.a_index_.resize(new_num_nz);
-  lp.a_value_.resize(new_num_nz);
-  // Copy in the new indices and values
-  for (HighsInt el = 0; el < num_new_nz; el++) {
-    lp.a_index_[current_num_nz + el] = XAindex[el];
-    lp.a_value_[current_num_nz + el] = XAvalue[el];
-  }
-}
-
-HighsStatus appendColsToLpMatrix(HighsLp& lp, const HighsInt num_new_col,
-                                 const HighsInt num_new_nz,
-                                 const HighsInt* XAstart,
-                                 const HighsInt* XAindex,
-                                 const double* XAvalue) {
-  if (num_new_col < 0) return HighsStatus::kError;
-  if (num_new_col == 0) return HighsStatus::kOk;
-  // Check that nonzeros aren't being appended to a matrix with no rows
-  if (num_new_nz > 0 && lp.num_row_ <= 0) return HighsStatus::kError;
-  // Adding a positive number of columns to a matrix
-  if (lp.format_ == MatrixFormat::kNone) {
-    // LP is currently empty, store the matrix column-wise
-    assert(lp.num_col_ == 0 && lp.num_row_ == 0);
-    lp.format_ = MatrixFormat::kColwise;
-  } else {
-    // Ensure that the matrix is stored column-wise
-    setFormat(lp);
-  }
-  // Determine the new number of columns in the matrix and resize the
-  // starts accordingly.
-  HighsInt new_num_col = lp.num_col_ + num_new_col;
-  lp.a_start_.resize(new_num_col + 1);
-  // If adding columns to an empty LP then introduce the start for the
-  // fictitious column 0
-  if (lp.num_col_ == 0) lp.a_start_[0] = 0;
-
-  // Determine the current number of nonzeros and the new number of nonzeros
-  HighsInt current_num_nz = lp.a_start_[lp.num_col_];
-  HighsInt new_num_nz = current_num_nz + num_new_nz;
-
-  // Append the starts of the new columns
-  if (num_new_nz) {
-    // Nontrivial number of nonzeros being added, so use XAstart
-    assert(XAstart != NULL);
-    for (HighsInt col = 0; col < num_new_col; col++)
-      lp.a_start_[lp.num_col_ + col] = current_num_nz + XAstart[col];
-  } else {
-    // No nonzeros being added, so XAstart may be null, but entries of
-    // zero are implied.
-    for (HighsInt col = 0; col < num_new_col; col++)
-      lp.a_start_[lp.num_col_ + col] = current_num_nz;
-  }
-  lp.a_start_[lp.num_col_ + num_new_col] = new_num_nz;
-
-  // If no nonzeros are being added then there's nothing else to do
-  if (num_new_nz <= 0) return HighsStatus::kOk;
-
-  // Adding a non-trivial matrix: resize the column-wise matrix arrays
-  // accordingly
-  lp.a_index_.resize(new_num_nz);
-  lp.a_value_.resize(new_num_nz);
-  // Copy in the new indices and values
-  for (HighsInt el = 0; el < num_new_nz; el++) {
-    lp.a_index_[current_num_nz + el] = XAindex[el];
-    lp.a_value_[current_num_nz + el] = XAvalue[el];
-  }
-  return HighsStatus::kOk;
-}
-
-HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
-                                 const HighsInt num_new_nz,
-                                 const HighsInt* XARstart,
-                                 const HighsInt* XARindex,
-                                 const double* XARvalue) {
-  if (num_new_row < 0) return HighsStatus::kError;
-  if (num_new_row == 0) return HighsStatus::kOk;
-  // Check that nonzeros aren't being appended to a matrix with no columns
-  if (num_new_nz > 0 && lp.num_col_ <= 0) return HighsStatus::kError;
-  // Adding a positive number of rows to a matrix
-  HighsInt current_num_nz = 0;
-  if (lp.format_ == MatrixFormat::kNone) {
-    // LP is currently empty, store the matrix row-wise
-    assert(lp.num_col_ == 0 && lp.num_row_ == 0);
-    lp.format_ = MatrixFormat::kRowwise;
-  } else if (lp.format_ == MatrixFormat::kColwise) {
-    assert(lp.num_col_ > 0);
-    assert((HighsInt)lp.a_start_.size() >= lp.num_col_);
-    current_num_nz = lp.a_start_[lp.num_col_];
-    if (current_num_nz == 0) {
-      // Matrix is currently empty and stored column-wise. It can be
-      // converted trivially to row-wise storage so that rows can be
-      // added easily.
-      //
-      // It's possible that the model could have columns and (empty)
-      // rows - hence the assignment of zero starts for rows
-      // 0...lp.num_row_.
-      //
-      // However, this allows efficient handling of the (common) case
-      // where a modeller defines variables without constraints, and
-      // then constraints one-by-one.
-      lp.format_ = MatrixFormat::kRowwise;
-      lp.a_start_.assign(lp.num_row_ + 1, 0);
-    }
-  }
-  if (lp.format_ == MatrixFormat::kRowwise) {
-    appendToMatrix(lp, lp.num_row_, num_new_row, num_new_nz, XARstart, XARindex,
-                   XARvalue);
-  } else {
-    // Storing the matrix column-wise, so have to insert the new rows
-    assert(lp.format_ == MatrixFormat::kColwise);
-    vector<HighsInt> Alength;
-    Alength.assign(lp.num_col_, 0);
-    for (HighsInt el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
-    // Determine the new number of nonzeros and resize the column-wise matrix
-    // arrays
-    HighsInt new_num_nz = current_num_nz + num_new_nz;
-    lp.a_index_.resize(new_num_nz);
-    lp.a_value_.resize(new_num_nz);
-    // Append the new rows
-    // Shift the existing columns to make space for the new entries
-    HighsInt new_el = new_num_nz;
-    for (HighsInt col = lp.num_col_ - 1; col >= 0; col--) {
-      HighsInt start_col_plus_1 = new_el;
-      new_el -= Alength[col];
-      for (HighsInt el = lp.a_start_[col + 1] - 1; el >= lp.a_start_[col];
-           el--) {
-        new_el--;
-        lp.a_index_[new_el] = lp.a_index_[el];
-        lp.a_value_[new_el] = lp.a_value_[el];
-      }
-      lp.a_start_[col + 1] = start_col_plus_1;
-    }
-    assert(new_el == 0);
-    // Insert the new entries
-    for (HighsInt row = 0; row < num_new_row; row++) {
-      HighsInt first_el = XARstart[row];
-      HighsInt last_el =
-          (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
-      for (HighsInt el = first_el; el < last_el; el++) {
-        HighsInt col = XARindex[el];
-        new_el = lp.a_start_[col + 1] - Alength[col];
-        Alength[col]--;
-        lp.a_index_[new_el] = lp.num_row_ + row;
-        lp.a_value_[new_el] = XARvalue[el];
-      }
-    }
-  }
-  return HighsStatus::kOk;
-}
-
-HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection) {
+void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
   HighsStatus call_status;
-  call_status =
-      deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
-  if (call_status != HighsStatus::kOk) return call_status;
-  call_status = deleteColsFromLpMatrix(log_options, lp, index_collection);
-  if (call_status != HighsStatus::kOk) return call_status;
+  deleteColsFromLpVectors(lp, new_num_col, index_collection);
+  lp.a_matrix_.deleteCols(index_collection);
   lp.num_col_ = new_num_col;
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteColsFromLpVectors(
-    const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_col,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
+                             const HighsIndexCollection& index_collection) {
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_col_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
+  limits(index_collection, from_k, to_k);
+  ;
   // Initialise new_num_col in case none is removed due to from_k > to_k
   new_num_col = lp.num_col_;
-  if (from_k > to_k) return HighsStatus::kOk;
+  if (from_k > to_k) return;
 
   HighsInt delete_from_col;
   HighsInt delete_to_col;
@@ -1008,9 +1104,8 @@ HighsStatus deleteColsFromLpVectors(
   new_num_col = 0;
   bool have_names = lp.col_names_.size();
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
+    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
+                     keep_from_col, keep_to_col, current_set_entry);
     // Account for the initial columns being kept
     if (k == from_k) new_num_col = delete_from_col;
     if (delete_to_col >= col_dim - 1) break;
@@ -1028,122 +1123,25 @@ HighsStatus deleteColsFromLpVectors(
   lp.col_lower_.resize(new_num_col);
   lp.col_upper_.resize(new_num_col);
   if (have_names) lp.col_names_.resize(new_num_col);
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteColsFromLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_col_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  HighsInt delete_from_col;
-  HighsInt delete_to_col;
-  HighsInt keep_from_col;
-  HighsInt keep_to_col = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt col_dim = lp.num_col_;
-  HighsInt new_num_col = 0;
-  HighsInt new_num_nz = 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
-    if (k == from_k) {
-      // Account for the initial columns being kept
-      new_num_col = delete_from_col;
-      new_num_nz = lp.a_start_[delete_from_col];
-    }
-    // Ensure that the starts of the deleted columns are zeroed to
-    // avoid redundant start information for columns whose indices
-    // are't used after the deletion takes place. In particular, if
-    // all columns are deleted then something must be done to ensure
-    // that the matrix isn't magially recreated by increasing the
-    // number of columns from zero when there are no rows in the LP.
-    for (HighsInt col = delete_from_col; col <= delete_to_col; col++)
-      lp.a_start_[col] = 0;
-    // Shift the starts - both in place and value - to account for the
-    // columns and nonzeros removed
-    const HighsInt keep_from_el = lp.a_start_[keep_from_col];
-    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
-      lp.a_start_[new_num_col] = new_num_nz + lp.a_start_[col] - keep_from_el;
-      new_num_col++;
-    }
-    for (HighsInt el = keep_from_el; el < lp.a_start_[keep_to_col + 1]; el++) {
-      lp.a_index_[new_num_nz] = lp.a_index_[el];
-      lp.a_value_[new_num_nz] = lp.a_value_[el];
-      new_num_nz++;
-    }
-    if (keep_to_col >= col_dim - 1) break;
-  }
-  // Ensure that the start of the spurious last column is zeroed so
-  // that it doesn't give a positive number of matrix entries if the
-  // number of columns in the LP is increased when there are no rows
-  // in the LP.
-  lp.a_start_[lp.num_col_] = 0;
-  lp.a_start_[new_num_col] = new_num_nz;
-  lp.a_start_.resize(new_num_col + 1);
-  lp.a_index_.resize(new_num_nz);
-  lp.a_value_.resize(new_num_nz);
-  return HighsStatus::kOk;
-}
-
-HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
+void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsStatus call_status;
   HighsInt new_num_row;
-  call_status =
-      deleteRowsFromLpVectors(log_options, lp, new_num_row, index_collection);
-  return_status = interpretCallStatus(call_status, return_status,
-                                      "deleteRowsFromLpVectors");
-  if (return_status == HighsStatus::kError) return return_status;
-  call_status = deleteRowsFromLpMatrix(log_options, lp, index_collection);
-  return_status =
-      interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
-  if (return_status == HighsStatus::kError) return return_status;
+  deleteRowsFromLpVectors(lp, new_num_row, index_collection);
+  lp.a_matrix_.deleteRows(index_collection);
   lp.num_row_ = new_num_row;
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteRowsFromLpVectors(
-    const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_row,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
+                             const HighsIndexCollection& index_collection) {
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_row_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
+  limits(index_collection, from_k, to_k);
   // Initialise new_num_row in case none is removed due to from_k > to_k
   new_num_row = lp.num_row_;
-  if (from_k > to_k) return HighsStatus::kOk;
+  if (from_k > to_k) return;
 
   HighsInt delete_from_row;
   HighsInt delete_to_row;
@@ -1155,9 +1153,8 @@ HighsStatus deleteRowsFromLpVectors(
   new_num_row = 0;
   bool have_names = (HighsInt)lp.row_names_.size() > 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_row,
-                                    delete_to_row, keep_from_row, keep_to_row,
-                                    current_set_entry);
+    updateOutInIndex(index_collection, delete_from_row, delete_to_row,
+                     keep_from_row, keep_to_row, current_set_entry);
     if (k == from_k) {
       // Account for the initial rows being kept
       new_num_row = delete_from_row;
@@ -1175,147 +1172,81 @@ HighsStatus deleteRowsFromLpVectors(
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
   if (have_names) lp.row_names_.resize(new_num_row);
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteRowsFromLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const HighsIndexCollection& index_collection) {
+void deleteScale(vector<double>& scale,
+                 const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_row_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
+  limits(index_collection, from_k, to_k);
+  if (from_k > to_k) return;
 
-  HighsInt delete_from_row;
-  HighsInt delete_to_row;
-  HighsInt keep_from_row;
-  HighsInt row_dim = lp.num_row_;
-  HighsInt keep_to_row = -1;
+  HighsInt delete_from_col;
+  HighsInt delete_to_col;
+  HighsInt keep_from_col;
+  HighsInt keep_to_col = -1;
   HighsInt current_set_entry = 0;
 
-  // Set up a row mask to indicate the new row index of kept rows and
-  // -1 for deleted rows so that the kept entries in the column-wise
-  // matrix can be identified and have their correct row index.
-  vector<HighsInt> new_index;
-  new_index.resize(lp.num_row_);
-  HighsInt new_num_row = 0;
-  bool mask = index_collection.is_mask_;
-  const HighsInt* row_mask = index_collection.mask_;
-  if (!mask) {
-    keep_to_row = -1;
-    current_set_entry = 0;
-    for (HighsInt k = from_k; k <= to_k; k++) {
-      updateIndexCollectionOutInIndex(index_collection, delete_from_row,
-                                      delete_to_row, keep_from_row, keep_to_row,
-                                      current_set_entry);
-      if (k == from_k) {
-        // Account for any initial rows being kept
-        for (HighsInt row = 0; row < delete_from_row; row++) {
-          new_index[row] = new_num_row;
-          new_num_row++;
-        }
-      }
-      for (HighsInt row = delete_from_row; row <= delete_to_row; row++) {
-        new_index[row] = -1;
-      }
-      for (HighsInt row = keep_from_row; row <= keep_to_row; row++) {
-        new_index[row] = new_num_row;
-        new_num_row++;
-      }
-      if (keep_to_row >= row_dim - 1) break;
+  HighsInt col_dim = index_collection.dimension_;
+  HighsInt new_num_col = 0;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
+                     keep_from_col, keep_to_col, current_set_entry);
+    // Account for the initial columns being kept
+    if (k == from_k) new_num_col = delete_from_col;
+    if (delete_to_col >= col_dim - 1) break;
+    assert(delete_to_col < col_dim);
+    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
+      assert((HighsInt)scale.size() > new_num_col);
+      scale[new_num_col] = scale[col];
+      new_num_col++;
     }
-  } else {
-    for (HighsInt row = 0; row < lp.num_row_; row++) {
-      if (row_mask[row]) {
-        new_index[row] = -1;
-      } else {
-        new_index[row] = new_num_row;
-        new_num_row++;
-      }
-    }
+    if (keep_to_col >= col_dim - 1) break;
   }
-  HighsInt new_num_nz = 0;
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    HighsInt from_el = lp.a_start_[col];
-    lp.a_start_[col] = new_num_nz;
-    for (HighsInt el = from_el; el < lp.a_start_[col + 1]; el++) {
-      HighsInt row = lp.a_index_[el];
-      HighsInt new_row = new_index[row];
-      if (new_row >= 0) {
-        lp.a_index_[new_num_nz] = new_row;
-        lp.a_value_[new_num_nz] = lp.a_value_[el];
-        new_num_nz++;
-      }
-    }
-  }
-  lp.a_start_[lp.num_col_] = new_num_nz;
-  lp.a_start_.resize(lp.num_col_ + 1);
-  lp.a_index_.resize(new_num_nz);
-  lp.a_value_.resize(new_num_nz);
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                                      const HighsInt col,
-                                      const double new_value) {
-  if (row < 0 || row > lp.num_row_) return HighsStatus::kError;
-  if (col < 0 || col > lp.num_col_) return HighsStatus::kError;
+void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
+                               const HighsInt col, const double new_value) {
+  assert(0 <= row && row < lp.num_row_);
+  assert(0 <= col && col < lp.num_col_);
   HighsInt changeElement = -1;
-  for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-    if (lp.a_index_[el] == row) {
+  for (HighsInt el = lp.a_matrix_.start_[col];
+       el < lp.a_matrix_.start_[col + 1]; el++) {
+    if (lp.a_matrix_.index_[el] == row) {
       changeElement = el;
       break;
     }
   }
   if (changeElement < 0) {
-    changeElement = lp.a_start_[col + 1];
-    HighsInt new_num_nz = lp.a_start_[lp.num_col_] + 1;
-    lp.a_index_.resize(new_num_nz);
-    lp.a_value_.resize(new_num_nz);
-    for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_start_[i]++;
+    changeElement = lp.a_matrix_.start_[col + 1];
+    HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] + 1;
+    lp.a_matrix_.index_.resize(new_num_nz);
+    lp.a_matrix_.value_.resize(new_num_nz);
+    for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]++;
     for (HighsInt el = new_num_nz - 1; el > changeElement; el--) {
-      lp.a_index_[el] = lp.a_index_[el - 1];
-      lp.a_value_[el] = lp.a_value_[el - 1];
+      lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el - 1];
+      lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el - 1];
     }
   }
-  lp.a_index_[changeElement] = row;
-  lp.a_value_[changeElement] = new_value;
-
-  return HighsStatus::kOk;
+  lp.a_matrix_.index_[changeElement] = row;
+  lp.a_matrix_.value_[changeElement] = new_value;
 }
 
-HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
-                                const HighsIndexCollection& index_collection,
-                                const vector<HighsVarType>& new_integrality) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+void changeLpIntegrality(HighsLp& lp,
+                         const HighsIndexCollection& index_collection,
+                         const vector<HighsVarType>& new_integrality) {
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
+  limits(index_collection, from_k, to_k);
+  if (from_k > to_k) return;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
+  const vector<HighsInt>& col_set = index_collection.set_;
+  const vector<HighsInt>& col_mask = index_collection.mask_;
 
   // Change the integrality to the user-supplied integrality, according to the
   // technique
@@ -1339,28 +1270,20 @@ HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
     if (mask && !col_mask[col]) continue;
     lp.integrality_[col] = new_integrality[usr_col];
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
-                          const HighsIndexCollection& index_collection,
-                          const vector<double>& new_col_cost) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
+                   const vector<double>& new_col_cost) {
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
+  limits(index_collection, from_k, to_k);
+  if (from_k > to_k) return;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
+  const vector<HighsInt>& col_set = index_collection.set_;
+  const vector<HighsInt>& col_mask = index_collection.mask_;
 
   // Change the costs to the user-supplied costs, according to the technique
   HighsInt lp_col;
@@ -1380,46 +1303,38 @@ HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
     if (mask && !col_mask[col]) continue;
     lp.col_cost_[col] = new_col_cost[usr_col];
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
-                              const HighsIndexCollection& index_collection,
-                              const vector<double>& new_col_lower,
-                              const vector<double>& new_col_upper) {
-  return changeBounds(log_options, lp.col_lower_, lp.col_upper_,
-                      index_collection, new_col_lower, new_col_upper);
+void changeLpColBounds(HighsLp& lp,
+                       const HighsIndexCollection& index_collection,
+                       const vector<double>& new_col_lower,
+                       const vector<double>& new_col_upper) {
+  changeBounds(lp.col_lower_, lp.col_upper_, index_collection, new_col_lower,
+               new_col_upper);
 }
 
-HighsStatus changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
-                              const HighsIndexCollection& index_collection,
-                              const vector<double>& new_row_lower,
-                              const vector<double>& new_row_upper) {
-  return changeBounds(log_options, lp.row_lower_, lp.row_upper_,
-                      index_collection, new_row_lower, new_row_upper);
+void changeLpRowBounds(HighsLp& lp,
+                       const HighsIndexCollection& index_collection,
+                       const vector<double>& new_row_lower,
+                       const vector<double>& new_row_upper) {
+  changeBounds(lp.row_lower_, lp.row_upper_, index_collection, new_row_lower,
+               new_row_upper);
 }
 
-HighsStatus changeBounds(const HighsLogOptions& log_options,
-                         vector<double>& lower, vector<double>& upper,
-                         const HighsIndexCollection& index_collection,
-                         const vector<double>& new_lower,
-                         const vector<double>& new_upper) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+void changeBounds(vector<double>& lower, vector<double>& upper,
+                  const HighsIndexCollection& index_collection,
+                  const vector<double>& new_lower,
+                  const vector<double>& new_upper) {
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
+  limits(index_collection, from_k, to_k);
+  if (from_k > to_k) return;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* ix_set = index_collection.set_;
-  const HighsInt* ix_mask = index_collection.mask_;
+  const vector<HighsInt>& ix_set = index_collection.set_;
+  const vector<HighsInt>& ix_mask = index_collection.mask_;
 
   // Change the bounds to the user-supplied bounds, according to the technique
   HighsInt lp_ix;
@@ -1440,7 +1355,6 @@ HighsStatus changeBounds(const HighsLogOptions& log_options,
     lower[ix] = new_lower[usr_ix];
     upper[ix] = new_upper[usr_ix];
   }
-  return HighsStatus::kOk;
 }
 
 HighsInt getNumInt(const HighsLp& lp) {
@@ -1452,48 +1366,46 @@ HighsInt getNumInt(const HighsLp& lp) {
   return num_int;
 }
 
-HighsStatus getLpCosts(const HighsLp& lp, const HighsInt from_col,
-                       const HighsInt to_col, double* XcolCost) {
-  if (from_col < 0 || to_col >= lp.num_col_) return HighsStatus::kError;
-  if (from_col > to_col) return HighsStatus::kOk;
+void getLpCosts(const HighsLp& lp, const HighsInt from_col,
+                const HighsInt to_col, double* XcolCost) {
+  assert(0 <= from_col && to_col < lp.num_col_);
+  if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++)
     XcolCost[col - from_col] = lp.col_cost_[col];
-  return HighsStatus::kOk;
 }
 
-HighsStatus getLpColBounds(const HighsLp& lp, const HighsInt from_col,
-                           const HighsInt to_col, double* XcolLower,
-                           double* XcolUpper) {
-  if (from_col < 0 || to_col >= lp.num_col_) return HighsStatus::kError;
-  if (from_col > to_col) return HighsStatus::kOk;
+void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
+                    const HighsInt to_col, double* XcolLower,
+                    double* XcolUpper) {
+  assert(0 <= from_col && to_col < lp.num_col_);
+  if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
     if (XcolLower != NULL) XcolLower[col - from_col] = lp.col_lower_[col];
     if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.col_upper_[col];
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
-                           const HighsInt to_row, double* XrowLower,
-                           double* XrowUpper) {
-  if (from_row < 0 || to_row >= lp.num_row_) return HighsStatus::kError;
-  if (from_row > to_row) return HighsStatus::kOk;
+void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
+                    const HighsInt to_row, double* XrowLower,
+                    double* XrowUpper) {
+  assert(0 <= to_row && from_row < lp.num_row_);
+  if (from_row > to_row) return;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
     if (XrowLower != NULL) XrowLower[row - from_row] = lp.row_lower_[row];
     if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.row_upper_[row];
   }
-  return HighsStatus::kOk;
 }
 
 // Get a single coefficient from the matrix
-HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
-                                   const HighsInt Xcol, double* val) {
-  if (Xrow < 0 || Xrow >= lp.num_row_) return HighsStatus::kError;
-  if (Xcol < 0 || Xcol >= lp.num_col_) return HighsStatus::kError;
+void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
+                            const HighsInt Xcol, double* val) {
+  assert(0 <= Xrow && Xrow < lp.num_row_);
+  assert(0 <= Xcol && Xcol < lp.num_col_);
 
   HighsInt get_el = -1;
-  for (HighsInt el = lp.a_start_[Xcol]; el < lp.a_start_[Xcol + 1]; el++) {
-    if (lp.a_index_[el] == Xrow) {
+  for (HighsInt el = lp.a_matrix_.start_[Xcol];
+       el < lp.a_matrix_.start_[Xcol + 1]; el++) {
+    if (lp.a_matrix_.index_[el] == Xrow) {
       get_el = el;
       break;
     }
@@ -1501,9 +1413,8 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
   if (get_el < 0) {
     *val = 0;
   } else {
-    *val = lp.a_value_[get_el];
+    *val = lp.a_matrix_.value_[get_el];
   }
-  return HighsStatus::kOk;
 }
 
 // Methods for reporting an LP, including its row and column data and matrix
@@ -1532,7 +1443,7 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ == 0)
     lp_num_nz = 0;
   else
-    lp_num_nz = lp.a_start_[lp.num_col_];
+    lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   highsLogUser(log_options, HighsLogType::kInfo,
                "LP has %" HIGHSINT_FORMAT " columns, %" HIGHSINT_FORMAT " rows",
                lp.num_col_, lp.num_row_);
@@ -1602,7 +1513,7 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     type = getBoundType(lp.col_lower_[iCol], lp.col_upper_[iCol]);
-    count = lp.a_start_[iCol + 1] - lp.a_start_[iCol];
+    count = lp.a_matrix_.start_[iCol + 1] - lp.a_matrix_.start_[iCol];
     highsLogUser(log_options, HighsLogType::kInfo,
                  "%8" HIGHSINT_FORMAT
                  " %12g %12g %12g         %2s %12" HIGHSINT_FORMAT "",
@@ -1636,8 +1547,8 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
 
   count.resize(lp.num_row_, 0);
   if (lp.num_col_ > 0) {
-    for (HighsInt el = 0; el < lp.a_start_[lp.num_col_]; el++)
-      count[lp.a_index_[el]]++;
+    for (HighsInt el = 0; el < lp.a_matrix_.start_[lp.num_col_]; el++)
+      count[lp.a_matrix_.index_[el]]++;
   }
 
   highsLogUser(log_options, HighsLogType::kInfo,
@@ -1666,12 +1577,14 @@ void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_row_) {
     // With postitive number of rows, can assume that there are index and value
     // vectors to pass
-    reportMatrix(log_options, "Column", lp.num_col_, lp.a_start_[lp.num_col_],
-                 &lp.a_start_[0], &lp.a_index_[0], &lp.a_value_[0]);
+    reportMatrix(log_options, "Column", lp.num_col_,
+                 lp.a_matrix_.start_[lp.num_col_], &lp.a_matrix_.start_[0],
+                 &lp.a_matrix_.index_[0], &lp.a_matrix_.value_[0]);
   } else {
     // With no rows, can's assume that there are index and value vectors to pass
-    reportMatrix(log_options, "Column", lp.num_col_, lp.a_start_[lp.num_col_],
-                 &lp.a_start_[0], NULL, NULL);
+    reportMatrix(log_options, "Column", lp.num_col_,
+                 lp.a_matrix_.start_[lp.num_col_], &lp.a_matrix_.start_[0],
+                 NULL, NULL);
   }
 }
 
@@ -1696,8 +1609,7 @@ void reportMatrix(const HighsLogOptions& log_options, const std::string message,
                "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
 }
 
-void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
-               const std::string message) {
+void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;
@@ -1715,205 +1627,381 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
   for (HighsInt row = 0; row < lp.num_row_; row++)
     rowRange[row] = lp.row_upper_[row] - lp.row_lower_[row];
 
-  printf("\n%s model data: Analysis\n", message.c_str());
-  analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_);
+  std::string message;
+  if (lp.is_scaled_) {
+    message = "Scaled";
+  } else {
+    message = "Unscaled";
+  }
+  highsLogDev(log_options, HighsLogType::kInfo, "\n%s model data: Analysis\n",
+              message.c_str());
+  if (lp.is_scaled_) {
+    const HighsScale& scale = lp.scale_;
+    analyseVectorValues(log_options, "Column scaling factors", lp.num_col_,
+                        scale.col, true, lp.model_name_);
+    analyseVectorValues(log_options, "Row    scaling factors", lp.num_row_,
+                        scale.row, true, lp.model_name_);
+  }
+  analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_,
+                      true, lp.model_name_);
   analyseVectorValues(log_options, "Column lower bounds", lp.num_col_,
-                      lp.col_lower_);
+                      lp.col_lower_, true, lp.model_name_);
   analyseVectorValues(log_options, "Column upper bounds", lp.num_col_,
-                      lp.col_upper_);
+                      lp.col_upper_, true, lp.model_name_);
   analyseVectorValues(log_options, "Column min abs bound", lp.num_col_,
-                      min_colBound);
-  analyseVectorValues(log_options, "Column range", lp.num_col_, colRange);
+                      min_colBound, true, lp.model_name_);
+  analyseVectorValues(log_options, "Column range", lp.num_col_, colRange, true,
+                      lp.model_name_);
   analyseVectorValues(log_options, "Row lower bounds", lp.num_row_,
-                      lp.row_lower_);
+                      lp.row_lower_, true, lp.model_name_);
   analyseVectorValues(log_options, "Row upper bounds", lp.num_row_,
-                      lp.row_upper_);
+                      lp.row_upper_, true, lp.model_name_);
   analyseVectorValues(log_options, "Row min abs bound", lp.num_row_,
-                      min_rowBound);
-  analyseVectorValues(log_options, "Row range", lp.num_row_, rowRange);
-  analyseVectorValues(log_options, "Matrix sparsity", lp.a_start_[lp.num_col_],
-                      lp.a_value_, true, lp.model_name_);
+                      min_rowBound, true, lp.model_name_);
+  analyseVectorValues(log_options, "Row range", lp.num_row_, rowRange, true,
+                      lp.model_name_);
+  analyseVectorValues(log_options, "Matrix sparsity",
+                      lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.value_,
+                      true, lp.model_name_);
   analyseMatrixSparsity(log_options, "Constraint matrix", lp.num_col_,
-                        lp.num_row_, lp.a_start_, lp.a_index_);
+                        lp.num_row_, lp.a_matrix_.start_, lp.a_matrix_.index_);
   analyseModelBounds(log_options, "Column", lp.num_col_, lp.col_lower_,
                      lp.col_upper_);
   analyseModelBounds(log_options, "Row", lp.num_row_, lp.row_lower_,
                      lp.row_upper_);
 }
 
-void analyseScaledLp(const HighsLogOptions& log_options,
-                     const HighsScale& scale, const HighsLp& scaled_lp) {
-  if (!scale.is_scaled) return;
-  analyseVectorValues(log_options, "Column scaling factors", scaled_lp.num_col_,
-                      scale.col);
-  analyseVectorValues(log_options, "Row    scaling factors", scaled_lp.num_row_,
-                      scale.row);
-  analyseLp(log_options, scaled_lp, "Scaled");
-}
-
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty) {
-  const bool have_value = solution.value_valid;
+void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style) {
+  const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  vector<double> use_col_value;
-  vector<double> use_row_value;
-  vector<double> use_col_dual;
-  vector<double> use_row_dual;
-  vector<HighsBasisStatus> use_col_status;
-  vector<HighsBasisStatus> use_row_status;
-  if (have_value) {
-    use_col_value = solution.col_value;
-    use_row_value = solution.row_value;
-  }
-  if (have_dual) {
-    use_col_dual = solution.col_dual;
-    use_row_dual = solution.row_dual;
-  }
-  if (have_basis) {
-    use_col_status = basis.col_status;
-    use_row_status = basis.row_status;
-  }
-  if (!have_value && !have_dual && !have_basis) return;
-  if (pretty) {
-    writeModelBoundSol(file, true, lp.num_col_, lp.col_lower_, lp.col_upper_,
-                       lp.col_names_, use_col_value, use_col_dual,
-                       use_col_status);
-    writeModelBoundSol(file, false, lp.num_row_, lp.row_lower_, lp.row_upper_,
-                       lp.row_names_, use_row_value, use_row_dual,
-                       use_row_status);
+  if (style == kSolutionStylePretty) {
+    const HighsVarType* integrality_ptr =
+        lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
+    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
+                            lp.col_upper_, lp.col_names_, have_primal,
+                            solution.col_value, have_dual, solution.col_dual,
+                            have_basis, basis.col_status, integrality_ptr);
+    writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
+                            lp.row_upper_, lp.row_names_, have_primal,
+                            solution.row_value, have_dual, solution.row_dual,
+                            have_basis, basis.row_status);
   } else {
-    fprintf(file,
-            "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
-            " : Number of columns and rows for primal or dual solution "
-            "or basis\n",
-            lp.num_col_, lp.num_row_);
-    if (have_value) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Primal solution\n");
-    if (have_dual) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Dual solution\n");
-    if (have_basis) {
-      fprintf(file, "T");
-    } else {
-      fprintf(file, "F");
-    }
-    fprintf(file, " Basis\n");
-    fprintf(file, "Columns\n");
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (have_value) fprintf(file, "%.15g", use_col_value[iCol]);
-      if (have_dual) fprintf(file, "%.15g", use_col_dual[iCol]);
-      if (have_basis)
-        fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
-      fprintf(file, " \n");
-    }
-    fprintf(file, "Rows\n");
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (have_value) fprintf(file, "%.15g", use_row_value[iRow]);
-      if (have_dual) fprintf(file, "%.15g", use_row_dual[iRow]);
-      if (have_basis)
-        fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
-      fprintf(file, " \n");
-    }
+    fprintf(file, "Model status\n");
+    fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
+    writeModelSolution(file, lp, solution, info);
   }
 }
 
-HighsStatus writeBasisFile(const HighsLogOptions& log_options,
-                           const HighsBasis& basis,
-                           const std::string filename) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (basis.valid == false) {
+HighsStatus readSolutionFile(const std::string filename,
+                             const HighsOptions& options, const HighsLp& lp,
+                             HighsBasis& basis, HighsSolution& solution,
+                             const HighsInt style) {
+  const HighsLogOptions& log_options = options.log_options;
+  if (style != kSolutionStyleRaw) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "writeBasisFile: Cannot write an invalid basis\n");
+                 "readSolutionFile: Cannot read file of style %d\n",
+                 (int)style);
     return HighsStatus::kError;
   }
-  std::ofstream outFile(filename);
-  if (outFile.fail()) {
+  const HighsInt kMaxLineLength = 80;
+  std::ifstream in_file(filename);
+  if (in_file.fail()) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "writeBasisFile: Cannot open writeable file \"%s\"\n",
+                 "readSolutionFile: Cannot open readable file \"%s\"\n",
                  filename.c_str());
     return HighsStatus::kError;
   }
-  outFile << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
-  outFile << basis.col_status.size() << " " << basis.row_status.size()
-          << std::endl;
-  for (const auto& status : basis.col_status) {
-    outFile << (HighsInt)status << " ";
+  std::string keyword;
+  std::string name;
+  HighsInt num_col;
+  HighsInt num_row;
+  const HighsInt lp_num_col = lp.num_col_;
+  const HighsInt lp_num_row = lp.num_row_;
+  // Define idetifiers for reading in
+  HighsSolution read_solution = solution;
+  HighsBasis read_basis = basis;
+  std::string section_name;
+  HighsInt status;
+  in_file.ignore(kMaxLineLength, '\n');  // Model status
+  in_file.ignore(kMaxLineLength, '\n');  // Optimal
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // # Primal solution values
+  in_file >> keyword;
+  if (keyword != "None") {
+    in_file.ignore(kMaxLineLength, '\n');  // Status
+    in_file.ignore(kMaxLineLength, '\n');  // Objective
+    // Read in the column values
+    in_file >> keyword >> keyword >> num_col;
+    assert(keyword == "Columns");
+    if (num_col != lp_num_col) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " columns, not %" HIGHSINT_FORMAT "\n",
+                   num_col, lp_num_col);
+      return HighsStatus::kError;
+    }
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      in_file >> name >> read_solution.col_value[iCol];
+    // Read in the row values
+    in_file >> keyword >> keyword >> num_row;
+    assert(keyword == "Rows");
+    if (num_row != lp_num_row) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " rows, not %" HIGHSINT_FORMAT "\n",
+                   num_row, lp_num_row);
+      return HighsStatus::kError;
+    }
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      in_file >> name >> read_solution.row_value[iRow];
   }
-  outFile << std::endl;
-  for (const auto& status : basis.row_status) {
-    outFile << (HighsInt)status << " ";
+  in_file.ignore(kMaxLineLength, '\n');
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // # Dual solution values
+  in_file >> keyword;
+  if (keyword != "None") {
+    in_file.ignore(kMaxLineLength, '\n');  // Status
+    in_file >> keyword >> keyword >> num_col;
+    assert(keyword == "Columns");
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      in_file >> name >> read_solution.col_dual[iCol];
+    in_file >> keyword >> keyword >> num_row;
+    assert(keyword == "Rows");
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      in_file >> name >> read_solution.row_dual[iRow];
   }
-  outFile << std::endl;
-  outFile << std::endl;
-  outFile.close();
-  return return_status;
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  //
+  in_file.ignore(kMaxLineLength, '\n');  // # Basis
+  if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
+    return HighsStatus::kError;
+  solution = read_solution;
+  basis = read_basis;
+  return HighsStatus::kOk;
+}
+
+void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
+                                const HighsSolution& solution) {
+  HighsInt num_col_infeasibilities = 0;
+  double max_col_infeasibility = 0;
+  double sum_col_infeasibilities = 0;
+  HighsInt num_integer_infeasibilities = 0;
+  double max_integer_infeasibility = 0;
+  double sum_integer_infeasibilities = 0;
+  HighsInt num_row_infeasibilities = 0;
+  double max_row_infeasibility = 0;
+  double sum_row_infeasibilities = 0;
+  HighsInt num_row_residuals = 0;
+  double max_row_residual = 0;
+  double sum_row_residuals = 0;
+  const double kRowResidualTolerance = 1e-12;
+  const vector<HighsInt>& start = lp.a_matrix_.start_;
+  const vector<HighsInt>& index = lp.a_matrix_.index_;
+  const vector<double>& value = lp.a_matrix_.value_;
+  vector<double> row_activity;
+  row_activity.assign(lp.num_row_, 0);
+  const bool have_integrality = lp.integrality_.size();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const double primal = solution.col_value[iCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const HighsVarType type =
+        have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    // @primal_infeasibility calculation
+    double col_infeasibility = 0;
+    if (primal < lower - options.primal_feasibility_tolerance) {
+      col_infeasibility = lower - primal;
+    } else if (primal > upper + options.primal_feasibility_tolerance) {
+      col_infeasibility = primal - upper;
+    }
+    double integer_infeasibility = 0;
+    if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
+      double nearest_integer = std::round(primal);
+      double integer_infeasibility = std::fabs(primal - nearest_integer);
+    }
+    if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
+                                  type == HighsVarType::kSemiInteger)) {
+      // Semi-variables at zero will have positive col
+      // infeasibility, so possibly zero this
+      if (std::fabs(primal) <= options.mip_feasibility_tolerance)
+        col_infeasibility = 0;
+    }
+    if (col_infeasibility > 0) {
+      if (col_infeasibility > options.primal_feasibility_tolerance) {
+        if (col_infeasibility > 2 * max_col_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Col %6d has         infeasiblilty of %11.4g from "
+                       "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
+                       (int)iCol, col_infeasibility, lower, primal, upper);
+        num_col_infeasibilities++;
+      }
+      max_col_infeasibility =
+          std::max(col_infeasibility, max_col_infeasibility);
+      sum_col_infeasibilities += col_infeasibility;
+    }
+    if (integer_infeasibility > 0) {
+      if (integer_infeasibility > options.mip_feasibility_tolerance) {
+        if (integer_infeasibility > 2 * max_integer_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Col %6d has integer infeasiblilty of %11.4g\n",
+                       (int)iCol, integer_infeasibility);
+        num_integer_infeasibilities++;
+      }
+      max_integer_infeasibility =
+          std::max(integer_infeasibility, max_integer_infeasibility);
+      sum_integer_infeasibilities += integer_infeasibility;
+    }
+    for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
+      row_activity[index[iEl]] += primal * value[iEl];
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const double primal = solution.row_value[iRow];
+    const double lower = lp.row_lower_[iRow];
+    const double upper = lp.row_upper_[iRow];
+    // @primal_infeasibility calculation
+    double row_infeasibility = 0;
+    if (primal < lower - options.primal_feasibility_tolerance) {
+      row_infeasibility = lower - primal;
+    } else if (primal > upper + options.primal_feasibility_tolerance) {
+      row_infeasibility = primal - upper;
+    }
+    if (row_infeasibility > 0) {
+      if (row_infeasibility > options.primal_feasibility_tolerance) {
+        if (row_infeasibility > 2 * max_row_infeasibility)
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "Row %6d has         infeasiblilty of %11.4g from "
+                       "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
+                       (int)iRow, row_infeasibility, lower, primal, upper);
+        num_row_infeasibilities++;
+      }
+      max_row_infeasibility =
+          std::max(row_infeasibility, max_row_infeasibility);
+      sum_row_infeasibilities += row_infeasibility;
+    }
+    double row_residual = fabs(primal - row_activity[iRow]);
+    if (row_residual > kRowResidualTolerance) {
+      if (row_residual > 2 * max_row_residual) {
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "Row %6d has         residual      of %11.4g\n", (int)iRow,
+                     row_residual);
+      }
+      num_row_residuals++;
+    }
+    max_row_residual = std::max(row_residual, max_row_residual);
+    sum_row_residuals += row_residual;
+  }
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Solution has               num          max          sum\n");
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Col     infeasibilities %6d  %11.4g  %11.4g\n",
+               (int)num_col_infeasibilities, max_col_infeasibility,
+               sum_col_infeasibilities);
+  if (lp.isMip())
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Integer infeasibilities %6d  %11.4g  %11.4g\n",
+                 (int)num_integer_infeasibilities, max_integer_infeasibility,
+                 sum_integer_infeasibilities);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Row     infeasibilities %6d  %11.4g  %11.4g\n",
+               (int)num_row_infeasibilities, max_row_infeasibility,
+               sum_row_infeasibilities);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Row     residuals       %6d  %11.4g  %11.4g\n",
+               (int)num_row_residuals, max_row_residual, sum_row_residuals);
+}
+
+void writeBasisFile(FILE*& file, const HighsBasis& basis) {
+  fprintf(file, "HiGHS v%d\n", (int)HIGHS_VERSION_MAJOR);
+  if (basis.valid == false) {
+    fprintf(file, "None\n");
+    return;
+  }
+  fprintf(file, "Valid\n");
+  fprintf(file, "# Columns %d\n", (int)basis.col_status.size());
+  for (const auto& status : basis.col_status) fprintf(file, "%d ", (int)status);
+  fprintf(file, "\n");
+  fprintf(file, "# Rows %d\n", (int)basis.row_status.size());
+  for (const auto& status : basis.row_status) fprintf(file, "%d ", (int)status);
+  fprintf(file, "\n");
 }
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename) {
-  // Reads a basis file, returning an error if what's read is
-  // inconsistent with the sizes of the HighsBasis passed in
+  // Opens a basis file as an ifstream
   HighsStatus return_status = HighsStatus::kOk;
-  std::ifstream inFile(filename);
-  if (inFile.fail()) {
+  std::ifstream in_file;
+  in_file.open(filename.c_str(), std::ios::in);
+  if (in_file.is_open()) {
+    return_status = readBasisStream(log_options, basis, in_file);
+    in_file.close();
+  } else {
     highsLogUser(log_options, HighsLogType::kError,
                  "readBasisFile: Cannot open readable file \"%s\"\n",
                  filename.c_str());
-    return HighsStatus::kError;
+    return_status = HighsStatus::kError;
   }
+  return return_status;
+}
+
+HighsStatus readBasisStream(const HighsLogOptions& log_options,
+                            HighsBasis& basis, std::ifstream& in_file) {
+  // Reads a basis as an ifstream, returning an error if what's read is
+  // inconsistent with the sizes of the HighsBasis passed in
+  HighsStatus return_status = HighsStatus::kOk;
   std::string string_highs, string_version;
-  HighsInt highs_version_number;
-  inFile >> string_highs >> string_version >> highs_version_number;
-  if (highs_version_number == 1) {
-    HighsInt numCol, numRow;
-    inFile >> numCol >> numRow;
-    HighsInt basis_numCol = (HighsInt)basis.col_status.size();
-    HighsInt basis_numRow = (HighsInt)basis.row_status.size();
-    if (numCol != basis_numCol) {
+  in_file >> string_highs >> string_version;
+  if (string_version == "v1") {
+    std::string keyword;
+    in_file >> keyword;
+    if (keyword == "None") {
+      basis.valid = false;
+      return HighsStatus::kOk;
+    }
+    const HighsInt basis_num_col = (HighsInt)basis.col_status.size();
+    const HighsInt basis_num_row = (HighsInt)basis.row_status.size();
+    HighsInt int_status;
+    assert(keyword == "Valid");
+    HighsInt num_col, num_row;
+    // Read in the columns section
+    in_file >> keyword >> keyword;
+    assert(keyword == "Columns");
+    in_file >> num_col;
+    if (num_col != basis_num_col) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readBasisFile: Basis file is for %" HIGHSINT_FORMAT
                    " columns, not %" HIGHSINT_FORMAT "\n",
-                   numCol, basis_numCol);
+                   num_col, basis_num_col);
       return HighsStatus::kError;
     }
-    if (numRow != basis_numRow) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      in_file >> int_status;
+      basis.col_status[iCol] = (HighsBasisStatus)int_status;
+    }
+    // Read in the rows section
+    in_file >> keyword >> keyword;
+    assert(keyword == "Rows");
+    in_file >> num_row;
+    if (num_row != basis_num_row) {
       highsLogUser(log_options, HighsLogType::kError,
                    "readBasisFile: Basis file is for %" HIGHSINT_FORMAT
                    " rows, not %" HIGHSINT_FORMAT "\n",
-                   numRow, basis_numRow);
+                   num_row, basis_num_row);
       return HighsStatus::kError;
     }
-    HighsInt int_status;
-    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-      inFile >> int_status;
-      basis.col_status[iCol] = (HighsBasisStatus)int_status;
-    }
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      inFile >> int_status;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      in_file >> int_status;
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
-    }
-    if (inFile.eof()) {
-      highsLogUser(
-          log_options, HighsLogType::kError,
-          "readBasisFile: Reached end of file before reading complete basis\n");
-      return_status = HighsStatus::kError;
     }
   } else {
     highsLogUser(log_options, HighsLogType::kError,
-                 "readBasisFile: Cannot read basis file for HiGHS version "
-                 "%" HIGHSINT_FORMAT "\n",
-                 highs_version_number);
+                 "readBasisFile: Cannot read basis file for HiGHS %s\n",
+                 string_version.c_str());
     return_status = HighsStatus::kError;
   }
-  inFile.close();
   return return_status;
 }
 
@@ -1924,12 +2012,13 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   solution.col_dual.assign(lp.num_col_, 0);
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt i = lp.a_start_[col]; i < lp.a_start_[col + 1]; i++) {
-      const HighsInt row = lp.a_index_[i];
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; i++) {
+      const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
       // @FlipRowDual -= became +=
-      solution.col_dual[col] += solution.row_dual[row] * lp.a_value_[i];
+      solution.col_dual[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
     }
     solution.col_dual[col] += lp.col_cost_[col];
   }
@@ -1945,12 +2034,14 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   solution.row_value.assign(lp.num_row_, 0);
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt i = lp.a_start_[col]; i < lp.a_start_[col + 1]; i++) {
-      const HighsInt row = lp.a_index_[i];
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; i++) {
+      const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
 
-      solution.row_value[row] += solution.col_value[col] * lp.a_value_[i];
+      solution.row_value[row] +=
+          solution.col_value[col] * lp.a_matrix_.value_[i];
     }
   }
 
@@ -2016,217 +2107,16 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
   return null_data;
 }
 
-HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
-                                         HighsLp& equality_lp) {
-  // Copy lp.
-  equality_lp = lp;
-
-  // Add slacks for each row with more than one bound.
-  std::vector<double> rhs(lp.num_row_, 0);
-
-  for (HighsInt row = 0; row < lp.num_row_; row++) {
-    assert(equality_lp.a_start_[equality_lp.num_col_] ==
-           (HighsInt)equality_lp.a_value_.size());
-    assert((HighsInt)equality_lp.a_index_.size() ==
-           (HighsInt)equality_lp.a_value_.size());
-    const HighsInt nnz = equality_lp.a_start_[equality_lp.num_col_];
-
-    if (lp.row_lower_[row] <= -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
-      // free row
-      equality_lp.a_start_.push_back(nnz + 1);
-      equality_lp.a_index_.push_back(row);
-      equality_lp.a_value_.push_back(1.0);
-
-      equality_lp.num_col_++;
-      equality_lp.col_lower_.push_back(-kHighsInf);
-      equality_lp.col_upper_.push_back(kHighsInf);
-      equality_lp.col_cost_.push_back(0);
-    } else if (lp.row_lower_[row] > -kHighsInf &&
-               lp.row_upper_[row] >= kHighsInf) {
-      // only lower bound
-      rhs[row] = lp.row_lower_[row];
-
-      equality_lp.a_start_.push_back(nnz + 1);
-      equality_lp.a_index_.push_back(row);
-      equality_lp.a_value_.push_back(-1.0);
-
-      equality_lp.num_col_++;
-      equality_lp.col_lower_.push_back(0);
-      equality_lp.col_upper_.push_back(kHighsInf);
-      equality_lp.col_cost_.push_back(0);
-    } else if (lp.row_lower_[row] <= -kHighsInf &&
-               lp.row_upper_[row] < kHighsInf) {
-      // only upper bound
-      rhs[row] = lp.row_upper_[row];
-
-      equality_lp.a_start_.push_back(nnz + 1);
-      equality_lp.a_index_.push_back(row);
-      equality_lp.a_value_.push_back(1.0);
-
-      equality_lp.num_col_++;
-      equality_lp.col_lower_.push_back(0);
-      equality_lp.col_upper_.push_back(kHighsInf);
-      equality_lp.col_cost_.push_back(0);
-    } else if (lp.row_lower_[row] > -kHighsInf &&
-               lp.row_upper_[row] < kHighsInf &&
-               lp.row_lower_[row] != lp.row_upper_[row]) {
-      // both lower and upper bound that are different
-      double rhs_value, coefficient;
-      double difference = lp.row_upper_[row] - lp.row_lower_[row];
-      if (fabs(lp.row_lower_[row]) < fabs(lp.row_upper_[row])) {
-        rhs_value = lp.row_lower_[row];
-        coefficient = -1;
-      } else {
-        rhs_value = lp.row_upper_[row];
-        coefficient = 1;
-      }
-      rhs[row] = rhs_value;
-
-      equality_lp.a_start_.push_back(nnz + 1);
-      equality_lp.a_index_.push_back(row);
-      equality_lp.a_value_.push_back(coefficient);
-
-      equality_lp.num_col_++;
-      equality_lp.col_lower_.push_back(0);
-      equality_lp.col_upper_.push_back(difference);
-      equality_lp.col_cost_.push_back(0);
-    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
-      // equality row
-      rhs[row] = lp.row_lower_[row];
-    } else {
-#ifdef HiGHSDEV
-      printf(
-          "transformIntoEqualityProblem: Unknown row type when adding slacks");
-#endif
-      return HighsStatus::kError;
-    }
-  }
-  equality_lp.row_lower_ = rhs;
-  equality_lp.row_upper_ = rhs;
-  equality_lp.integrality_.assign(equality_lp.num_col_,
-                                  HighsVarType::kContinuous);
-  return HighsStatus::kOk;
-}
-
-// Given (P) returns (D) for the pair
-// (P)
-//    min c'x st Ax=b
-//     st l <= x <= u
-// (D)
-//    max b'y + l'zl - u'zu
-//     st A'y + zl - zu = c
-//        y free, zl >=0, zu >= 0
-HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
-  std::vector<double> colCost = lp.col_cost_;
-  if (lp.sense_ != ObjSense::kMinimize) {
-    for (HighsInt col = 0; col < lp.num_col_; col++)
-      colCost[col] = -colCost[col];
-  }
-
-  assert(lp.row_lower_ == lp.row_upper_);
-
-  const HighsInt ncols = lp.num_row_;
-  const HighsInt nrows = lp.num_col_;
-
-  dual.num_row_ = nrows;
-  dual.row_lower_ = colCost;
-  dual.row_upper_ = colCost;
-
-  // Add columns (y)
-  dual.num_col_ = ncols;
-  dual.col_lower_.resize(ncols);
-  dual.col_upper_.resize(ncols);
-  dual.col_cost_.resize(ncols);
-
-  for (HighsInt col = 0; col < ncols; col++) {
-    dual.col_lower_[col] = -kHighsInf;
-    dual.col_upper_[col] = kHighsInf;
-    // cost b'y
-    dual.col_cost_[col] = lp.row_lower_[col];
-  }
-
-  // Get transpose of A
-  HighsInt i, k;
-  vector<HighsInt> iwork(lp.num_row_, 0);
-  dual.a_start_.resize(lp.num_row_ + 1, 0);
-  HighsInt AcountX = lp.a_index_.size();
-  dual.a_index_.resize(AcountX);
-  dual.a_value_.resize(AcountX);
-  for (HighsInt k = 0; k < AcountX; k++) iwork.at(lp.a_index_.at(k))++;
-  for (i = 1; i <= lp.num_row_; i++)
-    dual.a_start_.at(i) = dual.a_start_.at(i - 1) + iwork.at(i - 1);
-  for (i = 0; i < lp.num_row_; i++) iwork.at(i) = dual.a_start_.at(i);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    for (k = lp.a_start_.at(iCol); k < lp.a_start_.at(iCol + 1); k++) {
-      HighsInt iRow = lp.a_index_.at(k);
-      HighsInt iPut = iwork.at(iRow)++;
-      dual.a_index_.at(iPut) = iCol;
-      dual.a_value_.at(iPut) = lp.a_value_[k];
-    }
-  }
-
-  // Add columns (zl)
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    if (lp.col_lower_[col] > -kHighsInf) {
-      const HighsInt nnz = dual.a_start_[dual.num_col_];
-
-      dual.col_lower_.push_back(0);
-      dual.col_upper_.push_back(kHighsInf);
-
-      dual.col_cost_.push_back(lp.col_lower_[col]);
-
-      // Add constaints
-      dual.a_start_.push_back(nnz + 1);
-      dual.a_index_.push_back(col);
-      dual.a_value_.push_back(1.0);
-
-      dual.num_col_++;
-    }
-  }
-
-  // Add columns (zu)
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    if (lp.col_upper_[col] < kHighsInf) {
-      const HighsInt nnz = dual.a_start_[dual.num_col_];
-
-      dual.col_lower_.push_back(0);
-      dual.col_upper_.push_back(kHighsInf);
-
-      dual.col_cost_.push_back(-lp.col_upper_[col]);
-
-      // Add constaints
-      dual.a_start_.push_back(nnz + 1);
-      dual.a_index_.push_back(col);
-      dual.a_value_.push_back(-1.0);
-
-      dual.num_col_++;
-    }
-  }
-
-  dual.sense_ = ObjSense::kMinimize;
-  for (HighsInt col = 0; col < dual.num_col_; col++) {
-    dual.col_cost_[col] = -dual.col_cost_[col];
-  }
-
-  dual.model_name_ = lp.model_name_ + "_dualized";
-
-#ifdef HiGHSDEV
-  printf("Dualized equality LP\n");
-#endif
-
-  return HighsStatus::kOk;
-}
-
 void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const HighsLp& presolve_lp) {
   HighsInt num_col_from = lp.num_col_;
   HighsInt num_row_from = lp.num_row_;
-  HighsInt num_els_from = lp.a_start_[num_col_from];
+  HighsInt num_els_from = lp.a_matrix_.start_[num_col_from];
   HighsInt num_col_to = presolve_lp.num_col_;
   HighsInt num_row_to = presolve_lp.num_row_;
   HighsInt num_els_to;
   if (num_col_to) {
-    num_els_to = presolve_lp.a_start_[num_col_to];
+    num_els_to = presolve_lp.a_matrix_.start_[num_col_to];
   } else {
     num_els_to = 0;
   }
@@ -2250,7 +2140,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const bool presolve_to_empty) {
   HighsInt num_col_from = lp.num_col_;
   HighsInt num_row_from = lp.num_row_;
-  HighsInt num_els_from = lp.a_start_[num_col_from];
+  HighsInt num_els_from = lp.a_matrix_.start_[num_col_from];
   HighsInt num_col_to;
   HighsInt num_row_to;
   HighsInt num_els_to;
@@ -2287,226 +2177,249 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   vector<HighsInt> col_length_k;
   col_length_k.resize(1 + max_assess_col_num_en, 0);
   bool LiDSE_candidate = true;
-  bool all_unit_nonzeros = true;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     // Check limit on number of entries in the column has not been breached
-    HighsInt col_num_en = lp.a_start_[col + 1] - lp.a_start_[col];
+    HighsInt col_num_en =
+        lp.a_matrix_.start_[col + 1] - lp.a_matrix_.start_[col];
     max_col_num_en = std::max(col_num_en, max_col_num_en);
-    if (col_num_en > max_assess_col_num_en) {
-#ifdef HiGHSDEV
-      if (LiDSE_candidate)
-        printf("Column %" HIGHSINT_FORMAT " has %" HIGHSINT_FORMAT
-               " > %" HIGHSINT_FORMAT " entries so LP is not LiDSE candidate\n",
-               col, col_num_en, max_allowed_col_num_en);
-      LiDSE_candidate = false;
-#else
-      LiDSE_candidate = false;
-      return LiDSE_candidate;
-#endif
-    } else {
-      col_length_k[col_num_en]++;
-    }
-    for (HighsInt en = lp.a_start_[col]; en < lp.a_start_[col + 1]; en++) {
-      double value = lp.a_value_[en];
+    if (col_num_en > max_assess_col_num_en) return false;
+    col_length_k[col_num_en]++;
+    for (HighsInt en = lp.a_matrix_.start_[col];
+         en < lp.a_matrix_.start_[col + 1]; en++) {
+      double value = lp.a_matrix_.value_[en];
       // All nonzeros must be +1 or -1
-      if (fabs(value) != 1) {
-        all_unit_nonzeros = false;
-#ifdef HiGHSDEV
-        if (LiDSE_candidate)
-          printf("Column %" HIGHSINT_FORMAT " has entry %" HIGHSINT_FORMAT
-                 " with value %g so LP is not LiDSE "
-                 "candidate\n",
-                 col, en - lp.a_start_[col], value);
-        LiDSE_candidate = false;
-#else
-        LiDSE_candidate = false;
-        return LiDSE_candidate;
-#endif
-      }
+      if (fabs(value) != 1) return false;
     }
   }
-#ifdef HiGHSDEV
-  /*
-  printf("LP has\n");
-  HighsInt to_num_en = std::min(max_assess_col_num_en, max_col_num_en);
-  for (HighsInt col_num_en = 0; col_num_en < to_num_en+1; col_num_en++)
-    printf("%7" HIGHSINT_FORMAT " columns of count %1" HIGHSINT_FORMAT "\n",
-  col_length_k[col_num_en], col_num_en);
-  */
-#endif
-  double average_col_num_en = lp.a_start_[lp.num_col_];
+  double average_col_num_en = lp.a_matrix_.start_[lp.num_col_];
   average_col_num_en = average_col_num_en / lp.num_col_;
   LiDSE_candidate =
       LiDSE_candidate && average_col_num_en <= max_average_col_num_en;
-  std::string logic0 = "has";
-  if (!all_unit_nonzeros) logic0 = "does not have";
-  std::string logic1 = "is not";
-  if (LiDSE_candidate) logic1 = "is";
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "LP %s %s all |entries|=1; max column count = %" HIGHSINT_FORMAT
-               " (limit %" HIGHSINT_FORMAT
-               "); average "
-               "column count = %0.2g (limit %" HIGHSINT_FORMAT
-               "): So %s a candidate for LiDSE\n",
-               lp.model_name_.c_str(), logic0.c_str(), max_col_num_en,
-               max_allowed_col_num_en, average_col_num_en,
-               max_average_col_num_en, logic1.c_str());
-#ifdef HiGHSDEV
-  HighsInt int_average_col_num_en = average_col_num_en;
-  printf("grep_count_distrib,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
-         ",%" HIGHSINT_FORMAT "\n",
-         lp.model_name_.c_str(), max_col_num_en, int_average_col_num_en,
-         LiDSE_candidate);
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "LP %s has all |entries|=1; max column count = %" HIGHSINT_FORMAT
+              " (limit %" HIGHSINT_FORMAT
+              "); average "
+              "column count = %0.2g (limit %" HIGHSINT_FORMAT
+              "): LP is %s a candidate for LiDSE\n",
+              lp.model_name_.c_str(), max_col_num_en, max_allowed_col_num_en,
+              average_col_num_en, max_average_col_num_en,
+              LiDSE_candidate ? "is" : "is not");
   return LiDSE_candidate;
 }
 
-HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
-  if (desired_format == MatrixFormat::kNone) return HighsStatus::kError;
-  if (lp.format_ == desired_format) return HighsStatus::kOk;
-  if (lp.num_col_ == 0 && lp.num_row_ == 0) {
-    // No rows or columns, so either orientation is possible and has
-    // identical data: just requires the start of the fictitious
-    // row/column 0
-    lp.a_start_.assign(1, 0);
-    lp.format_ = desired_format;
-  } else {
-    // Any LP with positive numbers of rows or columns must have an orientation
-    assert(lp.format_ != MatrixFormat::kNone);
-    if (desired_format == MatrixFormat::kColwise) {
-      ensureColWise(lp);
-    } else {
-      ensureRowWise(lp);
+HighsLp withoutSemiVariables(const HighsLp& lp_) {
+  HighsLp lp = lp_;
+  HighsInt num_col = lp.num_col_;
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_semi_variables = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+      num_semi_variables++;
+  }
+  assert(num_semi_variables);
+  // Insert spaces for index/value of new coefficients for
+  // semi-variables
+  vector<HighsInt>& start = lp.a_matrix_.start_;
+  vector<HighsInt>& index = lp.a_matrix_.index_;
+  vector<double>& value = lp.a_matrix_.value_;
+  HighsInt num_nz = start[num_col];
+  HighsInt new_num_nz = num_nz + 2 * num_semi_variables;
+  HighsInt new_el = new_num_nz;
+  index.resize(new_num_nz);
+  value.resize(new_num_nz);
+  for (HighsInt iCol = num_col - 1; iCol >= 0; iCol--) {
+    HighsInt from_el = start[iCol + 1] - 1;
+    start[iCol + 1] = new_el;
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+      new_el -= 2;
+    for (HighsInt iEl = from_el; iEl >= start[iCol]; iEl--) {
+      new_el--;
+      index[new_el] = index[iEl];
+      value[new_el] = value[iEl];
     }
   }
-  assert(lp.format_ == desired_format);
-  return HighsStatus::kOk;
+  assert(new_el == 0);
+  // Insert the new coefficients for semi-variables
+  HighsInt row_num = num_row;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      HighsInt iEl = start[iCol + 1] - 2;
+      index[iEl] = row_num++;
+      value[iEl] = 1;
+      iEl++;
+      index[iEl] = row_num++;
+      value[iEl] = 1;
+    }
+  }
+  num_nz = start[num_col];
+  new_num_nz = num_nz + 2 * num_semi_variables;
+  row_num = num_row;
+  HighsInt semi_col_num = 0;
+  HighsInt semi_row_num = 0;
+  // Insert the new variables and their coefficients
+  std::stringstream ss;
+  const bool has_col_names = lp.col_names_.size();
+  const bool has_row_names = lp.row_names_.size();
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      // Add a binary variable with zero cost
+      lp.col_cost_.push_back(0);
+      lp.col_lower_.push_back(0);
+      lp.col_upper_.push_back(1);
+      // Complete x - l*y >= 0
+      lp.row_lower_.push_back(0);
+      lp.row_upper_.push_back(kHighsInf);
+      if (has_col_names) {
+        // Create a column name
+        ss.str(std::string());
+        ss << "semi_binary_" << semi_col_num++;
+        lp.col_names_.push_back(ss.str());
+      }
+      if (has_row_names) {
+        // Create a row name
+        ss.str(std::string());
+        ss << "semi_lb_" << semi_row_num;
+        lp.row_names_.push_back(ss.str());
+      }
+      index.push_back(row_num++);
+      value.push_back(-lp.col_lower_[iCol]);
+      // Complete x - u*y <= 0
+      lp.row_lower_.push_back(-kHighsInf);
+      lp.row_upper_.push_back(0);
+      if (has_row_names) {
+        // Create a row name
+        ss.str(std::string());
+        ss << "semi_ub_" << semi_row_num++;
+        lp.row_names_.push_back(ss.str());
+      }
+      index.push_back(row_num++);
+      value.push_back(-lp.col_upper_[iCol]);
+      // Add the next start
+      start.push_back(index.size());
+      lp.integrality_.push_back(HighsVarType::kInteger);
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
+        lp.integrality_[iCol] = HighsVarType::kContinuous;
+      } else if (lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+        lp.integrality_[iCol] = HighsVarType::kInteger;
+      }
+      // Change the lower bound to on the semi-variable to
+      // zero. Cannot do this earlier, as its original value is used
+      // in constraint 0 <= x-l*y
+      lp.col_lower_[iCol] = 0;
+    }
+  }
+  num_col += num_semi_variables;
+  lp.num_col_ += num_semi_variables;
+  lp.num_row_ += 2 * num_semi_variables;
+  assert(index.size() == new_num_nz);
+  return lp;
 }
 
-void ensureColWise(HighsLp& lp) {
-  // Should only call this is orientation is ROWWISE
-  assert(lp.format_ == MatrixFormat::kRowwise);
-  HighsInt num_nz;
-  bool empty_matrix = lp.num_col_ == 0 || lp.num_row_ == 0;
-  if (!empty_matrix) {
-    // Matrix is probably non-empty
-    assert((HighsInt)lp.a_start_.size() >= lp.num_row_ + 1);
-    num_nz = lp.a_start_[lp.num_row_];
-    assert(num_nz >= 0);
-    assert((HighsInt)lp.a_index_.size() >= num_nz);
-    assert((HighsInt)lp.a_value_.size() >= num_nz);
-    empty_matrix = num_nz == 0;
-    if (!empty_matrix) {
-      // Matrix is non-empty, so transpose it
-      vector<HighsInt>& ARstart = lp.a_start_;
-      vector<HighsInt>& ARindex = lp.a_index_;
-      vector<double>& ARvalue = lp.a_value_;
-      vector<HighsInt> Astart;
-      vector<HighsInt> Aindex;
-      vector<double> Avalue;
-      Astart.resize(lp.num_col_ + 1);
-      Aindex.resize(num_nz);
-      Avalue.resize(num_nz);
-      vector<HighsInt> Alength;
-      Alength.assign(lp.num_col_, 0);
-      for (HighsInt iEl = ARstart[0]; iEl < num_nz; iEl++)
-        Alength[ARindex[iEl]]++;
-      Astart[0] = 0;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-        Astart[iCol + 1] = Astart[iCol] + Alength[iCol];
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-        for (HighsInt iEl = ARstart[iRow]; iEl < ARstart[iRow + 1]; iEl++) {
-          HighsInt iCol = ARindex[iEl];
-          HighsInt iCol_el = Astart[iCol];
-          Aindex[iCol_el] = iRow;
-          Avalue[iCol_el] = ARvalue[iEl];
-          Astart[iCol]++;
-        }
-      }
-      Astart[0] = 0;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-        Astart[iCol + 1] = Astart[iCol] + Alength[iCol];
-      assert(Astart[lp.num_col_] == num_nz);
-      // Now update the LP's matrix
-      lp.a_start_ = Astart;
-      lp.a_index_ = Aindex;
-      lp.a_value_ = Avalue;
+void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
+  HighsLp row_wise_lp = lp;
+  vector<HighsInt>& a_start = lp.a_matrix_.start_;
+  vector<HighsInt>& a_index = lp.a_matrix_.index_;
+  vector<double>& a_value = lp.a_matrix_.value_;
+  vector<HighsInt> a_count;
+  vector<HighsInt> ar_count;
+  vector<HighsInt> ar_start;
+  vector<HighsInt> ar_index;
+  vector<double> ar_value;
+  const bool has_name = lp.row_names_.size() > 0;
+  HighsInt num_nz = a_start[lp.num_col_];
+  const HighsInt original_num_nz = num_nz;
+  const HighsInt original_num_row = lp.num_row_;
+  HighsInt num_row_count_1 = 0;
+  ar_count.assign(lp.num_row_, 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++)
+      ar_count[a_index[iEl]]++;
+  }
+  ar_start.push_back(0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    ar_start.push_back(ar_start[iRow] + ar_count[iRow]);
+    ar_count[iRow] = ar_start[iRow];
+  }
+  ar_index.resize(num_nz);
+  ar_value.resize(num_nz);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
+      HighsInt iRow = a_index[iEl];
+      ar_index[ar_count[iRow]] = iCol;
+      ar_value[ar_count[iRow]] = a_value[iEl];
+      ar_count[iRow]++;
     }
   }
-  if (empty_matrix) {
-    // Matrix is empty, so set up empty column-wise structure
-    lp.a_start_.assign(lp.num_col_ + 1, 0);
-    lp.a_index_.clear();
-    lp.a_value_.clear();
+  HighsInt newRow = 0;
+  HighsInt newEl = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    const HighsInt row_count = ar_start[iRow + 1] - ar_start[iRow];
+    if (row_count == 1) {
+      HighsInt iCol = ar_index[ar_start[iRow]];
+      double value = ar_value[ar_start[iRow]];
+      assert(value);
+      if (value > 0) {
+        if (lp.row_lower_[iRow] > -kHighsInf)
+          lp.col_lower_[iCol] =
+              std::max(lp.row_lower_[iRow] / value, lp.col_lower_[iCol]);
+        if (lp.row_upper_[iRow] < kHighsInf)
+          lp.col_upper_[iCol] =
+              std::min(lp.row_upper_[iRow] / value, lp.col_upper_[iCol]);
+      } else {
+        if (lp.row_lower_[iRow] > -kHighsInf)
+          lp.col_upper_[iCol] =
+              std::min(lp.row_lower_[iRow] / value, lp.col_upper_[iCol]);
+        if (lp.row_upper_[iRow] < kHighsInf)
+          lp.col_lower_[iCol] =
+              std::max(lp.row_upper_[iRow] / value, lp.col_lower_[iCol]);
+      }
+      num_row_count_1++;
+      continue;
+    }
+    lp.row_lower_[newRow] = lp.row_lower_[iRow];
+    lp.row_upper_[newRow] = lp.row_upper_[iRow];
+    if (has_name) lp.row_names_[newRow] = lp.row_names_[iRow];
+    ar_start[newRow] = newEl;
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      ar_index[newEl] = ar_index[iEl];
+      ar_value[newEl] = ar_value[iEl];
+      newEl++;
+    }
+    newRow++;
   }
-  assert((HighsInt)lp.a_start_.size() >= lp.num_col_ + 1);
-  num_nz = lp.a_start_[lp.num_col_];
-  assert(num_nz >= 0);
-  assert((HighsInt)lp.a_index_.size() >= num_nz);
-  assert((HighsInt)lp.a_value_.size() >= num_nz);
-  lp.format_ = MatrixFormat::kColwise;
-}
+  ar_start[newRow] = newEl;
+  lp.num_row_ = newRow;
+  lp.row_lower_.resize(newRow);
+  lp.row_upper_.resize(newRow);
+  if (has_name) lp.row_names_.resize(newRow);
 
-void ensureRowWise(HighsLp& lp) {
-  // Should only call this is orientation is COLWISE
-  assert(lp.format_ == MatrixFormat::kColwise);
-  HighsInt num_nz;
-  bool empty_matrix = lp.num_col_ == 0 || lp.num_row_ == 0;
-  if (!empty_matrix) {
-    // Matrix is probably non-empty
-    assert((HighsInt)lp.a_start_.size() >= lp.num_col_ + 1);
-    num_nz = lp.a_start_[lp.num_col_];
-    assert(num_nz >= 0);
-    assert((HighsInt)lp.a_index_.size() >= num_nz);
-    assert((HighsInt)lp.a_value_.size() >= num_nz);
-    empty_matrix = num_nz == 0;
-    if (!empty_matrix) {
-      // Matrix is non-empty, so transpose it
-      vector<HighsInt>& Astart = lp.a_start_;
-      vector<HighsInt>& Aindex = lp.a_index_;
-      vector<double>& Avalue = lp.a_value_;
-      vector<HighsInt> ARstart;
-      vector<HighsInt> ARindex;
-      vector<double> ARvalue;
-      ARstart.resize(lp.num_row_ + 1);
-      ARindex.resize(num_nz);
-      ARvalue.resize(num_nz);
-      vector<HighsInt> ARlength;
-      ARlength.assign(lp.num_row_, 0);
-      for (HighsInt iEl = Astart[0]; iEl < num_nz; iEl++)
-        ARlength[Aindex[iEl]]++;
-      ARstart[0] = 0;
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-        ARstart[iRow + 1] = ARstart[iRow] + ARlength[iRow];
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-        for (HighsInt iEl = Astart[iCol]; iEl < Astart[iCol + 1]; iEl++) {
-          HighsInt iRow = Aindex[iEl];
-          HighsInt iRow_el = ARstart[iRow];
-          ARindex[iRow_el] = iCol;
-          ARvalue[iRow_el] = Avalue[iEl];
-          ARstart[iRow]++;
-        }
-      }
-      ARstart[0] = 0;
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-        ARstart[iRow + 1] = ARstart[iRow] + ARlength[iRow];
-      assert(ARstart[lp.num_row_] == num_nz);
-      // Now update the LP's matrix
-      lp.a_start_ = ARstart;
-      lp.a_index_ = ARindex;
-      lp.a_value_ = ARvalue;
+  num_nz = ar_start[lp.num_row_];
+  a_count.assign(lp.num_col_, 0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++)
+      a_count[ar_index[iEl]]++;
+  }
+  a_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    a_start[iCol + 1] = a_start[iCol] + a_count[iCol];
+    a_count[iCol] = a_start[iCol];
+  }
+  a_index.resize(num_nz);
+  a_value.resize(num_nz);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      HighsInt iCol = ar_index[iEl];
+      a_index[a_count[iCol]] = iRow;
+      a_value[a_count[iCol]] = ar_value[iEl];
+      a_count[iCol]++;
     }
   }
-  if (empty_matrix) {
-    // Matrix is empty, so set up empty row-wise structure
-    lp.a_start_.assign(lp.num_row_ + 1, 0);
-    lp.a_index_.clear();
-    lp.a_value_.clear();
-  }
-  assert((HighsInt)lp.a_start_.size() >= lp.num_row_ + 1);
-  num_nz = lp.a_start_[lp.num_row_];
-  assert(num_nz >= 0);
-  assert((HighsInt)lp.a_index_.size() >= num_nz);
-  assert((HighsInt)lp.a_value_.size() >= num_nz);
-  lp.format_ = MatrixFormat::kRowwise;
+  assert(original_num_row - lp.num_row_ == num_row_count_1);
+  assert(original_num_nz - num_nz == num_row_count_1);
+  highsLogUser(log_options, HighsLogType::kWarning,
+               "Removed %d rows of count 1\n", (int)num_row_count_1);
 }

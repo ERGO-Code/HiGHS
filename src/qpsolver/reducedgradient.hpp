@@ -1,7 +1,7 @@
 #ifndef __SRC_LIB_REDUCEDGRADIENT_HPP__
 #define __SRC_LIB_REDUCEDGRADIENT_HPP__
 
-#include "nullspace.hpp"
+#include "basis.hpp"
 #include "runtime.hpp"
 #include "vector.hpp"
 
@@ -9,17 +9,17 @@ class ReducedGradient {
   Vector rg;
   bool uptodate = false;
   Gradient& gradient;
-  Nullspace& nullspace;
+  Basis& basis;
 
   void recompute() {
-    rg.dim = nullspace.getNullspace().mat.num_col;
-    nullspace.Ztprod(gradient.getGradient(), rg);
+    rg.dim = basis.getinactive().size();
+    basis.Ztprod(gradient.getGradient(), rg);
     uptodate = true;
   }
 
  public:
-  ReducedGradient(Runtime& rt, Nullspace& ns, Gradient& grad)
-      : rg(rt.instance.num_var), gradient(grad), nullspace(ns) {}
+  ReducedGradient(Runtime& rt, Basis& bas, Gradient& grad)
+      : rg(rt.instance.num_var), gradient(grad), basis(bas) {}
 
   Vector& get() {
     if (!uptodate) {
@@ -28,7 +28,7 @@ class ReducedGradient {
     return rg;
   }
 
-  void reduce(NullspaceReductionResult& nrr) {
+  void reduce(const Vector& buffer_d, const HighsInt maxabsd) {
     if (!uptodate) {
       return;
     }
@@ -43,13 +43,13 @@ class ReducedGradient {
     // }
     // r.num_nz = rg.dim-1;
 
-    for (HighsInt i = 0; i < nrr.d.num_nz; i++) {
-      HighsInt idx = nrr.d.index[i];
-      if (idx == nrr.maxabsd) {
+    for (HighsInt i = 0; i < buffer_d.num_nz; i++) {
+      HighsInt idx = buffer_d.index[i];
+      if (idx == maxabsd) {
         continue;
       }
       rg.value[idx] -=
-          rg.value[nrr.maxabsd] * nrr.d.value[idx] / nrr.d.value[nrr.maxabsd];
+          rg.value[maxabsd] * buffer_d.value[idx] / buffer_d.value[maxabsd];
     }
 
     rg.resparsify();

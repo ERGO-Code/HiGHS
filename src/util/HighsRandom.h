@@ -137,8 +137,8 @@ class HighsRandom {
 
   void advance() {
     // advance state with simple xorshift the outputs are produced by applying
-    // strongly universal hash functions to the state so that the lower
-    // order bits are as strong as the upper order bits
+    // strongly universal hash functions to the state so that the least
+    // significant bits are as well distributed as the most significant bits.
     state ^= state >> 12;
     state ^= state << 25;
     state ^= state >> 27;

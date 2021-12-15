@@ -22,10 +22,6 @@
 #include "ipm/IpxSolution.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
-#include "lp_data/HConst.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
@@ -67,11 +63,12 @@ void getHighsNonVertexSolution(const HighsLogOptions& log_options,
                                HighsSolution& highs_solution);
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, bool& imprecise_solution,
-                       HighsBasis& highs_basis, HighsSolution& highs_solution,
-                       HighsIterationCounts& iteration_counts,
-                       HighsModelStatus& model_status,
-                       HighsSolutionParams& solution_params);
+                       const HighsLp& lp, HighsBasis& highs_basis,
+                       HighsSolution& highs_solution,
+                       HighsModelStatus& model_status, HighsInfo& highs_info);
 
-HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model);
+HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
+
+void reportSolveData(const HighsLogOptions& log_options,
+                     const ipx::Info& ipx_info);
 #endif

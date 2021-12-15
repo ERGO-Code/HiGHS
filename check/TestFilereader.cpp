@@ -24,9 +24,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = false;
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
 
   // Try to run HiGHS with default options. No model loaded so OK
@@ -60,7 +58,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
-  REQUIRE(info.simplex_iteration_count == 86);
+  REQUIRE(info.simplex_iteration_count == 87);
 
   model = "garbage";
   if (test_garbage_mps) {
@@ -87,9 +85,7 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   HighsStatus status;
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
@@ -116,9 +112,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
   // Read mps
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
   HighsLp lp_mps = highs.getLp();
@@ -180,15 +174,13 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   HighsStatus status;
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
   HighsLp lp_free = highs.getLp();
 
-  REQUIRE(lp_free.integrality_.size() == lp_free.num_col_);
+  REQUIRE((int)lp_free.integrality_.size() == lp_free.num_col_);
   REQUIRE(lp_free.integrality_ == kIntegers);
 
   // Read mps with fixed format parser.
@@ -200,7 +192,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   HighsLp lp_fixed = highs.getLp();
 
-  REQUIRE(lp_fixed.integrality_.size() == lp_fixed.num_col_);
+  REQUIRE((int)lp_fixed.integrality_.size() == lp_fixed.num_col_);
   REQUIRE(lp_fixed.integrality_ == kIntegers);
 
   bool are_the_same = lp_free == lp_fixed;

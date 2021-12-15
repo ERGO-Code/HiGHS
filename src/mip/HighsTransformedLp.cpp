@@ -261,7 +261,21 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       continue;
     }
 
-    if (lb == -kHighsInf && ub == kHighsInf) return false;
+    if (lb == -kHighsInf && ub == kHighsInf) {
+      vectorsum.clear();
+      return false;
+    }
+
+    // store the old bound type so that we can restore it if the continuous
+    // column is relaxed out anyways. This allows to correctly transform and
+    // then untransform multiple base rows which is useful to compute cuts based
+    // on several transformed base rows. It could otherwise lead to bugs if a
+    // column is first transformed with a simple bound and not relaxed but for
+    // another base row is transformed and relaxed with a variable bound. Should
+    // the non-relaxed column now be untransformed we would wrongly use the
+    // variable bound even though this is not the correct way to untransform the
+    // column.
+    BoundType oldBoundType = boundTypes[col];
 
     if (lprelaxation.isColIntegral(col)) {
       if (lb == -kHighsInf || ub == kHighsInf) integersPositive = false;
@@ -319,6 +333,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
           tmpRhs -= lb * vals[i];
           vals[i] = 0.0;
           removeZeros = true;
+          boundTypes[col] = oldBoundType;
         }
         break;
       case BoundType::kSimpleUb:
@@ -326,18 +341,25 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
           tmpRhs -= ub * vals[i];
           vals[i] = 0.0;
           removeZeros = true;
+          boundTypes[col] = oldBoundType;
         }
         break;
       case BoundType::kVariableLb:
         tmpRhs -= bestVlb[col]->second.constant * vals[i];
         vectorsum.add(bestVlb[col]->first, vals[i] * bestVlb[col]->second.coef);
-        if (vals[i] > 0) vals[i] = 0;
+        if (vals[i] > 0) {
+          boundTypes[col] = oldBoundType;
+          vals[i] = 0;
+        }
         break;
       case BoundType::kVariableUb:
         tmpRhs -= bestVub[col]->second.constant * vals[i];
         vectorsum.add(bestVub[col]->first, vals[i] * bestVub[col]->second.coef);
         vals[i] = -vals[i];
-        if (vals[i] > 0) vals[i] = 0;
+        if (vals[i] > 0) {
+          boundTypes[col] = oldBoundType;
+          vals[i] = 0;
+        }
     }
   }
 
@@ -355,7 +377,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     };
 
     vectorsum.cleanup(IsZero);
-    if (maxError > mip.mipdata_->feastol) return false;
+    if (maxError > mip.mipdata_->feastol) {
+      vectorsum.clear();
+      return false;
+    }
 
     inds = vectorsum.getNonzeros();
     numNz = inds.size();

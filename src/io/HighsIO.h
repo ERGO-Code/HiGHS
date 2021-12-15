@@ -16,6 +16,7 @@
 #ifndef HIGHS_IO_H
 #define HIGHS_IO_H
 
+#include <array>
 #include <iostream>
 
 #include "util/HighsInt.h"
@@ -44,6 +45,11 @@ struct HighsLogOptions {
   bool* log_to_console;
   HighsInt* log_dev_level;
 };
+
+/**
+ * @brief Convert a double number to a string using given tolerance
+ */
+std::array<char, 32> highsDoubleToString(double val, double tolerance);
 
 /**
  * @brief For _single-line_ user logging with message type notification

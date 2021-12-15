@@ -19,12 +19,12 @@
 #include <set>
 #include <vector>
 
-#include "lp_data/HighsModelObject.h"
+#include "simplex/HEkk.h"
+#include "util/HVector.h"
 
-class HVector;
-const double initial_total_change = 1e-12;
-const double initial_remain_theta = 1e100;
-const double max_select_theta = 1e18;
+const double kInitialTotalChange = 1e-12;
+const double kInitialRemainTheta = 1e100;
+const double kMaxSelectTheta = 1e18;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -91,6 +91,7 @@ class HEkkDualRow {
    * heap sort of ratios
    */
   bool chooseFinalWorkGroupQuad();
+  bool quadChooseFinalWorkGroupQuad();
   bool chooseFinalWorkGroupHeap();
 
   void chooseFinalLargeAlpha(
@@ -146,36 +147,47 @@ class HEkkDualRow {
    */
   void computeDevexWeight(const HighsInt slice = -1);
 
+  HighsInt debugFindInWorkData(
+      const HighsInt iCol, const HighsInt count,
+      const std::vector<std::pair<HighsInt, double>>& workData_);
+  HighsInt debugChooseColumnInfeasibilities() const;
+  void debugReportBfrtVar(
+      const HighsInt ix,
+      const std::vector<std::pair<HighsInt, double>>& pass_workData) const;
   // References:
   HEkk& ekk_instance_;
 
   HighsInt workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it
                            //!< here to avoid compiler warning
-  const HighsInt*
-      workNumTotPermutation;  //!< Pointer to ekk_instance_.numTotPermutation();
-  const int8_t* workMove;   //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
-  const double* workDual;   //!< Pointer to ekk_instance_.info_.workDual_;
-  const double* workRange;  //!< Pointer to ekk_instance_.info_.workRange_;
-  const HighsInt* work_devex_index;  //!< Pointer to
-                                     //!< ekk_instance_.info_.devex_index_;
+  const HighsInt* workNumTotPermutation =
+      nullptr;  //!< Pointer to ekk_instance_.numTotPermutation();
+  const int8_t* workMove =
+      nullptr;  //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
+  const double* workDual =
+      nullptr;  //!< Pointer to ekk_instance_.info_.workDual_;
+  const double* workRange =
+      nullptr;  //!< Pointer to ekk_instance_.info_.workRange_;
+  const HighsInt* work_devex_index =
+      nullptr;  //!< Pointer to
+                //!< ekk_instance_.info_.devex_index_;
 
   // Freelist:
   std::set<HighsInt> freeList;  //!< Freelist itself
 
   // packed data:
-  HighsInt packCount;               //!< number of packed indices/values
+  HighsInt packCount = 0;           //!< number of packed indices/values
   std::vector<HighsInt> packIndex;  //!< Packed indices
   std::vector<double> packValue;    //!< Packed values
 
   // (Local) value of computed weight
-  double computed_edge_weight;
+  double computed_edge_weight = 0.;
 
-  double workDelta;    //!< Local copy of dual.delta_primal
-  double workAlpha;    //!< Original copy of pivotal computed row-wise
-  double workTheta;    //!< Original copy of dual step workDual[workPivot] /
-                       //!< workAlpha;
-  HighsInt workPivot;  //!< Index of the column entering the basis
-  HighsInt workCount;  //!< Number of BFRT flips
+  double workDelta = 0.;   //!< Local copy of dual.delta_primal
+  double workAlpha = 0.;   //!< Original copy of pivotal computed row-wise
+  double workTheta = 0.;   //!< Original copy of dual step workDual[workPivot] /
+                           //!< workAlpha;
+  HighsInt workPivot = 0;  //!< Index of the column entering the basis
+  HighsInt workCount = 0;  //!< Number of BFRT flips
 
   std::vector<std::pair<HighsInt, double>>
       workData;  //!< Index-Value pairs for ratio test
@@ -183,12 +195,12 @@ class HEkkDualRow {
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 
   // Independent identifiers for heap-based sort in BFRT
-  HighsInt alt_workCount;
+  HighsInt alt_workCount = 0;
   std::vector<std::pair<HighsInt, double>> original_workData;
   std::vector<std::pair<HighsInt, double>> sorted_workData;
   std::vector<HighsInt> alt_workGroup;
 
-  HighsSimplexAnalysis* analysis;
+  HighsSimplexAnalysis* analysis = nullptr;
 };
 
 #endif /* SIMPLEX_HEKKDUALROW_H_ */

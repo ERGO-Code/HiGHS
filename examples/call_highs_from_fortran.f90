@@ -108,7 +108,7 @@ program fortrantest
   integer, parameter :: new_scale_strategy = 3
   double precision, parameter ::  dual_tolerance = 1d-6
   logical ( c_bool ) write_solution_to_file
-  logical ( c_bool ) write_solution_pretty
+  integer ( c_int ) write_solution_style
 
   double precision, pointer :: double_null(:)
   integer, pointer :: integer_null(:)
@@ -417,10 +417,10 @@ program fortrantest
   write_solution_to_file = .true.
   runstatus = Highs_setBoolOptionValue(highs, "write_solution_to_file"//C_NULL_CHAR, write_solution_to_file)
 
-  runstatus = Highs_getBoolOptionValue(highs, "write_solution_pretty"//C_NULL_CHAR, write_solution_pretty)
-  print*, "Default write_solution_pretty = ", write_solution_pretty
-  write_solution_pretty = .true.
-  runstatus = Highs_setBoolOptionValue(highs, "write_solution_pretty"//C_NULL_CHAR, write_solution_pretty)
+  runstatus = Highs_getIntOptionValue(highs, "write_solution_style"//C_NULL_CHAR, write_solution_style)
+  print*, "Default write_solution_style = ", write_solution_style
+  write_solution_style = 1;
+  runstatus = Highs_setIntOptionValue(highs, "write_solution_style"//C_NULL_CHAR, write_solution_style)
 
   ! Report all the deviations from default options
   runstatus = Highs_writeOptionsDeviations(highs, "OptionsDeviations.set"//C_NULL_CHAR)

@@ -351,7 +351,7 @@ HighsInt OsiHiGHSSolverInterface::getNumElements() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::getNumElements()\n");
-  return this->highs->lp_.a_start_[this->highs->lp_.num_col_];
+  return this->highs->lp_.a_matrix_.start_[this->highs->lp_.num_col_];
 }
 
 const double* OsiHiGHSSolverInterface::getColLower() const {
@@ -498,10 +498,12 @@ const CoinPackedMatrix* OsiHiGHSSolverInterface::getMatrixByCol() const {
   double* value = new double[nelements];
 
   // copy data
-  memcpy(start, &(this->highs->lp_.a_start_[0]),
+  memcpy(start, &(this->highs->lp_.a_matrix_.start_[0]),
          (ncols + 1) * sizeof(HighsInt));
-  memcpy(index, &(this->highs->lp_.a_index_[0]), nelements * sizeof(HighsInt));
-  memcpy(value, &(this->highs->lp_.a_value_[0]), nelements * sizeof(double));
+  memcpy(index, &(this->highs->lp_.a_matrix_.index_[0]),
+         nelements * sizeof(HighsInt));
+  memcpy(value, &(this->highs->lp_.a_matrix_.value_[0]),
+         nelements * sizeof(double));
 
   for (HighsInt i = 0; i < ncols; i++) {
     len[i] = start[i + 1] - start[i];
@@ -741,9 +743,9 @@ void OsiHiGHSSolverInterface::loadProblem(
   lp.row_lower_.resize(numrows);
   lp.row_upper_.resize(numrows);
 
-  lp.a_start_.resize(numcols + 1);
-  lp.a_index_.resize(start[numcols]);
-  lp.a_value_.resize(start[numcols]);
+  lp.a_matrix_.start_.resize(numcols + 1);
+  lp.a_matrix_.index_.resize(start[numcols]);
+  lp.a_matrix_.value_.resize(start[numcols]);
 
   // copy data
   if (obj != NULL) {
@@ -776,9 +778,9 @@ void OsiHiGHSSolverInterface::loadProblem(
     lp.row_upper_.assign(numrows, kHighsInf);
   }
 
-  lp.a_start_.assign(start, start + numcols + 1);
-  lp.a_index_.assign(index, index + start[numcols]);
-  lp.a_value_.assign(value, value + start[numcols]);
+  lp.a_matrix_.start_.assign(start, start + numcols + 1);
+  lp.a_matrix_.index_.assign(index, index + start[numcols]);
+  lp.a_matrix_.value_.assign(value, value + start[numcols]);
   this->highs->passModel(lp);
   this->setObjSense(oldObjSense);
 }
@@ -989,13 +991,14 @@ const double* OsiHiGHSSolverInterface::getReducedCost() const {
       this->dummy_solution->col_dual.resize(num_cols);
       for (HighsInt col = 0; col < num_cols; col++) {
         dummy_solution->col_dual[col] = lp.col_cost_[col];
-        for (HighsInt i = lp.a_start_[col]; i < lp.a_start_[col + 1]; i++) {
-          const HighsInt row = lp.a_index_[i];
+        for (HighsInt i = lp.a_matrix_.start_[col];
+             i < lp.a_matrix_.start_[col + 1]; i++) {
+          const HighsInt row = lp.a_matrix_.index_[i];
           assert(row >= 0);
           assert(row < lp.num_row_);
 
           dummy_solution->col_dual[col] -=
-              dummy_solution->row_dual[row] * lp.a_value_[i];
+              dummy_solution->row_dual[row] * lp.a_matrix_.value_[i];
         }
       }
       return &dummy_solution->col_dual[0];

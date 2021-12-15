@@ -122,8 +122,9 @@ private:
    std::map<LpSectionKeyword, std::vector<std::unique_ptr<ProcessedToken>>> sectiontokens;
    
    char linebuffer[LP_MAX_LINE_LENGTH+1];
-   bool linebufferrefill;
    char* linebufferpos;
+   bool linefullyread;
+   bool newline_encountered;
 
    Builder builder;
 
@@ -515,6 +516,8 @@ void Reader::processbinsec() {
       std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BIN][i].get())->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       var->type = VariableType::BINARY;
+      var->lowerbound = 0.0;
+      var->upperbound = 1.0;
    }
 }
 
@@ -523,7 +526,11 @@ void Reader::processgensec() {
       lpassert(sectiontokens[LpSectionKeyword::GEN][i]->type == ProcessedTokenType::VARID);
       std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::GEN][i].get())->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
-      var->type = VariableType::GENERAL;
+      if (var->type == VariableType::SEMICONTINUOUS) {
+	var->type = VariableType::SEMIINTEGER;
+      } else {
+	var->type = VariableType::GENERAL;
+      };
    }
 }
 
@@ -532,7 +539,11 @@ void Reader::processsemisec() {
       lpassert(sectiontokens[LpSectionKeyword::SEMI][i]->type == ProcessedTokenType::VARID);
       std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::SEMI][i].get())->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
-      var->type = VariableType::SEMICONTINUOUS;
+      if (var->type == VariableType::GENERAL) {
+	var->type = VariableType::SEMIINTEGER;
+      } else {
+	var->type = VariableType::SEMICONTINUOUS;
+      };
    }
 }
 
@@ -782,7 +793,9 @@ void Reader::processtokens() {
 
 // reads the entire file and separates 
 void Reader::tokenize() {
-   this->linebufferrefill = true;
+   this->linefullyread = true;;
+   this->newline_encountered = true;
+   this->linebufferpos = this->linebuffer;
    bool done = false;
    while(true) {
       this->readnexttoken(done);
@@ -794,10 +807,48 @@ void Reader::tokenize() {
 
 void Reader::readnexttoken(bool& done) {
    done = false;
-   if (this->linebufferrefill) {
+   if (!this->linefullyread) {
+      // fill up line
+      
+      // how many do we need to read?
+      unsigned int num_already_read = this->linebufferpos - this->linebuffer;
+
+      // shift buffer
+      for (unsigned int i=num_already_read; i<LP_MAX_LINE_LENGTH+1; i++) {
+         this->linebuffer[i-num_already_read] = this->linebuffer[i];
+      }
+
+      char* write_start = &this->linebuffer[LP_MAX_LINE_LENGTH-num_already_read];
+
+      // read more values
+      char* eof = fgets(write_start, num_already_read+1, this->file);
+      unsigned int linelength;
+      for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
+         if (this->linebuffer[linelength] == '\r') {
+            this->linebuffer[linelength] = '\n';
+         }
+         if (this->linebuffer[linelength] == '\n') {
+            break;
+         }
+      }
+
+      if (this->linebuffer[linelength] == '\n') {
+         this->linefullyread = true;
+      } else {
+         this->linefullyread = false;
+      }
+
+      // fgets returns nullptr if end of file reached (EOF following a \n)
+      if (eof == nullptr) {
+         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
+         done = true;
+         return;
+      }
+      this->linebufferpos = this->linebuffer;
+   } else if(newline_encountered) {
+      newline_encountered = false;
       char* eof = fgets(this->linebuffer, LP_MAX_LINE_LENGTH+1, this->file);
       this->linebufferpos = this->linebuffer;
-      this->linebufferrefill = false;
 
       unsigned int linelength;
       for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
@@ -808,7 +859,11 @@ void Reader::readnexttoken(bool& done) {
             break;
          }
       }
-      lpassert(this->linebuffer[linelength] == '\n');
+      if (this->linebuffer[linelength] == '\n') {
+         this->linefullyread = true;
+      } else {
+         this->linefullyread = false;
+      }
 
       // fgets returns nullptr if end of file reached (EOF following a \n)
       if (eof == nullptr) {
@@ -824,7 +879,8 @@ void Reader::readnexttoken(bool& done) {
    switch (nextchar) {
       // check for comment
       case '\\':
-         this->linebufferrefill = true;
+         this->newline_encountered = true;
+         this->linefullyread = true;
          return;
       
       // check for bracket opening
@@ -900,8 +956,10 @@ void Reader::readnexttoken(bool& done) {
          return;
 
       // check for line end
+      case ';':
       case '\n':
-         this->linebufferrefill = true;
+         this->newline_encountered = true;
+         this->linefullyread = true;
          return;
 
       // check for file end (EOF at end of some line)

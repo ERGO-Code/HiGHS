@@ -16,8 +16,7 @@
 #ifndef SIMPLEX_HSIMPLEXREPORT_H_
 #define SIMPLEX_HSIMPLEXREPORT_H_
 
-#include "lp_data/HighsModelObject.h"
-#include "simplex/SimplexConst.h"
+#include "lp_data/HighsOptions.h"
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
                                   const HighsInt iteration_count,

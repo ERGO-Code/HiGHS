@@ -15,17 +15,81 @@
  */
 #include "HighsIO.h"
 
+#include <cmath>
 #include <cstdarg>
 #include <cstdio>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-void (*printmsgcb)(HighsInt, const char*, void*) = NULL;
-void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
-void* msgcb_data = NULL;
+static void (*printmsgcb)(HighsInt, const char*, void*) = NULL;
+static void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
+static void* msgcb_data = NULL;
 
-char msgbuffer[65536];
+static char msgbuffer[65536];
+
+std::array<char, 32> highsDoubleToString(double val, double tolerance) {
+  std::array<char, 32> printString;
+  double l =
+      std::abs(val) == kHighsInf
+          ? 1.0
+          : (1.0 - tolerance +
+             std::log10(std::max(tolerance, std::abs(val)) / (tolerance)));
+  switch (int(l)) {
+    case 0:
+      std::snprintf(printString.data(), 32, "%c", '0');
+      break;
+    case 1:
+      std::snprintf(printString.data(), 32, "%.1g", val);
+      break;
+    case 2:
+      std::snprintf(printString.data(), 32, "%.2g", val);
+      break;
+    case 3:
+      std::snprintf(printString.data(), 32, "%.3g", val);
+      break;
+    case 4:
+      std::snprintf(printString.data(), 32, "%.4g", val);
+      break;
+    case 5:
+      std::snprintf(printString.data(), 32, "%.5g", val);
+      break;
+    case 6:
+      std::snprintf(printString.data(), 32, "%.6g", val);
+      break;
+    case 7:
+      std::snprintf(printString.data(), 32, "%.7g", val);
+      break;
+    case 8:
+      std::snprintf(printString.data(), 32, "%.8g", val);
+      break;
+    case 9:
+      std::snprintf(printString.data(), 32, "%.9g", val);
+      break;
+    case 10:
+      std::snprintf(printString.data(), 32, "%.10g", val);
+      break;
+    case 11:
+      std::snprintf(printString.data(), 32, "%.11g", val);
+      break;
+    case 12:
+      std::snprintf(printString.data(), 32, "%.12g", val);
+      break;
+    case 13:
+      std::snprintf(printString.data(), 32, "%.13g", val);
+      break;
+    case 14:
+      std::snprintf(printString.data(), 32, "%.14g", val);
+      break;
+    case 15:
+      std::snprintf(printString.data(), 32, "%.15g", val);
+      break;
+    default:
+      std::snprintf(printString.data(), 32, "%.16g", val);
+  }
+
+  return printString;
+}
 
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
@@ -77,12 +141,13 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       (log_options_.log_file_stream == NULL && !*log_options_.log_to_console) ||
       !*log_options_.log_dev_level)
     return;
-  // Always report HighsLogType INFO, WARNING or ERROR
+  // Always report HighsLogType::kInfo, HighsLogType::kWarning or
+  // HighsLogType::kError
   //
-  // Report HighsLogType DETAILED if *log_options_.log_dev_level >=
+  // Report HighsLogType::kDetailed if *log_options_.log_dev_level >=
   // kHighsLogDevLevelDetailed
   //
-  // Report HighsLogType VERBOSE if *log_options_.log_dev_level >=
+  // Report HighsLogType::kVerbose if *log_options_.log_dev_level >=
   // kHighsLogDevLevelVerbose
   if (type == HighsLogType::kDetailed &&
       *log_options_.log_dev_level < kHighsLogDevLevelDetailed)

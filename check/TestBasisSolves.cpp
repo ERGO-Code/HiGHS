@@ -1,9 +1,11 @@
 #include <algorithm>
 
-#include "HConfig.h"
+//#include "HConfig.h"
 #include "Highs.h"
 #include "HighsRandom.h"
 #include "catch.hpp"
+
+using std::min;
 
 const bool dev_run = false;
 
@@ -65,9 +67,10 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         }
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-          HighsInt row = lp.a_index_[el];
-          residual += lp.a_value_[el] * solution[row];
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
+          HighsInt row = lp.a_matrix_.index_[el];
+          residual += lp.a_matrix_.value_[el] * solution[row];
         }
         residual = fabs(rhs[k] - residual);
         if (residual > residual_tolerance) {
@@ -88,9 +91,11 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         basis_matrix_times_solution[row] += solution[k];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-          HighsInt row = lp.a_index_[el];
-          basis_matrix_times_solution[row] += lp.a_value_[el] * solution[k];
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
+          HighsInt row = lp.a_matrix_.index_[el];
+          basis_matrix_times_solution[row] +=
+              lp.a_matrix_.value_[el] * solution[k];
         }
       }
     }
@@ -118,9 +123,10 @@ void GetBasisSolvesFormRHS(HighsLp& lp, vector<HighsInt>& basic_variables,
         rhs[k] = solution[row];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-          HighsInt row = lp.a_index_[el];
-          rhs[k] += lp.a_value_[el] * solution[row];
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
+          HighsInt row = lp.a_matrix_.index_[el];
+          rhs[k] += lp.a_matrix_.value_[el] * solution[row];
         }
       }
     }
@@ -133,9 +139,10 @@ void GetBasisSolvesFormRHS(HighsLp& lp, vector<HighsInt>& basic_variables,
         rhs[row] += solution[k];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-          HighsInt row = lp.a_index_[el];
-          rhs[row] += lp.a_value_[el] * solution[k];
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
+          HighsInt row = lp.a_matrix_.index_[el];
+          rhs[row] += lp.a_matrix_.value_[el] * solution[k];
         }
       }
     }
@@ -232,9 +239,9 @@ void testBasisSolve(Highs& highs) {
     if (var >= 0) {
       basic_col = var;
       for (HighsInt ix = 0; ix < numRow; ix++) rhs[ix] = 0;
-      for (HighsInt el = lp.a_start_[basic_col];
-           el < lp.a_start_[basic_col + 1]; el++)
-        rhs[lp.a_index_[el]] = lp.a_value_[el];
+      for (HighsInt el = lp.a_matrix_.start_[basic_col];
+           el < lp.a_matrix_.start_[basic_col + 1]; el++)
+        rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
 
       highs_status =
           highs.getBasisSolve(&rhs[0], &solution_col[0], &solution_num_nz,
@@ -409,9 +416,9 @@ void testBasisSolve(Highs& highs) {
     REQUIRE(highs_status == HighsStatus::kOk);
     // Check solution
     for (HighsInt row = 0; row < numRow; row++) rhs[row] = 0;
-    for (HighsInt el = lp.a_start_[check_col]; el < lp.a_start_[check_col + 1];
-         el++)
-      rhs[lp.a_index_[el]] = lp.a_value_[el];
+    for (HighsInt el = lp.a_matrix_.start_[check_col];
+         el < lp.a_matrix_.start_[check_col + 1]; el++)
+      rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs,
                                                 solution_col, false);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
@@ -440,9 +447,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   vector<HighsInt> basic_variables;
   vector<double> rhs, solution_row, solution_col;
@@ -452,28 +457,6 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   solution_col.resize(1);
 
   HighsStatus highs_status;
-
-  // Check the no model traps
-  highs_status = highs.getBasicVariables(&basic_variables[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisInverseRow(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisInverseCol(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisTransposeSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getReducedRow(0, &solution_row[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getReducedColumn(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
 
   // Read the LP given by filename
   highs_status = highs.readModel(filename);

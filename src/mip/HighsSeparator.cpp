@@ -19,7 +19,8 @@
 #include "mip/HighsMipSolver.h"
 
 HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
-                               const char* name, const char* ch3_name) {
+                               const char* name, const char* ch3_name)
+    : numCutsFound(0), numCalls(0) {
   clockIndex = mipsolver.timer_.clock_def(name, ch3_name);
 }
 
@@ -27,7 +28,7 @@ void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,
                          HighsLpAggregator& lpAggregator,
                          HighsTransformedLp& transLp, HighsCutPool& cutpool) {
   ++numCalls;
-  std::size_t currNumCuts = cutpool.getNumCuts();
+  HighsInt currNumCuts = cutpool.getNumCuts();
 
   lpRelaxation.getMipSolver().timer_.start(clockIndex);
   separateLpSolution(lpRelaxation, lpAggregator, transLp, cutpool);

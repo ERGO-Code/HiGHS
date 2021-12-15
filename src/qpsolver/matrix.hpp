@@ -4,7 +4,6 @@
 #include <cassert>
 #include <vector>
 
-#include "parallel.hpp"
 #include "vector.hpp"
 
 #ifdef OPENMP
@@ -18,103 +17,17 @@ struct MatrixBase {
   std::vector<HighsInt> index;
   std::vector<double> value;
 
-  Vector& mat_vec_par_omp(const Vector& other, Vector& target) const {
-    target.reset();
-
-#ifdef OPENMP
-    std::vector<omp_lock_t> row_locks(num_row);
-    for (HighsInt i = 0; i < num_row; i++) {
-      omp_init_lock(&(row_locks[i]));
-    }
-
-#pragma omp parallel for shared(target, other, row_locks) default(none)
-    for (HighsInt i = 0; i < other.num_nz; i++) {
-      HighsInt col = other.index[i];
-      // #pragma omp parallel for shared(target, other, col, row_locks)
-      // default(none)
-      for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
-        HighsInt row = index[idx];
-        omp_set_lock(&row_locks[row]);
-        target.value[row] += value[idx] * other.value[col];
-        omp_unset_lock(&row_locks[row]);
-      }
-    }
-    target.resparsify();
-#else
-    assert(1 == 0);
-#endif
-    return target;
-  }
-
-  Vector& mat_vec_par(const Vector& other, Vector& target) const {
-    target.reset();
-
-    unsigned nb_threads_hint = std::thread::hardware_concurrency();
-    unsigned nb_threads = nb_threads_hint == 0 ? 8 : (nb_threads_hint);
-
-    unsigned batch_size = other.num_nz / (nb_threads + 1);
-
-    std::vector<std::thread> my_threads(nb_threads);
-    std::vector<Vector> results(nb_threads, num_row);
-
-    for (unsigned i = 0; i < nb_threads; ++i) {
-      HighsInt batch_start = i * batch_size;
-      my_threads[i] = std::thread(
-          [&](HighsInt tid, HighsInt thread_start) {
-            // thread i: compute for columns start-start+batch_size
-
-            for (HighsInt nz = thread_start; nz < thread_start + batch_size;
-                 nz++) {
-              HighsInt col = other.index[nz];
-              for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
-                HighsInt row = index[idx];
-                results[tid].value[row] += value[idx] * other.value[col];
-              }
-            }
-            results[tid].resparsify();
-          },
-          i, batch_start);
-    }
-
-    for (HighsInt nz = nb_threads * batch_size; nz < other.num_nz; nz++) {
-      HighsInt col = other.index[nz];
-      for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
-        HighsInt row = index[idx];
-        target.value[row] += value[idx] * other.value[col];
-      }
-    }
-
-    std::for_each(my_threads.begin(), my_threads.end(),
-                  std::mem_fn(&std::thread::join));
-
-    for (HighsInt i = 0; i < nb_threads; i++) {
-      target += results[i];
-    }
-    target.resparsify();
-    return target;
-  }
-
   Vector& mat_vec(const Vector& other, Vector& target) const {
     return mat_vec_seq(other, target);
   }
 
   Vector& mat_vec_seq(const Vector& other, Vector& target) const {
     target.reset();
-
-    // omp_lock_t row_locks[num_row];
-    // for (HighsInt i=0; i<num_row; i++) {
-    //    omp_init_lock(&(row_locks[i]));
-    // }
-
-    // #pragma omp parallel for shared(target, other, row_locks) default(none)
     for (HighsInt i = 0; i < other.num_nz; i++) {
       HighsInt col = other.index[i];
-      // #pragma omp parallel for shared(target, other, col) default(none)
       for (HighsInt idx = start[col]; idx < start[col + 1]; idx++) {
         HighsInt row = index[idx];
-        // omp_set_lock(&row_locks[row]);
         target.value[row] += value[idx] * other.value[col];
-        // omp_unset_lock(&row_locks[row]);
       }
     }
     target.resparsify();
@@ -169,59 +82,16 @@ struct MatrixBase {
     return vec_mat_1(other, target);
   }
 
-  Vector& vec_mat_2(const Vector& other, Vector& target) const {
-    target.reset();
-
-    // HighsInt col = 0;
-    // for (HighsInt i=0; i<index.size(); i++) {
-    //    if (i >= start[col+1]) {
-    //       col++;
-    //    }
-    //    target.value[col] += other.value[index[i]] * value[i];
-    // }
-    parallel_for_frac(num_col, [&](HighsInt first, HighsInt last) {
-      for (HighsInt i = first; i < last; i++) {
-        target.value[i] = other.dot(&index[start[i]], &value[start[i]],
-                                    start[i + 1] - start[i]);
-      }
-    });
-
-    // parallel_for_obo(num_col, [&](HighsInt i) {
-    //    target.value[i] = other.dot(&index[start[i]], &value[start[i]],
-    //    start[i+1]-start[i]);
-    // });
-
-    // for (HighsInt i=0; i<num_col; i++) {
-    //    double dot = 0.0;
-    //    for (HighsInt j=start[i]; j<start[i+1]; j++) {
-    //       dot += other.value[index[j]] * value[j];
-    //    }
-
-    //    target.value[i] = dot; //other.dot(&index[start[i]], &value[start[i]],
-    //    start[i+1]-start[i]);
-    // }
-    target.resparsify();
-    return target;
-  }
-
   Vector& vec_mat_1(const Vector& other, Vector& target) const {
     target.reset();
-    // #pragma omp parallel for shared(target)
-    // TODO: loop over idx array, not start
-    PARALLELISM_SETTING par = num_col > 9999999 ? PARALLELISM_SETTING::BUILTIN
-                                                : PARALLELISM_SETTING::NONE;
-    parallel_for(num_col,
-                 [&](HighsInt starts, HighsInt end) {
-                   for (HighsInt i = starts; i < end; i++) {
-                     double dot = 0.0;
-                     for (HighsInt j = start[i]; j < start[i + 1]; j++) {
-                       dot += other.value[index[j]] * value[j];
-                     }
+    for (HighsInt col=0; col < num_col; col++) {
+      double dot = 0.0;
+      for (HighsInt j = start[col]; j < start[col + 1]; j++) {
+        dot += other.value[index[j]] * value[j];
+      }
+      target.value[col] = dot;
+    }
 
-                     target.value[i] = dot;
-                   }
-                 },
-                 par);
     target.resparsify();
     return target;
   }

@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "HConfig.h"
 #include "lp_data/HighsOptions.h"
 
 void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
@@ -38,9 +37,9 @@ struct HighsIndexCollection {
   HighsInt to_ = -2;
   bool is_set_ = false;
   HighsInt set_num_entries_ = -1;
-  HighsInt* set_ = NULL;
+  std::vector<HighsInt> set_;
   bool is_mask_ = false;
-  HighsInt* mask_ = NULL;
+  std::vector<HighsInt> mask_;
 };
 
 struct HighsValueDistribution {
@@ -84,20 +83,27 @@ const double awful_regression_error = 2.0;
 const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
-bool assessIndexCollection(const HighsLogOptions& log_options,
-                           const HighsIndexCollection& index_collection);
+bool create(HighsIndexCollection& index_collection, const HighsInt from_col,
+            const HighsInt to_col, const HighsInt dimension);
 
-bool limitsForIndexCollection(const HighsLogOptions& log_options,
-                              const HighsIndexCollection& index_collection,
-                              HighsInt& from_k, HighsInt& to_k);
+bool create(HighsIndexCollection& index_collection,
+            const HighsInt num_set_entries, const HighsInt* set,
+            const HighsInt dimension);
 
-void updateIndexCollectionOutInIndex(
-    const HighsIndexCollection& index_collection, HighsInt& out_from_ix,
-    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix,
-    HighsInt& current_set_entry);
+void create(HighsIndexCollection& index_collection, const HighsInt* mask,
+            const HighsInt dimension);
 
-HighsInt dataSizeOfIndexCollection(
-    const HighsIndexCollection& index_collection);
+bool ok(const HighsIndexCollection& index_collection);
+
+void limits(const HighsIndexCollection& index_collection, HighsInt& from_k,
+            HighsInt& to_k);
+
+void updateOutInIndex(const HighsIndexCollection& index_collection,
+                      HighsInt& out_from_ix, HighsInt& out_to_ix,
+                      HighsInt& in_from_ix, HighsInt& in_to_ix,
+                      HighsInt& current_set_entry);
+
+HighsInt dataSize(const HighsIndexCollection& index_collection);
 
 bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
                                  const HighsVarType* user_data,
@@ -175,4 +181,13 @@ void printScatterDataRegressionComparison(std::string name,
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
                                        const bool print = false);
 
+double nearestPowerOfTwoScale(const double value);
+
+// If assert_condition is false then, if NDEBUG is defined message is
+// printed and abort() is called, otherwise assert is called
+void highsAssert(const bool assert_condition, const std::string message = "");
+
+// If pause_condition is true, then keyboard input is required. Allows
+// breakpoints in VScode where optimization might prevent them.
+bool highsPause(const bool pause_condition, const std::string message = "");
 #endif  // UTIL_HIGHSUTILS_H_

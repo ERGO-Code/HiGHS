@@ -20,20 +20,26 @@
 
 #include "lp_data/HConst.h"
 
-class HighsHessian;
+// class HighsHessian;
 
 class HighsHessian {
  public:
-  HighsInt dim_ = 0;
-  HessianFormat format_ = HessianFormat::kTriangular;
-  std::vector<HighsInt> q_start_;
-  std::vector<HighsInt> q_index_;
-  std::vector<double> q_value_;
+  HighsHessian() { clear(); }
+  HighsInt dim_;
+  HessianFormat format_;
+  std::vector<HighsInt> start_;
+  std::vector<HighsInt> index_;
+  std::vector<double> value_;
   bool operator==(const HighsHessian& hessian);
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
   void clear();
+  bool formatOk() const {
+    return (this->format_ == HessianFormat::kTriangular ||
+            this->format_ == HessianFormat::kSquare);
+  };
+  HighsInt numNz() const;
   void print();
 };
 

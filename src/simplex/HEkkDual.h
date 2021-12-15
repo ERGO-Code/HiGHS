@@ -20,21 +20,19 @@
 #include <string>
 #include <vector>
 
-#include "HConfig.h"
-//#include "lp_data/HighsModelObject.h"
-#include "simplex/HCrash.h"
+//#include "HConfig.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HVector.h"
-
-class HFactor;
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 
 // Limit on the number of column slices for parallel calculations. SIP
 // uses num_threads-2 slices; PAMI uses num_threads-1 slices
-const HighsInt kHighsSlicedLimit = kHighsThreadLimit;
-// Was 100, but can't see why this should be higher than kHighsThreadLimit;
+const HighsInt kHighsSlicedLimit = kSimplexConcurrencyLimit;
+// Was 100, but can't see why this should be higher than
+// kSimplexConcurrencyLimit; const double kMaxOkGrowth = 1e4;
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -171,9 +169,9 @@ class HEkkDual {
   void iterationAnalysisMajor();
 
   /**
-   * @brief Single line report after rebuild
+   * @brief Single line report after rebuild or cleanup
    */
-  void reportRebuild(const HighsInt reason_for_rebuild = -1);
+  void reportRebuild(const HighsInt reason_for_rebuild);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -197,6 +195,7 @@ class HEkkDual {
    * enter the basis (CHUZC)
    */
   void chooseColumn(HVector* row_ep);
+  void improveChooseColumnRow(HVector* row_ep);
 
   /**
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
@@ -358,6 +357,7 @@ class HEkkDual {
   void majorRollback();
 
   // private:
+  bool proofOfPrimalInfeasibility();
   void saveDualRay();
   void assessPhase1Optimality();
   void assessPhase1OptimalityUnperturbed();
@@ -371,6 +371,8 @@ class HEkkDual {
                                     const bool initialise = false);
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
+
+  bool badBasisChange();
 
   // Devex scalars
   HighsInt num_devex_iterations =
@@ -387,8 +389,8 @@ class HEkkDual {
   HighsInt solver_num_col;
   HighsInt solver_num_tot;
 
-  const HMatrix* matrix;
-  const HFactor* factor;
+  const HighsSparseMatrix* a_matrix;
+  const HSimplexNla* simplex_nla;
   HighsSimplexAnalysis* analysis;
 
   const int8_t* jMove;
@@ -403,6 +405,9 @@ class HEkkDual {
   double* rowLower;
   double* rowUpper;
   int8_t* nonbasicFlag;
+
+  // Retained value
+  bool initial_basis_is_logical_;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
@@ -454,7 +459,8 @@ class HEkkDual {
   HighsInt slice_num;
   HighsInt slice_PRICE;
   HighsInt slice_start[kHighsSlicedLimit + 1];
-  HMatrix slice_matrix[kHighsSlicedLimit];
+  HighsSparseMatrix slice_a_matrix[kHighsSlicedLimit];
+  HighsSparseMatrix slice_ar_matrix[kHighsSlicedLimit];
   HVector slice_row_ap[kHighsSlicedLimit];
   std::vector<HEkkDualRow> slice_dualRow;
 
@@ -501,8 +507,8 @@ class HEkkDual {
   HighsInt multi_nFinish;
   HighsInt multi_iteration;
   HighsInt multi_chooseAgain;
-  MChoice multi_choice[kHighsThreadLimit];
-  MFinish multi_finish[kHighsThreadLimit];
+  MChoice multi_choice[kSimplexConcurrencyLimit];
+  MFinish multi_finish[kSimplexConcurrencyLimit];
 
   //  double build_synthetic_tick;
   //  double total_synthetic_tick;

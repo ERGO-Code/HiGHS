@@ -19,40 +19,54 @@
 #include <string>
 #include <vector>
 
-#include "lp_data/HConst.h"
-
-class HighsLp;
+#include "lp_data/HStruct.h"
+#include "util/HighsSparseMatrix.h"
 
 class HighsLp {
  public:
+  HighsLp() { clear(); }
   // Model data
-  HighsInt num_col_ = 0;
-  HighsInt num_row_ = 0;
+  HighsInt num_col_;
+  HighsInt num_row_;
 
-  std::vector<HighsInt> a_start_;
-  std::vector<HighsInt> a_index_;
-  std::vector<double> a_value_;
   std::vector<double> col_cost_;
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
   std::vector<double> row_lower_;
   std::vector<double> row_upper_;
 
-  MatrixFormat format_ = MatrixFormat::kColwise;
-  ObjSense sense_ = ObjSense::kMinimize;
-  double offset_ = 0;
+  HighsSparseMatrix a_matrix_;
 
-  std::string model_name_ = "";
+  ObjSense sense_;
+  double offset_;
+
+  std::string model_name_;
 
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
 
   std::vector<HighsVarType> integrality_;
 
+  HighsScale scale_;
+  bool is_scaled_;
+  bool is_moved_;
+
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
+  bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
+  void setMatrixDimensions();
+  bool dimensionsOk(std::string message) const;
+  void setFormat(const MatrixFormat format);
+  void ensureColwise() { this->a_matrix_.ensureColwise(); };
+  void ensureRowwise() { this->a_matrix_.ensureRowwise(); };
+  void clearScaling();
+  void resetScale();
+  void clearScale();
+  void applyScale();
+  void unapplyScale();
+  void moveBackLpAndUnapplyScaling(HighsLp lp);
   void clear();
 };
 

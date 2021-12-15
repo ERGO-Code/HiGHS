@@ -268,11 +268,22 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     assert(fracval > localdom.col_lower_[col] + mipsolver.mipdata_->feastol);
     assert(fracval < localdom.col_upper_[col] - mipsolver.mipdata_->feastol);
 
-    if (pseudocost.isReliable(col) || branchingVarReliableAtNode(col)) {
+    if (pseudocost.isReliable(col)) {
       upscore[k] = pseudocost.getPseudocostUp(col, fracval);
       downscore[k] = pseudocost.getPseudocostDown(col, fracval);
       upscorereliable[k] = true;
       downscorereliable[k] = true;
+    } else {
+      int flags = branchingVarReliableAtNodeFlags(col);
+      if (flags & kUpReliable) {
+        upscore[k] = pseudocost.getPseudocostUp(col, fracval);
+        upscorereliable[k] = true;
+      }
+
+      if (flags & kDownReliable) {
+        downscore[k] = pseudocost.getPseudocostDown(col, fracval);
+        downscorereliable[k] = true;
+      }
     }
   }
 
@@ -493,6 +504,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
              std::make_pair(upscore[candidate],
                             pseudocost.getAvgInferencesUp(col)))) {
       // evaluate down branch
+      // if (!mipsolver.submip)
+      //   printf("down eval col=%d fracval=%g\n", col, fracval);
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
 
       HighsDomainChange domchg{downval, col, HighsBoundType::kUpper};
@@ -628,6 +641,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       lp->flushDomain(localdom);
       if (numiters > basisstart_threshold) lp->recoverBasis();
     } else {
+      // if (!mipsolver.submip)
+      //  printf("up eval col=%d fracval=%g\n", col, fracval);
       // evaluate up branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
       HighsDomainChange domchg{upval, col, HighsBoundType::kLower};
@@ -1105,9 +1120,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
                     1);
       if (sbiters > sbmaxiters) {
         pseudocost.setMinReliable(0);
-      } else if (sbiters > sbmaxiters / 2) {
-        double reductionratio =
-            (sbiters - sbmaxiters / 2) / (double)(sbmaxiters - sbmaxiters / 2);
+      } else if (sbiters > (sbmaxiters >> 1)) {
+        double reductionratio = (sbiters - (sbmaxiters >> 1)) /
+                                (double)(sbmaxiters - (sbmaxiters >> 1));
 
         HighsInt minrelreduced = int(minrel - reductionratio * (minrel - 1));
         pseudocost.setMinReliable(std::min(minrel, minrelreduced));
@@ -1117,7 +1132,12 @@ HighsSearch::NodeResult HighsSearch::branch() {
     double degeneracyFac = lp->computeLPDegneracy(localdom);
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
+    // if (!mipsolver.submip)
+    //  printf("selecting branching cand with minrel=%d\n",
+    //         pseudocost.getMinReliable());
     HighsInt branchcand = selectBranchingCandidate(sbmaxiters);
+    // if (!mipsolver.submip)
+    //   printf("branching cand returned as %d\n", branchcand);
     NodeData& currnode = nodestack.back();
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];
@@ -1748,7 +1768,7 @@ HighsSearch::NodeResult HighsSearch::dive() {
     ++nnodes;
     NodeResult result = evaluateNode();
 
-    if (mipsolver.mipdata_->checkLimits()) return result;
+    if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 
     if (result != NodeResult::kOpen) return result;
 

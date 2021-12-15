@@ -93,8 +93,7 @@ struct HighsOrbitopeMatrix {
 
   HighsInt orbitalFixing(HighsDomain& domain) const;
 
-  void determineOrbitopeType(HighsCliqueTable& cliquetable,
-                             HighsDomain& domain);
+  void determineOrbitopeType(HighsCliqueTable& cliquetable);
 
   HighsInt getBranchingColumn(const std::vector<double>& colLower,
                               const std::vector<double>& colUpper,

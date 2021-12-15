@@ -197,14 +197,14 @@ HighsInt Highs_run(void* highs);
 /*
  * @brief Reports the solution and basis status
  */
-HighsInt Highs_writeSolution(void* highs,
+HighsInt Highs_writeSolution(const void* highs,
                              const char* filename  //!< filename
 );
 
 /*
  * @brief Reports the solution and basis status in a human-readable fashion
  */
-HighsInt Highs_writeSolutionPretty(void* highs,
+HighsInt Highs_writeSolutionPretty(const void* highs,
                                    const char* filename  //!< filename
 );
 
@@ -334,23 +334,23 @@ HighsInt Highs_setOptionValue(void* highs,
                               const char* value    //!< new value of option
 );
 
-HighsInt Highs_getBoolOptionValue(void* highs,
+HighsInt Highs_getBoolOptionValue(const void* highs,
                                   const char* option,  //!< name of the option
                                   HighsInt* value      //!< value of option
 );
 
-HighsInt Highs_getIntOptionValue(void* highs,
+HighsInt Highs_getIntOptionValue(const void* highs,
                                  const char* option,  //!< name of the option
                                  HighsInt* value      //!< value of option
 );
 
-HighsInt Highs_getDoubleOptionValue(void* highs,
+HighsInt Highs_getDoubleOptionValue(const void* highs,
                                     const char* option,  //!< name of the option
                                     double* value        //!< value of option
 );
 
 HighsInt Highs_getStringOptionValue(
-    void* highs,
+    const void* highs,
     const char* option,  //!< name of the option
     char* value  //!< pointer to allocated memory to store value of option
 );
@@ -358,7 +358,7 @@ HighsInt Highs_getStringOptionValue(
 /*
  * @brief Get the type expected by an option
  */
-HighsInt Highs_getOptionType(void* highs,
+HighsInt Highs_getOptionType(const void* highs,
                              const char* option,  //!< The name of the option
                              HighsInt* type       //!< The type of the option.
 );
@@ -368,14 +368,14 @@ HighsInt Highs_getOptionType(void* highs,
  */
 HighsInt Highs_resetOptions(void* highs);
 
-HighsInt Highs_writeOptions(void* highs, const char* filename);
+HighsInt Highs_writeOptions(const void* highs, const char* filename);
 
-HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename);
+HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
 
 /*
  * @brief
  */
-HighsInt Highs_getIntInfoValue(void* highs,
+HighsInt Highs_getIntInfoValue(const void* highs,
                                const char* info,  //!< The info name
                                HighsInt* value    //!< The info value
 );
@@ -383,7 +383,7 @@ HighsInt Highs_getIntInfoValue(void* highs,
 /*
  * @brief
  */
-HighsInt Highs_getDoubleInfoValue(void* highs,
+HighsInt Highs_getDoubleInfoValue(const void* highs,
                                   const char* info,  //!< The info name
                                   double* value      //!< The info value
 );
@@ -391,7 +391,7 @@ HighsInt Highs_getDoubleInfoValue(void* highs,
  * @brief
  */
 HighsInt Highs_getSolution(
-    void* highs,
+    const void* highs,
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
@@ -402,7 +402,7 @@ HighsInt Highs_getSolution(
  * @brief
  */
 HighsInt Highs_getBasis(
-    void* highs,
+    const void* highs,
     HighsInt* colstatus,  //!< array of length [numcol], filled
                           //!< with column basis stati
     HighsInt* rowstatus   //!< array of length [numrow], filled
@@ -412,19 +412,19 @@ HighsInt Highs_getBasis(
 /**
  * @brief Returns the status of the model
  */
-HighsInt Highs_getModelStatus(void* highs);
+HighsInt Highs_getModelStatus(const void* highs);
 
 /**
  * @brief Returns the status of the scaled model
  */
-HighsInt Highs_getScaledModelStatus(void* highs);
+HighsInt Highs_getScaledModelStatus(const void* highs);
 
 /**
  * @brief Returns an unbounded dual ray that is a certificate of primal
  * infeasibility.
  */
 HighsInt Highs_getDualRay(
-    void* highs,
+    const void* highs,
     HighsInt* has_dual_ray,  //!< TRUE if the dual ray exists
     double* dual_ray_value   //!< array of length [numrow],
                              //!< filled with an unbounded ray
@@ -435,7 +435,7 @@ HighsInt Highs_getDualRay(
  * infeasibility.
  */
 HighsInt Highs_getPrimalRay(
-    void* highs,
+    const void* highs,
     HighsInt* has_primal_ray,  //!< TRUE if the primal ray exists
     double* primal_ray_value   //!< array of length [numcol], filled with an
                                //!< unbounded ray
@@ -444,7 +444,7 @@ HighsInt Highs_getPrimalRay(
 /**
  * @brief Returns the objective function value (if known)
  */
-double Highs_getObjectiveValue(void* highs);
+double Highs_getObjectiveValue(const void* highs);
 
 /**
  * @brief Gets the basic variables in the order corresponding to
@@ -453,7 +453,7 @@ double Highs_getObjectiveValue(void* highs);
  * required by SCIP, non-negative entries are indices of columns,
  * and negative entries are -(row_index+1).
  */
-HighsInt Highs_getBasicVariables(void* highs,
+HighsInt Highs_getBasicVariables(const void* highs,
                                  HighsInt* basic_variables  //!< Basic variables
 );
 
@@ -461,7 +461,7 @@ HighsInt Highs_getBasicVariables(void* highs,
  * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
  */
 HighsInt Highs_getBasisInverseRow(
-    void* highs,
+    const void* highs,
     const HighsInt row,    //!< Index of row required
     double* row_vector,    //!< Row required
     HighsInt* row_num_nz,  //!< Number of nonzeros
@@ -472,7 +472,7 @@ HighsInt Highs_getBasisInverseRow(
  * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
  */
 HighsInt Highs_getBasisInverseCol(
-    void* highs,
+    const void* highs,
     const HighsInt col,    //!< Index of column required
     double* col_vector,    //!< Column required
     HighsInt* col_num_nz,  //!< Number of nonzeros
@@ -484,7 +484,7 @@ HighsInt Highs_getBasisInverseCol(
  * \f$\mathbf{b}\f$
  */
 HighsInt Highs_getBasisSolve(
-    void* highs,
+    const void* highs,
     const double* rhs,          //!< RHS \f$\mathbf{b}\f$
     double* solution_vector,    //!< Solution \f$\mathbf{x}\f$
     HighsInt* solution_num_nz,  //!< Number of nonzeros
@@ -496,7 +496,7 @@ HighsInt Highs_getBasisSolve(
  * \f$\mathbf{b}\f$
  */
 HighsInt Highs_getBasisTransposeSolve(
-    void* highs,
+    const void* highs,
     const double* rhs,          //!< RHS \f$\mathbf{b}\f$
     double* solution_vector,    //!< Solution  \f$\mathbf{x}\f$
     HighsInt* solution_nz,      //!< Number of nonzeros
@@ -506,7 +506,7 @@ HighsInt Highs_getBasisTransposeSolve(
 /**
  * @brief Forms a row of \f$B^{-1}A\f$
  */
-HighsInt Highs_getReducedRow(void* highs,
+HighsInt Highs_getReducedRow(const void* highs,
                              const HighsInt row,    //!< Index of row required
                              double* row_vector,    //!< Row required
                              HighsInt* row_num_nz,  //!< Number of nonzeros
@@ -517,7 +517,7 @@ HighsInt Highs_getReducedRow(void* highs,
  * @brief Forms a column of \f$B^{-1}A\f$
  */
 HighsInt Highs_getReducedColumn(
-    void* highs,
+    const void* highs,
     const HighsInt col,    //!< Index of column required
     double* col_vector,    //!< Column required
     HighsInt* col_num_nz,  //!< Number of nonzeros
@@ -540,7 +540,7 @@ HighsInt Highs_setLogicalBasis(void* highs);
 /**
  * @brief Returns the cumulative wall-clock time spent in Highs_run();
  */
-double Highs_getRunTime(void* highs);
+double Highs_getRunTime(const void* highs);
 
 /**
  * @brief Adds a row to the model
@@ -799,18 +799,18 @@ HighsInt Highs_changeCoeff(
 /**
  * @brief Get the objective sense
  */
-HighsInt Highs_getObjectiveSense(void* highs, HighsInt* sense);
+HighsInt Highs_getObjectiveSense(const void* highs, HighsInt* sense);
 
 /**
  * @brief Get the objective offset
  */
-HighsInt Highs_getObjectiveOffset(void* highs, double* offset);
+HighsInt Highs_getObjectiveOffset(const void* highs, double* offset);
 
 /**
  * @brief Get multiple columns from the model given by an interval
  */
 HighsInt Highs_getColsByRange(
-    void* highs,
+    const void* highs,
     const HighsInt from_col,  //!< The index of the first column to
                               //!< get from the model
     const HighsInt to_col,    //!< One more than the last column to get
@@ -832,7 +832,7 @@ HighsInt Highs_getColsByRange(
  * @brief Get multiple columns from the model given by a set
  */
 HighsInt Highs_getColsBySet(
-    void* highs,
+    const void* highs,
     const HighsInt num_set_entries,  //!< The number of indides in the set
     const HighsInt* set,     //!< Array of size num_set_entries with indices
                              //!< of columns to get
@@ -853,7 +853,7 @@ HighsInt Highs_getColsBySet(
  * @brief Get multiple columns from the model given by a mask
  */
 HighsInt Highs_getColsByMask(
-    void* highs,
+    const void* highs,
     const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
     HighsInt* num_col,       //!< Number of columns got from the model
     double* costs,           //!< Array of size num_col with costs
@@ -872,7 +872,7 @@ HighsInt Highs_getColsByMask(
  * @brief Get multiple rows from the model given by an interval
  */
 HighsInt Highs_getRowsByRange(
-    void* highs,
+    const void* highs,
     const HighsInt
         from_row,  //!< The index of the first row to get from the model
     const HighsInt to_row,   //!< One more than the last row get from the model
@@ -892,7 +892,7 @@ HighsInt Highs_getRowsByRange(
  * @brief Get multiple rows from the model given by a set
  */
 HighsInt Highs_getRowsBySet(
-    void* highs,
+    const void* highs,
     const HighsInt num_set_entries,  //!< The number of indides in the set
     const HighsInt* set,     //!< Array of size num_set_entries with indices
                              //!< of rows to get
@@ -912,7 +912,7 @@ HighsInt Highs_getRowsBySet(
  * @brief Get multiple rows from the model given by a mask
  */
 HighsInt Highs_getRowsByMask(
-    void* highs,
+    const void* highs,
     const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
     HighsInt* num_row,       //!< Number of rows got from the model
     double* lower,           //!< Array of size num_row with lower bounds
@@ -1004,29 +1004,29 @@ HighsInt Highs_scaleRow(void* highs,
 /**
  * @brief Returns the value of infinity used by HiGHS
  */
-double Highs_getInfinity(void* highs);
+double Highs_getInfinity(const void* highs);
 
 /**
  * @brief Returns the number of columns of the current model
  */
-HighsInt Highs_getNumCol(void* highs);
+HighsInt Highs_getNumCol(const void* highs);
 
 /**
  * @brief Returns the number of rows of the current model
  */
-HighsInt Highs_getNumRow(void* highs);
+HighsInt Highs_getNumRow(const void* highs);
 
 /**
  * @brief Returns the number of nonzeros of the current model
  */
-HighsInt Highs_getNumNz(void* highs);
+HighsInt Highs_getNumNz(const void* highs);
 
 /**
  * @brief Returns the number of nonzeroes of the current Hessian
  */
-HighsInt Highs_getHessianNumNz(void* highs);
+HighsInt Highs_getHessianNumNz(const void* highs);
 
-HighsInt Highs_getModel(void* highs, const HighsInt a_format,
+HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         const HighsInt q_format, HighsInt* numcol,
                         HighsInt* numrow, HighsInt* numnz,
                         HighsInt* hessian_num_nz, HighsInt* sense,
@@ -1084,18 +1084,19 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
 
 HighsInt Highs_runQuiet(void* highs);
 
-HighsInt Highs_setHighsLogfile(void* highs,
-                               void* logfile  //!< File handle of the logfile
+HighsInt Highs_setHighsLogfile(
+    void* highs,
+    const void* logfile  //!< File handle of the logfile
 );
 
 HighsInt Highs_setHighsOutput(
     void* highs,
-    void* outputfile  //!< File handle of the output file
+    const void* outputfile  //!< File handle of the output file
 );
 
-HighsInt Highs_getIterationCount(void* highs);
+HighsInt Highs_getIterationCount(const void* highs);
 
-HighsInt Highs_getSimplexIterationCount(void* highs);
+HighsInt Highs_getSimplexIterationCount(const void* highs);
 
 HighsInt Highs_setHighsBoolOptionValue(
     void* highs,
@@ -1134,47 +1135,47 @@ HighsInt Highs_setHighsOptionValue(void* highs,
 );
 
 HighsInt Highs_getHighsBoolOptionValue(
-    void* highs,
+    const void* highs,
     const char* option,  //!< name of the option
     HighsInt* value      //!< value of option
 );
 
 HighsInt Highs_getHighsIntOptionValue(
-    void* highs,
+    const void* highs,
     const char* option,  //!< name of the option
     HighsInt* value      //!< value of option
 );
 
 HighsInt Highs_getHighsDoubleOptionValue(
-    void* highs,
+    const void* highs,
     const char* option,  //!< name of the option
     double* value        //!< value of option
 );
 
 HighsInt Highs_getHighsStringOptionValue(
-    void* highs,
+    const void* highs,
     const char* option,  //!< name of the option
     char* value  //!< pointer to allocated memory to store value of option
 );
 
-HighsInt Highs_getHighsOptionType(void* highs, const char* option,
+HighsInt Highs_getHighsOptionType(const void* highs, const char* option,
                                   HighsInt* type);
 
 HighsInt Highs_resetHighsOptions(void* highs);
 
-HighsInt Highs_getHighsIntInfoValue(void* highs, const char* info,
+HighsInt Highs_getHighsIntInfoValue(const void* highs, const char* info,
                                     HighsInt* value);
 
-HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
+HighsInt Highs_getHighsDoubleInfoValue(const void* highs, const char* info,
                                        double* value);
 
-HighsInt Highs_getNumCols(void* highs);
+HighsInt Highs_getNumCols(const void* highs);
 
-HighsInt Highs_getNumRows(void* highs);
+HighsInt Highs_getNumRows(const void* highs);
 
-double Highs_getHighsInfinity(void* highs);
+double Highs_getHighsInfinity(const void* highs);
 
-double Highs_getHighsRunTime(void* highs);
+double Highs_getHighsRunTime(const void* highs);
 
 // const char* Highs_highsModelStatusToChar(void* highs,
 //                                          HighsInt int_model_status);

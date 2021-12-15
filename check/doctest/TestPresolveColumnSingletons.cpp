@@ -21,15 +21,15 @@ HighsStatus zeroCostColSing() {
   lp.num_col_ = 2;
   lp.num_row_ = 1;
 
-  lp.a_start_.push_back(0);
-  lp.a_start_.push_back(1);
-  lp.a_start_.push_back(2);
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
 
-  lp.a_index_.push_back(0);
-  lp.a_value_.push_back(0.5);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(0.5);
 
-  lp.a_index_.push_back(0);
-  lp.a_value_.push_back(0.5);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(0.5);
 
   lp.col_lower_.push_back(0);
   lp.col_upper_.push_back(1);
@@ -43,8 +43,6 @@ HighsStatus zeroCostColSing() {
   lp.col_cost_.push_back(0);
   lp.col_cost_.push_back(1);
 
-  lp.format_ = MatrixFormat::kColwise;
-  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
@@ -60,23 +58,23 @@ HighsStatus colSingDoubletonEquality()
   lp.num_col_ = 4;
   lp.num_row_ = 2;
 
-  lp.a_start_.push_back(0);
-  lp.a_start_.push_back(2);
-  lp.a_start_.push_back(3);
-  lp.a_start_.push_back(4);
-  lp.a_start_.push_back(5);
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(2);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(4);
+  lp.a_matrix_.start_.push_back(5);
 
-  lp.a_index_.push_back(0);
-  lp.a_index_.push_back(1);
-  lp.a_index_.push_back(0);
-  lp.a_index_.push_back(1);
-  lp.a_index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(1);
 
-  lp.a_value_.push_back(0.5);
-  lp.a_value_.push_back(0.5);
-  lp.a_value_.push_back(1);
-  lp.a_value_.push_back(1);
-  lp.a_value_.push_back(1);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
 
   lp.col_lower_.push_back(0);
   lp.col_upper_.push_back(1);
@@ -116,23 +114,23 @@ HighsStatus colSingDoubletonInequality()
   lp.num_col_ = 4;
   lp.num_row_ = 2;
 
-  lp.a_start_.push_back(0);
-  lp.a_start_.push_back(2);
-  lp.a_start_.push_back(3);
-  lp.a_start_.push_back(4);
-  lp.a_start_.push_back(5);
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(2);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(4);
+  lp.a_matrix_.start_.push_back(5);
 
-  lp.a_index_.push_back(0);
-  lp.a_index_.push_back(1);
-  lp.a_index_.push_back(0);
-  lp.a_index_.push_back(1);
-  lp.a_index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(1);
 
-  lp.a_value_.push_back(0.5);
-  lp.a_value_.push_back(0.5);
-  lp.a_value_.push_back(1);
-  lp.a_value_.push_back(1);
-  lp.a_value_.push_back(1);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
 
   lp.col_lower_.push_back(0);
   lp.col_upper_.push_back(1);
@@ -173,15 +171,15 @@ HighsStatus twoColSingDoubletonEquality()
   lp.num_col_ = 2;
   lp.num_row_ = 1;
 
-  lp.a_start_.push_back(0);
-  lp.a_start_.push_back(1);
-  lp.a_start_.push_back(2);
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
 
-  lp.a_index_.push_back(0);
-  lp.a_index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
 
-  lp.a_value_.push_back(1);
-  lp.a_value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
 
   lp.col_lower_.push_back(0);
   lp.col_upper_.push_back(1);
@@ -195,8 +193,6 @@ HighsStatus twoColSingDoubletonEquality()
   lp.col_cost_.push_back(1);
   lp.col_cost_.push_back(2);
 
-  lp.format_ = MatrixFormat::kColwise;
-  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
@@ -212,15 +208,15 @@ HighsStatus twoColSingDoubletonInequality()
   lp.num_col_ = 2;
   lp.num_row_ = 1;
 
-  lp.a_start_.push_back(0);
-  lp.a_start_.push_back(1);
-  lp.a_start_.push_back(2);
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
 
-  lp.a_index_.push_back(0);
-  lp.a_index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
 
-  lp.a_value_.push_back(1);
-  lp.a_value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
 
   lp.col_lower_.push_back(0);
   lp.col_upper_.push_back(1);
@@ -234,8 +230,6 @@ HighsStatus twoColSingDoubletonInequality()
   lp.col_cost_.push_back(1);
   lp.col_cost_.push_back(2);
 
-  lp.format_ = MatrixFormat::kColwise;
-  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);

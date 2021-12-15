@@ -18,15 +18,14 @@
 #include <cassert>
 #include <iostream>
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsModelObject.h"
-#include "simplex/HSimplex.h"
+#include "pdqsort/pdqsort.h"
 #include "simplex/HSimplexDebug.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsCDouble.h"
 #include "util/HighsSort.h"
 
 using std::make_pair;
+using std::min;
 using std::pair;
 using std::set;
 
@@ -75,7 +74,6 @@ void HEkkDualRow::chooseMakepack(const HVector* row, const HighsInt offset) {
   const HighsInt rowCount = row->count;
   const HighsInt* rowIndex = &row->index[0];
   const double* rowArray = &row->array[0];
-
   for (HighsInt i = 0; i < rowCount; i++) {
     const HighsInt index = rowIndex[i];
     const double value = rowArray[index];
@@ -92,10 +90,11 @@ void HEkkDualRow::choosePossible() {
   const double Ta = ekk_instance_.info_.update_count < 10
                         ? 1e-9
                         : ekk_instance_.info_.update_count < 20 ? 3e-8 : 1e-6;
-  const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   workTheta = kHighsInf;
   workCount = 0;
+
   for (HighsInt i = 0; i < packCount; i++) {
     const HighsInt iCol = packIndex[i];
     const HighsInt move = workMove[iCol];
@@ -132,7 +131,15 @@ HighsInt HEkkDualRow::chooseFinal() {
    */
 
   // 1. Reduce by large step BFRT
-  analysis->simplexTimerStart(Chuzc2Clock);
+  analysis->simplexTimerStart(Chuzc3Clock);
+  bool report_bfrt = false;
+  const bool debug_bfrt_report_on = false;
+  if (ekk_instance_.debug_iteration_report_) {
+    report_bfrt = debug_bfrt_report_on;
+    if (report_bfrt)
+      printf("HEkkDualRow::chooseFinal Check iter = %d\n",
+             (int)ekk_instance_.iteration_count_);
+  }
   HighsInt fullCount = workCount;
   workCount = 0;
   double totalChange = 0;
@@ -151,41 +158,51 @@ HighsInt HEkkDualRow::chooseFinal() {
     selectTheta *= 10;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  analysis->simplexTimerStop(Chuzc2Clock);
-
+  analysis->simplexTimerStop(Chuzc3Clock);
   // 2. Choose by small step BFRT
 
   bool use_quad_sort = false;
   bool use_heap_sort = false;
   // Use the quadratic cost sort for smaller values of workCount,
   // otherwise use the heap-based sort
-  use_quad_sort = workCount < 100;
+  use_quad_sort = true;  // workCount < 100;
   use_heap_sort = !use_quad_sort;
-
   assert(use_heap_sort || use_quad_sort);
+  if (workCount < 100) {
+    analysis->num_quad_chuzc++;
+  } else {
+    analysis->num_heap_chuzc++;
+    analysis->sum_heap_chuzc_size += workCount;
+    analysis->max_heap_chuzc_size =
+        max(workCount, analysis->max_heap_chuzc_size);
+  }
 
   if (use_heap_sort) {
+    printf("CHUZC: Using heap sort\n");
     // Take a copy of workData and workCount for the independent
     // heap-based code
     original_workData = workData;
     alt_workCount = workCount;
   }
-  analysis->simplexTimerStart(Chuzc3Clock);
+  analysis->simplexTimerStart(Chuzc4Clock);
   bool choose_ok;
   if (use_quad_sort) {
     // Use the O(n^2) quadratic sort for the candidates
-    analysis->simplexTimerStart(Chuzc3a0Clock);
+    analysis->simplexTimerStart(Chuzc4a0Clock);
     choose_ok = chooseFinalWorkGroupQuad();
-    analysis->simplexTimerStop(Chuzc3a0Clock);
+    //    if (!choose_ok) {
+    //  choose_ok = quadChooseFinalWorkGroupQuad();
+    //    }
+    analysis->simplexTimerStop(Chuzc4a0Clock);
   }
   if (use_heap_sort) {
     // Use the O(n log n) heap sort for the candidates
-    analysis->simplexTimerStart(Chuzc3a1Clock);
+    analysis->simplexTimerStart(Chuzc4a1Clock);
     choose_ok = chooseFinalWorkGroupHeap();
-    analysis->simplexTimerStop(Chuzc3a1Clock);
+    analysis->simplexTimerStop(Chuzc4a1Clock);
   }
   if (!choose_ok) {
-    analysis->simplexTimerStop(Chuzc3Clock);
+    analysis->simplexTimerStop(Chuzc4Clock);
     return -1;
   }
   // Make sure that there is at least one group according to sorting procedure
@@ -193,7 +210,7 @@ HighsInt HEkkDualRow::chooseFinal() {
   if (use_heap_sort) assert((HighsInt)alt_workGroup.size() > 1);
 
   // 3. Choose large alpha
-  analysis->simplexTimerStart(Chuzc3bClock);
+  analysis->simplexTimerStart(Chuzc4bClock);
   HighsInt breakIndex;
   HighsInt breakGroup;
   HighsInt alt_breakIndex;
@@ -204,7 +221,7 @@ HighsInt HEkkDualRow::chooseFinal() {
   if (use_heap_sort)
     chooseFinalLargeAlpha(alt_breakIndex, alt_breakGroup, alt_workCount,
                           sorted_workData, alt_workGroup);
-  analysis->simplexTimerStop(Chuzc3bClock);
+  analysis->simplexTimerStop(Chuzc4bClock);
 
   if (!use_quad_sort) {
     // If the quadratic sort is not being used, revert to the heap
@@ -212,9 +229,9 @@ HighsInt HEkkDualRow::chooseFinal() {
     breakIndex = alt_breakIndex;
     breakGroup = alt_breakGroup;
   }
-  analysis->simplexTimerStart(Chuzc3cClock);
+  analysis->simplexTimerStart(Chuzc4cClock);
 
-  HighsInt move_out = workDelta < 0 ? -1 : 1;
+  const HighsInt move_out = workDelta < 0 ? -1 : 1;
   assert(breakIndex >= 0);
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;
@@ -229,65 +246,92 @@ HighsInt HEkkDualRow::chooseFinal() {
   } else {
     workTheta = 0;
   }
+  analysis->simplexTimerStop(Chuzc4cClock);
 
-  analysis->simplexTimerStop(Chuzc3cClock);
-
-  /*
-  if (use_quad_sort && use_heap_sort)
-    debugDualChuzcWorkDataAndGroup(
-        ekk_instance_, workDelta, workTheta, workCount, alt_workCount,
-  breakIndex, alt_breakIndex, workData, sorted_workData, workGroup,
-  alt_workGroup);
-  */
-  analysis->simplexTimerStart(Chuzc3dClock);
+  analysis->simplexTimerStart(Chuzc4dClock);
 
   // 4. Determine BFRT flip index: flip all
-  fullCount = breakIndex;
+  fullCount = breakIndex;  // Not used
   workCount = 0;
   if (use_quad_sort) {
+    if (report_bfrt) {
+      printf(
+          "CHUZC(%d) breakGroup = %d/%d; breakIndex = %d/%d; workPivot = %d; "
+          "workCount = %d\n",
+          (int)ekk_instance_.iteration_count_, (int)breakGroup,
+          (int)workGroup.size(), (int)breakIndex,
+          (int)workGroup[workGroup.size()], (int)workPivot, (int)workCount);
+      debugReportBfrtVar(-1, workData);
+    }
     for (HighsInt i = 0; i < workGroup[breakGroup]; i++) {
+      if (report_bfrt) debugReportBfrtVar(i, workData);
       const HighsInt iCol = workData[i].first;
       const HighsInt move = workMove[iCol];
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
+    for (HighsInt i = workGroup[breakGroup]; i < workGroup[breakGroup + 1]; i++)
+      if (report_bfrt) debugReportBfrtVar(i, workData);
   } else {
+    printf("DebugHeapSortCHUZC: Pivot = %4d; alpha = %11.4g; theta = %11.4g\n",
+           (int)workPivot, workAlpha, workTheta);
+    debugReportBfrtVar(-1, sorted_workData);
     for (HighsInt i = 0; i < alt_workGroup[breakGroup]; i++) {
       const HighsInt iCol = sorted_workData[i].first;
       const HighsInt move = workMove[iCol];
+      debugReportBfrtVar(i, sorted_workData);
       workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
+    }
+    // Look at all entries of final group to see what dual
+    // infeasibilities might be created
+    assert(breakGroup + 1 < (int)alt_workGroup.size());
+    const HighsInt to_i = alt_workGroup[breakGroup + 1];
+    assert(to_i <= (int)sorted_workData.size());
+    //    HighsInt num_infeasibility = 0;
+    const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
+    for (HighsInt i = alt_workGroup[breakGroup]; i < to_i; i++) {
+      debugReportBfrtVar(i, sorted_workData);
+      const HighsInt iCol = sorted_workData[i].first;
+      const double value = sorted_workData[i].second;
+      const HighsInt move = workMove[iCol];
+      const double dual = workDual[iCol];
+      const double new_dual = dual - move_out * move * workTheta * value;
+      const double new_dual_infeasibility = move * new_dual;
+      const bool infeasible = new_dual_infeasibility < -Td;
+      if (infeasible) {
+        //	num_infeasibility++;
+        workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
+        assert(workRange[iCol] < kHighsInf);
+      }
     }
   }
   if (workTheta == 0) workCount = 0;
-  analysis->simplexTimerStop(Chuzc3dClock);
+  analysis->simplexTimerStop(Chuzc4dClock);
 
-  analysis->simplexTimerStart(Chuzc3eClock);
-  /*
-  if (!use_quad_sort) {
-    for (HighsInt i = 0; i < workCount; i++) workData[i] = sorted_workData[i];
-  }
-  */
-  sort(workData.begin(), workData.begin() + workCount);
-  analysis->simplexTimerStop(Chuzc3eClock);
-  analysis->simplexTimerStop(Chuzc3Clock);
+  analysis->simplexTimerStart(Chuzc4eClock);
+  // Sort workData by .first (iCol) so that columns of A are accessed in order?
+  pdqsort(workData.begin(), workData.begin() + workCount);
+  analysis->simplexTimerStop(Chuzc4eClock);
+  analysis->simplexTimerStop(Chuzc4Clock);
+
   return 0;
 }
 
 bool HEkkDualRow::chooseFinalWorkGroupQuad() {
-  const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   HighsInt fullCount = workCount;
   workCount = 0;
-  double totalChange = initial_total_change;
+  double totalChange = kInitialTotalChange;
   double selectTheta = workTheta;
   const double totalDelta = fabs(workDelta);
   workGroup.clear();
   workGroup.push_back(0);
   HighsInt prev_workCount = workCount;
-  double prev_remainTheta = initial_remain_theta;
+  double prev_remainTheta = kInitialRemainTheta;
   double prev_selectTheta = selectTheta;
   HighsInt debug_num_loop = 0;
 
-  while (selectTheta < max_select_theta) {
-    double remainTheta = initial_remain_theta;
+  while (selectTheta < kMaxSelectTheta) {
+    double remainTheta = kInitialRemainTheta;
     debug_num_loop++;
     HighsInt debug_loop_ln = 0;
     for (HighsInt i = workCount; i < fullCount; i++) {
@@ -312,7 +356,7 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
         (prev_remainTheta == remainTheta)) {
       HighsInt num_var =
           ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
-      debugDualChuzcFailQuad0(ekk_instance_.options_, workCount, workData,
+      debugDualChuzcFailQuad0(*ekk_instance_.options_, workCount, workData,
                               num_var, workDual, selectTheta, remainTheta,
                               true);
       return false;
@@ -327,17 +371,79 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
   // Check that at least one group has been identified
   if ((HighsInt)workGroup.size() <= 1) {
     HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
-    debugDualChuzcFailQuad1(ekk_instance_.options_, workCount, workData,
+    debugDualChuzcFailQuad1(*ekk_instance_.options_, workCount, workData,
                             num_var, workDual, selectTheta, true);
     return false;
   }
   return true;
 }
 
+bool HEkkDualRow::quadChooseFinalWorkGroupQuad() {
+  const HighsCDouble Td = ekk_instance_.options_->dual_feasibility_tolerance;
+  HighsInt fullCount = workCount;
+  workCount = 0;
+  HighsCDouble totalChange = kInitialTotalChange;
+  HighsCDouble selectTheta = workTheta;
+  const HighsCDouble totalDelta = fabs(workDelta);
+  workGroup.clear();
+  workGroup.push_back(0);
+  HighsInt prev_workCount = workCount;
+  HighsCDouble prev_remainTheta = kInitialRemainTheta;
+  HighsCDouble prev_selectTheta = selectTheta;
+  HighsInt debug_num_loop = 0;
+
+  while (selectTheta < kMaxSelectTheta) {
+    HighsCDouble remainTheta = kInitialRemainTheta;
+    debug_num_loop++;
+    HighsInt debug_loop_ln = 0;
+    for (HighsInt i = workCount; i < fullCount; i++) {
+      HighsInt iCol = workData[i].first;
+      HighsCDouble value = workData[i].second;
+      HighsCDouble dual = workMove[iCol] * workDual[iCol];
+      // Tight satisfy
+      if (dual <= selectTheta * value) {
+        swap(workData[workCount++], workData[i]);
+        totalChange += value * (workRange[iCol]);
+      } else if (dual + Td < remainTheta * value) {
+        remainTheta = (dual + Td) / value;
+      }
+      debug_loop_ln++;
+    }
+    workGroup.push_back(workCount);
+
+    // Update selectTheta with the value of remainTheta;
+    selectTheta = remainTheta;
+    // Check for no change in this loop - to prevent infinite loop
+    if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
+        (prev_remainTheta == remainTheta)) {
+      HighsInt num_var =
+          ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+      debugDualChuzcFailQuad0(*ekk_instance_.options_, workCount, workData,
+                              num_var, workDual, (double)selectTheta,
+                              (double)remainTheta, true);
+      return false;
+    }
+    // Record the initial values of workCount, remainTheta and selectTheta for
+    // the next pass through the loop - to check for infinite loop condition
+    prev_workCount = workCount;
+    prev_remainTheta = remainTheta;
+    prev_selectTheta = selectTheta;
+    if (totalChange >= totalDelta || workCount == fullCount) break;
+  }
+  // Check that at least one group has been identified
+  if ((HighsInt)workGroup.size() <= 1) {
+    HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+    debugDualChuzcFailQuad1(*ekk_instance_.options_, workCount, workData,
+                            num_var, workDual, (double)selectTheta, true);
+    return false;
+  }
+  return true;
+}
+
 bool HEkkDualRow::chooseFinalWorkGroupHeap() {
-  const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   HighsInt fullCount = alt_workCount;
-  double totalChange = initial_total_change;
+  double totalChange = kInitialTotalChange;
   double selectTheta = workTheta;
   const double totalDelta = fabs(workDelta);
   HighsInt heap_num_en = 0;
@@ -350,7 +456,7 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
     double value = original_workData[i].second;
     double dual = workMove[iCol] * workDual[iCol];
     double ratio = dual / value;
-    if (ratio < max_select_theta) {
+    if (ratio < kMaxSelectTheta) {
       heap_num_en++;
       heap_i[heap_num_en] = i;
       heap_v[heap_num_en] = ratio;
@@ -364,7 +470,7 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
   if (heap_num_en <= 0) {
     HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
     // No entries in heap = > failure
-    debugDualChuzcFailHeap(ekk_instance_.options_, alt_workCount,
+    debugDualChuzcFailHeap(*ekk_instance_.options_, alt_workCount,
                            original_workData, num_var, workDual, selectTheta,
                            true);
     return false;
@@ -381,6 +487,7 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
       // first entry
       alt_workGroup.push_back(alt_workCount);
       this_group_first_entry = alt_workCount;
+      HighsInt alt_workGroup_size = alt_workGroup.size();
       selectTheta = (dual + Td) / value;
       // End loop if all permitted groups have been identified
       if (totalChange >= totalDelta) break;
@@ -443,7 +550,7 @@ void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
     ekk_instance_.flipBound(iCol);
-    ekk_instance_.matrix_.collect_aj(*bfrtColumn, iCol, change);
+    ekk_instance_.lp_.a_matrix_.collectAj(*bfrtColumn, iCol, change);
   }
   ekk_instance_.info_.updated_dual_objective_value +=
       dual_objective_value_change;
@@ -492,7 +599,7 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       HighsInt iCol = *sit;
       assert(iCol < ekk_instance_.lp_.num_col_);
-      double alpha = ekk_instance_.matrix_.compute_dot(*row_ep, iCol);
+      double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * move_out > 0)
           ekk_instance_.basis_.nonbasicMove_[iCol] = 1;
@@ -524,11 +631,7 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
   computed_edge_weight = 0;
   for (HighsInt el_n = 0; el_n < packCount; el_n++) {
     HighsInt vr_n = packIndex[el_n];
-    if (!ekk_instance_.basis_.nonbasicFlag_[vr_n]) {
-      //      printf("Basic variable %" HIGHSINT_FORMAT " in packIndex is
-      //      skipped\n", vr_n);
-      continue;
-    }
+    if (!ekk_instance_.basis_.nonbasicFlag_[vr_n]) continue;
     double pv = work_devex_index[vr_n] * packValue[el_n];
     if (pv) {
       computed_edge_weight += pv * pv;
@@ -541,4 +644,71 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
              "%11.4g\n",
              slice, computed_edge_weight);
   }
+}
+
+HighsInt HEkkDualRow::debugFindInWorkData(
+    const HighsInt iCol, const HighsInt count,
+    const std::vector<std::pair<HighsInt, double>>& workData_) {
+  for (HighsInt Ix = 0; Ix < count; Ix++)
+    if (workData_[Ix].first == iCol) return Ix;
+  return -1;
+}
+
+HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
+  HighsInt num_infeasibility = 0;
+  if (ekk_instance_.options_->highs_debug_level < kHighsDebugLevelCheap)
+    return num_infeasibility;
+  const HighsInt move_out = workDelta < 0 ? -1 : 1;
+  std::vector<double> unpack_value;
+  HighsLp& lp = ekk_instance_.lp_;
+  unpack_value.resize(lp.num_col_ + lp.num_row_);
+  for (HighsInt ix = 0; ix < packCount; ix++)
+    unpack_value[packIndex[ix]] = packValue[ix];
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
+  for (HighsInt i = 0; i < workCount; i++) {
+    const HighsInt iCol = workData[i].first;
+    const double delta = workData[i].second;
+    const double value = unpack_value[iCol];
+    const HighsInt move = workMove[iCol];
+    const double dual = workDual[iCol];
+    const double delta_dual = fabs(workTheta * value);
+    const double new_dual = dual - workTheta * value;
+    const double infeasibility_after_flip = -move * new_dual;
+    const bool infeasible = infeasibility_after_flip < -Td;
+    if (infeasible) {
+      printf(
+          "%3d: iCol = %4d; dual = %11.4g; value = %11.4g; move = %2d; delta = "
+          "%11.4g; new_dual = %11.4g; infeasibility = %11.4g: %d\n",
+          (int)i, (int)iCol, dual, value, (int)move, delta_dual, new_dual,
+          infeasibility_after_flip, infeasible);
+
+      num_infeasibility++;
+    }
+  }
+  assert(!num_infeasibility);
+  return num_infeasibility;
+}
+void HEkkDualRow::debugReportBfrtVar(
+    const HighsInt ix,
+    const std::vector<std::pair<HighsInt, double>>& pass_workData) const {
+  if (ix < 0) {
+    printf(
+        "Ix iCol Mv       Lower      Primal       Upper       Value        "
+        "Dual       Ratio      NwDual Ifs\n");
+    return;
+  }
+  const HighsInt move_out = workDelta < 0 ? -1 : 1;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
+  const HighsInt iCol = pass_workData[ix].first;
+  const double value = pass_workData[ix].second;
+  const HighsInt move = workMove[iCol];
+  const double dual = workDual[iCol];
+  const double new_dual = dual - move_out * move * workTheta * value;
+  const double new_dual_infeasibility = move * new_dual;
+  const bool infeasible = new_dual_infeasibility < -Td;
+  printf("%2d %4d %2d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g %3d\n",
+         (int)ix, (int)iCol, (int)move, ekk_instance_.info_.workLower_[iCol],
+         ekk_instance_.info_.workValue_[iCol],
+         ekk_instance_.info_.workUpper_[iCol], value, dual, fabs(dual / value),
+         new_dual, infeasible);
 }

@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #ifndef IPX_CONTROL_H_
 #define IPX_CONTROL_H_
 
@@ -82,6 +80,7 @@ public:
     ipxint stop_at_switch() const { return parameters_.stop_at_switch; }
     ipxint update_heuristic() const { return parameters_.update_heuristic; }
     ipxint maxpasses() const { return parameters_.maxpasses; }
+    bool reportBasisData() const { return parameters_.analyse_basis_data; }
 
     const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);

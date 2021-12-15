@@ -103,6 +103,8 @@ class HEkkPrimal {
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);
+  bool badBasisChange();
+
   // References:
   HEkk& ekk_instance_;
 
@@ -145,7 +147,7 @@ class HEkkPrimal {
   HighsInt num_free_col;
   HSet nonbasic_free_col_set;
   // Hyper-sparse CHUZC data
-  bool use_hyper_chuzc;
+  bool use_hyper_chuzc = false;
   bool initialise_hyper_chuzc;
   bool done_next_chuzc;
   const HighsInt max_num_hyper_chuzc_candidates = 50;

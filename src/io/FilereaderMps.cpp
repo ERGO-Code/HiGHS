@@ -38,8 +38,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::kSuccess:
-        if (setFormat(lp) != HighsStatus::kOk)
-          return FilereaderRetcode::kParserError;
+        lp.ensureColwise();
         return FilereaderRetcode::kOk;
       case FreeFormatParserReturnCode::kParserError:
         return FilereaderRetcode::kParserError;
@@ -59,36 +58,22 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   }
 
   // else use fixed format parser
-  FilereaderRetcode return_code = readMps(
-      options.log_options, filename, -1, -1, lp.num_row_, lp.num_col_,
-      lp.sense_, lp.offset_, lp.a_start_, lp.a_index_, lp.a_value_,
-      lp.col_cost_, lp.col_lower_, lp.col_upper_, lp.row_lower_, lp.row_upper_,
-      lp.integrality_, lp.col_names_, lp.row_names_, options.keep_n_rows);
-  if (return_code == FilereaderRetcode::kOk) {
-    lp.format_ = MatrixFormat::kColwise;
-    if (setFormat(lp) != HighsStatus::kOk)
-      return FilereaderRetcode::kParserError;
-  }
-  if (namesWithSpaces(lp.num_col_, lp.col_names_)) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Model has column names with spaces\n");
-#ifdef HiGHSDEV
-    namesWithSpaces(lp.num_col_, lp.col_names_, true);
-#endif
-  }
-  if (namesWithSpaces(lp.num_row_, lp.row_names_)) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Model has row names with spaces\n");
-#ifdef HiGHSDEV
-    namesWithSpaces(lp.num_row_, lp.row_names_, true);
-#endif
-  }
+  FilereaderRetcode return_code =
+      readMps(options.log_options, filename, -1, -1, lp.num_row_, lp.num_col_,
+              lp.sense_, lp.offset_, lp.a_matrix_.start_, lp.a_matrix_.index_,
+              lp.a_matrix_.value_, lp.col_cost_, lp.col_lower_, lp.col_upper_,
+              lp.row_lower_, lp.row_upper_, lp.integrality_, lp.col_names_,
+              lp.row_names_, options.keep_n_rows);
+  if (return_code == FilereaderRetcode::kOk) lp.ensureColwise();
+  // Comment on existence of names with spaces
+  hasNamesWithSpaces(options.log_options, lp.num_col_, lp.col_names_);
+  hasNamesWithSpaces(options.log_options, lp.num_row_, lp.row_names_);
   return return_code;
 }
 
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsModel& model) {
-  assert(model.lp_.format_ != MatrixFormat::kRowwise);
+  assert(model.lp_.a_matrix_.isColwise());
   return writeModelAsMps(options, filename, model);
 }

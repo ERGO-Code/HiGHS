@@ -186,9 +186,9 @@ void testSolversSetup(const std::string model,
                       vector<HighsInt>& simplex_strategy_iteration_count) {
   if (model.compare("adlittle") == 0) {
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyChoose] = 86;
+        int)SimplexStrategy::kSimplexStrategyChoose] = 87;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyDualPlain] = 86;
+        int)SimplexStrategy::kSimplexStrategyDualPlain] = 87;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualTasks] = 72;
     simplex_strategy_iteration_count[(
@@ -202,10 +202,8 @@ void testSolversSetup(const std::string model,
 
 void testSolvers(Highs& highs, IterationCount& model_iteration_count,
                  const vector<HighsInt>& simplex_strategy_iteration_count) {
-  bool have_omp = false;
-#ifdef OPENMP
-  have_omp = true;
-#endif
+  bool have_omp = true;
+
   /*
   HighsInt i = (HighsInt)SimplexStrategy::kSimplexStrategyPrimal;
   model_iteration_count.simplex = simplex_strategy_iteration_count[i];
@@ -281,12 +279,14 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   const HighsInfo& info = highs.getInfo();
-  REQUIRE(info.num_dual_infeasibilities == 1);
+  REQUIRE(info.num_dual_infeasibilities == 0);
 
-  REQUIRE(info.simplex_iteration_count == 443);
+  REQUIRE(info.simplex_iteration_count == 476);
 
   HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kNotset);
+  REQUIRE(model_status ==
+          HighsModelStatus::kOptimal);  // Now etamacro is solved properly it's
+                                        // not HighsModelStatus::kNotset);
 
   model_status = highs.getModelStatus(true);
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -299,7 +299,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 611);
+  REQUIRE(info.simplex_iteration_count == 619);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
@@ -314,9 +314,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   const double use_max_objective_bound = 150.0;
   double save_objective_bound;
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
 
   //  status = highs.setOptionValue("log_dev_level",
@@ -427,5 +425,5 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   error = fabs((info.objective_function_value - max_objective_function_value) /
                max_objective_function_value);
   if (dev_run) printf("\nOptimal objective value error = %g\n", error);
-  REQUIRE(error < 1e-14);
+  REQUIRE(error < 1e-10);
 }

@@ -65,9 +65,7 @@ void ekk_scipLpi3(Highs& highs) {
 
 TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsLp lp;
   const bool from_file = true;
   if (from_file) {

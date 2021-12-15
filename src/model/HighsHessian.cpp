@@ -20,20 +20,28 @@
 
 void HighsHessian::clear() {
   dim_ = 0;
-  this->q_start_.clear();
-  this->q_index_.clear();
-  this->q_value_.clear();
+  this->start_.clear();
+  this->index_.clear();
+  this->value_.clear();
+  this->format_ = HessianFormat::kTriangular;
+  this->start_.assign(1, 0);
 }
+
+HighsInt HighsHessian::numNz() const {
+  assert(this->formatOk());
+  assert((HighsInt)this->start_.size() >= this->dim_ + 1);
+  return this->start_[this->dim_];
+}
+
 void HighsHessian::print() {
   HighsInt num_nz = 0;
-  if (dim_ > 0) num_nz = this->q_start_[dim_];
+  if (dim_ > 0) num_nz = this->start_[dim_];
 
   printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
          " nonzeros\n",
          dim_, num_nz);
-  printf("Start; Index; Value of sizes %d; %d; %d\n",
-         (int)this->q_start_.size(), (int)this->q_index_.size(),
-         (int)this->q_value_.size());
+  printf("Start; Index; Value of sizes %d; %d; %d\n", (int)this->start_.size(),
+         (int)this->index_.size(), (int)this->value_.size());
   if (dim_ <= 0) return;
   printf(" Row|");
   for (int iCol = 0; iCol < dim_; iCol++) printf(" %4d", iCol);
@@ -44,23 +52,21 @@ void HighsHessian::print() {
   std::vector<double> col;
   col.assign(dim_, 0);
   for (HighsInt iCol = 0; iCol < dim_; iCol++) {
-    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol + 1];
-         iEl++)
-      col[this->q_index_[iEl]] = this->q_value_[iEl];
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+      col[this->index_[iEl]] = this->value_[iEl];
     printf("%4d|", (int)iCol);
     for (int iRow = 0; iRow < dim_; iRow++) printf(" %4g", col[iRow]);
     printf("\n");
-    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol + 1];
-         iEl++)
-      col[this->q_index_[iEl]] = 0;
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+      col[this->index_[iEl]] = 0;
   }
 }
 bool HighsHessian::operator==(const HighsHessian& hessian) {
   bool equal = true;
   equal = this->dim_ == hessian.dim_ && equal;
-  equal = this->q_start_ == hessian.q_start_ && equal;
-  equal = this->q_index_ == hessian.q_index_ && equal;
-  equal = this->q_value_ == hessian.q_value_ && equal;
+  equal = this->start_ == hessian.start_ && equal;
+  equal = this->index_ == hessian.index_ && equal;
+  equal = this->value_ == hessian.value_ && equal;
   return equal;
 }
 
@@ -69,10 +75,10 @@ void HighsHessian::product(const std::vector<double>& solution,
   if (this->dim_ <= 0) return;
   product.assign(this->dim_, 0);
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
-    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol + 1];
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
          iEl++) {
-      const HighsInt iRow = this->q_index_[iEl];
-      product[iRow] += this->q_value_[iEl] * solution[iCol];
+      const HighsInt iRow = this->index_[iEl];
+      product[iRow] += this->value_[iEl] * solution[iCol];
     }
   }
 }
@@ -80,14 +86,14 @@ void HighsHessian::product(const std::vector<double>& solution,
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   double objective_function_value = 0;
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
-    HighsInt iEl = this->q_start_[iCol];
-    assert(this->q_index_[iEl] == iCol);
+    HighsInt iEl = this->start_[iCol];
+    assert(this->index_[iEl] == iCol);
     objective_function_value +=
-        0.5 * solution[iCol] * this->q_value_[iEl] * solution[iCol];
-    for (HighsInt iEl = this->q_start_[iCol] + 1;
-         iEl < this->q_start_[iCol + 1]; iEl++)
+        0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
+    for (HighsInt iEl = this->start_[iCol] + 1; iEl < this->start_[iCol + 1];
+         iEl++)
       objective_function_value +=
-          solution[iCol] * this->q_value_[iEl] * solution[this->q_index_[iEl]];
+          solution[iCol] * this->value_[iEl] * solution[this->index_[iEl]];
   }
   return objective_function_value;
 }

@@ -21,15 +21,15 @@ TEST_CASE("HighsModel", "[highs_model]") {
   HighsHessian& hessian = model.hessian_;
   HighsInt dim = lp.num_col_;
   hessian.dim_ = dim;
-  hessian.q_start_.resize(dim + 1);
-  hessian.q_index_.resize(dim);
-  hessian.q_value_.resize(dim);
+  hessian.start_.resize(dim + 1);
+  hessian.index_.resize(dim);
+  hessian.value_.resize(dim);
   for (int iCol = 0; iCol < dim; iCol++) {
-    hessian.q_start_[iCol] = iCol;
-    hessian.q_index_[iCol] = iCol;
-    hessian.q_value_[iCol] = 1.0;
+    hessian.start_[iCol] = iCol;
+    hessian.index_[iCol] = iCol;
+    hessian.value_[iCol] = 1.0;
   }
-  hessian.q_start_[dim] = dim;
+  hessian.start_[dim] = dim;
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kOk);
   status = highs.run();
@@ -47,9 +47,9 @@ TEST_CASE("HighsModel", "[highs_model]") {
   // A Hessian with dimesion but no nonzeros (ie identically zero)
   // should be ignored OK
   hessian.dim_ = dim;
-  hessian.q_start_.resize(dim + 1);
-  hessian.q_start_[0] = 0;
-  hessian.q_start_[dim] = 0;
+  hessian.start_.resize(dim + 1);
+  hessian.start_[0] = 0;
+  hessian.start_[dim] = 0;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kOk);
@@ -61,14 +61,14 @@ TEST_CASE("HighsModel", "[highs_model]") {
   const double illegal_small_hessian_diagonal_entry = 1e-12;
   const double illegal_negative_hessian_diagonal_entry = -1;
   assert(dim == 2);
-  hessian.q_start_[1] = 1;
-  hessian.q_start_[2] = 2;
-  hessian.q_index_.resize(dim);
-  hessian.q_index_[0] = 0;
-  hessian.q_index_[1] = 1;
-  hessian.q_value_.resize(dim);
-  hessian.q_value_[0] = illegal_small_hessian_diagonal_entry;
-  hessian.q_value_[1] = illegal_negative_hessian_diagonal_entry;
+  hessian.start_[1] = 1;
+  hessian.start_[2] = 2;
+  hessian.index_.resize(dim);
+  hessian.index_[0] = 0;
+  hessian.index_[1] = 1;
+  hessian.value_.resize(dim);
+  hessian.value_[0] = illegal_small_hessian_diagonal_entry;
+  hessian.value_[1] = illegal_negative_hessian_diagonal_entry;
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kError);
 }

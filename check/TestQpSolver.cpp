@@ -92,6 +92,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[2] - required_x2) < double_equal_tolerance);
+  std::remove(filename.c_str());
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -119,9 +120,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0.25;
   hessian.dim_ = lp.num_col_;
-  hessian.q_start_ = {0, 1};
-  hessian.q_index_ = {0};
-  hessian.q_value_ = {2.0};
+  hessian.start_ = {0, 1};
+  hessian.index_ = {0};
+  hessian.value_ = {2.0};
 
   Highs highs;
   const HighsModel& model = highs.getModel();
@@ -136,11 +137,10 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  const bool pretty = true;
   if (dev_run) {
     printf("One variable unconstrained QP: objective = %g; solution:\n",
            objective_function_value);
-    highs.writeSolution("", pretty);
+    highs.writeSolution("", kSolutionStylePretty);
   }
 
   required_objective_function_value = 0;
@@ -170,9 +170,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   // Pass the new Hessian
   hessian.dim_ = 2;
-  hessian.q_start_ = {0, 1, 2};
-  hessian.q_index_ = {0, 1};
-  hessian.q_value_ = {2.0, 2.0};
+  hessian.start_ = {0, 1, 2};
+  hessian.index_ = {0, 1};
+  hessian.value_ = {2.0, 2.0};
   return_status = highs.passHessian(hessian);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -182,7 +182,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   if (dev_run) {
     printf("Two variable unconstrained QP: objective = %g; solution:\n",
            objective_function_value);
-    highs.writeSolution("", pretty);
+    highs.writeSolution("", kSolutionStylePretty);
   }
 
   required_objective_function_value = -0.25;
@@ -212,9 +212,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
           double_equal_tolerance);
 
   // Add the constraint 0.5 <= x0 + x1
-  lp.a_index_ = {0, 1};
-  lp.a_value_ = {1, 1};
-  highs.addRow(0.5, inf, 2, &lp.a_index_[0], &lp.a_value_[0]);
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  highs.addRow(0.5, inf, 2, &lp.a_matrix_.index_[0], &lp.a_matrix_.value_[0]);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
@@ -222,7 +222,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   if (dev_run) {
     printf("Two variable constrained QP: objective = %g; solution:\n",
            objective_function_value);
-    highs.writeSolution("", pretty);
+    highs.writeSolution("", kSolutionStylePretty);
   }
 
   required_objective_function_value = 0.125;
@@ -264,14 +264,14 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   hessian.dim_ = lp.num_col_;
 
   //  hessian.format_ = HessianFormat::kSquare;
-  //  hessian.q_start_ = {0, 2, 3, 5};
-  //  hessian.q_index_ = {0, 2, 1, 0, 2};
-  //  hessian.q_value_ = {2.0, -1.0, 0.2, -1.0, 2.0};
+  //  hessian.start_ = {0, 2, 3, 5};
+  //  hessian.index_ = {0, 2, 1, 0, 2};
+  //  hessian.value_ = {2.0, -1.0, 0.2, -1.0, 2.0};
 
   hessian.format_ = HessianFormat::kTriangular;
-  hessian.q_start_ = {0, 2, 3, 4};
-  hessian.q_index_ = {0, 2, 1, 2};
-  hessian.q_value_ = {2.0, -1.0, 0.2, 2.0};
+  hessian.start_ = {0, 2, 3, 4};
+  hessian.index_ = {0, 2, 1, 2};
+  hessian.value_ = {2.0, -1.0, 0.2, 2.0};
 
   Highs highs;
   const HighsInfo& info = highs.getInfo();
@@ -287,17 +287,17 @@ TEST_CASE("test-qjh", "[qpsolver]") {
           double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
   // Now with a constraint
   lp.num_row_ = 1;
   lp.col_lower_ = {0.0, 0.0, 0.0};
   lp.row_lower_ = {-inf};
   lp.row_upper_ = {2};
-  lp.a_start_ = {0, 1, 1, 2};
-  lp.a_index_ = {0, 0};
-  lp.a_value_ = {1.0, 1.0};
-  lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
@@ -308,7 +308,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
           double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
   // Make the problem infeasible
   return_status = highs.changeColBounds(0, 3, inf);
@@ -318,7 +318,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   model_status = highs.getModelStatus();
   if (dev_run)
     printf("Infeasible QP status: %s\n",

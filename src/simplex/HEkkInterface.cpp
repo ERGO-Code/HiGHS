@@ -29,19 +29,3 @@ void HEkk::appendRowsToVectors(const HighsInt num_new_row,
                                const vector<double>& rowUpper) {
   appendRowsToLpVectors(lp_, num_new_row, rowLower, rowUpper);
 }
-
-void HEkk::appendColsToMatrix(const HighsInt num_new_col,
-                              const HighsInt num_new_nz,
-                              const HighsInt* XAstart, const HighsInt* XAindex,
-                              const double* XAvalue) {
-  appendColsToLpMatrix(lp_, num_new_col, num_new_nz, XAstart, XAindex, XAvalue);
-}
-
-void HEkk::appendRowsToMatrix(const HighsInt num_new_row,
-                              const HighsInt num_new_nz,
-                              const HighsInt* XARstart,
-                              const HighsInt* XARindex,
-                              const double* XARvalue) {
-  appendRowsToLpMatrix(lp_, num_new_row, num_new_nz, XARstart, XARindex,
-                       XARvalue);
-}

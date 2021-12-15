@@ -4,7 +4,7 @@
 #include "lp_data/HConst.h"
 
 const bool dev_run = false;
-const double zero_ray_value_tolerance = 1e-8;
+const double zero_ray_value_tolerance = 1e-14;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
                        const vector<double>& expected_ray_value) {
@@ -54,8 +54,10 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (col_status[iCol] == HighsBasisStatus::kBasic) continue;
     // Get the tableau row entry for this nonbasic column
-    for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++)
-      tableau_row[iCol] += dual_ray_value[lp.a_index_[iEl]] * lp.a_value_[iEl];
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      tableau_row[iCol] +=
+          dual_ray_value[lp.a_matrix_.index_[iEl]] * lp.a_matrix_.value_[iEl];
   }
 
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -151,9 +153,10 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   vector<double> row_ray_value;
   row_ray_value.assign(numRow, 0.0);
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++)
-      row_ray_value[lp.a_index_[iEl]] +=
-          primal_ray_value[iCol] * lp.a_value_[iEl];
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      row_ray_value[lp.a_matrix_.index_[iEl]] +=
+          primal_ray_value[iCol] * lp.a_matrix_.value_[iEl];
   }
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
@@ -204,7 +207,8 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   REQUIRE(ray_error_norm < 1e-6);
 }
 
-void testInfeasibleMps(const std::string model) {
+void testInfeasibleMps(const std::string model,
+                       const bool has_dual_ray_ = true) {
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -214,7 +218,11 @@ void testInfeasibleMps(const std::string model) {
   vector<double> primal_ray_value;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  } else {
+    highs.setOptionValue("log_dev_level", 2);
+  }
 
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
@@ -229,7 +237,7 @@ void testInfeasibleMps(const std::string model) {
   // Check that there is a dual ray
   dual_ray_value.resize(lp.num_row_);
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
-  REQUIRE(has_dual_ray == true);
+  REQUIRE(has_dual_ray == has_dual_ray_);
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
           HighsStatus::kOk);
   checkDualRayValue(highs, dual_ray_value);
@@ -282,9 +290,7 @@ void testUnboundedMps(const std::string model,
 
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -351,7 +357,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
 
-  if (dev_run) highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is no dual ray
@@ -403,7 +409,10 @@ TEST_CASE("Rays-woodinfe", "[highs_test_rays]") {
   testInfeasibleMps("woodinfe");
 }
 
-TEST_CASE("Rays-klein1", "[highs_test_rays]") { testInfeasibleMps("klein1"); }
+// klein1 is infeasible, but currently has no dual ray
+TEST_CASE("Rays-klein1", "[highs_test_rays]") {
+  testInfeasibleMps("klein1", true);
+}
 
 TEST_CASE("Rays-gams10am", "[highs_test_rays]") {
   testInfeasibleMps("gams10am");
@@ -424,9 +433,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
@@ -459,9 +466,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);

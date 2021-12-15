@@ -16,39 +16,31 @@
 #ifndef LP_DATA_HIGHSMODELUTILS_H_
 #define LP_DATA_HIGHSMODELUTILS_H_
 
-#include "HConfig.h"
-#include "Highs.h"
-#include "lp_data/HighsStatus.h"
-
-HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
-                                   const std::string matrix_name,
-                                   const HighsInt num_vec,
-                                   const vector<HighsInt>& matrix_start,
-                                   const vector<HighsInt>& matrix_index,
-                                   const vector<double>& matrix_value);
-
-HighsStatus assessMatrix(const HighsLogOptions& log_options,
-                         const std::string matrix_name, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
-                         vector<HighsInt>& matrix_index,
-                         vector<double>& matrix_value,
-                         const double small_matrix_value,
-                         const double large_matrix_value);
+//#include "Highs.h"
+//#include "lp_data/HighsStatus.h"
+#include "lp_data/HStruct.h"
+#include "lp_data/HighsInfo.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper);
-void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
-                        const std::vector<double>& lower,
-                        const std::vector<double>& upper,
-                        const std::vector<std::string>& names,
-                        const std::vector<double>& primal,
-                        const std::vector<double>& dual,
-                        const std::vector<HighsBasisStatus>& status);
-bool namesWithSpaces(const HighsInt num_name,
-                     const std::vector<std::string>& names,
-                     const bool report = false);
+bool hasNamesWithSpaces(const HighsLogOptions& log_options,
+                        const HighsInt num_name,
+                        const std::vector<std::string>& names);
+void writeModelBoundSolution(
+    FILE* file, const bool columns, const HighsInt dim,
+    const std::vector<double>& lower, const std::vector<double>& upper,
+    const std::vector<std::string>& names, const bool have_primal,
+    const std::vector<double>& primal, const bool have_dual,
+    const std::vector<double>& dual, const bool have_basis,
+    const std::vector<HighsBasisStatus>& status,
+    const HighsVarType* integrality = NULL);
+void writeModelSolution(FILE* file, const HighsLp& lp,
+                        const HighsSolution& solution, const HighsInfo& info);
+
 HighsInt maxNameLength(const HighsInt num_name,
                        const std::vector<std::string>& names);
 HighsStatus normaliseNames(const HighsLogOptions& log_options,
@@ -68,10 +60,9 @@ std::string utilBasisStatusToString(const HighsBasisStatus basis_status);
 
 std::string utilBasisValidityToString(const HighsInt basis_validity);
 
-void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts);
-
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 
 std::string statusToString(const HighsBasisStatus status, const double lower,
                            const double upper);
+std::string typeToString(const HighsVarType type);
 #endif
