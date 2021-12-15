@@ -18,9 +18,6 @@
 
 #include <vector>
 
-#include "HConfig.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HStruct.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
@@ -30,6 +27,7 @@
 // class HighsLp;
 struct SimplexScale;
 struct HighsBasis;
+struct HighsSolution;
 class HighsOptions;
 
 using std::vector;
@@ -228,3 +226,7 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
+HighsLp withoutSemiVariables(const HighsLp& lp);
+
+void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
+#endif  // LP_DATA_HIGHSLPUTILS_H_
