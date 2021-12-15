@@ -53,9 +53,9 @@ void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
 
   result.assign(lp.num_col_, 0);
   for (int col = 0; col < lp.num_col_; col++) {
-    for (int k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
-      const int row = lp.a_index_[k];
-      result.at(col) += lp.a_value_[k] * v[row];
+    for (int k = lp.a_matrix_.start_[col]; k < lp.a_matrix_.start_[col + 1]; k++) {
+      const int row = lp.a_matrix_.index_[k];
+      result.at(col) += lp.a_matrix_.value_[k] * v[row];
     }
   }
 }
@@ -121,15 +121,15 @@ double minimizeComponentIca(const int col, const double mu,
   double a = 0.0;
   double b = 0.0;
 
-  for (int k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
-    int row = lp.a_index_[k];
-    a += lp.a_value_[k] * lp.a_value_[k];
+  for (int k = lp.a_matrix_.start_[col]; k < lp.a_matrix_.start_[col + 1]; k++) {
+    int row = lp.a_matrix_.index_[k];
+    a += lp.a_matrix_.value_[k] * lp.a_matrix_.value_[k];
     // matlab but with b = b / 2
-    double bracket = -residual[row] - lp.a_value_[k] * sol.col_value[col];
+    double bracket = -residual[row] - lp.a_matrix_.value_[k] * sol.col_value[col];
     bracket += lambda[row];
     // clp minimizing for delta_x
     // double bracket_clp = - residual_[row];
-    b += lp.a_value_[k] * bracket;
+    b += lp.a_matrix_.value_[k] * bracket;
   }
 
   a = (0.5 / mu) * a;
@@ -158,10 +158,10 @@ double minimizeComponentIca(const int col, const double mu,
 
   // Update objective, row_value, residual after each component update.
   objective += lp.col_cost_[col] * delta_x;
-  for (int k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
-    int row = lp.a_index_[k];
-    residual[row] -= lp.a_value_[k] * delta_x;
-    sol.row_value[row] += lp.a_value_[k] * delta_x;
+  for (int k = lp.a_matrix_.start_[col]; k < lp.a_matrix_.start_[col + 1]; k++) {
+    int row = lp.a_matrix_.index_[k];
+    residual[row] -= lp.a_matrix_.value_[k] * delta_x;
+    sol.row_value[row] += lp.a_matrix_.value_[k] * delta_x;
   }
 
   return delta_x;

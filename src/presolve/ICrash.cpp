@@ -86,33 +86,33 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
   convertToMinimization(ilp);
   if (isEqualityProblem(ilp)) {
     if (options.dualize) {
-      status = dualizeEqualityProblem(ilp, local_lp);
-      if (status == HighsStatus::kOk) {
-        ilp = local_lp;
-      } else {
-        printf("Cannot dualise equality problem\n");
-      }
+      // status = dualizeEqualityProblem(ilp, local_lp);
+      // if (status == HighsStatus::kOk) {
+      //   ilp = local_lp;
+      // } else {
+      //   printf("Cannot dualise equality problem\n");
+      // }
     }
   } else {
     // not equality problem.
-    assert(!options.breakpoints);  // remove when implementing breakpoints and
-                                   // add if else.
-    status = transformIntoEqualityProblem(ilp, local_lp);
-    if (status == HighsStatus::kOk) {
-      ilp = local_lp;
-    } else {
-      printf("Cannot transform into equality problem\n");
-    }
-    if (options.dualize) {
-      // Add slacks & dualize.
-      // dualizeEqualityProblem returns a minimization equality problem.
-      status = dualizeEqualityProblem(ilp, local_lp);
-      if (status == HighsStatus::kOk) {
-        ilp = local_lp;
-      } else {
-        printf("Cannot dualise equality problem\n");
-      }
-    }
+    // assert(!options.breakpoints);  // remove when implementing breakpoints and
+    //                                // add if else.
+    // status = transformIntoEqualityProblem(ilp, local_lp);
+    // if (status == HighsStatus::kOk) {
+    //   ilp = local_lp;
+    // } else {
+    //   printf("Cannot transform into equality problem\n");
+    // }
+    // if (options.dualize) {
+    //   // Add slacks & dualize.
+    //   // dualizeEqualityProblem returns a minimization equality problem.
+    //   // status = dualizeEqualityProblem(ilp, local_lp);
+    //   // if (status == HighsStatus::kOk) {
+    //   //   ilp = local_lp;
+    //   // } else {
+    //   //   printf("Cannot dualise equality problem\n");
+    //   // }
+    // }
   }
 
   return Quadratic{ilp, options};
@@ -243,7 +243,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
     for (int col = 0; col < idata.lp.num_col_; col++) {
       // determine whether to minimize for col.
       // if empty skip.
-      if (idata.lp.a_start_[col] == idata.lp.a_start_[col + 1]) continue;
+      if (idata.lp.a_matrix_.start_[col] == idata.lp.a_matrix_.start_[col + 1]) continue;
 
       double old_value = idata.xk.col_value[col];
       minimizeComponentIca(col, idata.mu, idata.lambda, idata.lp, objective_ica,
