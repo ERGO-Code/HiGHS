@@ -1388,37 +1388,82 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
   return HighsDebugStatus::kOk;
 }
 
+HighsDebugStatus HEkk::devDebugSteepestEdgeWeights(const std::string message) {
+  // Possibly force the expensive check for development work
+  const bool check_dual_edge_weights = true;
+  if (check_dual_edge_weights) {
+    const bool check_all_dual_edge_weights = false;
+    const HighsInt alt_debug_level = check_all_dual_edge_weights
+                                         ? (HighsInt)kHighsDebugLevelExpensive
+                                         : (HighsInt)kHighsDebugLevelCostly;
+    //    printf("Performing level %1d check %s for dual steepest edge
+    //    weights\n", (int)alt_debug_level, message.c_str());
+    return debugSteepestEdgeWeights(alt_debug_level);
+  } else {
+    return debugSteepestEdgeWeights();
+  }
+}
+
 HighsDebugStatus HEkk::debugSteepestEdgeWeights(
     const HighsInt alt_debug_level) {
   const HighsInt use_debug_level = alt_debug_level >= 0
                                        ? alt_debug_level
                                        : this->options_->highs_debug_level;
-  if (use_debug_level < kHighsDebugLevelExpensive)
+  if (use_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   const HighsLp& lp = this->lp_;
-  std::vector<double> save_dual_edge_weight = this->dual_edge_weight_;
-  computeDualSteepestEdgeWeights();
-  std::vector<double>& true_dual_steepest_edge_weight = this->dual_edge_weight_;
+  const HighsInt num_row = lp.num_row_;
   double dual_steepest_edge_weight_norm = 0;
   double dual_steepest_edge_weight_error = 0;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    dual_steepest_edge_weight_norm +=
-        std::fabs(true_dual_steepest_edge_weight[iRow]);
-    dual_steepest_edge_weight_error += std::fabs(
-        this->dual_edge_weight_[iRow] - true_dual_steepest_edge_weight[iRow]);
+  HighsInt num_check_weight;
+  if (use_debug_level < kHighsDebugLevelExpensive) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      dual_steepest_edge_weight_norm += std::fabs(dual_edge_weight_[iRow]);
+    }
+    // Just check a few weights
+    num_check_weight =
+        std::max((HighsInt)1, std::min((HighsInt)10, num_row / 10));
+    HVector row_ep;
+    row_ep.setup(num_row);
+    for (HighsInt iCheck = 0; iCheck < num_check_weight; iCheck++) {
+      HighsInt iRow = random_.integer(num_row);
+      const double true_weight = computeDualSteepestEdgeWeight(iRow, row_ep);
+      dual_steepest_edge_weight_error +=
+          std::fabs(this->dual_edge_weight_[iRow] - true_weight);
+    }
+  } else {
+    // Check all weights
+    num_check_weight = num_row;
+    std::vector<double> save_dual_edge_weight = this->dual_edge_weight_;
+    computeDualSteepestEdgeWeights();
+    std::vector<double>& true_dual_steepest_edge_weight =
+        this->dual_edge_weight_;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      dual_steepest_edge_weight_norm +=
+          std::fabs(true_dual_steepest_edge_weight[iRow]);
+      dual_steepest_edge_weight_error += std::fabs(
+          this->dual_edge_weight_[iRow] - true_dual_steepest_edge_weight[iRow]);
+    }
+    this->dual_edge_weight_ = save_dual_edge_weight;
   }
-  this->dual_edge_weight_ = save_dual_edge_weight;
   // Now assess the relative error
   assert(dual_steepest_edge_weight_norm > 0);
   double relative_dual_steepest_edge_weight_error =
       dual_steepest_edge_weight_error / dual_steepest_edge_weight_norm;
-  if (relative_dual_steepest_edge_weight_error > 1e-3) {
+  const double error_report_tolerance = 1e-8;
+  const double large_relative_dual_steepest_edge_weight_error = 1e-3;
+  assert(large_relative_dual_steepest_edge_weight_error >
+         error_report_tolerance);
+  if (relative_dual_steepest_edge_weight_error > error_report_tolerance) {
     printf(
-        "HEkk::debugSteepestEdgeWeights Error = %g; Norm = %g; Relative "
-        "error = %g\n",
-        dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,
+        "HEkk::debugSteepestEdgeWeights Checked %2d weights: "
+        "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
+        (int)num_check_weight, dual_steepest_edge_weight_error,
+        dual_steepest_edge_weight_norm,
         relative_dual_steepest_edge_weight_error);
-    return HighsDebugStatus::kLargeError;
+    if (relative_dual_steepest_edge_weight_error >
+        large_relative_dual_steepest_edge_weight_error)
+      return HighsDebugStatus::kLargeError;
   }
   return HighsDebugStatus::kOk;
 }

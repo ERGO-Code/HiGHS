@@ -803,6 +803,10 @@ void Highs::setNonbasicStatusInterface(
   HighsInt ignore_from_ix;
   HighsInt ignore_to_ix = -1;
   HighsInt current_set_entry = 0;
+  // Given a basic-nonbasic partition, all status settings are defined
+  // by the bounds unless boxed, in which case any definitive (ie not
+  // just kNonbasic) existing status is retained. Otherwise, set to
+  // bound nearer to zero
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, set_from_ix, set_to_ix, ignore_from_ix,
                      ignore_to_ix, current_set_entry);
@@ -814,7 +818,7 @@ void Highs::setNonbasicStatusInterface(
         // Nonbasic column
         double lower = lp.col_lower_[iCol];
         double upper = lp.col_upper_[iCol];
-        HighsBasisStatus status = HighsBasisStatus::kNonbasic;
+        HighsBasisStatus status = highs_basis.col_status[iCol];
         HighsInt move = kIllegalMoveValue;
         if (lower == upper) {
           status = HighsBasisStatus::kLower;
@@ -823,11 +827,18 @@ void Highs::setNonbasicStatusInterface(
           // Finite lower bound so boxed or lower
           if (!highs_isInfinity(upper)) {
             // Finite upper bound so boxed
-            if (fabs(lower) < fabs(upper)) {
-              status = HighsBasisStatus::kLower;
+            if (status == HighsBasisStatus::kNonbasic) {
+              // No definitive status, so set to bound nearer to zero
+              if (fabs(lower) < fabs(upper)) {
+                status = HighsBasisStatus::kLower;
+                move = kNonbasicMoveUp;
+              } else {
+                status = HighsBasisStatus::kUpper;
+                move = kNonbasicMoveDn;
+              }
+            } else if (status == HighsBasisStatus::kLower) {
               move = kNonbasicMoveUp;
             } else {
-              status = HighsBasisStatus::kUpper;
               move = kNonbasicMoveDn;
             }
           } else {
@@ -844,7 +855,6 @@ void Highs::setNonbasicStatusInterface(
           status = HighsBasisStatus::kZero;
           move = kNonbasicMoveZe;
         }
-        assert(status != HighsBasisStatus::kNonbasic);
         highs_basis.col_status[iCol] = status;
         if (has_simplex_basis) {
           assert(move != kIllegalMoveValue);
@@ -858,7 +868,7 @@ void Highs::setNonbasicStatusInterface(
         // Nonbasic column
         double lower = lp.row_lower_[iRow];
         double upper = lp.row_upper_[iRow];
-        HighsBasisStatus status = HighsBasisStatus::kNonbasic;
+        HighsBasisStatus status = highs_basis.row_status[iRow];
         HighsInt move = kIllegalMoveValue;
         if (lower == upper) {
           status = HighsBasisStatus::kLower;
@@ -867,11 +877,18 @@ void Highs::setNonbasicStatusInterface(
           // Finite lower bound so boxed or lower
           if (!highs_isInfinity(upper)) {
             // Finite upper bound so boxed
-            if (fabs(lower) < fabs(upper)) {
-              status = HighsBasisStatus::kLower;
+            if (status == HighsBasisStatus::kNonbasic) {
+              // No definitive status, so set to bound nearer to zero
+              if (fabs(lower) < fabs(upper)) {
+                status = HighsBasisStatus::kLower;
+                move = kNonbasicMoveDn;
+              } else {
+                status = HighsBasisStatus::kUpper;
+                move = kNonbasicMoveUp;
+              }
+            } else if (status == HighsBasisStatus::kLower) {
               move = kNonbasicMoveDn;
             } else {
-              status = HighsBasisStatus::kUpper;
               move = kNonbasicMoveUp;
             }
           } else {
@@ -888,7 +905,6 @@ void Highs::setNonbasicStatusInterface(
           status = HighsBasisStatus::kZero;
           move = kNonbasicMoveZe;
         }
-        assert(status != HighsBasisStatus::kNonbasic);
         highs_basis.row_status[iRow] = status;
         if (has_simplex_basis) {
           assert(move != kIllegalMoveValue);

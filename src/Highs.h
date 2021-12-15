@@ -1104,6 +1104,7 @@ class Highs {
   // Highs::run() and, assuming that this is always done, it checks
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
+  HighsInt debug_run_call_num_ = 0;
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
