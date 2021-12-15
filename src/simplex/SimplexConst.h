@@ -128,6 +128,7 @@ enum RebuildReason {
   kRebuildReasonPossiblySingularBasis,            // 7
   kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
   kRebuildReasonChooseColumnFail,                 // 9
+  kRebuildReasonForceRefactor,                    // 10
   kRebuildReasonCount
 };
 
@@ -191,7 +192,11 @@ enum class LpAction {
   kBacktracking
 };
 
-enum class BadBasisChangeReason { kSingular = 0, kCycling };
+enum class BadBasisChangeReason {
+  kSingular = 0,
+  kCycling,
+  kFailedInfeasibilityProof
+};
 
 //
 // Relation between HiGHS basis and Simplex basis

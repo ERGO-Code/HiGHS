@@ -186,8 +186,8 @@ set(infeasibleInstances
     "forest6\;       infeasible"
     "galenet\;       infeasible"
     "gams10am\;      infeasible"
-    "klein1\;        infeasible"
-#    "refinery\;      infeasible"
+#    "klein1\;        infeasible"
+    "refinery\;      infeasible"
     "woodinfe\;      infeasible"
     )
 

@@ -1631,6 +1631,9 @@ void HEkk::handleRankDeficiency() {
         variable_out < lp_.num_col_ ? (int)variable_out
                                     : (int)(variable_out - lp_.num_col_),
         (int)row_out, (int)(row_in), (int)variable_in);
+    // NB Parameters row_out, variable_in, variable_out, since
+    // variable_in is the logical that must not come out to be
+    // replaced by the structural variable_out
     addBadBasisChange(row_out, variable_in, variable_out,
                       BadBasisChangeReason::kSingular, true);
   }
@@ -3698,7 +3701,11 @@ void HEkk::addBadBasisChange(const HighsInt row_out,
                              const bool taboo) {
   assert(0 <= row_out && row_out <= lp_.num_row_);
   assert(0 <= variable_out && variable_out <= lp_.num_col_ + lp_.num_row_);
-  assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
+  if (variable_in >= 0) {
+    assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
+  } else {
+    assert(variable_in == -1);
+  }
   HighsSimplexBadBasisChangeRecord record;
   record.taboo = taboo;
   record.row_out = row_out;
@@ -3910,6 +3917,12 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   const double gap = double(proof_lower - implied_upper);
   const bool gap_ok = gap > options_->primal_feasibility_tolerance;
   const bool proof_of_primal_infeasibility = !infinite_implied_upper && gap_ok;
+  /*
+  printf("HEkk::proofOfPrimalInfeasibility: gap = %11.4g (%s); sumInf = %11.4g
+  (%s) so proof is %s\n", gap, highsBoolToString(gap_ok).c_str(),
+         (double)sumInf, highsBoolToString(infinite_implied_upper).c_str(),
+         highsBoolToString(proof_of_primal_infeasibility).c_str());
+  */
   if (debug_proof_report) {
     printf("HEkk::proofOfPrimalInfeasibility has %sfinite implied upper bound",
            infinite_implied_upper ? "in" : "");

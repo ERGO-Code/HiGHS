@@ -376,6 +376,7 @@ class HEkkDual {
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
   bool badBasisChange();
+  void assessPossiblyDualUnbounded();
 
   // Devex scalars
   HighsInt num_devex_iterations =

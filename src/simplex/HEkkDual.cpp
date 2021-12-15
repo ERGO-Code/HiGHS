@@ -927,6 +927,12 @@ void HEkkDual::solvePhase2() {
       if (ekk_instance_.bailoutOnTimeIterations()) break;
       if (bailoutOnDualObjective()) break;
       assert(solve_phase != kSolvePhaseTabooBasis);
+
+      // If possibly dual unbounded, assess whether this implies
+      // primal infeasibility.
+      if (rebuild_reason == kRebuildReasonPossiblyDualUnbounded)
+        assessPossiblyDualUnbounded();
+
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
@@ -934,6 +940,8 @@ void HEkkDual::solvePhase2() {
     // outer loop to see what's ocurred
     bool finished = status.has_fresh_rebuild &&
                     !ekk_instance_.rebuildRefactor(rebuild_reason);
+    // ToDo: Handle the following more elegantly as the first case of
+    // "Assess outcome of dual phase 2"
     if (finished && ekk_instance_.tabooBadBasisChange()) {
       // A bad basis change has had to be made taboo without any other
       // basis changes having been performed from a fresh rebuild. In
@@ -985,50 +993,12 @@ void HEkkDual::solvePhase2() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
-  } else if (variable_in == -1) {
-    // There is no candidate in CHUZC, so probably dual unbounded
+  } else {
+    // Can only be that primal infeasiblility has been detected
+    assert(model_status == HighsModelStatus::kInfeasible);
+    assert(solve_phase == kSolvePhaseExit);
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                "dual-phase-2-unbounded\n");
-    // First determine whether there is a proof of primal infeasibility
-    const bool proof_of_infeasibility = proofOfPrimalInfeasibility();
-    if (proof_of_infeasibility) {
-      // There is a proof of primal infeasiblilty
-      solve_phase = kSolvePhaseExit;
-      // Save dual ray information
-      saveDualRay();
-      // Model status should be unset?
-      assert(model_status == HighsModelStatus::kNotset);
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                  "problem-primal-infeasible\n");
-      model_status = HighsModelStatus::kInfeasible;
-    } else {
-      if (ekk_instance_.info_.costs_perturbed) {
-        // If the costs have been perturbed, clean up and return
-        cleanup();
-      } else if (ekk_instance_.info_.costs_shifted) {
-        // Costs have been shifted to ensure dual feasibility, so
-        // consider performing primal simplex iterations to get dual
-        // feasibility
-        //
-        // First remove any shifts and recompute the dual values
-        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
-                                     false);
-        ekk_instance_.computeDual();
-        solve_phase = kSolvePhasePrimalInfeasibleCleanup;
-      } else {
-        // The costs have not been perturbed, so dual unbounded---and
-        // hence primal infeasible.
-        solve_phase = kSolvePhaseExit;
-        // Model status should be unset?
-        assert(model_status == HighsModelStatus::kNotset);
-        highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
-                    "problem-primal-infeasible\n");
-        highsLogDev(
-            ekk_instance_.options_->log_options, HighsLogType::kWarning,
-            "Dual unbounded but no ray to prove primal infeasiblilty?\n");
-        model_status = HighsModelStatus::kInfeasible;
-      }
-    }
+                "problem-primal-infeasible\n");
   }
   // Possibly debug unless before primal simplex clean-up(in which
   // case there will be dual infeasibilities).
@@ -1244,20 +1214,10 @@ void HEkkDual::iterate() {
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
 
-  // if (row_out == 238 && variable_out == 297) {
-  //   printf("HEkkDual::iterate row_out = %d variable_out = %d\n",
-  //   (int)row_out,
-  //          (int)variable_out);
-  // }
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
-  // if (rebuild_reason == kRebuildReasonChooseColumnFail) {
-  //   printf("HEkkDual::iterate row_out = %d:
-  //   kRebuildReasonChooseColumnFail\n",
-  //          (int)row_out);
-  // }
   if (badBasisChange()) return;
 
   analysis->simplexTimerStart(IterateFtranClock);
@@ -2941,4 +2901,33 @@ bool HEkkDual::badBasisChange() {
   HighsInt bad_basis_change_num = ekk_instance_.badBasisChange(
       SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
   return bad_basis_change_num >= 0;
+}
+
+void HEkkDual::assessPossiblyDualUnbounded() {
+  assert(rebuild_reason == kRebuildReasonPossiblyDualUnbounded);
+  if (solve_phase != kSolvePhase2) return;
+  if (!ekk_instance_.status_.has_fresh_rebuild) return;
+  // Appears to be dual unbounded in phase 2 after fresh
+  // rebuild. Normally this implies primal infeasibility, but only
+  // allow this to be claimed if the proof of primal infeasibility
+  // is true.
+  //
+  const bool proof_of_infeasibility = proofOfPrimalInfeasibility();
+  if (proof_of_infeasibility) {
+    // There is a proof of primal infeasiblilty
+    solve_phase = kSolvePhaseExit;
+    // Save dual ray information
+    saveDualRay();
+    // Model status should be unset?
+    assert(ekk_instance_.model_status_ == HighsModelStatus::kNotset);
+    ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
+  } else {
+    // No proof of primal infeasiblilty, so assume dual unbounded
+    // claim is spurious. Make row_out taboo, and prevent rebuild
+    //    assert(999=666);
+    ekk_instance_.addBadBasisChange(
+        row_out, variable_out, variable_in,
+        BadBasisChangeReason::kFailedInfeasibilityProof, true);
+    rebuild_reason = kRebuildReasonNo;
+  }
 }
