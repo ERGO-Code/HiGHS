@@ -1398,9 +1398,9 @@ HighsDebugStatus HEkk::devDebugSteepestEdgeWeights(const std::string message) {
                                          : (HighsInt)kHighsDebugLevelCostly;
     //    printf("Performing level %1d check %s for dual steepest edge
     //    weights\n", (int)alt_debug_level, message.c_str());
-    debugSteepestEdgeWeights(alt_debug_level);
+    return debugSteepestEdgeWeights(alt_debug_level);
   } else {
-    debugSteepestEdgeWeights();
+    return debugSteepestEdgeWeights();
   }
 }
 
