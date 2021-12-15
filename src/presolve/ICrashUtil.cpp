@@ -65,15 +65,17 @@ void printMinorIterationDetails(const double iteration, const double col,
                                 const double ctx, const std::vector<double>& r,
                                 const double quadratic_objective) {
   double rnorm = getNorm2(r);
-  std::cout << "iter " << iteration;
-  std::cout << ", col " << col;
-  std::cout << ", update " << update;
-  std::cout << ", old_value " << old_value;
-  std::cout << ", new_value " << old_value + update;
-  std::cout << ", ctx " << ctx;
-  std::cout << ", r " << rnorm;
-  std::cout << ", quadratic_objective " << quadratic_objective;
-  std::cout << std::endl;
+  std::stringstream ss;
+  ss << "iter " << iteration;
+  ss << ", col " << col;
+  ss << ", update " << update;
+  ss << ", old_value " << old_value;
+  ss << ", new_value " << old_value + update;
+  ss << ", ctx " << ctx;
+  ss << ", r " << rnorm;
+  ss << ", quadratic_objective " << quadratic_objective;
+  ss << std::endl;
+  std::cout << ss.str();
 }
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,

@@ -52,29 +52,44 @@ bool parseICrashStrategy(const std::string& strategy,
 
 bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
   if (options.exact) {
-    std::cout << "ICrashError: exact subproblem solution not available "
-                 "at the moment." << std::endl;
+    // std::cout << "ICrashError: exact subproblem solution not available "
+    //              "at the moment." << std::endl;
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "ICrashError: exact subproblem solution not available "
+                 "at the moment.\n");
     return false;
   }
 
   if (options.breakpoints) {
     if (options.exact) {
-      std::cout << "ICrashError: exact strategy not allowed for "
-                   "breakpoints minimization." << std::endl;
+      // std::cout << "ICrashError: exact strategy not allowed for "
+      //              "breakpoints minimization." << std::endl;
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "ICrashError: exact strategy not allowed for "
+                   "breakpoints minimization.\n");
       return false;
     }
     if (options.dualize) {
-      std::cout << "ICrashError: breakpoints does not support dualize option."
-                << std::endl;
+      // std::cout << "ICrashError: breakpoints does not support dualize
+      // option."
+      //           << std::endl;
+      highsLogUser(
+          options.log_options, HighsLogType::kInfo,
+          "ICrashError: breakpoints does not support dualize option.\n");
       return false;
     }
-    std::cout << "ICrashError: breakpoints not implemented yet." << std::endl;
+    // std::cout << "ICrashError: breakpoints not implemented yet." <<
+    // std::endl;
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "ICrashError: breakpoints not implemented yet.\n");
     return false;
   }
 
   if (options.strategy == ICrashStrategy::kPenalty)
-    std::cout << "ICrash Warning: Using solveSubproblemICA with lambda = 0."
-              << std::endl;
+    // std::cout << "ICrash Warning: Using solveSubproblemICA with lambda = 0."
+    //           << std::endl;
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "ICrash Warning: Using solveSubproblemICA with lambda = 0.\n");
 
   return true;
 }
@@ -95,7 +110,8 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
     }
   } else {
     // not equality problem.
-    // assert(!options.breakpoints);  // remove when implementing breakpoints and
+    // assert(!options.breakpoints);  // remove when implementing breakpoints
+    // and
     //                                // add if else.
     // status = transformIntoEqualityProblem(ilp, local_lp);
     // if (status == HighsStatus::kOk) {
@@ -117,10 +133,6 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
 
   return Quadratic{ilp, options};
 }
-
-
-
-
 
 double getQuadraticObjective(const Quadratic& idata) {
   // c'x
@@ -196,7 +208,10 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       break;
     }
     case ICrashStrategy::kAdmm: {
-          std::cout << "ICrash Error: ADMM parameter update not implemented." << std::endl;
+      // std::cout << "ICrash Error: ADMM parameter update not implemented." <<
+      // std::endl;
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "ICrashError: ADMM parameter update not implemented yet.");
       break;
     }
     case ICrashStrategy::kICA: {
@@ -243,7 +258,8 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
     for (int col = 0; col < idata.lp.num_col_; col++) {
       // determine whether to minimize for col.
       // if empty skip.
-      if (idata.lp.a_matrix_.start_[col] == idata.lp.a_matrix_.start_[col + 1]) continue;
+      if (idata.lp.a_matrix_.start_[col] == idata.lp.a_matrix_.start_[col + 1])
+        continue;
 
       double old_value = idata.xk.col_value[col];
       minimizeComponentIca(col, idata.mu, idata.lambda, idata.lp, objective_ica,
@@ -283,11 +299,17 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       break;
     }
     case ICrashStrategy::kPenalty: {
-           std::cout <<              "ICrashError: Not implemented yet." << std::endl;
+      //  std::cout <<              "ICrashError: Not implemented yet." <<
+      //  std::endl;
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "ICrashError: not implemented yet.");
       return false;
     }
     default: {
-          std::cout <<               "ICrashError: Not implemented yet." << std::endl;
+      // std::cout <<               "ICrashError: Not implemented yet." <<
+      // std::endl;
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "ICrashError: not implemented yet.");
       return false;
     }
   }
@@ -309,7 +331,8 @@ void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
        << idata.lp_objective << ", res " << idata.residual_norm_2
        << ", quad_obj " << idata.quadratic_objective << std::endl;
   }
-  std::cout << ss.str();
+  // std::cout << ss.str();
+  highsLogUser(options.log_options, HighsLogType::kInfo, ss.str().c_str());
 }
 
 std::string ICrashtrategyToString(const ICrashStrategy strategy) {
@@ -345,7 +368,8 @@ void reportOptions(const ICrashOptions& options) {
     ss << "exact: true\n";
   }
   ss << "\n";
-  std::cout << ss.str();
+  // std::cout << ss.str();
+  highsLogUser(options.log_options, HighsLogType::kInfo, ss.str().c_str());
 }
 
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
@@ -387,12 +411,15 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
 
     // Exit if feasible.
     if (idata.residual_norm_2 < kExitTolerance) {
-      std::cout << "Solution feasible within exit tolerance: " << kExitTolerance << std::endl;
+      // std::cout << "Solution feasible within exit tolerance: " <<
+      // kExitTolerance << std::endl;
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "Solution feasible within exit tolerance: %g\n");
       iteration++;
       break;
     }
   }
-// Fill in return values.
+  // Fill in return values.
   iteration--;
   result.details = std::move(idata.details);
   // reportICrashIterationDetails(result.details);
@@ -403,7 +430,11 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   elapsed_seconds = end - start;
   result.total_time = elapsed_seconds.count();
 
-  std::cout << "\nICrash finished successfully after: " << result.total_time << "sec." << std::endl; 
+  // std::cout << "\nICrash finished successfully after: " << result.total_time
+  // << "sec." << std::endl;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "\nICrash finished successfully after: %.3g sec.\n",
+                   result.total_time);
 
   return HighsStatus::kOk;
 }
