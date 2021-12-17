@@ -95,8 +95,8 @@ HighsStatus HEkkDual::solve() {
   const bool near_optimal = dual_feasible_with_unperturbed_costs &&
                             info.num_primal_infeasibilities < 1000 &&
                             info.max_primal_infeasibility < 1e-3;
-  // For reporting, save a copy of info for the LP without cost
-  // perturbations
+  // For reporting, save dual infeasibility data for the LP without
+  // cost perturbations
   HighsInt unperturbed_num_infeasibilities = info.num_dual_infeasibilities;
   double unperturbed_max_infeasibility = info.max_dual_infeasibility;
   double unperturbed_sum_infeasibilities = info.sum_dual_infeasibilities;
@@ -880,8 +880,8 @@ void HEkkDual::solvePhase2() {
   // Collect free variables
   dualRow.createFreelist();
 
-  // If there's no backtracking basis Save the initial basis in case of
-  // backtracking
+  // If there's no backtracking basis, save the initial basis in case
+  // of backtracking
   if (!info.valid_backtracking_basis_) ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
@@ -1107,15 +1107,8 @@ void HEkkDual::rebuild() {
   info.updated_dual_objective_value = info.dual_objective_value;
 
   if (!info.run_quiet) {
-    // Report the primal infeasiblities
-    ekk_instance_.computeSimplexPrimalInfeasible();
-    if (solve_phase == kSolvePhase1) {
-      // In phase 1, report the simplex LP dual infeasiblities
-      ekk_instance_.computeSimplexLpDualInfeasible();
-    } else {
-      // In phase 2, report the simplex dual infeasiblities
-      ekk_instance_.computeSimplexDualInfeasible();
-    }
+    ekk_instance_.computeInfeasibilitiesForReporting(SimplexAlgorithm::kDual,
+                                                     solve_phase);
     reportRebuild(local_rebuild_reason);
   }
 
@@ -1198,7 +1191,8 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
-  const HighsInt from_check_iter = 0;
+  const HighsInt from_check_iter = -999;
+  ;
   const HighsInt to_check_iter = from_check_iter + 10;
   if (ekk_instance_.debug_solve_report_) {
     ekk_instance_.debug_iteration_report_ =
@@ -1218,7 +1212,7 @@ void HEkkDual::iterate() {
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
 
-  if (badBasisChange()) return;
+  if (isBadBasisChange()) return;
 
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
@@ -1375,6 +1369,10 @@ void HEkkDual::iterationAnalysisData() {
 }
 
 void HEkkDual::iterationAnalysis() {
+  // Possibly compute the infeasiblility data
+  if (analysis->analyse_simplex_runtime_data)
+    ekk_instance_.computeInfeasibilitiesForReporting(SimplexAlgorithm::kDual,
+                                                     solve_phase);
   // Possibly report on the iteration
   iterationAnalysisData();
   analysis->iterationReport();
@@ -2897,10 +2895,9 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   return HighsDebugStatus::kOk;
 }
 
-bool HEkkDual::badBasisChange() {
-  HighsInt bad_basis_change_num = ekk_instance_.badBasisChange(
-      SimplexAlgorithm::kDual, variable_in, row_out, rebuild_reason);
-  return bad_basis_change_num >= 0;
+bool HEkkDual::isBadBasisChange() {
+  return ekk_instance_.isBadBasisChange(SimplexAlgorithm::kDual, variable_in,
+                                        row_out, rebuild_reason);
 }
 
 void HEkkDual::assessPossiblyDualUnbounded() {
@@ -2924,7 +2921,15 @@ void HEkkDual::assessPossiblyDualUnbounded() {
   } else {
     // No proof of primal infeasiblilty, so assume dual unbounded
     // claim is spurious. Make row_out taboo, and prevent rebuild
-    //    assert(999=666);
+    const double local_report = false;
+    if (local_report) {
+      printf(
+          "HEkkDual::assessPossiblyDualUnbounded Failed proof: "
+          "call = %d; initial build tick = %d; simplex iterations = %d\n",
+          (int)ekk_instance_.debug_solve_call_num_,
+          (int)ekk_instance_.debug_initial_build_synthetic_tick_,
+          (int)ekk_instance_.iteration_count_);
+    }
     ekk_instance_.addBadBasisChange(
         row_out, variable_out, variable_in,
         BadBasisChangeReason::kFailedInfeasibilityProof, true);

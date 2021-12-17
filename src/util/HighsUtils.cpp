@@ -300,8 +300,8 @@ double highsRelativeDifference(const double v0, const double v1) {
   return fabs(v0 - v1) / std::max(v0, std::max(v1, 1.0));
 }
 
-void analyseVectorValues(const HighsLogOptions& log_options,
-                         const char* message, HighsInt vecDim,
+void analyseVectorValues(const HighsLogOptions* log_options,
+                         const std::string message, HighsInt vecDim,
                          const std::vector<double>& vec, bool analyseValueList,
                          std::string model_name) {
   if (vecDim == 0) return;
@@ -327,10 +327,13 @@ void analyseVectorValues(const HighsLogOptions& log_options,
   HighsInt VLsZ = 2;
   VLsV[PlusOneIx] = 1.0;
   VLsV[MinusOneIx] = -1.0;
-
+  double min_abs_value = kHighsInf;
+  double max_abs_value = 0;
   for (HighsInt ix = 0; ix < vecDim; ix++) {
     double v = vec[ix];
     double absV = std::fabs(v);
+    min_abs_value = std::min(absV, min_abs_value);
+    max_abs_value = std::max(absV, max_abs_value);
     HighsInt log10V;
     if (absV > 0) {
       // Nonzero value
@@ -393,66 +396,80 @@ void analyseVectorValues(const HighsLogOptions& log_options,
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::kInfo,
-              "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
-              " nonzeros (%3" HIGHSINT_FORMAT "%%): Analysis\n",
-              message, vecDim, nNz, 100 * nNz / vecDim);
+  highsReportDevInfo(
+      log_options,
+      highsFormatToString(
+          "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
+          " nonzeros (%3" HIGHSINT_FORMAT "%%) in [%11.4g, %11.4g]\n",
+          message.c_str(), vecDim, nNz, 100 * nNz / vecDim, min_abs_value,
+          max_abs_value));
   if (nNegInfV > 0)
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "%12" HIGHSINT_FORMAT " values are -Inf\n", nNegInfV);
+    highsReportDevInfo(
+        log_options, highsFormatToString(
+                         "%12" HIGHSINT_FORMAT " values are -Inf\n", nNegInfV));
   if (nPosInfV > 0)
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "%12" HIGHSINT_FORMAT " values are +Inf\n", nPosInfV);
+    highsReportDevInfo(
+        log_options, highsFormatToString(
+                         "%12" HIGHSINT_FORMAT " values are +Inf\n", nPosInfV));
   HighsInt k = nVK;
   HighsInt vK = posVK[k];
   if (vK > 0)
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "%12" HIGHSINT_FORMAT " values satisfy 10^(%3" HIGHSINT_FORMAT
-                ") <= v < Inf\n",
-                vK, k);
+    highsReportDevInfo(log_options, highsFormatToString(
+                                        "%12" HIGHSINT_FORMAT
+                                        " values satisfy 10^(%3" HIGHSINT_FORMAT
+                                        ") <= v < Inf\n",
+                                        vK, k));
   for (HighsInt k = nVK - 1; k >= 0; k--) {
     HighsInt vK = posVK[k];
     if (vK > 0)
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "%12" HIGHSINT_FORMAT " values satisfy 10^(%3" HIGHSINT_FORMAT
-                  ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
-                  vK, k, k + 1);
+      highsReportDevInfo(
+          log_options,
+          highsFormatToString("%12" HIGHSINT_FORMAT
+                              " values satisfy 10^(%3" HIGHSINT_FORMAT
+                              ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
+                              vK, k, k + 1));
   }
   for (HighsInt k = 1; k <= nVK; k++) {
     HighsInt vK = negVK[k];
     if (vK > 0)
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "%12" HIGHSINT_FORMAT " values satisfy 10^(%3" HIGHSINT_FORMAT
-                  ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
-                  vK, -k, 1 - k);
+      highsReportDevInfo(
+          log_options,
+          highsFormatToString("%12" HIGHSINT_FORMAT
+                              " values satisfy 10^(%3" HIGHSINT_FORMAT
+                              ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
+                              vK, -k, 1 - k));
   }
   vK = vecDim - nNz;
   if (vK > 0)
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "%12" HIGHSINT_FORMAT " values are zero\n", vK);
+    highsReportDevInfo(
+        log_options,
+        highsFormatToString("%12" HIGHSINT_FORMAT " values are zero\n", vK));
   if (analyseValueList) {
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "           Value distribution:");
+    highsReportDevInfo(log_options,
+                       highsFormatToString("           Value distribution:"));
     if (excessVLsV)
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  " More than %" HIGHSINT_FORMAT " different values", VLsZ);
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "\n            Value        Count\n");
+      highsReportDevInfo(
+          log_options,
+          highsFormatToString(
+              " More than %" HIGHSINT_FORMAT " different values", VLsZ));
+    highsReportDevInfo(
+        log_options, highsFormatToString("\n            Value        Count\n"));
     for (HighsInt ix = 0; ix < VLsZ; ix++) {
       HighsInt pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "     %12g %12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
-                  "%%)\n",
-                  VLsV[ix], VLsK[ix], pct);
+      highsReportDevInfo(log_options,
+                         highsFormatToString("     %12g %12" HIGHSINT_FORMAT
+                                             " (%3" HIGHSINT_FORMAT "%%)\n",
+                                             VLsV[ix], VLsK[ix], pct));
     }
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "grep_value_distrib,%s,%" HIGHSINT_FORMAT "",
-                model_name.c_str(), VLsZ);
-    highsLogDev(log_options, HighsLogType::kInfo, ",");
-    if (excessVLsV) highsLogDev(log_options, HighsLogType::kInfo, "!");
+    highsReportDevInfo(
+        log_options,
+        highsFormatToString("grep_value_distrib,%s,%" HIGHSINT_FORMAT "",
+                            model_name.c_str(), VLsZ));
+    highsReportDevInfo(log_options, highsFormatToString(","));
+    if (excessVLsV) highsReportDevInfo(log_options, highsFormatToString("!"));
     for (HighsInt ix = 0; ix < VLsZ; ix++)
-      highsLogDev(log_options, HighsLogType::kInfo, ",%g", VLsV[ix]);
-    highsLogDev(log_options, HighsLogType::kInfo, "\n");
+      highsReportDevInfo(log_options, highsFormatToString(",%g", VLsV[ix]));
+    highsReportDevInfo(log_options, highsFormatToString("\n"));
   }
 }
 

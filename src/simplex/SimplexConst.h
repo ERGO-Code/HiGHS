@@ -193,7 +193,8 @@ enum class LpAction {
 };
 
 enum class BadBasisChangeReason {
-  kSingular = 0,
+  kAll = 0,
+  kSingular,
   kCycling,
   kFailedInfeasibilityProof
 };

@@ -1472,10 +1472,10 @@ HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
         (int)iteration_count_, (int)num_dual_sign_change);
     printf("   |cB| = %g; |cN| = %g; zero delta dual = %g\n", norm_basic_costs,
            norm_nonbasic_costs, zero_delta_dual);
-    //    analyseVectorValues(options.log_options, "Previous duals", num_tot,
-    //    previous_dual); analyseVectorValues(options.log_options, "New duals",
+    //    analyseVectorValues(&options.log_options, "Previous duals", num_tot,
+    //    previous_dual); analyseVectorValues(&options.log_options, "New duals",
     //    num_tot, new_dual);
-    analyseVectorValues(options.log_options, "Delta duals", num_tot,
+    analyseVectorValues(&options.log_options, "Delta duals", num_tot,
                         delta_dual);
   }
   return HighsDebugStatus::kOk;

@@ -1265,6 +1265,7 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
   if (analyse_simplex_runtime_data) {
     reportDensity(header);
     reportIterationData(header);
+    reportInfeasibility(header);
   }
   highsLogDev(log_options, kIterationReportLogType, "%s\n",
               analysis_log->str().c_str());
@@ -1302,7 +1303,9 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
   } else {
     // Primal infeasibility information may not be known if dual ray
     // has proved primal infeasibility
-    if (num_primal_infeasibility < 0 || sum_primal_infeasibility < 0) return;
+    if (num_primal_infeasibility <= kHighsIllegalInfeasibilityCount ||
+        sum_primal_infeasibility >= kHighsIllegalInfeasibilityMeasure)
+      return;
     if (solve_phase == 1) {
       *analysis_log << highsFormatToString(" Ph1: %" HIGHSINT_FORMAT "(%g)",
                                            num_primal_infeasibility,

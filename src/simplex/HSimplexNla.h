@@ -23,6 +23,8 @@
 #include "simplex/SimplexStruct.h"
 #include "util/HFactor.h"
 
+const HighsInt kReportItemLimit = 25;
+
 struct ProductFormUpdate {
   bool valid_ = false;
   HighsInt num_row_;

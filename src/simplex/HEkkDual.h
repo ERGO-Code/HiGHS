@@ -375,7 +375,7 @@ class HEkkDual {
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
-  bool badBasisChange();
+  bool isBadBasisChange();
   void assessPossiblyDualUnbounded();
 
   // Devex scalars

@@ -64,6 +64,13 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
 void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
 
+/**
+ * @brief For development logging when true log_options may not be available -
+ * indicated by null pointer
+ */
+void highsReportDevInfo(const HighsLogOptions* log_options,
+                        const std::string line);
+
 /*
  * @brief sets the callbacks used to print output and and log
  *

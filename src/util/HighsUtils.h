@@ -131,8 +131,8 @@ double highsRelativeDifference(const double v0, const double v1);
  * different values
  */
 void analyseVectorValues(
-    const HighsLogOptions& log_options,
-    const char* message,             //!< Message to be printed
+    const HighsLogOptions* log_options,
+    const std::string message,       //!< Message to be printed
     HighsInt vecDim,                 //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of

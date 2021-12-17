@@ -189,11 +189,13 @@ class HEkk {
   vector<HighsInt> upper_bound_col_;
   vector<HighsInt> upper_bound_row_;
 
-  double build_synthetic_tick_;
-  double total_synthetic_tick_;
+  double build_synthetic_tick_ = 0;
+  double total_synthetic_tick_ = 0;
+
   HighsInt debug_solve_call_num_ = 0;
   HighsInt debug_basis_id_ = 0;
   bool time_report_ = false;
+  HighsInt debug_initial_build_synthetic_tick_ = 0;
   bool debug_solve_report_ = false;
   bool debug_iteration_report_ = false;
   bool debug_basis_report_ = false;
@@ -258,11 +260,14 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  HighsInt badBasisChange(const SimplexAlgorithm algorithm,
-                          const HighsInt variable_in, const HighsInt row_out,
-                          const HighsInt rebuild_reason);
+  bool isBadBasisChange(const SimplexAlgorithm algorithm,
+                        const HighsInt variable_in, const HighsInt row_out,
+                        const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
+  void computeInfeasibilitiesForReporting(
+      const SimplexAlgorithm algorithm,
+      const HighsInt solve_phase = kSolvePhase2);
   void computeSimplexInfeasible();
   void computeSimplexPrimalInfeasible();
   void computeSimplexDualInfeasible();
@@ -282,17 +287,20 @@ class HEkk {
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
 
-  void clearBadBasisChange() { bad_basis_change_.clear(); };
+  void clearBadBasisChange(
+      const BadBasisChangeReason reason = BadBasisChangeReason::kAll);
 
-  void addBadBasisChange(const HighsInt row_out, const HighsInt variable_out,
-                         const HighsInt variable_in,
-                         const BadBasisChangeReason reason,
-                         const bool taboo = false);
+  HighsInt addBadBasisChange(const HighsInt row_out,
+                             const HighsInt variable_out,
+                             const HighsInt variable_in,
+                             const BadBasisChangeReason reason,
+                             const bool taboo = false);
   void clearBadBasisChangeTabooFlag();
   bool tabooBadBasisChange();
-  void applyTabooRowOut(vector<double>& values, double overwrite_with);
+  void applyTabooRowOut(vector<double>& values, const double overwrite_with);
   void unapplyTabooRowOut(vector<double>& values);
-  void applyTabooVariableIn(vector<double>& values, double overwrite_with);
+  void applyTabooVariableIn(vector<double>& values,
+                            const double overwrite_with);
   void unapplyTabooVariableIn(vector<double>& values);
 
   // Methods in HEkkControl

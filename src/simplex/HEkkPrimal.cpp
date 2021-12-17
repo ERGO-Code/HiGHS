@@ -47,6 +47,12 @@ HighsStatus HEkkPrimal::solve() {
   // Get the nonabsic free column set
   getNonbasicFreeColumnSet();
 
+  const bool primal_feasible_with_unperturbed_bounds =
+      info.num_primal_infeasibilities == 0;
+  const bool force_phase2 =
+      info.max_primal_infeasibility * info.max_primal_infeasibility <
+      options.primal_feasibility_tolerance;
+
   // Determine whether the solution is near-optimal. Value 1 is
   // unimportant, as the sum of dual infeasiblilities for near-optimal
   // solutions is typically many orders of magnitude smaller than 1,
@@ -57,6 +63,13 @@ HighsStatus HEkkPrimal::solve() {
                             info.max_dual_infeasibility < 1e-3 &&
                             info.sum_dual_infeasibilities < 1 &&
                             info.num_primal_infeasibilities == 0;
+  // For reporting, save primal infeasibility data for the LP without
+  // bound perturbations
+  const HighsInt unperturbed_num_infeasibilities =
+      info.num_primal_infeasibilities;
+  const double unperturbed_max_infeasibility = info.max_primal_infeasibility;
+  const double unperturbed_sum_infeasibilities =
+      info.sum_primal_infeasibilities;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Primal feasible and num / max / sum dual infeasibilities are "
@@ -88,7 +101,26 @@ HighsStatus HEkkPrimal::solve() {
   HighsInt num_primal_infeasibility =
       ekk_instance_.info_.num_primal_infeasibilities;
   solve_phase = num_primal_infeasibility > 0 ? kSolvePhase1 : kSolvePhase2;
-
+  if (force_phase2) {
+    // Dual infeasiblilities without cost perturbation involved
+    // fixed variables or were (at most) small, so can easily be
+    // removed by flips for and fixed variables shifts for the rest
+    solve_phase = kSolvePhase2;
+    const bool local_report = true;
+    if (!primal_feasible_with_unperturbed_bounds && local_report) {
+      printf(
+          "Solve %d: Forcing phase 2 since near primal feasible with "
+          "unperturbed "
+          "costs\n"
+          "num / max / sum primal infeasiblitiles\n"
+          "%d / %11.4g / %11.4g (  perturbed bounds)\n"
+          "%d / %11.4g / %11.4g (unperturbed bounds)\n",
+          (int)ekk_instance_.debug_solve_call_num_,
+          (int)info.num_primal_infeasibilities, info.max_primal_infeasibility,
+          info.sum_primal_infeasibilities, (int)unperturbed_num_infeasibilities,
+          unperturbed_max_infeasibility, unperturbed_sum_infeasibilities);
+    }
+  }
   if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
@@ -818,7 +850,7 @@ void HEkkPrimal::iterate() {
     }
   }
 
-  if (badBasisChange()) return;
+  if (isBadBasisChange()) return;
 
   // Any pivoting is numerically acceptable, so perform update.
   //
@@ -2287,6 +2319,9 @@ void HEkkPrimal::updateVerify() {
 }
 
 void HEkkPrimal::iterationAnalysisData() {
+  // Possibly compute the infeasiblility data
+  if (analysis->analyse_simplex_runtime_data)
+    ekk_instance_.computeInfeasibilitiesForReporting(SimplexAlgorithm::kPrimal);
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->simplex_strategy = kSimplexStrategyPrimal;
   analysis->edge_weight_mode = DualEdgeWeightMode::kDevex;
@@ -2578,9 +2613,7 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
   return HighsDebugStatus::kOk;
 }
 
-bool HEkkPrimal::badBasisChange() {
-  HighsInt bad_basis_change_num = ekk_instance_.badBasisChange(
-      SimplexAlgorithm::kPrimal, variable_in, row_out, rebuild_reason);
-
-  return bad_basis_change_num >= 0;
+bool HEkkPrimal::isBadBasisChange() {
+  return ekk_instance_.isBadBasisChange(SimplexAlgorithm::kPrimal, variable_in,
+                                        row_out, rebuild_reason);
 }

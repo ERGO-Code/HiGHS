@@ -1637,30 +1637,30 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
               message.c_str());
   if (lp.is_scaled_) {
     const HighsScale& scale = lp.scale_;
-    analyseVectorValues(log_options, "Column scaling factors", lp.num_col_,
+    analyseVectorValues(&log_options, "Column scaling factors", lp.num_col_,
                         scale.col, true, lp.model_name_);
-    analyseVectorValues(log_options, "Row    scaling factors", lp.num_row_,
+    analyseVectorValues(&log_options, "Row    scaling factors", lp.num_row_,
                         scale.row, true, lp.model_name_);
   }
-  analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_,
+  analyseVectorValues(&log_options, "Column costs", lp.num_col_, lp.col_cost_,
                       true, lp.model_name_);
-  analyseVectorValues(log_options, "Column lower bounds", lp.num_col_,
+  analyseVectorValues(&log_options, "Column lower bounds", lp.num_col_,
                       lp.col_lower_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Column upper bounds", lp.num_col_,
+  analyseVectorValues(&log_options, "Column upper bounds", lp.num_col_,
                       lp.col_upper_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Column min abs bound", lp.num_col_,
+  analyseVectorValues(&log_options, "Column min abs bound", lp.num_col_,
                       min_colBound, true, lp.model_name_);
-  analyseVectorValues(log_options, "Column range", lp.num_col_, colRange, true,
+  analyseVectorValues(&log_options, "Column range", lp.num_col_, colRange, true,
                       lp.model_name_);
-  analyseVectorValues(log_options, "Row lower bounds", lp.num_row_,
+  analyseVectorValues(&log_options, "Row lower bounds", lp.num_row_,
                       lp.row_lower_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Row upper bounds", lp.num_row_,
+  analyseVectorValues(&log_options, "Row upper bounds", lp.num_row_,
                       lp.row_upper_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Row min abs bound", lp.num_row_,
+  analyseVectorValues(&log_options, "Row min abs bound", lp.num_row_,
                       min_rowBound, true, lp.model_name_);
-  analyseVectorValues(log_options, "Row range", lp.num_row_, rowRange, true,
+  analyseVectorValues(&log_options, "Row range", lp.num_row_, rowRange, true,
                       lp.model_name_);
-  analyseVectorValues(log_options, "Matrix sparsity",
+  analyseVectorValues(&log_options, "Matrix sparsity",
                       lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.value_,
                       true, lp.model_name_);
   analyseMatrixSparsity(log_options, "Constraint matrix", lp.num_col_,

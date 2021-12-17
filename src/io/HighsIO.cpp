@@ -180,6 +180,15 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_end(argptr);
 }
 
+void highsReportDevInfo(const HighsLogOptions* log_options,
+                        const std::string line) {
+  if (log_options) {
+    highsLogDev(*log_options, HighsLogType::kInfo, "%s", line.c_str());
+  } else {
+    printf("%s", line.c_str());
+  }
+}
+
 void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
                                              void* msgcb_data),
                          void (*logmsgcb_)(HighsLogType type, const char* msg,
