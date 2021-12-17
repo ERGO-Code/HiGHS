@@ -2143,7 +2143,6 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   const bool quad_precision = false;
   if (use_col_price) {
     // Perform column-wise PRICE
-    assert(1 == 0);
     ekk_instance_.lp_.a_matrix_.priceByColumn(quad_precision,
                                               row_basic_feasibility_change,
                                               col_basic_feasibility_change);
@@ -2158,7 +2157,6 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
         0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    assert(1 == 0);
     ekk_instance_.ar_matrix_.priceByRow(quad_precision,
                                         row_basic_feasibility_change,
                                         col_basic_feasibility_change);
