@@ -288,7 +288,6 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   //       heurlp.getLpSolver().getOptions().simplex_iteration_limit);
   HighsInt targetdepth = 1;
   HighsInt nbacktracks = -1;
-  std::shared_ptr<const HighsBasis> basis;
   HeuristicNeighborhood neighborhood(mipsolver, localdom);
 retry:
   ++nbacktracks;
@@ -302,17 +301,9 @@ retry:
 
   // printf("fixingrate before loop is %g\n", fixingrate);
   assert(heur.hasNode());
-  if (basis) {
-    heurlp.setStoredBasis(basis);
-    heurlp.recoverBasis();
-  }
   while (true) {
     // printf("evaluating node\n");
     heur.evaluateNode();
-    if (!basis) {
-      heurlp.storeBasis();
-      basis = heurlp.getStoredBasis();
-    }
     // printf("done evaluating node\n");
     if (heur.currentNodePruned()) {
       ++nbacktracks;
@@ -474,8 +465,6 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  heurlp.storeBasis();
-  basis = heurlp.getStoredBasis();
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
@@ -522,7 +511,6 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   bool stop = false;
   HighsInt nbacktracks = -1;
   HighsInt targetdepth = 1;
-  std::shared_ptr<const HighsBasis> basis;
   HeuristicNeighborhood neighborhood(mipsolver, localdom);
 retry:
   ++nbacktracks;
@@ -535,17 +523,9 @@ retry:
   }
 
   assert(heur.hasNode());
-  if (basis) {
-    heurlp.setStoredBasis(basis);
-    heurlp.recoverBasis();
-  }
 
   while (true) {
     heur.evaluateNode();
-    if (!basis) {
-      heurlp.storeBasis();
-      basis = heurlp.getStoredBasis();
-    }
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");
@@ -750,8 +730,6 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  heurlp.storeBasis();
-  basis = heurlp.getStoredBasis();
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
