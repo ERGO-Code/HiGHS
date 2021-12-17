@@ -474,6 +474,8 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
+  heurlp.storeBasis();
+  basis = heurlp.getStoredBasis();
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
@@ -748,6 +750,8 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
+  heurlp.storeBasis();
+  basis = heurlp.getStoredBasis();
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
