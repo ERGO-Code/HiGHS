@@ -821,7 +821,8 @@ void Highs::setNonbasicStatusInterface(
         HighsBasisStatus status = highs_basis.col_status[iCol];
         HighsInt move = kIllegalMoveValue;
         if (lower == upper) {
-          status = HighsBasisStatus::kLower;
+          if (status == HighsBasisStatus::kNonbasic)
+            status = HighsBasisStatus::kLower;
           move = kNonbasicMoveZe;
         } else if (!highs_isInfinity(-lower)) {
           // Finite lower bound so boxed or lower
@@ -871,7 +872,8 @@ void Highs::setNonbasicStatusInterface(
         HighsBasisStatus status = highs_basis.row_status[iRow];
         HighsInt move = kIllegalMoveValue;
         if (lower == upper) {
-          status = HighsBasisStatus::kLower;
+          if (status == HighsBasisStatus::kNonbasic)
+            status = HighsBasisStatus::kLower;
           move = kNonbasicMoveZe;
         } else if (!highs_isInfinity(-lower)) {
           // Finite lower bound so boxed or lower
