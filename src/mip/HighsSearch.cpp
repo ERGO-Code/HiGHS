@@ -818,12 +818,16 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
 void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   if (nodestack.empty()) return;
 
+  // get the basis of the node highest up in the tree
   std::shared_ptr<const HighsBasis> basis;
-  if (nodestack.back().opensubtrees == 0) {
-    if (nodestack.back().nodeBasis)
-      basis = std::move(nodestack.back().nodeBasis);
-    backtrack(false);
+  for (NodeData& nodeData : nodestack) {
+    if (nodeData.nodeBasis) {
+      basis = std::move(nodeData.nodeBasis);
+      break;
+    }
   }
+
+  if (nodestack.back().opensubtrees == 0) backtrack(false);
 
   while (!nodestack.empty()) {
     auto oldchangedcols = localdom.getChangedCols().size();
@@ -845,9 +849,6 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     }
     nodestack.back().opensubtrees = 0;
-    if (nodestack.back().nodeBasis)
-      basis = std::move(nodestack.back().nodeBasis);
-
     backtrack(false);
   }
 
