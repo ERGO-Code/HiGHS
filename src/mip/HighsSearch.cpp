@@ -534,6 +534,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
+        lp->recoverBasis();
         return -1;
       }
 
@@ -589,7 +590,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -606,7 +607,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         }
@@ -623,7 +624,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
-        if (numiters > basisstart_threshold) lp->recoverBasis();
+        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -671,6 +672,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
+        lp->recoverBasis();
         return -1;
       }
 
@@ -727,7 +729,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -744,7 +746,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         }
@@ -761,7 +763,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
-        if (numiters > basisstart_threshold) lp->recoverBasis();
+        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
