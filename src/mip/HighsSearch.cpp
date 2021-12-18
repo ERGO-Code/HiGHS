@@ -1019,6 +1019,17 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       currnode.estimate = lp->computeBestEstimate(pseudocost);
       currnode.lp_objective = lp->getObjective();
 
+      if (parent != nullptr && parent->lp_objective != -kHighsInf &&
+          parent->branching_point != parent->branchingdecision.boundval) {
+        double delta =
+            parent->branchingdecision.boundval - parent->branching_point;
+        double objdelta =
+            std::max(0.0, currnode.lp_objective - parent->lp_objective);
+
+        pseudocost.addObservation(parent->branchingdecision.column, delta,
+                                  objdelta);
+      }
+
       if (lp->unscaledPrimalFeasible(status)) {
         if (lp->getFractionalIntegers().empty()) {
           result = NodeResult::kBoundExceeding;
@@ -1063,17 +1074,6 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             result = NodeResult::kBoundExceeding;
           }
         }
-      }
-
-      if (parent != nullptr && parent->lp_objective != -kHighsInf &&
-          parent->branching_point != parent->branchingdecision.boundval) {
-        double delta =
-            parent->branchingdecision.boundval - parent->branching_point;
-        double objdelta =
-            std::max(0.0, currnode.lp_objective - parent->lp_objective);
-
-        pseudocost.addObservation(parent->branchingdecision.column, delta,
-                                  objdelta);
       }
     } else if (status == HighsLpRelaxation::Status::kInfeasible) {
       if (lp->getLpSolver().getModelStatus(true) ==
