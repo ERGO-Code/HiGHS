@@ -328,6 +328,17 @@ class HighsDomain {
     changedcols_.clear();
   }
 
+  void removeContinuousChangedCols() {
+    for (HighsInt i : changedcols_)
+      changedcolsflags_[i] =
+          mipsolver->variableType(i) != HighsVarType::kContinuous;
+
+    changedcols_.erase(
+        std::remove_if(changedcols_.begin(), changedcols_.end(),
+                       [&](HighsInt i) { return !changedcolsflags_[i]; }),
+        changedcols_.end());
+  }
+
   void clearChangedCols(HighsInt start) {
     HighsInt end = changedcols_.size();
     for (HighsInt i = start; i != end; ++i)

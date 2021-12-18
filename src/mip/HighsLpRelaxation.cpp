@@ -133,7 +133,8 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   lpsolver.passOptions(other.lpsolver.getOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
-  mask.resize(mipsolver.numCol());
+  colLbBuffer.resize(mipsolver.numCol());
+  colUbBuffer.resize(mipsolver.numCol());
   numlpiters = 0;
   avgSolveIters = 0;
   numSolved = 0;
@@ -155,7 +156,8 @@ void HighsLpRelaxation::loadModel() {
   lpsolver.clearSolver();
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
-  mask.resize(lpmodel.num_col_);
+  colLbBuffer.resize(lpmodel.num_col_);
+  colUbBuffer.resize(lpmodel.num_col_);
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
@@ -394,17 +396,18 @@ void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
   if (!domain.getChangedCols().empty()) {
     if (&domain == &mipsolver.mipdata_->domain) continuous = true;
     currentbasisstored = false;
-    for (HighsInt col : domain.getChangedCols()) {
-      if (!continuous &&
-          mipsolver.variableType(col) == HighsVarType::kContinuous)
-        continue;
-      mask[col] = 1;
+    if (!continuous) domain.removeContinuousChangedCols();
+    HighsInt numChgCols = domain.getChangedCols().size();
+    if (numChgCols == 0) return;
+    const HighsInt* chgCols = domain.getChangedCols().data();
+    for (HighsInt i = 0; i < numChgCols; ++i) {
+      HighsInt col = chgCols[i];
+      colLbBuffer[i] = domain.col_lower_[col];
+      colUbBuffer[i] = domain.col_upper_[col];
     }
 
-    lpsolver.changeColsBounds(mask.data(), domain.col_lower_.data(),
-                              domain.col_upper_.data());
-
-    for (HighsInt col : domain.getChangedCols()) mask[col] = 0;
+    lpsolver.changeColsBounds(numChgCols, domain.getChangedCols().data(),
+                              colLbBuffer.data(), colUbBuffer.data());
 
     domain.clearChangedCols();
   }
