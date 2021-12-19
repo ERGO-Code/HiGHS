@@ -1354,7 +1354,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 
 bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
   if (!num_nz) return true;
-  const bool ok_format = format == (HighsInt)MatrixFormat::kColwise;
+  const bool ok_format = format == (HighsInt)HessianFormat::kTriangular;
   assert(ok_format);
   if (!ok_format)
     highsLogUser(

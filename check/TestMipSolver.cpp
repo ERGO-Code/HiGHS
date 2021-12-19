@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void solve(Highs& highs, std::string presolve,
@@ -101,6 +101,58 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(info.mip_node_count == 1);
   REQUIRE(info.mip_dual_bound == -6);
   REQUIRE(info.mip_gap == 0);
+}
+
+TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-3, -2, -1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {inf, inf, 1};
+  lp.row_lower_ = {-inf, 12};
+  lp.row_upper_ = {7, 12};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 4, 1, 2, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
+                     HighsVarType::kInteger};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  highs.setOptionValue("solver", "mip");
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  if (dev_run) {
+    printf("INFO: valid = %d\n", (int)info.valid);
+    printf("INFO: mip_node_count = %d\n", (int)info.mip_node_count);
+    printf("INFO: simplex_iteration_count = %d\n",
+           (int)info.simplex_iteration_count);
+    printf("INFO: ipm_iteration_count = %d\n", (int)info.ipm_iteration_count);
+    printf("INFO: qp_iteration_count = %d\n", (int)info.qp_iteration_count);
+    printf("INFO: crossover_iteration_count = %d\n",
+           (int)info.crossover_iteration_count);
+    printf("INFO: primal_solution_status = %d\n",
+           (int)info.primal_solution_status);
+    printf("INFO: dual_solution_status = %d\n", (int)info.dual_solution_status);
+    printf("INFO: basis_validity = %d\n", (int)info.basis_validity);
+    printf("INFO: objective_function_value = %g\n",
+           info.objective_function_value);
+    printf("INFO: mip_dual_bound = %g\n", info.mip_dual_bound);
+    printf("INFO: mip_gap = %g\n", info.mip_gap);
+    printf("INFO: num_primal_infeasibilities = %d\n",
+           (int)info.num_primal_infeasibilities);
+    printf("INFO: max_primal_infeasibility = %g\n",
+           info.max_primal_infeasibility);
+    printf("INFO: sum_primal_infeasibilities = %g\n",
+           info.sum_primal_infeasibilities);
+    printf("INFO: num_dual_infeasibilities = %d\n",
+           (int)info.num_dual_infeasibilities);
+    printf("INFO: max_dual_infeasibility = %g\n", info.max_dual_infeasibility);
+    printf("INFO: sum_dual_infeasibilities = %g\n",
+           info.sum_dual_infeasibilities);
+  }
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
