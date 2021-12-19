@@ -1089,7 +1089,6 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       minact += vals[i] * globaldom.col_upper_[inds[i]];
     }
   }
-  if (nbin == 0) return;
 
   for (HighsInt i = 0; i != len; ++i) {
     if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous) continue;
@@ -1100,13 +1099,17 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
                             globaldom.feastol());
       globaldom.changeBound(HighsBoundType::kUpper, inds[i], boundVal,
                             HighsDomain::Reason::unspecified());
+      if (globaldom.infeasible()) return;
     } else {
       boundVal = std::ceil(boundVal + globaldom.col_upper_[inds[i]] -
                            globaldom.feastol());
       globaldom.changeBound(HighsBoundType::kLower, inds[i], boundVal,
                             HighsDomain::Reason::unspecified());
+      if (globaldom.infeasible()) return;
     }
   }
+
+  if (nbin <= 1) return;
 
   std::vector<HighsInt> perm;
   perm.resize(len);

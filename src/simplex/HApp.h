@@ -22,7 +22,9 @@
 //#include <set>
 //#include <vector>
 
+#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "simplex/HEkk.h"
 #include "simplex/HSimplex.h"
