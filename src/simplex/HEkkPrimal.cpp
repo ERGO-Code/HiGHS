@@ -2143,7 +2143,6 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   const bool quad_precision = false;
   if (use_col_price) {
     // Perform column-wise PRICE
-    assert(1 == 0);
     ekk_instance_.lp_.a_matrix_.priceByColumn(quad_precision,
                                               row_basic_feasibility_change,
                                               col_basic_feasibility_change);
@@ -2158,7 +2157,6 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
         0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    assert(1 == 0);
     ekk_instance_.ar_matrix_.priceByRow(quad_precision,
                                         row_basic_feasibility_change,
                                         col_basic_feasibility_change);
@@ -2167,7 +2165,8 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
     // variables, nonbasicFlag[*]=0
-    const int8_t* nonbasicFlag = &ekk_instance_.basis_.nonbasicFlag_[0];
+    const std::vector<int8_t>& nonbasicFlag =
+        ekk_instance_.basis_.nonbasicFlag_;
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       row_basic_feasibility_change.array[iCol] *= nonbasicFlag[iCol];
   }
