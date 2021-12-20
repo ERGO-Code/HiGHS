@@ -128,6 +128,10 @@ class OptionRecordString : public OptionRecord {
   virtual ~OptionRecordString() {}
 };
 
+void highsOpenLogFile(HighsLogOptions& log_options, 
+		      std::vector<OptionRecord*>& option_records,
+		      const std::string log_file);
+
 bool commandLineOffChooseOnOk(const HighsLogOptions& log_options,
                               const string& value);
 bool commandLineSolverOk(const HighsLogOptions& log_options,

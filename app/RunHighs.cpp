@@ -22,20 +22,20 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsModel& model);
 
 int main(int argc, char** argv) {
-  // Create the Highs instance
-  Highs highs;
-  
-  // Load user options.
   HighsOptions options;
-  //  highsOpenLogFile(options, "Highs.log");
+  highsOpenLogFile(options, "FRED.log");
 
   printHighsVersionCopyright(options.log_options);
 
+  // Load user options.
   std::string model_file;
   bool options_ok = loadOptions(argc, argv, options, model_file);
   if (!options_ok) return 0;
-  //
-  // Pass the option seetings to HiGHS
+
+  // Create the Highs instance
+  Highs highs;
+  
+  // Pass the option settings to HiGHS
   highs.passOptions(options);
   //
   // Load the model from model_file

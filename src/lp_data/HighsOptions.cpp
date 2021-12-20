@@ -14,8 +14,33 @@
  * @brief
  */
 #include "lp_data/HighsOptions.h"
+#include <cassert>
 
 void setLogOptions();
+
+void highsOpenLogFile(HighsLogOptions& log_options, 
+		      std::vector<OptionRecord*>& option_records,
+		      const std::string log_file) {
+  HighsInt index;
+  OptionStatus status =
+    getOptionIndex(log_options, "log_file", option_records, index);
+  assert(status == OptionStatus::kOk);
+  if (log_options.log_file_stream != NULL) {
+    // Current log file stream is not null, so flush and close it
+    fflush(log_options.log_file_stream);
+    fclose(log_options.log_file_stream);
+  }
+  if (log_file.compare("")) {
+    // New log file name is not empty, so open it
+    log_options.log_file_stream = fopen(log_file.c_str(), "w");
+  } else {
+    // New log file name is empty, so set the stream to null
+    log_options.log_file_stream = NULL;
+  }
+  OptionRecordString& option = *(OptionRecordString*)option_records[index];
+  option.assignvalue(log_file);
+}
+
 std::string optionEntryTypeToString(const HighsOptionType type) {
   if (type == HighsOptionType::kBool) {
     return "bool";
@@ -443,6 +468,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
                                atof(value.c_str()));
   } else {
     // Setting a string option value
+    /*
     if (!name.compare(kLogFileString)) {
       // Changing the name of the log file
       if (log_options.log_file_stream != NULL) {
@@ -458,6 +484,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
         log_options.log_file_stream = NULL;
       }
     }
+    */
     if (!name.compare(kModelFileString)) {
       // Don't allow model filename to be changed - it's only an
       // option so that reading of run-time options works

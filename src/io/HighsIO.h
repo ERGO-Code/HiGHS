@@ -81,12 +81,7 @@ void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
 void highsSetLogCallback(HighsOptions& options  //!< the options
 );
 
-/*
 void highsOpenLogFile(HighsOptions& options, const std::string log_file);
-void highsOpenLogFile(HighsLogOptions& log_options, 
-		      OptionRecordString& option,
-		      const std::string log_file);
-*/
 
 void highsReportLogOptions(const HighsLogOptions& log_options_);
 

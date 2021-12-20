@@ -196,28 +196,10 @@ void highsSetLogCallback(HighsOptions& options) {
   msgcb_data = options.msgcb_data;
 }
 
-/*
 void highsOpenLogFile(HighsOptions& options, 
 		      const std::string log_file) {
+  highsOpenLogFile(options.log_options, options.records, log_file);
 }
-
-void highsOpenLogFile(HighsLogOptions& log_options, 
-		      OptionRecordString& option,
-		      const std::string log_file) {
-  if (log_options.log_file_stream != NULL) {
-    // Current log file stream is not null, so flush and close it
-    fflush(log_options.log_file_stream);
-    fclose(log_options.log_file_stream);
-  }
-  if (log_file.compare("")) {
-    // New log file name is not empty, so open it
-    log_options.log_file_stream = fopen(log_file.c_str(), "w");
-  } else {
-    // New log file name is empty, so set the stream to null
-    log_options.log_file_stream = NULL;
-  }
-}
-*/
 
 void highsReportLogOptions(const HighsLogOptions& log_options_) {
   printf("\nHighs log options\n");
