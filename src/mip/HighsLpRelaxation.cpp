@@ -796,7 +796,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kUnscaledDualFeasible;
 
-      return Status::kUnscaledInfeasible;
+      if (scaledmodelstatus == HighsModelStatus::kOptimal)
+        return Status::kUnscaledInfeasible;
+
+      return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
         // printf(
