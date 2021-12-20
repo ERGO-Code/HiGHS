@@ -2845,12 +2845,36 @@ double HEkkDual::computeExactDualObjectiveValue() {
     simplex_nla->btran(dual_col, expected_density);
     lp.a_matrix_.priceByColumn(quad_precision, dual_row, dual_col);
   }
-  double dual_objective = lp.offset_;
+  HighsCDouble dual_objective = lp.offset_;
   double norm_dual = 0;
   double norm_delta_dual = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (!basis.nonbasicFlag_[iCol]) continue;
     double exact_dual = lp.col_cost_[iCol] - dual_row.array[iCol];
+
+    // printf(
+    //    "exact col dual: %g, col lower: %g, col upper: %g, workValue: %g, "
+    //    "nonbasic: %d\n",
+    //    exact_dual, lp.col_lower_[iCol], lp.col_upper_[iCol],
+    //    info.workValue_[iCol], basis.nonbasicFlag_[iCol]);
+
+    // The active value must be decided based on the exact dual. For a nonbasic
+    // column the bound that must be used may flip due to cost perturbation
+    // flipping the sign of its dual and for a basic variable we may need to add
+    // to the dual objective using one of the bounds when its dual is not zero.
+    double active_value;
+    if (exact_dual > ekk_instance_.options_->small_matrix_value)
+      active_value = lp.col_lower_[iCol];
+    else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
+      active_value = lp.col_upper_[iCol];
+    else if (basis.nonbasicFlag_[iCol])
+      active_value = info.workValue_[iCol];
+    else
+      continue;
+
+    // when the active value is infinite the dual objective lower bound is
+    // -infinity
+    if (highs_isInfinity(fabs(active_value))) return -kHighsInf;
+
     double residual = fabs(exact_dual - info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
@@ -2860,13 +2884,39 @@ double HEkkDual::computeExactDualObjectiveValue() {
           "Col %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iCol, exact_dual, info.workDual_[iCol], residual);
-    dual_objective += info.workValue_[iCol] * exact_dual;
+    dual_objective += active_value * exact_dual;
   }
+
   for (HighsInt iVar = lp.num_col_; iVar < numTot; iVar++) {
-    if (!basis.nonbasicFlag_[iVar]) continue;
     HighsInt iRow = iVar - lp.num_col_;
-    double exact_dual = -dual_col.array[iRow];
-    double residual = fabs(exact_dual - info.workDual_[iVar]);
+    double exact_dual = dual_col.array[iRow];
+
+    // printf(
+    //    "exact row dual: %g, row lower: %g, row upper: %g, workValue: %g, "
+    //    "nonbasic: %d\n",
+    //    exact_dual, lp.row_lower_[iRow], lp.row_upper_[iRow],
+    //    -info.workValue_[iVar], basis.nonbasicFlag_[iVar]);
+
+    // Similarly to the column case above the active value must be decided based
+    // on the exact dual. For a nonbasic row the bound that must be used
+    // may flip due to cost perturbation flipping the sign of its dual and for a
+    // basic variable we may need to add to the dual objective using one of the
+    // bounds when its dual is not zero.
+    double active_value;
+    if (exact_dual > ekk_instance_.options_->small_matrix_value)
+      active_value = lp.row_lower_[iRow];
+    else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
+      active_value = lp.row_upper_[iRow];
+    else if (basis.nonbasicFlag_[iVar])
+      active_value = -info.workValue_[iVar];
+    else
+      continue;
+
+    // when the active value is infinite the dual objective lower bound is
+    // -infinity
+    if (highs_isInfinity(fabs(active_value))) return -kHighsInf;
+
+    double residual = fabs(exact_dual + info.workDual_[iVar]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
@@ -2875,7 +2925,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
           "Row %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iRow, exact_dual, info.workDual_[iVar], residual);
-    dual_objective += info.workValue_[iVar] * exact_dual;
+    dual_objective += active_value * exact_dual;
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
   if (relative_delta > 1e-3)
@@ -2883,7 +2933,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
         ekk_instance_.options_->log_options, HighsLogType::kWarning,
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g\n",
         norm_dual, norm_delta_dual, relative_delta);
-  return dual_objective;
+  return double(dual_objective);
 }
 
 HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,

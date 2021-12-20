@@ -318,8 +318,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         // !status.has_dual_steepest_edge_weights) {
         ekk_info.dual_edge_weight_strategy =
             kSimplexDualEdgeWeightStrategyDevex;
-        // options.dual_simplex_cost_perturbation_multiplier = 0;
+        // when the status of the scaled LP was objective bound do not use cost
+        // perturbation to solve the unscaled LP so that the status can reliably
+        // be verified
+        if (scaled_model_status == HighsModelStatus::kObjectiveBound)
+          options.dual_simplex_cost_perturbation_multiplier = 0;
       }
+
       //
       // Solve the unscaled LP with scaled NLA
       //
