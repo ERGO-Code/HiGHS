@@ -545,6 +545,8 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
                               HighsOptions& to_options) {
   // (Attempt to) set option value from the HighsOptions passed in
   OptionStatus return_status;
+  std::string from_log_file = from_options.log_file;
+  std::string original_to_log_file = to_options.log_file;
   HighsInt num_options = to_options.records.size();
   // Check all the option values before setting any of them - in case
   // to_options are the main Highs options. Checks are only needed for
@@ -603,6 +605,18 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
       if (return_status != OptionStatus::kOk) return return_status;
     }
   }
+  if (from_log_file.compare(original_to_log_file)) {
+    // The log file name has changed
+    if (from_options.log_file_stream) {
+      assert(from_log_file.compare(""));
+      // The stream corresponding to from_log_file was non-null, so
+      // to_options inherits it. This ensures that the stream to
+      // Highs.log opened in RunHighs.cpp is retained.
+      to_options.log_file_stream = from_options.log_file_stream;
+    } else {
+      highsOpenLogFile(to_options, to_options.log_file);
+    }
+  }    
   return OptionStatus::kOk;
 }
 

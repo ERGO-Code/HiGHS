@@ -358,6 +358,7 @@ struct HighsOptionsStruct {
   void (*logmsgcb)(HighsLogType type, const char* msg, void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
   HighsLogOptions log_options;
+  HighsInt log_file_index;
   virtual ~HighsOptionsStruct() {}
 };
 
@@ -607,6 +608,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(kLogFileString, "Log file", advanced,
                                            &log_file, "Highs.log"); // ""); // 
     records.push_back(record_string);
+    // Record the index of the log_file option
+    log_file_index = records.size();
 
     record_bool =
         new OptionRecordBool("write_solution_to_file",
