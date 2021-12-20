@@ -563,6 +563,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     }
   }
 
+  const HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
     HighsInt start = lp.a_matrix_.start_[i];
     HighsInt end = lp.a_matrix_.start_[i + 1];
@@ -578,16 +580,28 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
-        std::abs(val) <= mipsolver.mipdata_->feastol ||
-        mipsolver.mipdata_->domain.col_lower_[i] ==
-            mipsolver.mipdata_->domain.col_upper_[i]) {
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
+
+    if (!removeValue &&
+        (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
+         mipsolver.variableType(i) == HighsVarType::kContinuous)) {
+      // remove continuous entries and globally fixed entries whenever the
+      // local LP's bound is not tighter than the global bound
+      if (val > 0)
+        removeValue = lp.col_lower_[i] - globaldomain.col_lower_[i] <=
+                      mipsolver.mipdata_->feastol;
+      else
+        removeValue = globaldomain.col_upper_[i] - lp.col_upper_[i] <=
+                      mipsolver.mipdata_->feastol;
+    }
+
+    if (removeValue) {
       if (val < 0) {
-        if (mipsolver.mipdata_->domain.col_upper_[i] == kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.col_upper_[i];
+        if (globaldomain.col_upper_[i] == kHighsInf) return false;
+        upper -= val * globaldomain.col_upper_[i];
       } else {
-        if (mipsolver.mipdata_->domain.col_lower_[i] == -kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.col_lower_[i];
+        if (globaldomain.col_lower_[i] == -kHighsInf) return false;
+        upper -= val * globaldomain.col_lower_[i];
       }
 
       continue;
