@@ -597,10 +597,10 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (removeValue) {
       if (val < 0) {
-        if (globaldomain.col_upper_[i] == kHighsInf) return false;
+        if (globaldomain.col_upper_[i] == kHighsInf) return;
         upper -= val * globaldomain.col_upper_[i];
       } else {
-        if (globaldomain.col_lower_[i] == -kHighsInf) return false;
+        if (globaldomain.col_lower_[i] == -kHighsInf) return;
         upper -= val * globaldomain.col_lower_[i];
       }
 
