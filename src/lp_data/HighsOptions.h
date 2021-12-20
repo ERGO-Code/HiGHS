@@ -601,7 +601,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_string = new OptionRecordString(kLogFileString, "Log file", advanced,
-                                           &log_file, "Highs.log");
+                                           &log_file, "Highs.log"); // ""); // 
     records.push_back(record_string);
 
     record_bool =
@@ -892,7 +892,7 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
-    log_file_stream = fopen(log_file.c_str(), "w");
+    log_file_stream = log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
     log_options.log_file_stream = log_file_stream;
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
