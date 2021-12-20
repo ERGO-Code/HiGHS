@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
   // Create the Highs instance
   Highs highs;
-  
+
   // Pass the option settings to HiGHS
   highs.passOptions(options);
   //

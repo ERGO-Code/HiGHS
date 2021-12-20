@@ -1,6 +1,5 @@
 #include <cstdio>
 
-//#include "HMPSIO.h"
 #include "Highs.h"
 #include "catch.hpp"
 
@@ -13,7 +12,7 @@ TEST_CASE("logging", "[highs_logging]") {
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  
+
   // Read mps
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -22,4 +21,6 @@ TEST_CASE("logging", "[highs_logging]") {
 
   highs.setOptionValue("log_file", "temp.log");
 
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
 }

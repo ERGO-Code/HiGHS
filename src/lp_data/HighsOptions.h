@@ -128,9 +128,9 @@ class OptionRecordString : public OptionRecord {
   virtual ~OptionRecordString() {}
 };
 
-void highsOpenLogFile(HighsLogOptions& log_options, 
-		      std::vector<OptionRecord*>& option_records,
-		      const std::string log_file);
+void highsOpenLogFile(HighsLogOptions& log_options,
+                      std::vector<OptionRecord*>& option_records,
+                      const std::string log_file);
 
 bool commandLineOffChooseOnOk(const HighsLogOptions& log_options,
                               const string& value);
@@ -606,7 +606,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_string = new OptionRecordString(kLogFileString, "Log file", advanced,
-                                           &log_file, ""); // "Highs.log"); // 
+                                           &log_file, "");  // "Highs.log"); //
     records.push_back(record_string);
     // Record the index of the log_file option
     log_file_index = records.size();

@@ -196,8 +196,7 @@ void highsSetLogCallback(HighsOptions& options) {
   msgcb_data = options.msgcb_data;
 }
 
-void highsOpenLogFile(HighsOptions& options, 
-		      const std::string log_file) {
+void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
   highsOpenLogFile(options.log_options, options.records, log_file);
 }
 

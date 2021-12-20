@@ -14,16 +14,17 @@
  * @brief
  */
 #include "lp_data/HighsOptions.h"
+
 #include <cassert>
 
 void setLogOptions();
 
-void highsOpenLogFile(HighsLogOptions& log_options, 
-		      std::vector<OptionRecord*>& option_records,
-		      const std::string log_file) {
+void highsOpenLogFile(HighsLogOptions& log_options,
+                      std::vector<OptionRecord*>& option_records,
+                      const std::string log_file) {
   HighsInt index;
   OptionStatus status =
-    getOptionIndex(log_options, "log_file", option_records, index);
+      getOptionIndex(log_options, "log_file", option_records, index);
   assert(status == OptionStatus::kOk);
   if (log_options.log_file_stream != NULL) {
     // Current log file stream is not null, so flush and close it
@@ -470,10 +471,10 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
     // Setting a string option value
     if (!name.compare(kLogFileString)) {
       OptionRecordString& option = *(OptionRecordString*)option_records[index];
-      std::string original_log_file = "FRED.log";//option.value;
+      std::string original_log_file = "FRED.log";  // option.value;
       if (value.compare(original_log_file)) {
-	// Changing the name of the log file
-	 highsOpenLogFile(log_options, options_records, value);
+        // Changing the name of the log file
+        highsOpenLogFile(log_options, option_records, value);
       }
     }
     if (!name.compare(kModelFileString)) {
@@ -607,7 +608,7 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
     } else {
       highsOpenLogFile(to_options, to_options.log_file);
     }
-  }    
+  }
   return OptionStatus::kOk;
 }
 
