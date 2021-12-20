@@ -2849,6 +2849,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   double norm_dual = 0;
   double norm_delta_dual = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (!basis.nonbasicFlag_[iCol]) continue;
     double exact_dual = lp.col_cost_[iCol] - dual_row.array[iCol];
 
     // printf(
@@ -2866,10 +2867,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
       active_value = lp.col_lower_[iCol];
     else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
       active_value = lp.col_upper_[iCol];
-    else if (basis.nonbasicFlag_[iCol])
-      active_value = info.workValue_[iCol];
     else
-      continue;
+      active_value = info.workValue_[iCol];
 
     // when the active value is infinite the dual objective lower bound is
     // -infinity
@@ -2888,6 +2887,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   }
 
   for (HighsInt iVar = lp.num_col_; iVar < numTot; iVar++) {
+    if (!basis.nonbasicFlag_[iVar]) continue;
     HighsInt iRow = iVar - lp.num_col_;
     double exact_dual = dual_col.array[iRow];
 
@@ -2907,10 +2907,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
       active_value = lp.row_lower_[iRow];
     else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
       active_value = lp.row_upper_[iRow];
-    else if (basis.nonbasicFlag_[iVar])
-      active_value = -info.workValue_[iVar];
     else
-      continue;
+      active_value = -info.workValue_[iVar];
 
     // when the active value is infinite the dual objective lower bound is
     // -infinity

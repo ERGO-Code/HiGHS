@@ -463,11 +463,11 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
-                       globaldomain.col_lower_[i] == globaldomain.col_upper_[i];
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
 
     if (!removeValue &&
-        mipsolver.variableType(i) == HighsVarType::kContinuous) {
+        (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
+         mipsolver.variableType(i) == HighsVarType::kContinuous)) {
       if (val > 0)
         removeValue =
             lpsolver.getSolution().col_value[i] - globaldomain.col_lower_[i] <=
