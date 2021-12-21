@@ -23,7 +23,7 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
 
 int main(int argc, char** argv) {
   HighsOptions options;
-  highsOpenLogFile(options, "FRED.log");
+  highsOpenLogFile(options, "Highs.log");
 
   printHighsVersionCopyright(options.log_options);
 
@@ -59,9 +59,10 @@ int main(int argc, char** argv) {
 
 void printHighsVersionCopyright(const HighsLogOptions& log_options) {
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %" HIGHSINT_FORMAT ".%" HIGHSINT_FORMAT
-               ".%" HIGHSINT_FORMAT " [date: %s, git hash: %s]\n",
-               HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR, HIGHS_VERSION_PATCH,
+               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+               (int)HIGHS_VERSION_MAJOR,
+	       (int)HIGHS_VERSION_MINOR,
+	       (int)HIGHS_VERSION_PATCH,
                HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::kInfo,
                "Copyright (c) 2021 ERGO-Code under MIT licence terms\n");

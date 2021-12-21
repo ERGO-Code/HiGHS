@@ -878,7 +878,6 @@ void reportOption(FILE* file, const OptionRecordString& option,
 }
 
 void HighsOptions::setLogOptions() {
-  //  this->log_options.log_file_stream = this->log_file_stream;
   this->log_options.output_flag = &this->output_flag;
   this->log_options.log_to_console = &this->log_to_console;
   this->log_options.log_dev_level = &this->log_dev_level;
