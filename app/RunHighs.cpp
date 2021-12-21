@@ -22,26 +22,36 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsModel& model);
 
 int main(int argc, char** argv) {
-
   // Create the Highs instance
   Highs highs;
-  const HighsOptions& highs_options = highs.getOptions();
+  const HighsOptions& options = highs.getOptions();
+  const HighsLogOptions& log_options = options.log_options;
 
-  highs.openLogFile("Highs.log");
-  printHighsVersionCopyright(highs_options.log_options);
-
-  // Load user options.
+  // Load user options
   std::string model_file;
-  HighsOptions options;
-  bool options_ok = loadOptions(argc, argv, options, model_file);
-  if (!options_ok) return 0;
+  HighsOptions loaded_options;
+  // Set "HiGHS.log" as the default log_file for the app so that
+  // log_file has this value if it isn't set in the file
+  loaded_options.log_file = "HiGHS.log";
+  // When loading the options file, any messages are reported using
+  // the default HighsLogOptions
+  if (!loadOptions(log_options, argc, argv, loaded_options, model_file))
+    return 0;
+  // Open the app log file - unless output_flag is false, to avoid
+  // creating an empty file. It does nothing if its name is "".
+  if (loaded_options.output_flag) highs.openLogFile(loaded_options.log_file);
 
-  // Pass the option settings to HiGHS
-  highs.passOptions(options);
+  // Pass the option settings to HiGHS. Only error-checking produces
+  // output, but values are checked in loadOptions, so it's safe to
+  // call this first so that printHighsVersionCopyright uses reporting
+  // settings defined in any options file.
+  highs.passOptions(loaded_options);
+
+  printHighsVersionCopyright(log_options);
   //
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
-  reportModelStatsOrError(options.log_options, read_status, highs.getModel());
+  reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError)
     return 1;  // todo: change to read error
   //

@@ -937,7 +937,7 @@ class Highs {
    * @brief Opens a named log file
    */
   HighsStatus openLogFile(const std::string log_file = "");
-  
+
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string solutionStatusToString(const HighsInt solution_status) const;

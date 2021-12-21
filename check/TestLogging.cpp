@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("logging", "[highs_logging]") {
   std::string model;
@@ -22,7 +22,7 @@ TEST_CASE("logging", "[highs_logging]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   // Setting log_file to a non-empty string opens the file
-  highs.setOptionValue("log_file", log_file);
+  highs.setOptionValue(kLogFileString, log_file);
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
