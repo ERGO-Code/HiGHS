@@ -17,7 +17,7 @@
 
 #include <cassert>
 
-void setLogOptions();
+// void setLogOptions();
 
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
@@ -599,12 +599,13 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
   }
   if (from_log_file.compare(original_to_log_file)) {
     // The log file name has changed
-    if (from_options.log_file_stream) {
+    if (from_options.log_options.log_file_stream) {
       assert(from_log_file.compare(""));
       // The stream corresponding to from_log_file was non-null, so
       // to_options inherits it. This ensures that the stream to
       // Highs.log opened in RunHighs.cpp is retained.
-      to_options.log_file_stream = from_options.log_file_stream;
+      to_options.log_options.log_file_stream =
+          from_options.log_options.log_file_stream;
     } else {
       highsOpenLogFile(to_options, to_options.log_file);
     }
@@ -877,7 +878,7 @@ void reportOption(FILE* file, const OptionRecordString& option,
 }
 
 void HighsOptions::setLogOptions() {
-  this->log_options.log_file_stream = this->log_file_stream;
+  //  this->log_options.log_file_stream = this->log_file_stream;
   this->log_options.output_flag = &this->output_flag;
   this->log_options.log_to_console = &this->log_to_console;
   this->log_options.log_dev_level = &this->log_dev_level;

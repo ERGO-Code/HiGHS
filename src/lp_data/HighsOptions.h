@@ -350,15 +350,12 @@ struct HighsOptionsStruct {
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
-  // HiGHS log FILE*
-  FILE* log_file_stream = NULL;
 
   // Logging callback identifiers
   void (*printmsgcb)(HighsInt level, const char* msg, void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsLogType type, const char* msg, void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
   HighsLogOptions log_options;
-  HighsInt log_file_index;
   virtual ~HighsOptionsStruct() {}
 };
 
@@ -383,6 +380,7 @@ class HighsOptions : public HighsOptionsStruct {
   HighsOptions(HighsOptions&& options) {
     records = std::move(options.records);
     HighsOptionsStruct::operator=(std::move(options));
+    this->log_options.log_file_stream = options.log_options.log_file_stream;
     setLogOptions();
   }
 
@@ -390,6 +388,7 @@ class HighsOptions : public HighsOptionsStruct {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
+      this->log_options.log_file_stream = other.log_options.log_file_stream;
       setLogOptions();
     }
     return *this;
@@ -399,6 +398,7 @@ class HighsOptions : public HighsOptionsStruct {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
+      this->log_options.log_file_stream = other.log_options.log_file_stream;
       setLogOptions();
     }
     return *this;
@@ -608,8 +608,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(kLogFileString, "Log file", advanced,
                                            &log_file, "");  // "Highs.log"); //
     records.push_back(record_string);
-    // Record the index of the log_file option
-    log_file_index = records.size();
 
     record_bool =
         new OptionRecordBool("write_solution_to_file",
@@ -899,8 +897,8 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
-    log_file_stream = log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
-    log_options.log_file_stream = log_file_stream;
+    log_options.log_file_stream =
+        log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;

@@ -14,7 +14,7 @@ TEST_CASE("logging", "[highs_logging]") {
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   log_file = "temp.log";
-  
+
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   // By default, initial output is just to to console
@@ -28,5 +28,4 @@ TEST_CASE("logging", "[highs_logging]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   if (!dev_run) std::remove(log_file.c_str());
-
 }
