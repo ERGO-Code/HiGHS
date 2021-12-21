@@ -471,7 +471,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
     // Setting a string option value
     if (!name.compare(kLogFileString)) {
       OptionRecordString& option = *(OptionRecordString*)option_records[index];
-      std::string original_log_file = "FRED.log";  // option.value;
+      std::string original_log_file = *(option.value);
       if (value.compare(original_log_file)) {
         // Changing the name of the log file
         highsOpenLogFile(log_options, option_records, value);
@@ -537,8 +537,10 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
                               HighsOptions& to_options) {
   // (Attempt to) set option value from the HighsOptions passed in
   OptionStatus return_status;
+  std::string empty_file = "";
   std::string from_log_file = from_options.log_file;
   std::string original_to_log_file = to_options.log_file;
+  FILE* original_to_log_file_stream = to_options.log_options.log_file_stream;
   HighsInt num_options = to_options.records.size();
   // Check all the option values before setting any of them - in case
   // to_options are the main Highs options. Checks are only needed for
@@ -599,11 +601,21 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
   }
   if (from_log_file.compare(original_to_log_file)) {
     // The log file name has changed
-    if (from_options.log_options.log_file_stream) {
-      assert(from_log_file.compare(""));
-      // The stream corresponding to from_log_file was non-null, so
-      // to_options inherits it. This ensures that the stream to
-      // Highs.log opened in RunHighs.cpp is retained.
+    printf("%s = original_to_log_file.compare(%s) = %s\n",
+	   original_to_log_file.c_str(),
+	   empty_file.c_str(),
+	   highsBoolToString(original_to_log_file.compare(empty_file)).c_str());
+    if (from_options.log_options.log_file_stream &&
+	!original_to_log_file.compare(empty_file)) {
+      // The stream corresponding to from_log_file is non-null and the
+      // original log file name was empty, so to_options inherits the
+      // stream, but associated with the (necessarily) non-empty name
+      // from_log_file
+      //
+      // This ensures that the stream to Highs.log opened in
+      // RunHighs.cpp is retained unless the log file name is changed.
+      assert(from_log_file.compare(empty_file));
+      assert(!original_to_log_file_stream);
       to_options.log_options.log_file_stream =
           from_options.log_options.log_file_stream;
     } else {

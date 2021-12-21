@@ -29,3 +29,21 @@ TEST_CASE("logging", "[highs_logging]") {
 
   if (!dev_run) std::remove(log_file.c_str());
 }
+
+TEST_CASE("no-logging", "[highs_logging]") {
+  std::string model;
+  std::string model_file;
+  std::string log_file;
+  HighsStatus return_status;
+
+  model = "adlittle";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  return_status = highs.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+}

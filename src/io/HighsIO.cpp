@@ -104,7 +104,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       type == HighsLogType::kWarning || type == HighsLogType::kError;
   va_list argptr;
   va_start(argptr, format);
-  const bool flush_streams = true;
+  const bool flush_streams = false;
   if (!logmsgcb) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
@@ -160,7 +160,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     return;
   va_list argptr;
   va_start(argptr, format);
-  const bool flush_streams = true;
+  const bool flush_streams = false;
   if (!logmsgcb) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
