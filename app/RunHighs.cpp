@@ -22,18 +22,19 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsModel& model);
 
 int main(int argc, char** argv) {
-  HighsOptions options;
-  highsOpenLogFile(options, "Highs.log");
-
-  printHighsVersionCopyright(options.log_options);
-
-  // Load user options.
-  std::string model_file;
-  bool options_ok = loadOptions(argc, argv, options, model_file);
-  if (!options_ok) return 0;
 
   // Create the Highs instance
   Highs highs;
+  const HighsOptions& highs_options = highs.getOptions();
+
+  highs.openLogFile("Highs.log");
+  printHighsVersionCopyright(highs_options.log_options);
+
+  // Load user options.
+  std::string model_file;
+  HighsOptions options;
+  bool options_ok = loadOptions(argc, argv, options, model_file);
+  if (!options_ok) return 0;
 
   // Pass the option settings to HiGHS
   highs.passOptions(options);

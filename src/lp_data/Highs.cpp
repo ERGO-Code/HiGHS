@@ -2847,3 +2847,8 @@ HighsStatus Highs::crossover(HighsSolution& solution) {
 
   return HighsStatus::kOk;
 }
+
+HighsStatus Highs::openLogFile(const std::string log_file) {
+  highsOpenLogFile(options_.log_options, options_.records, log_file);
+  return HighsStatus::kOk;
+}

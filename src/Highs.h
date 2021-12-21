@@ -927,6 +927,17 @@ class Highs {
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
 
+  /**
+   * @brief Runs ipx crossover and if successful loads basis into Highs::basis_
+   */
+  HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
+
+  /**
+   * @brief Opens a named log file
+   */
+  HighsStatus openLogFile(const std::string log_file = "");
+  
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string solutionStatusToString(const HighsInt solution_status) const;
@@ -1036,10 +1047,6 @@ class Highs {
     deprecationMessage("getSimplexIterationCount", "None");
     return info_.simplex_iteration_count;
   }
-
-  // Runs ipx crossover and if successful loads basis into Highs::basis_
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 

@@ -601,10 +601,6 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
   }
   if (from_log_file.compare(original_to_log_file)) {
     // The log file name has changed
-    printf("%s = original_to_log_file.compare(%s) = %s\n",
-	   original_to_log_file.c_str(),
-	   empty_file.c_str(),
-	   highsBoolToString(original_to_log_file.compare(empty_file)).c_str());
     if (from_options.log_options.log_file_stream &&
 	!original_to_log_file.compare(empty_file)) {
       // The stream corresponding to from_log_file is non-null and the
