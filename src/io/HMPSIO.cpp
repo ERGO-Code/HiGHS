@@ -843,8 +843,10 @@ HighsStatus writeMps(
       for (HighsInt el = q_start[col]; el < q_start[col + 1]; el++) {
         HighsInt row = q_index[el];
         assert(row >= col);
-        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
-                col_names[row].c_str(), q_value[el]);
+        // May have explicit zeroes on the diagonal
+        if (q_value[el])
+          fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
+                  col_names[row].c_str(), q_value[el]);
       }
     }
   }

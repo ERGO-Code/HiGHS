@@ -263,8 +263,16 @@ HighsStatus Highs::passModel(HighsModel model) {
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  clearZeroHessian();
-
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.numNz() == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
@@ -389,9 +397,18 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  clearZeroHessian();
-  return_status = interpretCallStatus(options_.log_options, clearSolver(),
-                                      return_status, "clearSolver");
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.numNz() == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
+  return_status =
+      interpretCallStatus(options_.log_options, clearSolver(), return_status, "clearSolver");
   return returnFromHighs(return_status);
 }
 
