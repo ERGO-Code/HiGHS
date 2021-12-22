@@ -120,39 +120,15 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
                      HighsVarType::kInteger};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  highs.setOptionValue("solver", "mip");
-  REQUIRE(highs.run() == HighsStatus::kOk);
+  highs.setOptionValue("highs_debug_level", kHighsDebugLevelCheap);
+  highs.setOptionValue("log_dev_level", 2);
+  HighsStatus return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) highs.writeInfo("");
   const HighsInfo& info = highs.getInfo();
-  const HighsSolution& solution = highs.getSolution();
-  if (dev_run) {
-    printf("INFO: valid = %d\n", (int)info.valid);
-    printf("INFO: mip_node_count = %d\n", (int)info.mip_node_count);
-    printf("INFO: simplex_iteration_count = %d\n",
-           (int)info.simplex_iteration_count);
-    printf("INFO: ipm_iteration_count = %d\n", (int)info.ipm_iteration_count);
-    printf("INFO: qp_iteration_count = %d\n", (int)info.qp_iteration_count);
-    printf("INFO: crossover_iteration_count = %d\n",
-           (int)info.crossover_iteration_count);
-    printf("INFO: primal_solution_status = %d\n",
-           (int)info.primal_solution_status);
-    printf("INFO: dual_solution_status = %d\n", (int)info.dual_solution_status);
-    printf("INFO: basis_validity = %d\n", (int)info.basis_validity);
-    printf("INFO: objective_function_value = %g\n",
-           info.objective_function_value);
-    printf("INFO: mip_dual_bound = %g\n", info.mip_dual_bound);
-    printf("INFO: mip_gap = %g\n", info.mip_gap);
-    printf("INFO: num_primal_infeasibilities = %d\n",
-           (int)info.num_primal_infeasibilities);
-    printf("INFO: max_primal_infeasibility = %g\n",
-           info.max_primal_infeasibility);
-    printf("INFO: sum_primal_infeasibilities = %g\n",
-           info.sum_primal_infeasibilities);
-    printf("INFO: num_dual_infeasibilities = %d\n",
-           (int)info.num_dual_infeasibilities);
-    printf("INFO: max_dual_infeasibility = %g\n", info.max_dual_infeasibility);
-    printf("INFO: sum_dual_infeasibilities = %g\n",
-           info.sum_dual_infeasibilities);
-  }
+  REQUIRE(info.num_primal_infeasibilities == 0);
+  REQUIRE(info.max_primal_infeasibility == 0);
+  REQUIRE(info.sum_primal_infeasibilities == 0);
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
