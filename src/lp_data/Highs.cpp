@@ -224,6 +224,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
+  assert(lp.a_matrix_.formatOk());
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
     // rows. Clearly the matrix is empty, so may have no orientation
@@ -288,7 +289,7 @@ HighsStatus Highs::passModel(HighsLp lp) {
 }
 
 HighsStatus Highs::passModel(
-    const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
+    const HighsInt num_col, const HighsInt num_row, const HighsInt a_num_nz,
     const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
     const HighsInt sense, const double offset, const double* costs,
     const double* col_lower, const double* col_upper, const double* row_lower,
@@ -298,11 +299,12 @@ HighsStatus Highs::passModel(
   HighsModel model;
   HighsLp& lp = model.lp_;
   // Check that the formats of the constraint matrix and Hessian are valid
-  if (!lp.a_matrix_.formatOk()) return HighsStatus::kError;
+  if (!aFormatOk(a_num_nz, a_format)) return HighsStatus::kError;
   if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
 
-  bool a_rowwise = false;
-  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
+  const bool a_rowwise =
+      a_num_nz > 0 ? a_format == (HighsInt)MatrixFormat::kRowwise : false;
+  //  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
 
   lp.num_col_ = num_col;
   lp.num_row_ = num_row;
@@ -320,7 +322,7 @@ HighsStatus Highs::passModel(
     lp.row_lower_.assign(row_lower, row_lower + num_row);
     lp.row_upper_.assign(row_upper, row_upper + num_row);
   }
-  if (num_nz > 0) {
+  if (a_num_nz > 0) {
     assert(num_col > 0);
     assert(num_row > 0);
     assert(astart != NULL);
@@ -331,16 +333,16 @@ HighsStatus Highs::passModel(
     } else {
       lp.a_matrix_.start_.assign(astart, astart + num_col);
     }
-    lp.a_matrix_.index_.assign(aindex, aindex + num_nz);
-    lp.a_matrix_.value_.assign(avalue, avalue + num_nz);
+    lp.a_matrix_.index_.assign(aindex, aindex + a_num_nz);
+    lp.a_matrix_.value_.assign(avalue, avalue + a_num_nz);
   }
   if (a_rowwise) {
     lp.a_matrix_.start_.resize(num_row + 1);
-    lp.a_matrix_.start_[num_row] = num_nz;
+    lp.a_matrix_.start_[num_row] = a_num_nz;
     lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   } else {
     lp.a_matrix_.start_.resize(num_col + 1);
-    lp.a_matrix_.start_[num_col] = num_nz;
+    lp.a_matrix_.start_[num_col] = a_num_nz;
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
@@ -407,8 +409,8 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
       hessian.clear();
     }
   }
-  return_status =
-      interpretCallStatus(options_.log_options, clearSolver(), return_status, "clearSolver");
+  return_status = interpretCallStatus(options_.log_options, clearSolver(),
+                                      return_status, "clearSolver");
   return returnFromHighs(return_status);
 }
 
