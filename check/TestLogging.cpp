@@ -11,7 +11,7 @@ TEST_CASE("logging", "[highs_logging]") {
   std::string log_file;
   HighsStatus return_status;
 
-  model = "adlittle";
+  model = "avgas";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   log_file = "temp.log";
 
@@ -26,6 +26,21 @@ TEST_CASE("logging", "[highs_logging]") {
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  // Setting log_file to an empty string closes the file and prevents
+  // further logging to file
+  highs.setOptionValue(kLogFileString, "");
+
+  // Setting log_to_console false suppresses logging to console
+  highs.setOptionValue("log_to_console", false);
+  // Writing out the the info should puroduce no output to console or file
+  highs.run();
+
+  // Setting log_to_console true restores logging to console
+  highs.setOptionValue("log_to_console", true);
+  if (dev_run) printf("After setting log_to_console = true\n");
+  // Writing out the the info should puroduce output to console
+  highs.run();
 
   if (!dev_run) std::remove(log_file.c_str());
 }
