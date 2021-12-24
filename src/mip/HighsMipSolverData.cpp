@@ -1301,6 +1301,22 @@ restart:
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
+
+  if (options.mip_gap_limit != 0.0) {
+    const double lb = lower_bound + mipsolver.model_->offset_;
+    const double ub = upper_bound + mipsolver.model_->offset_;
+    const double gap = (ub - lb) / std::max(1.0, std::abs(ub));
+
+    if (gap <= options.mip_gap_limit) {
+      if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+        highsLogDev(options.log_options, HighsLogType::kInfo,
+                    "reached MIP gap limit\n");
+        mipsolver.modelstatus_ = HighsModelStatus::kObjectiveTarget;
+      }
+      return true;
+    }
+  }
+
   if (options.mip_max_nodes != kHighsIInf &&
       num_nodes + nodeOffset >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
