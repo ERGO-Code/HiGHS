@@ -9,14 +9,15 @@ const bool dev_run = false;
 
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
+  HighsLogOptions report_log_options = options.log_options;
   options.output_flag = false;
   OptionStatus return_status =
-      checkOptions(options.log_options, options.records);
+      checkOptions(report_log_options, options.records);
   REQUIRE(return_status == OptionStatus::kOk);
 
   std::string filename = std::string(HIGHS_DIR) + "/check/sample_options_file";
 
-  bool success = loadOptionsFromFile(options, filename);
+  bool success = loadOptionsFromFile(report_log_options, options, filename);
   REQUIRE(success == true);
   REQUIRE(options.presolve == kHighsOnString);
   REQUIRE(options.small_matrix_value == 0.001);
@@ -24,35 +25,38 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   if (dev_run) reportOptions(stdout, options.records, true);
 
-  return_status = checkOptions(options.log_options, options.records);
+  return_status = checkOptions(report_log_options, options.records);
   REQUIRE(return_status == OptionStatus::kOk);
 
   // Check setting boolean options
   std::string setting_string = "fixed";
   return_status =
+      setLocalOptionValue(report_log_options, "mps_parser_type_free",
+                          options.log_options, options.records, setting_string);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
+
+  return_status =
       setLocalOptionValue(options.log_options, "mps_parser_type_free",
-                          options.records, setting_string);
+                          options.log_options, options.records, "fixed");
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  return_status = setLocalOptionValue(
-      options.log_options, "mps_parser_type_free", options.records, "fixed");
-  REQUIRE(return_status == OptionStatus::kIllegalValue);
-
-  return_status = setLocalOptionValue(
-      options.log_options, "mps_parser_type_free", options.records, "False");
+  return_status =
+      setLocalOptionValue(options.log_options, "mps_parser_type_free",
+                          options.log_options, options.records, "False");
   REQUIRE(return_status == OptionStatus::kOk);
 
-  return_status = setLocalOptionValue(
-      options.log_options, "mps_parser_type_free", options.records, "F");
+  return_status =
+      setLocalOptionValue(options.log_options, "mps_parser_type_free",
+                          options.log_options, options.records, "F");
   REQUIRE(return_status == OptionStatus::kOk);
 
   bool mps_parser_type_free = false;
   return_status =
-      setLocalOptionValue(options.log_options, "mps_parser_type_free",
+      setLocalOptionValue(report_log_options, "mps_parser_type_free",
                           options.records, mps_parser_type_free);
   REQUIRE(return_status == OptionStatus::kOk);
 
-  return_status = setLocalOptionValue(options.log_options, "mps_parser_type",
+  return_status = setLocalOptionValue(report_log_options, "mps_parser_type",
                                       options.records, true);
   REQUIRE(return_status == OptionStatus::kUnknownOption);
 
@@ -67,14 +71,14 @@ TEST_CASE("internal-options", "[highs_options]") {
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   std::string allowed_matrix_scale_factor_string = "1e-7";
-  return_status =
-      setLocalOptionValue(options.log_options, "allowed_matrix_scale_factor",
-                          options.records, allowed_matrix_scale_factor_string);
+  return_status = setLocalOptionValue(
+      report_log_options, "allowed_matrix_scale_factor", options.log_options,
+      options.records, allowed_matrix_scale_factor_string);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status =
-      setLocalOptionValue(options.log_options, "allowed_matrix_scale_factor",
-                          options.records, "3.14159");
+      setLocalOptionValue(report_log_options, "allowed_matrix_scale_factor",
+                          options.log_options, options.records, "3.14159");
 
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
@@ -85,13 +89,13 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   double allowed_matrix_scale_factor_double = 1e-7;
   return_status =
-      setLocalOptionValue(options.log_options, "allowed_matrix_scale_factor",
+      setLocalOptionValue(report_log_options, "allowed_matrix_scale_factor",
                           options.records, allowed_matrix_scale_factor_double);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   HighsInt allowed_matrix_scale_factor = 12;
   return_status =
-      setLocalOptionValue(options.log_options, "allowed_matrix_scale_factor",
+      setLocalOptionValue(report_log_options, "allowed_matrix_scale_factor",
                           options.records, allowed_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::kOk);
 
@@ -102,74 +106,81 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   // Check setting double options
 
-  return_status = setLocalOptionValue(options.log_options, "large_matrix_value",
+  return_status = setLocalOptionValue(report_log_options, "large_matrix_value",
                                       options.records, -1);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  return_status = setLocalOptionValue(options.log_options, "large_matrix_value",
-                                      options.records, "1");
+  return_status =
+      setLocalOptionValue(report_log_options, "large_matrix_value",
+                          options.log_options, options.records, "1");
   REQUIRE(return_status == OptionStatus::kOk);
 
-  return_status = setLocalOptionValue(options.log_options, "small_matrix_value",
+  return_status = setLocalOptionValue(report_log_options, "small_matrix_value",
                                       options.records, -1);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  return_status = setLocalOptionValue(options.log_options, "small_matrix_value",
-                                      options.records, "1e-6");
+  return_status =
+      setLocalOptionValue(report_log_options, "small_matrix_value",
+                          options.log_options, options.records, "1e-6");
   REQUIRE(return_status == OptionStatus::kOk);
 
   double small_matrix_value = 1e-7;
-  return_status = setLocalOptionValue(options.log_options, "small_matrix_value",
+  return_status = setLocalOptionValue(report_log_options, "small_matrix_value",
                                       options.records, small_matrix_value);
   REQUIRE(return_status == OptionStatus::kOk);
 
   // Check setting string options
 
-  return_status = setLocalOptionValue(options.log_options, kPresolveString,
-                                      options.records, "ml.mps");
+  return_status =
+      setLocalOptionValue(report_log_options, kPresolveString,
+                          options.log_options, options.records, "ml.mps");
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   std::string model_file = "ml.mps";
-  return_status = setLocalOptionValue(options.log_options, kPresolveString,
-                                      options.records, model_file);
+  return_status =
+      setLocalOptionValue(report_log_options, kPresolveString,
+                          options.log_options, options.records, model_file);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  return_status = setLocalOptionValue(options.log_options, kPresolveString,
-                                      options.records, "off");
+  return_status =
+      setLocalOptionValue(report_log_options, kPresolveString,
+                          options.log_options, options.records, "off");
   REQUIRE(return_status == OptionStatus::kOk);
 
   std::string presolve = "choose";
-  return_status = setLocalOptionValue(options.log_options, kPresolveString,
-                                      options.records, presolve);
+  return_status =
+      setLocalOptionValue(report_log_options, kPresolveString,
+                          options.log_options, options.records, presolve);
   REQUIRE(return_status == OptionStatus::kOk);
 
-  return_status = setLocalOptionValue(options.log_options, kModelFileString,
-                                      options.records, model_file);
+  return_status =
+      setLocalOptionValue(report_log_options, kModelFileString,
+                          options.log_options, options.records, model_file);
   REQUIRE(return_status == OptionStatus::kUnknownOption);
 
   if (dev_run) reportOptions(stdout, options.records);
 
   bool get_mps_parser_type_free;
   return_status =
-      getLocalOptionValue(options.log_options, "mps_parser_type_free",
+      getLocalOptionValue(report_log_options, "mps_parser_type_free",
                           options.records, get_mps_parser_type_free);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_mps_parser_type_free == false);
 
   HighsInt get_allowed_matrix_scale_factor;
   return_status =
-      getLocalOptionValue(options.log_options, "allowed_matrix_scale_factor",
+      getLocalOptionValue(report_log_options, "allowed_matrix_scale_factor",
                           options.records, get_allowed_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_allowed_matrix_scale_factor == allowed_matrix_scale_factor);
 
   double get_small_matrix_value;
-  return_status = getLocalOptionValue(options.log_options, "small_matrix_value",
+  return_status = getLocalOptionValue(report_log_options, "small_matrix_value",
                                       options.records, get_small_matrix_value);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
-  return_status = checkOptions(options.log_options, options.records);
+  return_status = checkOptions(report_log_options, options.records);
   REQUIRE(return_status == OptionStatus::kOk);
   std::remove(model_file.c_str());
 }

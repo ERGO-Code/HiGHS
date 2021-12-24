@@ -80,16 +80,18 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const std::string value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
+  HighsLogOptions report_log_options = options_.log_options;
+  if (setLocalOptionValue(report_log_options, option, options_.log_options,
+                          options_.records, value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const char* value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
+  HighsLogOptions report_log_options = options_.log_options;
+  if (setLocalOptionValue(report_log_options, option, options_.log_options,
+                          options_.records, value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -100,7 +102,9 @@ HighsStatus Highs::readOptions(const std::string filename) {
                  "Empty file name so not reading options\n");
     return HighsStatus::kWarning;
   }
-  if (!loadOptionsFromFile(options_, filename)) return HighsStatus::kError;
+  HighsLogOptions report_log_options = options_.log_options;
+  if (!loadOptionsFromFile(report_log_options, options_, filename))
+    return HighsStatus::kError;
   return HighsStatus::kOk;
 }
 
@@ -2857,5 +2861,10 @@ HighsStatus Highs::crossover(HighsSolution& solution) {
   return HighsStatus::kError;
 #endif
 
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::openLogFile(const std::string log_file) {
+  highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }

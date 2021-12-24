@@ -320,17 +320,17 @@ void HEkkPrimal::initialiseInstance() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
                 num_free_col);
-    nonbasic_free_col_set.setup(num_free_col, num_tot,
-                                ekk_instance_.options_->output_flag,
-                                ekk_instance_.options_->log_file_stream, debug);
+    nonbasic_free_col_set.setup(
+        num_free_col, num_tot, ekk_instance_.options_->output_flag,
+        ekk_instance_.options_->log_options.log_file_stream, debug);
   }
   // Set up the hyper-sparse CHUZC data
   hyper_chuzc_candidate.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_measure.resize(1 + max_num_hyper_chuzc_candidates);
-  hyper_chuzc_candidate_set.setup(max_num_hyper_chuzc_candidates, num_tot,
-                                  ekk_instance_.options_->output_flag,
-                                  ekk_instance_.options_->log_file_stream,
-                                  debug);
+  hyper_chuzc_candidate_set.setup(
+      max_num_hyper_chuzc_candidates, num_tot,
+      ekk_instance_.options_->output_flag,
+      ekk_instance_.options_->log_options.log_file_stream, debug);
 }
 
 void HEkkPrimal::initialiseSolve() {
