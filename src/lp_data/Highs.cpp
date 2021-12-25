@@ -2366,8 +2366,7 @@ HighsStatus Highs::callSolveQp() {
   // Cheating now, but need to set this honestly!
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(options_.log_options, call_status,
-                                      return_status, "QpSolver");
+  return_status = interpretCallStatus(options_.log_options, call_status, return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
   // Cheating now, but need to set this honestly!
   scaled_model_status_ =

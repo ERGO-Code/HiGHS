@@ -84,7 +84,7 @@ struct MatrixBase {
 
   Vector& vec_mat_1(const Vector& other, Vector& target) const {
     target.reset();
-    for (HighsInt col = 0; col < num_col; col++) {
+    for (HighsInt col=0; col < num_col; col++) {
       double dot = 0.0;
       for (HighsInt j = start[col]; j < start[col + 1]; j++) {
         dot += other.value[index[j]] * value[j];
