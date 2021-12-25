@@ -1431,14 +1431,17 @@ bool HighsSearch::backtrack(bool recoverBasis) {
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
       depthoffset += nodestack.back().skipDepthCount;
-      nodestack.pop_back();
-
-      if (nodestack.empty()) {
+      if (nodestack.size() == 1) {
+        if (recoverBasis && nodestack.back().nodeBasis)
+          lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
+        nodestack.pop_back();
         localdom.backtrackToGlobal();
         lp->flushDomain(localdom);
+        if (recoverBasis) lp->recoverBasis();
         return false;
       }
 
+      nodestack.pop_back();
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif
