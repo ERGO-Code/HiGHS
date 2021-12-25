@@ -258,11 +258,11 @@ Vector Basis::recomputex(const Instance& inst) {
       }
     }
 
-      rhs.index[i] = i;
-      rhs.num_nz++;
-   }
-   HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.btranCall(rhs_hvec, 1.0);
+    rhs.index[i] = i;
+    rhs.num_nz++;
+  }
+  HVector rhs_hvec = vec2hvec(rhs);
+  basisfactor.btranCall(rhs_hvec, 1.0);
   return hvec2vec(rhs_hvec);
 }
 
