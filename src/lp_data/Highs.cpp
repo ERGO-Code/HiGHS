@@ -80,16 +80,18 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const std::string value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
+  HighsLogOptions report_log_options = options_.log_options;
+  if (setLocalOptionValue(report_log_options, option, options_.log_options,
+                          options_.records, value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const char* value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
+  HighsLogOptions report_log_options = options_.log_options;
+  if (setLocalOptionValue(report_log_options, option, options_.log_options,
+                          options_.records, value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -100,7 +102,9 @@ HighsStatus Highs::readOptions(const std::string filename) {
                  "Empty file name so not reading options\n");
     return HighsStatus::kWarning;
   }
-  if (!loadOptionsFromFile(options_, filename)) return HighsStatus::kError;
+  HighsLogOptions report_log_options = options_.log_options;
+  if (!loadOptionsFromFile(report_log_options, options_, filename))
+    return HighsStatus::kError;
   return HighsStatus::kOk;
 }
 
@@ -2469,15 +2473,27 @@ HighsStatus Highs::callSolveMip() {
   if (use_mip_feasibility_tolerance) {
     // Overwrite max infeasibility to include integrality if there is a solution
     if (solver.solution_objective_ != kHighsInf) {
-      info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-      info_.max_primal_infeasibility =
-          std::max({solver.row_violation_, solver.bound_violation_,
-                    solver.integrality_violation_});
-      if (info_.max_primal_infeasibility > options_.mip_feasibility_tolerance) {
+      const double mip_max_bound_violation =
+          std::max(solver.row_violation_, solver.bound_violation_);
+      const double mip_max_infeasibility =
+          std::max(mip_max_bound_violation, solver.integrality_violation_);
+      const double delta_max_bound_violation =
+          std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
+      // Possibly report a mis-match between the max bound violation
+      // returned by the MIP solver, and the value obtained from the
+      // solution
+      if (delta_max_bound_violation > 1e-12)
+        highsLogDev(options_.log_options, HighsLogType::kWarning,
+                    "Inconsistent max bound violation: MIP solver (%10.4g); LP "
+                    "(%10.4g); Difference of %10.4g\n",
+                    mip_max_bound_violation, info_.max_primal_infeasibility,
+                    delta_max_bound_violation);
+      info_.max_integrality_violation = solver.integrality_violation_;
+      if (info_.max_integrality_violation >
+          options_.mip_feasibility_tolerance) {
         info_.primal_solution_status = kSolutionStatusInfeasible;
-        // model_status_ = HighsModelStatus::kNotset;
+        assert(model_status_ == HighsModelStatus::kInfeasible);
       }
-      info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
     }
     // Recover the primal feasibility tolerance
     options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
@@ -2878,5 +2894,10 @@ HighsStatus Highs::crossover(HighsSolution& solution) {
   return HighsStatus::kError;
 #endif
 
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::openLogFile(const std::string log_file) {
+  highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }
