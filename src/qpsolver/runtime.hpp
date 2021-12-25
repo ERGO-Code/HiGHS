@@ -1,13 +1,20 @@
 #ifndef __SRC_LIB_RUNTIME_HPP__
 #define __SRC_LIB_RUNTIME_HPP__
 
+#include "HighsTimer.h"
 #include "eventhandler.hpp"
 #include "instance.hpp"
 #include "settings.hpp"
 #include "statistics.hpp"
-#include "HighsTimer.h"
 
-enum class ProblemStatus { INDETERMINED, OPTIMAL, UNBOUNDED, INFEASIBLE, ITERATIONLIMIT, TIMELIMIT };
+enum class ProblemStatus {
+  INDETERMINED,
+  OPTIMAL,
+  UNBOUNDED,
+  INFEASIBLE,
+  ITERATIONLIMIT,
+  TIMELIMIT
+};
 
 struct Runtime {
   Instance instance;
