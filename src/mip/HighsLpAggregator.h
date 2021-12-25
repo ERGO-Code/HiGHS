@@ -22,7 +22,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "mip/HighsSparseVectorSum.h"
+#include "util/HighsSparseVectorSum.h"
 
 class HighsLpRelaxation;
 

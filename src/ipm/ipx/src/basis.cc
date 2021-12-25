@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #include "basis.h"
 #include <algorithm>
 #include <cmath>
@@ -172,6 +170,8 @@ void Basis::SolveDense(const Vector& rhs, Vector& lhs, char trans) const {
 void Basis::SolveForUpdate(Int j, IndexedVector& lhs) {
     const Int p = PositionOf(j);
     Timer timer;
+    const Int dim = model_.rows();
+    assert(dim>0);
     if (p < 0) {                // ftran
         const SparseMatrix& AI = model_.AI();
         Int begin = AI.begin(j);
@@ -181,6 +181,8 @@ void Basis::SolveForUpdate(Int j, IndexedVector& lhs) {
         const double* bx = AI.values() + begin;
         lu_->FtranForUpdate(nz, bi, bx, lhs);
         num_ftran_++;
+	const double density = (1.0 * lhs.nnz()) / dim;
+	sum_ftran_density_ += density;
         if (lhs.sparse())
             num_ftran_sparse_++;
         time_ftran_ += timer.Elapsed();
@@ -188,9 +190,12 @@ void Basis::SolveForUpdate(Int j, IndexedVector& lhs) {
     else {                      // btran
         lu_->BtranForUpdate(p, lhs);
         num_btran_++;
+	const double density = (1.0 * lhs.nnz()) / dim;
+	sum_btran_density_ += density;
         if (lhs.sparse())
             num_btran_sparse_++;
         time_btran_ += timer.Elapsed();
+	//	updateValueDistribution(density, btran_density);
     }
 }
 
@@ -251,7 +256,7 @@ void Basis::TableauRow(Int jb, IndexedVector& btran, IndexedVector& row,
             Int end = AIt.end(i);
             for (Int p = begin; p < end; p++) {
                 Int j = Ati[p];
-                if (map2basis_[j] == -1 || map2basis_[j] == -2 && !ignore_fixed)
+                if (map2basis_[j] == -1 || (map2basis_[j] == -2 && !ignore_fixed))
                 {
                     map2basis_[j] -= 2; // mark column
                     row_pattern[nz++] = j;
@@ -270,7 +275,7 @@ void Basis::TableauRow(Int jb, IndexedVector& btran, IndexedVector& row,
         const double* Ax = AI.values();
         for (Int j = 0; j < n+m; j++) {
             double result = 0.0;
-            if (map2basis_[j] == -1 || map2basis_[j] == -2 && !ignore_fixed) {
+            if (map2basis_[j] == -1 || (map2basis_[j] == -2 && !ignore_fixed)) {
                 Int begin = AI.begin(j);
                 Int end = AI.end(j);
                 for (Int p = begin; p < end; p++)
@@ -908,4 +913,18 @@ Vector CopyBasic(const Vector& x, const Basis& basis) {
     return xbasic;
 }
 
+void Basis::reportBasisData() const {
+  printf("\nBasis data\n");
+  printf("    Num factorizations = %d\n", (int)this->factorizations());
+  printf("    Num updates = %d\n", (int)updates_total());
+  if (this->num_ftran_) 
+    printf("    Average density of %7d FTRANs is %6.4f; sparse proportion = %6.4f\n",
+	   (int)this->num_ftran_, this->sum_ftran_density_ / this->num_ftran_, frac_ftran_sparse());
+  if (this->num_btran_) 
+    printf("    Average density of %7d BTRANs is %6.4f; sparse proportion = %6.4f\n",
+	   (int)this->num_btran_, this->sum_btran_density_ / this->num_btran_, frac_btran_sparse());
+  printf("    Mean fill-in %11.4g\n", mean_fill());
+  printf("    Max  fill-in %11.4g\n", max_fill());
+
+}
 }  // namespace ipx

@@ -178,7 +178,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   assert(cutset.empty());
 
-  std::vector<std::pair<double, int>> efficacious_cuts;
+  std::vector<std::pair<double, HighsInt>> efficacious_cuts;
 
   HighsInt agelim = agelim_;
 
@@ -278,8 +278,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   if (efficacious_cuts.empty()) return;
 
   pdqsort(efficacious_cuts.begin(), efficacious_cuts.end(),
-          [&efficacious_cuts](const std::pair<double, int>& a,
-                              const std::pair<double, int>& b) {
+          [&efficacious_cuts](const std::pair<double, HighsInt>& a,
+                              const std::pair<double, HighsInt>& b) {
             if (a.first > b.first) return true;
             if (a.first < b.first) return false;
             return std::make_pair(
@@ -298,7 +298,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   HighsInt numefficacious =
       std::upper_bound(efficacious_cuts.begin(), efficacious_cuts.end(),
                        minScore,
-                       [](double mscore, std::pair<double, int> const& c) {
+                       [](double mscore, std::pair<double, HighsInt> const& c) {
                          return mscore > c.first;
                        }) -
       efficacious_cuts.begin();
@@ -320,7 +320,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   assert(cutset.empty());
 
-  for (const std::pair<double, int>& p : efficacious_cuts) {
+  for (const std::pair<double, HighsInt>& p : efficacious_cuts) {
     bool discard = false;
     double maxpar = 0.1;
     for (HighsInt k : cutset.cutindices) {

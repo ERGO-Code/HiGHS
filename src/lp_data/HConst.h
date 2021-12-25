@@ -16,6 +16,7 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
+#include <cmath>
 #include <limits>
 #include <string>
 
@@ -24,13 +25,27 @@
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
+const double kHighsMacheps = std::ldexp(1, -52);
 const double kHighsZero = 1e-50;
 const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
-const HighsInt kHighsThreadLimit = 8;  // 32;
+const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
+
 const HighsInt kHighsPrereleaseRowDualSign = -1;
+const bool kExtendInvertWhenAddingRows = false;
+
+enum SimplexScaleStrategy {
+  kSimplexScaleStrategyMin = 0,
+  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
+  kSimplexScaleStrategyChoose,                          // 1
+  kSimplexScaleStrategyEquilibration,                   // 2
+  kSimplexScaleStrategyForcedEquilibration,             // 3
+  kSimplexScaleStrategyMaxValue015,                     // 4
+  kSimplexScaleStrategyMaxValue0157,                    // 5
+  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValue0157
+};
 
 enum HighsDebugLevel {
   kHighsDebugLevelNone = 0,
@@ -55,21 +70,24 @@ enum class HighsDebugStatus {
 enum HighsAnalysisLevel {
   kHighsAnalysisLevelNone = 0,
   kHighsAnalysisLevelModelData = 1,
-  kHighsAnalysisLevelSolverData = 2,
-  kHighsAnalysisLevelSolverTime = 4,
-  kHighsAnalysisLevelNlaData = 8,
-  kHighsAnalysisLevelNlaTime = 16,
+  kHighsAnalysisLevelSolverSummaryData = 2,
+  kHighsAnalysisLevelSolverRuntimeData = 4,
+  kHighsAnalysisLevelSolverTime = 8,
+  kHighsAnalysisLevelNlaData = 16,
+  kHighsAnalysisLevelNlaTime = 32,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
-      kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverData +
-      kHighsAnalysisLevelSolverTime + kHighsAnalysisLevelNlaData +
-      kHighsAnalysisLevelNlaTime
+      kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
+      kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
+      kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime
 };
 
 enum class HighsVarType : uint8_t {
   kContinuous = 0,
   kInteger = 1,
-  kImplicitInteger = 2,
+  kSemiContinuous = 2,
+  kSemiInteger = 3,
+  kImplicitInteger = 4,
 };
 
 enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
@@ -85,11 +103,9 @@ enum OptionOffChooseOn {
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 
-enum class MatrixFormat { kNone = 0, kColwise, kRowwise };
+enum class MatrixFormat { kColwise = 1, kRowwise, kRowwisePartitioned };
 
-enum class HessianFormat { kNone = 0, kTriangular, kSquare };
-
-const HessianFormat kHessianFormatInternal = HessianFormat::kTriangular;
+enum class HessianFormat { kTriangular = 1, kSquare };
 
 enum SolutionStatus {
   kSolutionStatusNone = 0,
@@ -105,6 +121,11 @@ enum BasisValidity {
   kBasisValidityMin = kBasisValidityInvalid,
   kBasisValidityMax = kBasisValidityValid
 };
+
+const HighsInt kSolutionStyleRaw = 0;
+const HighsInt kSolutionStylePretty = 1;
+const HighsInt kSolutionStyleMin = kSolutionStyleRaw;
+const HighsInt kSolutionStyleMax = kSolutionStylePretty;
 
 const std::string kHighsFilenameDefault = "";
 
@@ -161,6 +182,15 @@ enum class HighsBasisStatus {
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
-const double kHighsIllegalInfeasibilityMeasure = -1;
+const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
 
+// Termination link in linked lists
+const HighsInt kNoLink = -1;
+
+const int8_t kPivotIllegal = -1;
+const int8_t kPivotLogical = 0;
+const int8_t kPivotUnit = 1;
+const int8_t kPivotRowSingleton = 2;
+const int8_t kPivotColSingleton = 3;
+const int8_t kPivotMarkowitz = 4;
 #endif /* LP_DATA_HCONST_H_ */

@@ -134,6 +134,8 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
     double_values[ix] = double_values[ix + 1];
     int_values[ix] = indices[1 + ix];
   }
+  double_values.resize(num_values);
+  int_values.resize(num_values);
   std::make_heap(int_values.begin(), int_values.end());
   std::sort_heap(int_values.begin(), int_values.end());
   //  maxheapsort(&int_values[0], num_values);
@@ -141,12 +143,12 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   bool ok;
   // Check that the values in the vector of doubles are ascending - can do
   // strict test
-  ok = increasingSetOk(&double_values[0], num_values, 0, 1, true);
+  ok = increasingSetOk(double_values, 0, 1, true);
   REQUIRE(ok == true);
 
   // Check that the values in the vector of integers are ascending - maybe can't
   // do strict test
-  ok = increasingSetOk(&int_values[0], num_values, 0, num_values, false);
+  ok = increasingSetOk(int_values, 0, num_values, false);
   REQUIRE(ok == true);
 
   num_values = 14;
@@ -206,7 +208,7 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   sorted_lb.resize(num_values);
   sorted_ub.resize(num_values);
 
-  sortSetData(num_values, &sorted_set[0], &lb[0], &ub[0], NULL, &sorted_lb[0],
+  sortSetData(num_values, sorted_set, &lb[0], &ub[0], NULL, &sorted_lb[0],
               &sorted_ub[0], NULL);
 
   HighsInt prev_ix = -kHighsIInf;

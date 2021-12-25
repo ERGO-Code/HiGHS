@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #include "crossover.h"
 #include <algorithm>
 #include <cassert>
@@ -119,7 +117,7 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
 
         const Int jn = variables[next];
         if (x[jn] == lb[jn] || x[jn] == ub[jn] ||
-            x[jn] == 0.0 && std::isinf(lb[jn]) && std::isinf(ub[jn])) {
+            (x[jn] == 0.0 && std::isinf(lb[jn]) && std::isinf(ub[jn]))) {
             // nothing to do
             next++;
             continue;
@@ -242,8 +240,8 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
             throw std::logic_error("invalid variable in Crossover::PushDual");
     }
     for (Int j = 0; j < n+m; j++) {
-        if ((sign_restrict[j] & 1) && z[j] < 0.0 ||
-            (sign_restrict[j] & 2) && z[j] > 0.0)
+        if (((sign_restrict[j] & 1) && z[j] < 0.0) ||
+            ((sign_restrict[j] & 2) && z[j] > 0.0))
             throw std::logic_error(
                 "sign condition violated in Crossover::PushDual");
     }

@@ -17,270 +17,13 @@
 #include "lp_data/HighsModelUtils.h"
 
 #include <algorithm>
+#include <sstream>
 #include <vector>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
-
-HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
-                                   const std::string matrix_name,
-                                   const HighsInt num_vec,
-                                   const vector<HighsInt>& matrix_start,
-                                   const vector<HighsInt>& matrix_index,
-                                   const vector<double>& matrix_value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Use error_found to track whether an error has been found in multiple tests
-  bool error_found = false;
-  // Assess main dimensions
-  bool legal_num_vec = num_vec >= 0;
-  if (!legal_num_vec) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "%s matrix has illegal number of vectors = %" HIGHSINT_FORMAT
-                 "\n",
-                 matrix_name.c_str(), num_vec);
-    error_found = true;
-  }
-  HighsInt matrix_start_size = matrix_start.size();
-  bool legal_matrix_start_size = false;
-  // Don't expect the matrix_start_size to be legal if there are no vectors
-  if (num_vec > 0) {
-    legal_matrix_start_size = matrix_start_size >= num_vec + 1;
-    if (!legal_matrix_start_size) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix has illegal start vector size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_name.c_str(), matrix_start_size, num_vec + 1);
-      error_found = true;
-    }
-  }
-  if (matrix_start_size > 0) {
-    // Check whether the first start is zero
-    if (matrix_start[0]) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "%s matrix start vector begins with %" HIGHSINT_FORMAT
-                   " rather than 0\n",
-                   matrix_name.c_str(), matrix_start[0]);
-      error_found = true;
-    }
-  }
-  // Possibly check the sizes of the index and value vectors. Can only
-  // do this with the number of nonzeros, and this is only known if
-  // the start vector has a legal size. Setting num_nz = 0 otherwise
-  // means that all tests pass, as they just check that the sizes of
-  // the index and value vectors are non-negative.
-  HighsInt num_nz = 0;
-  if (legal_matrix_start_size) num_nz = matrix_start[num_vec];
-  bool legal_num_nz = num_nz >= 0;
-  if (!legal_num_nz) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "%s matrix has illegal number of nonzeros = %" HIGHSINT_FORMAT
-                 "\n",
-                 matrix_name.c_str(), num_nz);
-    error_found = true;
-  } else {
-    HighsInt matrix_index_size = matrix_index.size();
-    HighsInt matrix_value_size = matrix_value.size();
-    bool legal_matrix_index_size = matrix_index_size >= num_nz;
-    bool legal_matrix_value_size = matrix_value_size >= num_nz;
-    if (!legal_matrix_index_size) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix has illegal index vector size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_name.c_str(), matrix_index_size, num_nz);
-      error_found = true;
-    }
-    if (!legal_matrix_value_size) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix has illegal value vector size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_name.c_str(), matrix_value_size, num_nz);
-      error_found = true;
-    }
-  }
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
-  return return_status;
-}
-
-HighsStatus assessMatrix(const HighsLogOptions& log_options,
-                         const std::string matrix_name, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
-                         vector<HighsInt>& matrix_index,
-                         vector<double>& matrix_value,
-                         const double small_matrix_value,
-                         const double large_matrix_value) {
-  if (assessMatrixDimensions(log_options, matrix_name, num_vec, matrix_start,
-                             matrix_index, matrix_value) == HighsStatus::kError)
-    return HighsStatus::kError;
-  const HighsInt num_nz = matrix_start[num_vec];
-  if (num_vec <= 0) return HighsStatus::kOk;
-  if (num_nz <= 0) return HighsStatus::kOk;
-
-  HighsStatus return_status = HighsStatus::kOk;
-  bool error_found = false;
-  bool warning_found = false;
-
-  // Assess the starts
-  // Set up previous_start for a fictitious previous empty packed vector
-  HighsInt previous_start = matrix_start[0];
-  for (HighsInt ix = 0; ix < num_vec; ix++) {
-    HighsInt this_start = matrix_start[ix];
-    bool this_start_too_small = this_start < previous_start;
-    if (this_start_too_small) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix packed vector %" HIGHSINT_FORMAT
-                   " has illegal start of %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT
-                   " = "
-                   "previous start\n",
-                   matrix_name.c_str(), ix, this_start, previous_start);
-      return HighsStatus::kError;
-    }
-    bool this_start_too_big = this_start > num_nz;
-    if (this_start_too_big) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix packed vector %" HIGHSINT_FORMAT
-                   " has illegal start of %" HIGHSINT_FORMAT
-                   " > %" HIGHSINT_FORMAT
-                   " = "
-                   "number of nonzeros\n",
-                   matrix_name.c_str(), ix, this_start, num_nz);
-      return HighsStatus::kError;
-    }
-  }
-
-  // Assess the indices and values
-  // Count the number of acceptable indices/values
-  HighsInt num_new_nz = 0;
-  HighsInt num_small_values = 0;
-  double max_small_value = 0;
-  double min_small_value = kHighsInf;
-  // Set up a zeroed vector to detect duplicate indices
-  vector<HighsInt> check_vector;
-  if (vec_dim > 0) check_vector.assign(vec_dim, 0);
-  for (HighsInt ix = 0; ix < num_vec; ix++) {
-    HighsInt from_el = matrix_start[ix];
-    HighsInt to_el = matrix_start[ix + 1];
-    // Account for any index-value pairs removed so far
-    matrix_start[ix] = num_new_nz;
-    for (HighsInt el = from_el; el < to_el; el++) {
-      // Check the index
-      HighsInt component = matrix_index[el];
-      // Check that the index is non-negative
-      bool legal_component = component >= 0;
-      if (!legal_component) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "%s matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is illegal index %" HIGHSINT_FORMAT "\n",
-                     matrix_name.c_str(), ix, el, component);
-        return HighsStatus::kError;
-      }
-      // Check that the index does not exceed the vector dimension
-      legal_component = component < vec_dim;
-      if (!legal_component) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "%s matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is illegal index "
-                     "%12" HIGHSINT_FORMAT " >= %" HIGHSINT_FORMAT
-                     " = vector dimension\n",
-                     matrix_name.c_str(), ix, el, component, vec_dim);
-        return HighsStatus::kError;
-      }
-      // Check that the index has not already ocurred
-      legal_component = check_vector[component] == 0;
-      if (!legal_component) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "%s matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is duplicate index %" HIGHSINT_FORMAT "\n",
-                     matrix_name.c_str(), ix, el, component);
-        return HighsStatus::kError;
-      }
-      // Indicate that the index has occurred
-      check_vector[component] = 1;
-      // Check the value
-      double abs_value = fabs(matrix_value[el]);
-      /*
-      // Check that the value is not zero
-      bool zero_value = abs_value == 0;
-      if (zero_value) {
-        highsLogUser(log_options, HighsLogType::kError,
-                        "%s matrix packed vector %" HIGHSINT_FORMAT ", entry %"
-      HIGHSINT_FORMAT ", is zero\n", matrix_name.c_str(),  ix, el); return
-      HighsStatus::kError;
-      }
-      */
-      // Check that the value is not too large
-      bool large_value = abs_value > large_matrix_value;
-      if (large_value) {
-        highsLogUser(
-            log_options, HighsLogType::kError,
-            "%s matrix packed vector %" HIGHSINT_FORMAT
-            ", entry %" HIGHSINT_FORMAT ", is large value |%g| >= %g\n",
-            matrix_name.c_str(), ix, el, abs_value, large_matrix_value);
-        return HighsStatus::kError;
-      }
-      bool ok_value = abs_value > small_matrix_value;
-      if (!ok_value) {
-        if (max_small_value < abs_value) max_small_value = abs_value;
-        if (min_small_value > abs_value) min_small_value = abs_value;
-        num_small_values++;
-      }
-      if (ok_value) {
-        // Shift the index and value of the OK entry to the new
-        // position in the index and value vectors, and increment
-        // the new number of nonzeros
-        matrix_index[num_new_nz] = matrix_index[el];
-        matrix_value[num_new_nz] = matrix_value[el];
-        num_new_nz++;
-      } else {
-        // Zero the check_vector entry since the small value
-        // _hasn't_ occurred
-        check_vector[component] = 0;
-      }
-    }
-    // Zero check_vector
-    for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++)
-      check_vector[matrix_index[el]] = 0;
-#ifdef HiGHSDEV
-    // NB This is very expensive so shouldn't be true
-    const bool check_check_vector = false;
-    if (check_check_vector) {
-      // Check zeroing of check vector
-      for (HighsInt component = 0; component < vec_dim; component++) {
-        if (check_vector[component]) error_found = true;
-      }
-      if (error_found)
-        highsLogUser(log_options, HighsLogType::kError,
-                     "assessMatrix: check_vector not zeroed\n");
-    }
-#endif
-  }
-  if (num_small_values) {
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s matrix packed vector contains %" HIGHSINT_FORMAT
-                 " |values| in [%g, %g] "
-                 "less than %g: ignored\n",
-                 matrix_name.c_str(), num_small_values, min_small_value,
-                 max_small_value, small_matrix_value);
-    warning_found = true;
-  }
-  matrix_start[num_vec] = num_new_nz;
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else if (warning_found)
-    return_status = HighsStatus::kWarning;
-  else
-    return_status = HighsStatus::kOk;
-
-  return return_status;
-}
 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
@@ -375,21 +118,36 @@ std::string statusToString(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
-                        const std::vector<double>& lower,
-                        const std::vector<double>& upper,
-                        const std::vector<std::string>& names,
-                        const std::vector<double>& primal,
-                        const std::vector<double>& dual,
-                        const std::vector<HighsBasisStatus>& status) {
+std::string typeToString(const HighsVarType type) {
+  switch (type) {
+    case HighsVarType::kContinuous:
+      return "Continuous";
+    case HighsVarType::kInteger:
+      return "Integer   ";
+    case HighsVarType::kSemiContinuous:
+      return "Semi-conts";
+    case HighsVarType::kSemiInteger:
+      return "Semi-int  ";
+    case HighsVarType::kImplicitInteger:
+      return "ImpliedInt";
+  }
+  return "";
+}
+
+void writeModelBoundSolution(
+    FILE* file, const bool columns, const HighsInt dim,
+    const std::vector<double>& lower, const std::vector<double>& upper,
+    const std::vector<std::string>& names, const bool have_primal,
+    const std::vector<double>& primal, const bool have_dual,
+    const std::vector<double>& dual, const bool have_basis,
+    const std::vector<HighsBasisStatus>& status,
+    const HighsVarType* integrality) {
   const bool have_names = names.size() > 0;
-  const bool have_primal = primal.size() > 0;
-  const bool have_dual = dual.size() > 0;
-  const bool have_basis = status.size() > 0;
   if (have_names) assert((int)names.size() >= dim);
   if (have_primal) assert((int)primal.size() >= dim);
   if (have_dual) assert((int)dual.size() >= dim);
   if (have_basis) assert((int)status.size() >= dim);
+  const bool have_integrality = integrality != NULL;
   std::string var_status_string;
   if (columns) {
     fprintf(file, "Columns\n");
@@ -399,6 +157,7 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
   fprintf(
       file,
       "    Index Status        Lower        Upper       Primal         Dual");
+  if (have_integrality) fprintf(file, "  Type      ");
   if (have_names) {
     fprintf(file, "  Name\n");
   } else {
@@ -422,6 +181,8 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
     } else {
       fprintf(file, "             ");
     }
+    if (have_integrality)
+      fprintf(file, "  %s", typeToString(integrality[ix]).c_str());
     if (have_names) {
       fprintf(file, "  %-s\n", names[ix].c_str());
     } else {
@@ -430,21 +191,116 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
   }
 }
 
-bool namesWithSpaces(const HighsInt num_name,
-                     const std::vector<std::string>& names, const bool report) {
-  bool names_with_spaces = false;
+void writeModelSolution(FILE* file, const HighsLp& lp,
+                        const HighsSolution& solution, const HighsInfo& info) {
+  const bool have_col_names = lp.col_names_.size() > 0;
+  const bool have_row_names = lp.row_names_.size() > 0;
+  const bool have_primal = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  std::stringstream ss;
+  if (have_col_names) assert((int)lp.col_names_.size() >= lp.num_col_);
+  if (have_row_names) assert((int)lp.row_names_.size() >= lp.num_row_);
+  if (have_primal) {
+    assert((int)solution.col_value.size() >= lp.num_col_);
+    assert((int)solution.row_value.size() >= lp.num_row_);
+    assert(info.primal_solution_status != kSolutionStatusNone);
+  }
+  if (have_dual) {
+    assert((int)solution.col_dual.size() >= lp.num_col_);
+    assert((int)solution.row_dual.size() >= lp.num_row_);
+    assert(info.dual_solution_status != kSolutionStatusNone);
+  }
+  const double double_tolerance = 1e-13;
+  fprintf(file, "\n# Primal solution values\n");
+  if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
+    fprintf(file, "None\n");
+  } else {
+    if (info.primal_solution_status == kSolutionStatusFeasible) {
+      fprintf(file, "Feasible\n");
+    } else {
+      assert(info.primal_solution_status == kSolutionStatusInfeasible);
+      fprintf(file, "Infeasible\n");
+    }
+    HighsCDouble objective_function_value = lp.offset_;
+    for (HighsInt i = 0; i < lp.num_col_; ++i)
+      objective_function_value += lp.col_cost_[i] * solution.col_value[i];
+    std::array<char, 32> objStr =
+        highsDoubleToString((double)objective_function_value, double_tolerance);
+    fprintf(file, "Objective %s\n", objStr.data());
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.col_value[ix], double_tolerance);
+      // Create a column name
+      ss.str(std::string());
+      ss << "C" << ix;
+      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+    fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.row_value[ix], double_tolerance);
+      // Create a row name
+      ss.str(std::string());
+      ss << "R" << ix;
+      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+  }
+  fprintf(file, "\n# Dual solution values\n");
+  if (!have_dual || info.dual_solution_status == kSolutionStatusNone) {
+    fprintf(file, "None\n");
+  } else {
+    if (info.dual_solution_status == kSolutionStatusFeasible) {
+      fprintf(file, "Feasible\n");
+    } else {
+      assert(info.dual_solution_status == kSolutionStatusInfeasible);
+      fprintf(file, "Infeasible\n");
+    }
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.col_dual[ix], double_tolerance);
+      ss.str(std::string());
+      ss << "C" << ix;
+      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+    fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+      std::array<char, 32> valStr =
+          highsDoubleToString(solution.row_dual[ix], double_tolerance);
+      ss.str(std::string());
+      ss << "R" << ix;
+      const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
+      fprintf(file, "%-s %s\n", name.c_str(), valStr.data());
+    }
+  }
+}
+
+bool hasNamesWithSpaces(const HighsLogOptions& log_options,
+                        const HighsInt num_name,
+                        const std::vector<std::string>& names) {
+  HighsInt num_names_with_spaces = 0;
   for (HighsInt ix = 0; ix < num_name; ix++) {
     HighsInt space_pos = names[ix].find(" ");
     if (space_pos >= 0) {
-      if (report)
-        printf(
+      if (num_names_with_spaces == 0) {
+        highsLogDev(
+            log_options, HighsLogType::kInfo,
             "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
             "\n",
             names[ix].c_str(), space_pos);
-      names_with_spaces = true;
+        num_names_with_spaces++;
+      }
     }
   }
-  return names_with_spaces;
+  if (num_names_with_spaces)
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "There are %" HIGHSINT_FORMAT " names with spaces\n",
+                num_names_with_spaces);
+  return num_names_with_spaces > 0;
 }
 
 HighsInt maxNameLength(const HighsInt num_name,
@@ -485,7 +341,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
       names[ix] = name_prefix + std::to_string(ix);
   } else {
     // Using original names, so look to see whether there are names with spaces
-    names_with_spaces = namesWithSpaces(num_name, names);
+    names_with_spaces = hasNamesWithSpaces(log_options, num_name, names);
   }
   // Find the final maximum name length
   max_name_length = maxNameLength(num_name, names);
@@ -605,7 +461,7 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
       return "Postsolve error";
       break;
     case HighsModelStatus::kModelEmpty:
-      return "Model empty";
+      return "Empty";
       break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
@@ -620,16 +476,16 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
       return "Unbounded";
       break;
     case HighsModelStatus::kObjectiveBound:
-      return "Reached objective bound";
+      return "Bound on objective reached";
       break;
     case HighsModelStatus::kObjectiveTarget:
-      return "Reached objective target";
+      return "Target for objective reached";
       break;
     case HighsModelStatus::kTimeLimit:
-      return "Reached time limit";
+      return "Time limit reached";
       break;
     case HighsModelStatus::kIterationLimit:
-      return "Reached iteration limit";
+      return "Iteration limit reached";
       break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
@@ -638,13 +494,6 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
       assert(1 == 0);
       return "Unrecognised HiGHS model status";
   }
-}
-
-void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts) {
-  iteration_counts.simplex = 0;
-  iteration_counts.ipm = 0;
-  iteration_counts.crossover = 0;
-  iteration_counts.qp = 0;
 }
 
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.

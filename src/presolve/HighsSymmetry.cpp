@@ -312,8 +312,7 @@ bool StabilizerOrbits::isStabilized(HighsInt col) const {
          std::binary_search(stabilizedCols.begin(), stabilizedCols.end(), col);
 }
 
-void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
-                                                HighsDomain& domain) {
+void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable) {
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numRows; ++i) {
       columnToRow.insert(entry(i, j), i);
@@ -1184,22 +1183,23 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   HighsMatrixColoring coloring(epsilon);
   edgeBuffer.resize(numVertices);
   // set up row and column based incidence matrix
-  HighsInt numNz = model.a_index_.size();
+  HighsInt numNz = model.a_matrix_.index_.size();
   Gedge.resize(2 * numNz);
-  std::transform(model.a_index_.begin(), model.a_index_.end(), Gedge.begin(),
-                 [&](HighsInt rowIndex) {
+  std::transform(model.a_matrix_.index_.begin(), model.a_matrix_.index_.end(),
+                 Gedge.begin(), [&](HighsInt rowIndex) {
                    return std::make_pair(rowIndex + numCol, HighsUInt{0});
                  });
 
   Gstart.resize(numVertices + 1);
-  std::copy(model.a_start_.begin(), model.a_start_.end(), Gstart.begin());
+  std::copy(model.a_matrix_.start_.begin(), model.a_matrix_.start_.end(),
+            Gstart.begin());
 
   // set up the column colors and count row sizes
   std::vector<HighsInt> rowSizes(numRow);
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      Gedge[j].second = coloring.color(model.a_value_[j]);
-      rowSizes[model.a_index_[j]] += 1;
+      Gedge[j].second = coloring.color(model.a_matrix_.value_[j]);
+      rowSizes[model.a_matrix_.index_[j]] += 1;
     }
   }
 
@@ -1216,7 +1216,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // finally add the nonzeros to the row major matrix
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      HighsInt row = model.a_index_[j];
+      HighsInt row = model.a_matrix_.index_[j];
       HighsInt ARpos = Gstart[numCol + row + 1] - rowSizes[row];
       rowSizes[row] -= 1;
       Gedge[ARpos].first = i;

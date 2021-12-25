@@ -10,46 +10,39 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
-#define LP_DATA_HIGHS_MODEL_OBJECT_H_
+/**@file simplex/HighsLpSolverObject.h
+ * @brief Collection of class instances required to solve an LP
+ */
+#ifndef LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
+#define LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
 
-#include "HConfig.h"
-#include "lp_data/HStruct.h"
-#include "lp_data/HighsLp.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HEkk.h"
-#include "simplex/HFactor.h"
-#include "simplex/HMatrix.h"
-#include "simplex/HighsSimplexAnalysis.h"
-#include "simplex/SimplexStruct.h"
-#include "util/HighsRandom.h"
-#include "util/HighsTimer.h"
 
-// Class to communicate data between the simplex solver and the class
-// Highs below. Sensitivity data structure would be added here. Only
-// include essential data.
-class HighsModelObject {
+class HighsLpSolverObject {
  public:
-  HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
+  HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
+                      HighsInfo& highs_info, HEkk& ekk_instance,
+                      HighsOptions& options, HighsTimer& timer)
       : lp_(lp),
+        basis_(basis),
+        solution_(solution),
+        highs_info_(highs_info),
+        ekk_instance_(ekk_instance),
         options_(options),
-        timer_(timer),
-        ekk_instance_(options, timer) {}
+        timer_(timer) {}
 
   HighsLp& lp_;
+  HighsBasis& basis_;
+  HighsSolution& solution_;
+  HighsInfo& highs_info_;
+  HEkk& ekk_instance_;
   HighsOptions& options_;
   HighsTimer& timer_;
 
   HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
-
-  HighsSolutionParams solution_params_;
-  HighsIterationCounts iteration_counts_;
-  HighsBasis basis_;
-  HighsSolution solution_;
-
-  HighsScale scale_;
-  HEkk ekk_instance_;
 };
 
-#endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_
+#endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_

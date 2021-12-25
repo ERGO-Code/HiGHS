@@ -20,13 +20,12 @@
 #include <iostream>
 #include <set>
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsModelObject.h"
-#include "simplex/HVector.h"
+#include "pdqsort/pdqsort.h"
 #include "simplex/SimplexTimer.h"
 
 using std::fill_n;
 using std::make_pair;
+using std::min;
 using std::nth_element;
 using std::pair;
 
@@ -168,7 +167,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
             // Shrink
             if (setP.size() >= chooseCHECK) {
-              sort(setP.begin(), setP.end());
+              pdqsort(setP.begin(), setP.end());
               setP.resize(chLimit);
               cutoffMerit = -setP.back().first;
             }
@@ -208,7 +207,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
             setP.push_back(make_pair(-myInfeas / myWeight, iRow));
             // Shrink
             if (setP.size() >= chooseCHECK) {
-              sort(setP.begin(), setP.end());
+              pdqsort(setP.begin(), setP.end());
               setP.resize(chLimit);
               cutoffMerit = -setP.back().first;
             }
@@ -219,7 +218,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
   }
 
   // Store the setP
-  sort(setP.begin(), setP.end());
+  pdqsort(setP.begin(), setP.end());
   if ((HighsInt)(setP.size()) > chLimit) setP.resize(chLimit);
   *chCount = setP.size();
   for (unsigned i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
@@ -329,7 +328,7 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
 
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  const double Tp = ekk_instance_.options_.primal_feasibility_tolerance;
+  const double Tp = ekk_instance_.options_->primal_feasibility_tolerance;
   double* baseValue = &ekk_instance_.info_.baseValue_[0];
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
@@ -432,7 +431,7 @@ void HEkkDualRHS::updatePivots(HighsInt iRow, double value) {
   //
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  const double Tp = ekk_instance_.options_.primal_feasibility_tolerance;
+  const double Tp = ekk_instance_.options_->primal_feasibility_tolerance;
   double* baseValue = &ekk_instance_.info_.baseValue_[0];
   baseValue[iRow] = value;
   double pivotInfeas = 0;
@@ -488,7 +487,7 @@ void HEkkDualRHS::createArrayOfPrimalInfeasibilities() {
   const double* baseValue = &ekk_instance_.info_.baseValue_[0];
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  const double Tp = ekk_instance_.options_.primal_feasibility_tolerance;
+  const double Tp = ekk_instance_.options_->primal_feasibility_tolerance;
   for (HighsInt i = 0; i < numRow; i++) {
     const double value = baseValue[i];
     const double less = baseLower[i] - value;

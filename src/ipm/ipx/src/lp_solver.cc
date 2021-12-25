@@ -1,5 +1,3 @@
-// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-
 #include "lp_solver.h"
 #include <algorithm>
 #include <cassert>
@@ -104,6 +102,8 @@ Int LpSolver::Solve() {
     info_.time_total = control_.Elapsed();
     control_.Debug(2) << info_;
     control_.CloseLogfile();
+    if (control_.reportBasisData())
+      basis_->reportBasisData();
     return info_.status;
 }
 

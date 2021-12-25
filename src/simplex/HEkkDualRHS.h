@@ -18,9 +18,8 @@
 
 #include <vector>
 
-#include "lp_data/HighsModelObject.h"
-
-class HVector;
+#include "simplex/HEkk.h"
+#include "util/HVector.h"
 
 /**
  * @brief Dual simplex optimality test for HiGHS

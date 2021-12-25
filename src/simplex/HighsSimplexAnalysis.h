@@ -23,28 +23,13 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexConst.h"
+#include "util/HFactor.h"
+#include "util/HVector.h"
+#include "util/HVectorBase.h"
 #include "util/HighsInt.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
-
-//#ifdef OPENMP
-//#include "omp.h"
-//#endif
-
-enum ANALYSIS_OPERATION_TYPE {
-  ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
-  ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-  ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
-  ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
-  ANALYSIS_OPERATION_TYPE_BTRAN_EP,
-  ANALYSIS_OPERATION_TYPE_PRICE_AP,
-  ANALYSIS_OPERATION_TYPE_FTRAN,
-  ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-  ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-  NUM_ANALYSIS_OPERATION_TYPE,
-};
 
 enum TRAN_STAGE {
   TRAN_STAGE_FTRAN_LOWER = 0,
@@ -75,33 +60,15 @@ const HighsLogType kIterationReportLogType = HighsLogType::kVerbose;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsTimer& timer)
-      : timer_reference(timer), analysis_log(new std::stringstream()) {
-    timer_ = &timer;
-    /*
-    HighsInt omp_max_threads = 1;
-#ifdef OPENMP
-    omp_max_threads = omp_get_max_threads();
-#endif
-    for (HighsInt i = 0; i < omp_max_threads; i++) {
-      HighsTimerClock clock(timer);
-      thread_simplex_clocks.push_back(clock);
-      thread_factor_clocks.push_back(clock);
-    }
-    pointer_serial_factor_clocks = &thread_factor_clocks[0];
-    */
-    //#ifdef HiGHSDEV
-    //#else
-    //    pointer_serial_factor_clocks = NULL;
-    //#endif
-  }
-  // Reference and pointer to timer
-  HighsTimer& timer_reference;
+  HighsSimplexAnalysis() {}
+  // Pointer to timer
   HighsTimer* timer_;
 
   void setup(const std::string lp_name, const HighsLp& lp,
              const HighsOptions& options,
              const HighsInt simplex_iteration_count);
+  void setupSimplexTime(const HighsOptions& options);
+  void setupFactorTime(const HighsOptions& options);
   void messaging(const HighsLogOptions& log_options_);
   void iterationReport();
   void invertReport();
@@ -165,11 +132,9 @@ class HighsSimplexAnalysis {
   void reportInvertFormData();
 
   // Control methods to be moved to HEkkControl
-  void updateOperationResultDensity(const double local_density,
-                                    double& density);
   void dualSteepestEdgeWeightError(const double computed_edge_weight,
                                    const double updated_edge_weight);
-  bool switchToDevex();
+  //  bool switchToDevex();
 
   std::vector<HighsTimerClock> thread_simplex_clocks;
   std::vector<HighsTimerClock> thread_factor_clocks;
@@ -187,23 +152,16 @@ class HighsSimplexAnalysis {
 
   // Interpreted shortcuts from bit settings in highs_analysis_level
   bool analyse_lp_data;
-  bool analyse_simplex_data;
+  bool analyse_simplex_summary_data;
+  bool analyse_simplex_runtime_data;
   bool analyse_simplex_time;
   bool analyse_factor_data;
   bool analyse_factor_time;
+  bool analyse_simplex_data;
 
   // Control parameters moving to info
-  double col_aq_density;
-  double row_ep_density;
-  double row_ap_density;
-  double row_DSE_density;
-  double col_basic_feasibility_change_density;
-  double row_basic_feasibility_change_density;
-  double col_BFRT_density;
-  double primal_col_density;
-  double dual_col_density;
-  bool allow_dual_steepest_edge_to_devex_switch;
-  double dual_steepest_edge_weight_log_error_threshold;
+  //  bool allow_dual_steepest_edge_to_devex_switch;
+  //  double dual_steepest_edge_weight_log_error_threshold;
 
   // Local copies of simplex data for reporting
   HighsInt simplex_strategy = 0;
@@ -215,6 +173,7 @@ class HighsSimplexAnalysis {
   HighsInt leaving_variable = 0;
   HighsInt entering_variable = 0;
   HighsInt rebuild_reason = 0;
+  std::string rebuild_reason_string = "";
   double reduced_rhs_value = 0;
   double reduced_cost_value = 0;
   double edge_weight = 0;
@@ -236,14 +195,25 @@ class HighsSimplexAnalysis {
   double max_dual_phase_1_lp_dual_infeasibility = 0;
   double sum_dual_phase_1_lp_dual_infeasibility = 0;
   HighsInt num_devex_framework = 0;
+  double col_aq_density;
+  double row_ep_density;
+  double row_ap_density;
+  double row_DSE_density;
+  double col_basic_feasibility_change_density;
+  double row_basic_feasibility_change_density;
+  double col_BFRT_density;
+  double primal_col_density;
+  double dual_col_density;
+  HighsInt num_costly_DSE_iteration;
+  double costly_DSE_measure;
 
   // Local copies of parallel simplex data for reporting
   HighsInt multi_iteration_count = 0;
   HighsInt multi_chosen = 0;
   HighsInt multi_finished = 0;
-  HighsInt min_threads = 0;
-  HighsInt num_threads = 0;
-  HighsInt max_threads = 0;
+  HighsInt min_concurrency = 0;
+  HighsInt num_concurrency = 0;
+  HighsInt max_concurrency = 0;
 
   // Unused
   //  HighsInt multi_num = 0; // Useless
@@ -264,6 +234,28 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_step_distribution;
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
+
+  HighsInt num_primal_cycling_detections = 0;
+  HighsInt num_dual_cycling_detections = 0;
+
+  HighsInt num_quad_chuzc = 0;
+  HighsInt num_heap_chuzc = 0;
+  double sum_heap_chuzc_size = 0;
+  HighsInt max_heap_chuzc_size = 0;
+
+  HighsInt num_improve_choose_column_row_call = 0;
+  HighsInt num_remove_pivot_from_pack = 0;
+
+  HighsInt num_correct_dual_primal_flip = 0;
+  double min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
+  double max_correct_dual_primal_flip = 0;
+  HighsInt num_correct_dual_cost_shift = 0;
+  double max_correct_dual_cost_shift_dual_infeasibility = 0;
+  double max_correct_dual_cost_shift = 0;
+  HighsInt net_num_single_cost_shift = 0;
+  HighsInt num_single_cost_shift = 0;
+  double max_single_cost_shift = 0;
+  double sum_single_cost_shift = 0;
 
   // Tolerances for analysis of TRAN stages - could be needed for
   // control if this is ever used again!
@@ -293,9 +285,8 @@ class HighsSimplexAnalysis {
   HighsInt intLog10(const double v);
   bool dualAlgorithm();
 
-  HighsInt AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
-  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
-  double AnIterCostlyDseMeasure;
+  //  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
+  //  double AnIterCostlyDseMeasure;
 
   HighsInt num_dual_steepest_edge_weight_check = 0;
   HighsInt num_dual_steepest_edge_weight_reject = 0;
@@ -317,7 +308,7 @@ class HighsSimplexAnalysis {
   double last_user_log_time = -kHighsInf;
   double delta_user_log_time = 1e0;
 
-  double average_num_threads;
+  double average_concurrency;
   double average_fraction_of_possible_minor_iterations_performed;
   HighsInt sum_multi_chosen = 0;
   HighsInt sum_multi_finished = 0;
@@ -352,12 +343,12 @@ class HighsSimplexAnalysis {
     std::string AnIterOpName;
     HighsValueDistribution AnIterOp_density;
   };
-  AnIterOpRec AnIterOp[NUM_ANALYSIS_OPERATION_TYPE];
+  AnIterOpRec AnIterOp[kNumSimplexNlaOperation];
 
   struct AnIterTraceRec {
     double AnIterTraceTime;
     double AnIterTraceMulti;
-    double AnIterTraceDensity[NUM_ANALYSIS_OPERATION_TYPE];
+    double AnIterTraceDensity[kNumSimplexNlaOperation];
     double AnIterTraceCostlyDse;
     HighsInt AnIterTraceIter;
     HighsInt AnIterTrace_dual_edge_weight_mode;

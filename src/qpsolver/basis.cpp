@@ -146,7 +146,7 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
     row_ep.index[0] = droppedcon_rowindex;
     row_ep.array[droppedcon_rowindex] = 1.0;
     row_ep.count = 1;
-    basisfactor.btran(row_ep, 1.0);
+    basisfactor.btranCall(row_ep, 1.0);
   }
 
   pricing->update_weights(hvec2vec(col_aq), hvec2vec(row_ep), droppedcon,
@@ -167,7 +167,7 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
 Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer,
                      HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
-  basisfactor.btran(rhs_hvec, 1.0);
+  basisfactor.btranCall(rhs_hvec, 1.0);
   if (buffer) {
     row_ep.copy(&rhs_hvec);
     for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
@@ -183,7 +183,7 @@ Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer,
 
 Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
-  basisfactor.btran(rhs_hvec, 1.0);
+  basisfactor.btranCall(rhs_hvec, 1.0);
   if (buffer) {
     row_ep.copy(&rhs_hvec);
     for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
@@ -200,7 +200,7 @@ Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
 Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer,
                      HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
-  basisfactor.ftran(rhs_hvec, 1.0);
+  basisfactor.ftranCall(rhs_hvec, 1.0);
   if (buffer) {
     col_aq.copy(&rhs_hvec);
     for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
@@ -217,7 +217,7 @@ Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer,
 
 Vector Basis::ftran(const Vector& rhs, bool buffer, HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
-  basisfactor.ftran(rhs_hvec, 1.0);
+  basisfactor.ftranCall(rhs_hvec, 1.0);
   if (buffer) {
     col_aq.copy(&rhs_hvec);
     for (HighsInt i = 0; i < rhs_hvec.packCount; i++) {
@@ -228,7 +228,6 @@ Vector Basis::ftran(const Vector& rhs, bool buffer, HighsInt q) {
     col_aq.packFlag = rhs_hvec.packFlag;
     buffered_q = q;
   }
-
   return hvec2vec(rhs_hvec);
 }
 
@@ -259,12 +258,11 @@ Vector Basis::recomputex(const Instance& inst) {
       }
     }
 
-    rhs.index[i] = i;
-    rhs.num_nz++;
-  }
-  HVector rhs_hvec = vec2hvec(rhs);
-  basisfactor.btran(rhs_hvec, 1.0);
-
+      rhs.index[i] = i;
+      rhs.num_nz++;
+   }
+   HVector rhs_hvec = vec2hvec(rhs);
+   basisfactor.btranCall(rhs_hvec, 1.0);
   return hvec2vec(rhs_hvec);
 }
 

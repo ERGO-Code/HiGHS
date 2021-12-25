@@ -105,23 +105,35 @@ class HighsSearch {
           opensubtrees(2) {}
   };
 
+  enum ReliableFlags {
+    kUpReliable = 1,
+    kDownReliable = 2,
+    kReliable = kDownReliable | kUpReliable,
+  };
+
   std::vector<double> subrootsol;
   std::vector<NodeData> nodestack;
   HighsHashTable<HighsInt, int> reliableatnode;
 
+  int branchingVarReliableAtNodeFlags(HighsInt col) const {
+    auto it = reliableatnode.find(col);
+    if (it == nullptr) return 0;
+    return *it;
+  }
+
   bool branchingVarReliableAtNode(HighsInt col) const {
     auto it = reliableatnode.find(col);
-    if (it == nullptr || *it != 3) return false;
+    if (it == nullptr || *it != kReliable) return false;
 
     return true;
   }
 
   void markBranchingVarUpReliableAtNode(HighsInt col) {
-    reliableatnode[col] |= 1;
+    reliableatnode[col] |= kUpReliable;
   }
 
   void markBranchingVarDownReliableAtNode(HighsInt col) {
-    reliableatnode[col] |= 2;
+    reliableatnode[col] |= kDownReliable;
   }
 
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;

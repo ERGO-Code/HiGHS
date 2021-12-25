@@ -14,9 +14,7 @@ TEST_CASE("highs-info", "[highs_info]") {
   //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& highs_info = highs.getInfo();
 
   HighsStatus return_status = highs.readModel(filename);

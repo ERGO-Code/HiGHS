@@ -1,7 +1,7 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
-#include "lp_data/HConst.h"
+//#include "lp_data/HConst.h"
 
 const bool dev_run = false;
 
@@ -344,10 +344,10 @@ void almostNotUnbounded(Highs& highs) {
   lp.col_upper_ = {inf, inf};
   lp.row_lower_ = {-1 + epsilon, -1, 3};
   lp.row_upper_ = {inf, inf, inf};
-  lp.a_start_ = {0, 3, 6};
-  lp.a_index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_value_ = {1 + epsilon, -1, 1, -1, 1, 1};
-  lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {1 + epsilon, -1, 1, -1, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
 
@@ -375,7 +375,7 @@ void almostNotUnbounded(Highs& highs) {
   // value -3
   lp.col_cost_[1] = 1 - epsilon;
   lp.row_lower_[0] = -1 - epsilon;
-  lp.a_value_[0] = 1 - epsilon;
+  lp.a_matrix_.value_[0] = 1 - epsilon;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   solve(highs, "off", "simplex", require_model_status2, optimal_objective2);
@@ -401,10 +401,10 @@ void singularStartingBasis(Highs& highs) {
   lp.col_upper_ = {inf, inf, inf};
   lp.row_lower_ = {-inf, -inf};
   lp.row_upper_ = {3, 2};
-  lp.a_start_ = {0, 2, 4, 6};
-  lp.a_index_ = {0, 1, 0, 1, 0, 1};
-  lp.a_value_ = {1, 2, 2, 4, 1, 3};
-  lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 4, 1, 3};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
@@ -449,8 +449,8 @@ void unconstrained(Highs& highs) {
   lp.col_cost_ = {1, -1};
   lp.col_lower_ = {4, 2};
   lp.col_upper_ = {inf, 3};
-  lp.a_start_ = {0, 0, 0};
-  lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 0, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -471,128 +471,110 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
+void smallValue(Highs& highs) {
+  REQUIRE(highs.addCol(0, 0, kHighsInf, 0, nullptr, nullptr) ==
+          HighsStatus::kOk);
+  const HighsInt index = 0;
+  const double value = 1e-9;
+  REQUIRE(highs.addRow(-kHighsInf, 1, 1, &index, &value) ==
+          HighsStatus::kWarning);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+}
+
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   distillation(highs);
 }
 
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue272(highs);
 }
 TEST_CASE("LP-280", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue280(highs);
 }
 TEST_CASE("LP-282", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue282(highs);
 }
 TEST_CASE("LP-285", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue285(highs);
 }
 
 TEST_CASE("LP-295", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue295(highs);
 }
 
 TEST_CASE("LP-306", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue306(highs);
 }
 TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue316(highs);
 }
 TEST_CASE("LP-425", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   issue425(highs);
 }
 TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   mpsGalenet(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   primalDualInfeasible1(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   primalDualInfeasible2(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   mpsUnbounded(highs);
 }
 
 // for some reason hangs on IPX with presolve off: add to doctest
 TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   mpsGas11(highs);
 }
 
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   almostNotUnbounded(highs);
 }
 TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   singularStartingBasis(highs);
 }
 TEST_CASE("LP-unconstrained", "[highs_test_special_lps]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   unconstrained(highs);
+}
+
+TEST_CASE("LP-small-value", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  smallValue(highs);
 }

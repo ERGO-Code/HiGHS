@@ -5,7 +5,37 @@
 using namespace ipx;
 
 struct ipx_parameters ipx_default_parameters() {
-    return ipx_parameters{};
+    ipx_parameters p;
+    p.display = 1;
+    p.logfile = nullptr;
+    p.print_interval = 5.0;
+    p.time_limit = -1.0;
+    p.analyse_basis_data = false;
+    p.dualize = -1;
+    p.scale = 1;
+    p.ipm_maxiter = 300;
+    p.ipm_feasibility_tol = 1e-6;
+    p.ipm_optimality_tol = 1e-8;
+    p.ipm_drop_primal = 1e-9;
+    p.ipm_drop_dual = 1e-9;
+    p.kkt_tol = 0.3;
+    p.crash_basis = 1;
+    p.dependency_tol = 1e-6;
+    p.volume_tol = 2.0;
+    p.rows_per_slice = 10000;
+    p.maxskip_updates = 10;
+    p.lu_kernel = 0;
+    p.lu_pivottol = 0.0625;
+    p.crossover = 1;
+    p.crossover_start = 1e-8;
+    p.pfeasibility_tol = 1e-7;
+    p.dfeasibility_tol = 1e-7;
+    p.debug = 0;
+    p.switchiter = -1;
+    p.stop_at_switch = 0;
+    p.update_heuristic = 1;
+    p.maxpasses = -1;
+    return p;
 }
 
 void ipx_new(void** p_self) {

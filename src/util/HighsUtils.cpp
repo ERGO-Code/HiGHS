@@ -21,15 +21,39 @@
 #include <cstdio>
 #include <vector>
 
-#include "HConfig.h"
-//#include "io/HighsIO.h"
-//#include "lp_data/HConst.h"
+#include "util/HighsSort.h"
 
-/*
-HighsInt getOmpNumThreads() {
-  return omp_get_num_threads()
+bool create(HighsIndexCollection& index_collection, const HighsInt from_col,
+            const HighsInt to_col, const HighsInt dimension) {
+  if (from_col < 0) return false;
+  if (to_col >= dimension) return false;
+  index_collection.dimension_ = dimension;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_col;
+  index_collection.to_ = to_col;
+  return true;
 }
-*/
+
+bool create(HighsIndexCollection& index_collection,
+            const HighsInt num_set_entries, const HighsInt* set,
+            const HighsInt dimension) {
+  // Create an index collection for the given set - so long as it is strictly
+  // ordered
+  index_collection.dimension_ = dimension;
+  index_collection.is_set_ = true;
+  index_collection.set_ = {set, set + num_set_entries};
+  index_collection.set_num_entries_ = num_set_entries;
+  if (!increasingSetOk(index_collection.set_, 1, 0, true)) return false;
+  return true;
+}
+
+void create(HighsIndexCollection& index_collection, const HighsInt* mask,
+            const HighsInt dimension) {
+  // Create an index collection for the given mask
+  index_collection.dimension_ = dimension;
+  index_collection.is_mask_ = true;
+  index_collection.mask_ = {mask, mask + dimension};
+}
 
 void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
                           const std::vector<HighsInt>& Astart,
@@ -61,105 +85,94 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
   }
 }
 
-bool assessIndexCollection(const HighsLogOptions& log_options,
-                           const HighsIndexCollection& index_collection) {
+bool ok(const HighsIndexCollection& index_collection) {
   // Check parameter for each technique of defining an index collection
   if (index_collection.is_interval_) {
     // Changing by interval: check the parameters and that check set and mask
     // are false
     if (index_collection.is_set_) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index collection is both interval and set\n");
+      printf("Index collection is both interval and set\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index collection is both interval and mask\n");
+      printf("Index collection is both interval and mask\n");
       return false;
     }
     if (index_collection.from_ < 0) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index interval lower limit is %" HIGHSINT_FORMAT " < 0\n",
-                   index_collection.from_);
+      printf("Index interval lower limit is %" HIGHSINT_FORMAT " < 0\n",
+             index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index interval upper limit is %" HIGHSINT_FORMAT
-                   " > %" HIGHSINT_FORMAT "\n",
-                   index_collection.to_, index_collection.dimension_ - 1);
+      printf("Index interval upper limit is %" HIGHSINT_FORMAT
+             " > %" HIGHSINT_FORMAT "\n",
+             index_collection.to_, index_collection.dimension_ - 1);
       return false;
     }
   } else if (index_collection.is_set_) {
     // Changing by set: check the parameters and check that interval and mask
     // are false
     if (index_collection.is_interval_) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index collection is both set and interval\n");
+      printf("Index collection is both set and interval\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index collection is both set and mask\n");
+      printf("Index collection is both set and mask\n");
       return false;
     }
-    if (index_collection.set_ == NULL) {
-      highsLogUser(log_options, HighsLogType::kError, "Index set is NULL\n");
+    if (index_collection.set_.empty()) {
+      printf("Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
-    const HighsInt* set = index_collection.set_;
-    const HighsInt set_entry_upper = index_collection.dimension_ - 1;
+    const vector<HighsInt>& set = index_collection.set_;
+    const HighsInt num_entries = index_collection.set_num_entries_;
+    const HighsInt entry_upper = index_collection.dimension_ - 1;
     HighsInt prev_set_entry = -1;
-    for (HighsInt k = 0; k < index_collection.set_num_entries_; k++) {
-      if (set[k] < 0 || set[k] > set_entry_upper) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "Index set entry set[%" HIGHSINT_FORMAT
-                     "] = %" HIGHSINT_FORMAT
-                     " is out of bounds [0, %" HIGHSINT_FORMAT "]\n",
-                     k, set[k], set_entry_upper);
+    for (HighsInt k = 0; k < num_entries; k++) {
+      if (set[k] < 0 || set[k] > entry_upper) {
+        printf("Index set entry set[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
+               " is out of bounds [0, %" HIGHSINT_FORMAT "]\n",
+               k, set[k], entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "Index set entry set[%" HIGHSINT_FORMAT
-                     "] = %" HIGHSINT_FORMAT
-                     " is not greater than "
-                     "previous entry %" HIGHSINT_FORMAT "\n",
-                     k, set[k], prev_set_entry);
+        printf("Index set entry set[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
+               " is not greater than "
+               "previous entry %" HIGHSINT_FORMAT "\n",
+               k, set[k], prev_set_entry);
         return false;
       }
       prev_set_entry = set[k];
     }
+    // This was the old check done independently, and should be
+    // equivalent.
+    assert(increasingSetOk(set, 0, entry_upper, true));
   } else if (index_collection.is_mask_) {
     // Changing by mask: check the parameters and check that set and interval
     // are false
-    if (index_collection.mask_ == NULL) {
-      highsLogUser(log_options, HighsLogType::kError, "Index mask is NULL\n");
+    if (index_collection.mask_.empty()) {
+      printf("Index mask is NULL\n");
       return false;
     }
     if (index_collection.is_interval_) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index collection is both mask and interval\n");
+      printf("Index collection is both mask and interval\n");
       return false;
     }
     if (index_collection.is_set_) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "Index collection is both mask and set\n");
+      printf("Index collection is both mask and set\n");
       return false;
     }
   } else {
     // No method defined
-    highsLogUser(log_options, HighsLogType::kError,
-                 "Undefined index collection\n");
+    printf("Undefined index collection\n");
     return false;
   }
   return true;
 }
 
-bool limitsForIndexCollection(const HighsLogOptions& log_options,
-                              const HighsIndexCollection& index_collection,
-                              HighsInt& from_k, HighsInt& to_k) {
+void limits(const HighsIndexCollection& index_collection, HighsInt& from_k,
+            HighsInt& to_k) {
   if (index_collection.is_interval_) {
     from_k = index_collection.from_;
     to_k = index_collection.to_;
@@ -170,17 +183,14 @@ bool limitsForIndexCollection(const HighsLogOptions& log_options,
     from_k = 0;
     to_k = index_collection.dimension_ - 1;
   } else {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "Undefined index collection\n");
-    return false;
+    assert(1 == 0);
   }
-  return true;
 }
 
-void updateIndexCollectionOutInIndex(
-    const HighsIndexCollection& index_collection, HighsInt& out_from_ix,
-    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix,
-    HighsInt& current_set_entry) {
+void updateOutInIndex(const HighsIndexCollection& index_collection,
+                      HighsInt& out_from_ix, HighsInt& out_to_ix,
+                      HighsInt& in_from_ix, HighsInt& in_to_ix,
+                      HighsInt& current_set_entry) {
   if (index_collection.is_interval_) {
     out_from_ix = index_collection.from_;
     out_to_ix = index_collection.to_;
@@ -188,7 +198,7 @@ void updateIndexCollectionOutInIndex(
     in_to_ix = index_collection.dimension_ - 1;
   } else if (index_collection.is_set_) {
     out_from_ix = index_collection.set_[current_set_entry];
-    out_to_ix = out_from_ix;  //+1;
+    out_to_ix = out_from_ix;
     current_set_entry++;
     HighsInt current_set_entry0 = current_set_entry;
     for (HighsInt set_entry = current_set_entry0;
@@ -225,8 +235,7 @@ void updateIndexCollectionOutInIndex(
   }
 }
 
-HighsInt dataSizeOfIndexCollection(
-    const HighsIndexCollection& index_collection) {
+HighsInt dataSize(const HighsIndexCollection& index_collection) {
   if (index_collection.is_set_) {
     return index_collection.set_num_entries_;
   } else {
@@ -503,7 +512,7 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   }
 
   highsLogDev(log_options, HighsLogType::kInfo, "\n%s\n\n", message);
-  HighsInt lastRpCat;
+  HighsInt lastRpCat = -1;
   for (HighsInt cat = 0; cat < maxCat + 1; cat++) {
     if (colCatK[cat]) lastRpCat = cat;
   }
@@ -1111,4 +1120,48 @@ void printScatterDataRegressionComparison(
          scatter_data.num_better_linear_);
   printf("%10" HIGHSINT_FORMAT " regression better log\n",
          scatter_data.num_better_log_);
+}
+
+double nearestPowerOfTwoScale(const double value) {
+  int exp_scale;
+  // Decompose value into a normalized fraction and an integral power
+  // of two.
+  //
+  // If arg is zero, returns zero and stores zero in *exp. Otherwise
+  // (if arg is not zero), if no errors occur, returns the value x in
+  // the range (-1;-0.5], [0.5; 1) and stores an integer value in *exp
+  // such that x×2(*exp)=arg
+  std::frexp(value, &exp_scale);
+  exp_scale = -exp_scale;
+  // Multiply a floating point value x(=1) by the number 2 raised to
+  // the exp power
+  double scale = std::ldexp(1, exp_scale);
+  return scale;
+}
+
+void highsAssert(const bool assert_condition, const std::string message) {
+  if (assert_condition) return;
+  printf("Failing highsAssert(\"%s\")\n", message.c_str());
+#ifdef NDEBUG
+  // Standard assert won't trigger abort, so do it explicitly
+  printf("assert(%s) failed ...\n", message.c_str());
+  fflush(stdout);
+  abort();
+#else
+  // Standard assert
+  assert(assert_condition);
+#endif
+}
+
+bool highsPause(const bool pause_condition, const std::string message) {
+  if (!pause_condition) return pause_condition;
+  printf("Satisfying highsPause(\"%s\")\n", message.c_str());
+  char str[100];
+  printf("Enter any value to continue:");
+  fflush(stdout);
+  if (fgets(str, 100, stdin) != nullptr) {
+    printf("You entered: \"%s\"\n", str);
+    fflush(stdout);
+  }
+  return pause_condition;
 }

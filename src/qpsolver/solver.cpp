@@ -140,7 +140,6 @@ double computemaxsteplength(Runtime& runtime, const Vector& p,
     zcd = true;
     return std::numeric_limits<double>::infinity();
   }
-  
 }
 
 void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,

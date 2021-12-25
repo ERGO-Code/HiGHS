@@ -439,7 +439,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
         HighsCDouble uih = u[i] + h;
         HighsCDouble mihplusdeltai = mih + a[i] - cplusthreshold;
         if (z <= mihplusdeltai) {
-          assert(mih <= z);
+          assert(mih <= z + epsilon);
           return double(uih * ulminusetaplusone * (al - r));
         }
 
@@ -873,7 +873,7 @@ bool HighsCutGeneration::postprocessCut() {
     // the support is not integral, scale cut to have the largest coefficient
     // around 1.0
     int expshift;
-    std::frexp(maxAbsValue, &expshift);
+    std::frexp(maxAbsValue - epsilon, &expshift);
     expshift = -expshift;
     rhs = std::ldexp((double)rhs, expshift);
 

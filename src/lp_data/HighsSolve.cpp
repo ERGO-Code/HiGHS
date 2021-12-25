@@ -14,11 +14,8 @@
  * @brief Class-independent utilities for HiGHS
  */
 
-#include "lp_data/HighsInfo.h"
-#include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HApp.h"
-#include "util/HighsUtils.h"
 #ifdef IPX_ON
 #include "ipm/IpxWrapper.h"
 #else
@@ -26,79 +23,64 @@
 #endif
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus solveLp(HighsModelObject& model, const string message) {
+HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  HighsOptions& options = model.options_;
+  HighsOptions& options = solver_object.options_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
-  resetModelStatusAndSolutionParams(model);
+  resetModelStatusAndHighsInfo(solver_object);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                (message + "\n").c_str());
-#ifdef HIGHSDEV
-  // Shouldn't have to check validity of the LP since this is done when it is
-  // loaded or modified
-  call_status = assessLp(model.lp_, options_);
-  // If any errors have been found or normalisation carried out,
-  // call_status will be ERROR or WARNING, so only valid return is OK.
-  assert(call_status == HighsStatus::kOk);
-  return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::kError) return return_status;
-#endif
-  if (!model.lp_.num_row_) {
+  if (options.highs_debug_level > kHighsDebugLevelMin) {
+    // Shouldn't have to check validity of the LP since this is done when it is
+    // loaded or modified
+    call_status = assessLp(solver_object.lp_, options);
+    // If any errors have been found or normalisation carried out,
+    // call_status will be ERROR or WARNING, so only valid return is OK.
+    assert(call_status == HighsStatus::kOk);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessLp");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  if (!solver_object.lp_.num_row_) {
     // Unconstrained LP so solve directly
-    call_status = solveUnconstrainedLp(model);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    call_status = solveUnconstrainedLp(solver_object);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
     // Set the scaled model status for completeness
-    model.scaled_model_status_ = model.unscaled_model_status_;
+    solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
   } else if (options.solver == kIpmString) {
     // Use IPM
 #ifdef IPX_ON
     bool imprecise_solution;
     // Use IPX to solve the LP
     try {
-      call_status = solveLpIpx(imprecise_solution, model);
+      call_status = solveLpIpx(solver_object);
     } catch (const std::exception& exception) {
       highsLogDev(options.log_options, HighsLogType::kError,
                   "Exception %s in solveLpIpx\n", exception.what());
       call_status = HighsStatus::kError;
     }
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveLpIpx");
-    if (return_status == HighsStatus::kError) return return_status;
     // Non-error return requires a primal solution
-    assert(model.solution_.value_valid);
-    // Set the scaled model status for completeness
-    model.scaled_model_status_ = model.unscaled_model_status_;
-    // Get the infeasibilities and objective value
-    // ToDo: This should take model.basis_ and use it if it's valid
-    //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
-    //    model.solution_params_);
-    getLpKktFailures(model.lp_, model.solution_, model.basis_,
-                     model.solution_params_);
-    const double objective_function_value =
-        model.lp_.objectiveValue(model.solution_.col_value);
-    model.solution_params_.objective_function_value = objective_function_value;
-
-    HighsSolutionParams check_solution_params;
-    check_solution_params.objective_function_value = objective_function_value;
-    check_solution_params.primal_feasibility_tolerance =
-        options.primal_feasibility_tolerance;
-    check_solution_params.dual_feasibility_tolerance =
-        options.dual_feasibility_tolerance;
-    getLpKktFailures(model.lp_, model.solution_, model.basis_,
-                     check_solution_params);
-
-    if (debugCompareSolutionParams(options, model.solution_params_,
-                                   check_solution_params) !=
-        HighsDebugStatus::kOk) {
-      return HighsStatus::kError;
-    }
-
-    if ((model.unscaled_model_status_ == HighsModelStatus::kUnknown ||
-         (model.unscaled_model_status_ ==
+    assert(solver_object.solution_.value_valid);
+    // Set the return_status, model status and, for completeness, scaled
+    // model status
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpIpx");
+    if (return_status == HighsStatus::kError) return return_status;
+    // model status has been set in solveLpIpx
+    solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
+    // Get the objective and any KKT failures
+    solver_object.highs_info_.objective_function_value =
+        solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
+    getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
+                     solver_object.basis_, solver_object.highs_info_);
+    // Seting the IPM-specific values of (highs_)info_ has been done in
+    // solveLpIpx
+    if ((solver_object.unscaled_model_status_ == HighsModelStatus::kUnknown ||
+         (solver_object.unscaled_model_status_ ==
               HighsModelStatus::kUnboundedOrInfeasible &&
           !options.allow_unbounded_or_infeasible)) &&
         options.run_crossover) {
@@ -117,11 +99,11 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       // Reset the return status since it will now be determined by
       // the outcome of the simplex solve
       return_status = HighsStatus::kOk;
-      call_status = solveLpSimplex(model);
-      return_status =
-          interpretCallStatus(call_status, return_status, "solveLpSimplex");
+      call_status = solveLpSimplex(solver_object);
+      return_status = interpretCallStatus(options.log_options, call_status,
+                                          return_status, "solveLpSimplex");
       if (return_status == HighsStatus::kError) return return_status;
-      if (!isSolutionRightSize(model.lp_, model.solution_)) {
+      if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
         highsLogUser(options.log_options, HighsLogType::kError,
                      "Inconsistent solution returned from solver\n");
         return HighsStatus::kError;
@@ -134,40 +116,40 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 #endif
   } else {
     // Use Simplex
-    call_status = solveLpSimplex(model);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveLpSimplex");
+    call_status = solveLpSimplex(solver_object);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
-    if (!isSolutionRightSize(model.lp_, model.solution_)) {
+    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Inconsistent solution returned from solver\n");
       return HighsStatus::kError;
     }
   }
   // Analyse the HiGHS (basic) solution
-  if (debugHighsLpSolution(message, model) == HighsDebugStatus::kLogicalError)
+  if (debugHighsLpSolution(message, solver_object) ==
+      HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   return return_status;
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
-// and HighsSolutionParams
-HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
-  return (solveUnconstrainedLp(
-      highs_model_object.options_, highs_model_object.lp_,
-      highs_model_object.unscaled_model_status_,
-      highs_model_object.solution_params_, highs_model_object.solution_,
-      highs_model_object.basis_));
+// and HighsInfo
+HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object) {
+  return (solveUnconstrainedLp(solver_object.options_, solver_object.lp_,
+                               solver_object.unscaled_model_status_,
+                               solver_object.highs_info_,
+                               solver_object.solution_, solver_object.basis_));
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
-// and HighsSolutionParams
+// and HighsInfo
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
-                                 HighsSolutionParams& solution_params,
-                                 HighsSolution& solution, HighsBasis& basis) {
+                                 HighsInfo& highs_info, HighsSolution& solution,
+                                 HighsBasis& basis) {
   // Aliase to model status and solution parameters
-  resetModelStatusAndSolutionParams(model_status, solution_params, options);
+  resetModelStatusAndHighsInfo(model_status, highs_info);
 
   // Check that the LP really is unconstrained!
   assert(lp.num_row_ == 0);
@@ -186,10 +168,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.row_dual.clear();
   basis.row_status.clear();
 
-  double primal_feasibility_tolerance =
-      solution_params.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance =
-      solution_params.dual_feasibility_tolerance;
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
 
   // Initialise the objective value calculation. Done using
   // HighsSolution so offset is vanilla
@@ -197,12 +177,12 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   bool infeasible = false;
   bool unbounded = false;
 
-  solution_params.num_primal_infeasibility = 0;
-  solution_params.max_primal_infeasibility = 0;
-  solution_params.sum_primal_infeasibility = 0;
-  solution_params.num_dual_infeasibility = 0;
-  solution_params.max_dual_infeasibility = 0;
-  solution_params.sum_dual_infeasibility = 0;
+  highs_info.num_primal_infeasibilities = 0;
+  highs_info.max_primal_infeasibility = 0;
+  highs_info.sum_primal_infeasibilities = 0;
+  highs_info.num_dual_infeasibilities = 0;
+  highs_info.max_dual_infeasibility = 0;
+  highs_info.sum_dual_infeasibilities = 0;
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     double cost = lp.col_cost_[iCol];
@@ -292,38 +272,31 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     basis.col_status[iCol] = status;
     objective += value * cost;
     if (primal_infeasibility > primal_feasibility_tolerance)
-      solution_params.num_primal_infeasibility++;
-    solution_params.sum_primal_infeasibility += primal_infeasibility;
-    solution_params.max_primal_infeasibility = std::max(
-        primal_infeasibility, solution_params.max_primal_infeasibility);
+      highs_info.num_primal_infeasibilities++;
+    highs_info.sum_primal_infeasibilities += primal_infeasibility;
+    highs_info.max_primal_infeasibility =
+        std::max(primal_infeasibility, highs_info.max_primal_infeasibility);
     if (dual_infeasibility > dual_feasibility_tolerance)
-      solution_params.num_dual_infeasibility++;
-    solution_params.sum_dual_infeasibility += dual_infeasibility;
-    solution_params.max_dual_infeasibility =
-        std::max(dual_infeasibility, solution_params.max_dual_infeasibility);
+      highs_info.num_dual_infeasibilities++;
+    highs_info.sum_dual_infeasibilities += dual_infeasibility;
+    highs_info.max_dual_infeasibility =
+        std::max(dual_infeasibility, highs_info.max_dual_infeasibility);
   }
-  solution_params.objective_function_value = objective;
+  highs_info.objective_function_value = objective;
   solution.value_valid = true;
   solution.dual_valid = true;
   basis.valid = true;
-  if (solution_params.num_primal_infeasibility > 0) {
-    solution_params.primal_solution_status = kSolutionStatusInfeasible;
-  } else {
-    solution_params.primal_solution_status = kSolutionStatusFeasible;
-  }
-  if (solution_params.num_dual_infeasibility > 0) {
-    solution_params.dual_solution_status = kSolutionStatusInfeasible;
-  } else {
-    solution_params.dual_solution_status = kSolutionStatusFeasible;
-  }
-  if (solution_params.num_primal_infeasibility > 0) {
+  highs_info.basis_validity = kBasisValidityValid;
+  setSolutionStatus(highs_info);
+  if (highs_info.num_primal_infeasibilities) {
     // Primal infeasible
     model_status = HighsModelStatus::kInfeasible;
-  } else if (solution_params.num_dual_infeasibility > 0) {
+  } else if (highs_info.num_dual_infeasibilities) {
     // Dual infeasible => primal unbounded for unconstrained LP
     model_status = HighsModelStatus::kUnbounded;
   } else {
     model_status = HighsModelStatus::kOptimal;
   }
+
   return HighsStatus::kOk;
 }

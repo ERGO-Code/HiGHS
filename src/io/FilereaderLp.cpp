@@ -36,13 +36,27 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     lp.num_col_ = m.variables.size();
     lp.num_row_ = m.constraints.size();
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+    HighsInt num_continuous = 0;
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
       lp.col_lower_.push_back(m.variables[i]->lowerbound);
       lp.col_upper_.push_back(m.variables[i]->upperbound);
       lp.col_names_.push_back(m.variables[i]->name);
+      if (m.variables[i]->type == VariableType::BINARY ||
+          m.variables[i]->type == VariableType::GENERAL) {
+        lp.integrality_[i] = HighsVarType::kInteger;
+      } else if (m.variables[i]->type == VariableType::SEMICONTINUOUS) {
+        lp.integrality_[i] = HighsVarType::kSemiContinuous;
+      } else if (m.variables[i]->type == VariableType::SEMIINTEGER) {
+        lp.integrality_[i] = HighsVarType::kSemiInteger;
+      } else {
+        lp.integrality_[i] = HighsVarType::kContinuous;
+        num_continuous++;
+      }
     }
-
+    // Clear lp.integrality_ if problem is pure LP
+    if (num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
     if (m.objective->offset) {
       highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -72,16 +86,20 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     unsigned int qnnz = 0;
+    // model_.hessian_ is initialised with start_[0] for fictitious
+    // column 0, so have to clear this before pushing back start
+    hessian.start_.clear();
+    assert((int)hessian.start_.size() == 0);
     for (std::shared_ptr<Variable> var : m.variables) {
-      hessian.q_start_.push_back(qnnz);
+      hessian.start_.push_back(qnnz);
 
       for (unsigned int i = 0; i < mat[var].size(); i++) {
-        hessian.q_index_.push_back(varindex[mat[var][i]->name]);
-        hessian.q_value_.push_back(mat2[var][i]);
+        hessian.index_.push_back(varindex[mat[var][i]->name]);
+        hessian.value_.push_back(mat2[var][i]);
         qnnz++;
       }
     }
-    hessian.q_start_.push_back(qnnz);
+    hessian.start_.push_back(qnnz);
     hessian.format_ = HessianFormat::kSquare;
 
     // handle constraints
@@ -105,23 +123,27 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     HighsInt nz = 0;
+    // lp.a_matrix_ is initialised with start_[0] for fictitious
+    // column 0, so have to clear this before pushing back start
+    lp.a_matrix_.start_.clear();
+    assert((int)lp.a_matrix_.start_.size() == 0);
     for (HighsInt i = 0; i < lp.num_col_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
-      lp.a_start_.push_back(nz);
+      lp.a_matrix_.start_.push_back(nz);
       for (HighsUInt j = 0; j < consofvarmap_index[var].size(); j++) {
-        lp.a_index_.push_back(consofvarmap_index[var][j]);
-        lp.a_value_.push_back(consofvarmap_value[var][j]);
+        lp.a_matrix_.index_.push_back(consofvarmap_index[var][j]);
+        lp.a_matrix_.value_.push_back(consofvarmap_value[var][j]);
         nz++;
       }
     }
-    lp.a_start_.push_back(nz);
-    lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.start_.push_back(nz);
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::kParserError;
   }
-  if (setFormat(lp) != HighsStatus::kOk) return FilereaderRetcode::kParserError;
+  lp.ensureColwise();
   return FilereaderRetcode::kOk;
 }
 
@@ -149,7 +171,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-  assert(lp.format_ != MatrixFormat::kRowwise);
+  assert(lp.a_matrix_.isColwise());
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -168,12 +190,12 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   if (model.isQp()) {
     this->writeToFile(file, "+ [ ");
     for (HighsInt col = 0; col < lp.num_col_; col++) {
-      for (HighsInt i = model.hessian_.q_start_[col];
-           i < model.hessian_.q_start_[col + 1]; i++) {
-        if (col <= model.hessian_.q_index_[i]) {
+      for (HighsInt i = model.hessian_.start_[col];
+           i < model.hessian_.start_[col + 1]; i++) {
+        if (col <= model.hessian_.index_[i]) {
           this->writeToFile(
               file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ",
-              model.hessian_.q_value_[i], col, model.hessian_.q_index_[i]);
+              model.hessian_.value_[i], col, model.hessian_.index_[i]);
         }
       }
     }
@@ -190,11 +212,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
       for (HighsInt var = 0; var < lp.num_col_; var++) {
-        for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
-             idx++) {
-          if (lp.a_index_[idx] == row) {
+        for (HighsInt idx = lp.a_matrix_.start_[var];
+             idx < lp.a_matrix_.start_[var + 1]; idx++) {
+          if (lp.a_matrix_.index_[idx] == row) {
             this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                              lp.a_value_[idx], var + 1);
+                              lp.a_matrix_.value_[idx], var + 1);
           }
         }
       }
@@ -205,11 +227,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
-          for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
-               idx++) {
-            if (lp.a_index_[idx] == row) {
+          for (HighsInt idx = lp.a_matrix_.start_[var];
+               idx < lp.a_matrix_.start_[var + 1]; idx++) {
+            if (lp.a_matrix_.index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                                lp.a_value_[idx], var + 1);
+                                lp.a_matrix_.value_[idx], var + 1);
             }
           }
         }
@@ -219,11 +241,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
-          for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
-               idx++) {
-            if (lp.a_index_[idx] == row) {
+          for (HighsInt idx = lp.a_matrix_.start_[var];
+               idx < lp.a_matrix_.start_[var + 1]; idx++) {
+            if (lp.a_matrix_.index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                                lp.a_value_[idx], var + 1);
+                                lp.a_matrix_.value_[idx], var + 1);
             }
           }
         }
@@ -260,18 +282,46 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     }
   }
 
-  // write binary section
-  this->writeToFile(file, "bin");
-  this->writeToFileLineend(file);
+  if (lp.integrality_.size() > 0) {
+    // write binary section
+    this->writeToFile(file, "bin");
+    this->writeToFileLineend(file);
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      if (lp.integrality_[i] == HighsVarType::kInteger ||
+          lp.integrality_[i] == HighsVarType::kSemiInteger) {
+        if (lp.col_lower_[i] == 0.0 && lp.col_upper_[i] == 1.0) {
+          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+          this->writeToFileLineend(file);
+        }
+      }
+    }
 
-  // write general section
-  this->writeToFile(file, "gen");
-  this->writeToFileLineend(file);
+    // write general section
+    this->writeToFile(file, "gen");
+    this->writeToFileLineend(file);
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      if (lp.integrality_[i] == HighsVarType::kInteger ||
+          lp.integrality_[i] == HighsVarType::kSemiInteger) {
+        if (lp.col_lower_[i] != 0.0 || lp.col_upper_[i] != 1.0) {
+          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+          this->writeToFileLineend(file);
+        }
+      }
+    }
 
-  // write semi section
-  this->writeToFile(file, "semi");
-  this->writeToFileLineend(file);
-
+    // write semi section
+    this->writeToFile(file, "semi");
+    this->writeToFileLineend(file);
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
+      if (lp.integrality_[i] == HighsVarType::kSemiContinuous ||
+          lp.integrality_[i] == HighsVarType::kSemiInteger) {
+        if (lp.col_lower_[i] != 0.0 || lp.col_upper_[i] != 1.0) {
+          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+          this->writeToFileLineend(file);
+        }
+      }
+    }
+  }
   // write end
   this->writeToFile(file, "end");
   this->writeToFileLineend(file);

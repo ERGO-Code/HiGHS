@@ -128,6 +128,7 @@ set(sources
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -142,7 +143,6 @@ set(sources
     qpsolver/basis.cpp
     qpsolver/solver.cpp
     qpsolver/ratiotest.cpp
-    simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -152,22 +152,30 @@ set(sources
     simplex/HEkkDualRow.cpp
     simplex/HEkkDualMulti.cpp
     simplex/HEkkInterface.cpp
-    simplex/HFactor.cpp
-    simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
-    simplex/HMatrix.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
+    simplex/HSimplexNla.cpp
+    simplex/HSimplexNlaDebug.cpp
+    simplex/HSimplexNlaFreeze.cpp
+    simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    simplex/HVector.cpp
     test/DevKkt.cpp
     test/KktCh2.cpp
+    util/HFactor.cpp
+    util/HFactorDebug.cpp
+    util/HFactorExtend.cpp
+    util/HFactorRefactor.cpp
+    util/HFactorUtils.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
+    util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
+    util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
     util/HSet.cpp
+    util/HVectorBase.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -190,10 +198,9 @@ set(headers
     lp_data/HighsInfo.h
     lp_data/HighsInfoDebug.h
     lp_data/HighsLp.h
+    lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
-    lp_data/HighsModelObject.h
-    lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
     lp_data/HighsRuntimeOptions.h
@@ -224,34 +231,35 @@ set(headers
     mip/HighsSearch.h
     mip/HighsSeparation.h
     mip/HighsSeparator.h
-    mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsBinarySemaphore.h
+    parallel/HighsCacheAlign.h
+    parallel/HighsMutex.h
+    parallel/HighsParallel.h
+    parallel/HighsSpinMutex.h
+    parallel/HighsSplitDeque.h
+    parallel/HighsTaskExecutor.h
+    parallel/HighsTask.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
-    simplex/FactorTimer.h
-    simplex/HCrash.h
     simplex/HEkk.h
-    simplex/HEkkDebug.h
-    simplex/HEkkPrimal.h
     simplex/HEkkDual.h
-    simplex/HEkkDualRow.h
     simplex/HEkkDualRHS.h
-    simplex/HFactor.h
-    simplex/HFactorDebug.h
+    simplex/HEkkDualRow.h
+    simplex/HEkkPrimal.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HMatrix.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
+    simplex/HSimplexNla.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    simplex/HVector.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -265,6 +273,10 @@ set(headers
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
+    util/FactorTimer.h
+    util/HFactor.h
+    util/HFactorConst.h
+    util/HFactorDebug.h
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
@@ -275,12 +287,18 @@ set(headers
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
+    util/HighsMatrixUtils.h
     util/HighsRandom.h
+    util/HighsRbTree.h
     util/HighsSort.h
+    util/HighsSparseMatrix.h
+    util/HighsSparseVectorSum.h
     util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
     util/HSet.h
+    util/HVector.h
+    util/HVectorBase.h
     util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
@@ -336,8 +354,6 @@ if (IPX_ON)
         MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
-include(CheckLanguage)
-check_language("Fortran")
 if(FORTRAN_FOUND)
     set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
@@ -348,11 +364,11 @@ if(FORTRAN_FOUND)
         ARCHIVE DESTINATION lib
         INCLUDES DESTINATION include
         MODULES DESTINATION modules)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
 endif(FORTRAN_FOUND)
 
-check_language("CSharp")
 if(CSHARP_FOUND)
     message(STATUS "CSharp supported")
     set(csharpsources
@@ -395,7 +411,7 @@ if (OSI_FOUND)
     configure_file(${HIGHS_SOURCE_DIR}/osi-highs.pc.in
         "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
     install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc"
-        DESTINATION lib/pkg-config)
+        DESTINATION lib/pkgconfig)
 endif()
 
 
@@ -409,25 +425,26 @@ foreach ( file ${headers} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
-    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
     target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
     target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
     target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
     target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-    target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
-    target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
-    target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
     target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
     target_compile_options(libipx PRIVATE "-Wno-unused-variable")
     target_compile_options(libipx PRIVATE "-Wno-sign-compare")
-    target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
+    #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
     endif()
 
     install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
@@ -475,7 +492,7 @@ install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" 
     DESTINATION lib/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
-    DESTINATION lib/pkg-config)
+    DESTINATION lib/pkgconfig)
 
 else() 
 
@@ -486,9 +503,8 @@ else()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
 
-target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 if (NOT ${BUILD_SHARED_LIBS})
-    target_compile_options(libhighs PRIVATE "-fPIC" )
+    set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 target_sources(libhighs PRIVATE
@@ -543,6 +559,7 @@ target_sources(libhighs PRIVATE
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -557,7 +574,6 @@ target_sources(libhighs PRIVATE
     qpsolver/basis.cpp
     qpsolver/solver.cpp
     qpsolver/ratiotest.cpp
-    simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -567,22 +583,30 @@ target_sources(libhighs PRIVATE
     simplex/HEkkDualRow.cpp
     simplex/HEkkDualMulti.cpp
     simplex/HEkkInterface.cpp
-    simplex/HFactor.cpp
-    simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
-    simplex/HMatrix.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
+    simplex/HSimplexNla.cpp
+    simplex/HSimplexNlaDebug.cpp
+    simplex/HSimplexNlaFreeze.cpp
+    simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    simplex/HVector.cpp
     test/KktCh2.cpp
     test/DevKkt.cpp
+    util/HFactor.cpp
+    util/HFactorDebug.cpp
+    util/HFactorExtend.cpp
+    util/HFactorRefactor.cpp
+    util/HFactorUtils.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
+    util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
+    util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
     util/HSet.cpp
+    util/HVectorBase.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -619,10 +643,9 @@ set(headers_fast_build_
     lp_data/HighsInfo.h
     lp_data/HighsInfoDebug.h
     lp_data/HighsLp.h
+    lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
-    lp_data/HighsModelObject.h
-    lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
     lp_data/HighsRuntimeOptions.h
@@ -653,34 +676,35 @@ set(headers_fast_build_
     mip/HighsSearch.h
     mip/HighsSeparation.h
     mip/HighsSeparator.h
-    mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    parallel/HighsBinarySemaphore.h
+    parallel/HighsCacheAlign.h
+    parallel/HighsMutex.h
+    parallel/HighsParallel.h
+    parallel/HighsSpinMutex.h
+    parallel/HighsSplitDeque.h
+    parallel/HighsTaskExecutor.h
+    parallel/HighsTask.h
     qpsolver/solver.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
-    simplex/FactorTimer.h
-    simplex/HCrash.h
     simplex/HEkk.h
-    simplex/HEkkDebug.h
     simplex/HEkkDual.h
     simplex/HEkkDualRHS.h
     simplex/HEkkDualRow.h
     simplex/HEkkPrimal.h
-    simplex/HFactor.h
-    simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HMatrix.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
+    simplex/HSimplexNla.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    simplex/HVector.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -694,6 +718,10 @@ set(headers_fast_build_
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
+    util/FactorTimer.h
+    util/HFactor.h
+    util/HFactorConst.h
+    util/HFactorDebug.h
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
@@ -704,12 +732,18 @@ set(headers_fast_build_
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
+    util/HighsMatrixUtils.h
     util/HighsRandom.h
+    util/HighsRbTree.h
     util/HighsSort.h
+    util/HighsSparseMatrix.h
+    util/HighsSparseVectorSum.h
     util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
     util/HSet.h
+    util/HVector.h
+    util/HVectorBase.h
     util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
@@ -722,7 +756,7 @@ else()
     set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
 endif()
 
-#set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h")
+#set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
 # set the install rpath to the installed destination
 set_target_properties(libhighs PROPERTIES INSTALL_RPATH
@@ -734,6 +768,7 @@ foreach ( file ${headers_fast_build_} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
@@ -746,10 +781,10 @@ if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
     if (UNIX)
-        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-        target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
         target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
-        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
     endif()
 
 endif()
@@ -758,3 +793,6 @@ endif()
         "${CMAKE_INSTALL_PREFIX}/lib")
 
 endif()
+
+find_package(Threads REQUIRED)
+target_link_libraries(libhighs Threads::Threads)

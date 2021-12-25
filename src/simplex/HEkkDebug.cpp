@@ -14,14 +14,15 @@
  * @brief
  */
 
-#include "simplex/HEkkDebug.h"
-
 #include <cassert>
 #include <cmath>
 #include <string>
 
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
+#include "simplex/HEkk.h"
+#include "simplex/HSimplexReport.h"
+#include "simplex/SimplexTimer.h"
 
 using std::abs;
 using std::max;
@@ -41,11 +42,72 @@ const double updated_dual_small_absolute_error = 1e-6;
 const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
-HighsDebugStatus ekkDebugSimplex(const std::string message,
-                                 const HEkk& ekk_instance,
-                                 const SimplexAlgorithm algorithm,
-                                 const HighsInt phase, const bool initialise) {
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
+void HEkk::timeReporting(const HighsInt save_mod_recover) {
+  static HighsInt highs_analysis_level;
+  if (save_mod_recover == -1) {
+    highs_analysis_level = options_->highs_analysis_level;
+  } else if (save_mod_recover == 0) {
+    // Ensure that kHighsAnalysisLevelSolverTime is set
+    if (!(kHighsAnalysisLevelSolverTime & highs_analysis_level))
+      this->options_->highs_analysis_level += kHighsAnalysisLevelSolverTime;
+  } else {
+    options_->highs_analysis_level = highs_analysis_level;
+    SimplexTimer simplex_timer;
+    const bool non_null_report = simplex_timer.reportSimplexInnerClock(
+        this->analysis_.thread_simplex_clocks[0], 20);
+    this->analysis_.analyse_simplex_time =
+        kHighsAnalysisLevelSolverTime & options_->highs_analysis_level;
+    if (non_null_report) {
+      HighsLogOptions log_options;
+      bool output_flag = true;
+      bool log_to_console = false;
+      HighsInt log_dev_level = kHighsLogDevLevelVerbose;
+      log_options.log_file_stream = stdout;
+      log_options.output_flag = &output_flag;
+      log_options.log_to_console = &log_to_console;
+      log_options.log_dev_level = &log_dev_level;
+      reportSimplexPhaseIterations(log_options, this->iteration_count_,
+                                   this->info_);
+    }
+  }
+}
+
+void HEkk::debugReporting(const HighsInt save_mod_recover,
+                          const HighsInt log_dev_level_) {
+  static bool output_flag;
+  static HighsInt log_dev_level;
+  static HighsInt highs_analysis_level;
+  static HighsInt highs_debug_level;
+  static bool analyse_simplex_runtime_data;
+  if (save_mod_recover == -1) {
+    output_flag = options_->output_flag;
+    log_dev_level = options_->log_dev_level;
+    highs_analysis_level = options_->highs_analysis_level;
+    highs_debug_level = options_->highs_debug_level;
+    analyse_simplex_runtime_data = analysis_.analyse_simplex_runtime_data;
+  } else if (save_mod_recover == 0) {
+    this->options_->output_flag = true;
+    this->options_->log_dev_level = log_dev_level_;
+    this->options_->highs_analysis_level =
+        kHighsAnalysisLevelSolverSummaryData +
+        kHighsAnalysisLevelSolverRuntimeData;
+    this->options_->highs_debug_level = kHighsDebugLevelCostly;
+    if (log_dev_level_ == kHighsLogDevLevelVerbose)
+      this->analysis_.analyse_simplex_runtime_data = true;
+  } else {
+    options_->output_flag = output_flag;
+    options_->log_dev_level = log_dev_level;
+    options_->highs_analysis_level = highs_analysis_level;
+    options_->highs_debug_level = highs_debug_level;
+    analysis_.analyse_simplex_runtime_data = analyse_simplex_runtime_data;
+  }
+}
+
+HighsDebugStatus HEkk::debugSimplex(const std::string message,
+                                    const SimplexAlgorithm algorithm,
+                                    const HighsInt phase,
+                                    const bool initialise) const {
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   static double max_max_basic_dual;
   static double max_max_primal_residual;
@@ -57,15 +119,15 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     return ::HighsDebugStatus::kOk;
   }
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsLp& lp = ekk_instance.lp_;
-  const HighsSimplexInfo& info = ekk_instance.info_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsLp& lp = this->lp_;
+  const HighsSimplexInfo& info = this->info_;
+  const SimplexBasis& basis = this->basis_;
+  const HighsOptions& options = *(this->options_);
 
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;
   const HighsInt num_tot = num_col + num_row;
-  const HighsInt iteration_count = ekk_instance.iteration_count_;
+  const HighsInt iteration_count = this->iteration_count_;
   std::string value_adjective;
   HighsLogType report_level;
 
@@ -75,7 +137,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     bool flag_error = flag != kNonbasicFlagTrue && flag != kNonbasicFlagFalse;
     if (flag_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Variable %" HIGHSINT_FORMAT
                   " has "
                   "nonbasic flag = %" HIGHSINT_FORMAT "\n",
@@ -129,7 +191,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
     if (primal_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Nonbasic variable %" HIGHSINT_FORMAT
                   " "
                   "has primal error "
@@ -142,7 +204,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     bool move_error = move != basis.nonbasicMove_[iVar];
     if (move_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Nonbasic variable %" HIGHSINT_FORMAT
                   " "
                   "has move error "
@@ -167,7 +229,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     bool nonbasicFlag_error = basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue;
     if (nonbasicFlag_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Basic variable %" HIGHSINT_FORMAT
                   " "
                   "has nonbasicFlag = %" HIGHSINT_FORMAT "\n",
@@ -179,7 +241,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     bool nonbasicMove_error = basis.nonbasicMove_[iVar];
     if (nonbasicMove_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Basic variable %" HIGHSINT_FORMAT
                   " "
                   "has nonbasicMove = %" HIGHSINT_FORMAT "\n",
@@ -198,7 +260,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     bool baseBound_error = workLower != lower || workUpper != upper;
     if (baseBound_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Basic variable %" HIGHSINT_FORMAT
                   " "
                   "(in row %" HIGHSINT_FORMAT
@@ -222,7 +284,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       bool primal_phase1_cost_error = abs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
         highsLogDev(options.log_options, HighsLogType::kError,
-                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                    "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                     " Basic variable %" HIGHSINT_FORMAT
                     " "
                     "(in row %" HIGHSINT_FORMAT
@@ -264,7 +326,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   if (max_basic_dual > 2 * max_max_basic_dual) {
     highsLogDev(options.log_options, report_level,
-                "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                 " %-9s max   basic dual = %9.4g\n",
                 message.c_str(), iteration_count, value_adjective.c_str(),
                 max_basic_dual);
@@ -273,13 +335,13 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   // Check that the number, max and sums of primal and dual infeasibilities (if
   // known) are correct
   const HighsInt info_num_primal_infeasibility =
-      ekk_instance.info_.num_primal_infeasibility;
+      this->info_.num_primal_infeasibilities;
   if (info_num_primal_infeasibility >= 0) {
     const bool illegal_num_primal_infeasibility =
         num_primal_infeasibility != info_num_primal_infeasibility;
     if (illegal_num_primal_infeasibility) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Should have %" HIGHSINT_FORMAT
                   " not "
                   "%" HIGHSINT_FORMAT " primal infeasibilities\n",
@@ -290,14 +352,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const double info_max_primal_infeasibility =
-      ekk_instance.info_.max_primal_infeasibility;
-  if (info_max_primal_infeasibility >= 0) {
+      this->info_.max_primal_infeasibility;
+  if (info_max_primal_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_max_primal_infeasibility =
         abs(max_primal_infeasibility - info_max_primal_infeasibility) >
         ok_feasibility_difference;
     if (illegal_max_primal_infeasibility) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Should have %g not "
                   "%g max primal infeasibility\n",
                   message.c_str(), iteration_count, max_primal_infeasibility,
@@ -307,14 +369,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const double info_sum_primal_infeasibility =
-      ekk_instance.info_.sum_primal_infeasibility;
-  if (info_sum_primal_infeasibility >= 0) {
+      this->info_.sum_primal_infeasibilities;
+  if (info_sum_primal_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_sum_primal_infeasibility =
         abs(sum_primal_infeasibility - info_sum_primal_infeasibility) >
         ok_feasibility_difference;
     if (illegal_sum_primal_infeasibility) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Should have %g not "
                   "%g sum primal infeasibilities\n",
                   message.c_str(), iteration_count, sum_primal_infeasibility,
@@ -324,13 +386,13 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const HighsInt info_num_dual_infeasibility =
-      ekk_instance.info_.num_dual_infeasibility;
+      this->info_.num_dual_infeasibilities;
   if (info_num_dual_infeasibility >= 0) {
     const bool illegal_num_dual_infeasibility =
         num_dual_infeasibility != info_num_dual_infeasibility;
     if (illegal_num_dual_infeasibility) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Should have %" HIGHSINT_FORMAT
                   " not "
                   "%" HIGHSINT_FORMAT " dual infeasibilities\n",
@@ -340,15 +402,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       return HighsDebugStatus::kLogicalError;
     }
   }
-  const double info_max_dual_infeasibility =
-      ekk_instance.info_.max_dual_infeasibility;
-  if (info_max_dual_infeasibility >= 0) {
+  const double info_max_dual_infeasibility = this->info_.max_dual_infeasibility;
+  if (info_max_dual_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_max_dual_infeasibility =
         abs(max_dual_infeasibility - info_max_dual_infeasibility) >
         ok_feasibility_difference;
     if (illegal_max_dual_infeasibility) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Should have %g not "
                   "%g max dual infeasibility\n",
                   message.c_str(), iteration_count, max_dual_infeasibility,
@@ -358,14 +419,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const double info_sum_dual_infeasibility =
-      ekk_instance.info_.sum_dual_infeasibility;
-  if (info_sum_dual_infeasibility >= 0) {
+      this->info_.sum_dual_infeasibilities;
+  if (info_sum_dual_infeasibility != kHighsIllegalInfeasibilityMeasure) {
     const bool illegal_sum_dual_infeasibility =
         abs(sum_dual_infeasibility - info_sum_dual_infeasibility) >
         ok_feasibility_difference;
     if (illegal_sum_dual_infeasibility) {
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                  "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                   " Should have %g not "
                   "%g sum dual infeasibilities\n",
                   message.c_str(), iteration_count, sum_dual_infeasibility,
@@ -386,7 +447,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   if (illegal_primal_infeasibility) {
     // Should be primal feasible, but isn't
     highsLogDev(options.log_options, HighsLogType::kError,
-                "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                 " Should be primal "
                 "feasible, but num / max "
                 "/ sum primal infeasibility is %" HIGHSINT_FORMAT
@@ -397,9 +458,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     return HighsDebugStatus::kLogicalError;
   }
   bool require_dual_feasible_in_dual_simplex =
-      algorithm == SimplexAlgorithm::kDual &&
-      ekk_instance.status_.has_fresh_rebuild &&
-      ekk_instance.info_.allow_cost_perturbation;
+      algorithm == SimplexAlgorithm::kDual && this->status_.has_fresh_rebuild &&
+      this->info_.allow_cost_perturbation;
 
   bool illegal_dual_infeasibility =
       (require_dual_feasible_in_dual_simplex || phase == 0) &&
@@ -407,19 +467,19 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   if (illegal_dual_infeasibility) {
     // Dual simplex or optimal but has dual infeasibilities
     highsLogDev(options.log_options, HighsLogType::kError,
-                "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                 " Should be dual "
                 "feasible, but num / max / "
                 "sum dual infeasibility is %" HIGHSINT_FORMAT
                 " / %g / %g; Phase = %" HIGHSINT_FORMAT "; status = %s\n",
                 message.c_str(), iteration_count, num_dual_infeasibility,
                 max_dual_infeasibility, sum_dual_infeasibility, phase,
-                utilModelStatusToString(ekk_instance.model_status_).c_str());
+                utilModelStatusToString(this->model_status_).c_str());
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::kLogicalError;
   }
 
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
+  if (this->options_->highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Now determine the primal and dual residuals.
   //
@@ -447,10 +507,11 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     double dual = info.workCost_[iCol];
     double value = primal_value[iCol];
-    for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++) {
-      HighsInt iRow = lp.a_index_[iEl];
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+      HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iVar = num_col + iRow;
-      double Avalue = lp.a_value_[iEl];
+      double Avalue = lp.a_matrix_.value_[iEl];
       primal_activity[iRow] += value * Avalue;
       dual += dual_value[iVar] * Avalue;
     }
@@ -479,7 +540,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   if (max_primal_residual > 2 * max_max_primal_residual) {
     highsLogDev(options.log_options, report_level,
-                "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                 " %-9s max primal residual = %9.4g\n",
                 message.c_str(), iteration_count, value_adjective.c_str(),
                 max_primal_residual);
@@ -500,7 +561,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   if (max_dual_residual > 2 * max_max_dual_residual) {
     highsLogDev(options.log_options, report_level,
-                "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+                "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                 " %-9s max   dual residual = %9.4g\n",
                 message.c_str(), iteration_count, value_adjective.c_str(),
                 max_dual_residual);
@@ -509,15 +570,151 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   return return_status;
 }
 
-HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
+// Methods below are not called externally
+
+void HEkk::debugReportReinvertOnNumericalTrouble(
+    const std::string method_name, const double numerical_trouble_measure,
+    const double alpha_from_col, const double alpha_from_row,
+    const double numerical_trouble_tolerance, const bool reinvert) const {
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap) return;
+  const double abs_alpha_from_col = abs(alpha_from_col);
+  const double abs_alpha_from_row = abs(alpha_from_row);
+  const double abs_alpha_diff = abs(abs_alpha_from_col - abs_alpha_from_row);
+  const HighsInt iteration_count = this->iteration_count_;
+  const HighsInt update_count = this->info_.update_count;
+  const std::string model_name = this->lp_.model_name_;
+
+  const bool numerical_trouble =
+      numerical_trouble_measure > numerical_trouble_tolerance;
+  const bool near_numerical_trouble =
+      10 * numerical_trouble_measure > numerical_trouble_tolerance;
+
+  const bool wrong_sign = alpha_from_col * alpha_from_row <= 0;
+  if (!near_numerical_trouble && !wrong_sign) return;
+  std::string adjective;
+  if (numerical_trouble) {
+    adjective = "       exceeds";
+  } else if (near_numerical_trouble) {
+    adjective = "almost exceeds";
+  } else {
+    adjective = "clearly satisfies";
+  }
+  highsLogDev(this->options_->log_options, HighsLogType::kWarning,
+              "%s (%s) [Iter %" HIGHSINT_FORMAT "; Update %" HIGHSINT_FORMAT
+              "] Col: %11.4g; Row: %11.4g; Diff "
+              "= %11.4g: Measure %11.4g %s %11.4g\n",
+              method_name.c_str(), model_name.c_str(), iteration_count,
+              update_count, abs_alpha_from_col, abs_alpha_from_row,
+              abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
+              numerical_trouble_tolerance);
+  if (wrong_sign) {
+    highsLogDev(this->options_->log_options, HighsLogType::kWarning,
+                "   Incompatible signs for Col: %11.4g and Row: %11.4g\n",
+                alpha_from_col, alpha_from_row);
+  }
+  if ((numerical_trouble || wrong_sign) && !reinvert) {
+    highsLogDev(this->options_->log_options, HighsLogType::kWarning,
+                "   Numerical trouble or wrong sign and not reinverting\n");
+  }
+}
+
+HighsDebugStatus HEkk::debugUpdatedDual(const double updated_dual,
+                                        const double computed_dual) const {
+  const HighsOptions& options = *(this->options_);
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  std::string error_adjective;
+  HighsLogType report_level;
+  double updated_dual_absolute_error = abs(updated_dual - computed_dual);
+  double updated_dual_relative_error =
+      updated_dual_absolute_error / max(abs(computed_dual), 1.0);
+  bool sign_error = updated_dual * computed_dual <= 0;
+  bool at_least_small_error =
+      sign_error ||
+      updated_dual_absolute_error > updated_dual_small_absolute_error ||
+      updated_dual_relative_error > updated_dual_small_relative_error;
+  if (!at_least_small_error) return return_status;
+
+  if (updated_dual_relative_error > updated_dual_large_relative_error ||
+      updated_dual_absolute_error > updated_dual_large_absolute_error) {
+    error_adjective = "Large";
+    report_level = HighsLogType::kInfo;
+    return_status = HighsDebugStatus::kLargeError;
+  } else if (updated_dual_relative_error > updated_dual_small_relative_error ||
+             updated_dual_absolute_error > updated_dual_small_absolute_error) {
+    error_adjective = "Small";
+    report_level = HighsLogType::kDetailed;
+    return_status = HighsDebugStatus::kSmallError;
+  } else {
+    error_adjective = "OK";
+    report_level = HighsLogType::kVerbose;
+    return_status = HighsDebugStatus::kOk;
+  }
+  if (sign_error) {
+    report_level = HighsLogType::kInfo;
+    return_status = HighsDebugStatus::kLargeError;
+  }
+  highsLogDev(
+      options.log_options, report_level,
+      "UpdatedDual:  %-9s absolute (%9.4g) or relative (%9.4g) error in "
+      "updated dual value",
+      error_adjective.c_str(), updated_dual_absolute_error,
+      updated_dual_relative_error);
+  if (sign_error) {
+    highsLogDev(options.log_options, report_level,
+                ": Also sign error with (%9.4g, %9.4g)\n", updated_dual,
+                computed_dual);
+  } else {
+    highsLogDev(options.log_options, report_level, "\n");
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugRetainedDataOk(const HighsLp& lp) const {
+  if (!this->status_.initialised_for_new_lp ||
+      this->options_->highs_debug_level < kHighsDebugLevelCostly)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+
+  const HighsOptions& options = *(this->options_);
+  if (this->status_.has_basis) {
+    HighsDebugStatus call_status = this->debugBasisCorrect(&lp);
+    const bool basis_correct =
+        debugDebugToHighsStatus(call_status) != HighsStatus::kError;
+    if (!basis_correct) {
+      highsLogDev(options.log_options, HighsLogType::kError,
+                  "Supposed to be a Simplex basis, but incorrect\n");
+      assert(basis_correct);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
+  }
+
+  if (this->status_.has_invert) {
+    HighsDebugStatus call_status =
+        this->debugNlaCheckInvert("HEkk::debugRetainedDataOk");
+    const bool invert_ok =
+        debugDebugToHighsStatus(call_status) != HighsStatus::kError;
+    if (!invert_ok) {
+      highsLogDev(
+          options.log_options, HighsLogType::kError,
+          "Supposed to be a simplex basis inverse, but too inaccurate\n");
+      assert(invert_ok);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugBasisCorrect(const HighsLp* lp) const {
   // Nontrivially expensive analysis of a Simplex basis, checking
   // consistency, and then correctness of nonbasicMove
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *(this->options_);
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const bool consistent =
-      ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::kLogicalError;
+      this->debugBasisConsistent() != HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogDev(options.log_options, HighsLogType::kError,
                 "Supposed to be a Simplex basis, but not consistent\n");
@@ -526,7 +723,7 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   }
   if (options.highs_debug_level < kHighsDebugLevelCostly) return return_status;
   const bool correct_nonbasicMove =
-      ekkDebugNonbasicMove(ekk_instance) != HighsDebugStatus::kLogicalError;
+      this->debugNonbasicMove(lp) != HighsDebugStatus::kLogicalError;
   if (!correct_nonbasicMove) {
     highsLogDev(
         options.log_options, HighsLogType::kError,
@@ -537,20 +734,120 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   return return_status;
 }
 
-HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
-  // Non-trivially expensive check of NonbasicMove
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
+HighsDebugStatus HEkk::debugBasisConsistent() const {
+  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
+  // of basic/nonbasic variables and non-repetition of basic variables
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
-  const HighsLp& lp = ekk_instance.lp_;
-  const SimplexBasis& basis = ekk_instance.basis_;
+  const HighsOptions& options = *(this->options_);
+  const HighsLp& lp = this->lp_;
+  const SimplexBasis& basis = this->basis_;
+  // Check consistency of nonbasicFlag
+  if (this->debugNonbasicFlagConsistent() == HighsDebugStatus::kLogicalError) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicFlag inconsistent\n");
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  const bool right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_;
+  // Check consistency of basicIndex
+  if (!right_size) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "basicIndex size error\n");
+    assert(right_size);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  // Use localNonbasicFlag so that duplicate entries in basicIndex can
+  // be spotted
+  vector<int8_t> localNonbasicFlag = basis.nonbasicFlag_;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    HighsInt iCol = basis.basicIndex_[iRow];
+    HighsInt flag = localNonbasicFlag[iCol];
+    // Indicate that this column has been found in basicIndex
+    localNonbasicFlag[iCol] = -1;
+    if (flag) {
+      // Nonzero value for localNonbasicFlag entry means that column is either
+      if (flag == kNonbasicFlagTrue) {
+        // Nonbasic...
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Entry basicIndex_[%" HIGHSINT_FORMAT
+                    "] = %" HIGHSINT_FORMAT " is not basic\n",
+                    iRow, iCol);
+      } else {
+        // .. or is -1 since it has already been found in basicIndex
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Entry basicIndex_[%" HIGHSINT_FORMAT
+                    "] = %" HIGHSINT_FORMAT " is already basic\n",
+                    iRow, iCol);
+        assert(flag == -1);
+      }
+      assert(!flag);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugNonbasicFlagConsistent() const {
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const HighsOptions& options = *(this->options_);
+  const HighsLp& lp = this->lp_;
+  const SimplexBasis& basis = this->basis_;
+  HighsInt numTot = lp.num_col_ + lp.num_row_;
+  const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
+  if (!right_size) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicFlag size error\n");
+    assert(right_size);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  HighsInt num_basic_variables = 0;
+  for (HighsInt var = 0; var < numTot; var++) {
+    if (basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
+      num_basic_variables++;
+    } else {
+      assert(basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
+    }
+  }
+  bool right_num_basic_variables = num_basic_variables == lp.num_row_;
+  if (!right_num_basic_variables) {
+    highsLogDev(options.log_options, HighsLogType::kError,
+                "nonbasicFlag has %" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT
+                " basic variables\n",
+                num_basic_variables, lp.num_row_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::kLogicalError;
+  }
+  return return_status;
+}
+
+HighsDebugStatus HEkk::debugNonbasicMove(const HighsLp* pass_lp) const {
+  // Non-trivially expensive check of NonbasicMove
+  if (this->options_->highs_debug_level < kHighsDebugLevelCostly)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const HighsOptions& options = *(this->options_);
+  const SimplexBasis& basis = this->basis_;
   HighsInt num_free_variable_move_errors = 0;
   HighsInt num_lower_bounded_variable_move_errors = 0;
   HighsInt num_upper_bounded_variable_move_errors = 0;
   HighsInt num_boxed_variable_move_errors = 0;
   HighsInt num_fixed_variable_move_errors = 0;
-  const HighsInt numTot = lp.num_col_ + lp.num_row_;
+  HighsInt num_col;
+  HighsInt num_row;
+  const bool use_pass_lp = pass_lp;
+  if (use_pass_lp) {
+    num_col = pass_lp->num_col_;
+    num_row = pass_lp->num_row_;
+  } else {
+    assert(1 == 0);
+    num_col = this->lp_.num_col_;
+    num_row = this->lp_.num_row_;
+  }
+
+  const HighsInt numTot = num_col + num_row;
   bool right_size = (HighsInt)basis.nonbasicMove_.size() == numTot;
   // Check consistency of nonbasicMove
   if (!right_size) {
@@ -565,13 +862,24 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
   for (HighsInt iVar = 0; iVar < numTot; iVar++) {
     if (!basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic variable
-    if (iVar < lp.num_col_) {
-      lower = lp.col_lower_[iVar];
-      upper = lp.col_upper_[iVar];
+    if (use_pass_lp) {
+      if (iVar < num_col) {
+        lower = pass_lp->col_lower_[iVar];
+        upper = pass_lp->col_upper_[iVar];
+      } else {
+        HighsInt iRow = iVar - num_col;
+        lower = -pass_lp->row_upper_[iRow];
+        upper = -pass_lp->row_lower_[iRow];
+      }
     } else {
-      HighsInt iRow = iVar - lp.num_col_;
-      lower = -lp.row_upper_[iRow];
-      upper = -lp.row_lower_[iRow];
+      if (iVar < num_col) {
+        lower = this->lp_.col_lower_[iVar];
+        upper = this->lp_.col_upper_[iVar];
+      } else {
+        HighsInt iRow = iVar - num_col;
+        lower = -this->lp_.row_upper_[iRow];
+        upper = -this->lp_.row_lower_[iRow];
+      }
     }
 
     if (highs_isInfinity(upper)) {
@@ -631,110 +939,40 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
   return return_status;
 }
 
-HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
-  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
-  // of basic/nonbasic variables and non-repetition of basic variables
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
-  const HighsLp& lp = ekk_instance.lp_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  // Check consistency of nonbasicFlag
-  if (ekkDebugNonbasicFlagConsistent(ekk_instance) ==
-      HighsDebugStatus::kLogicalError) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicFlag inconsistent\n");
-    return_status = HighsDebugStatus::kLogicalError;
+bool HEkk::debugNlaScalingOk(const HighsLp& lp) const {
+  bool ok = true;
+  assert(this->status_.has_nla);
+  const HSimplexNla& simplex_nla = this->simplex_nla_;
+  if (lp.scale_.has_scaling) {
+    // The LP has scaling, so ensure that the simplex NLA has its scaling
+    void* nla_scale = (void*)simplex_nla.scale_;
+    void* lp_scale = (void*)(&lp.scale_);
+    ok = nla_scale == lp_scale;
+  } else {
+    // The LP has no scaling, so ensure that the simplex NLA has no scaling
+    ok = !simplex_nla.scale_;
   }
-  const bool right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_;
-  // Check consistency of basicIndex
-  if (!right_size) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "basicIndex size error\n");
-    assert(right_size);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  // Use localNonbasicFlag so that duplicate entries in basicIndex can
-  // be spotted
-  vector<int8_t> localNonbasicFlag = basis.nonbasicFlag_;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    HighsInt iCol = basis.basicIndex_[iRow];
-    HighsInt flag = localNonbasicFlag[iCol];
-    // Indicate that this column has been found in basicIndex
-    localNonbasicFlag[iCol] = -1;
-    if (flag) {
-      // Nonzero value for localNonbasicFlag entry means that column is either
-      if (flag == kNonbasicFlagTrue) {
-        // Nonbasic...
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Entry basicIndex_[%" HIGHSINT_FORMAT
-                    "] = %" HIGHSINT_FORMAT " is not basic\n",
-                    iRow, iCol);
-      } else {
-        // .. or is -1 since it has already been found in basicIndex
-        highsLogDev(options.log_options, HighsLogType::kError,
-                    "Entry basicIndex_[%" HIGHSINT_FORMAT
-                    "] = %" HIGHSINT_FORMAT " is already basic\n",
-                    iRow, iCol);
-        assert(flag == -1);
-      }
-      assert(!flag);
-      return_status = HighsDebugStatus::kLogicalError;
-    }
-  }
-  return return_status;
+  assert(ok);
+  return ok;
+}
+HighsDebugStatus HEkk::debugNlaCheckInvert(
+    const std::string message, const HighsInt alt_debug_level) const {
+  assert(this->status_.has_nla);
+  return this->simplex_nla_.debugCheckInvert(message, alt_debug_level);
 }
 
-HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
-  const HighsLp& lp = ekk_instance.lp_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  HighsInt numTot = lp.num_col_ + lp.num_row_;
-  const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
-  if (!right_size) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicFlag size error\n");
-    assert(right_size);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  HighsInt num_basic_variables = 0;
-  for (HighsInt var = 0; var < numTot; var++) {
-    if (basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
-      num_basic_variables++;
-    } else {
-      assert(basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
-    }
-  }
-  bool right_num_basic_variables = num_basic_variables == lp.num_row_;
-  if (!right_num_basic_variables) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "nonbasicFlag has %" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT
-                " basic variables\n",
-                num_basic_variables, lp.num_row_);
-    assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-  return return_status;
-}
-
-HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
-                                    const SimplexAlgorithm algorithm,
-                                    const HighsInt phase,
-                                    const HighsModelStatus model_status) {
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
+HighsDebugStatus HEkk::debugOkForSolve(const SimplexAlgorithm algorithm,
+                                       const HighsInt phase) const {
+  if (this->options_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsLp& lp = ekk_instance.lp_;
-  const HighsSimplexStatus& status = ekk_instance.status_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsLp& lp = this->lp_;
+  const HighsSimplexStatus& status = this->status_;
+  const SimplexBasis& basis = this->basis_;
+  const HighsOptions& options = *this->options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = status.has_basis && status.has_matrix && status.has_factor_arrays &&
+  ok = status.has_basis && status.has_ar_matrix && status.has_nla &&
        //       status.has_dual_steepest_edge_weights &&
        status.has_invert;
   if (!ok) {
@@ -743,16 +981,16 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                   "Not OK to solve since status.has_basis = "
                   "%" HIGHSINT_FORMAT "\n",
                   status.has_basis);
-    if (!status.has_matrix)
+    if (!status.has_ar_matrix)
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "Not OK to solve since status.has_matrix = "
+                  "Not OK to solve since status.has_ar_matrix = "
                   "%" HIGHSINT_FORMAT "\n",
-                  status.has_matrix);
-    if (!status.has_factor_arrays)
+                  status.has_ar_matrix);
+    if (!status.has_nla)
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "Not OK to solve since status.has_factor_arrays "
+                  "Not OK to solve since status.has_nla "
                   "= %" HIGHSINT_FORMAT "\n",
-                  status.has_factor_arrays);
+                  status.has_nla);
     if (!status.has_dual_steepest_edge_weights)
       highsLogDev(options.log_options, HighsLogType::kError,
                   "Not OK to solve since "
@@ -765,35 +1003,31 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                   "%" HIGHSINT_FORMAT "\n",
                   status.has_invert);
   }
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
+  if (this->options_->highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Basis and data check
-  if (ekkDebugBasisConsistent(ekk_instance) == HighsDebugStatus::kLogicalError)
+  if (this->debugBasisConsistent() == HighsDebugStatus::kLogicalError)
     return HighsDebugStatus::kLogicalError;
   // Check work cost, lower, upper and range
-  if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase, model_status))
+  if (!this->debugWorkArraysOk(algorithm, phase))
     return HighsDebugStatus::kLogicalError;
   const HighsInt numTot = lp.num_col_ + lp.num_row_;
   // Check nonbasic move against work cost, lower, upper and range
   for (HighsInt var = 0; var < numTot; ++var) {
     if (basis.nonbasicFlag_[var]) {
       // Nonbasic variable
-      if (!ekkDebugOneNonbasicMoveVsWorkArraysOk(ekk_instance, var))
+      if (!this->debugOneNonbasicMoveVsWorkArraysOk(var))
         return HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;
 }
 
-// Methods below are not called externally
-
-bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const SimplexAlgorithm algorithm,
-                          const HighsInt phase,
-                          const HighsModelStatus model_status) {
-  const HighsLp& lp = ekk_instance.lp_;
-  const HighsSimplexInfo& info = ekk_instance.info_;
-  const HighsOptions& options = ekk_instance.options_;
+bool HEkk::debugWorkArraysOk(const SimplexAlgorithm algorithm,
+                             const HighsInt phase) const {
+  const HighsLp& lp = this->lp_;
+  const HighsSimplexInfo& info = this->info_;
+  const HighsOptions& options = *(this->options_);
   bool ok = true;
   // Don't check dual simplex phase 1 bounds or perturbed bounds
   const bool dual_phase1 = algorithm == SimplexAlgorithm::kDual && phase == 1;
@@ -868,9 +1102,10 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
   }
   // Don't check costs against the LP, when using primal simplex in
   // primal phase 1, if the LP is primal infeasible, or if the costs
-  // have been perturbed
-  if (!(primal_phase1 || model_status == HighsModelStatus::kInfeasible ||
-        info.costs_perturbed)) {
+  // have been changed
+  const bool costs_changed = info_.costs_perturbed || info_.costs_shifted;
+  if (!(primal_phase1 || this->model_status_ == HighsModelStatus::kInfeasible ||
+        costs_changed)) {
     for (HighsInt col = 0; col < lp.num_col_; ++col) {
       HighsInt var = col;
       double work_cost = info.workCost_[var];
@@ -901,12 +1136,11 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
   return ok;
 }
 
-bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
-                                           const HighsInt var) {
-  const HighsLp& lp = ekk_instance.lp_;
-  const HighsSimplexInfo& info = ekk_instance.info_;
-  const SimplexBasis& basis = ekk_instance.basis_;
-  const HighsOptions& options = ekk_instance.options_;
+bool HEkk::debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const {
+  const HighsLp& lp = this->lp_;
+  const HighsSimplexInfo& info = this->info_;
+  const SimplexBasis& basis = this->basis_;
+  const HighsOptions& options = *(this->options_);
   assert(var >= 0);
   assert(var < lp.num_col_ + lp.num_row_);
   // Make sure we're not checking a basic variable
@@ -1083,115 +1317,14 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
   return ok;
 }
 
-void ekkDebugReportReinvertOnNumericalTrouble(
-    const std::string method_name, const HEkk& ekk_instance,
-    const double numerical_trouble_measure, const double alpha_from_col,
-    const double alpha_from_row, const double numerical_trouble_tolerance,
-    const bool reinvert) {
-  if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap) return;
-  const double abs_alpha_from_col = abs(alpha_from_col);
-  const double abs_alpha_from_row = abs(alpha_from_row);
-  const double abs_alpha_diff = abs(abs_alpha_from_col - abs_alpha_from_row);
-  const HighsInt iteration_count = ekk_instance.iteration_count_;
-  const HighsInt update_count = ekk_instance.info_.update_count;
-  const std::string model_name = ekk_instance.lp_.model_name_;
-
-  const bool numerical_trouble =
-      numerical_trouble_measure > numerical_trouble_tolerance;
-  const bool near_numerical_trouble =
-      10 * numerical_trouble_measure > numerical_trouble_tolerance;
-
-  const bool wrong_sign = alpha_from_col * alpha_from_row <= 0;
-  if (!near_numerical_trouble && !wrong_sign) return;
-  std::string adjective;
-  if (numerical_trouble) {
-    adjective = "       exceeds";
-  } else if (near_numerical_trouble) {
-    adjective = "almost exceeds";
-  } else {
-    adjective = "clearly satisfies";
-  }
-  highsLogDev(ekk_instance.options_.log_options, HighsLogType::kWarning,
-              "%s (%s) [Iter %" HIGHSINT_FORMAT "; Update %" HIGHSINT_FORMAT
-              "] Col: %11.4g; Row: %11.4g; Diff "
-              "= %11.4g: Measure %11.4g %s %11.4g\n",
-              method_name.c_str(), model_name.c_str(), iteration_count,
-              update_count, abs_alpha_from_col, abs_alpha_from_row,
-              abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
-              numerical_trouble_tolerance);
-  if (wrong_sign) {
-    highsLogDev(ekk_instance.options_.log_options, HighsLogType::kWarning,
-                "   Incompatible signs for Col: %11.4g and Row: %11.4g\n",
-                alpha_from_col, alpha_from_row);
-  }
-  if ((numerical_trouble || wrong_sign) && !reinvert) {
-    highsLogDev(ekk_instance.options_.log_options, HighsLogType::kWarning,
-                "   Numerical trouble or wrong sign and not reinverting\n");
-  }
-}
-
-HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
-                                     const double updated_dual,
-                                     const double computed_dual) {
+HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
+    const HighsInt num_free_col, const HSet nonbasic_free_col_set) const {
+  const HighsOptions& options = *(this->options_);
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
-  HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  std::string error_adjective;
-  HighsLogType report_level;
-  double updated_dual_absolute_error = abs(updated_dual - computed_dual);
-  double updated_dual_relative_error =
-      updated_dual_absolute_error / max(abs(computed_dual), 1.0);
-  bool sign_error = updated_dual * computed_dual <= 0;
-  bool at_least_small_error =
-      sign_error ||
-      updated_dual_absolute_error > updated_dual_small_absolute_error ||
-      updated_dual_relative_error > updated_dual_small_relative_error;
-  if (!at_least_small_error) return return_status;
-
-  if (updated_dual_relative_error > updated_dual_large_relative_error ||
-      updated_dual_absolute_error > updated_dual_large_absolute_error) {
-    error_adjective = "Large";
-    report_level = HighsLogType::kInfo;
-    return_status = HighsDebugStatus::kLargeError;
-  } else if (updated_dual_relative_error > updated_dual_small_relative_error ||
-             updated_dual_absolute_error > updated_dual_small_absolute_error) {
-    error_adjective = "Small";
-    report_level = HighsLogType::kDetailed;
-    return_status = HighsDebugStatus::kSmallError;
-  } else {
-    error_adjective = "OK";
-    report_level = HighsLogType::kVerbose;
-    return_status = HighsDebugStatus::kOk;
-  }
-  if (sign_error) {
-    report_level = HighsLogType::kInfo;
-    return_status = HighsDebugStatus::kLargeError;
-  }
-  highsLogDev(
-      options.log_options, report_level,
-      "UpdatedDual:  %-9s absolute (%9.4g) or relative (%9.4g) error in "
-      "updated dual value",
-      error_adjective.c_str(), updated_dual_absolute_error,
-      updated_dual_relative_error);
-  if (sign_error) {
-    highsLogDev(options.log_options, report_level,
-                ": Also sign error with (%9.4g, %9.4g)\n", updated_dual,
-                computed_dual);
-  } else {
-    highsLogDev(options.log_options, report_level, "\n");
-  }
-  return return_status;
-}
-
-HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
-    const HEkk& ekk_instance, const HighsInt num_free_col,
-    const HSet nonbasic_free_col_set) {
-  const HighsOptions& options = ekk_instance.options_;
-  if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::kNotChecked;
-  const HighsLp& lp = ekk_instance.lp_;
-  const HighsSimplexInfo& info = ekk_instance.info_;
-  const SimplexBasis& basis = ekk_instance.basis_;
+  const HighsLp& lp = this->lp_;
+  const HighsSimplexInfo& info = this->info_;
+  const SimplexBasis& basis = this->basis_;
   HighsInt num_tot = lp.num_col_ + lp.num_row_;
 
   // Check the number of free columns
@@ -1255,7 +1388,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
+HighsDebugStatus HEkk::debugRowMatrix() const {
   /*
   printf("Checking row-wise matrix\n");
   for (HighsInt row = 0; row < numRow; row++) {
@@ -1278,5 +1411,86 @@ HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
     }
   }
   */
+  return HighsDebugStatus::kOk;
+}
+
+HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
+  static vector<double> previous_dual;
+  const HighsSimplexInfo& info = this->info_;
+  if (initialise) {
+    previous_dual = info.workDual_;
+    return HighsDebugStatus::kOk;
+  }
+  const HighsOptions& options = *(this->options_);
+  //  if (options.highs_debug_level < kHighsDebugLevelCheap) return
+  //  HighsDebugStatus::kNotChecked;
+  const HighsLp& lp = this->lp_;
+  const SimplexBasis& basis = this->basis_;
+
+  double norm_basic_costs = 0;
+  for (HighsInt iRow = 0; iRow < lp_.num_row_; iRow++) {
+    const double value = info.workCost_[basis.basicIndex_[iRow]] +
+                         info.workShift_[basis.basicIndex_[iRow]];
+    norm_basic_costs = max(fabs(value), norm_basic_costs);
+  }
+
+  vector<double> new_dual = info.workDual_;
+  vector<double> delta_dual;
+  HighsInt num_tot = lp.num_col_ + lp.num_row_;
+  delta_dual.assign(num_tot, 0);
+  HighsInt num_dual_sign_change = 0;
+  HighsInt num_delta_dual_values = 0;
+  double norm_nonbasic_costs = 0;
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
+    if (!basis.nonbasicFlag_[iVar]) continue;
+    double value = info.workCost_[iVar] + info.workShift_[iVar];
+    norm_nonbasic_costs = max(fabs(value), norm_nonbasic_costs);
+  }
+
+  const double zero_delta_dual =
+      max(0.5 * (norm_basic_costs + norm_nonbasic_costs) * 1e-16, 1e-16);
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
+    if (!basis.nonbasicFlag_[iVar]) {
+      previous_dual[iVar] = 0;
+      new_dual[iVar] = 0;
+      continue;
+    }
+    double delta = new_dual[iVar] - previous_dual[iVar];
+    if (fabs(delta) < zero_delta_dual) continue;
+    delta_dual[iVar] = delta;
+    const bool sign_change =
+        fabs(previous_dual[iVar]) > options.dual_feasibility_tolerance &&
+        fabs(new_dual[iVar]) > options.dual_feasibility_tolerance &&
+        previous_dual[iVar] * new_dual[iVar] < 0;
+    if (sign_change) num_dual_sign_change++;
+    num_delta_dual_values++;
+  }
+  if (num_delta_dual_values) {
+    printf(
+        "\nHEkk::debugComputeDual Iteration %d: Number of dual sign changes = "
+        "%d\n",
+        (int)iteration_count_, (int)num_dual_sign_change);
+    printf("   |cB| = %g; |cN| = %g; zero delta dual = %g\n", norm_basic_costs,
+           norm_nonbasic_costs, zero_delta_dual);
+    //    analyseVectorValues(options.log_options, "Previous duals", num_tot,
+    //    previous_dual); analyseVectorValues(options.log_options, "New duals",
+    //    num_tot, new_dual);
+    analyseVectorValues(options.log_options, "Delta duals", num_tot,
+                        delta_dual);
+  }
+  return HighsDebugStatus::kOk;
+}
+
+HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string message,
+                                                  const bool force_report) {
+  const HighsSimplexInfo& info = this->info_;
+  computeSimplexDualInfeasible();
+  if (info.num_dual_infeasibilities || force_report)
+    printf(
+        "Iteration %6d: %s num / max / sum dual infeasibilities is %d / %g / "
+        "%g\n",
+        (int)iteration_count_, message.c_str(),
+        (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+        info.sum_dual_infeasibilities);
   return HighsDebugStatus::kOk;
 }

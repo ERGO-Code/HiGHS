@@ -16,6 +16,8 @@
 #ifndef SIMPLEX_SIMPLEXCONST_H_
 #define SIMPLEX_SIMPLEXCONST_H_
 
+#include "util/HighsInt.h"
+
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
 
 enum SimplexStrategy {
@@ -30,26 +32,28 @@ enum SimplexStrategy {
   kSimplexStrategyNum
 };
 
-enum SimplexSolvePhase {
-  kSolvePhaseMin = -3,
-  kSolvePhaseError = kSolvePhaseMin,  // -3
-  kSolvePhaseExit,                    // -2,
-  kSolvePhaseUnknown,                 // -1
-  kSolvePhaseOptimal,                 // 0
-  kSolvePhase1,                       // 1
-  kSolvePhase2,                       // 2
-  kSolvePhaseCleanup = 4,
-  kSolvePhaseMax = kSolvePhaseCleanup
+enum SimplexUnscaledSolutionStrategy {
+  kSimplexUnscaledSolutionStrategyMin = 0,
+  kSimplexUnscaledSolutionStrategyNone =
+      kSimplexUnscaledSolutionStrategyMin,  // 0
+  kSimplexUnscaledSolutionStrategyRefine,   // 1
+  kSimplexUnscaledSolutionStrategyDirect,   // 2
+  kSimplexUnscaledSolutionStrategyMax = kSimplexUnscaledSolutionStrategyDirect,
+  kSimplexUnscaledSolutionStrategyNum
 };
 
-enum SimplexScaleStrategy {
-  kSimplexScaleStrategyMin = 0,
-  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
-  kSimplexScaleStrategyHighs,                           // 1
-  kSimplexScaleStrategyHighsForced,                     // 2
-  kSimplexScaleStrategy015,                             // 3
-  kSimplexScaleStrategy0157,                            // 4
-  kSimplexScaleStrategyMax = kSimplexScaleStrategy0157
+enum SimplexSolvePhase {
+  kSolvePhaseMin = -3,
+  kSolvePhaseError = kSolvePhaseMin,   // -3
+  kSolvePhaseExit,                     // -2,
+  kSolvePhaseUnknown,                  // -1
+  kSolvePhaseOptimal,                  // 0
+  kSolvePhase1,                        // 1
+  kSolvePhase2,                        // 2
+  kSolvePhasePrimalInfeasibleCleanup,  // 3
+  kSolvePhaseOptimalCleanup,           // 4
+  kSolvePhaseTabooBasis,               // 5
+  kSolvePhaseMax = kSolvePhaseTabooBasis
 };
 
 enum SimplexCrashStrategy {
@@ -74,9 +78,7 @@ enum SimplexDualEdgeWeightStrategy {
   kSimplexDualEdgeWeightStrategyDantzig,
   kSimplexDualEdgeWeightStrategyDevex,
   kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial,
-  kSimplexDualEdgeWeightStrategyMax =
-      kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial
+  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
@@ -96,6 +98,16 @@ enum SimplexPriceStrategy {
   kSimplexPriceStrategyMax = kSimplexPriceStrategyRowSwitchColSwitch
 };
 
+enum SimplexPivotalRowRefinementStrategy {
+  kSimplexInfeasibilityProofRefinementMin = 0,
+  kSimplexInfeasibilityProofRefinementNo =
+      kSimplexInfeasibilityProofRefinementMin,
+  kSimplexInfeasibilityProofRefinementUnscaledLp,    // 1
+  kSimplexInfeasibilityProofRefinementAlsoScaledLp,  // 2
+  kSimplexInfeasibilityProofRefinementMax =
+      kSimplexInfeasibilityProofRefinementAlsoScaledLp
+};
+
 enum SimplexPrimalCorrectionStrategy {
   kSimplexPrimalCorrectionStrategyNone = 0,
   kSimplexPrimalCorrectionStrategyInRebuild,
@@ -105,28 +117,46 @@ enum SimplexPrimalCorrectionStrategy {
 
 // Not an enum class since rebuild_reason is used in so many places
 enum RebuildReason {
+  kRebuildReasonCleanup = -1,
   kRebuildReasonNo = 0,
   kRebuildReasonUpdateLimitReached,               // 1
   kRebuildReasonSyntheticClockSaysInvert,         // 2
   kRebuildReasonPossiblyOptimal,                  // 3
-  kRebuildReasonPossiblyPrimalUnbounded,          // 4
-  kRebuildReasonPossiblyDualUnbounded,            // 5
-  kRebuildReasonPossiblySingularBasis,            // 6
-  kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 7
-  kRebuildReasonChooseColumnFail,                 // 8
+  kRebuildReasonPossiblyPhase1Feasible,           // 4
+  kRebuildReasonPossiblyPrimalUnbounded,          // 5
+  kRebuildReasonPossiblyDualUnbounded,            // 6
+  kRebuildReasonPossiblySingularBasis,            // 7
+  kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
+  kRebuildReasonChooseColumnFail,                 // 9
   kRebuildReasonCount
+};
+
+enum SimplexNlaOperation {
+  kSimplexNlaNull = -1,
+  kSimplexNlaBtranFull = 0,
+  kSimplexNlaPriceFull,
+  kSimplexNlaBtranBasicFeasibilityChange,
+  kSimplexNlaPriceBasicFeasibilityChange,
+  kSimplexNlaBtranEp,
+  kSimplexNlaPriceAp,
+  kSimplexNlaFtran,
+  kSimplexNlaFtranBfrt,
+  kSimplexNlaFtranDse,
+  kNumSimplexNlaOperation
 };
 
 enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
-const HighsInt kDualTasksMinThreads = 3;
-const HighsInt kDualMultiMinThreads = 1;  // 2;
+const HighsInt kDualTasksMinConcurrency = 3;
+const HighsInt kDualMultiMinConcurrency = 1;  // 2;
 
 // Simplex nonbasicFlag status for columns and rows. Don't use enum
 // class since they are used as HighsInt to replace conditional
 // statements by multiplication
 const HighsInt kNonbasicFlagTrue = 1;   // Nonbasic
 const HighsInt kNonbasicFlagFalse = 0;  // Basic
+const HighsInt kIllegalFlagValue =
+    -99;  // Used to see whether valid flag value has been set
 
 // Simplex nonbasicMove status for columns and rows. Don't use enum
 // class since they are used in conditional statements
@@ -138,6 +168,30 @@ const HighsInt kIllegalMoveValue =
 
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
+
+const HighsInt kNoRowSought = -2;
+const HighsInt kNoRowChosen = -1;
+
+const double minDualSteepestEdgeWeight = 1e-4;
+
+enum class LpAction {
+  kScale = 0,
+  kNewCosts,
+  kNewBounds,
+  kNewBasis,
+  kNewCols,
+  kNewRows,
+  kDelCols,
+  kDelNonbasicCols,
+  kDelRows,
+  kDelRowsBasisOk,
+  kScaledCol,
+  kScaledRow,
+  kHotStart,
+  kBacktracking
+};
+
+enum class BadBasisChangeReason { kSingular = 0, kCycling };
 
 //
 // Relation between HiGHS basis and Simplex basis

@@ -28,14 +28,14 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config Release --parallel
+      run: cmake --build . --config Release --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --timeout 300 --output-on-failure -C Release
 
   windows_release:
     runs-on: windows-latest
@@ -62,14 +62,14 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config Release --parallel
+      run: cmake --build . --config Release --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --timeout 300 --output-on-failure -C Release
 
   fast_build_debug:
     runs-on: windows-latest
@@ -96,14 +96,14 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config Debug --parallel
+      run: cmake --build . --config Debug --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Debug --output-on-failure
+      run: ctest --timeout 300 --output-on-failure -C Debug
 
   windows_debug:
     runs-on: windows-latest
@@ -130,14 +130,14 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config Debug --parallel
+      run: cmake --build . --config Debug --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Debug --output-on-failure
+      run: ctest --timeout 300 --output-on-failure -C Debug
 
   windows_release64:
     runs-on: windows-latest
@@ -164,14 +164,14 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config Release --parallel
+      run: cmake --build . --config Release --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --timeout 300 --output-on-failure -C Release
 
   windows_debug64:
     runs-on: windows-latest
@@ -198,11 +198,11 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config Debug --parallel
+      run: cmake --build . --config Debug --parallel 4
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Debug --output-on-failure
+      run: ctest --timeout 300 --output-on-failure -C Debug

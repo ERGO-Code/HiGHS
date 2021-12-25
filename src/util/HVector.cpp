@@ -10,10 +10,15 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HVector.cpp
+/**@file util/HVector.cpp
  * @brief
  */
-#include "simplex/HVector.h"
+
+#if 0
+
+// todo these implementations are not needed as they are already located in HVectorBase.h
+
+#include "util/HVector.h"
 
 #include <cassert>
 #include <cmath>
@@ -72,14 +77,13 @@ void HVector::clear() {
 
 void HVector::tight() {
   /*
-   * Packing: Zero values in Vector.array which exceed kHighsTiny in
-   * magnitude
+   * Zero values in Vector.array that do not exceed kHighsTiny in magnitude
    */
   HighsInt totalCount = 0;
   for (HighsInt i = 0; i < count; i++) {
     const HighsInt my_index = index[i];
     const double value = array[my_index];
-    if (fabs(value) > kHighsTiny) {
+    if (fabs(value) >= kHighsTiny) {
       index[totalCount++] = my_index;
     } else {
       array[my_index] = 0;
@@ -160,3 +164,16 @@ void HVector::saxpy(const double pivotX, const HVector* pivot) {
   }
   count = workCount;
 }
+bool HVector::isEqual(HVector& v0) {
+  if (this->size != v0.size) return false;
+  if (this->count != v0.count) return false;
+  if (this->index != v0.index) return false;
+  if (this->array != v0.array) return false;
+  //  if (this->index.size() != v0.index.size()) return false;
+  //  for (HighsInt el = 0; el < (HighsInt)this->index.size(); el++)
+  //    if (this->index[el] != v0.index[el]) return false;
+  if (this->synthetic_tick != v0.synthetic_tick) return false;
+  return true;
+}
+
+#endif

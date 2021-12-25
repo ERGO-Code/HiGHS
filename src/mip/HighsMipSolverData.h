@@ -52,6 +52,7 @@ struct HighsMipSolverData {
   bool detectSymmetries;
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
+  HighsInt numCliqueEntriesAfterPresolve;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
@@ -157,7 +158,7 @@ struct HighsMipSolverData {
     rowvals = ARvalue_.data() + start;
   }
 
-  bool checkLimits() const;
+  bool checkLimits(int64_t nodeOffset = 0) const;
 };
 
 #endif

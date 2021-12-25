@@ -951,108 +951,110 @@ void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
 void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                                          double newbound) {
   auto mip = mipsolver->model_;
-  HighsInt start = mip->a_start_[col];
-  HighsInt end = mip->a_start_[col + 1];
+  HighsInt start = mip->a_matrix_.start_[col];
+  HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
 
   for (HighsInt i = start; i != end; ++i) {
-    if (mip->a_value_[i] > 0) {
+    if (mip->a_matrix_.value_[i] > 0) {
       double deltamin;
       if (oldbound == -kHighsInf) {
-        --activitymininf_[mip->a_index_[i]];
-        deltamin = newbound * mip->a_value_[i];
+        --activitymininf_[mip->a_matrix_.index_[i]];
+        deltamin = newbound * mip->a_matrix_.value_[i];
       } else if (newbound == -kHighsInf) {
-        ++activitymininf_[mip->a_index_[i]];
-        deltamin = -oldbound * mip->a_value_[i];
+        ++activitymininf_[mip->a_matrix_.index_[i]];
+        deltamin = -oldbound * mip->a_matrix_.value_[i];
       } else {
-        deltamin = (newbound - oldbound) * mip->a_value_[i];
+        deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
       }
-      activitymin_[mip->a_index_[i]] += deltamin;
+      activitymin_[mip->a_matrix_.index_[i]] += deltamin;
 
 #ifndef NDEBUG
       {
         HighsInt tmpinf;
         HighsCDouble tmpminact;
-        computeMinActivity(mipsolver->mipdata_->ARstart_[mip->a_index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_index_[i]] - tmpminact)) <=
-               mipsolver->mipdata_->feastol);
-        assert(tmpinf == activitymininf_[mip->a_index_[i]]);
+        computeMinActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
+        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                               tmpminact)) <= mipsolver->mipdata_->feastol);
+        assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
 
       if (deltamin <= 0) {
-        updateThresholdLbChange(col, newbound, mip->a_value_[i],
-                                capacityThreshold_[mip->a_index_[i]]);
+        updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
+                                capacityThreshold_[mip->a_matrix_.index_[i]]);
         continue;
       }
 
-      if (mip->row_upper_[mip->a_index_[i]] != kHighsInf &&
-          activitymininf_[mip->a_index_[i]] == 0 &&
-          activitymin_[mip->a_index_[i]] - mip->row_upper_[mip->a_index_[i]] >
+      if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
+          activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
+          activitymin_[mip->a_matrix_.index_[i]] -
+                  mip->row_upper_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
-        infeasible_reason = Reason::modelRowUpper(mip->a_index_[i]);
+        infeasible_reason = Reason::modelRowUpper(mip->a_matrix_.index_[i]);
         end = i + 1;
         break;
       }
 
-      if (activitymininf_[mip->a_index_[i]] <= 1 &&
-          !propagateflags_[mip->a_index_[i]] &&
-          mip->row_upper_[mip->a_index_[i]] != kHighsInf)
-        markPropagate(mip->a_index_[i]);
+      if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
+          !propagateflags_[mip->a_matrix_.index_[i]] &&
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
+        markPropagate(mip->a_matrix_.index_[i]);
     } else {
       double deltamax;
       if (oldbound == -kHighsInf) {
-        --activitymaxinf_[mip->a_index_[i]];
-        deltamax = newbound * mip->a_value_[i];
+        --activitymaxinf_[mip->a_matrix_.index_[i]];
+        deltamax = newbound * mip->a_matrix_.value_[i];
       } else if (newbound == -kHighsInf) {
-        ++activitymaxinf_[mip->a_index_[i]];
-        deltamax = -oldbound * mip->a_value_[i];
+        ++activitymaxinf_[mip->a_matrix_.index_[i]];
+        deltamax = -oldbound * mip->a_matrix_.value_[i];
       } else {
-        deltamax = (newbound - oldbound) * mip->a_value_[i];
+        deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
       }
-      activitymax_[mip->a_index_[i]] += deltamax;
+      activitymax_[mip->a_matrix_.index_[i]] += deltamax;
 
 #ifndef NDEBUG
       {
         HighsInt tmpinf;
         HighsCDouble tmpmaxact;
-        computeMaxActivity(mipsolver->mipdata_->ARstart_[mip->a_index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_index_[i]] - tmpmaxact)) <=
-               mipsolver->mipdata_->feastol);
-        assert(tmpinf == activitymaxinf_[mip->a_index_[i]]);
+        computeMaxActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
+        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
+        assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
 
       if (deltamax >= 0) continue;
 
-      if (mip->row_lower_[mip->a_index_[i]] != -kHighsInf &&
-          activitymaxinf_[mip->a_index_[i]] == 0 &&
-          mip->row_lower_[mip->a_index_[i]] - activitymax_[mip->a_index_[i]] >
+      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
+          activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] -
+                  activitymax_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
-        infeasible_reason = Reason::modelRowLower(mip->a_index_[i]);
+        infeasible_reason = Reason::modelRowLower(mip->a_matrix_.index_[i]);
         end = i + 1;
         break;
       }
 
-      if (activitymaxinf_[mip->a_index_[i]] <= 1 &&
-          !propagateflags_[mip->a_index_[i]] &&
-          mip->row_lower_[mip->a_index_[i]] != -kHighsInf)
-        markPropagate(mip->a_index_[i]);
+      if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
+          !propagateflags_[mip->a_matrix_.index_[i]] &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf)
+        markPropagate(mip->a_matrix_.index_[i]);
     }
   }
 
@@ -1062,36 +1064,36 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
   } else {
     assert(infeasible_reason.type == Reason::kModelRowLower ||
            infeasible_reason.type == Reason::kModelRowUpper);
-    assert(infeasible_reason.index == mip->a_index_[end - 1]);
+    assert(infeasible_reason.index == mip->a_matrix_.index_[end - 1]);
   }
 
   if (infeasible_) {
     std::swap(oldbound, newbound);
     for (HighsInt i = start; i != end; ++i) {
-      if (mip->a_value_[i] > 0) {
+      if (mip->a_matrix_.value_[i] > 0) {
         double deltamin;
         if (oldbound == -kHighsInf) {
-          --activitymininf_[mip->a_index_[i]];
-          deltamin = newbound * mip->a_value_[i];
+          --activitymininf_[mip->a_matrix_.index_[i]];
+          deltamin = newbound * mip->a_matrix_.value_[i];
         } else if (newbound == -kHighsInf) {
-          ++activitymininf_[mip->a_index_[i]];
-          deltamin = -oldbound * mip->a_value_[i];
+          ++activitymininf_[mip->a_matrix_.index_[i]];
+          deltamin = -oldbound * mip->a_matrix_.value_[i];
         } else {
-          deltamin = (newbound - oldbound) * mip->a_value_[i];
+          deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
         }
-        activitymin_[mip->a_index_[i]] += deltamin;
+        activitymin_[mip->a_matrix_.index_[i]] += deltamin;
       } else {
         double deltamax;
         if (oldbound == -kHighsInf) {
-          --activitymaxinf_[mip->a_index_[i]];
-          deltamax = newbound * mip->a_value_[i];
+          --activitymaxinf_[mip->a_matrix_.index_[i]];
+          deltamax = newbound * mip->a_matrix_.value_[i];
         } else if (newbound == -kHighsInf) {
-          ++activitymaxinf_[mip->a_index_[i]];
-          deltamax = -oldbound * mip->a_value_[i];
+          ++activitymaxinf_[mip->a_matrix_.index_[i]];
+          deltamax = -oldbound * mip->a_matrix_.value_[i];
         } else {
-          deltamax = (newbound - oldbound) * mip->a_value_[i];
+          deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
         }
-        activitymax_[mip->a_index_[i]] += deltamax;
+        activitymax_[mip->a_matrix_.index_[i]] += deltamax;
       }
     }
 
@@ -1105,114 +1107,116 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
                                          double newbound) {
   auto mip = mipsolver->model_;
-  HighsInt start = mip->a_start_[col];
-  HighsInt end = mip->a_start_[col + 1];
+  HighsInt start = mip->a_matrix_.start_[col];
+  HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
 
   for (HighsInt i = start; i != end; ++i) {
-    if (mip->a_value_[i] > 0) {
+    if (mip->a_matrix_.value_[i] > 0) {
       double deltamax;
       if (oldbound == kHighsInf) {
-        --activitymaxinf_[mip->a_index_[i]];
-        deltamax = newbound * mip->a_value_[i];
+        --activitymaxinf_[mip->a_matrix_.index_[i]];
+        deltamax = newbound * mip->a_matrix_.value_[i];
       } else if (newbound == kHighsInf) {
-        ++activitymaxinf_[mip->a_index_[i]];
-        deltamax = -oldbound * mip->a_value_[i];
+        ++activitymaxinf_[mip->a_matrix_.index_[i]];
+        deltamax = -oldbound * mip->a_matrix_.value_[i];
       } else {
-        deltamax = (newbound - oldbound) * mip->a_value_[i];
+        deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
       }
-      activitymax_[mip->a_index_[i]] += deltamax;
+      activitymax_[mip->a_matrix_.index_[i]] += deltamax;
 
 #ifndef NDEBUG
       {
         HighsInt tmpinf;
         HighsCDouble tmpmaxact;
-        computeMaxActivity(mipsolver->mipdata_->ARstart_[mip->a_index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_index_[i]] - tmpmaxact)) <=
-               mipsolver->mipdata_->feastol);
-        assert(tmpinf == activitymaxinf_[mip->a_index_[i]]);
+        computeMaxActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
+        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
+        assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
 
       if (deltamax >= 0) {
-        updateThresholdUbChange(col, newbound, mip->a_value_[i],
-                                capacityThreshold_[mip->a_index_[i]]);
+        updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
+                                capacityThreshold_[mip->a_matrix_.index_[i]]);
         continue;
       }
 
-      if (mip->row_lower_[mip->a_index_[i]] != -kHighsInf &&
-          activitymaxinf_[mip->a_index_[i]] == 0 &&
-          mip->row_lower_[mip->a_index_[i]] - activitymax_[mip->a_index_[i]] >
+      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
+          activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] -
+                  activitymax_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
-        infeasible_reason = Reason::modelRowLower(mip->a_index_[i]);
+        infeasible_reason = Reason::modelRowLower(mip->a_matrix_.index_[i]);
         end = i + 1;
         break;
       }
 
-      if (activitymaxinf_[mip->a_index_[i]] <= 1 &&
-          !propagateflags_[mip->a_index_[i]] &&
-          mip->row_lower_[mip->a_index_[i]] != -kHighsInf) {
-        markPropagate(mip->a_index_[i]);
-        // propagateflags_[mip->a_index_[i]] = 1;
-        // propagateinds_.push_back(mip->a_index_[i]);
+      if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
+          !propagateflags_[mip->a_matrix_.index_[i]] &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf) {
+        markPropagate(mip->a_matrix_.index_[i]);
+        // propagateflags_[mip->a_matrix_.index_[i]] = 1;
+        // propagateinds_.push_back(mip->a_matrix_.index_[i]);
       }
     } else {
       double deltamin;
       if (oldbound == kHighsInf) {
-        --activitymininf_[mip->a_index_[i]];
-        deltamin = newbound * mip->a_value_[i];
+        --activitymininf_[mip->a_matrix_.index_[i]];
+        deltamin = newbound * mip->a_matrix_.value_[i];
       } else if (newbound == kHighsInf) {
-        ++activitymininf_[mip->a_index_[i]];
-        deltamin = -oldbound * mip->a_value_[i];
+        ++activitymininf_[mip->a_matrix_.index_[i]];
+        deltamin = -oldbound * mip->a_matrix_.value_[i];
       } else {
-        deltamin = (newbound - oldbound) * mip->a_value_[i];
+        deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
       }
 
-      activitymin_[mip->a_index_[i]] += deltamin;
+      activitymin_[mip->a_matrix_.index_[i]] += deltamin;
 
 #ifndef NDEBUG
       {
         HighsInt tmpinf;
         HighsCDouble tmpminact;
-        computeMinActivity(mipsolver->mipdata_->ARstart_[mip->a_index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_index_[i]] - tmpminact)) <=
-               mipsolver->mipdata_->feastol);
-        assert(tmpinf == activitymininf_[mip->a_index_[i]]);
+        computeMinActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
+        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                               tmpminact)) <= mipsolver->mipdata_->feastol);
+        assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
 
       if (deltamin <= 0) continue;
 
-      if (mip->row_upper_[mip->a_index_[i]] != kHighsInf &&
-          activitymininf_[mip->a_index_[i]] == 0 &&
-          activitymin_[mip->a_index_[i]] - mip->row_upper_[mip->a_index_[i]] >
+      if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
+          activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
+          activitymin_[mip->a_matrix_.index_[i]] -
+                  mip->row_upper_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
-        infeasible_reason = Reason::modelRowUpper(mip->a_index_[i]);
+        infeasible_reason = Reason::modelRowUpper(mip->a_matrix_.index_[i]);
         end = i + 1;
         break;
       }
 
-      if (activitymininf_[mip->a_index_[i]] <= 1 &&
-          !propagateflags_[mip->a_index_[i]] &&
-          mip->row_upper_[mip->a_index_[i]] != kHighsInf) {
-        markPropagate(mip->a_index_[i]);
-        // propagateflags_[mip->a_index_[i]] = 1;
-        // propagateinds_.push_back(mip->a_index_[i]);
+      if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
+          !propagateflags_[mip->a_matrix_.index_[i]] &&
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf) {
+        markPropagate(mip->a_matrix_.index_[i]);
+        // propagateflags_[mip->a_matrix_.index_[i]] = 1;
+        // propagateinds_.push_back(mip->a_matrix_.index_[i]);
       }
     }
   }
@@ -1223,37 +1227,37 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   } else {
     assert(infeasible_reason.type == Reason::kModelRowLower ||
            infeasible_reason.type == Reason::kModelRowUpper);
-    assert(infeasible_reason.index == mip->a_index_[end - 1]);
+    assert(infeasible_reason.index == mip->a_matrix_.index_[end - 1]);
   }
 
   if (infeasible_) {
     std::swap(oldbound, newbound);
     for (HighsInt i = start; i != end; ++i) {
-      if (mip->a_value_[i] > 0) {
+      if (mip->a_matrix_.value_[i] > 0) {
         double deltamax;
         if (oldbound == kHighsInf) {
-          --activitymaxinf_[mip->a_index_[i]];
-          deltamax = newbound * mip->a_value_[i];
+          --activitymaxinf_[mip->a_matrix_.index_[i]];
+          deltamax = newbound * mip->a_matrix_.value_[i];
         } else if (newbound == kHighsInf) {
-          ++activitymaxinf_[mip->a_index_[i]];
-          deltamax = -oldbound * mip->a_value_[i];
+          ++activitymaxinf_[mip->a_matrix_.index_[i]];
+          deltamax = -oldbound * mip->a_matrix_.value_[i];
         } else {
-          deltamax = (newbound - oldbound) * mip->a_value_[i];
+          deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
         }
-        activitymax_[mip->a_index_[i]] += deltamax;
+        activitymax_[mip->a_matrix_.index_[i]] += deltamax;
       } else {
         double deltamin;
         if (oldbound == kHighsInf) {
-          --activitymininf_[mip->a_index_[i]];
-          deltamin = newbound * mip->a_value_[i];
+          --activitymininf_[mip->a_matrix_.index_[i]];
+          deltamin = newbound * mip->a_matrix_.value_[i];
         } else if (newbound == kHighsInf) {
-          ++activitymininf_[mip->a_index_[i]];
-          deltamin = -oldbound * mip->a_value_[i];
+          ++activitymininf_[mip->a_matrix_.index_[i]];
+          deltamin = -oldbound * mip->a_matrix_.value_[i];
         } else {
-          deltamin = (newbound - oldbound) * mip->a_value_[i];
+          deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
         }
 
-        activitymin_[mip->a_index_[i]] += deltamin;
+        activitymin_[mip->a_matrix_.index_[i]] += deltamin;
       }
     }
 
@@ -1312,10 +1316,16 @@ void HighsDomain::markPropagateCut(Reason reason) {
 void HighsDomain::markPropagate(HighsInt row) {
   if (!propagateflags_[row]) {
     bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
+                     (activitymininf_[row] != 0 ||
+                      activitymin_[row] < mipsolver->rowLower(row) -
+                                              mipsolver->mipdata_->feastol) &&
                      (activitymaxinf_[row] == 1 ||
                       (double(activitymax_[row]) - mipsolver->rowLower(row)) <=
                           capacityThreshold_[row]);
     bool propupper = mipsolver->rowUpper(row) != kHighsInf &&
+                     (activitymaxinf_[row] != 0 ||
+                      activitymax_[row] > mipsolver->rowUpper(row) +
+                                              mipsolver->mipdata_->feastol) &&
                      (activitymininf_[row] == 1 ||
                       (mipsolver->rowUpper(row) - double(activitymin_[row])) <=
                           capacityThreshold_[row]);
@@ -1763,7 +1773,10 @@ bool HighsDomain::propagate() {
           const HighsInt* Rindex = mipsolver->mipdata_->ARindex_.data() + start;
           const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
 
-          if (mipsolver->rowUpper(i) != kHighsInf) {
+          if (mipsolver->rowUpper(i) != kHighsInf &&
+              (activitymaxinf_[i] != 0 ||
+               activitymax_[i] >
+                   mipsolver->rowUpper(i) + mipsolver->mipdata_->feastol)) {
             // computeMinActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymininf_[i],
             //           activitymin_[i]);
@@ -1773,7 +1786,10 @@ bool HighsDomain::propagate() {
                 activitymininf_[i], &changedbounds[2 * start]);
           }
 
-          if (mipsolver->rowLower(i) != -kHighsInf) {
+          if (mipsolver->rowLower(i) != -kHighsInf &&
+              (activitymininf_[i] != 0 ||
+               activitymin_[i] <
+                   mipsolver->rowLower(i) - mipsolver->mipdata_->feastol)) {
             // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymaxinf_[i],
             //           activitymax_[i]);
@@ -2271,8 +2287,6 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
         return explainInfeasibilityConflict(conflict, len);
       }
   }
-
-  return false;
 }
 
 bool HighsDomain::ConflictSet::explainInfeasibilityConflict(

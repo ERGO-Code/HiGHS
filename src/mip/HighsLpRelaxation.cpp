@@ -307,6 +307,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     lprows.resize(lprows.size() - ndelcuts);
 
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
+    basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
     lpsolver.run();
   }
@@ -347,6 +348,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   if (!useBasis && agelimit != kHighsIInf) {
     HighsBasis b = mipsolver.mipdata_->firstrootbasis;
     b.row_status.resize(nlprows, HighsBasisStatus::kBasic);
+    b.debug_origin_name = "HighsLpRelaxation::removeCuts";
     HighsStatus st = lpsolver.setBasis(b);
     assert(st != HighsStatus::kError);
   }
@@ -443,15 +445,15 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   inds.reserve(lp.num_col_);
   vals.reserve(lp.num_col_);
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
-    HighsInt start = lp.a_start_[i];
-    HighsInt end = lp.a_start_[i + 1];
+    HighsInt start = lp.a_matrix_.start_[i];
+    HighsInt end = lp.a_matrix_.start_[i + 1];
 
     HighsCDouble sum = lp.col_cost_[i];
 
     for (HighsInt j = start; j != end; ++j) {
-      if (row_dual[lp.a_index_[j]] == 0) continue;
+      if (row_dual[lp.a_matrix_.index_[j]] == 0) continue;
       // @FlipRowDual += became -=
-      sum -= lp.a_value_[j] * row_dual[lp.a_index_[j]];
+      sum -= lp.a_matrix_.value_[j] * row_dual[lp.a_matrix_.index_[j]];
     }
 
     double val = double(sum);
@@ -559,14 +561,14 @@ void HighsLpRelaxation::storeDualInfProof() {
   }
 
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
-    HighsInt start = lp.a_start_[i];
-    HighsInt end = lp.a_start_[i + 1];
+    HighsInt start = lp.a_matrix_.start_[i];
+    HighsInt end = lp.a_matrix_.start_[i + 1];
 
     HighsCDouble sum = 0.0;
 
     for (HighsInt j = start; j != end; ++j) {
-      if (dualray[lp.a_index_[j]] == 0.0) continue;
-      sum -= lp.a_value_[j] * dualray[lp.a_index_[j]];
+      if (dualray[lp.a_matrix_.index_[j]] == 0.0) continue;
+      sum -= lp.a_matrix_.value_[j] * dualray[lp.a_matrix_.index_[j]];
     }
 
     double val = double(sum);
@@ -649,7 +651,7 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
                                             double& rhs) {
   if (!hasdualproof) return false;
 
-  assert(checkDualProof());
+  // assert(checkDualProof());
 
   inds = dualproofinds;
   vals = dualproofvals;
@@ -659,7 +661,7 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
 
 void HighsLpRelaxation::recoverBasis() {
   if (basischeckpoint) {
-    lpsolver.setBasis(*basischeckpoint);
+    lpsolver.setBasis(*basischeckpoint, "HighsLpRelaxation::recoverBasis");
     currentbasisstored = true;
   }
 }
@@ -733,35 +735,34 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         lpsolver.setOptionValue("objective_bound", objbound);
         return result;
       }
-
-      return Status::kError;
     case HighsModelStatus::kInfeasible: {
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
 
       storeDualInfProof();
-      if (checkDualProof()) return Status::kInfeasible;
+      if (true || checkDualProof()) return Status::kInfeasible;
+      // /printf("infeasibility proof not valid\n");
       hasdualproof = false;
 
-      HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
-      if (scalestrategy != kSimplexScaleStrategyOff) {
-        lpsolver.setOptionValue("simplex_scale_strategy",
-                                kSimplexScaleStrategyOff);
-        HighsBasis basis = lpsolver.getBasis();
-        lpsolver.clearSolver();
-        lpsolver.setBasis(basis);
-        auto tmp = run(resolve_on_error);
-        lpsolver.setOptionValue("simplex_scale_strategy", scalestrategy);
-        if (!scaledOptimal(tmp)) {
-          lpsolver.clearSolver();
-          lpsolver.setBasis(basis);
-        }
-        return tmp;
-      }
-
-      // trust the primal simplex result without scaling
-      if (lpsolver.getModelStatus() == HighsModelStatus::kInfeasible)
-        return Status::kInfeasible;
+      // HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
+      // if (scalestrategy != kSimplexScaleStrategyOff) {
+      //   lpsolver.setOptionValue("simplex_scale_strategy",
+      //                           kSimplexScaleStrategyOff);
+      //   HighsBasis basis = lpsolver.getBasis();
+      //   lpsolver.clearSolver();
+      //   lpsolver.setBasis(basis);
+      //   auto tmp = run(resolve_on_error);
+      //   lpsolver.setOptionValue("simplex_scale_strategy", scalestrategy);
+      //   if (!scaledOptimal(tmp)) {
+      //     lpsolver.clearSolver();
+      //     lpsolver.setBasis(basis);
+      //   }
+      //   return tmp;
+      // }
+      //
+      // // trust the primal simplex result without scaling
+      // if (lpsolver.getModelStatus() == HighsModelStatus::kInfeasible)
+      //   return Status::kInfeasible;
 
       // highsLogUser(mipsolver.options_mip_->log_options,
       //                 HighsLogType::kWarning,
@@ -774,6 +775,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::kError;
     }
+    case HighsModelStatus::kUnknown:
+      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+      // fall through
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
@@ -783,24 +787,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kOptimal;
 
-      if (resolve_on_error) {
-        // printf(
-        //     "error: optimal with unscaled infeasibilities (primal:%g, "
-        //     "dual:%g)\n",
-        //     info.max_primal_infeasibility, info.max_dual_infeasibility);
-        HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
-        if (scalestrategy != kSimplexScaleStrategyOff) {
-          lpsolver.setOptionValue("simplex_scale_strategy",
-                                  kSimplexScaleStrategyOff);
-          HighsBasis basis = lpsolver.getBasis();
-          lpsolver.clearSolver();
-          lpsolver.setBasis(basis);
-          auto tmp = run(resolve_on_error);
-          lpsolver.setOptionValue("simplex_scale_strategy", scalestrategy);
-          return tmp;
-        }
-      }
-
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kUnscaledPrimalFeasible;
 
@@ -809,7 +795,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       return Status::kUnscaledInfeasible;
     case HighsModelStatus::kIterationLimit: {
-      if (resolve_on_error) {
+      if (!mipsolver.submip && resolve_on_error) {
         // printf(
         //     "error: lpsolver reached iteration limit, resolving with basis "
         //     "from ipm\n");
@@ -817,12 +803,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.passModel(lpsolver.getLp());
         ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("output_flag", false);
+        ipm.setOptionValue("ipm_iteration_limit", 200);
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
         ipm.run();
-        lpsolver.setBasis(ipm.getBasis());
+        lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }
 

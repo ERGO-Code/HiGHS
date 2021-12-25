@@ -16,11 +16,10 @@
 #ifndef IPM_IPX_WRAPPER_EMPTY_H_
 #define IPM_IPX_WRAPPER_EMPTY_H_
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpSolverObject.h"
 
-HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model) {
-  model.unscaled_model_status_ = HighsModelStatus::kNotset;
+HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
+  solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
   return HighsStatus::kError;
 }
 #endif

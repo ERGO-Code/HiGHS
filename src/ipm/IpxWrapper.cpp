@@ -18,6 +18,8 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
+using std::min;
+
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& obj, std::vector<double>& col_lb,
                    std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
@@ -95,13 +97,13 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   std::vector<HighsInt> sizes(num_col, 0);
 
   for (HighsInt col = 0; col < lp.num_col_; col++)
-    for (HighsInt k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
-      HighsInt row = lp.a_index_[k];
+    for (HighsInt k = lp.a_matrix_.start_[col]; k < lp.a_matrix_.start_[col + 1]; k++) {
+      HighsInt row = lp.a_matrix_.index_[k];
       if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf)
         sizes[col]++;
     }
   // Copy Astart and Aindex to ipx::Int array.
-  HighsInt nnz = lp.a_index_.size();
+  HighsInt nnz = lp.a_matrix_.index_.size();
   Ap.resize(num_col + 1);
   Ai.reserve(nnz + num_slack);
   Ax.reserve(nnz + num_slack);
@@ -110,22 +112,15 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   Ap[0] = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     Ap[col + 1] = Ap[col] + sizes[col];
-    //    printf("Struc Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT ";
-    //    Al[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n", col,
-    //    (int)Ap[col], col, (int)sizes[col]);
   }
   for (HighsInt col = lp.num_col_; col < (HighsInt)num_col; col++) {
     Ap[col + 1] = Ap[col] + 1;
-    //    printf("Slack Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
-    //    col, (int)Ap[col]);
   }
-  //  printf("Fictn Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
-  //  (int)num_col, (int)Ap[num_col]);
   for (HighsInt k = 0; k < nnz; k++) {
-    HighsInt row = lp.a_index_[k];
+    HighsInt row = lp.a_matrix_.index_[k];
     if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf) {
-      Ai.push_back(reduced_rowmap[lp.a_index_[k]]);
-      Ax.push_back(lp.a_value_[k]);
+      Ai.push_back(reduced_rowmap[lp.a_matrix_.index_[k]]);
+      Ax.push_back(lp.a_matrix_.value_[k]);
     }
   }
 
@@ -159,18 +154,6 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
     obj[col] = (HighsInt)lp.sense_ * lp.col_cost_[col];
   }
   obj.insert(obj.end(), num_slack, 0);
-  /*
-  for (int col = 0; col < num_col; col++)
-    printf("Col %2" HIGHSINT_FORMAT ": [%11.4g, %11.4g] Cost = %11.4g; Start =
-  %" HIGHSINT_FORMAT "\n", col, col_lb[col], col_ub[col], obj[col],
-  (int)Ap[col]); for (int row = 0; row < num_row; row++) printf("Row %2"
-  HIGHSINT_FORMAT ": RHS = %11.4g; Type = %" HIGHSINT_FORMAT "\n", row,
-  rhs[row], constraint_type[row]); for (int col = 0; col < num_col; col++) { for
-  (int el = Ap[col]; el < Ap[col+1]; el++) { printf("El %2" HIGHSINT_FORMAT ":
-  [%2" HIGHSINT_FORMAT ", %11.4g]\n", el, (int)Ai[el], Ax[el]);
-    }
-  }
-  */
 }
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
@@ -488,12 +471,13 @@ void reportIpmNoProgress(const HighsOptions& options,
                ipx_info.abs_dresidual);
 }
 
-void getHighsNonVertexSolution(const HighsLogOptions& log_options,
+void getHighsNonVertexSolution(const HighsOptions& options,
                                const HighsLp& lp, const ipx::Int num_col,
                                const ipx::Int num_row,
                                const std::vector<double>& rhs,
                                const std::vector<char>& constraint_type,
                                const ipx::LpSolver& lps,
+			       const HighsModelStatus model_status,
                                HighsSolution& highs_solution) {
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
@@ -510,16 +494,17 @@ void getHighsNonVertexSolution(const HighsLogOptions& log_options,
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
 
-  ipxSolutionToHighsSolution(log_options, lp, rhs, constraint_type, num_col,
-                             num_row, x, slack, highs_solution);
+  ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
+                             num_row, x, slack, y, zl, zu,
+			     model_status, highs_solution);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, bool& imprecise_solution,
-                       HighsBasis& highs_basis, HighsSolution& highs_solution,
-                       HighsIterationCounts& iteration_counts,
+                       const HighsLp& lp, 
+                       HighsBasis& highs_basis,
+		       HighsSolution& highs_solution,
                        HighsModelStatus& model_status,
-                       HighsSolutionParams& solution_params) {
+                       HighsInfo& highs_info) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -549,9 +534,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   highs_basis.valid = false;
   highs_solution.value_valid = false;
   highs_solution.dual_valid = false;
-  // Indicate that no imprecise soluition hs (yet) been found
-  imprecise_solution = false;
-  resetModelStatusAndSolutionParams(model_status, solution_params, options);
+  // Indicate that no imprecise solution has (yet) been found
+  resetModelStatusAndHighsInfo(model_status, highs_info);
   // Create the LpSolver instance
   ipx::LpSolver lps;
   // Set IPX parameters
@@ -582,9 +566,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
   parameters.crossover_start = options.start_crossover_tolerance;
+  parameters.analyse_basis_data = kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  parameters.ipm_maxiter = options.ipm_iteration_limit - iteration_counts.ipm;
+  parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
   parameters.crossover = options.run_crossover;
   if (!parameters.crossover) {
@@ -620,13 +605,14 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Use IPX to solve the LP!
   ipx::Int solve_status = lps.Solve();
 
+  const bool report_solve_data = kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
-  iteration_counts.ipm += (HighsInt)ipx_info.iter;
-
-  iteration_counts.crossover += (HighsInt)ipx_info.updates_crossover;
-  // iteration_counts.crossover += (int)ipx_info.pushes_crossover;
+  if (report_solve_data) reportSolveData(options.log_options, ipx_info);
+  highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
+  highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  // highs_info.crossover_iteration_count += (int)ipx_info.pushes_crossover;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
@@ -664,10 +650,12 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   if (solve_status == IPX_STATUS_stopped) {
     // IPX stopped, so there's certainly no basic solution. Get the
-    // non-vertex solution, though.
-    //    assert(0==1);
-    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
-                              constraint_type, lps, highs_solution);
+    // non-vertex solution, though. This needs the model status to
+    // know whether to worry about dual infeasibilities.
+    const HighsModelStatus local_model_status = HighsModelStatus::kUnknown;
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
+                              constraint_type, lps,
+			      local_model_status, highs_solution);
     //
     // Look at the reason why IPX stopped
     //
@@ -739,9 +727,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
       model_status = HighsModelStatus::kUnboundedOrInfeasible;
     }
-    //    assert(0==2);
-    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
-                              constraint_type, lps, highs_solution);
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
+                              constraint_type, lps,
+			      model_status, highs_solution);
     return HighsStatus::kOk;
   }
 
@@ -768,8 +756,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   const bool have_basic_solution =
       ipx_info.status_crossover != IPX_STATUS_not_run;
   // Both crossover and IPM can be imprecise
-  imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise ||
-                       ipx_info.status_ipm == IPX_STATUS_imprecise;
+  const bool imprecise_solution =
+    ipx_info.status_crossover == IPX_STATUS_imprecise ||
+    ipx_info.status_ipm == IPX_STATUS_imprecise;
   if (have_basic_solution) {
     IpxSolution ipx_solution;
     ipx_solution.num_col = num_col;
@@ -790,10 +779,16 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
-    //    assert(0==3);
-    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
-                              constraint_type, lps, highs_solution);
+    // No basic solution, so get a non-vertex HiGHS solution. This
+    // needs the model status to know whether to worry about dual
+    // infeasibilities.
+    const HighsModelStatus local_model_status = imprecise_solution ? HighsModelStatus::kUnknown : HighsModelStatus::kOptimal;
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
+                              constraint_type, lps,
+			      local_model_status, highs_solution);
+    assert(!highs_basis.valid);
   }
+  highs_info.basis_validity = highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
   HighsStatus return_status;
   if (imprecise_solution) {
     model_status = HighsModelStatus::kUnknown;
@@ -805,8 +800,200 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
-HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model) {
-  return solveLpIpx(model.options_, model.timer_, model.lp_, imprecise_solution,
-                    model.basis_, model.solution_, model.iteration_counts_,
-                    model.unscaled_model_status_, model.solution_params_);
+HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
+  return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
+                    solver_object.basis_, solver_object.solution_, 
+                    solver_object.unscaled_model_status_, solver_object.highs_info_);
+}
+
+void reportSolveData(const HighsLogOptions& log_options, const ipx::Info& ipx_info) {
+  highsLogDev(log_options, HighsLogType::kInfo, "\nIPX Solve data\n");
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    IPX       status = %4d\n", (int)ipx_info.status);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    IPM       status = %4d\n", (int)ipx_info.status_ipm);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Crossover status = %4d\n", (int)ipx_info.status_crossover);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    IPX errflag      = %4d\n\n", (int)ipx_info.errflag);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    LP variables   = %8d\n", (int)ipx_info.num_var);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    LP constraints = %8d\n", (int)ipx_info.num_constr);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    LP entries     = %8d\n\n", (int)ipx_info.num_entries);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Solver columns = %8d\n", (int)ipx_info.num_cols_solver);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Solver rows    = %8d\n", (int)ipx_info.num_rows_solver);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Solver entries = %8d\n\n", (int)ipx_info.num_entries_solver);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Dualized = %d\n", (int)ipx_info.dualized);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Number of dense columns detected = %d\n\n", (int)ipx_info.dense_cols);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Dependent rows    = %d\n", (int)ipx_info.dependent_rows);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Dependent cols    = %d\n", (int)ipx_info.dependent_cols);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Inconsistent rows = %d\n", (int)ipx_info.rows_inconsistent);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Inconsistent cols = %d\n", (int)ipx_info.cols_inconsistent);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Primal dropped    = %d\n", (int)ipx_info.primal_dropped);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Dual   dropped    = %d\n\n", (int)ipx_info.dual_dropped);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |Absolute primal residual| = %11.4g\n", ipx_info.abs_presidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |Absolute   dual residual| = %11.4g\n", ipx_info.abs_dresidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |Relative primal residual| = %11.4g\n", ipx_info.rel_presidual);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |Relative   dual residual| = %11.4g\n\n", ipx_info.rel_dresidual);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Primal objective value     = %11.4g\n", ipx_info.pobjval);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Dual   objective value     = %11.4g\n", ipx_info.dobjval);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Relative objective gap     = %11.4g\n", ipx_info.rel_objgap);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Complementarity            = %11.4g\n\n", ipx_info.complementarity);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |x| = %11.4g\n", ipx_info.normx);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |y| = %11.4g\n", ipx_info.normy);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    |z| = %11.4g\n\n", ipx_info.normz);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Objective value       = %11.4g\n", ipx_info.objval);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Primal infeasiblility = %11.4g\n", ipx_info.primal_infeas);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Dual infeasiblility   = %11.4g\n\n", ipx_info.dual_infeas);
+  
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    IPM iter   = %d\n", (int)ipx_info.iter);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    KKT iter 1 = %d\n", (int)ipx_info.kktiter1);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    KKT iter 2 = %d\n", (int)ipx_info.kktiter2);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Basis repairs = %d\n", (int)ipx_info.basis_repairs);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Updates start     = %d\n", (int)ipx_info.updates_start);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Updates ipm       = %d\n", (int)ipx_info.updates_ipm);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Updates crossover = %d\n\n", (int)ipx_info.updates_crossover);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time total          = %8.2f\n\n", ipx_info.time_total);
+  double sum_time = 0;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time IPM 1          = %8.2f\n", ipx_info.time_ipm1);
+  sum_time += ipx_info.time_ipm1;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time IPM 2          = %8.2f\n", ipx_info.time_ipm2);
+  sum_time += ipx_info.time_ipm2;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time starting basis = %8.2f\n", ipx_info.time_starting_basis);
+  sum_time += ipx_info.time_starting_basis;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time crossover      = %8.2f\n", ipx_info.time_crossover);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Sum                 = %8.2f\n\n", sum_time);
+
+  sum_time = 0;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time kkt_factorize  = %8.2f\n", ipx_info.time_kkt_factorize);
+  sum_time += ipx_info.time_kkt_factorize;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time kkt_solve      = %8.2f\n", ipx_info.time_kkt_solve);
+  sum_time += ipx_info.time_kkt_solve;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Sum                 = %8.2f\n\n", sum_time);
+
+  sum_time = 0;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time maxvol         = %8.2f\n", ipx_info.time_maxvol);
+  sum_time += ipx_info.time_maxvol;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr1            = %8.2f\n", ipx_info.time_cr1);
+  sum_time += ipx_info.time_cr1;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr2            = %8.2f\n", ipx_info.time_cr2);
+  sum_time += ipx_info.time_cr2;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Sum                 = %8.2f\n\n", sum_time);
+
+  sum_time = 0;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr1_AAt        = %8.2f\n", ipx_info.time_cr1_AAt);
+  sum_time += ipx_info.time_cr1_AAt;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr1_pre        = %8.2f\n", ipx_info.time_cr1_pre);
+  sum_time += ipx_info.time_cr1_pre;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Sum  cr1            = %8.2f\n\n", sum_time);
+
+  sum_time = 0;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr2_NNt        = %8.2f\n", ipx_info.time_cr2_NNt);
+  sum_time += ipx_info.time_cr2_NNt;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr2_B          = %8.2f\n", ipx_info.time_cr2_B);
+  sum_time += ipx_info.time_cr2_B;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time cr2_Bt         = %8.2f\n", ipx_info.time_cr2_Bt);
+  sum_time += ipx_info.time_cr2_Bt;
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Sum  cr2            = %8.2f\n\n", sum_time);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Proportion of sparse FTRAN = %11.4g\n", ipx_info.ftran_sparse);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Proportion of sparse BTRAN = %11.4g\n\n", ipx_info.btran_sparse);
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time FTRAN       = %8.2f\n", ipx_info.time_ftran);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time BTRAN       = %8.2f\n", ipx_info.time_btran);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time LU INVERT   = %8.2f\n", ipx_info.time_lu_invert);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time LU UPDATE   = %8.2f\n", ipx_info.time_lu_update);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Mean fill-in     = %11.4g\n", ipx_info.mean_fill);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Max fill-in      = %11.4g\n", ipx_info.max_fill);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Time symb INVERT = %11.4g\n\n", ipx_info.time_symb_invert);
+  
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Maxvol updates       = %d\n", (int)ipx_info.maxvol_updates);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Maxvol skipped       = %d\n", (int)ipx_info.maxvol_skipped);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Maxvol passes        = %d\n", (int)ipx_info.maxvol_passes);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Tableau num nonzeros = %d\n", (int)ipx_info.tbl_nnz);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Tbl max?             = %11.4g\n", ipx_info.tbl_max);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Frobnorm squared     = %11.4g\n", ipx_info.frobnorm_squared);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Lambda max           = %11.4g\n", ipx_info.lambdamax);
+  highsLogDev(log_options, HighsLogType::kInfo,
+	 "    Volume increase      = %11.4g\n\n", ipx_info.volume_increase);
+
 }

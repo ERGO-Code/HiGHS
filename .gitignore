@@ -48,10 +48,11 @@ local.properties
 x64/
 build32/
 build64/
+test32/
+test64/
 [Bb]in/
 [Oo]bj/
 test/
-test64/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -237,11 +238,7 @@ pip-log.txt
 #Virtual Studio directory
 .vscode/
 
-#Unit test fallout?
-test.lp
-test.out.gz
-test2.lp
-test2.out
+#Unit test fallout
 
 #SCIP interface
 lpi_highs.cpp
@@ -259,3 +256,8 @@ releaseDocs
 #HiGHS options files
 *.set
 
+#ctest files
+InvalidBasis.bas
+adlittle.bas
+adlittle.lp
+qjh.mps

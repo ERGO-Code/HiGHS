@@ -51,7 +51,7 @@ class HighsMipSolver {
 
   HighsInt numRow() const { return model_->num_row_; }
 
-  HighsInt numNonzero() const { return model_->a_index_.size(); }
+  HighsInt numNonzero() const { return model_->a_matrix_.numNz(); }
 
   const double* colCost() const { return model_->col_cost_.data(); }
 

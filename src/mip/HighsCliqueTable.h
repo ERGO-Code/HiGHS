@@ -55,6 +55,7 @@ class HighsCliqueTable {
     HighsInt start;
     HighsInt end;
     HighsInt origin;
+    HighsInt numZeroFixed;
     bool equality;
   };
 
@@ -86,7 +87,6 @@ class HighsCliqueTable {
   std::vector<HighsInt> cliquesetroot;
   std::vector<HighsInt> sizeTwoCliquesetRoot;
   std::vector<HighsInt> numcliquesvar;
-  std::vector<HighsInt> redundantconstraints;
   std::vector<CliqueVar> infeasvertexstack;
 
   std::vector<HighsInt> colsubstituted;
@@ -94,6 +94,7 @@ class HighsCliqueTable {
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<uint8_t> iscandidate;
+  std::vector<uint8_t> colDeleted;
   std::vector<uint16_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
   std::vector<HighsInt> stack;
@@ -104,6 +105,7 @@ class HighsCliqueTable {
   HighsRandom randgen;
   HighsInt nfixings;
   HighsInt numEntries;
+  bool inPresolve;
   HighsInt splay(HighsInt cliqueid, HighsInt root);
 
   void unlink(HighsInt node);
@@ -126,11 +128,11 @@ class HighsCliqueTable {
     HighsInt ncalls = 0;
     HighsInt maxcalls = 10000;
     HighsInt maxcliques = 100;
-    int64_t maxSplayCalls = std::numeric_limits<int64_t>::max();
+    int64_t maxNeighborhoodQueries = std::numeric_limits<int64_t>::max();
 
-    bool stop(int64_t numSplayCalls) const {
+    bool stop(int64_t numNeighborhoodQueries) const {
       return maxcalls == ncalls || int(cliques.size()) == maxcliques ||
-             numSplayCalls > maxSplayCalls;
+             numNeighborhoodQueries > maxNeighborhoodQueries;
     }
 
     BronKerboschData(const std::vector<double>& sol) : sol(sol) {}
@@ -153,16 +155,23 @@ class HighsCliqueTable {
                    bool equality = false, HighsInt origin = kHighsIInf);
 
  public:
-  int64_t numSplayCalls;
+  int64_t numNeighborhoodQueries;
+
   HighsCliqueTable(HighsInt ncols) {
     cliquesetroot.resize(2 * ncols, -1);
     sizeTwoCliquesetRoot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
+    colDeleted.resize(ncols, false);
     nfixings = 0;
-    numSplayCalls = 0;
+    numNeighborhoodQueries = 0;
     numEntries = 0;
+    inPresolve = false;
   }
+
+  void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
+
+  HighsInt getNumEntries() const { return numEntries; }
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 

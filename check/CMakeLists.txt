@@ -13,7 +13,12 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 
 # Make test executable
 set(TEST_SOURCES
+    TestAlienBasis.cpp
+    TestDualise.cpp
+    TestCheckSolution.cpp
     TestEkk.cpp
+    TestFreezeBasis.cpp
+    TestHotStart.cpp
     TestMain.cpp
     TestOptions.cpp
     TestIO.cpp
@@ -24,7 +29,10 @@ set(TEST_SOURCES
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
+    TestHighsHash.cpp
     TestHighsIntegers.cpp
+    TestHighsParallel.cpp
+    TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
     TestHSet.cpp
@@ -34,6 +42,7 @@ set(TEST_SOURCES
     TestQpSolver.cpp
     TestRays.cpp
     TestRanging.cpp
+    TestSemiVariables.cpp
     TestThrow.cpp
     Avgas.cpp)
 
@@ -50,6 +59,12 @@ if (IPX_ON)
 endif()
 
 add_executable(unit_tests ${TEST_SOURCES})
+if (UNIX)
+    target_compile_options(unit_tests PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
+    target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(unit_tests PRIVATE "-Wno-sign-compare")
+endif()
 target_link_libraries(unit_tests libhighs Catch)
 
 if (OSI_FOUND AND BUILD_TESTING)
@@ -82,6 +97,7 @@ add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target unit_tests
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 
@@ -102,6 +118,7 @@ add_test(NAME osi-unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
+                 --config ${CMAKE_BUILD_TYPE}
          )
 
 # Avoid that several build jobs try to concurretly build.
@@ -149,17 +166,17 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;3295\; 5.5018458883\;"
-    "80bau3b\;3832\; 9.8722419241\;"
-    "adlittle\;83\; 2.2549496316\;"
+    "25fv47\;3149\; 5.5018458883\;"
+    "80bau3b\;3686\; 9.8722419241\;"
+    "adlittle\;74\; 2.2549496316\;"
     "afiro\;22\;-4.6475314286\;"
-    "etamacro\;502\;-7.55715231\;"
-    "greenbea\;4573\;-7.2555248130\;"
-    "shell\;626\; 1.2088253460\;"
-    "stair\;527\;-2.5126695119\;"
-    "standata\;69\; 1.2576995000\;"
+    "etamacro\;540\;-7.5571523330\;"
+    "greenbea\;4907\;-7.2555248130\;"
+    "shell\;623\; 1.2088253460\;"
+    "stair\;529\;-2.5126695119\;"
+    "standata\;72\; 1.2576995000\;"
     "standgub\;68\; 1.2576995000\;"
-    "standmps\;219\; 1.4060175000\;"
+    "standmps\;218\; 1.4060175000\;"
     )
 
 set(infeasibleInstances
@@ -184,11 +201,11 @@ set(failInstances
 set(mipInstances 
     "small_mip\;3.2368421\;"
     "flugpl\;1201500\;"
-    "lseu\;1120\;"
+    "lseu\;1120|1119.9999999\;"
     "egout\;(568.1007|568.1006999)\;"
     "gt2\;21166\;"
     "rgn\;82.1999992\;"
-    "bell5\;(8966406.49152|8966406.491519)\;"
+    "bell5\;(8966406.49152|8966406.491519|8966406.49151)\;"
     "sp150x300d\;(69|68.9999999)\;"
     "p0548\;(8691|8690.9999999)\;"
     "dcmulti\;188182\;"
@@ -201,9 +218,9 @@ set(settings
     "--random_seed=1"
     "--random_seed=2"
     "--random_seed=3"
-    "--random_seed=4"
-    "--random_seed=5"
-#    "--parallel=on"
+#   "--random_seed=4"
+#   "--random_seed=5"
+#   "--parallel=on"
     )
 
 # define a macro to add tests

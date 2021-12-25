@@ -178,7 +178,7 @@ HighsInt Highs_lpDimMpsRead(
   const HighsLp& lp = highs.getLp();
   *numcol = lp.num_col_;
   *numrow = lp.num_row_;
-  *numnz = lp.a_start_[lp.num_col_];
+  *numnz = lp.a_matrix_.numNz();
   return (HighsInt)status;
 }
 
@@ -193,7 +193,7 @@ HighsInt Highs_lpDataMpsRead(
   const char* filename = "ml.mps";
   HighsStatus status = highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
-  const HighsInt num_nz = lp.a_start_[lp.num_col_];
+  const HighsInt num_nz = lp.a_matrix_.start_[lp.num_col_];
   assert(lp.num_col_ == numcol);
   assert(lp.num_row_ == numrow);
   *sense = (HighsInt)lp.sense_;
@@ -203,9 +203,9 @@ HighsInt Highs_lpDataMpsRead(
   memcpy(colupper, &lp.col_upper_[0], (numcol) * sizeof(double));
   memcpy(rowlower, &lp.row_lower_[0], (numrow) * sizeof(double));
   memcpy(rowupper, &lp.row_upper_[0], (numrow) * sizeof(double));
-  memcpy(astart, &lp.a_start_[0], (numcol + 1) * sizeof(HighsInt));
-  memcpy(aindex, &lp.a_index_[0], (num_nz) * sizeof(HighsInt));
-  memcpy(avalue, &lp.a_value_[0], (num_nz) * sizeof(double));
+  memcpy(astart, &lp.a_matrix_.start_[0], (numcol + 1) * sizeof(HighsInt));
+  memcpy(aindex, &lp.a_matrix_.index_[0], (num_nz) * sizeof(HighsInt));
+  memcpy(avalue, &lp.a_matrix_.value_[0], (num_nz) * sizeof(double));
 
   return (HighsInt)status;
 }
@@ -224,12 +224,14 @@ HighsInt Highs_writeModel(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->writeModel(std::string(filename));
 }
 
-HighsInt Highs_writeSolution(void* highs, const char* filename) {
-  return (HighsInt)((Highs*)highs)->writeSolution(std::string(filename));
+HighsInt Highs_writeSolution(const void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)
+      ->writeSolution(std::string(filename), kSolutionStyleRaw);
 }
 
-HighsInt Highs_writeSolutionPretty(void* highs, const char* filename) {
-  return (HighsInt)((Highs*)highs)->writeSolution(std::string(filename), true);
+HighsInt Highs_writeSolutionPretty(const void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)
+      ->writeSolution(std::string(filename), kSolutionStylePretty);
 }
 
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
@@ -313,7 +315,7 @@ HighsInt Highs_setOptionValue(void* highs, const char* option,
       ->setOptionValue(std::string(option), std::string(value));
 }
 
-HighsInt Highs_getBoolOptionValue(void* highs, const char* option,
+HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
                                   HighsInt* value) {
   bool v;
   HighsInt retcode =
@@ -322,17 +324,17 @@ HighsInt Highs_getBoolOptionValue(void* highs, const char* option,
   return retcode;
 }
 
-HighsInt Highs_getIntOptionValue(void* highs, const char* option,
+HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
                                  HighsInt* value) {
   return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
 }
 
-HighsInt Highs_getDoubleOptionValue(void* highs, const char* option,
+HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
                                     double* value) {
   return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
 }
 
-HighsInt Highs_getStringOptionValue(void* highs, const char* option,
+HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
                                     char* value) {
   std::string v;
   memset(value, 0, 7);
@@ -342,7 +344,8 @@ HighsInt Highs_getStringOptionValue(void* highs, const char* option,
   return retcode;
 }
 
-HighsInt Highs_getOptionType(void* highs, const char* option, HighsInt* type) {
+HighsInt Highs_getOptionType(const void* highs, const char* option,
+                             HighsInt* type) {
   HighsOptionType t;
   HighsInt retcode =
       (HighsInt)((Highs*)highs)->getOptionType(std::string(option), t);
@@ -362,16 +365,17 @@ HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->writeOptions(filename, true);
 }
 
-HighsInt Highs_getIntInfoValue(void* highs, const char* info, HighsInt* value) {
+HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
+                               HighsInt* value) {
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
-HighsInt Highs_getDoubleInfoValue(void* highs, const char* info,
+HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
                                   double* value) {
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
-HighsInt Highs_getSolution(void* highs, double* colvalue, double* coldual,
+HighsInt Highs_getSolution(const void* highs, double* colvalue, double* coldual,
                            double* rowvalue, double* rowdual) {
   HighsSolution solution = ((Highs*)highs)->getSolution();
 
@@ -401,7 +405,8 @@ HighsInt Highs_getSolution(void* highs, double* colvalue, double* coldual,
   return HighsStatuskOk;
 }
 
-HighsInt Highs_getBasis(void* highs, HighsInt* colstatus, HighsInt* rowstatus) {
+HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
+                        HighsInt* rowstatus) {
   HighsBasis basis = ((Highs*)highs)->getBasis();
   for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
     colstatus[i] = (HighsInt)basis.col_status[i];
@@ -413,15 +418,15 @@ HighsInt Highs_getBasis(void* highs, HighsInt* colstatus, HighsInt* rowstatus) {
   return HighsStatuskOk;
 }
 
-HighsInt Highs_getModelStatus(void* highs) {
+HighsInt Highs_getModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus();
 }
 
-HighsInt Highs_getScaledModelStatus(void* highs) {
+HighsInt Highs_getScaledModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus(true);
 }
 
-HighsInt Highs_getDualRay(void* highs, HighsInt* has_dual_ray,
+HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
                           double* dual_ray_value) {
   bool v;
   HighsInt retcode = (HighsInt)((Highs*)highs)->getDualRay(v, dual_ray_value);
@@ -429,7 +434,7 @@ HighsInt Highs_getDualRay(void* highs, HighsInt* has_dual_ray,
   return retcode;
 }
 
-HighsInt Highs_getPrimalRay(void* highs, HighsInt* has_primal_ray,
+HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
                             double* primal_ray_value) {
   bool v;
   HighsInt retcode =
@@ -438,36 +443,36 @@ HighsInt Highs_getPrimalRay(void* highs, HighsInt* has_primal_ray,
   return retcode;
 }
 
-double Highs_getObjectiveValue(void* highs) {
+double Highs_getObjectiveValue(const void* highs) {
   return ((Highs*)highs)->getObjectiveValue();
 }
 
-HighsInt Highs_getBasicVariables(void* highs, HighsInt* basic_variables) {
+HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables) {
   return (HighsInt)((Highs*)highs)->getBasicVariables(basic_variables);
 }
 
-HighsInt Highs_getBasisInverseRow(void* highs, const HighsInt row,
+HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
                                   double* row_vector, HighsInt* row_num_nz,
                                   HighsInt* row_indices) {
   return (HighsInt)((Highs*)highs)
       ->getBasisInverseRow(row, row_vector, row_num_nz, row_indices);
 }
 
-HighsInt Highs_getBasisInverseCol(void* highs, const HighsInt col,
+HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
                                   double* col_vector, HighsInt* col_num_nz,
                                   HighsInt* col_indices) {
   return (HighsInt)((Highs*)highs)
       ->getBasisInverseCol(col, col_vector, col_num_nz, col_indices);
 }
 
-HighsInt Highs_getBasisSolve(void* highs, const double* rhs,
+HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
                              double* solution_vector, HighsInt* solution_num_nz,
                              HighsInt* solution_indices) {
   return (HighsInt)((Highs*)highs)
       ->getBasisSolve(rhs, solution_vector, solution_num_nz, solution_indices);
 }
 
-HighsInt Highs_getBasisTransposeSolve(void* highs, const double* rhs,
+HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
                                       double* solution_vector,
                                       HighsInt* solution_nz,
                                       HighsInt* solution_indices) {
@@ -476,14 +481,14 @@ HighsInt Highs_getBasisTransposeSolve(void* highs, const double* rhs,
                                solution_indices);
 }
 
-HighsInt Highs_getReducedRow(void* highs, const HighsInt row,
+HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
                              double* row_vector, HighsInt* row_num_nz,
                              HighsInt* row_indices) {
   return (HighsInt)((Highs*)highs)
       ->getReducedRow(row, row_vector, row_num_nz, row_indices);
 }
 
-HighsInt Highs_getReducedColumn(void* highs, const HighsInt col,
+HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
                                 double* col_vector, HighsInt* col_num_nz,
                                 HighsInt* col_indices) {
   return (HighsInt)((Highs*)highs)
@@ -538,7 +543,7 @@ HighsInt Highs_setLogicalBasis(void* highs) {
   return (HighsInt)((Highs*)highs)->setBasis();
 }
 
-double Highs_getRunTime(void* highs) {
+double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }
 
@@ -707,18 +712,18 @@ HighsInt Highs_changeCoeff(void* highs, const HighsInt row, const HighsInt col,
   return (HighsInt)((Highs*)highs)->changeCoeff(row, col, value);
 }
 
-HighsInt Highs_getObjectiveSense(void* highs, HighsInt* sense) {
+HighsInt Highs_getObjectiveSense(const void* highs, HighsInt* sense) {
   ObjSense get_sense;
   HighsStatus status = ((Highs*)highs)->getObjectiveSense(get_sense);
   *sense = (HighsInt)get_sense;
   return (HighsInt)status;
 }
 
-HighsInt Highs_getObjectiveOffset(void* highs, double* offset) {
+HighsInt Highs_getObjectiveOffset(const void* highs, double* offset) {
   return (HighsInt)((Highs*)highs)->getObjectiveOffset(*offset);
 }
 
-HighsInt Highs_getColsByRange(void* highs, const HighsInt from_col,
+HighsInt Highs_getColsByRange(const void* highs, const HighsInt from_col,
                               const HighsInt to_col, HighsInt* num_col,
                               double* costs, double* lower, double* upper,
                               HighsInt* num_nz, HighsInt* matrix_start,
@@ -733,7 +738,7 @@ HighsInt Highs_getColsByRange(void* highs, const HighsInt from_col,
   return (HighsInt)status;
 }
 
-HighsInt Highs_getColsBySet(void* highs, const HighsInt num_set_entries,
+HighsInt Highs_getColsBySet(const void* highs, const HighsInt num_set_entries,
                             const HighsInt* set, HighsInt* num_col,
                             double* costs, double* lower, double* upper,
                             HighsInt* num_nz, HighsInt* matrix_start,
@@ -748,7 +753,7 @@ HighsInt Highs_getColsBySet(void* highs, const HighsInt num_set_entries,
   return (HighsInt)status;
 }
 
-HighsInt Highs_getColsByMask(void* highs, const HighsInt* mask,
+HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_col, double* costs, double* lower,
                              double* upper, HighsInt* num_nz,
                              HighsInt* matrix_start, HighsInt* matrix_index,
@@ -762,7 +767,7 @@ HighsInt Highs_getColsByMask(void* highs, const HighsInt* mask,
   return (HighsInt)status;
 }
 
-HighsInt Highs_getRowsByRange(void* highs, const HighsInt from_row,
+HighsInt Highs_getRowsByRange(const void* highs, const HighsInt from_row,
                               const HighsInt to_row, HighsInt* num_row,
                               double* lower, double* upper, HighsInt* num_nz,
                               HighsInt* matrix_start, HighsInt* matrix_index,
@@ -777,7 +782,7 @@ HighsInt Highs_getRowsByRange(void* highs, const HighsInt from_row,
   return (HighsInt)status;
 }
 
-HighsInt Highs_getRowsBySet(void* highs, const HighsInt num_set_entries,
+HighsInt Highs_getRowsBySet(const void* highs, const HighsInt num_set_entries,
                             const HighsInt* set, HighsInt* num_row,
                             double* lower, double* upper, HighsInt* num_nz,
                             HighsInt* matrix_start, HighsInt* matrix_index,
@@ -792,7 +797,7 @@ HighsInt Highs_getRowsBySet(void* highs, const HighsInt num_set_entries,
   return (HighsInt)status;
 }
 
-HighsInt Highs_getRowsByMask(void* highs, const HighsInt* mask,
+HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_row, double* lower, double* upper,
                              HighsInt* num_nz, HighsInt* matrix_start,
                              HighsInt* matrix_index, double* matrix_value) {
@@ -843,19 +848,27 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row,
   return (HighsInt)((Highs*)highs)->scaleRow(row, scaleval);
 }
 
-double Highs_getInfinity(void* highs) { return ((Highs*)highs)->getInfinity(); }
+double Highs_getInfinity(const void* highs) {
+  return ((Highs*)highs)->getInfinity();
+}
 
-HighsInt Highs_getNumCol(void* highs) { return ((Highs*)highs)->getNumCol(); }
+HighsInt Highs_getNumCol(const void* highs) {
+  return ((Highs*)highs)->getNumCol();
+}
 
-HighsInt Highs_getNumRow(void* highs) { return ((Highs*)highs)->getNumRow(); }
+HighsInt Highs_getNumRow(const void* highs) {
+  return ((Highs*)highs)->getNumRow();
+}
 
-HighsInt Highs_getNumNz(void* highs) { return ((Highs*)highs)->getNumNz(); }
+HighsInt Highs_getNumNz(const void* highs) {
+  return ((Highs*)highs)->getNumNz();
+}
 
-HighsInt Highs_getHessianNumNz(void* highs) {
+HighsInt Highs_getHessianNumNz(const void* highs) {
   return ((Highs*)highs)->getHessianNumNz();
 }
 
-HighsInt Highs_getModel(void* highs, const HighsInt a_format,
+HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         const HighsInt q_format, HighsInt* numcol,
                         HighsInt* numrow, HighsInt* numnz, HighsInt* q_num_nz,
                         HighsInt* sense, double* offset, double* colcost,
@@ -882,7 +895,7 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   }
 
   // Save the original orientation so that it is recovered
-  MatrixFormat original_a_format = lp.format_;
+  MatrixFormat original_a_format = lp.a_matrix_.format_;
   // Determine the desired orientation and number of start entries to
   // be copied
   MatrixFormat desired_a_format = MatrixFormat::kColwise;
@@ -897,16 +910,17 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
-    memcpy(astart, &lp.a_start_[0], num_start_entries * sizeof(HighsInt));
-    *numnz = lp.a_start_[*numcol];
-    memcpy(aindex, &lp.a_index_[0], *numnz * sizeof(HighsInt));
-    memcpy(avalue, &lp.a_value_[0], *numnz * sizeof(double));
+    *numnz = lp.a_matrix_.numNz();
+    memcpy(astart, &lp.a_matrix_.start_[0],
+           num_start_entries * sizeof(HighsInt));
+    memcpy(aindex, &lp.a_matrix_.index_[0], *numnz * sizeof(HighsInt));
+    memcpy(avalue, &lp.a_matrix_.value_[0], *numnz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
-    memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));
-    *q_num_nz = hessian.q_start_[*numcol];
-    memcpy(qindex, &hessian.q_index_[0], *q_num_nz * sizeof(HighsInt));
-    memcpy(qvalue, &hessian.q_value_[0], *q_num_nz * sizeof(double));
+    *q_num_nz = hessian.start_[*numcol];
+    memcpy(qstart, &hessian.start_[0], *numcol * sizeof(HighsInt));
+    memcpy(qindex, &hessian.index_[0], *q_num_nz * sizeof(HighsInt));
+    memcpy(qvalue, &hessian.value_[0], *q_num_nz * sizeof(double));
   }
   if ((HighsInt)lp.integrality_.size()) {
     for (int iCol = 0; iCol < *numcol; iCol++)
@@ -1002,23 +1016,23 @@ HighsInt Highs_runQuiet(void* highs) {
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
-HighsInt Highs_setHighsLogfile(void* highs, void* logfile) {
+HighsInt Highs_setHighsLogfile(void* highs, const void* logfile) {
   ((Highs*)highs)->deprecationMessage("Highs_setHighsLogfile", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
-HighsInt Highs_setHighsOutput(void* highs, void* outputfile) {
+HighsInt Highs_setHighsOutput(void* highs, const void* outputfile) {
   ((Highs*)highs)->deprecationMessage("Highs_setHighsOutput", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
-HighsInt Highs_getIterationCount(void* highs) {
+HighsInt Highs_getIterationCount(const void* highs) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getIterationCount", "Highs_getIntInfoValue");
   return (HighsInt)((Highs*)highs)->getInfo().simplex_iteration_count;
 }
 
-HighsInt Highs_getSimplexIterationCount(void* highs) {
+HighsInt Highs_getSimplexIterationCount(const void* highs) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getSimplexIterationCount",
                            "Highs_getIntInfoValue");
@@ -1064,7 +1078,7 @@ HighsInt Highs_setHighsOptionValue(void* highs, const char* option,
   return Highs_setOptionValue(highs, option, value);
 }
 
-HighsInt Highs_getHighsBoolOptionValue(void* highs, const char* option,
+HighsInt Highs_getHighsBoolOptionValue(const void* highs, const char* option,
                                        HighsInt* value) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsBoolOptionValue",
@@ -1072,7 +1086,7 @@ HighsInt Highs_getHighsBoolOptionValue(void* highs, const char* option,
   return Highs_getBoolOptionValue(highs, option, value);
 }
 
-HighsInt Highs_getHighsIntOptionValue(void* highs, const char* option,
+HighsInt Highs_getHighsIntOptionValue(const void* highs, const char* option,
                                       HighsInt* value) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsIntOptionValue",
@@ -1080,7 +1094,7 @@ HighsInt Highs_getHighsIntOptionValue(void* highs, const char* option,
   return Highs_getIntOptionValue(highs, option, value);
 }
 
-HighsInt Highs_getHighsDoubleOptionValue(void* highs, const char* option,
+HighsInt Highs_getHighsDoubleOptionValue(const void* highs, const char* option,
                                          double* value) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsDoubleOptionValue",
@@ -1088,7 +1102,7 @@ HighsInt Highs_getHighsDoubleOptionValue(void* highs, const char* option,
   return Highs_getDoubleOptionValue(highs, option, value);
 }
 
-HighsInt Highs_getHighsStringOptionValue(void* highs, const char* option,
+HighsInt Highs_getHighsStringOptionValue(const void* highs, const char* option,
                                          char* value) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsStringOptionValue",
@@ -1096,7 +1110,7 @@ HighsInt Highs_getHighsStringOptionValue(void* highs, const char* option,
   return Highs_getStringOptionValue(highs, option, value);
 }
 
-HighsInt Highs_getHighsOptionType(void* highs, const char* option,
+HighsInt Highs_getHighsOptionType(const void* highs, const char* option,
                                   HighsInt* type) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsOptionType", "Highs_getOptionType");
@@ -1109,7 +1123,7 @@ HighsInt Highs_resetHighsOptions(void* highs) {
   return Highs_resetOptions(highs);
 }
 
-HighsInt Highs_getHighsIntInfoValue(void* highs, const char* info,
+HighsInt Highs_getHighsIntInfoValue(const void* highs, const char* info,
                                     HighsInt* value) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsIntInfoValue",
@@ -1117,7 +1131,7 @@ HighsInt Highs_getHighsIntInfoValue(void* highs, const char* info,
   return Highs_getIntInfoValue(highs, info, value);
 }
 
-HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
+HighsInt Highs_getHighsDoubleInfoValue(const void* highs, const char* info,
                                        double* value) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsDoubleInfoValue",
@@ -1125,16 +1139,16 @@ HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
   return Highs_getDoubleInfoValue(highs, info, value);
 }
 
-HighsInt Highs_getNumCols(void* highs) { return Highs_getNumCol(highs); }
-HighsInt Highs_getNumRows(void* highs) { return Highs_getNumRow(highs); }
+HighsInt Highs_getNumCols(const void* highs) { return Highs_getNumCol(highs); }
+HighsInt Highs_getNumRows(const void* highs) { return Highs_getNumRow(highs); }
 
-double Highs_getHighsRunTime(void* highs) {
+double Highs_getHighsRunTime(const void* highs) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsRunTime", "Highs_getRunTime");
   return Highs_getRunTime(highs);
 }
 
-double Highs_getHighsInfinity(void* highs) {
+double Highs_getHighsInfinity(const void* highs) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsInfinity", "Highs_getInfinity");
   return Highs_getInfinity(highs);

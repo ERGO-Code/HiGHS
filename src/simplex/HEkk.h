@@ -16,41 +16,93 @@
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
 
-#include "lp_data/HStruct.h"
-#include "simplex/HFactor.h"
-#include "simplex/HMatrix.h"
+#include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
-#include "simplex/SimplexStruct.h"
+#include "util/HSet.h"
+#include "util/HighsHash.h"
 #include "util/HighsRandom.h"
+
+class HighsLpSolverObject;
 
 class HEkk {
  public:
-  HEkk(HighsOptions& options, HighsTimer& timer)
-      : options_(options), timer_(timer), analysis_(timer) {}
+  HEkk() {}
   /**
    * @brief Interface to simplex solvers
    */
-  // References:
-  //
-  // LP to be solved, HiGHS options to be used
-  HighsOptions& options_;
-  HighsTimer& timer_;
-  HighsSimplexAnalysis analysis_;
+  void clear();
+  void clearEkkLp();
+  void clearEkkData();
+  void clearEkkDualise();
+  void clearEkkPointers();
+  void clearEkkDataInfo();
+  void clearEkkControlInfo();
+  void clearEkkNlaInfo();
+  void clearEkkAllStatus();
+  void clearEkkDataStatus();
+  void clearNlaStatus();
+  void clearNlaInvertStatus();
 
-  HighsStatus passLp(const HighsLp& pass_lp);
+  void invalidate();
+  void invalidateBasisMatrix();
+  void invalidateBasis();
+  void invalidateBasisArtifacts();
+
+  void updateStatus(LpAction action);
+  void setNlaPointersForLpAndScale(const HighsLp& lp);
+  void setNlaPointersForTrans(const HighsLp& lp);
+  void setNlaRefactorInfo();
+  void clearHotStart();
+  void btran(HVector& rhs, const double expected_density);
+  void ftran(HVector& rhs, const double expected_density);
+
+  void moveLp(HighsLpSolverObject& solver_object);
+  void setPointers(HighsOptions* options, HighsTimer* timer);
+  HighsSparseMatrix* getScaledAMatrixPointer();
+  HighsScale* getScalePointer();
+
+  void initialiseEkk();
+  HighsStatus dualise();
+  HighsStatus undualise();
+  HighsStatus permute();
+  HighsStatus unpermute();
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
-  HighsStatus setBasis(const SimplexBasis& basis);
+
+  void freezeBasis(HighsInt& frozen_basis_id);
+  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
+  HighsStatus frozenBasisAllDataClear();
+
+  void addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix);
+  void addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix);
+  void deleteCols(const HighsIndexCollection& index_collection);
+  void deleteRows(const HighsIndexCollection& index_collection);
+  void unscaleSimplex(const HighsLp& incumbent_lp);
+  double factorSolveError();
+
+  bool proofOfPrimalInfeasibility();
+  bool proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
+                                  const HighsInt row_out);
+
+  double getValueScale(const HighsInt count, const vector<double>& value);
+  double getMaxAbsRowValue(HighsInt row);
+
+  void unitBtranIterativeRefinement(const HighsInt row_out, HVector& row_ep);
+  void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
+                         HVector& residual, double& residual_norm);
 
   HighsSolution getSolution();
-  HighsBasis getHighsBasis();
+  HighsBasis getHighsBasis(HighsLp& use_lp) const;
+
   const SimplexBasis& getSimplexBasis() { return basis_; }
 
-  HighsInt initialiseSimplexLpBasisAndFactor(
+  HighsStatus initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
+  void initialisePartitionedRowwiseMatrix();
+  bool lpFactorRowCompatible();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -60,26 +112,24 @@ class HEkk {
   void appendRowsToVectors(const HighsInt num_new_row,
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
-  void appendColsToMatrix(const HighsInt num_new_col, const HighsInt num_new_nz,
-                          const HighsInt* XAstart, const HighsInt* XAindex,
-                          const double* XAvalue);
-  void appendRowsToMatrix(const HighsInt num_new_row, const HighsInt num_new_nz,
-                          const HighsInt* XARstart, const HighsInt* XARindex,
-                          const double* XARvalue);
 
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
+  // Debug methods
+  void debugReporting(
+      const HighsInt save_mod_recover,
+      const HighsInt log_dev_level_ = kHighsLogDevLevelDetailed);
+  void timeReporting(const HighsInt save_mod_recover);
+  HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
+  HighsDebugStatus debugNlaCheckInvert(
+      const std::string message, const HighsInt alt_debug_level = -1) const;
+  bool debugNlaScalingOk(const HighsLp& lp) const;
 
-  double cost_scale_ = 1;
-  HighsInt iteration_count_ = 0;
-  HighsInt dual_simplex_cleanup_level_ = 0;
-
-  bool solve_bailout_;
-  bool called_return_from_solve_;
-  SimplexAlgorithm exit_algorithm_;
-  HighsInt return_primal_solution_status_;
-  HighsInt return_dual_solution_status_;
+  // Data members
+  HighsOptions* options_;
+  HighsTimer* timer_;
+  HighsSimplexAnalysis analysis_;
 
   HighsLp lp_;
   std::string lp_name_;
@@ -87,21 +137,72 @@ class HEkk {
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;
   SimplexBasis basis_;
+  HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
-  HMatrix matrix_;
-  HFactor factor_;
+  bool simplex_in_scaled_space_;
+  HighsSparseMatrix ar_matrix_;
+  HighsSparseMatrix scaled_a_matrix_;
+  HSimplexNla simplex_nla_;
+  HotStart hot_start_;
+
+  double cost_scale_ = 1;
+  double cost_perturbation_base_;
+  double cost_perturbation_max_abs_cost_;
+  HighsInt iteration_count_ = 0;
+  HighsInt dual_simplex_cleanup_level_ = 0;
+  HighsInt dual_simplex_phase1_cleanup_level_ = 0;
+
+  HighsInt previous_iteration_cycling_detected = -kHighsIInf;
+
+  bool solve_bailout_;
+  bool called_return_from_solve_;
+  SimplexAlgorithm exit_algorithm_;
+  HighsInt return_primal_solution_status_;
+  HighsInt return_dual_solution_status_;
+
+  // Data to be retained after proving primal infeasiblilty
+  vector<HighsInt> proof_index_;
+  vector<double> proof_value_;
+
+  // Data to be retained when dualising
+  HighsInt original_num_col_;
+  HighsInt original_num_row_;
+  HighsInt original_num_nz_;
+  double original_offset_;
+  vector<double> original_col_cost_;
+  vector<double> original_col_lower_;
+  vector<double> original_col_upper_;
+  vector<double> original_row_lower_;
+  vector<double> original_row_upper_;
+  //
+  // The upper_bound_col vector accumulates the indices of boxed
+  // variables, whose upper bounds are treated as additional
+  // constraints.
+  //
+  // The upper_bound_row vector accumulates the indices of boxed
+  // constraints, whose upper bounds are treated as additional
+  // constraints.
+  vector<HighsInt> upper_bound_col_;
+  vector<HighsInt> upper_bound_row_;
 
   double build_synthetic_tick_;
   double total_synthetic_tick_;
+  HighsInt debug_solve_call_num_ = 0;
+  HighsInt debug_basis_id_ = 0;
+  bool time_report_ = false;
+  bool debug_solve_report_ = false;
+  bool debug_iteration_report_ = false;
+  bool debug_basis_report_ = false;
+
+  std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
  private:
-  void initialiseForNewLp();
   bool isUnconstrainedLp();
-  HighsStatus initialiseForSolve();
+  void initialiseForSolve();
   void setSimplexOptions();
   void updateSimplexOptions();
   void initialiseSimplexLpRandomVectors();
@@ -114,8 +215,9 @@ class HEkk {
       double* scattered_edge_weights);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
+  bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
-  void initialiseMatrix();
+  void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
                       const HighsInt solve_phase, const bool perturb = false);
@@ -132,14 +234,16 @@ class HEkk {
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
-  void tableauRowPrice(const HVector& row_ep, HVector& row_ap);
+  void tableauRowPrice(const bool quad_precision, const HVector& row_ep,
+                       HVector& row_ap,
+                       const HighsInt debug_report = kDebugReportOff);
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
   void computeDualInfeasibleWithFlips();
   double computeDualForTableauColumn(const HighsInt iVar,
                                      const HVector& tableau_column);
-  bool correctDual(HighsInt* free_infeasibility_count);
+  void correctDual(HighsInt* free_infeasibility_count);
   bool reinvertOnNumericalTrouble(const std::string method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,
@@ -150,8 +254,14 @@ class HEkk {
   void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
                     HighsInt* hint);
 
+  void transformForUpdate(HVector* column, HVector* row_ep,
+                          const HighsInt variable_in, HighsInt* row_out);
+
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
+  HighsInt badBasisChange(const SimplexAlgorithm algorithm,
+                          const HighsInt variable_in, const HighsInt row_out,
+                          const HighsInt rebuild_reason);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
@@ -166,24 +276,67 @@ class HEkk {
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
   bool bailoutOnTimeIterations();
+  HighsStatus returnFromEkkSolve(const HighsStatus return_status);
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
   double computeBasisCondition();
   void initialiseAnalysis();
-  void initialiseControl();
+  std::string rebuildReason(const HighsInt rebuild_reason);
+
+  void clearBadBasisChange() { bad_basis_change_.clear(); };
+
+  void addBadBasisChange(const HighsInt row_out, const HighsInt variable_out,
+                         const HighsInt variable_in,
+                         const BadBasisChangeReason reason,
+                         const bool taboo = false);
+  void clearBadBasisChangeTabooFlag();
+  bool tabooBadBasisChange();
+  void applyTabooRowOut(vector<double>& values, double overwrite_with);
+  void unapplyTabooRowOut(vector<double>& values);
+  void applyTabooVariableIn(vector<double>& values, double overwrite_with);
+  void unapplyTabooVariableIn(vector<double>& values);
 
   // Methods in HEkkControl
+  void initialiseControl();
   void assessDSEWeightError(const double computed_edge_weight,
                             const double updated_edge_weight);
   void updateOperationResultDensity(const double local_density,
                                     double& density);
   bool switchToDevex();
 
-  friend class Highs;
+  // private debug methods
+  HighsDebugStatus debugSimplex(const std::string message,
+                                const SimplexAlgorithm algorithm,
+                                const HighsInt phase,
+                                const bool initialise = false) const;
+  void debugReportReinvertOnNumericalTrouble(
+      const std::string method_name, const double numerical_trouble_measure,
+      const double alpha_from_col, const double alpha_from_row,
+      const double numerical_trouble_tolerance, const bool reinvert) const;
+
+  HighsDebugStatus debugUpdatedDual(const double updated_dual,
+                                    const double computed_dual) const;
+
+  HighsDebugStatus debugBasisCorrect(const HighsLp* lp = NULL) const;
+  HighsDebugStatus debugBasisConsistent() const;
+  HighsDebugStatus debugNonbasicFlagConsistent() const;
+  HighsDebugStatus debugNonbasicMove(const HighsLp* lp = NULL) const;
+  HighsDebugStatus debugOkForSolve(const SimplexAlgorithm algorithm,
+                                   const HighsInt phase) const;
+  bool debugWorkArraysOk(const SimplexAlgorithm algorithm,
+                         const HighsInt phase) const;
+  bool debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const;
+
+  HighsDebugStatus debugNonbasicFreeColumnSet(
+      const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
+  HighsDebugStatus debugRowMatrix() const;
+
+  HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
+                                              const bool force_report = false);
+  HighsDebugStatus debugComputeDual(const bool initialise = false) const;
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;
-  //  friend class HEkkDualRHS;
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

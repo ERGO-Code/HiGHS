@@ -22,6 +22,7 @@
 #include "lp_data/HConst.h"
 #include "mip/HighsDomainChange.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsRbTree.h"
 
 class HighsDomain;
 class HighsLpRelaxation;
@@ -35,10 +36,8 @@ class HighsNodeQueue {
     double lower_bound;
     double estimate;
     HighsInt depth;
-    HighsInt leftlower;
-    HighsInt rightlower;
-    HighsInt leftestimate;
-    HighsInt rightestimate;
+    highs::RbTreeLinks lowerLinks;
+    highs::RbTreeLinks hybridEstimLinks;
 
     OpenNode()
         : domchgstack(),
@@ -47,10 +46,8 @@ class HighsNodeQueue {
           lower_bound(-kHighsInf),
           estimate(-kHighsInf),
           depth(0),
-          leftlower(-1),
-          rightlower(-1),
-          leftestimate(-1),
-          rightestimate(-1) {}
+          lowerLinks(),
+          hybridEstimLinks() {}
 
     OpenNode(std::vector<HighsDomainChange>&& domchgstack,
              std::vector<HighsInt>&& branchings, double lower_bound,
@@ -60,10 +57,8 @@ class HighsNodeQueue {
           lower_bound(lower_bound),
           estimate(estimate),
           depth(depth),
-          leftlower(-1),
-          rightlower(-1),
-          leftestimate(-1),
-          rightestimate(-1) {}
+          lowerLinks(),
+          hybridEstimLinks() {}
 
     OpenNode& operator=(OpenNode&& other) = default;
     OpenNode(OpenNode&&) = default;
@@ -76,13 +71,18 @@ class HighsNodeQueue {
                          HighsCDouble& treeweight);
 
  private:
+  class NodeLowerRbTree;
+  class NodeHybridEstimRbTree;
+
   std::vector<OpenNode> nodes;
   std::vector<std::set<std::pair<double, HighsInt>>> colLowerNodes;
   std::vector<std::set<std::pair<double, HighsInt>>> colUpperNodes;
   std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
       freeslots;
-  HighsInt lowerroot = -1;
-  HighsInt estimroot = -1;
+  HighsInt lowerRoot = -1;
+  HighsInt lowerMin = -1;
+  HighsInt hybridEstimRoot = -1;
+  HighsInt hybridEstimMin = -1;
 
   void link_estim(HighsInt node);
 
@@ -109,9 +109,9 @@ class HighsNodeQueue {
                    std::vector<HighsInt>&& branchings, double lower_bound,
                    double estimate, HighsInt depth);
 
-  OpenNode popBestNode();
+  OpenNode&& popBestNode();
 
-  OpenNode popBestBoundNode();
+  OpenNode&& popBestBoundNode();
 
   int64_t numNodesUp(HighsInt col) const { return colLowerNodes[col].size(); }
 
@@ -149,7 +149,7 @@ class HighsNodeQueue {
   void clear() {
     HighsNodeQueue nodequeue;
     nodequeue.setNumCol(colUpperNodes.size());
-    std::swap(*this, nodequeue);
+    *this = std::move(nodequeue);
   }
 
   bool empty() const { return nodes.size() == freeslots.size(); }

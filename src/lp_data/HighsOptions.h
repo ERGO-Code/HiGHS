@@ -22,8 +22,8 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
-#include "simplex/HFactor.h"
 #include "simplex/SimplexConst.h"
+#include "util/HFactorConst.h"
 
 using std::string;
 
@@ -252,6 +252,7 @@ const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
+const string kRangingString = "ranging";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -261,6 +262,7 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
+  std::string ranging;
   double time_limit;
 
   // Options read from the file
@@ -274,6 +276,7 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt random_seed;
+  HighsInt threads;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -283,13 +286,13 @@ struct HighsOptionsStruct {
   HighsInt simplex_primal_edge_weight_strategy;
   HighsInt simplex_iteration_limit;
   HighsInt simplex_update_limit;
+  HighsInt simplex_min_concurrency;
+  HighsInt simplex_max_concurrency;
   HighsInt ipm_iteration_limit;
-  HighsInt highs_min_threads;
-  HighsInt highs_max_threads;
   std::string solution_file;
   std::string log_file;
   bool write_solution_to_file;
-  bool write_solution_pretty;
+  HighsInt write_solution_style;
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
@@ -299,20 +302,27 @@ struct HighsOptionsStruct {
   bool run_crossover;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
+  bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   HighsInt keep_n_rows;
-  HighsInt allowed_simplex_matrix_scale_factor;
-  HighsInt allowed_simplex_cost_scale_factor;
+  HighsInt cost_scale_factor;
+  HighsInt allowed_matrix_scale_factor;
+  HighsInt allowed_cost_scale_factor;
   HighsInt simplex_dualise_strategy;
   HighsInt simplex_permute_strategy;
   HighsInt max_dual_simplex_cleanup_level;
+  HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
+  HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
+  bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
+  double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
+  double dual_simplex_pivot_growth_tolerance;
   double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
@@ -406,18 +416,29 @@ class HighsOptions : public HighsOptionsStruct {
         kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
         advanced, &presolve, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kSolverString, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
+
     record_string = new OptionRecordString(
         kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
         advanced, &parallel, kHighsChooseString);
     records.push_back(record_string);
+
     record_double =
         new OptionRecordDouble(kTimeLimitString, "Time limit", advanced,
                                &time_limit, 0, kHighsInf, kHighsInf);
     records.push_back(record_double);
+
+    record_string =
+        new OptionRecordString(kRangingString,
+                               "Compute cost, bound, RHS and basic solution "
+                               "ranging: \"off\" or \"on\"",
+                               advanced, &ranging, kHighsOffString);
+    records.push_back(record_string);
+    //
     // Options read from the file
     record_double =
         new OptionRecordDouble("infinite_cost",
@@ -477,6 +498,11 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &random_seed, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "threads", "number of threads used by HiGHS (0: automatic)", advanced,
+        &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
                             advanced, &highs_debug_level, kHighsDebugLevelMin,
@@ -497,9 +523,10 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_scale_strategy",
-        "Strategy for scaling before simplex solver: off / on (0/1)", advanced,
-        &simplex_scale_strategy, kSimplexScaleStrategyMin,
-        kSimplexScaleStrategyHighsForced, kSimplexScaleStrategyMax);
+        "Simplex scaling strategy: off / choose / equilibration / forced "
+        "equilibration / max value 0 / max value 1 (0/1/2/3/4/5)",
+        advanced, &simplex_scale_strategy, kSimplexScaleStrategyMin,
+        kSimplexScaleStrategyChoose, kSimplexScaleStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -546,13 +573,16 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "highs_min_threads", "Minimum number of threads in parallel execution",
-        advanced, &highs_min_threads, 1, 1, kHighsThreadLimit);
+        "simplex_min_concurrency",
+        "Minimum level of concurrency in parallel simplex", advanced,
+        &simplex_min_concurrency, 1, 1, kSimplexConcurrencyLimit);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "highs_max_threads", "Maximum number of threads in parallel execution",
-        advanced, &highs_max_threads, 1, kHighsThreadLimit, kHighsThreadLimit);
+    record_int =
+        new OptionRecordInt("simplex_max_concurrency",
+                            "Maximum level of concurrency in parallel simplex",
+                            advanced, &simplex_max_concurrency, 1,
+                            kSimplexConcurrencyLimit, kSimplexConcurrencyLimit);
     records.push_back(record_int);
 
     record_bool =
@@ -580,11 +610,13 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("write_solution_pretty",
-                                       "Write the primal and dual solution in "
-                                       "a pretty (human-readable) format",
-                                       advanced, &write_solution_pretty, false);
-    records.push_back(record_bool);
+    record_int =
+        new OptionRecordInt("write_solution_style",
+                            "Write the solution in style: 0=>Raw "
+                            "(computer-readable); 1=>Pretty (human-readable) ",
+                            advanced, &write_solution_style, kSolutionStyleMin,
+                            kSolutionStyleRaw, kSolutionStyleMax);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool("mip_detect_symmetry",
                                        "Whether symmetry should be detected",
@@ -683,10 +715,18 @@ class HighsOptions : public HighsOptionsStruct {
         &use_implied_bounds_from_presolve, false);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool(
+        "lp_presolve_requires_basis_postsolve",
+        "Prevents LP presolve steps for which postsolve cannot maintain a "
+        "basis",
+        advanced, &lp_presolve_requires_basis_postsolve, true);
+    records.push_back(record_bool);
+
     record_bool = new OptionRecordBool("mps_parser_type_free",
                                        "Use the free format MPS file reader",
                                        advanced, &mps_parser_type_free, true);
     records.push_back(record_bool);
+
     record_int =
         new OptionRecordInt("keep_n_rows",
                             "For multiple N-rows in MPS files: delete rows / "
@@ -694,19 +734,23 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &keep_n_rows, kKeepNRowsDeleteRows,
                             kKeepNRowsDeleteRows, kKeepNRowsKeepRows);
     records.push_back(record_int);
-    record_int = new OptionRecordInt(
-        "allowed_simplex_matrix_scale_factor",
-        "Largest power-of-two factor permitted when scaling the "
-        "constraint "
-        "matrix for the simplex solver",
-        advanced, &allowed_simplex_matrix_scale_factor, 0, 10, 20);
+
+    record_int =
+        new OptionRecordInt("cost_scale_factor", "Scaling factor for costs",
+                            advanced, &cost_scale_factor, -20, 0, 20);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("allowed_matrix_scale_factor",
+                            "Largest power-of-two factor permitted when "
+                            "scaling the constraint matrix",
+                            advanced, &allowed_matrix_scale_factor, 0, 10, 20);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "allowed_simplex_cost_scale_factor",
-        "Largest power-of-two factor permitted when scaling the costs for the "
-        "simplex solver",
-        advanced, &allowed_simplex_cost_scale_factor, 0, 0, 20);
+        "allowed_cost_scale_factor",
+        "Largest power-of-two factor permitted when scaling the costs",
+        advanced, &allowed_cost_scale_factor, 0, 0, 20);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -727,9 +771,24 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
+        "max_dual_simplex_phase1_cleanup_level",
+        "Max level of dual simplex phase 1 cleanup", advanced,
+        &max_dual_simplex_phase1_cleanup_level, 0, 2, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,
         &simplex_price_strategy, kSimplexPriceStrategyMin,
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("simplex_unscaled_solution_strategy",
+                            "Strategy for solving unscaled LP in simplex",
+                            advanced, &simplex_unscaled_solution_strategy,
+                            kSimplexUnscaledSolutionStrategyMin,
+                            kSimplexUnscaledSolutionStrategyRefine,
+                            kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
     record_bool =
@@ -738,10 +797,24 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &simplex_initial_condition_check, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool(
+        "no_unnecessary_rebuild_refactor",
+        "No unnecessary refactorization on simplex rebuild", advanced,
+        &no_unnecessary_rebuild_refactor, true);
+    records.push_back(record_bool);
+
     record_double = new OptionRecordDouble(
         "simplex_initial_condition_tolerance",
         "Tolerance on initial basis condition in simplex", advanced,
         &simplex_initial_condition_tolerance, 1.0, 1e14, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "rebuild_refactor_solution_error_tolerance",
+        "Tolerance on solution error when considering refactorization on "
+        "simplex rebuild",
+        advanced, &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -763,6 +836,12 @@ class HighsOptions : public HighsOptionsStruct {
         "Primal simplex bound perturbation multiplier: 0 => no perturbation",
         advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
         kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_simplex_pivot_growth_tolerance",
+        "Dual simplex pivot growth tolerance", advanced,
+        &dual_simplex_pivot_growth_tolerance, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

@@ -27,13 +27,6 @@ struct HighsIterationCounts {
   HighsInt qp = 0;
 };
 
-struct HighsScale {
-  bool is_scaled = false;
-  double cost;
-  std::vector<double> col;
-  std::vector<double> row;
-};
-
 struct HighsSolution {
   bool value_valid = false;
   bool dual_valid = false;
@@ -41,28 +34,45 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
+  void clear();
+};
+
+struct RefactorInfo {
+  bool use = false;
+  std::vector<HighsInt> pivot_row;
+  std::vector<HighsInt> pivot_var;
+  std::vector<int8_t> pivot_type;
+  double build_synthetic_tick;
+  void clear();
+};
+
+struct HotStart {
+  bool valid = false;
+  RefactorInfo refactor_info;
+  std::vector<int8_t> nonbasicMove;
+  void clear();
 };
 
 struct HighsBasis {
   bool valid = false;
+  bool alien = true;
+  HighsInt debug_id = -1;
+  HighsInt debug_update_count = -1;
+  std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  void clear();
+  //  void copy(const HighsBasis& basis);
 };
 
-struct HighsSolutionParams {
-  // Input to solution analysis method
-  double primal_feasibility_tolerance;
-  double dual_feasibility_tolerance;
-  HighsInt primal_solution_status;
-  HighsInt dual_solution_status;
-  // Output from solution analysis method
-  double objective_function_value;
-  HighsInt num_primal_infeasibility;
-  double sum_primal_infeasibility;
-  double max_primal_infeasibility;
-  HighsInt num_dual_infeasibility;
-  double sum_dual_infeasibility;
-  double max_dual_infeasibility;
+struct HighsScale {
+  HighsInt strategy;
+  bool has_scaling;
+  HighsInt num_col;
+  HighsInt num_row;
+  double cost;
+  std::vector<double> col;
+  std::vector<double> row;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */
