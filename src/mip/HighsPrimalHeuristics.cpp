@@ -477,7 +477,6 @@ retry:
     return;
   }
 
-  int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
 
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
@@ -485,6 +484,7 @@ retry:
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+    int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
                    mipsolver.mipdata_->heuristic_lp_iterations -
@@ -505,7 +505,7 @@ retry:
     goto retry;
   }
 
-  lp_iterations = new_lp_iterations;
+  lp_iterations += heur.getLocalLpIterations();
 }
 
 void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
@@ -771,14 +771,13 @@ retry:
     return;
   }
 
-  int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
-
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+    int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
                    mipsolver.mipdata_->heuristic_lp_iterations -
@@ -798,7 +797,7 @@ retry:
     goto retry;
   }
 
-  lp_iterations = new_lp_iterations;
+  lp_iterations += heur.getLocalLpIterations();
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
