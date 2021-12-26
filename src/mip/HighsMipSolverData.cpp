@@ -117,7 +117,7 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
         ((total_lp_iterations - node_iters_curr_run) +
-         node_iters_curr_run / std::max(1e-3, double(pruned_treeweight)));
+         node_iters_curr_run / std::max(0.02, double(pruned_treeweight)));
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
     // exploration. Additionally we want to spent the proportional effort
