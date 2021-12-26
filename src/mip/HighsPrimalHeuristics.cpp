@@ -477,7 +477,6 @@ retry:
     return;
   }
 
-
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
