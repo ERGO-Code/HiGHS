@@ -297,7 +297,10 @@ retry:
   //        "   target depth : %" HIGHSINT_FORMAT "\n",
   //        heur.getCurrentDepth(), targetdepth);
   if (heur.getCurrentDepth() > targetdepth) {
-    if (!heur.backtrackUntilDepth(targetdepth)) return;
+    if (!heur.backtrackUntilDepth(targetdepth)) {
+      lp_iterations += heur.getLocalLpIterations();
+      return;
+    }
   }
 
   // printf("fixingrate before loop is %g\n", fixingrate);
@@ -473,19 +476,35 @@ retry:
     return;
   }
 
+  int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
+
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+        100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                   mipsolver.mipdata_->heuristic_lp_iterations -
+                   mipsolver.mipdata_->sb_lp_iterations) >>
+                  1)) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
     maxfixingrate = fixingrate * 0.5;
     // printf("infeasible in in root node, trying with lower fixing rate %g\n",
     //        maxfixingrate);
     goto retry;
   }
+
+  lp_iterations = new_lp_iterations;
 }
 
 void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
@@ -529,7 +548,10 @@ retry:
   // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
   //       targetdepth);
   if (heur.getCurrentDepth() > targetdepth) {
-    if (!heur.backtrackUntilDepth(targetdepth)) return;
+    if (!heur.backtrackUntilDepth(targetdepth)) {
+      lp_iterations += heur.getLocalLpIterations();
+      return;
+    }
   }
 
   assert(heur.hasNode());
@@ -747,18 +769,34 @@ retry:
     return;
   }
 
+  int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
+
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+        100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                   mipsolver.mipdata_->heuristic_lp_iterations -
+                   mipsolver.mipdata_->sb_lp_iterations) >>
+                  1)) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
     // printf("infeasible in in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
     goto retry;
   }
+
+  lp_iterations = new_lp_iterations;
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
