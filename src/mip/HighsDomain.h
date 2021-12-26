@@ -427,7 +427,7 @@ class HighsDomain {
 
   void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack);
 
-  void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack,
+  bool setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack,
                             const std::vector<HighsInt>& branchingPositions);
 
   bool propagate();

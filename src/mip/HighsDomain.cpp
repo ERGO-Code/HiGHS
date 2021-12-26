@@ -1505,7 +1505,7 @@ void HighsDomain::setDomainChangeStack(
   }
 }
 
-void HighsDomain::setDomainChangeStack(
+bool HighsDomain::setDomainChangeStack(
     const std::vector<HighsDomainChange>& domchgstack,
     const std::vector<HighsInt>& branchingPositions) {
   infeasible_ = false;
@@ -1527,6 +1527,7 @@ void HighsDomain::setDomainChangeStack(
   HighsInt stacksize = domchgstack.size();
   HighsInt nextBranchPos = -1;
   HighsInt k = 0;
+  bool branchedOnGeneralInteger = false;
   for (HighsInt branchPos : branchingPositions) {
     for (; k < branchPos; ++k) {
       if (domchgstack[k].boundtype == HighsBoundType::kLower &&
@@ -1538,16 +1539,20 @@ void HighsDomain::setDomainChangeStack(
 
       changeBound(domchgstack[k], Reason::unspecified());
       if (!infeasible_) propagate();
-      if (infeasible_) return;
+      if (infeasible_) return branchedOnGeneralInteger;
     }
 
-    if (k == stacksize) return;
+    if (k == stacksize) return branchedOnGeneralInteger;
+
+    double currLb = col_lower_[domchgstack[k].column];
+    double currUb = col_upper_[domchgstack[k].column];
+    branchedOnGeneralInteger |= currUb - currLb > 1.5;
 
     // do not skip redundant branching changes, as we need to keep their status
     // as branching variables for computing correct stabilizers
     changeBound(domchgstack[k], Reason::branching());
     if (!infeasible_) propagate();
-    if (infeasible_) return;
+    if (infeasible_) return branchedOnGeneralInteger;
   }
 
   for (; k < stacksize; ++k) {
@@ -1565,6 +1570,8 @@ void HighsDomain::setDomainChangeStack(
     if (!infeasible_) propagate();
     if (infeasible_) break;
   }
+
+  return branchedOnGeneralInteger;
 }
 
 void HighsDomain::backtrackToGlobal() {

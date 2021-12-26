@@ -118,6 +118,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
+  lastAgeCall = 0;
   objective = -kHighsInf;
   currentbasisstored = false;
 }
@@ -139,6 +140,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
+  lastAgeCall = 0;
   objective = -kHighsInf;
 }
 
@@ -329,36 +331,39 @@ void HighsLpRelaxation::removeCuts() {
          (HighsInt)lpsolver.getLp().row_lower_.size());
 }
 
-void HighsLpRelaxation::performAging(bool useBasis) {
+void HighsLpRelaxation::performAging(bool deleteRows) {
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
+  HighsInt agelimit;
 
-  size_t agelimit = mipsolver.options_mip_->mip_lp_age_limit;
+  if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid ||
+      !lpsolver.getSolution().dual_valid)
+    return;
 
-  ++epochs;
-  if (epochs % std::max(size_t(agelimit) / 2u, size_t(2)) != 0)
+  if (deleteRows) {
+    agelimit = mipsolver.options_mip_->mip_lp_age_limit;
+
+    ++epochs;
+    if (epochs % std::max(agelimit >> 1, HighsInt{2}) != 0)
+      agelimit = kHighsIInf;
+    else if (epochs < agelimit)
+      agelimit = epochs;
+  } else {
+    if (lastAgeCall == numlpiters) return;
     agelimit = kHighsIInf;
-  else if (epochs < agelimit)
-    agelimit = epochs;
+  }
+
+  lastAgeCall = numlpiters;
 
   HighsInt nlprows = numRows();
   HighsInt nummodelrows = getNumModelRows();
   std::vector<HighsInt> deletemask;
 
-  if (!useBasis && agelimit != kHighsIInf) {
-    HighsBasis b = mipsolver.mipdata_->firstrootbasis;
-    b.row_status.resize(nlprows, HighsBasisStatus::kBasic);
-    b.debug_origin_name = "HighsLpRelaxation::removeCuts";
-    HighsStatus st = lpsolver.setBasis(b);
-    assert(st != HighsStatus::kError);
-  }
-
   HighsInt ndelcuts = 0;
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
-    if (!useBasis ||
-        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
-      lprows[i].age += 1;
+    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
+      lprows[i].age += (deleteRows || lprows[i].age != 0);
       if (lprows[i].age > agelimit) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
@@ -377,6 +382,10 @@ void HighsLpRelaxation::performAging(bool useBasis) {
 void HighsLpRelaxation::resetAges() {
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
+
+  if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid ||
+      !lpsolver.getSolution().dual_valid)
+    return;
 
   HighsInt nlprows = numRows();
   HighsInt nummodelrows = getNumModelRows();

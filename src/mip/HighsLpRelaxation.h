@@ -75,6 +75,7 @@ class HighsLpRelaxation {
   std::shared_ptr<const HighsBasis> basischeckpoint;
   bool currentbasisstored;
   int64_t numlpiters;
+  int64_t lastAgeCall;
   double avgSolveIters;
   int64_t numSolved;
   size_t epochs;
@@ -160,6 +161,8 @@ class HighsLpRelaxation {
 
   Status getStatus() const { return status; }
 
+  const HighsInfo& getSolverInfo() const { return lpsolver.getInfo(); }
+
   int64_t getNumLpIterations() const { return numlpiters; }
 
   bool integerFeasible() const {
@@ -239,7 +242,7 @@ class HighsLpRelaxation {
 
   void addCuts(HighsCutSet& cutset);
 
-  void performAging(bool useBasis = true);
+  void performAging(bool deleteRows = false);
 
   void resetAges();
 
