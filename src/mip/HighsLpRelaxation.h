@@ -80,6 +80,7 @@ class HighsLpRelaxation {
   size_t epochs;
   HighsInt maxNumFractional;
   Status status;
+  bool adjustSymBranchingCol;
 
   void storeDualInfProof();
 
@@ -106,6 +107,10 @@ class HighsLpRelaxation {
   bool isRowIntegral(HighsInt row) const {
     assert(row < (HighsInt)lprows.size());
     return lprows[row].isIntegral(mipsolver);
+  }
+
+  void setAdjustSymmetricBranchingCol(bool adjustSymBranchingCol) {
+    this->adjustSymBranchingCol = adjustSymBranchingCol;
   }
 
   double getAvgSolveIters() { return avgSolveIters; }

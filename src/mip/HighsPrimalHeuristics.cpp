@@ -270,6 +270,7 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
@@ -523,6 +524,7 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,

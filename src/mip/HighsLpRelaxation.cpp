@@ -120,6 +120,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   maxNumFractional = 0;
   objective = -kHighsInf;
   currentbasisstored = false;
+  adjustSymBranchingCol = true;
 }
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
@@ -128,12 +129,14 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       fractionalints(other.fractionalints),
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
-      currentbasisstored(other.currentbasisstored) {
+      currentbasisstored(other.currentbasisstored),
+      adjustSymBranchingCol(other.adjustSymBranchingCol) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.passOptions(other.lpsolver.getOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
   mask.resize(mipsolver.numCol());
+  status = Status::kNotSet;
   numlpiters = 0;
   avgSolveIters = 0;
   numSolved = 0;
@@ -896,8 +899,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
               subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
             }
 
-            col = mipsolver.mipdata_->symmetries.getBranchingColumn(
-                getLp().col_lower_, getLp().col_upper_, col);
+            if (adjustSymBranchingCol)
+              col = mipsolver.mipdata_->symmetries.getBranchingColumn(
+                  getLp().col_lower_, getLp().col_upper_, col);
 
             auto& pair = fracints[col];
             pair.first += val;
