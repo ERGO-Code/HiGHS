@@ -93,6 +93,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
   submipoptions.presolve = "on";
   submipoptions.mip_detect_symmetry = false;
+  submipoptions.mip_heuristic_effort = 0.8;
   // setup solver and run it
 
   HighsSolution solution;
@@ -472,6 +473,7 @@ retry:
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
+    if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
     // pseudocost = heur.pseudocost;
     return;
@@ -765,6 +767,7 @@ retry:
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
+    if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
     // pseudocost = heur.pseudocost;
     return;

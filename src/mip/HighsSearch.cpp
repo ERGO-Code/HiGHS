@@ -886,6 +886,8 @@ int64_t HighsSearch::getTotalLpIterations() const {
 
 int64_t HighsSearch::getLocalLpIterations() const { return lpiterations; }
 
+int64_t HighsSearch::getLocalNodes() const { return nnodes; }
+
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
   return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
 }
