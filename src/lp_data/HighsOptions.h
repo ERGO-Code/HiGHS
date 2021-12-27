@@ -349,6 +349,7 @@ struct HighsOptionsStruct {
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
   double mip_heuristic_effort;
+  double mip_gap_limit;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
@@ -693,6 +694,12 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "mip_gap_limit",
+        "limit to stop the MIP solve when the gap is at most this value",
+        advanced, &mip_gap_limit, 0.0, 0.0, kHighsInf);
     records.push_back(record_double);
 
     // Advanced options
