@@ -230,7 +230,7 @@ void minimal_api_mip() {
   HighsInt aindex[6] = {0, 1, 0, 1, 0, 1};
   double avalue[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
 
-  HighsInt integrality[6] = {0, 0, 1};
+  HighsInt integrality[3] = {0, 0, -1};
 
   double* colvalue = (double*)malloc(sizeof(double) * numcol);
   double* rowvalue = (double*)malloc(sizeof(double) * numrow);

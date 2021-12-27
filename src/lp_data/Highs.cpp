@@ -349,8 +349,12 @@ HighsStatus Highs::passModel(
     lp.integrality_.resize(num_col);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       HighsInt integrality_status = integrality[iCol];
+      /*
       assert(integrality_status == (HighsInt)HighsVarType::kContinuous ||
-             integrality_status == (HighsInt)HighsVarType::kInteger);
+             integrality_status == (HighsInt)HighsVarType::kInteger ||
+	     integrality_status == (HighsInt)HighsVarType::kSemiContinuous ||
+             integrality_status == (HighsInt)HighsVarType::kSemiInteger);
+      */
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }
