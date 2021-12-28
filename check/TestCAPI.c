@@ -230,20 +230,49 @@ void minimal_api_mip() {
   HighsInt aindex[6] = {0, 1, 0, 1, 0, 1};
   double avalue[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
 
+  // Give an illegal value to an entry in integrality
   HighsInt integrality[3] = {0, 0, -1};
 
   double* colvalue = (double*)malloc(sizeof(double) * numcol);
   double* rowvalue = (double*)malloc(sizeof(double) * numrow);
 
   HighsInt modelstatus;
+  HighsInt return_status;
 
-  HighsInt return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
+  return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
 					 sense, offset, colcost, collower, colupper, rowlower, rowupper,
 					 astart, aindex, avalue,
 					 integrality,
 					 colvalue, rowvalue,
 					 &modelstatus);
 
+  // Should return error
+  assert( return_status == -1 );
+
+  // Non-empty integrality for a continuous problem yields a warning
+  integrality[numcol-1] = 0;
+
+  return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
+					 sense, offset, colcost, collower, colupper, rowlower, rowupper,
+					 astart, aindex, avalue,
+					 integrality,
+					 colvalue, rowvalue,
+					 &modelstatus);
+
+  // Should return warning
+  assert( return_status == 1 );
+
+  // Genuine integrality is fine
+  integrality[numcol-1] = 1;
+
+  return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
+					 sense, offset, colcost, collower, colupper, rowlower, rowupper,
+					 astart, aindex, avalue,
+					 integrality,
+					 colvalue, rowvalue,
+					 &modelstatus);
+
+  // Should return OK
   assert( return_status == 0 );
 
   if (dev_run) {
@@ -781,15 +810,15 @@ void test_getColsByRange() {
 }
 
 int main() {
-    minimal_api();
-    full_api();
-    minimal_api_lp();
-    minimal_api_mip();
-    minimal_api_qp();
-    full_api_lp();
-    //  full_api_mip();
-    full_api_qp();
-    options();
-    test_getColsByRange();
+  minimal_api();
+  full_api();
+  minimal_api_lp();
+  minimal_api_mip();
+  minimal_api_qp();
+  full_api_lp();
+  //  full_api_mip();
+  full_api_qp();
+  options();
+  test_getColsByRange();
   return 0;
 }
