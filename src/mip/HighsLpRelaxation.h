@@ -32,6 +32,7 @@ class HighsLpRelaxation {
     kUnscaledDualFeasible,
     kUnscaledPrimalFeasible,
     kUnscaledInfeasible,
+    kUnbounded,
     kError,
   };
 
