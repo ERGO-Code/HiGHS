@@ -2657,7 +2657,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
-          (options_.solver == kIpmString && options_.run_crossover)) {
+          (options_.solver == kIpmString && options_.run_crossover) ||
+          model_.isMip()) {
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::kOk);
       } else {
