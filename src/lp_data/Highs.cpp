@@ -244,14 +244,14 @@ HighsStatus Highs::passModel(HighsModel model) {
   }
   // Dimensions in a_matrix_ may not be set, so take them from lp.
   lp.setMatrixDimensions();
-  // Check that the LP array dimensions are valid
-  if (!lpDimensionsOk("passModel", lp, options_.log_options))
-    return HighsStatus::kError;
   // Residual scale factors may be present. ToDo Allow user-defined
   // scale factors to be passed
   assert(!lp.is_scaled_);
   assert(!lp.is_moved_);
   lp.resetScale();
+  // Check that the LP array dimensions are valid
+  if (!lpDimensionsOk("passModel", lp, options_.log_options))
+    return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise

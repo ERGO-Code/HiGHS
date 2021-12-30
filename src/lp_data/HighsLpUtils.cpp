@@ -183,7 +183,7 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   HighsInt row_lower_size = lp.row_lower_.size();
   HighsInt row_upper_size = lp.row_upper_.size();
   bool legal_row_lower_size = row_lower_size >= num_row;
-  bool legal_row_upper_size = row_lower_size >= num_row;
+  bool legal_row_upper_size = row_upper_size >= num_row;
   if (!legal_row_lower_size)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on row_lower.size() = %d "

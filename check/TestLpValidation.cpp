@@ -3,7 +3,7 @@
 #include "HighsLpUtils.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("LP-dimension-validation", "[highs_data]") {
@@ -29,15 +29,17 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   lp.row_lower_.resize(1);
   lp.row_upper_.resize(1);
 
-  lp.scale_.strategy = -1;
-  lp.scale_.num_col = 1;
-  lp.scale_.num_row = 1;
-  lp.scale_.has_scaling = false;
-  lp.scale_.row.resize(1);
-  lp.scale_.col.resize(1);
+  // Set up invalid scale data once scaling can be imported
+  //  lp.scale_.strategy = -1;
+  //  lp.scale_.num_col = 1;
+  //  lp.scale_.num_row = 1;
+  //  lp.scale_.has_scaling = false;
+  //  lp.scale_.row.resize(1);
+  //  lp.scale_.col.resize(1);
   Highs highs;
-  HighsStatus return_status;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
+  HighsStatus return_status;
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
 
   if (dev_run) printf("Give valid number of columns\n");
@@ -74,8 +76,9 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
 
   if (dev_run) printf("Give valid row_upper.size()\n");
   lp.row_upper_.resize(true_num_row);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
+  /*
   if (dev_run) printf("Give valid scale_.strategy\n");
   lp.scale_.strategy = kSimplexScaleStrategyOff;
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
@@ -96,7 +99,6 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   lp.scale_.row.resize(0);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
-  /*
   if (dev_run) printf("Set scale_.strategy =
   kSimplexScaleStrategyMaxValue015\n"); lp.scale_.strategy =
   kSimplexScaleStrategyMaxValue015; REQUIRE(highs.passModel(lp) ==
