@@ -1352,6 +1352,20 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   return return_status;
 }
 
+bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {
+  if (!num_nz) return true;
+  const bool ok_format = format == (HighsInt)MatrixFormat::kColwise ||
+                         format == (HighsInt)MatrixFormat::kRowwise;
+  assert(ok_format);
+  if (!ok_format)
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Non-empty Constraint matrix has illegal format = %" HIGHSINT_FORMAT
+        "\n",
+        format);
+  return ok_format;
+}
+
 bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
   if (!num_nz) return true;
   const bool ok_format = format == (HighsInt)HessianFormat::kTriangular;
