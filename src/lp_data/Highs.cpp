@@ -244,6 +244,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   }
   // Dimensions in a_matrix_ may not be set, so take them from lp.
   lp.setMatrixDimensions();
+  // Check that the LP array dimensions are valid
+  if (!lpDimensionsOk("passModel", lp, options_.log_options))
+    return HighsStatus::kError;
   // Residual scale factors may be present. ToDo Allow user-defined
   // scale factors to be passed
   assert(!lp.is_scaled_);
@@ -2188,8 +2191,8 @@ HighsPresolveStatus Highs::runPresolve() {
                                       (HighsInt)reduced_lp.a_matrix_.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(dimensionsOk("RunPresolve: reduced_lp", reduced_lp,
-                          options_.log_options));
+      assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
+                            options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -2842,7 +2845,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   // Stop the HiGHS run clock if it is running
   if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
   const bool dimensions_ok =
-      dimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
+      lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
     printf("LP Dimension error in returnFromHighs()\n");
   }

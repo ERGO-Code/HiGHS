@@ -125,7 +125,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   if (valid_basis) appendNonbasicColsToBasisInterface(XnumNewCol);
   // Increase the number of columns in the LP
   lp.num_col_ += XnumNewCol;
-  assert(dimensionsOk("addCols", lp, options.log_options));
+  assert(lpDimensionsOk("addCols", lp, options.log_options));
 
   // Deduce the consequences of adding new columns
   clearModelStatusSolutionAndInfo();
@@ -240,7 +240,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 
   // Increase the number of rows in the LP
   lp.num_row_ += XnumNewRow;
-  assert(dimensionsOk("addRows", lp, options.log_options));
+  assert(lpDimensionsOk("addRows", lp, options.log_options));
 
   // Deduce the consequences of adding new rows
   clearModelStatusSolutionAndInfo();
@@ -292,7 +292,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(dimensionsOk("deleteCols", lp, options_.log_options));
+  assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
 }
 
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
@@ -334,7 +334,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(dimensionsOk("deleteRows", lp, options_.log_options));
+  assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
