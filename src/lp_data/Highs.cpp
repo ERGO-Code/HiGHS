@@ -848,8 +848,7 @@ HighsStatus Highs::run() {
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
         // can't reurn this. Use primal simplex solver on the original
         // LP
-        std::string solver = options_.solver;
-        HighsInt simplex_strategy = options_.simplex_strategy;
+        HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
@@ -867,6 +866,8 @@ HighsStatus Highs::run() {
           options_.output_flag = output_flag;
         }
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        // Recover the options
+        options_ = save_options;
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
         // ToDo Eliminate setBasisValidity once ctest passes. Asserts
