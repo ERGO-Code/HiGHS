@@ -779,6 +779,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::kError;
     }
+    case HighsModelStatus::kUnbounded:
+      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+
+      if (info.primal_solution_status == kSolutionStatusFeasible)
+        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
+
+      return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
       if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
       // fall through

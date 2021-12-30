@@ -939,6 +939,19 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       total_lp_iterations += lpIters;
       avgrootlpiters = lp.getAvgSolveIters();
       lpWasSolved = true;
+
+      if (status == HighsLpRelaxation::Status::kUnbounded) {
+        if (mipsolver.solution_.empty())
+          mipsolver.modelstatus_ = HighsModelStatus::kUnboundedOrInfeasible;
+        else
+          mipsolver.modelstatus_ = HighsModelStatus::kUnbounded;
+
+        pruned_treeweight = 1.0;
+        num_nodes += 1;
+        num_leaves += 1;
+        return status;
+      }
+
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
           addIncumbent(lp.getLpSolver().getSolution().col_value,
@@ -1043,7 +1056,9 @@ restart:
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
   lp.getLpSolver().setOptionValue("parallel", "off");
 
-  if (status == HighsLpRelaxation::Status::kInfeasible) return;
+  if (status == HighsLpRelaxation::Status::kInfeasible ||
+      status == HighsLpRelaxation::Status::kUnbounded)
+    return;
 
   heuristics.randomizedRounding(firstlpsol);
   heuristics.flushStatistics();

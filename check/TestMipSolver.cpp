@@ -131,6 +131,124 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   REQUIRE(info.sum_primal_infeasibilities == 0);
 }
 
+TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  HighsLp lp;
+  HighsStatus return_status;
+  HighsModelStatus model_status;
+  // One-variable unbounded MIP from SciPy HiGHS MIP wrapper #28
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {inf};
+  lp.integrality_ = {HighsVarType::kInteger};
+
+  bool use_presolve = true;
+  HighsModelStatus require_model_status;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (use_presolve) {
+      // With use_presolve = true, MIP solver returns
+      // HighsModelStatus::kUnboundedOrInfeasible from presolve
+      highs.setOptionValue("presolve", kHighsOnString);
+      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    } else {
+      // With use_presolve = false, MIP solver returns
+      // HighsModelStatus::kUnbounded
+      highs.setOptionValue("presolve", kHighsOffString);
+      require_model_status = HighsModelStatus::kUnbounded;
+    }
+    return_status = highs.passModel(lp);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    model_status = highs.getModelStatus();
+    REQUIRE(model_status == require_model_status);
+
+    // Second time through loop is without presolve
+    use_presolve = false;
+  }
+  // Two-variable problem that is also primal unbounded as an LP, but
+  // primal infeasible as a MIP.
+  //
+  // min -x subject to x+2y>=1, x>=0; 1/4 <= y <= 3/4; y\in{0,1}
+  //
+  // First the LP - unbounded
+  lp.clear();
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, 0};
+  lp.col_lower_ = {0, 0.25};
+  lp.col_upper_ = {inf, 0.75};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {inf};
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 2};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+  use_presolve = true;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (use_presolve) {
+      // With use_presolve = true, LP solver returns
+      // HighsModelStatus::kUnbounded because it solves the LP after
+      // presolve has returned
+      // HighsModelStatus::kUnboundedOrInfeasible
+      highs.setOptionValue("presolve", kHighsOnString);
+      require_model_status = HighsModelStatus::kUnbounded;
+    } else {
+      // With use_presolve = false, LP solver returns
+      // HighsModelStatus::kUnbounded
+      highs.setOptionValue("presolve", kHighsOffString);
+      require_model_status = HighsModelStatus::kUnbounded;
+    }
+
+    return_status = highs.passModel(lp);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    model_status = highs.getModelStatus();
+    REQUIRE(model_status == require_model_status);
+
+    // Second time through loop is without presolve
+    use_presolve = false;
+  }
+
+  // Now as a MIP - infeasible
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
+  use_presolve = true;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (use_presolve) {
+      // With use_presolve = true, MIP solver returns
+      // HighsModelStatus::kUnboundedOrInfeasible from presolve
+      highs.setOptionValue("presolve", kHighsOnString);
+      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    } else {
+      // With use_presolve = false, MIP solver returns
+      // HighsModelStatus::kUnboundedOrInfeasible
+      highs.setOptionValue("presolve", kHighsOffString);
+      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    }
+
+    return_status = highs.passModel(lp);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    model_status = highs.getModelStatus();
+    REQUIRE(model_status == require_model_status);
+
+    // Second time through loop is without presolve
+    use_presolve = false;
+  }
+}
+
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
