@@ -258,11 +258,11 @@ Vector Basis::recomputex(const Instance& inst) {
       }
     }
 
-      rhs.index[i] = i;
-      rhs.num_nz++;
-   }
-   HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.btranCall(rhs_hvec, 1.0);
+    rhs.index[i] = i;
+    rhs.num_nz++;
+  }
+  HVector rhs_hvec = vec2hvec(rhs);
+  basisfactor.btranCall(rhs_hvec, 1.0);
   return hvec2vec(rhs_hvec);
 }
 
@@ -284,10 +284,11 @@ Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
 Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
   Vector temp(runtime.instance.num_var);
   for (HighsInt i = 0; i < rhs.num_nz; i++) {
-    HighsInt nonactive = nonactiveconstraintsidx[i];
+    HighsInt nz = rhs.index[i];
+    HighsInt nonactive = nonactiveconstraintsidx[nz];
     HighsInt idx = constraintindexinbasisfactor[nonactive];
     temp.index[i] = idx;
-    temp.value[idx] = rhs.value[i];
+    temp.value[idx] = rhs.value[nz];
   }
   temp.num_nz = rhs.num_nz;
   return btran(temp, target);
