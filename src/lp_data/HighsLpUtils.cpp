@@ -26,6 +26,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
 
@@ -107,6 +108,150 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                 "assessLp returns HighsStatus = %s\n",
                 HighsStatusToString(return_status).c_str());
   return return_status;
+}
+
+bool dimensionsOk(std::string message, const HighsLp& lp, const HighsLogOptions& log_options) {
+  bool ok = true;
+  const HighsInt num_col = lp.num_col_;
+  const HighsInt num_row = lp.num_row_;
+  if (!(num_col >= 0))
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on num_col >= 0\n",
+           message.c_str());
+  ok = num_col >= 0 && ok;
+  if (!(num_row >= 0))
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on num_row >= 0\n",
+           message.c_str());
+  ok = num_row >= 0 && ok;
+  if (!ok) return ok;
+
+  HighsInt col_cost_size = lp.col_cost_.size();
+  HighsInt col_lower_size = lp.col_lower_.size();
+  HighsInt col_upper_size = lp.col_upper_.size();
+  HighsInt matrix_start_size = lp.a_matrix_.start_.size();
+  bool legal_col_cost_size = col_cost_size >= num_col;
+  bool legal_col_lower_size = col_lower_size >= num_col;
+  bool legal_col_upper_size = col_lower_size >= num_col;
+  if (!legal_col_cost_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_col_cost_size\n",
+           message.c_str());
+  ok = legal_col_cost_size && ok;
+  if (!legal_col_lower_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_col_lower_size\n",
+           message.c_str());
+  ok = legal_col_lower_size && ok;
+  if (!legal_col_upper_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_col_upper_size\n",
+           message.c_str());
+  ok = legal_col_upper_size && ok;
+
+  bool legal_format = lp.a_matrix_.format_ == MatrixFormat::kColwise ||
+                      lp.a_matrix_.format_ == MatrixFormat::kRowwise;
+  if (!legal_format)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_format\n",
+           message.c_str());
+  ok = legal_format && ok;
+  HighsInt num_vec;
+  if (lp.a_matrix_.isColwise()) {
+    num_vec = num_col;
+  } else {
+    num_vec = num_row;
+  }
+  const bool partitioned = false;
+  vector<HighsInt> a_matrix_p_end;
+  bool legal_matrix_dimensions =
+      assessMatrixDimensions(num_vec, partitioned, lp.a_matrix_.start_,
+                             a_matrix_p_end, lp.a_matrix_.index_,
+                             lp.a_matrix_.value_) == HighsStatus::kOk;
+  if (!legal_matrix_dimensions)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_matrix_dimensions\n",
+           message.c_str());
+  ok = legal_matrix_dimensions && ok;
+
+  HighsInt row_lower_size = lp.row_lower_.size();
+  HighsInt row_upper_size = lp.row_upper_.size();
+  bool legal_row_lower_size = row_lower_size >= num_row;
+  bool legal_row_upper_size = row_lower_size >= num_row;
+  if (!legal_row_lower_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_row_lower_size\n",
+           message.c_str());
+  ok = legal_row_lower_size && ok;
+  if (!legal_row_upper_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_row_upper_size\n",
+           message.c_str());
+  ok = legal_row_upper_size && ok;
+
+  bool legal_a_matrix_num_col = lp.a_matrix_.num_col_ == num_col;
+  bool legal_a_matrix_num_row = lp.a_matrix_.num_row_ == num_row;
+  if (!legal_a_matrix_num_col)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_a_matrix_num_col\n",
+           message.c_str());
+  ok = legal_a_matrix_num_col && ok;
+  if (!legal_a_matrix_num_row)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_a_matrix_num_row\n",
+           message.c_str());
+  ok = legal_a_matrix_num_row && ok;
+
+  HighsInt scale_strategy = (HighsInt)lp.scale_.strategy;
+  bool legal_scale_strategy = scale_strategy >= 0;
+  if (!legal_scale_strategy)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_scale_strategy\n",
+           message.c_str());
+  ok = legal_scale_strategy && ok;
+  HighsInt scale_row_size = (HighsInt)lp.scale_.row.size();
+  HighsInt scale_col_size = (HighsInt)lp.scale_.col.size();
+  bool legal_scale_num_col = false;
+  bool legal_scale_num_row = false;
+  bool legal_scale_row_size = false;
+  bool legal_scale_col_size = false;
+  if (lp.scale_.has_scaling) {
+    legal_scale_num_col = lp.scale_.num_col == num_col;
+    legal_scale_num_row = lp.scale_.num_row == num_row;
+    legal_scale_row_size = scale_row_size >= num_row;
+    legal_scale_col_size = scale_col_size >= num_col;
+  } else {
+    legal_scale_num_col = lp.scale_.num_col == 0;
+    legal_scale_num_row = lp.scale_.num_row == 0;
+    legal_scale_row_size = scale_row_size == 0;
+    legal_scale_col_size = scale_col_size == 0;
+  }
+  if (!legal_scale_num_col)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_scale_num_col\n",
+           message.c_str());
+  ok = legal_scale_num_col && ok;
+  if (!legal_scale_num_row)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_scale_num_row\n",
+           message.c_str());
+  ok = legal_scale_num_row && ok;
+  if (!legal_scale_row_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_scale_row_size\n",
+           message.c_str());
+  ok = legal_scale_row_size && ok;
+  if (!legal_scale_col_size)
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails on legal_scale_col_size\n",
+           message.c_str());
+  ok = legal_scale_col_size && ok;
+  if (!ok) {
+    highsLogDev(log_options, HighsLogType::kError,
+                  "Dimension validation (%s) fails\n", message.c_str());
+  }
+
+  return ok;
 }
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
