@@ -2188,7 +2188,7 @@ HighsPresolveStatus Highs::runPresolve() {
                                       (HighsInt)reduced_lp.a_matrix_.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(reduced_lp.dimensionsOk("RunPresolve: reduced_lp"));
+      assert(dimensionsOk("RunPresolve: reduced_lp", reduced_lp, options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -2840,7 +2840,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   // Stop the HiGHS run clock if it is running
   if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
-  const bool dimensions_ok = model_.lp_.dimensionsOk("returnFromHighs");
+  const bool dimensions_ok = dimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
     printf("LP Dimension error in returnFromHighs()\n");
   }

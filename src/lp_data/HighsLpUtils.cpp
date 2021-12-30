@@ -37,7 +37,7 @@ using std::min;
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status =
-      lp.dimensionsOk("assessLp") ? HighsStatus::kOk : HighsStatus::kError;
+    dimensionsOk("assessLp", lp, options.log_options) ? HighsStatus::kOk : HighsStatus::kError;
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;

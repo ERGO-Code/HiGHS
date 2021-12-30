@@ -44,7 +44,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 bool dimensionsOk(std::string message,
 		  const HighsLp& lp,
-		  HighsLogOptions& log_options);
+		  const HighsLogOptions& log_options);
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,

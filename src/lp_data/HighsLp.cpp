@@ -94,6 +94,7 @@ void HighsLp::resetScale() {
   this->clearScale();
 }
 
+/*
 bool HighsLp::dimensionsOk(std::string message) const {
   bool ok = true;
   const HighsInt num_col = this->num_col_;
@@ -220,7 +221,7 @@ bool HighsLp::dimensionsOk(std::string message) const {
 
   return ok;
 }
-
+*/
 void HighsLp::setFormat(const MatrixFormat format) {
   this->a_matrix_.setFormat(format);
 }
