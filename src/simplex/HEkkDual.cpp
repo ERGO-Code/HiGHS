@@ -30,7 +30,7 @@
 
 using std::fabs;
 
-HighsStatus HEkkDual::solve() {
+HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   // Initialise control data for a particular solve
   initialiseSolve();
 
@@ -71,8 +71,9 @@ HighsStatus HEkkDual::solve() {
       info.num_dual_infeasibilities == 0;
   // Force phase 2 if dual infeasiblilities without cost perturbation
   // involved fixed variables or were (at most) small
-  force_phase2 = info.max_dual_infeasibility * info.max_dual_infeasibility <
-                 ekk_instance_.options_->dual_feasibility_tolerance;
+  force_phase2 = pass_force_phase2 ||
+                 info.max_dual_infeasibility * info.max_dual_infeasibility <
+                     ekk_instance_.options_->dual_feasibility_tolerance;
   if (ekk_instance_.debug_dual_feasible &&
       !dual_feasible_with_unperturbed_costs) {
     SimplexBasis& basis = ekk_instance_.basis_;
@@ -371,7 +372,7 @@ HighsStatus HEkkDual::solve() {
           info.primal_simplex_bound_perturbation_multiplier;
       info.primal_simplex_bound_perturbation_multiplier = 0;
       HEkkPrimal primal_solver(ekk_instance_);
-      HighsStatus call_status = primal_solver.solve();
+      HighsStatus call_status = primal_solver.solve(true);
       // Restore any bound perturbation
       info.primal_simplex_bound_perturbation_multiplier =
           save_primal_simplex_bound_perturbation_multiplier;
@@ -2756,8 +2757,7 @@ bool HEkkDual::bailoutOnDualObjective() {
     // reasons
     assert(ekk_instance_.model_status_ == HighsModelStatus::kTimeLimit ||
            ekk_instance_.model_status_ == HighsModelStatus::kIterationLimit ||
-           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveBound ||
-           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveTarget);
+           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveBound);
   } else if (ekk_instance_.lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >

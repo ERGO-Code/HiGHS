@@ -295,6 +295,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // LP, see whether the proof still holds for the unscaled LP. If
     // it does, then there's no need to solve the unscaled LP
     bool solve_unscaled_lp = true;
+    // ToDo: ekk_instance.status_.has_dual_ray should now be true if
+    // scaled_model_status == HighsModelStatus::kInfeasible since this
+    // model status depends on the infeasibility proof being true
     if (scaled_model_status == HighsModelStatus::kInfeasible &&
         ekk_instance.status_.has_dual_ray) {
       ekk_instance.setNlaPointersForLpAndScale(ekk_lp);
@@ -307,8 +310,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
           options.dual_simplex_cost_perturbation_multiplier;
       HighsInt simplex_dual_edge_weight_strategy =
           ekk_info.dual_edge_weight_strategy;
-      if (num_unscaled_primal_infeasibilities == 0) {
-        // Only dual infeasibilities, so use primal simplex
+      if (num_unscaled_primal_infeasibilities == 0 ||
+          scaled_model_status == HighsModelStatus::kObjectiveBound) {
+        // Only dual infeasibilities, or primal infeasibilities do not
+        // matter due to solution status, so use primal simplex phase
+        // 2
         options.simplex_strategy = kSimplexStrategyPrimal;
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
@@ -318,17 +324,14 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         // !status.has_dual_steepest_edge_weights) {
         ekk_info.dual_edge_weight_strategy =
             kSimplexDualEdgeWeightStrategyDevex;
-        // when the status of the scaled LP was objective bound do not use cost
-        // perturbation to solve the unscaled LP so that the status can reliably
-        // be verified
-        if (scaled_model_status == HighsModelStatus::kObjectiveBound)
-          options.dual_simplex_cost_perturbation_multiplier = 0;
+        // options.dual_simplex_cost_perturbation_multiplier = 0;
       }
 
       //
-      // Solve the unscaled LP with scaled NLA
+      // Solve the unscaled LP with scaled NLA and force to start in phase 2
       //
-      return_status = ekk_instance.solve();
+      const bool force_phase2 = true;
+      return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;
       //
       // Restore the options/strategies that may have been changed

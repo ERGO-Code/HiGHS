@@ -22,7 +22,7 @@
 
 using std::min;
 
-HighsStatus HEkkPrimal::solve() {
+HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
   // Initialise control data for a particular solve
   initialiseSolve();
 
@@ -50,8 +50,9 @@ HighsStatus HEkkPrimal::solve() {
   const bool primal_feasible_with_unperturbed_bounds =
       info.num_primal_infeasibilities == 0;
   const bool force_phase2 =
+      pass_force_phase2 ||
       info.max_primal_infeasibility * info.max_primal_infeasibility <
-      options.primal_feasibility_tolerance;
+          options.primal_feasibility_tolerance;
 
   // Determine whether the solution is near-optimal. Value 1 is
   // unimportant, as the sum of dual infeasiblilities for near-optimal
@@ -106,19 +107,22 @@ HighsStatus HEkkPrimal::solve() {
     // fixed variables or were (at most) small, so can easily be
     // removed by flips for and fixed variables shifts for the rest
     solve_phase = kSolvePhase2;
-    const bool local_report = true;
-    if (!primal_feasible_with_unperturbed_bounds && local_report) {
-      printf(
-          "Solve %d: Forcing phase 2 since near primal feasible with "
-          "unperturbed "
-          "costs\n"
-          "num / max / sum primal infeasiblitiles\n"
-          "%d / %11.4g / %11.4g (  perturbed bounds)\n"
-          "%d / %11.4g / %11.4g (unperturbed bounds)\n",
-          (int)ekk_instance_.debug_solve_call_num_,
-          (int)info.num_primal_infeasibilities, info.max_primal_infeasibility,
-          info.sum_primal_infeasibilities, (int)unperturbed_num_infeasibilities,
-          unperturbed_max_infeasibility, unperturbed_sum_infeasibilities);
+    if (!pass_force_phase2) {
+      const bool local_report = true;
+      if (!primal_feasible_with_unperturbed_bounds && local_report) {
+        printf(
+            "Solve %d: Forcing phase 2 since near primal feasible with "
+            "unperturbed "
+            "costs\n"
+            "num / max / sum primal infeasiblitiles\n"
+            "%d / %11.4g / %11.4g (  perturbed bounds)\n"
+            "%d / %11.4g / %11.4g (unperturbed bounds)\n",
+            (int)ekk_instance_.debug_solve_call_num_,
+            (int)info.num_primal_infeasibilities, info.max_primal_infeasibility,
+            info.sum_primal_infeasibilities,
+            (int)unperturbed_num_infeasibilities, unperturbed_max_infeasibility,
+            unperturbed_sum_infeasibilities);
+      }
     }
   }
   if (ekk_instance_.debugOkForSolve(algorithm, solve_phase) ==
@@ -287,7 +291,7 @@ HighsStatus HEkkPrimal::solve() {
     HighsInt simplex_strategy = info.simplex_strategy;
     info.simplex_strategy = kSimplexStrategyDualPlain;
     HEkkDual dual_solver(ekk_instance_);
-    HighsStatus call_status = dual_solver.solve();
+    HighsStatus call_status = dual_solver.solve(true);
     // Restore any bound perturbation
     info.dual_simplex_cost_perturbation_multiplier =
         save_dual_simplex_cost_perturbation_multiplier;

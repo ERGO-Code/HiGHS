@@ -50,7 +50,7 @@ class HEkkDual {
   /**
    * @brief Solve a model instance
    */
-  HighsStatus solve();
+  HighsStatus solve(const bool force_phase2 = false);
 
   const SimplexAlgorithm algorithm = SimplexAlgorithm::kDual;
 
