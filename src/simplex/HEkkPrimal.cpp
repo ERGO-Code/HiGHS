@@ -53,17 +53,21 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
       pass_force_phase2 ||
       info.max_primal_infeasibility * info.max_primal_infeasibility <
           options.primal_feasibility_tolerance;
-
-  // Determine whether the solution is near-optimal. Value 1 is
-  // unimportant, as the sum of dual infeasiblilities for near-optimal
-  // solutions is typically many orders of magnitude smaller than 1,
-  // and the sum of dual infeasiblilities will be very much larger for
-  // non-trivial LPs that are primal feasible for a logical or crash
-  // basis.
+  // Determine whether the solution is near-optimal. Values 1000 and
+  // 1e-3 (ensuring sum<1) are unimportant, as the sum of dual
+  // infeasiblilities for near-optimal solutions is typically many
+  // orders of magnitude smaller than 1, and the sum of dual
+  // infeasiblilities will be very much larger for non-trivial LPs
+  // that are primal feasible for a logical or crash basis.
+  //
+  // Consider there to be no primal infeasibilities if there are none,
+  // or if phase 2 is forced, in which case any primal infeasibilities
+  // will be shifed
+  const bool no_simplex_primal_infeasibilities =
+    primal_feasible_with_unperturbed_bounds || force_phase2;
   const bool near_optimal = info.num_dual_infeasibilities < 1000 &&
                             info.max_dual_infeasibility < 1e-3 &&
-                            info.sum_dual_infeasibilities < 1 &&
-                            info.num_primal_infeasibilities == 0;
+                            no_simplex_primal_infeasibilities;
   // For reporting, save primal infeasibility data for the LP without
   // bound perturbations
   const HighsInt unperturbed_num_infeasibilities =
@@ -73,7 +77,8 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
       info.sum_primal_infeasibilities;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
-                "Primal feasible and num / max / sum dual infeasibilities are "
+                "Primal feasible and num / max / sum "
+		"dual infeasibilities of "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",

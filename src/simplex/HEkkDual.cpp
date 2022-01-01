@@ -91,9 +91,19 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       printf("\n");
     }
   }
-
-  // Determine whether the solution is near-optimal.
-  const bool near_optimal = dual_feasible_with_unperturbed_costs &&
+  // Determine whether the solution is near-optimal. Values 1000 and
+  // 1e-3 (ensuring sum<1) are unimportant, as the sum of primal
+  // infeasiblilities for near-optimal solutions is typically many
+  // orders of magnitude smaller than 1, and the sum of primal
+  // infeasiblilities will be very much larger for non-trivial LPs
+  // that are dual feasible for a logical or crash basis.
+  //
+  // Consider there to be no dual infeasibilities if there are none,
+  // or if phase 2 is forced, in which case any dual infeasibilities
+  // will be shifed
+  const bool no_simplex_dual_infeasibilities =
+    dual_feasible_with_unperturbed_costs || force_phase2;
+  const bool near_optimal = no_simplex_dual_infeasibilities &&
                             info.num_primal_infeasibilities < 1000 &&
                             info.max_primal_infeasibility < 1e-3;
   // For reporting, save dual infeasibility data for the LP without
@@ -104,7 +114,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Dual feasible with unperturbed costs and num / max / sum "
-                "primal infeasibilities are "
+                "primal infeasibilities of "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
@@ -2844,6 +2854,15 @@ double HEkkDual::computeExactDualObjectiveValue() {
     const double expected_density = 1;
     simplex_nla->btran(dual_col, expected_density);
     lp.a_matrix_.priceByColumn(quad_precision, dual_row, dual_col);
+  }
+  // Compute dual infeasiblilities
+  ekk_instance_.computeSimplexDualInfeasible();
+  if (info.num_dual_infeasibilities>0) {
+    printf("HEkkDual::computeExactDualObjectiveValue num / max / sum dual infeasibilities = %d / %g / %g\n",
+	   (int)info.num_dual_infeasibilities,
+	   info.max_dual_infeasibility,
+	   info.sum_dual_infeasibilities);
+    //    assert(info.num_dual_infeasibilities == 0);
   }
   HighsCDouble dual_objective = lp.offset_;
   double norm_dual = 0;

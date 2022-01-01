@@ -262,6 +262,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
                     highs_info.max_dual_infeasibility,
                     highs_info.sum_dual_infeasibilities);
       // Determine whether refinement will take place
+      const bool objective_bound_refinement =
+	scaled_model_status == HighsModelStatus::kObjectiveBound &&
+	num_unscaled_dual_infeasibilities > 0;
       refine_solution =
           options.simplex_unscaled_solution_strategy ==
               kSimplexUnscaledSolutionStrategyRefine &&
@@ -269,7 +272,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
            scaled_model_status == HighsModelStatus::kInfeasible ||
            scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
            scaled_model_status == HighsModelStatus::kUnbounded ||
-           scaled_model_status == HighsModelStatus::kObjectiveBound ||
+           objective_bound_refinement ||
            scaled_model_status == HighsModelStatus::kObjectiveTarget ||
            scaled_model_status == HighsModelStatus::kUnknown);
       // Handle the case when refinement will not take place
@@ -316,6 +319,10 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         // matter due to solution status, so use primal simplex phase
         // 2
         options.simplex_strategy = kSimplexStrategyPrimal;
+	if (scaled_model_status == HighsModelStatus::kObjectiveBound) {
+	  printf("solveLpSimplex: Calling primal simplex after scaled_model_status == HighsModelStatus::kObjectiveBound\n");
+	  //	  assert(scaled_model_status != HighsModelStatus::kObjectiveBound);
+	}
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
