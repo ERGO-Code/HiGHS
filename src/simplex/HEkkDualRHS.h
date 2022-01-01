@@ -127,6 +127,8 @@ class HEkkDualRHS {
    */
   void createArrayOfPrimalInfeasibilities();
 
+  void assessOptimality();
+  
   // References:
   HEkk& ekk_instance_;
 

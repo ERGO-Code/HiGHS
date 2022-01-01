@@ -1202,8 +1202,7 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
-  const HighsInt from_check_iter = 100;
-  ;
+  const HighsInt from_check_iter = 65;
   const HighsInt to_check_iter = from_check_iter + 10;
   if (ekk_instance_.debug_solve_report_) {
     ekk_instance_.debug_iteration_report_ =
@@ -1416,6 +1415,7 @@ void HEkkDual::chooseRow() {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
+  if (solve_phase == kSolvePhase2) dualRHS.assessOptimality();
   // Zero the infeasibility of any taboo rows
   ekk_instance_.applyTabooRowOut(dualRHS.work_infeasibility, 0);
   // Choose candidates repeatedly until candidate is OK or optimality is
@@ -3003,3 +3003,4 @@ void HEkkDual::assessPossiblyDualUnbounded() {
     rebuild_reason = kRebuildReasonNo;
   }
 }
+

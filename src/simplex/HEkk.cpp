@@ -1014,8 +1014,8 @@ HighsStatus HEkk::unpermute() {
 HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
   debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = 3086;
-  const HighsInt debug_build_synthetic_tick = 3767900;
+  const HighsInt debug_from_solve_call_num = 559;
+  const HighsInt debug_build_synthetic_tick = 2914940;
   const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
   debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
                         debug_solve_call_num_ <= debug_to_solve_call_num &&
