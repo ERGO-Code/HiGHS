@@ -344,7 +344,7 @@ class HEkk {
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;
-  friend class HEkkDualRHS; // For  HEkkDualRHS::assessOptimality
+  friend class HEkkDualRHS;  // For  HEkkDualRHS::assessOptimality
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

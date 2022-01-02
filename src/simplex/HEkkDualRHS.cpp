@@ -320,7 +320,8 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
 
   const HighsInt to_entry = updatePrimal_inDense ? numRow : columnCount;
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    const HighsInt iRow = updatePrimal_inDense ? iEntry : variable_index[iEntry];
+    const HighsInt iRow =
+        updatePrimal_inDense ? iEntry : variable_index[iEntry];
     baseValue[iRow] -= theta * columnArray[iRow];
     // @primal_infeasibility calculation
     const double value = baseValue[iRow];
@@ -552,26 +553,32 @@ void HEkkDualRHS::assessOptimality() {
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (work_infeasibility[iRow] > kHighsZero) {
       num_work_infeasibilities++;
-      max_work_infeasibility = std::max(work_infeasibility[iRow], max_work_infeasibility);
+      max_work_infeasibility =
+          std::max(work_infeasibility[iRow], max_work_infeasibility);
     }
   }
   ekk_instance_.computeSimplexPrimalInfeasible();
-  const HighsInt num_primal_infeasibilities = ekk_instance_.info_.num_primal_infeasibilities;
-  const double max_primal_infeasibility = ekk_instance_.info_.max_primal_infeasibility;
+  const HighsInt num_primal_infeasibilities =
+      ekk_instance_.info_.num_primal_infeasibilities;
+  const double max_primal_infeasibility =
+      ekk_instance_.info_.max_primal_infeasibility;
   const bool regular_report = false;
-  if (regular_report || (num_work_infeasibilities && !num_primal_infeasibilities)) {
-    printf("assessOptimality: %6d rows; workCount = %4d (%6.4f) "
-	   "num / max infeasibilities: work = %4d / %11.4g; simplex = %4d / %11.4g: %s\n",
-	   (int)num_row, (int)workCount,
-	   workCount>0 ? (1.0 * workCount)/num_row : 0,
-	   (int)num_work_infeasibilities, max_work_infeasibility,
-	   (int)num_primal_infeasibilities, max_primal_infeasibility,
-	   num_primal_infeasibilities == 0 ? "Optimal" : "");
+  if (regular_report ||
+      (num_work_infeasibilities && !num_primal_infeasibilities)) {
+    printf(
+        "assessOptimality: %6d rows; workCount = %4d (%6.4f) "
+        "num / max infeasibilities: work = %4d / %11.4g; simplex = %4d / "
+        "%11.4g: %s\n",
+        (int)num_row, (int)workCount,
+        workCount > 0 ? (1.0 * workCount) / num_row : 0,
+        (int)num_work_infeasibilities, max_work_infeasibility,
+        (int)num_primal_infeasibilities, max_primal_infeasibility,
+        num_primal_infeasibilities == 0 ? "Optimal" : "");
     if (num_work_infeasibilities && !num_primal_infeasibilities) {
       printf("assessOptimality: call %d; tick %d; iter %d\n",
-	     (int)ekk_instance_.debug_solve_call_num_,
-	     (int)ekk_instance_.debug_initial_build_synthetic_tick_,
-	     (int)ekk_instance_.iteration_count_);
+             (int)ekk_instance_.debug_solve_call_num_,
+             (int)ekk_instance_.debug_initial_build_synthetic_tick_,
+             (int)ekk_instance_.iteration_count_);
     }
   }
 }

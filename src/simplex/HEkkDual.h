@@ -377,7 +377,7 @@ class HEkkDual {
 
   bool isBadBasisChange();
   void assessPossiblyDualUnbounded();
-  
+
   // Devex scalars
   HighsInt num_devex_iterations =
       0;  //!< Number of Devex iterations with the current framework

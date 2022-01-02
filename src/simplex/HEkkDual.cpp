@@ -102,7 +102,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   // or if phase 2 is forced, in which case any dual infeasibilities
   // will be shifed
   const bool no_simplex_dual_infeasibilities =
-    dual_feasible_with_unperturbed_costs || force_phase2;
+      dual_feasible_with_unperturbed_costs || force_phase2;
   const bool near_optimal = no_simplex_dual_infeasibilities &&
                             info.num_primal_infeasibilities < 1000 &&
                             info.max_primal_infeasibility < 1e-3;
@@ -1202,7 +1202,7 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
-  const HighsInt from_check_iter = 65;
+  const HighsInt from_check_iter = -65;
   const HighsInt to_check_iter = from_check_iter + 10;
   if (ekk_instance_.debug_solve_report_) {
     ekk_instance_.debug_iteration_report_ =
@@ -2857,12 +2857,13 @@ double HEkkDual::computeExactDualObjectiveValue() {
   }
   // Compute dual infeasiblilities
   ekk_instance_.computeSimplexDualInfeasible();
-  if (info.num_dual_infeasibilities>0) {
-    printf("HEkkDual::computeExactDualObjectiveValue num / max / sum dual infeasibilities = %d / %g / %g\n",
-	   (int)info.num_dual_infeasibilities,
-	   info.max_dual_infeasibility,
-	   info.sum_dual_infeasibilities);
-    //    assert(info.num_dual_infeasibilities == 0);
+  if (info.num_dual_infeasibilities > 0) {
+    printf(
+        "HEkkDual::computeExactDualObjectiveValue num / max / sum dual "
+        "infeasibilities = %d / %g / %g\n",
+        (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+        info.sum_dual_infeasibilities);
+    assert(info.num_dual_infeasibilities == 0);
   }
   HighsCDouble dual_objective = lp.offset_;
   double norm_dual = 0;
@@ -3003,4 +3004,3 @@ void HEkkDual::assessPossiblyDualUnbounded() {
     rebuild_reason = kRebuildReasonNo;
   }
 }
-

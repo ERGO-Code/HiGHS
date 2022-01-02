@@ -64,7 +64,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
   // or if phase 2 is forced, in which case any primal infeasibilities
   // will be shifed
   const bool no_simplex_primal_infeasibilities =
-    primal_feasible_with_unperturbed_bounds || force_phase2;
+      primal_feasible_with_unperturbed_bounds || force_phase2;
   const bool near_optimal = info.num_dual_infeasibilities < 1000 &&
                             info.max_dual_infeasibility < 1e-3 &&
                             no_simplex_primal_infeasibilities;
@@ -78,7 +78,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Primal feasible and num / max / sum "
-		"dual infeasibilities of "
+                "dual infeasibilities of "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
