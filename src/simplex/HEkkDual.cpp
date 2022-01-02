@@ -1415,7 +1415,7 @@ void HEkkDual::chooseRow() {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
-  if (solve_phase == kSolvePhase2) dualRHS.assessOptimality();
+  //  if (solve_phase == kSolvePhase2) dualRHS.assessOptimality();
   // Zero the infeasibility of any taboo rows
   ekk_instance_.applyTabooRowOut(dualRHS.work_infeasibility, 0);
   // Choose candidates repeatedly until candidate is OK or optimality is
