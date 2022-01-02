@@ -322,8 +322,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         if (scaled_model_status == HighsModelStatus::kObjectiveBound) {
           printf(
               "solveLpSimplex: Calling primal simplex after "
-              "scaled_model_status == HighsModelStatus::kObjectiveBound\n");
-          assert(scaled_model_status != HighsModelStatus::kObjectiveBound);
+              "scaled_model_status == HighsModelStatus::kObjectiveBound: solve "
+              "= %d; tick = %d; iter = %d\n",
+              (int)ekk_instance.debug_solve_call_num_,
+              (int)ekk_instance.debug_initial_build_synthetic_tick_,
+              (int)ekk_instance.iteration_count_);
+          //          assert(scaled_model_status !=
+          //          HighsModelStatus::kObjectiveBound);
         }
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
