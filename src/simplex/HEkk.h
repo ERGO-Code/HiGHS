@@ -66,7 +66,7 @@ class HEkk {
   HighsStatus undualise();
   HighsStatus permute();
   HighsStatus unpermute();
-  HighsStatus solve();
+  HighsStatus solve(const bool force_phase2 = false);
   HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
@@ -344,6 +344,7 @@ class HEkk {
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;
+  friend class HEkkDualRHS;  // For  HEkkDualRHS::assessOptimality
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

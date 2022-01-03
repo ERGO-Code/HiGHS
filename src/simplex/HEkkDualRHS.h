@@ -105,8 +105,9 @@ class HEkkDualRHS {
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void updatePivots(HighsInt iRow,  //!< row where the basis change has occurred
-                    double value    //!< New primal value in this row
+  void updatePivots(
+      const HighsInt iRow,  //!< row where the basis change has occurred
+      const double value    //!< New primal value in this row
   );
 
   /**
@@ -126,6 +127,8 @@ class HEkkDualRHS {
    *
    */
   void createArrayOfPrimalInfeasibilities();
+
+  void assessOptimality();
 
   // References:
   HEkk& ekk_instance_;

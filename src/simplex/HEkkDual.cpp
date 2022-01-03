@@ -30,7 +30,7 @@
 
 using std::fabs;
 
-HighsStatus HEkkDual::solve() {
+HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   // Initialise control data for a particular solve
   initialiseSolve();
 
@@ -71,8 +71,9 @@ HighsStatus HEkkDual::solve() {
       info.num_dual_infeasibilities == 0;
   // Force phase 2 if dual infeasiblilities without cost perturbation
   // involved fixed variables or were (at most) small
-  force_phase2 = info.max_dual_infeasibility * info.max_dual_infeasibility <
-                 ekk_instance_.options_->dual_feasibility_tolerance;
+  force_phase2 = pass_force_phase2 ||
+                 info.max_dual_infeasibility * info.max_dual_infeasibility <
+                     ekk_instance_.options_->dual_feasibility_tolerance;
   if (ekk_instance_.debug_dual_feasible &&
       !dual_feasible_with_unperturbed_costs) {
     SimplexBasis& basis = ekk_instance_.basis_;
@@ -90,9 +91,19 @@ HighsStatus HEkkDual::solve() {
       printf("\n");
     }
   }
-
-  // Determine whether the solution is near-optimal.
-  const bool near_optimal = dual_feasible_with_unperturbed_costs &&
+  // Determine whether the solution is near-optimal. Values 1000 and
+  // 1e-3 (ensuring sum<1) are unimportant, as the sum of primal
+  // infeasiblilities for near-optimal solutions is typically many
+  // orders of magnitude smaller than 1, and the sum of primal
+  // infeasiblilities will be very much larger for non-trivial LPs
+  // that are dual feasible for a logical or crash basis.
+  //
+  // Consider there to be no dual infeasibilities if there are none,
+  // or if phase 2 is forced, in which case any dual infeasibilities
+  // will be shifed
+  const bool no_simplex_dual_infeasibilities =
+      dual_feasible_with_unperturbed_costs || force_phase2;
+  const bool near_optimal = no_simplex_dual_infeasibilities &&
                             info.num_primal_infeasibilities < 1000 &&
                             info.max_primal_infeasibility < 1e-3;
   // For reporting, save dual infeasibility data for the LP without
@@ -103,7 +114,7 @@ HighsStatus HEkkDual::solve() {
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Dual feasible with unperturbed costs and num / max / sum "
-                "primal infeasibilities are "
+                "primal infeasibilities of "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
@@ -371,7 +382,7 @@ HighsStatus HEkkDual::solve() {
           info.primal_simplex_bound_perturbation_multiplier;
       info.primal_simplex_bound_perturbation_multiplier = 0;
       HEkkPrimal primal_solver(ekk_instance_);
-      HighsStatus call_status = primal_solver.solve();
+      HighsStatus call_status = primal_solver.solve(true);
       // Restore any bound perturbation
       info.primal_simplex_bound_perturbation_multiplier =
           save_primal_simplex_bound_perturbation_multiplier;
@@ -1191,8 +1202,7 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
-  const HighsInt from_check_iter = -999;
-  ;
+  const HighsInt from_check_iter = -11;
   const HighsInt to_check_iter = from_check_iter + 10;
   if (ekk_instance_.debug_solve_report_) {
     ekk_instance_.debug_iteration_report_ =
@@ -1405,6 +1415,7 @@ void HEkkDual::chooseRow() {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
+  //  if (solve_phase == kSolvePhase2) dualRHS.assessOptimality();
   // Zero the infeasibility of any taboo rows
   ekk_instance_.applyTabooRowOut(dualRHS.work_infeasibility, 0);
   // Choose candidates repeatedly until candidate is OK or optimality is
@@ -2756,8 +2767,7 @@ bool HEkkDual::bailoutOnDualObjective() {
     // reasons
     assert(ekk_instance_.model_status_ == HighsModelStatus::kTimeLimit ||
            ekk_instance_.model_status_ == HighsModelStatus::kIterationLimit ||
-           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveBound ||
-           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveTarget);
+           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveBound);
   } else if (ekk_instance_.lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >
@@ -2845,12 +2855,45 @@ double HEkkDual::computeExactDualObjectiveValue() {
     simplex_nla->btran(dual_col, expected_density);
     lp.a_matrix_.priceByColumn(quad_precision, dual_row, dual_col);
   }
-  double dual_objective = lp.offset_;
+  // Compute dual infeasiblilities
+  ekk_instance_.computeSimplexDualInfeasible();
+  if (info.num_dual_infeasibilities > 0) {
+    printf(
+        "HEkkDual::computeExactDualObjectiveValue num / max / sum dual "
+        "infeasibilities = %d / %g / %g\n",
+        (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
+        info.sum_dual_infeasibilities);
+    assert(info.num_dual_infeasibilities == 0);
+  }
+  HighsCDouble dual_objective = lp.offset_;
   double norm_dual = 0;
   double norm_delta_dual = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (!basis.nonbasicFlag_[iCol]) continue;
     double exact_dual = lp.col_cost_[iCol] - dual_row.array[iCol];
+
+    // printf(
+    //    "exact col dual: %g, col lower: %g, col upper: %g, workValue: %g, "
+    //    "nonbasic: %d\n",
+    //    exact_dual, lp.col_lower_[iCol], lp.col_upper_[iCol],
+    //    info.workValue_[iCol], basis.nonbasicFlag_[iCol]);
+
+    // The active value must be decided based on the exact dual. For a nonbasic
+    // column the bound that must be used may flip due to cost perturbation
+    // flipping the sign of its dual and for a basic variable we may need to add
+    // to the dual objective using one of the bounds when its dual is not zero.
+    double active_value;
+    if (exact_dual > ekk_instance_.options_->small_matrix_value)
+      active_value = lp.col_lower_[iCol];
+    else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
+      active_value = lp.col_upper_[iCol];
+    else
+      active_value = info.workValue_[iCol];
+
+    // when the active value is infinite the dual objective lower bound is
+    // -infinity
+    if (highs_isInfinity(fabs(active_value))) return -kHighsInf;
+
     double residual = fabs(exact_dual - info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
@@ -2860,13 +2903,38 @@ double HEkkDual::computeExactDualObjectiveValue() {
           "Col %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iCol, exact_dual, info.workDual_[iCol], residual);
-    dual_objective += info.workValue_[iCol] * exact_dual;
+    dual_objective += active_value * exact_dual;
   }
+
   for (HighsInt iVar = lp.num_col_; iVar < numTot; iVar++) {
     if (!basis.nonbasicFlag_[iVar]) continue;
     HighsInt iRow = iVar - lp.num_col_;
-    double exact_dual = -dual_col.array[iRow];
-    double residual = fabs(exact_dual - info.workDual_[iVar]);
+    double exact_dual = dual_col.array[iRow];
+
+    // printf(
+    //    "exact row dual: %g, row lower: %g, row upper: %g, workValue: %g, "
+    //    "nonbasic: %d\n",
+    //    exact_dual, lp.row_lower_[iRow], lp.row_upper_[iRow],
+    //    -info.workValue_[iVar], basis.nonbasicFlag_[iVar]);
+
+    // Similarly to the column case above the active value must be decided based
+    // on the exact dual. For a nonbasic row the bound that must be used
+    // may flip due to cost perturbation flipping the sign of its dual and for a
+    // basic variable we may need to add to the dual objective using one of the
+    // bounds when its dual is not zero.
+    double active_value;
+    if (exact_dual > ekk_instance_.options_->small_matrix_value)
+      active_value = lp.row_lower_[iRow];
+    else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
+      active_value = lp.row_upper_[iRow];
+    else
+      active_value = -info.workValue_[iVar];
+
+    // when the active value is infinite the dual objective lower bound is
+    // -infinity
+    if (highs_isInfinity(fabs(active_value))) return -kHighsInf;
+
+    double residual = fabs(exact_dual + info.workDual_[iVar]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
@@ -2875,7 +2943,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
           "Row %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iRow, exact_dual, info.workDual_[iVar], residual);
-    dual_objective += info.workValue_[iVar] * exact_dual;
+    dual_objective += active_value * exact_dual;
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
   if (relative_delta > 1e-3)
@@ -2883,7 +2951,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
         ekk_instance_.options_->log_options, HighsLogType::kWarning,
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g\n",
         norm_dual, norm_delta_dual, relative_delta);
-  return dual_objective;
+  return double(dual_objective);
 }
 
 HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,

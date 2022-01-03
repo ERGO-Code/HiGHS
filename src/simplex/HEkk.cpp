@@ -1011,14 +1011,12 @@ HighsStatus HEkk::unpermute() {
   return HighsStatus::kError;
 }
 
-HighsStatus HEkk::solve() {
+HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
   debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = -8;
-  const HighsInt debug_build_synthetic_tick = -12157180;
-  const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
-  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
-                        debug_solve_call_num_ <= debug_to_solve_call_num &&
+  const HighsInt debug_from_solve_call_num = -7;
+  const HighsInt debug_build_synthetic_tick = -809680;
+  debug_solve_report_ = debug_solve_call_num_ == debug_from_solve_call_num &&
                         build_synthetic_tick_ == debug_build_synthetic_tick;
   const HighsInt time_from_solve_call_num = -1;
   const HighsInt time_to_solve_call_num = time_from_solve_call_num;
@@ -1093,7 +1091,7 @@ HighsStatus HEkk::solve() {
     HEkkPrimal primal_solver(*this);
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
-    call_status = primal_solver.solve();
+    call_status = primal_solver.solve(force_phase2);
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
                                         return_status, "HEkkPrimal::solve");
@@ -1119,7 +1117,7 @@ HighsStatus HEkk::solve() {
     HEkkDual dual_solver(*this);
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
-    call_status = dual_solver.solve();
+    call_status = dual_solver.solve(force_phase2);
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
                                         return_status, "HEkkDual::solve");

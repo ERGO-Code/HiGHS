@@ -463,11 +463,11 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
-                       globaldomain.col_lower_[i] == globaldomain.col_upper_[i];
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
 
     if (!removeValue &&
-        mipsolver.variableType(i) == HighsVarType::kContinuous) {
+        (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
+         mipsolver.variableType(i) == HighsVarType::kContinuous)) {
       if (val > 0)
         removeValue =
             lpsolver.getSolution().col_value[i] - globaldomain.col_lower_[i] <=
@@ -563,6 +563,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     }
   }
 
+  const HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
     HighsInt start = lp.a_matrix_.start_[i];
     HighsInt end = lp.a_matrix_.start_[i + 1];
@@ -578,16 +580,28 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
-        std::abs(val) <= mipsolver.mipdata_->feastol ||
-        mipsolver.mipdata_->domain.col_lower_[i] ==
-            mipsolver.mipdata_->domain.col_upper_[i]) {
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
+
+    if (!removeValue &&
+        (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
+         mipsolver.variableType(i) == HighsVarType::kContinuous)) {
+      // remove continuous entries and globally fixed entries whenever the
+      // local LP's bound is not tighter than the global bound
+      if (val > 0)
+        removeValue = lp.col_lower_[i] - globaldomain.col_lower_[i] <=
+                      mipsolver.mipdata_->feastol;
+      else
+        removeValue = globaldomain.col_upper_[i] - lp.col_upper_[i] <=
+                      mipsolver.mipdata_->feastol;
+    }
+
+    if (removeValue) {
       if (val < 0) {
-        if (mipsolver.mipdata_->domain.col_upper_[i] == kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.col_upper_[i];
+        if (globaldomain.col_upper_[i] == kHighsInf) return;
+        upper -= val * globaldomain.col_upper_[i];
       } else {
-        if (mipsolver.mipdata_->domain.col_lower_[i] == -kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.col_lower_[i];
+        if (globaldomain.col_lower_[i] == -kHighsInf) return;
+        upper -= val * globaldomain.col_lower_[i];
       }
 
       continue;
@@ -796,7 +810,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kUnscaledDualFeasible;
 
-      return Status::kUnscaledInfeasible;
+      if (scaledmodelstatus == HighsModelStatus::kOptimal)
+        return Status::kUnscaledInfeasible;
+
+      return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
         // printf(
