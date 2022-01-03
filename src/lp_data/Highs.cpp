@@ -556,7 +556,7 @@ HighsStatus Highs::run() {
     }
   }
   if (ekk_instance_.status_.has_nla)
-    assert(ekk_instance_.lpFactorRowCompatible());
+    assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
   highs::parallel::initialize_scheduler(options_.threads);
 
@@ -1045,8 +1045,6 @@ HighsStatus Highs::run() {
     // ToDo Eliminate setBasisValidity once ctest passes. Asserts
     // verify that it does nothing - other than setting info_.valid =
     // true;
-    if (model_presolve_status_ == HighsPresolveStatus::kReduced)
-      ekk_instance_.clear();
     setBasisValidity();
   }
   double lp_solve_final_time = timer_.readRunHighsClock();
@@ -2794,7 +2792,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
-    if (!ekk_instance_.lpFactorRowCompatible()) {
+    if (!ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_)) {
       highsLogDev(options_.log_options, HighsLogType::kWarning,
                   "Highs::returnFromHighs(): LP and HFactor have inconsistent "
                   "numbers of rows\n");

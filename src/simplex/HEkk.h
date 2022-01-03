@@ -103,6 +103,7 @@ class HEkk {
   void handleRankDeficiency();
   void initialisePartitionedRowwiseMatrix();
   bool lpFactorRowCompatible();
+  bool lpFactorRowCompatible(HighsInt expectedNumRow);
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,

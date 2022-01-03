@@ -2165,6 +2165,20 @@ bool HEkk::lpFactorRowCompatible() {
   return consistent_num_row;
 }
 
+bool HEkk::lpFactorRowCompatible(HighsInt expectedNumRow) {
+  // Check for LP-HFactor row compatibility
+  const bool consistent_num_row =
+      this->simplex_nla_.factor_.num_row == expectedNumRow;
+  if (!consistent_num_row) {
+    highsLogDev(options_->log_options, HighsLogType::kError,
+                "HEkk::initialiseSimplexLpBasisAndFactor: LP(%6d, %6d) has "
+                "factor_num_row = %d\n",
+                (int)this->lp_.num_col_, expectedNumRow,
+                (int)this->simplex_nla_.factor_.num_row);
+  }
+  return consistent_num_row;
+}
+
 void HEkk::setNonbasicMove() {
   const bool have_solution = false;
   // Don't have a simplex basis since nonbasicMove is not set up.
