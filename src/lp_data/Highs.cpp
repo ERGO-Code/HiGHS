@@ -1045,6 +1045,8 @@ HighsStatus Highs::run() {
     // ToDo Eliminate setBasisValidity once ctest passes. Asserts
     // verify that it does nothing - other than setting info_.valid =
     // true;
+    if (model_presolve_status_ == HighsPresolveStatus::kReduced)
+      ekk_instance_.clear();
     setBasisValidity();
   }
   double lp_solve_final_time = timer_.readRunHighsClock();

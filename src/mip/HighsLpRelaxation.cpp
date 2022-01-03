@@ -510,9 +510,9 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
 void HighsLpRelaxation::storeDualInfProof() {
   assert(lpsolver.getModelStatus(true) == HighsModelStatus::kInfeasible);
-
-  HighsInt numrow = lpsolver.getNumRow();
   hasdualproof = false;
+  if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid) return;
+  HighsInt numrow = lpsolver.getNumRow();
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
@@ -631,9 +631,13 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
 
-  hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
-                                  mipsolver.mipdata_->upper_limit,
-                                  dualproofinds, dualproofvals, dualproofrhs);
+  if (lpsolver.getSolution().dual_valid)
+    hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
+                                    mipsolver.mipdata_->upper_limit,
+                                    dualproofinds, dualproofvals, dualproofrhs);
+  else
+    hasdualproof = false;
+
   if (!hasdualproof) dualproofrhs = kHighsInf;
 }
 
