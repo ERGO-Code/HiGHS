@@ -3779,9 +3779,8 @@ HighsInt HEkk::addBadBasisChange(const HighsInt row_out,
     bad_basis_change_.push_back(record);
     bad_basis_change_num = bad_basis_change_.size() - 1;
   } else {
-    // On the list so just update whether it is taboo and the row out
+    // On the list so just update whether it is taboo
     bad_basis_change_[bad_basis_change_num].taboo = taboo;
-    bad_basis_change_[bad_basis_change_num].row_out = row_out;
   }
   return bad_basis_change_num;
 }
