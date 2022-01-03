@@ -3019,23 +3019,22 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
     highsLogDev(options_->log_options, HighsLogType::kWarning,
                 " basis change (%d out; %d in) is bad\n", (int)variable_out,
                 (int)variable_in);
-    bad_basis_change_num = addBadBasisChange(row_out, variable_out, variable_in,
-                                             BadBasisChangeReason::kCycling);
+    bad_basis_change_num =
+        addBadBasisChange(row_out, variable_out, variable_in,
+                          BadBasisChangeReason::kCycling, true);
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
     for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
       if (bad_basis_change_[iX].variable_out == variable_out &&
           bad_basis_change_[iX].variable_in == variable_in) {
-        bad_basis_change_num = iX;
-        break;
+        bad_basis_change_[iX].taboo = true;
+        bad_basis_change_[iX].row_out = row_out;
+        return true;
       }
     }
   }
-  if (bad_basis_change_num >= 0) {
-    bad_basis_change_[bad_basis_change_num].taboo = true;
-    return true;
-  }
+
   return false;
 }
 
@@ -3766,8 +3765,9 @@ HighsInt HEkk::addBadBasisChange(const HighsInt row_out,
     bad_basis_change_.push_back(record);
     bad_basis_change_num = bad_basis_change_.size() - 1;
   } else {
-    // On the list so just update whether it is taboo
+    // On the list so just update whether it is taboo and the row out
     bad_basis_change_[bad_basis_change_num].taboo = taboo;
+    bad_basis_change_[bad_basis_change_num].row_out = row_out;
   }
   return bad_basis_change_num;
 }
