@@ -2863,6 +2863,9 @@ double HEkkDual::computeExactDualObjectiveValue() {
         "infeasibilities = %d / %g / %g\n",
         (int)info.num_dual_infeasibilities, info.max_dual_infeasibility,
         info.sum_dual_infeasibilities);
+    // ToDo This assert is to find an example to check that the right
+    // action is taken if there are dual_infeasibilities. Once a check
+    // is made it should be removed.
     assert(info.num_dual_infeasibilities == 0);
   }
   HighsCDouble dual_objective = lp.offset_;

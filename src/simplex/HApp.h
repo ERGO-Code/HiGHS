@@ -262,9 +262,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
                     highs_info.max_dual_infeasibility,
                     highs_info.sum_dual_infeasibilities);
       // Determine whether refinement will take place
-      const bool objective_bound_refinement =
-          scaled_model_status == HighsModelStatus::kObjectiveBound &&
-          num_unscaled_dual_infeasibilities > 0;
       refine_solution =
           options.simplex_unscaled_solution_strategy ==
               kSimplexUnscaledSolutionStrategyRefine &&
@@ -272,7 +269,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
            scaled_model_status == HighsModelStatus::kInfeasible ||
            scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
            scaled_model_status == HighsModelStatus::kUnbounded ||
-           objective_bound_refinement ||
+           scaled_model_status == HighsModelStatus::kObjectiveBound ||
            scaled_model_status == HighsModelStatus::kObjectiveTarget ||
            scaled_model_status == HighsModelStatus::kUnknown);
       // Handle the case when refinement will not take place

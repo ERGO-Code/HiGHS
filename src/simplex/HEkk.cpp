@@ -3000,7 +3000,6 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
                             const HighsInt variable_in, const HighsInt row_out,
                             const HighsInt rebuild_reason) {
-  HighsInt bad_basis_change_num = -1;
   if (rebuild_reason) return false;
   if (variable_in == -1 || row_out == -1) return false;
   uint64_t currhash = basis_.hash;
@@ -3033,9 +3032,8 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
     highsLogDev(options_->log_options, HighsLogType::kWarning,
                 " basis change (%d out; %d in) is bad\n", (int)variable_out,
                 (int)variable_in);
-    bad_basis_change_num =
-        addBadBasisChange(row_out, variable_out, variable_in,
-                          BadBasisChangeReason::kCycling, true);
+    addBadBasisChange(row_out, variable_out, variable_in,
+                      BadBasisChangeReason::kCycling, true);
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
