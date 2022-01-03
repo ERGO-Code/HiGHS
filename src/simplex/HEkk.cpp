@@ -3034,6 +3034,7 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
                 (int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
                       BadBasisChangeReason::kCycling, true);
+    return true;
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
