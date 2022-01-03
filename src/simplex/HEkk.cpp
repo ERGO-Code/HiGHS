@@ -3019,9 +3019,8 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
     highsLogDev(options_->log_options, HighsLogType::kWarning,
                 " basis change (%d out; %d in) is bad\n", (int)variable_out,
                 (int)variable_in);
-    addBadBasisChange(row_out, variable_out, variable_in,
-                      BadBasisChangeReason::kCycling);
-    bad_basis_change_num = bad_basis_change_.size() - 1;
+    bad_basis_change_num = addBadBasisChange(row_out, variable_out, variable_in,
+                                             BadBasisChangeReason::kCycling);
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
