@@ -3041,9 +3041,9 @@ bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
     // ones
     for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
       if (bad_basis_change_[iX].variable_out == variable_out &&
-          bad_basis_change_[iX].variable_in == variable_in) {
+          bad_basis_change_[iX].variable_in == variable_in &&
+          bad_basis_change_[iX].row_out == row_out) {
         bad_basis_change_[iX].taboo = true;
-        bad_basis_change_[iX].row_out = row_out;
         return true;
       }
     }
