@@ -347,6 +347,22 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       const bool force_phase2 = true;
       return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;
+
+      if (scaled_model_status != HighsModelStatus::kObjectiveBound &&
+          ekk_instance.model_status_ == HighsModelStatus::kObjectiveBound) {
+        // it may happen that the unscaled LP detected status kObjectiveBound
+        // for the first time in which case we again call solve with primal
+        // simplex if not dual feasible
+        const bool objective_bound_refinement =
+            ekk_instance.model_status_ == HighsModelStatus::kObjectiveBound &&
+            ekk_info.num_dual_infeasibilities > 0;
+
+        if (objective_bound_refinement) {
+          options.simplex_strategy = kSimplexStrategyPrimal;
+          return_status = ekk_instance.solve(force_phase2);
+        }
+      }
+
       //
       // Restore the options/strategies that may have been changed
       options.simplex_strategy = simplex_strategy;
