@@ -585,6 +585,7 @@ void HFactor::buildSimple() {
                       lc_iRow);
         for (HighsInt k = start; k < start + count; k++) {
           mr_count_before[a_index[k]]++;
+          assert(BcountX < b_index.size());
           b_index[BcountX] = a_index[k];
           b_value[BcountX++] = a_value[k];
         }
