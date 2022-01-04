@@ -252,10 +252,10 @@ void HFactor::setupGeneral(
   for (HighsInt i = 0; i < num_col; i++) iwork[a_start[i + 1] - a_start[i]]++;
   for (HighsInt i = num_row, counted = 0; i >= 0 && counted < num_row; i--)
     basis_matrix_limit_size += i * iwork[i], counted += iwork[i];
-  basis_matrix_limit_size += num_row;
+  const HighsInt b_max_dim = max(num_row, num_basic);
+  basis_matrix_limit_size += b_max_dim;
 
   // Allocate space for basis matrix, L, U factor and Update buffer
-  const HighsInt b_max_dim = max(num_row, num_basic);
   b_var.resize(b_max_dim);
   b_start.resize(b_max_dim + 1, 0);
   b_index.resize(basis_matrix_limit_size);
