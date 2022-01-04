@@ -250,9 +250,9 @@ void HFactor::setupGeneral(
 
   iwork.assign(num_row + 1, 0);
   for (HighsInt i = 0; i < num_col; i++) iwork[a_start[i + 1] - a_start[i]]++;
-  for (HighsInt i = num_row, counted = 0; i >= 0 && counted < num_row; i--)
-    basis_matrix_limit_size += i * iwork[i], counted += iwork[i];
   const HighsInt b_max_dim = max(num_row, num_basic);
+  for (HighsInt i = num_row, counted = 0; i >= 0 && counted < b_max_dim; i--)
+    basis_matrix_limit_size += i * iwork[i], counted += iwork[i];
   basis_matrix_limit_size += b_max_dim;
 
   // Allocate space for basis matrix, L, U factor and Update buffer
