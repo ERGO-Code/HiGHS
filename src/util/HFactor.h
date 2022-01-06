@@ -250,6 +250,7 @@ class HFactor {
 
   void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
                 const bool full = true) const;
+  void reportAsm();
 
   // Information required to perform refactorization of the current
   // basis
