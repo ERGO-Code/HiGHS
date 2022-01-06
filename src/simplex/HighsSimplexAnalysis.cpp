@@ -319,7 +319,7 @@ void HighsSimplexAnalysis::iterationReport() {
         (int)simplex_iteration_count, (int)leaving_variable,
         (int)entering_variable, primal_delta, dual_step, primal_step);
   }
-  if ((HighsInt)kIterationReportLogType > *log_options.log_dev_level) return;
+  if (*log_options.log_dev_level < (HighsInt)kIterationReportLogType) return;
   const bool header = (num_iteration_report_since_last_header < 0) ||
                       (num_iteration_report_since_last_header > 49);
   if (header) {

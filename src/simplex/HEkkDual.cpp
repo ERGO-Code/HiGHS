@@ -1379,8 +1379,13 @@ void HEkkDual::iterationAnalysisData() {
 }
 
 void HEkkDual::iterationAnalysis() {
-  // Possibly compute the infeasiblility data
-  if (analysis->analyse_simplex_runtime_data)
+  // Compute the infeasiblility data (expensive) if analysing run-time
+  // data and the log level is at least kIterationReportLogType
+  // (Verbose)
+  const bool make_iteration_report = analysis->analyse_simplex_runtime_data &&
+                                     ekk_instance_.options_->log_dev_level >=
+                                         (HighsInt)kIterationReportLogType;
+  if (make_iteration_report)
     ekk_instance_.computeInfeasibilitiesForReporting(SimplexAlgorithm::kDual,
                                                      solve_phase);
   // Possibly report on the iteration
