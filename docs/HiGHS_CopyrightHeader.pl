@@ -5,10 +5,10 @@ $infile='';
 $CopyrightHeaderLine0 = "/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */";
 $CopyrightHeaderLine1 = "/*                                                                       */";
 $CopyrightHeaderLine2 = "/*    This file is part of the HiGHS linear optimization suite           */";
-$CopyrightHeaderLine3 = "/*    Written and engineered 2008-2021 at the University of Edinburgh    */";
+$CopyrightHeaderLine3 = "/*    Written and engineered 2008-2022 at the University of Edinburgh    */";
 $CopyrightHeaderLine4 = "/*    Available as open-source under the MIT License                     */";
-$CopyrightHeaderLine5 = "/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */";
-$CopyrightHeaderLine6 = "/*    and Michael Feldmeier                                              */";
+$CopyrightHeaderLine5 = "/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */";
+$CopyrightHeaderLine6 = "/*    Feldmeier                                                          */";
 $RemoveCopyrightHeader = 0;
 while(<>) {
     if ($infile ne $ARGV) {
