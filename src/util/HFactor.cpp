@@ -811,9 +811,11 @@ HighsInt HFactor::buildKernel() {
   const HighsInt progress_frequency = 10000;
   HighsInt search_k = 0;
 
-  const HighsInt check_nwork = -11;
+  const HighsInt check_nwork = 4;
   while (nwork-- > 0) {
-    if (nwork == check_nwork) reportAsm();
+    //    if (nwork == check_nwork)
+    printf("\nnwork = %d\n", (int)nwork);
+      reportAsm();
     /**
      * 1. Search for the pivot
      */
@@ -857,17 +859,8 @@ HighsInt HFactor::buildKernel() {
       // Not yet found a pivot and there is at least one column
       // singleton
       jColPivot = col_link_first[1];
-      while (!foundPivot) {
-        iRowPivot = mc_index[mc_start[jColPivot]];
-        if (num_basic != num_row) {
-          // Check whether a singleton pivot is big enough and, if
-          // not, remove it from the matrix
-          double value = mc_value[mc_start[jColPivot]];
-          assert(fabs(value) >= pivot_tolerance);
-          //	    jColPivot = col_link_next[jColPivot];
-        }
-        foundPivot = true;
-      }
+      iRowPivot = mc_index[mc_start[jColPivot]];
+      foundPivot = true;
     }
     if (!foundPivot && row_link_first[1] != -1) {
       iRowPivot = row_link_first[1];
