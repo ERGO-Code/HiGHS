@@ -114,14 +114,13 @@ void HFactor::reportAsm() {
              (int)count, min_pivot, (int)start, (int)end);
       for (HighsInt k = start; k < end; k++) {
         HighsInt i = mc_index[k];
-        double abs_value = fabs(mc_value[k]);
+        double value = mc_value[k];
         //	if (abs_value < 1e-8) continue;
         HighsInt row_count = mr_count[i];
         double merit_local = 1.0 * (count - 1) * (row_count - 1);
-        printf(
-            "   Row %4d; Count = %2d; Merit = %11.4g; |Value| = %10.4g: %s\n",
-            (int)i, (int)row_count, merit_local, abs_value,
-            abs_value >= min_pivot ? "OK" : "");
+        printf("   Row %4d; Count = %2d; Merit = %11.4g; Value = %11.4g: %s\n",
+               (int)i, (int)row_count, merit_local, value,
+               std::abs(value) >= min_pivot ? "OK" : "");
       }
     }
   }

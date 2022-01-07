@@ -382,7 +382,7 @@ class HFactor {
   void buildReportRankDeficiency();
   void buildMarkSingC();
   void buildFinish();
-
+  void zeroCol(const HighsInt iCol);
   void luClear();
   // Rebuild using refactor information
   HighsInt rebuild(HighsTimerClock* factor_timer_clock_pointer);

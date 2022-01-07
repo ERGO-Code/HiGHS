@@ -811,11 +811,12 @@ HighsInt HFactor::buildKernel() {
   const HighsInt progress_frequency = 10000;
   HighsInt search_k = 0;
 
-  const HighsInt check_nwork = 4;
+  const HighsInt check_nwork = -11;
   while (nwork-- > 0) {
-    //    if (nwork == check_nwork)
-    printf("\nnwork = %d\n", (int)nwork);
+    //    printf("\nnwork = %d\n", (int)nwork);
+    if (nwork == check_nwork) {
       reportAsm();
+    }
     /**
      * 1. Search for the pivot
      */
@@ -946,17 +947,68 @@ HighsInt HFactor::buildKernel() {
     // 1.4. If we found nothing: tell singular
     if (!foundPivot) {
       rank_deficiency = nwork + 1;
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "Factorization identifies rank deficiency of %d\n",
+                  (int)rank_deficiency);
       return rank_deficiency;
     }
 
     /**
      * 2. Elimination other elements by the pivot
      */
+    const HighsInt original_pivotal_row_count = mr_count[iRowPivot];
+    const HighsInt original_pivotal_col_count = mc_count_a[jColPivot];
     // 2.1. Delete the pivot
+    //
+    // Remove the pivot row index from the pivotal column of the
+    // col-wise matrix. Also decreases the column count
     double pivot_multiplier = colDelete(jColPivot, iRowPivot);
+    // Remove the pivot column index from the pivotal row of the
+    // row-wise matrix. Also decreases the row count
+    rowDelete(jColPivot, iRowPivot);
+    // Remove the pivotal column from the linked list of columns
+    // containing it
+    clinkDel(jColPivot);
+    // Remove the pivotal row from the linked list of rows containing
+    // it
+    rlinkDel(iRowPivot);
     if (!singleton_pivot)
       assert(candidate_pivot_value == fabs(pivot_multiplier));
     if (fabs(pivot_multiplier) < pivot_tolerance) {
+      printf("\nPivot(%1d, %1d)=%11.4g is small for nwork = %d\n",
+             (int)iRowPivot, (int)jColPivot, pivot_multiplier, (int)nwork);
+      // Matrix is singular, but defer return since other valid pivots
+      // may exist.
+      assert(mr_count[iRowPivot] == original_pivotal_row_count - 1);
+      if (mr_count[iRowPivot] == 0) {
+        //	assert(999==111);
+        // The pivot corresponds to a singleton row. Entry is zeroed,
+        // and do no more since there may be other valid entries in
+        // the pivotal column
+        //
+        // Add the pivotal column to the linked list of columns with
+        // its new count
+        assert(mc_count_a[jColPivot] == original_pivotal_col_count - 1);
+        clinkAdd(jColPivot, mc_count_a[jColPivot]);
+      } else {
+        printf(
+            "Defer singular column of count %d due to small pivot (%d, %d) = "
+            "%g\n",
+            (int)original_pivotal_col_count, (int)iRowPivot, (int)jColPivot,
+            pivot_multiplier);
+        fflush(stdout);
+        assert(999 == 222);
+        // Otherwise, other entries in the pivotal column will be
+        // smaller than the pivot, so zero the column
+        zeroCol(jColPivot);
+        // Add the pivotal row to the linked list of rows with its new
+        // count
+        assert(mr_count[iRowPivot] == original_pivotal_row_count - 1);
+        rlinkAdd(iRowPivot, mr_count[iRowPivot]);
+      }
+      nwork++;
+      continue;
+      /*
       highsLogDev(log_options, HighsLogType::kWarning,
                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                   fabs(pivot_multiplier), nwork);
@@ -965,15 +1017,9 @@ HighsInt HFactor::buildKernel() {
                  rank_deficiency ==
              num_basic);
       return rank_deficiency;
+      */
     }
-    rowDelete(jColPivot, iRowPivot);
-    clinkDel(jColPivot);
-    rlinkDel(iRowPivot);
     permute[jColPivot] = iRowPivot;
-    //    printf("Mwz pivot %3d; mc_var[%3d] = %d; basic_index[%3d] = %d\n",
-    //    (int)(num_row-nwork),
-    //	   (int)jColPivot, (int)mc_var[jColPivot],
-    //	   (int)jColPivot, (int)basic_index[jColPivot]);
     assert(mc_var[jColPivot] == basic_index[jColPivot]);
 
     this->refactor_info_.pivot_row.push_back(iRowPivot);
@@ -1371,6 +1417,32 @@ void HFactor::buildFinish() {
     // Add cost of buildFinish to build_synthetic_tick
     build_synthetic_tick += num_row * 80 + (LcountX + u_countX) * 60;
   }
+}
+
+void HFactor::zeroCol(const HighsInt jCol) {
+  const HighsInt a_count = mc_count_a[jCol];
+  const HighsInt a_start = mc_start[jCol];
+  const HighsInt a_end = a_start + a_count - 1;
+  for (HighsInt iEl = a_start; iEl < a_end; iEl++) {
+    const double abs_value = std::abs(mc_value[iEl]);
+    const HighsInt iRow = mc_index[iEl];
+    const HighsInt original_row_count = mr_count[iRow];
+    // Remove the column index from this row of the row-wise
+    // matrix. Also decreases the row count
+    rowDelete(jCol, iRow);
+    // Remove this row from the linked list of rows containing it
+    rlinkDel(iRow);
+    // Add the this row to the linked list of rows with this reduced
+    // count
+    assert(mr_count[iRow] == original_row_count - 1);
+    rlinkAdd(iRow, mr_count[iRow]);
+    assert(abs_value < pivot_tolerance);
+  }
+  // Remove the column from the linked list of columns containing it
+  clinkDel(jCol);
+  // Zero the counts of the active and inactive sections of the column
+  mc_count_a[jCol] = 0;
+  mc_count_n[jCol] = 0;
 }
 
 void HFactor::ftranL(HVector& rhs, const double expected_density,
