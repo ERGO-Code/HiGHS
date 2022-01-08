@@ -57,7 +57,6 @@ class HighsLp {
   bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
-  bool dimensionsOk(std::string message) const;
   void setFormat(const MatrixFormat format);
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
   void ensureRowwise() { this->a_matrix_.ensureRowwise(); };

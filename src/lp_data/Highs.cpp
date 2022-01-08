@@ -249,6 +249,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   assert(!lp.is_scaled_);
   assert(!lp.is_moved_);
   lp.resetScale();
+  // Check that the LP array dimensions are valid
+  if (!lpDimensionsOk("passModel", lp, options_.log_options))
+    return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
@@ -2188,7 +2191,8 @@ HighsPresolveStatus Highs::runPresolve() {
                                       (HighsInt)reduced_lp.a_matrix_.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(reduced_lp.dimensionsOk("RunPresolve: reduced_lp"));
+      assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
+                            options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -2840,7 +2844,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   // Stop the HiGHS run clock if it is running
   if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
-  const bool dimensions_ok = model_.lp_.dimensionsOk("returnFromHighs");
+  const bool dimensions_ok =
+      lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
     printf("LP Dimension error in returnFromHighs()\n");
   }

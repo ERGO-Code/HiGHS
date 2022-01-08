@@ -32,9 +32,9 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
   // Assess the Hessian dimensions and vector sizes, returning on error
   vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
-  call_status =
-      assessMatrixDimensions(hessian.dim_, partitioned, hessian.start_,
-                             hessian_p_end, hessian.index_, hessian.value_);
+  call_status = assessMatrixDimensions(
+      options.log_options, hessian.dim_, partitioned, hessian.start_,
+      hessian_p_end, hessian.index_, hessian.value_);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrixDimensions");
   if (return_status == HighsStatus::kError) return return_status;
