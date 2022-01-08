@@ -385,7 +385,7 @@ void HPresolve::unlink(HighsInt pos) {
     --rowsizeImplInt[Arow[pos]];
 
   if (!rowDeleted[Arow[pos]]) {
-    if (rowsize[Arow[pos]] <= 1)
+    if (rowsize[Arow[pos]] == 1)
       singletonRows.push_back(Arow[pos]);
     else
       markChangedRow(Arow[pos]);
@@ -3827,6 +3827,8 @@ HPresolve::Result HPresolve::fastPresolveLoop(
   do {
     storeCurrentProblemSize();
 
+    HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
+
     HPRESOLVE_CHECKED_CALL(presolveChangedRows(postSolveStack));
 
     HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
@@ -4133,6 +4135,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
         return HighsModelStatus::kInfeasible;
 
       mipsolver->mipdata_->lower_bound = 0;
+    } else {
+      assert(model->num_row_ == 0);
+      if (model->num_row_ != 0) return HighsModelStatus::kNotset;
     }
     return HighsModelStatus::kOptimal;
   }
