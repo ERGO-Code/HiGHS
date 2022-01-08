@@ -971,8 +971,9 @@ HighsStatus Highs::run() {
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
           if (ipx_no_crossover) {
-            // IPX was used without crossover, so only have a primal solution
-            solution_.dual_valid = false;
+            // IPX was used without crossover, so only have primal and dual
+            // solution
+            solution_.dual_valid = true;
             basis_.clear();
             basis_.valid = false;
           } else {
