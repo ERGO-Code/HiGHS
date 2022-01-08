@@ -997,7 +997,7 @@ HighsInt HFactor::buildKernel() {
             (int)original_pivotal_col_count, (int)iRowPivot, (int)jColPivot,
             pivot_multiplier);
         fflush(stdout);
-        assert(999 == 222);
+        assert(original_pivotal_col_count == 1 || 999 == 222);
         // Otherwise, other entries in the pivotal column will be
         // smaller than the pivot, so zero the column
         zeroCol(jColPivot);

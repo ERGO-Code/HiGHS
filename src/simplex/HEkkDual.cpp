@@ -1011,7 +1011,7 @@ void HEkkDual::solvePhase2() {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "problem-primal-infeasible\n");
   }
-  // Possibly debug unless before primal simplex clean-up(in which
+  // Possibly debug unless before primal simplex clean-up (in which
   // case there will be dual infeasibilities).
   if (solve_phase != kSolvePhaseOptimalCleanup) {
     if (debugDualSimplex("End of solvePhase2") ==
