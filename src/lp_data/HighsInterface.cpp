@@ -125,7 +125,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   if (valid_basis) appendNonbasicColsToBasisInterface(XnumNewCol);
   // Increase the number of columns in the LP
   lp.num_col_ += XnumNewCol;
-  assert(lp.dimensionsOk("addCols"));
+  assert(lpDimensionsOk("addCols", lp, options.log_options));
 
   // Deduce the consequences of adding new columns
   clearModelStatusSolutionAndInfo();
@@ -240,7 +240,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 
   // Increase the number of rows in the LP
   lp.num_row_ += XnumNewRow;
-  assert(lp.dimensionsOk("addRows"));
+  assert(lpDimensionsOk("addRows", lp, options.log_options));
 
   // Deduce the consequences of adding new rows
   clearModelStatusSolutionAndInfo();
@@ -292,7 +292,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(lp.dimensionsOk("deleteCols"));
+  assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
 }
 
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
@@ -334,7 +334,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(lp.dimensionsOk("deleteRows"));
+  assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
@@ -1370,9 +1370,23 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   return return_status;
 }
 
+bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {
+  if (!num_nz) return true;
+  const bool ok_format = format == (HighsInt)MatrixFormat::kColwise ||
+                         format == (HighsInt)MatrixFormat::kRowwise;
+  assert(ok_format);
+  if (!ok_format)
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Non-empty Constraint matrix has illegal format = %" HIGHSINT_FORMAT
+        "\n",
+        format);
+  return ok_format;
+}
+
 bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
   if (!num_nz) return true;
-  const bool ok_format = format == (HighsInt)MatrixFormat::kColwise;
+  const bool ok_format = format == (HighsInt)HessianFormat::kTriangular;
   assert(ok_format);
   if (!ok_format)
     highsLogUser(

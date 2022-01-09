@@ -30,6 +30,7 @@ void HighsInfo::clear() {
   objective_function_value = 0;
   mip_dual_bound = 0;
   mip_gap = kHighsInf;
+  max_integrality_violation = kHighsIllegalInfeasibilityMeasure;
   num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;

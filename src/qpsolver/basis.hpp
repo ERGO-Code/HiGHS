@@ -8,10 +8,10 @@
 #include "instance.hpp"
 #include "pricing.hpp"
 #include "runtime.hpp"
+#include "snippets.hpp"
 #include "util/HFactor.h"
 #include "util/HVector.h"
 #include "util/HVectorBase.h"
-#include "snippets.hpp"
 
 enum class BasisStatus {
   Default,

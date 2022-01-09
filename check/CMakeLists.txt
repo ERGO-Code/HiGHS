@@ -36,6 +36,7 @@ set(TEST_SOURCES
     TestHighsHessian.cpp
     TestHighsModel.cpp
     TestHSet.cpp
+    TestLogging.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp

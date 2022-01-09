@@ -688,10 +688,14 @@ void HighsLpRelaxation::recoverBasis() {
 }
 
 void HighsLpRelaxation::setObjectiveLimit(double objlim) {
-  lpsolver.setOptionValue(
-      "objective_bound",
-      objlim + std::max(0.5, mipsolver.mipdata_->lower_bound *
-                                 mipsolver.mipdata_->feastol));
+  double offset;
+  if (mipsolver.mipdata_->objintscale != 0.0)
+    offset = 0.5 / mipsolver.mipdata_->objintscale;
+  else
+    offset = std::max(1000.0 * mipsolver.mipdata_->feastol,
+                      std::abs(objlim) * kHighsTiny);
+
+  lpsolver.setOptionValue("objective_bound", objlim + offset);
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
@@ -782,6 +786,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::kError;
     }
+    case HighsModelStatus::kUnbounded:
+      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+
+      if (info.primal_solution_status == kSolutionStatusFeasible)
+        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
+
+      return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
       if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
       // fall through

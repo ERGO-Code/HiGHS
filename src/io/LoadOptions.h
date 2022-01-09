@@ -20,6 +20,7 @@
 #include "lp_data/HighsOptions.h"
 
 // For extended options to be parsed from filename
-bool loadOptionsFromFile(HighsOptions& options, const std::string filename);
+bool loadOptionsFromFile(const HighsLogOptions& report_log_options,
+                         HighsOptions& options, const std::string filename);
 
 #endif

@@ -63,7 +63,7 @@ class HighsTask {
     static void do_call(const char* functorBytes) {
       // declaring F f would fail as type F is not default constructible
       FunctorSpace s{};
-      std::memcpy(&s.f, functorBytes, sizeof(F));
+      std::memcpy(reinterpret_cast<char*>(&s.f), functorBytes, sizeof(F));
       s.f();
     }
   };
