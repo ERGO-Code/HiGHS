@@ -104,7 +104,7 @@ void HFactor::reportDoubleVector(const std::string name,
 }
 
 void HFactor::reportAsm() {
-  for (HighsInt count = 1; count < num_row; count++) {
+  for (HighsInt count = 1; count <= num_row; count++) {
     if (col_link_first[count] < 0) continue;
     for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
       double min_pivot = mc_min_pivot[j];

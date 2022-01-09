@@ -956,8 +956,10 @@ HighsInt HFactor::buildKernel() {
     /**
      * 2. Elimination other elements by the pivot
      */
+#ifndef NDEBUG
     const HighsInt original_pivotal_row_count = mr_count[iRowPivot];
     const HighsInt original_pivotal_col_count = mc_count_a[jColPivot];
+#endif
     // 2.1. Delete the pivot
     //
     // Remove the pivot row index from the pivotal column of the
@@ -975,13 +977,12 @@ HighsInt HFactor::buildKernel() {
     if (!singleton_pivot)
       assert(candidate_pivot_value == fabs(pivot_multiplier));
     if (fabs(pivot_multiplier) < pivot_tolerance) {
-      printf("\nPivot(%1d, %1d)=%11.4g is small for nwork = %d\n",
-             (int)iRowPivot, (int)jColPivot, pivot_multiplier, (int)nwork);
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "Defer singular pivot = %11.4g\n", pivot_multiplier);
       // Matrix is singular, but defer return since other valid pivots
       // may exist.
       assert(mr_count[iRowPivot] == original_pivotal_row_count - 1);
       if (mr_count[iRowPivot] == 0) {
-        //	assert(999==111);
         // The pivot corresponds to a singleton row. Entry is zeroed,
         // and do no more since there may be other valid entries in
         // the pivotal column
@@ -991,13 +992,6 @@ HighsInt HFactor::buildKernel() {
         assert(mc_count_a[jColPivot] == original_pivotal_col_count - 1);
         clinkAdd(jColPivot, mc_count_a[jColPivot]);
       } else {
-        printf(
-            "Defer singular column of count %d due to small pivot (%d, %d) = "
-            "%g\n",
-            (int)original_pivotal_col_count, (int)iRowPivot, (int)jColPivot,
-            pivot_multiplier);
-        fflush(stdout);
-        assert(original_pivotal_col_count == 1 || 999 == 222);
         // Otherwise, other entries in the pivotal column will be
         // smaller than the pivot, so zero the column
         zeroCol(jColPivot);
@@ -1006,18 +1000,9 @@ HighsInt HFactor::buildKernel() {
         assert(mr_count[iRowPivot] == original_pivotal_row_count - 1);
         rlinkAdd(iRowPivot, mr_count[iRowPivot]);
       }
+      // No pivot found, so have to increment nwork
       nwork++;
       continue;
-      /*
-      highsLogDev(log_options, HighsLogType::kWarning,
-                  "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
-                  fabs(pivot_multiplier), nwork);
-      rank_deficiency = nwork + 1;
-      assert((HighsInt)this->refactor_info_.pivot_row.size() +
-                 rank_deficiency ==
-             num_basic);
-      return rank_deficiency;
-      */
     }
     permute[jColPivot] = iRowPivot;
     assert(mc_var[jColPivot] == basic_index[jColPivot]);
@@ -1422,7 +1407,7 @@ void HFactor::buildFinish() {
 void HFactor::zeroCol(const HighsInt jCol) {
   const HighsInt a_count = mc_count_a[jCol];
   const HighsInt a_start = mc_start[jCol];
-  const HighsInt a_end = a_start + a_count - 1;
+  const HighsInt a_end = a_start + a_count;
   for (HighsInt iEl = a_start; iEl < a_end; iEl++) {
     const double abs_value = std::abs(mc_value[iEl]);
     const HighsInt iRow = mc_index[iEl];
