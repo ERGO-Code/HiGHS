@@ -150,6 +150,10 @@ TEST_CASE("AlienBasis-rectangular-completion", "[highs_test_alien_basis]") {
   required_rank_deficiency = 1;
   // The column set is all matrix columns except 2
   std::vector<HighsInt> col_set = {0, 1, 3, 4};
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
   if (dev_run) reportColSet("Returned", col_set);
   // Note that col_set already has the index 4 = num_col+0 to replace
   // the deficient column 2 with the logical 0.
