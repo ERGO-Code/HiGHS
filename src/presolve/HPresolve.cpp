@@ -385,7 +385,7 @@ void HPresolve::unlink(HighsInt pos) {
     --rowsizeImplInt[Arow[pos]];
 
   if (!rowDeleted[Arow[pos]]) {
-    if (rowsize[Arow[pos]] <= 1)
+    if (rowsize[Arow[pos]] == 1)
       singletonRows.push_back(Arow[pos]);
     else
       markChangedRow(Arow[pos]);
@@ -3827,6 +3827,8 @@ HPresolve::Result HPresolve::fastPresolveLoop(
   do {
     storeCurrentProblemSize();
 
+    HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
+
     HPRESOLVE_CHECKED_CALL(presolveChangedRows(postSolveStack));
 
     HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
@@ -4133,6 +4135,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
         return HighsModelStatus::kInfeasible;
 
       mipsolver->mipdata_->lower_bound = 0;
+    } else {
+      assert(model->num_row_ == 0);
+      if (model->num_row_ != 0) return HighsModelStatus::kNotset;
     }
     return HighsModelStatus::kOptimal;
   }
@@ -5462,9 +5467,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               col, duplicateCol,
               model->integrality_[col] == HighsVarType::kInteger,
               model->integrality_[duplicateCol] == HighsVarType::kInteger);
+          HighsInt rowsizeIntReduction = 0;
           if (model->integrality_[duplicateCol] != HighsVarType::kInteger &&
-              model->integrality_[col] == HighsVarType::kInteger)
+              model->integrality_[col] == HighsVarType::kInteger) {
+            rowsizeIntReduction = 1;
             model->integrality_[col] = HighsVarType::kContinuous;
+          }
           markChangedCol(col);
           if (colsize[duplicateCol] == 1) {
             HighsInt row = Arow[colhead[duplicateCol]];
@@ -5522,6 +5530,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
             HighsInt colpos = coliter;
             HighsInt colrow = Arow[coliter];
+            // if an an integer column was merged into a continuous one make
+            // sure to update the integral rowsize
+            if (rowsizeIntReduction)
+              rowsizeInteger[colrow] -= rowsizeIntReduction;
             coliter = Anext[coliter];
 
             unlink(colpos);
@@ -5546,6 +5558,17 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             changeImplColLower(col, -kHighsInf, -1);
 
           if (colUpperSource[col] != -1) changeImplColUpper(col, kHighsInf, -1);
+
+          // if an implicit integer and an integer column where merge, check if
+          // merged continuous column is implicit integer after merge
+          if (rowsizeIntReduction &&
+              model->integrality_[duplicateCol] ==
+                  HighsVarType::kImplicitInteger &&
+              isImpliedInteger(col)) {
+            model->integrality_[col] = HighsVarType::kImplicitInteger;
+            for (const HighsSliceNonzero& nonz : getColumnVector(col))
+              ++rowsizeImplInt[nonz.index()];
+          }
 
           break;
       }
