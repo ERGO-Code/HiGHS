@@ -190,8 +190,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
            !ekk_instance.status_.is_dualised);
     if (options.cost_scale_factor) {
       double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
-      printf("Objective = %11.4g\n",
-             cost_scale_factor * ekk_instance.info_.dual_objective_value);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Objective = %11.4g\n",
+                  cost_scale_factor * ekk_instance.info_.dual_objective_value);
       ekk_instance.model_status_ = HighsModelStatus::kNotset;
       return_status = HighsStatus::kError;
     }
@@ -215,8 +216,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       //
       if (options.cost_scale_factor) {
         double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
-        printf("Objective = %11.4g\n",
-               cost_scale_factor * ekk_instance.info_.dual_objective_value);
+        highsLogDev(
+            options.log_options, HighsLogType::kInfo, "Objective = %11.4g\n",
+            cost_scale_factor * ekk_instance.info_.dual_objective_value);
         ekk_instance.model_status_ = HighsModelStatus::kNotset;
         return_status = HighsStatus::kError;
       }
@@ -317,15 +319,14 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         // 2
         options.simplex_strategy = kSimplexStrategyPrimal;
         if (scaled_model_status == HighsModelStatus::kObjectiveBound) {
-          printf(
+          highsLogDev(
+              options.log_options, HighsLogType::kInfo,
               "solveLpSimplex: Calling primal simplex after "
               "scaled_model_status == HighsModelStatus::kObjectiveBound: solve "
               "= %d; tick = %d; iter = %d\n",
               (int)ekk_instance.debug_solve_call_num_,
               (int)ekk_instance.debug_initial_build_synthetic_tick_,
               (int)ekk_instance.iteration_count_);
-          //          assert(scaled_model_status !=
-          //          HighsModelStatus::kObjectiveBound);
         }
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
