@@ -360,7 +360,7 @@ void HPresolve::unlink(HighsInt pos) {
   --colsize[Acol[pos]];
 
   if (!colDeleted[Acol[pos]]) {
-    if (colsize[Acol[pos]] <= 1)
+    if (colsize[Acol[pos]] == 1)
       singletonColumns.push_back(Acol[pos]);
     else
       markChangedCol(Acol[pos]);
@@ -1801,7 +1801,8 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 
 void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
   for (HighsInt i = 0; i < model->num_row_; ++i) {
-    if (rowDeleted[i] || rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i])
+    if (rowDeleted[i] || rowsize[i] < 1 ||
+        rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i])
       continue;
 
     storeRow(i);
@@ -1829,7 +1830,8 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
   }
 
   for (HighsInt i = 0; i < model->num_col_; ++i) {
-    if (colDeleted[i] || model->integrality_[i] != HighsVarType::kContinuous)
+    if (colDeleted[i] || colsize[i] < 1 ||
+        model->integrality_[i] != HighsVarType::kContinuous)
       continue;
 
     double maxAbsVal = 0;
