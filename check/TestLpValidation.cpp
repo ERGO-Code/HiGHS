@@ -6,6 +6,122 @@
 const bool dev_run = false;
 
 // No commas in test case name.
+TEST_CASE("LP-dimension-validation", "[highs_data]") {
+  // Create an LP with lots of illegal values
+  const HighsInt true_num_col = 2;
+  const HighsInt true_num_row = 3;
+  HighsLp lp;
+  lp.num_col_ = -1;
+  lp.num_row_ = -1;
+  lp.col_cost_.resize(1);
+  lp.col_lower_.resize(1);
+  lp.col_upper_.resize(1);
+  lp.a_matrix_.format_ = MatrixFormat::kRowwisePartitioned;
+  lp.a_matrix_.num_col_ = 1;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_.resize(2);
+  lp.a_matrix_.start_[0] = -1;
+  lp.a_matrix_.start_[1] = 2;
+  lp.a_matrix_.index_.resize(2);
+  lp.a_matrix_.index_[0] = -1;
+  lp.a_matrix_.index_[1] = 0;
+  lp.a_matrix_.value_.resize(2);
+  lp.row_lower_.resize(1);
+  lp.row_upper_.resize(1);
+
+  // Set up invalid scale data once scaling can be imported
+  //  lp.scale_.strategy = -1;
+  //  lp.scale_.num_col = 1;
+  //  lp.scale_.num_row = 1;
+  //  lp.scale_.has_scaling = false;
+  //  lp.scale_.row.resize(1);
+  //  lp.scale_.col.resize(1);
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+
+  HighsStatus return_status;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid number of columns\n");
+  lp.num_col_ = true_num_col;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid number of rows\n");
+  lp.num_row_ = true_num_row;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid col_cost.size()\n");
+  lp.col_cost_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid col_lower.size()\n");
+  lp.col_lower_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid col_upper.size()\n");
+  lp.col_upper_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.format_\n");
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.start.size()\n");
+  lp.a_matrix_.start_.resize(true_num_row + 1);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid row_lower.size()\n");
+  lp.row_lower_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid row_upper.size()\n");
+  lp.row_upper_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  /*
+  if (dev_run) printf("Give valid scale_.strategy\n");
+  lp.scale_.strategy = kSimplexScaleStrategyOff;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_col\n");
+  lp.scale_.num_col = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_row\n");
+  lp.scale_.num_row = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.col.size()\n");
+  lp.scale_.col.resize(0);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.row.size()\n");
+  lp.scale_.row.resize(0);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  if (dev_run) printf("Set scale_.strategy =
+  kSimplexScaleStrategyMaxValue015\n"); lp.scale_.strategy =
+  kSimplexScaleStrategyMaxValue015; REQUIRE(highs.passModel(lp) ==
+  HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_col\n");
+  lp.scale_.num_col = true_num_col;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_row\n");
+  lp.scale_.num_row = true_num_row;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.col.size()\n");
+  lp.scale_.col.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.row.size()\n");
+  lp.scale_.row.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  */
+}
+
 TEST_CASE("LP-validation", "[highs_data]") {
   // Create an empty LP
   HighsLp lp;

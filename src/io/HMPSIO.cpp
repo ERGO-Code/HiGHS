@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HMPSIO.cpp
@@ -39,6 +39,8 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                           vector<double>& rowLower, vector<double>& rowUpper,
                           vector<HighsVarType>& integerColumn,
                           vector<string>& col_names, vector<string>& row_names,
+                          HighsInt& Qdim, vector<HighsInt>& Qstart,
+                          vector<HighsInt>& Qindex, vector<double>& Qvalue,
                           const HighsInt keep_n_rows) {
   // MPS file buffer
   numRow = 0;
@@ -355,6 +357,58 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
             name.c_str(), line);
       }
     }
+  }
+  // Load Hessian
+  if (flag[0] == 'Q') {
+    highsLogUser(
+        log_options, HighsLogType::kWarning,
+        "Quadratic section: under development. Assumes QUADOBJ section\n");
+    Qdim = numCol;
+    HighsInt hessian_nz = 0;
+    HighsInt previous_col = -1;
+    bool has_diagonal;
+    Qstart.clear();
+    while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+      HighsInt iCol0 = colIndex[data[1]] - 1;
+      std::string name0 = "";
+      if (iCol0 >= 0) name0 = col_names[iCol0];
+      HighsInt iCol1 = colIndex[data[2]] - 1;
+      std::string name1 = "";
+      if (iCol1 >= 0) name1 = col_names[iCol1];
+      double value = data[0];
+      if (iCol0 != previous_col) {
+        // Can't handle columns out of order
+        if (iCol0 < previous_col) {
+          return FilereaderRetcode::kParserError;
+        } else if (iCol0 > previous_col) {
+          // A previous column has entries, but not on the diagonal
+          if (previous_col >= 0 && !has_diagonal)
+            return FilereaderRetcode::kParserError;
+          // New column, so set up starts of any intermediate (empty) columns
+          for (HighsInt iCol = previous_col + 1; iCol < iCol0; iCol++)
+            Qstart.push_back(hessian_nz);
+          Qstart.push_back(hessian_nz);
+          previous_col = iCol0;
+          has_diagonal = false;
+        }
+      }
+      // Assumes QUADOBJ, so iCol1 cannot be less than iCol0
+      if (iCol1 < iCol0) return FilereaderRetcode::kParserError;
+      if (iCol1 == iCol0) has_diagonal = true;
+      if (value) {
+        Qindex.push_back(iCol1);
+        Qvalue.push_back(value);
+        hessian_nz++;
+      }
+    }
+    // Hessian entries have been read, so set up starts of any remaining (empty)
+    // columns
+    for (HighsInt iCol = previous_col + 1; iCol < numCol; iCol++)
+      Qstart.push_back(hessian_nz);
+    Qstart.push_back(hessian_nz);
+    assert(Qstart.size() == Qdim + 1);
+    assert(Qindex.size() == hessian_nz);
+    assert(Qvalue.size() == hessian_nz);
   }
   // Determine the number of integer variables and set bounds of [0,1]
   // for integer variables without bounds
@@ -843,8 +897,10 @@ HighsStatus writeMps(
       for (HighsInt el = q_start[col]; el < q_start[col + 1]; el++) {
         HighsInt row = q_index[el];
         assert(row >= col);
-        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
-                col_names[row].c_str(), q_value[el]);
+        // May have explicit zeroes on the diagonal
+        if (q_value[el])
+          fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
+                  col_names[row].c_str(), q_value[el]);
       }
     }
   }

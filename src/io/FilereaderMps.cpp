@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderMps.cpp
@@ -27,6 +27,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
                                                    const std::string filename,
                                                    HighsModel& model) {
   HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
   // if free format parser
   // Parse file and return status.
   if (options.mps_parser_type_free) {
@@ -63,7 +64,8 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               lp.sense_, lp.offset_, lp.a_matrix_.start_, lp.a_matrix_.index_,
               lp.a_matrix_.value_, lp.col_cost_, lp.col_lower_, lp.col_upper_,
               lp.row_lower_, lp.row_upper_, lp.integrality_, lp.col_names_,
-              lp.row_names_, options.keep_n_rows);
+              lp.row_names_, hessian.dim_, hessian.start_, hessian.index_,
+              hessian.value_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) lp.ensureColwise();
   // Comment on existence of names with spaces
   hasNamesWithSpaces(options.log_options, lp.num_col_, lp.col_names_);

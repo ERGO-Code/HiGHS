@@ -31,6 +31,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
                           const ObjSense sense = ObjSense::kMinimize);
 HighsStatus assessHessianDimensions(const HighsOptions& options,
                                     HighsHessian& hessian);
+void completeHessianDiagonal(const HighsOptions& options,
+                             HighsHessian& hessian);
 bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
                        const ObjSense sense = ObjSense::kMinimize);
 HighsStatus normaliseHessian(const HighsOptions& options,
