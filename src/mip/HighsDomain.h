@@ -94,11 +94,7 @@ class HighsDomain {
       bool operator<(const ResolveCandidate& other) const {
         if (prio > other.prio) return true;
         if (other.prio > prio) return false;
-        //double prioA = fabs(delta);        //* (1 + numNodes);
-        //double prioB = fabs(other.delta);  //* (1 + other.numNodes);
-//
-        //if (prioA > prioB) return true;
-        //if (prioB > prioA) return false;
+
         return boundPos < other.boundPos;
       }
     };
