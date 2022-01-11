@@ -222,6 +222,7 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
     testSolver(highs, "simplex", model_iteration_count, i);
   }
   // Only use IPX with 32-bit arithmetic
+  // ToDo This is no longer true
 #ifndef HIGHSINT64
   testSolver(highs, "ipm", model_iteration_count);
 #endif

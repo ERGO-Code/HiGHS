@@ -40,7 +40,7 @@ class HighsHessian {
             this->format_ == HessianFormat::kSquare);
   };
   HighsInt numNz() const;
-  void print();
+  void print() const;
 };
 
 #endif

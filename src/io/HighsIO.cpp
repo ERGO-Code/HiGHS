@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HighsIO.cpp
@@ -104,20 +104,23 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       type == HighsLogType::kWarning || type == HighsLogType::kError;
   va_list argptr;
   va_start(argptr, format);
-  if (logmsgcb == NULL) {
-    if (log_options_.log_file_stream != NULL) {
-      // Write to log file stream
+  const bool flush_streams = true;
+  if (!logmsgcb) {
+    // Write to log file stream unless it is NULL
+    if (log_options_.log_file_stream) {
       if (prefix)
         fprintf(log_options_.log_file_stream, "%-9s",
                 HighsLogTypeTag[(int)type]);
       vfprintf(log_options_.log_file_stream, format, argptr);
+      if (flush_streams) fflush(log_options_.log_file_stream);
       va_start(argptr, format);
     }
+    // Write to stdout unless log file stream is stdout
     if (*log_options_.log_to_console &&
         log_options_.log_file_stream != stdout) {
-      // Write to stdout unless log file stream is stdout
       if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
+      if (flush_streams) fflush(stdout);
     }
   } else {
     int len;
@@ -157,16 +160,20 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     return;
   va_list argptr;
   va_start(argptr, format);
-  if (logmsgcb == NULL) {
-    if (log_options_.log_file_stream != NULL) {
+  const bool flush_streams = true;
+  if (!logmsgcb) {
+    // Write to log file stream unless it is NULL
+    if (log_options_.log_file_stream) {
       // Write to log file stream
       vfprintf(log_options_.log_file_stream, format, argptr);
+      if (flush_streams) fflush(log_options_.log_file_stream);
       va_start(argptr, format);
     }
+    // Write to stdout unless log file stream is stdout
     if (*log_options_.log_to_console &&
         log_options_.log_file_stream != stdout) {
-      // Write to stdout unless log file stream is stdout
       vfprintf(stdout, format, argptr);
+      if (flush_streams) fflush(stdout);
     }
   } else {
     int len;
@@ -178,6 +185,15 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     logmsgcb(type, msgbuffer, msgcb_data);
   }
   va_end(argptr);
+}
+
+void highsReportDevInfo(const HighsLogOptions* log_options,
+                        const std::string line) {
+  if (log_options) {
+    highsLogDev(*log_options, HighsLogType::kInfo, "%s", line.c_str());
+  } else {
+    printf("%s", line.c_str());
+  }
 }
 
 void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
@@ -194,6 +210,10 @@ void highsSetLogCallback(HighsOptions& options) {
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
+}
+
+void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
+  highsOpenLogFile(options.log_options, options.records, log_file);
 }
 
 void highsReportLogOptions(const HighsLogOptions& log_options_) {

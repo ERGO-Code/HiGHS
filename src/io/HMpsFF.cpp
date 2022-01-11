@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -127,6 +127,9 @@ HighsInt HMpsFF::fillHessian() {
   q_index.resize(num_entries);
   q_value.resize(num_entries);
 
+  // Use q_length to determine the number of entries in each column,
+  // and then as workspace to point to the next entry to be filled in
+  // each column
   std::vector<HighsInt> q_length;
   q_length.assign(q_dim, 0);
 
@@ -135,21 +138,19 @@ HighsInt HMpsFF::fillHessian() {
     q_length[iCol]++;
   }
   q_start[0] = 0;
-  for (HighsInt iCol = 0; iCol < numCol; iCol++)
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
+    q_length[iCol] = q_start[iCol];
+  }
 
   for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
     HighsInt iRow = std::get<0>(q_entries[iEl]);
     HighsInt iCol = std::get<1>(q_entries[iEl]);
     double value = std::get<2>(q_entries[iEl]);
-    q_index[q_start[iCol]] = iRow;
-    q_value[q_start[iCol]] = value;
-    q_start[iCol]++;
+    q_index[q_length[iCol]] = iRow;
+    q_value[q_length[iCol]] = value;
+    q_length[iCol]++;
   }
-  q_start[0] = 0;
-  for (HighsInt iCol = 0; iCol < numCol; iCol++)
-    q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
-
   return 0;
 }
 

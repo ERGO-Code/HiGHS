@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolution.cpp
@@ -678,7 +678,7 @@ HighsStatus ipxSolutionToHighsSolution(
       primal_truncation_norm =
           std::max(primal_truncation, primal_truncation_norm);
       dual_truncation_norm = std::max(dual_truncation, dual_truncation_norm);
-      if (dual_truncation > 1e-2 || primal_truncation > 1e-2)
+      /*if (dual_truncation > 1e-2 || primal_truncation > 1e-2)
         printf(
             "%s %4d: [%11.4g, %11.4g, %11.4g] residual = %11.4g; new = %11.4g; "
             "truncation = %11.4g | "
@@ -686,6 +686,7 @@ HighsStatus ipxSolutionToHighsSolution(
             is_col ? "Col" : "Row", (int)(is_col ? col : row), lower, value,
             upper, residual, new_value, primal_truncation, dual, new_dual,
             dual_truncation);
+      */
       if (is_col) {
         highs_solution.col_value[col] = new_value;
         highs_solution.col_dual[col] = new_dual;
@@ -697,19 +698,19 @@ HighsStatus ipxSolutionToHighsSolution(
     // Assess the truncations
     //  if (dual_truncation_norm >= dual_margin)
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %4d col  primal "
+                "ipxSolutionToHighsSolution: Norm of %6d col  primal "
                 "truncations is %10.4g\n",
                 num_col_primal_truncations, col_primal_truncation_norm);
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %4d row  primal "
+                "ipxSolutionToHighsSolution: Norm of %6d row  primal "
                 "truncations is %10.4g\n",
                 num_primal_truncations, primal_truncation_norm);
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %4d col    dual "
+                "ipxSolutionToHighsSolution: Norm of %6d col    dual "
                 "truncations is %10.4g\n",
                 num_col_dual_truncations, col_dual_truncation_norm);
     highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %4d row    dual "
+                "ipxSolutionToHighsSolution: Norm of %6d row    dual "
                 "truncations is %10.4g\n",
                 num_dual_truncations, dual_truncation_norm);
     // Determine the new residuals

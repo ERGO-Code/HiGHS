@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualRHS.h
@@ -89,8 +89,9 @@ class HEkkDualRHS {
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void updatePivots(HighsInt iRow,  //!< row where the basis change has occurred
-                    double value    //!< New primal value in this row
+  void updatePivots(
+      const HighsInt iRow,  //!< row where the basis change has occurred
+      const double value    //!< New primal value in this row
   );
 
   /**
@@ -110,6 +111,8 @@ class HEkkDualRHS {
    *
    */
   void createArrayOfPrimalInfeasibilities();
+
+  void assessOptimality();
 
   // References:
   HEkk& ekk_instance_;

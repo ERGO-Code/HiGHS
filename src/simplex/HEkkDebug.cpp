@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HEkkDebug.cpp
@@ -1552,10 +1552,10 @@ HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
         (int)iteration_count_, (int)num_dual_sign_change);
     printf("   |cB| = %g; |cN| = %g; zero delta dual = %g\n", norm_basic_costs,
            norm_nonbasic_costs, zero_delta_dual);
-    //    analyseVectorValues(options.log_options, "Previous duals", num_tot,
-    //    previous_dual); analyseVectorValues(options.log_options, "New duals",
+    //    analyseVectorValues(&options.log_options, "Previous duals", num_tot,
+    //    previous_dual); analyseVectorValues(&options.log_options, "New duals",
     //    num_tot, new_dual);
-    analyseVectorValues(options.log_options, "Delta duals", num_tot,
+    analyseVectorValues(&options.log_options, "Delta duals", num_tot,
                         delta_dual);
   }
   return HighsDebugStatus::kOk;
