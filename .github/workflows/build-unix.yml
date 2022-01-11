@@ -49,8 +49,8 @@ jobs:
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
 
-    -name: Create Install Directory
-     run: cmake -E make_directory ${{runner.workspace}}/install
+    - name: Create Install Directory
+      run: cmake -E make_directory ${{runner.workspace}}/install
 
     - name: Configure CMake
       shell: bash
@@ -80,7 +80,7 @@ jobs:
       run: |
          pip install -e ./
          nosetests -v ./highspy
-         
+
 
   debug64:
     runs-on: ${{ matrix.os }}
