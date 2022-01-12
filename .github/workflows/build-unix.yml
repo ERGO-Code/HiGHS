@@ -89,6 +89,7 @@ jobs:
         python -m pip install pybind11 numpy pyomo nose pip
 
     - name: Test Python Interface
+      if: matrix.TARGET == 'linux'
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
