@@ -92,6 +92,8 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
+         HIGHS_LIB_DIR=${{runner.workspace}}/install/lib
+         ls -l $HIGHS_LIB_DIR
          pip --version
          pip install -e ./HiGHS
          nosetests -v ./HiGHS/highspy
