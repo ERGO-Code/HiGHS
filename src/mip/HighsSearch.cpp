@@ -889,6 +889,8 @@ int64_t HighsSearch::getTotalLpIterations() const {
 
 int64_t HighsSearch::getLocalLpIterations() const { return lpiterations; }
 
+int64_t HighsSearch::getLocalNodes() const { return nnodes; }
+
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
   return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
 }
@@ -945,7 +947,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   localdom.propagate();
 
-  if (!localdom.infeasible()) {
+  if (!inheuristic && !localdom.infeasible()) {
     if (mipsolver.mipdata_->symmetries.numPerms > 0 &&
         !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
