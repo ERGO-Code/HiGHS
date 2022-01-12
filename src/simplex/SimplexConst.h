@@ -18,7 +18,7 @@
 
 #include "util/HighsInt.h"
 
-enum class SimplexAlgorithm { kPrimal = 0, kDual };
+enum class SimplexAlgorithm { kNone = 0, kPrimal, kDual };
 
 enum SimplexStrategy {
   kSimplexStrategyMin = 0,

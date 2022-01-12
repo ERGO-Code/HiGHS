@@ -1451,15 +1451,16 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeights(
   double relative_dual_steepest_edge_weight_error =
       dual_steepest_edge_weight_error / dual_steepest_edge_weight_norm;
   const double large_relative_dual_steepest_edge_weight_error = 1e-3;
-  if (relative_dual_steepest_edge_weight_error > 10*debug_max_relative_dual_steepest_edge_weight_error) {
+  if (relative_dual_steepest_edge_weight_error >
+      10 * debug_max_relative_dual_steepest_edge_weight_error) {
     printf(
-	   "HEkk::debugSteepestEdgeWeights Iteration %5d: Checked %2d weights: "
-	   "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
-	   (int)iteration_count_,
-	   (int)num_check_weight, dual_steepest_edge_weight_error,
-	   dual_steepest_edge_weight_norm,
-	   relative_dual_steepest_edge_weight_error);
-    debug_max_relative_dual_steepest_edge_weight_error = relative_dual_steepest_edge_weight_error;
+        "HEkk::debugSteepestEdgeWeights Iteration %5d: Checked %2d weights: "
+        "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
+        (int)iteration_count_, (int)num_check_weight,
+        dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,
+        relative_dual_steepest_edge_weight_error);
+    debug_max_relative_dual_steepest_edge_weight_error =
+        relative_dual_steepest_edge_weight_error;
     if (relative_dual_steepest_edge_weight_error >
         large_relative_dual_steepest_edge_weight_error)
       return HighsDebugStatus::kLargeError;

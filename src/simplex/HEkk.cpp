@@ -140,7 +140,7 @@ void HEkk::clearEkkData() {
 
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
-  this->exit_algorithm_ = SimplexAlgorithm::kPrimal;
+  this->exit_algorithm_ = SimplexAlgorithm::kNone;
   this->return_primal_solution_status_ = 0;
   this->return_dual_solution_status_ = 0;
 
@@ -3471,6 +3471,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     invalidatePrimalInfeasibilityRecord();
     invalidateDualInfeasibilityRecord();
   }
+  // The simplex algorithm used on exit should be set
+  assert(exit_algorithm_ != SimplexAlgorithm::kNone);
   switch (model_status_) {
     case HighsModelStatus::kOptimal: {
       if (info_.num_primal_infeasibilities) {
@@ -3547,12 +3549,11 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       break;
     }
     default: {
-      std::string algorithm_name = "primal";
-      if (exit_algorithm_ == SimplexAlgorithm::kDual) algorithm_name = "dual";
-      highsLogDev(options_->log_options, HighsLogType::kError,
-                  "EKK %s simplex solver returns status %s\n",
-                  algorithm_name.c_str(),
-                  utilModelStatusToString(model_status_).c_str());
+      highsLogDev(
+          options_->log_options, HighsLogType::kError,
+          "EKK %s simplex solver returns status %s\n",
+          exit_algorithm_ == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+          utilModelStatusToString(model_status_).c_str());
       return HighsStatus::kError;
       break;
     }
