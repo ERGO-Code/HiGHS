@@ -66,6 +66,9 @@ jobs:
          make install
          HIGHS_LIB_DIR=${{runner.workspace}}/install/lib
          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
+         ehco ""
+         echo "$HIGHS_LIB_DIR"
+         ls -l $HIGHS_LIB_DIR
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
@@ -78,8 +81,13 @@ jobs:
       shell: bash
       working-directory: $GITHUB_WORKSPACE
       run: |
+         echo ""
+         echo "${{runner.workspace}}"
+         ls -l ${{runner.workspace}}
+         echo ""
+         echo "$GITHUB_WORKSPACE"
+         ls -l $GITHUB_WORKSPACE
          pip install -e ./
-         nosetests -v ./highspy
 
 
   debug64:
