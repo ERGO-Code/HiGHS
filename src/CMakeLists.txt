@@ -717,6 +717,7 @@ set(headers_fast_build_
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
+    presolve/ICrash.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
