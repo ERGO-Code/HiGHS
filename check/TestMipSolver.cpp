@@ -99,7 +99,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(info.objective_function_value == optimal_objective);
 
   REQUIRE(info.mip_node_count == 1);
-  REQUIRE(info.mip_dual_bound == -6);
+  REQUIRE(fabs(info.mip_dual_bound + 6) < double_equal_tolerance);
   REQUIRE(info.mip_gap == 0);
 }
 

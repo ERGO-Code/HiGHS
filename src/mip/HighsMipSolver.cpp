@@ -411,8 +411,10 @@ void HighsMipSolver::cleanupSolve() {
   double gap = fabs(primal_bound_ - dual_bound_);
   if (primal_bound_ == 0.0)
     gap = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
-  else
+  else if (primal_bound_ != kHighsInf)
     gap = fabs(primal_bound_ - dual_bound_) / fabs(primal_bound_);
+  else
+    gap = kHighsInf;
   std::array<char, 128> gapString;
   std::array<char, 128> lbToleranceString;
 
