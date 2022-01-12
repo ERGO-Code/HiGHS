@@ -16,7 +16,7 @@
 
 #include <vector>
 
-#include "HighsOptions.h"
+#include "lp_data/HighsOptions.h"
 #include "io/HighsIO.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
