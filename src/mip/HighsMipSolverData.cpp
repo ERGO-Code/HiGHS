@@ -82,19 +82,37 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
 double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
                                                 double mip_rel_gap) const {
   double new_upper_limit;
-  if (objintscale != 0.0)
-    new_upper_limit =
-        (std::floor(objintscale * ub - 0.5) / objintscale) + feastol;
-  else
+  if (objintscale != 0.0) {
+    new_upper_limit = (std::floor(objintscale * ub - 0.5) / objintscale);
+
+    if (mip_rel_gap != 0.0)
+      new_upper_limit = std::min(
+          new_upper_limit,
+          ub - std::ceil(mip_rel_gap * fabs(ub + mipsolver.model_->offset_) *
+                             objintscale -
+                         mipsolver.mipdata_->epsilon) /
+                   objintscale);
+
+    if (mip_abs_gap != 0.0)
+      new_upper_limit = std::min(new_upper_limit,
+                                 ub - std::ceil(mip_abs_gap * objintscale -
+                                                mipsolver.mipdata_->epsilon) /
+                                          objintscale);
+
+    // add feasibility tolerance so that the next best integer feasible solution
+    // is definitely included in the remaining search
+    new_upper_limit += feastol;
+  } else {
     new_upper_limit = ub - epsilon;
 
-  if (mip_rel_gap != 0.0)
-    new_upper_limit =
-        std::min(new_upper_limit,
-                 ub - mip_rel_gap * fabs(ub + mipsolver.model_->offset_));
+    if (mip_rel_gap != 0.0)
+      new_upper_limit =
+          std::min(new_upper_limit,
+                   ub - mip_rel_gap * fabs(ub + mipsolver.model_->offset_));
 
-  if (mip_abs_gap != 0.0)
-    new_upper_limit = std::min(new_upper_limit, ub - mip_abs_gap);
+    if (mip_abs_gap != 0.0)
+      new_upper_limit = std::min(new_upper_limit, ub - mip_abs_gap);
+  }
 
   return new_upper_limit;
 }
