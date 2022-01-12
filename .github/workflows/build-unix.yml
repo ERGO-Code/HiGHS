@@ -41,7 +41,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.7, 3.8, 3.9]
+        python: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v1
@@ -81,7 +81,11 @@ jobs:
 
     - name: Install Python Dependencies
       shell: bash
-      run: python -m pip install pybind11 numpy pyomo nose pip
+      run: |
+        which python
+        python --version
+        python -m pip install --upgrade pip
+        python -m pip install pybind11 numpy pyomo nose pip
 
     - name: Test Python Interface
       shell: bash
