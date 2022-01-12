@@ -217,20 +217,20 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveValue", &Highs::getObjectiveValue)
     .def("getRunTime", &Highs::getRunTime)
     .def("getModelStatus", &Highs::getModelStatus)
+    .def("addRows", &highs_addRows)
+    .def("addRow", &highs_addRow)
+    .def("addCol", &highs_addCol)
+    .def("addVar", &highs_addVar)
+    .def("addVars", &highs_addVars)
+    .def("changeColsCost", &highs_changeColsCost)
+    .def("changeColsBounds", &highs_changeColsBounds)
+    .def("changeColsIntegrality", &highs_changeColsIntegrality)
+    .def("deleteVars", &highs_deleteVars)
+    .def("deleteRows", &highs_deleteRows)
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string)>(&Highs::setOptionValue));
-  m.def("highs_addRow", &highs_addRow);
-  m.def("highs_addRows", &highs_addRows);
-  m.def("highs_addCol", &highs_addCol);
-  m.def("highs_addVar", &highs_addVar);
-  m.def("highs_addVars", &highs_addVars);
-  m.def("highs_changeColsCost", &highs_changeColsCost);
-  m.def("highs_changeColsBounds", &highs_changeColsBounds);
-  m.def("highs_changeColsIntegrality", &highs_changeColsIntegrality);
-  m.def("highs_deleteVars", &highs_deleteVars);
-  m.def("highs_deleteRows", &highs_deleteRows);
   m.attr("kHighsInf") = kHighsInf;
   m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
   m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;

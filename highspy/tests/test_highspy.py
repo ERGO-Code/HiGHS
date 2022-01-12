@@ -13,8 +13,8 @@ class TestHighsPy(unittest.TestCase):
         """
         inf = highspy.kHighsInf
         h = highspy.Highs()
-        highspy.highs_addVars(h, 2, np.array([-inf, -inf]), np.array([inf, inf]))
-        highspy.highs_changeColsCost(h, 2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
+        h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
+        h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
         num_cons = 2
         lower = np.array([2, 0], dtype=np.double)
         upper = np.array([inf, inf], dtype=np.double)
@@ -22,7 +22,7 @@ class TestHighsPy(unittest.TestCase):
         starts = np.array([0, 2])
         indices = np.array([0, 1, 0, 1])
         values = np.array([-1, 1, 1, 1], dtype=np.double)
-        highspy.highs_addRows(h, num_cons, lower, upper, num_new_nz, starts, indices, values)
+        h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
         h.setOptionValue('log_to_console', False)
         h.run()
         sol = h.getSolution()
@@ -42,7 +42,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[1], 1.5)
 
         # now make y integer
-        highspy.highs_changeColsIntegrality(h, 1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
+        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
@@ -56,17 +56,17 @@ class TestHighsPy(unittest.TestCase):
         x + y >= 0
         -x + y >= 0
         """
-        highspy.highs_deleteRows(h, 1, np.array([0]))
-        highspy.highs_addRows(h, 1, np.array([0], dtype=np.double), np.array([inf]), 2,
-                              np.array([0]), np.array([0, 1]), np.array([-1, 1], dtype=np.double))
+        h.deleteRows(1, np.array([0]))
+        h.addRows(1, np.array([0], dtype=np.double), np.array([inf]), 2,
+                  np.array([0]), np.array([0, 1]), np.array([-1, 1], dtype=np.double))
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], 0)
         self.assertAlmostEqual(sol.col_value[1], 0)
 
         # change the upper bound of x to -5
-        highspy.highs_changeColsBounds(h, 1, np.array([0]), np.array([-inf], dtype=np.double),
-                                       np.array([-5], dtype=np.double))
+        h.changeColsBounds(1, np.array([0]), np.array([-inf], dtype=np.double),
+                           np.array([-5], dtype=np.double))
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -5)
