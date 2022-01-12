@@ -413,21 +413,40 @@ void HighsMipSolver::cleanupSolve() {
     gap = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
   else
     gap = fabs(primal_bound_ - dual_bound_) / fabs(primal_bound_);
-  std::array<char, 16> gapString;
+  std::array<char, 128> gapString;
+  std::array<char, 128> lbToleranceString;
 
   if (gap == kHighsInf)
     std::strcpy(gapString.data(), "inf");
+  else {
+    if (options_mip_->mip_rel_gap == 0.0)
+      std::snprintf(gapString.data(), gapString.size(), "%.2f%%", gap);
+    else
+      std::snprintf(gapString.data(), gapString.size(),
+                    "%.2f%% (tolerance: %.2f%%)", gap,
+                    100. * options_mip_->mip_rel_gap);
+  }
+
+  double lbTol = options_mip_->mip_abs_gap;
+
+  if (primal_bound_ != kHighsInf)
+    lbTol = std::max(lbTol, options_mip_->mip_rel_gap * fabs(primal_bound_));
+
+  if (lbTol <= options_mip_->mip_feasibility_tolerance)
+    std::strcpy(lbToleranceString.data(), "");
   else
-    std::snprintf(gapString.data(), gapString.size(), "%.2f%%", gap);
+    std::snprintf(lbToleranceString.data(), lbToleranceString.size(),
+                  " (tolerance: %.9g)", lbTol);
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n"
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
-               "  Dual bound        %.12g\n"
+               "  Dual bound        %.12g%s\n"
                "  Gap               %s\n"
                "  Solution status   %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data(), solutionstatus.c_str());
+               dual_bound_, lbToleranceString.data(), gapString.data(),
+               solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"
