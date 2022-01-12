@@ -79,7 +79,7 @@ jobs:
 
     - name: Test Python Interface
       shell: bash
-      working-directory: $GITHUB_WORKSPACE
+      working-directory: ${{runner.workspace}}
       run: |
          echo ""
          echo "${{runner.workspace}}"
