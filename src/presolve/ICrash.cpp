@@ -97,7 +97,7 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
 Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
   HighsLp ilp = lp;
   HighsLp local_lp;
-  HighsStatus status;
+  // HighsStatus status;
   convertToMinimization(ilp);
   if (isEqualityProblem(ilp)) {
     if (options.dualize) {
@@ -302,14 +302,14 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       //  std::cout <<              "ICrashError: Not implemented yet." <<
       //  std::endl;
       highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "ICrashError: not implemented yet.");
+                   "ICrashError: not implemented yet.\n");
       return false;
     }
     default: {
       // std::cout <<               "ICrashError: Not implemented yet." <<
       // std::endl;
       highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "ICrashError: not implemented yet.");
+                   "ICrashError: not implemented yet.\n");
       return false;
     }
   }
