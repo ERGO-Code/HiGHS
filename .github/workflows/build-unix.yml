@@ -87,7 +87,7 @@ jobs:
          echo ""
          echo "$GITHUB_WORKSPACE"
          ls -l $GITHUB_WORKSPACE
-         pip install -e ./
+         pip install -e ./HiGHS
 
 
   debug64:
