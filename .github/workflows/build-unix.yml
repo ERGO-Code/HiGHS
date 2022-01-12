@@ -74,6 +74,11 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --parallel 2 --timeout 300 --output-on-failure -C Release
 
+    - name: Install correct python version
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+
     - name: Install Python Dependencies
       shell: bash
       run: python -m pip install pybind11 numpy pyomo nose pip
