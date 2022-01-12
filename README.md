@@ -183,3 +183,51 @@ Javascript
 ----------
 
 HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
+
+Python
+------
+
+In order to build the Python interface, build the HiGHS library as
+described above, ensure the shared library is in the `LD_LIBRARY_PATH`
+environment variable, and then run
+
+`pip install ./`
+
+from the root HiGHS folder (there should be a `setup.py` file there).
+
+The Python interface can then be used:
+
+```
+python
+>>> import highspy
+>>> import numpy as np
+>>> inf = highspy.kHighsInf
+>>> h = highspy.Highs()
+>>> highspy.highs_addVars(h, 2, np.array([-inf, -inf]), np.array([inf, inf]))
+>>> highspy.highs_changeColsCost(h, 2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
+>>> num_cons = 2
+>>> lower = np.array([2, 0], dtype=np.double)
+>>> upper = np.array([inf, inf], dtype=np.double)
+>>> num_new_nz = 4
+>>> starts = np.array([0, 2])
+>>> indices = np.array([0, 1, 0, 1])
+>>> values = np.array([-1, 1, 1, 1], dtype=np.double)
+>>> highspy.highs_addRows(h, num_cons, lower, upper, num_new_nz, starts, indices, values)
+>>> h.setOptionValue('log_to_console', True)
+<HighsStatus.kOk: 0>
+>>> h.run()
+
+Presolving model
+2 rows, 2 cols, 4 nonzeros
+0 rows, 0 cols, 0 nonzeros
+0 rows, 0 cols, 0 nonzeros
+Presolve : Reductions: rows 0(-2); columns 0(-2); elements 0(-4) - Reduced to empty
+Solving the original LP from the solution after postsolve
+Model   status      : Optimal
+Objective value     :  1.0000000000e+00
+HiGHS run time      :          0.00
+<HighsStatus.kOk: 0>
+>>> sol = h.getSolution()
+>>> print(sol.col_value)
+[-1.0, 1.0]
+```
