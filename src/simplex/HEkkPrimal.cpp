@@ -23,18 +23,21 @@
 using std::min;
 
 HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
-  if (ekk_instance_.status_.has_dual_steepest_edge_weights) {
-    printf("HEkkPrimal::solve have dual steepest edge weights\n");
-    fflush(stdout);
-  }
   // Initialise control data for a particular solve
   initialiseSolve();
-  ekk_instance_.dual_edge_weight_.assign(num_row, 1.0);
-  ekk_instance_.status_.has_dual_steepest_edge_weights = true;
-
   // Assumes that the LP has a positive number of rows
   if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
+
+  if (ekk_instance_.status_.has_dual_steepest_edge_weights) {
+    printf("HEkkPrimal::solve have dual steepest edge weights\n");
+    fflush(stdout);
+  } else {
+    // Force the update of dual steepest edge weights
+    printf("Forcing the update of dual steepest edge weights, assuming B=I\n");
+    ekk_instance_.dual_edge_weight_.assign(num_row, 1.0);
+    ekk_instance_.status_.has_dual_steepest_edge_weights = true;
+  }
 
   HighsOptions& options = *ekk_instance_.options_;
   HighsSimplexInfo& info = ekk_instance_.info_;
