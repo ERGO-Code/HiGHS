@@ -177,6 +177,8 @@ class HighsSearch {
 
   int64_t getLocalLpIterations() const;
 
+  int64_t getLocalNodes() const;
+
   int64_t getStrongBranchingLpIterations() const;
 
   bool hasNode() const { return !nodestack.empty(); }
