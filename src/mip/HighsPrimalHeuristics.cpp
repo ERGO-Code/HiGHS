@@ -90,7 +90,10 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.mip_pscost_minreliable = 0;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
+  submipoptions.objective_bound = mipsolver.mipdata_->computeNewUpperLimit(
+      mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->feastol, 0.0);
+  submipoptions.mip_rel_gap = 0.0;
+  submipoptions.mip_abs_gap = mipsolver.mipdata_->feastol;
   submipoptions.presolve = "on";
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
@@ -270,7 +273,8 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
 
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
-  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setObjectiveLimit(mipsolver.mipdata_->computeNewUpperLimit(
+      mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->feastol, 0.0));
   heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
@@ -515,7 +519,8 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
 
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
-  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setObjectiveLimit(mipsolver.mipdata_->computeNewUpperLimit(
+      mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->feastol, 0.0));
   heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
@@ -979,19 +984,6 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
   std::vector<HighsInt> mask(mipsolver.model_->num_col_, 1);
   std::vector<double> cost(mipsolver.model_->num_col_, 0.0);
-  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
-    std::vector<HighsInt> objinds;
-    std::vector<double> objval;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.colCost(i) != 0) {
-        objinds.push_back(i);
-        objval.push_back(mipsolver.colCost(i));
-      }
-    }
-
-    lprelax.getLpSolver().addRow(-kHighsInf, mipsolver.mipdata_->upper_limit,
-                                 objinds.size(), objinds.data(), objval.data());
-  }
 
   lprelax.getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyPrimal);

@@ -79,6 +79,26 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   return addIncumbent(solution, double(obj), source);
 }
 
+double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
+                                                double mip_rel_gap) const {
+  double new_upper_limit;
+  if (objintscale != 0.0)
+    new_upper_limit =
+        (std::floor(objintscale * ub - 0.5) / objintscale) + feastol;
+  else
+    new_upper_limit = ub - epsilon;
+
+  if (mip_rel_gap != 0.0)
+    new_upper_limit =
+        std::min(new_upper_limit,
+                 ub - mip_rel_gap * fabs(ub + mipsolver.model_->offset_));
+
+  if (mip_abs_gap != 0.0)
+    new_upper_limit = std::min(new_upper_limit, ub - mip_abs_gap);
+
+  return new_upper_limit;
+}
+
 bool HighsMipSolverData::moreHeuristicsAllowed() {
   // in the beginning of the search and in sub-MIP heuristics we only allow
   // what is proportionally for the currently spent effort plus an initial
@@ -717,19 +737,14 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, char source) {
   if (solobj < upper_bound) {
-    if (solobj <= upper_limit) {
-      solobj = transformNewIncumbent(sol);
-      if (solobj >= upper_bound) return false;
-    }
+    solobj = transformNewIncumbent(sol);
+    if (solobj >= upper_bound) return false;
     upper_bound = solobj;
     incumbent = sol;
-    double new_upper_limit;
-    if (objintscale != 0.0) {
-      new_upper_limit =
-          (std::floor(objintscale * solobj - 0.5) / objintscale) + feastol;
-    } else {
-      new_upper_limit = solobj - feastol;
-    }
+    double new_upper_limit =
+        computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
+                             mipsolver.options_mip_->mip_rel_gap);
+
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
       upper_limit = new_upper_limit;
@@ -853,7 +868,13 @@ void HighsMipSolverData::printDisplayLine(char first) {
     ub = upper_bound + offset;
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
-    gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
+
+    if (ub == 0.0)
+      gap = lb == 0.0 ? 0.0 : kHighsInf;
+    else
+      gap = 100. * (ub - lb) / fabs(ub);
+
+    gap = std::min(gap, 9999.);
 
     std::array<char, 16> lb_string = convertToPrintString(lb);
     std::array<char, 16> ub_string = convertToPrintString(ub);
@@ -1316,21 +1337,6 @@ restart:
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
-
-  if (options.mip_gap_limit != 0.0) {
-    const double lb = lower_bound + mipsolver.model_->offset_;
-    const double ub = upper_bound + mipsolver.model_->offset_;
-    const double gap = (ub - lb) / std::max(1.0, std::abs(ub));
-
-    if (gap <= options.mip_gap_limit) {
-      if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-        highsLogDev(options.log_options, HighsLogType::kInfo,
-                    "reached MIP gap limit\n");
-        mipsolver.modelstatus_ = HighsModelStatus::kObjectiveTarget;
-      }
-      return true;
-    }
-  }
 
   if (options.mip_max_nodes != kHighsIInf &&
       num_nodes + nodeOffset >= options.mip_max_nodes) {

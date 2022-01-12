@@ -407,14 +407,27 @@ void HighsMipSolver::cleanupSolve() {
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     solutionstatus = feasible ? "feasible" : "infeasible";
   }
+
+  double gap = fabs(primal_bound_ - dual_bound_);
+  if (primal_bound_ == 0.0)
+    gap = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
+  else
+    gap = fabs(primal_bound_ - dual_bound_) / fabs(primal_bound_);
+  std::array<char, 16> gapString;
+
+  if (gap == kHighsInf)
+    std::strcpy(gapString.data(), "inf");
+  else
+    std::snprintf(gapString.data(), gapString.size(), "%.2f%%", gap);
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n"
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
+               "  Gap               %s\n"
                "  Solution status   %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, solutionstatus.c_str());
+               dual_bound_, gapString.data(), solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"

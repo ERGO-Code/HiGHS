@@ -127,6 +127,8 @@ struct HighsMipSolverData {
     domain.addConflictPool(conflictPool);
   }
 
+  double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
+                              double mip_rel_gap) const;
   bool moreHeuristicsAllowed();
   void removeFixedIndices();
   void init();
