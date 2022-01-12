@@ -150,6 +150,17 @@ void HEkk::clearEkkData() {
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
 
+  // Clear values used for debugging
+  this->debug_solve_call_num_ = 0;
+  this->debug_basis_id_ = 0;
+  this->time_report_ = false;
+  this->debug_initial_build_synthetic_tick_ = 0;
+  this->debug_solve_report_ = false;
+  this->debug_iteration_report_ = false;
+  this->debug_basis_report_ = false;
+  this->debug_dual_feasible = false;
+  this->debug_max_relative_dual_steepest_edge_weight_error = 0;
+
   clearBadBasisChange();
 }
 
