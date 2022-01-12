@@ -77,6 +77,10 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --parallel 2 --timeout 300 --output-on-failure -C Release
 
+    - name: Install Python Dependencies
+      shell: bash
+      run: pip install pybind11 numpy pyomo
+
     - name: Test Python Interface
       shell: bash
       working-directory: ${{runner.workspace}}
