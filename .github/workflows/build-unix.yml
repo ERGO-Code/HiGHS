@@ -76,7 +76,7 @@ jobs:
 
     - name: Install Python Dependencies
       shell: bash
-      run: pip install pybind11 numpy pyomo
+      run: pip install pybind11 numpy pyomo nose
 
     - name: Test Python Interface
       shell: bash
