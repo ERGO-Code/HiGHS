@@ -130,6 +130,153 @@ TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   //
 }
 
+TEST_CASE("AlienBasis-rectangular-completion", "[highs_test_alien_basis]") {
+  // Test the use of HFactor to complete a rectangular matrix in order
+  // to form a nonsingular square matrix
+  //
+  // Set up a matrix with 5 columns, 6 rows and a rank deficiency of 1
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 5;
+  matrix.num_row_ = 6;
+  matrix.start_ = {0, 4, 6, 12, 17, 20};
+  matrix.index_ = {0, 2, 4, 5, 0, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 4, 5, 1, 4, 5};
+  matrix.value_ = {1, 1, 2,  1, 2,  1, 1, 1, 1, 1,
+                   1, 1, -1, 2, -1, 2, 1, 1, 2, 1};
+  const HighsInt num_row = matrix.num_row_;
+  const HighsInt num_col = matrix.num_col_;
+  const HighsInt num_basic_col = num_col - 1;
+  HighsInt rank_deficiency;
+  HighsInt required_rank_deficiency;
+  required_rank_deficiency = 1;
+  // The column set is all matrix columns except 2
+  std::vector<HighsInt> col_set = {0, 1, 3, 4};
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
+  if (dev_run) reportColSet("Returned", col_set);
+  // Note that col_set already has the index 4 = num_col+0 to replace
+  // the deficient column 2 with the logical 0.
+  if (dev_run)
+    printf("Returned rank_deficiency = %d:\n  No pivot in\nk Row Col Var\n",
+           (int)rank_deficiency);
+  if (dev_run) {
+    // Report on the row with no pivot, index of the deficient entry
+    // in col_set, and entry itself.
+    for (HighsInt k = 0; k < rank_deficiency; k++)
+      printf("%1d %3d %3d %3d\n", (int)k, (int)factor.row_with_no_pivot[k],
+             (int)factor.col_with_no_pivot[k],
+             (int)factor.var_with_no_pivot[k]);
+  }
+  // Now illustrate how col_set can be extended with two more logicals
+  for (HighsInt k = rank_deficiency; k < num_row - num_basic_col + 1; k++) {
+    if (dev_run) printf("%1d %3d\n", (int)k, (int)factor.row_with_no_pivot[k]);
+    // Identify the index of the logical that is required
+    const HighsInt introduce_logical = factor.row_with_no_pivot[k];
+    const HighsInt introduce_column = num_col + introduce_logical;
+    col_set.push_back(introduce_column);
+  }
+  // Need to call HFactor::setup again as the dimension of col_set has
+  // changed
+  factor.setup(matrix, col_set);
+  required_rank_deficiency = 0;
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
+  // Demonstrate the existence of a factorizaion
+  HighsRandom random;
+  vector<double> solution;
+  HVector rhs;
+  rhs.setup(num_row);
+  rhs.clear();
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = col_set[iRow];
+    double solution_value = random.fraction();
+    solution.push_back(solution_value);
+    if (iVar < num_col) {
+      for (HighsInt iEl = matrix.start_[iVar]; iEl < matrix.start_[iVar + 1];
+           iEl++)
+        rhs.array[matrix.index_[iEl]] += solution_value * matrix.value_[iEl];
+    } else {
+      rhs.array[iVar - num_col] += solution_value;
+    }
+  }
+  std::iota(rhs.index.begin(), rhs.index.end(), 0);
+  rhs.count++;
+  factor.ftranCall(rhs, 1);
+  double solution_error = 0;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    solution_error += std::abs(rhs.array[iRow] - solution[iRow]);
+  REQUIRE(solution_error < 1e-8);
+}
+
+TEST_CASE("AlienBasis-delay-singularity0", "[highs_test_alien_basis]") {
+  // Test the use of HFactor to complete a rectangular matrix when
+  // (near) cancellation yields a (near-)zero row or column, to form a
+  // nonsingular square matrix.
+  //
+  // Set up a matrix with 6 columns, 5 rows and a column rank deficiency of 2
+  //
+  // Generates a singleton column with pivot 1e-12, then a singleton
+  // row with pivot 1e-12
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 6;
+  matrix.num_row_ = 5;
+  matrix.start_ = {0, 2, 4, 9, 12, 15, 18};
+  matrix.index_ = {0, 1, 0, 1, 0, 1, 2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4};
+  matrix.value_ = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 4, 1, 2, 3, 1, -1, -1};
+  const HighsInt perturbed_entry = 3;
+  const double perturbation = -1e-12;
+  matrix.value_[perturbed_entry] += perturbation;
+  const HighsInt num_row = matrix.num_row_;
+  const HighsInt num_col = matrix.num_col_;
+  const HighsInt num_basic_col = num_col;
+  HighsInt rank_deficiency;
+  HighsInt required_rank_deficiency;
+  required_rank_deficiency = 2;
+  // The column set is all matrix columns except 2
+  std::vector<HighsInt> col_set = {0, 1, 2, 3, 4, 5};
+
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
+}
+
+TEST_CASE("AlienBasis-delay-singularity1", "[highs_test_alien_basis]") {
+  // Test the use of HFactor to complete a rectangular matrix when
+  // (near) cancellation yields a (near-)zero row or column, to form a
+  // nonsingular square matrix
+  //
+  // Set up a matrix with 5 columns, 5 rows and a column rank deficiency of 1
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 5;
+  matrix.num_row_ = 5;
+  matrix.start_ = {0, 5, 10, 14, 17, 20};
+  matrix.index_ = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 1, 2, 3, 4, 2, 3, 4, 2, 3, 4};
+  matrix.value_ = {1, 1, 2, -1, 3, 1, 1, 2, -1, 3,
+                   1, 1, 2, 4,  1, 1, 1, 1, 2,  3};
+  const HighsInt perturbed_from_entry = 6;
+  const HighsInt perturbed_to_entry = 10;
+  const double perturbation_multiplier = 1 + 1e-12;
+  for (HighsInt iEl = perturbed_from_entry; iEl < perturbed_to_entry; iEl++)
+    matrix.value_[iEl] *= perturbation_multiplier;
+  const HighsInt num_row = matrix.num_row_;
+  const HighsInt num_col = matrix.num_col_;
+  const HighsInt num_basic_col = num_col;
+  HighsInt rank_deficiency;
+  HighsInt required_rank_deficiency;
+  required_rank_deficiency = 1;
+  // The column set is all matrix columns except 2
+  std::vector<HighsInt> col_set = {0, 1, 2, 3, 4};
+
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
+}
+
 TEST_CASE("AlienBasis-LP", "[highs_test_alien_basis]") {
   const HighsInt num_seed = 10;
   bool avgas = true;
@@ -146,8 +293,6 @@ void getDependentCols(const HighsSparseMatrix& matrix,
   factor.setup(matrix, col_set);
   HighsInt rank_deficiency = factor.build();
   REQUIRE(rank_deficiency == required_rank_deficiency);
-  if (dev_run) {
-  }
   if (dev_run)
     printf("Returned rank_deficiency = %d:\n  No pivot in\nk Row Col Var\n",
            (int)rank_deficiency);

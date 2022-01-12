@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ../app/RunHighs.cpp
@@ -22,21 +22,36 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsModel& model);
 
 int main(int argc, char** argv) {
-  // Load user options.
-  HighsOptions options;
-  std::string model_file;
-  printHighsVersionCopyright(options.log_options);
-
-  bool options_ok = loadOptions(argc, argv, options, model_file);
-  if (!options_ok) return 0;
+  // Create the Highs instance
   Highs highs;
-  //
-  // Pass the option seetings to HiGHS
-  highs.passOptions(options);
+  const HighsOptions& options = highs.getOptions();
+  const HighsLogOptions& log_options = options.log_options;
+
+  // Load user options
+  std::string model_file;
+  HighsOptions loaded_options;
+  // Set "HiGHS.log" as the default log_file for the app so that
+  // log_file has this value if it isn't set in the file
+  loaded_options.log_file = "HiGHS.log";
+  // When loading the options file, any messages are reported using
+  // the default HighsLogOptions
+  if (!loadOptions(log_options, argc, argv, loaded_options, model_file))
+    return 0;
+  // Open the app log file - unless output_flag is false, to avoid
+  // creating an empty file. It does nothing if its name is "".
+  if (loaded_options.output_flag) highs.openLogFile(loaded_options.log_file);
+
+  // Pass the option settings to HiGHS. Only error-checking produces
+  // output, but values are checked in loadOptions, so it's safe to
+  // call this first so that printHighsVersionCopyright uses reporting
+  // settings defined in any options file.
+  highs.passOptions(loaded_options);
+
+  printHighsVersionCopyright(log_options);
   //
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
-  reportModelStatsOrError(options.log_options, read_status, highs.getModel());
+  reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError)
     return 1;  // todo: change to read error
   //
@@ -55,10 +70,9 @@ int main(int argc, char** argv) {
 
 void printHighsVersionCopyright(const HighsLogOptions& log_options) {
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %" HIGHSINT_FORMAT ".%" HIGHSINT_FORMAT
-               ".%" HIGHSINT_FORMAT " [date: %s, git hash: %s]\n",
-               HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR, HIGHS_VERSION_PATCH,
-               HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
+               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+               (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
+               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::kInfo,
                "Copyright (c) 2021 ERGO-Code under MIT licence terms\n");
 }

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "io/LoadOptions.h"
@@ -18,7 +18,8 @@
 
 // For extended options to be parsed from a file. Assuming options file is
 // specified.
-bool loadOptionsFromFile(HighsOptions& options, const std::string filename) {
+bool loadOptionsFromFile(const HighsLogOptions& report_log_options,
+                         HighsOptions& options, const std::string filename) {
   if (filename.size() == 0) return false;
 
   string line, option, value;
@@ -36,7 +37,7 @@ bool loadOptionsFromFile(HighsOptions& options, const std::string filename) {
 
       HighsInt equals = line.find_first_of("=");
       if (equals < 0 || equals >= (HighsInt)line.size() - 1) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogUser(report_log_options, HighsLogType::kError,
                      "Error on line %" HIGHSINT_FORMAT " of options file.\n",
                      line_count);
         return false;
@@ -45,12 +46,12 @@ bool loadOptionsFromFile(HighsOptions& options, const std::string filename) {
       value = line.substr(equals + 1, line.size() - equals);
       trim(option, non_chars);
       trim(value, non_chars);
-      if (setLocalOptionValue(options.log_options, option, options.records,
-                              value) != OptionStatus::kOk)
+      if (setLocalOptionValue(report_log_options, option, options.log_options,
+                              options.records, value) != OptionStatus::kOk)
         return false;
     }
   } else {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogUser(report_log_options, HighsLogType::kError,
                  "Options file not found.\n");
     return false;
   }

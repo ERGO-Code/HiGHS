@@ -33,10 +33,8 @@ HighsInt HighsHessian::numNz() const {
   return this->start_[this->dim_];
 }
 
-void HighsHessian::print() {
-  HighsInt num_nz = 0;
-  if (dim_ > 0) num_nz = this->start_[dim_];
-
+void HighsHessian::print() const {
+  HighsInt num_nz = this->numNz();
   printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
          " nonzeros\n",
          dim_, num_nz);

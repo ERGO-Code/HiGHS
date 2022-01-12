@@ -10,10 +10,14 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 
   // set HiGHS to be silent
   highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("Time limit", runtime.settings.timelimit -
+                                         runtime.timer.readRunHighsClock());
 
   HighsLp lp;
-  lp.a_matrix_.index_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);
-  lp.a_matrix_.start_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.start);
+  lp.a_matrix_.index_ =
+      *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);
+  lp.a_matrix_.start_ =
+      *((std::vector<HighsInt>*)&runtime.instance.A.mat.start);
   lp.a_matrix_.value_ = runtime.instance.A.mat.value;
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
   lp.col_cost_.assign(runtime.instance.num_var, 0.0);

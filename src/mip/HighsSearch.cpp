@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsSearch.h"
@@ -534,6 +534,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
+        lp->recoverBasis();
         return -1;
       }
 
@@ -589,7 +590,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -606,7 +607,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         }
@@ -623,7 +624,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
-        if (numiters > basisstart_threshold) lp->recoverBasis();
+        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -671,6 +672,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
+        lp->recoverBasis();
         return -1;
       }
 
@@ -727,7 +729,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -744,7 +746,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         }
@@ -761,7 +763,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
-        if (numiters > basisstart_threshold) lp->recoverBasis();
+        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -818,12 +820,16 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
 void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   if (nodestack.empty()) return;
 
+  // get the basis of the node highest up in the tree
   std::shared_ptr<const HighsBasis> basis;
-  if (nodestack.back().opensubtrees == 0) {
-    if (nodestack.back().nodeBasis)
-      basis = std::move(nodestack.back().nodeBasis);
-    backtrack(false);
+  for (NodeData& nodeData : nodestack) {
+    if (nodeData.nodeBasis) {
+      basis = std::move(nodeData.nodeBasis);
+      break;
+    }
   }
+
+  if (nodestack.back().opensubtrees == 0) backtrack(false);
 
   while (!nodestack.empty()) {
     auto oldchangedcols = localdom.getChangedCols().size();
@@ -845,9 +851,6 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     }
     nodestack.back().opensubtrees = 0;
-    if (nodestack.back().nodeBasis)
-      basis = std::move(nodestack.back().nodeBasis);
-
     backtrack(false);
   }
 
@@ -885,6 +888,8 @@ int64_t HighsSearch::getTotalLpIterations() const {
 }
 
 int64_t HighsSearch::getLocalLpIterations() const { return lpiterations; }
+
+int64_t HighsSearch::getLocalNodes() const { return nnodes; }
 
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
   return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
@@ -942,7 +947,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   localdom.propagate();
 
-  if (!localdom.infeasible()) {
+  if (!inheuristic && !localdom.infeasible()) {
     if (mipsolver.mipdata_->symmetries.numPerms > 0 &&
         !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
@@ -1428,14 +1433,17 @@ bool HighsSearch::backtrack(bool recoverBasis) {
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
       depthoffset += nodestack.back().skipDepthCount;
-      nodestack.pop_back();
-
-      if (nodestack.empty()) {
+      if (nodestack.size() == 1) {
+        if (recoverBasis && nodestack.back().nodeBasis)
+          lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
+        nodestack.pop_back();
         localdom.backtrackToGlobal();
         lp->flushDomain(localdom);
+        if (recoverBasis) lp->recoverBasis();
         return false;
       }
 
+      nodestack.pop_back();
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif
@@ -1544,13 +1552,18 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
       depthoffset += nodestack.back().skipDepthCount;
-      nodestack.pop_back();
 
-      if (nodestack.empty()) {
+      if (nodestack.size() == 1) {
+        if (nodestack.back().nodeBasis)
+          lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
+        nodestack.pop_back();
         localdom.backtrackToGlobal();
         lp->flushDomain(localdom);
+        lp->recoverBasis();
         return false;
       }
+
+      nodestack.pop_back();
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif

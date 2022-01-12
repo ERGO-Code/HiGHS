@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_C_API
@@ -29,10 +29,12 @@ HighsInt Highs_lpCall(
     const HighsInt numcol,    //!< number of columns
     const HighsInt numrow,    //!< number of rows
     const HighsInt numnz,     //!< number of entries in the constraint matrix
-    const HighsInt a_format,  //!< format of the constraint matrix
-    const HighsInt sense,     //!< sense of the optimization
-    const double offset,      //!< objective constant
-    const double* colcost,    //!< array of length [numcol] with column costs
+    const HighsInt a_format,  //!< format of the constraint matrix (2 =>
+                              //!< Row-wise; Otherise column-wise)
+    const HighsInt sense,   //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
+    const double offset,    //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -40,7 +42,7 @@ HighsInt Highs_lpCall(
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
     const HighsInt*
-        astart,  //!< array of length [numcol+1] with column start indices
+        astart,  //!< array of length [numcol] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
@@ -63,10 +65,12 @@ HighsInt Highs_mipCall(
     const HighsInt numcol,    //!< number of columns
     const HighsInt numrow,    //!< number of rows
     const HighsInt numnz,     //!< number of entries in the constraint matrix
-    const HighsInt a_format,  //!< format of the constraint matrix
-    const HighsInt sense,     //!< sense of the optimization
-    const double offset,      //!< objective constant
-    const double* colcost,    //!< array of length [numcol] with column costs
+    const HighsInt a_format,  //!< format of the constraint matrix (2 =>
+                              //!< Row-wise; Otherise column-wise)
+    const HighsInt sense,   //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
+    const double offset,    //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -74,7 +78,7 @@ HighsInt Highs_mipCall(
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
     const HighsInt*
-        astart,  //!< array of length [numcol+1] with column start indices
+        astart,  //!< array of length [numcol] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
@@ -95,11 +99,14 @@ HighsInt Highs_qpCall(
     const HighsInt numrow,    //!< number of rows
     const HighsInt numnz,     //!< number of entries in the constraint matrix
     const HighsInt q_numnz,   //!< number of entries in the Hessian matrix
-    const HighsInt a_format,  //!< format of the constraint matrix
-    const HighsInt q_format,  //!< format of the Hessian matrix
-    const HighsInt sense,     //!< sense of the optimization
-    const double offset,      //!< objective constant
-    const double* colcost,    //!< array of length [numcol] with column costs
+    const HighsInt a_format,  //!< format of the constraint matrix (2 =>
+                              //!< Row-wise; Otherise column-wise)
+    const HighsInt q_format,  //!< format of the Hessian matrix (if numnz>0 it
+                              //!< must be 1; Otherwise N/A)
+    const HighsInt sense,   //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
+    const double offset,    //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -107,12 +114,12 @@ HighsInt Highs_qpCall(
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
     const HighsInt*
-        astart,  //!< array of length [numcol+1] with column start indices
+        astart,  //!< array of length [numcol] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue,  //!< array of length [numnz] with value of matrix entries
-    const HighsInt* qstart,  //!< array of length [numcol+1] with Hessian column
+    const HighsInt* qstart,  //!< array of length [numcol] with Hessian column
                              //!< start indices
     const HighsInt* qindex,  //!< array of length [numnz] with row indices of
                              //!< Hessian matrix entries
@@ -147,14 +154,15 @@ HighsInt Highs_lpDataMpsRead(
     //    const char* filename,
     const HighsInt numcol,  //!< number of columns
     const HighsInt numrow,  //!< number of rows
-    HighsInt* sense,        //!< sense of the optimization
+    HighsInt* sense,        //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
     double* offset,         //!< objective constant
     double* colcost,        //!< array of length [numcol] with column costs
     double* collower,  //!< array of length [numcol] with lower column bounds
     double* colupper,  //!< array of length [numcol] with upper column bounds
     double* rowlower,  //!< array of length [numrow] with lower row bounds
     double* rowupper,  //!< array of length [numrow] with upper row bounds
-    HighsInt* astart,  //!< array of length [numcol+1] with column start indices
+    HighsInt* astart,  //!< array of length [numcol] with column start indices
     HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     double* avalue  //!< array of length [numnz] with value of matrix entries
@@ -216,10 +224,12 @@ HighsInt Highs_passLp(
     const HighsInt numcol,    //!< number of columns
     const HighsInt numrow,    //!< number of rows
     const HighsInt numnz,     //!< number of entries in the constraint matrix
-    const HighsInt a_format,  //!< format of the constraint matrix
-    const HighsInt sense,     //!< sense of the optimization
-    const double offset,      //!< objective constant
-    const double* colcost,    //!< array of length [numcol] with column costs
+    const HighsInt a_format,  //!< format of the constraint matrix (2 =>
+                              //!< Row-wise; Otherise column-wise)
+    const HighsInt sense,   //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
+    const double offset,    //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -242,10 +252,12 @@ HighsInt Highs_passMip(
     const HighsInt numcol,    //!< number of columns
     const HighsInt numrow,    //!< number of rows
     const HighsInt numnz,     //!< number of entries in the constraint matrix
-    const HighsInt a_format,  //!< format of the constraint matrix
-    const HighsInt sense,     //!< sense of the optimization
-    const double offset,      //!< objective constant
-    const double* colcost,    //!< array of length [numcol] with column costs
+    const HighsInt a_format,  //!< format of the constraint matrix (2 =>
+                              //!< Row-wise; Otherise column-wise)
+    const HighsInt sense,   //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
+    const double offset,    //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -272,11 +284,14 @@ HighsInt Highs_passModel(
     const HighsInt numrow,    //!< number of rows
     const HighsInt numnz,     //!< number of entries in the constraint matrix
     const HighsInt q_num_nz,  //!< number of nonzeros in Hessian
-    const HighsInt a_format,  //!< format of the constraint matrix
-    const HighsInt q_format,  //!< format of the Hessian matrix
-    const HighsInt sense,     //!< sense of the optimization
-    const double offset,      //!< objective constant
-    const double* colcost,    //!< array of length [numcol] with column costs
+    const HighsInt a_format,  //!< format of the constraint matrix (2 =>
+                              //!< Row-wise; Otherise column-wise)
+    const HighsInt q_format,  //!< format of the Hessian matrix (if numnz>0 it
+                              //!< must be 1; Otherwise N/A)
+    const HighsInt sense,   //!< sense of the optimization (-1 => Maximization;
+                            //!< Otherwise minimization)
+    const double offset,    //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -1104,13 +1119,25 @@ HighsInt Highs_setHighsBoolOptionValue(
     const HighsInt value  //!< new value of option
 );
 
-/**
- * @brief Runs crossover and loads basis. If no basis is found, the values of
- * Highs solution will not be modified. If basis is found they are updated
- * to reflect the corresponding Highs basis.
- * status
- */
-
+// /**
+//  * @brief Returns the current model
+//  */
+// void Highs_getLp(
+//     void *highs,       //!< HiGHS object reference
+//     int* numcol,        //!< number of columns
+//     int* numrow,        //!< number of rows
+//     int* numnz,         //!< number of entries in the constraint matrix
+//     double *colcost,   //!< array of length [numcol] with column costs
+//     double *collower,  //!< array of length [numcol] with lower column bounds
+//     double *colupper,  //!< array of length [numcol] with upper column bounds
+//     double *rowlower,  //!< array of length [numrow] with lower row bounds
+//     double *rowupper,  //!< array of length [numrow] with upper row bounds
+//     int *astart,       //!< array of length [numcol] with column start
+//     indices int *
+//         aindex,  //!< array of length [numnz] with row indices of matrix
+//         entries
+//     double *avalue  //!< array of length [numnz] with value of matrix entries
+// );
 HighsInt Highs_setHighsIntOptionValue(
     void* highs,
     const char* option,   //!< name of the option

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HFactorUtils.cpp
@@ -101,4 +101,27 @@ void HFactor::reportDoubleVector(const std::string name,
     printf("%11.4g ", entry[iEn]);
   }
   printf("\n");
+}
+
+void HFactor::reportAsm() {
+  for (HighsInt count = 1; count <= num_row; count++) {
+    if (col_link_first[count] < 0) continue;
+    for (HighsInt j = col_link_first[count]; j != -1; j = col_link_next[j]) {
+      double min_pivot = mc_min_pivot[j];
+      HighsInt start = mc_start[j];
+      HighsInt end = start + mc_count_a[j];
+      printf("Col %4d: count = %2d; min_pivot = %10.4g; [%4d, %4d)\n", (int)j,
+             (int)count, min_pivot, (int)start, (int)end);
+      for (HighsInt k = start; k < end; k++) {
+        HighsInt i = mc_index[k];
+        double value = mc_value[k];
+        //	if (abs_value < 1e-8) continue;
+        HighsInt row_count = mr_count[i];
+        double merit_local = 1.0 * (count - 1) * (row_count - 1);
+        printf("   Row %4d; Count = %2d; Merit = %11.4g; Value = %11.4g: %s\n",
+               (int)i, (int)row_count, merit_local, value,
+               std::abs(value) >= min_pivot ? "OK" : "");
+      }
+    }
+  }
 }
