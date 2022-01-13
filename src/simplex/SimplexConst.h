@@ -203,6 +203,10 @@ enum class BadBasisChangeReason {
   kFailedInfeasibilityProof
 };
 
+const HighsInt kAllowedNumBadDevexWeight = 3;
+const double kBadDevexWeightFactor = 3;
+
+
 //
 // Relation between HiGHS basis and Simplex basis
 //

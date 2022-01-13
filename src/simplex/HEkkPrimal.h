@@ -143,13 +143,12 @@ class HEkkPrimal {
   // Primal phase 1 tools
   vector<pair<double, int> > ph1SorterR;
   vector<pair<double, int> > ph1SorterT;
-  // Devex weight
-  HighsInt num_devex_iterations;
-  HighsInt num_bad_devex_weight;
-  vector<double> devex_weight;
-  vector<HighsInt> devex_index;
-  const HighsInt allowed_num_bad_devex_weight = 3;
-  const double bad_devex_weight_factor = 3;
+  // Edge weights
+  // Edge weight
+  vector<double> edge_weight_;
+  HighsInt num_devex_iterations_;
+  HighsInt num_bad_devex_weight_;
+  vector<HighsInt> devex_index_;
   // Nonbasic free column data.
   HighsInt num_free_col;
   HSet nonbasic_free_col_set;

@@ -3959,6 +3959,13 @@ void HEkk::unapplyTabooVariableIn(vector<double>& values) {
   }
 }
 
+bool HEkk::logicalBasis() const {
+  for (HighsInt iRow = 0; iRow < this->lp_.num_row_; iRow++) {
+    if (basis_.basicIndex_[iRow] < this->lp_.num_col_) return false;
+  }
+  return true;
+}
+
 bool HEkk::proofOfPrimalInfeasibility() {
   // To be called from outside HEkk when row_ep is not known
   assert(status_.has_dual_ray);

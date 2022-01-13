@@ -190,7 +190,7 @@ class HEkk {
   vector<HighsInt> upper_bound_col_;
   vector<HighsInt> upper_bound_row_;
 
-  double edge_weight_error;
+  double edge_weight_error_;
 
   double build_synthetic_tick_ = 0;
   double total_synthetic_tick_ = 0;
@@ -312,7 +312,7 @@ class HEkk {
   void applyTabooVariableIn(vector<double>& values,
                             const double overwrite_with);
   void unapplyTabooVariableIn(vector<double>& values);
-
+  bool logicalBasis() const;
   // Methods in HEkkControl
   void initialiseControl();
   void assessDSEWeightError(const double computed_edge_weight,

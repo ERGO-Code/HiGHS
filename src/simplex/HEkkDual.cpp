@@ -154,14 +154,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       //
       // Exact DSE weights need to be computed if the basis contains
       // structurals
-      bool logical_basis = true;
-      for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
-        if (ekk_instance_.basis_.basicIndex_[iRow] < solver_num_col) {
-          logical_basis = false;
-          break;
-        }
-      }
-      if (logical_basis) {
+      if (ekk_instance_.logicalBasis()) {
         // Unit weights already set up for B=I
         status.has_dual_steepest_edge_weights = true;
       } else {
@@ -1324,7 +1317,7 @@ void HEkkDual::iterationAnalysisData() {
   analysis->pivot_value_from_row = alpha_row;
   analysis->factor_pivot_threshold = info.factor_pivot_threshold;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->edge_weight_error = ekk_instance_.edge_weight_error;
+  analysis->edge_weight_error = ekk_instance_.edge_weight_error_;
   analysis->objective_value = info.updated_dual_objective_value;
   // Since maximization is achieved by minimizing the LP with negated
   // costs, in phase 2 the dual objective value is negated, so flip

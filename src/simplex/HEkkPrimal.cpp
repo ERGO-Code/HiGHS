@@ -423,8 +423,9 @@ void HEkkPrimal::initialiseSolve() {
     assert(edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge);
     primal_edge_weight_mode = PrimalEdgeWeightMode::kSteepestEdge;
   }
-  assert(primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex);
-  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex) {
+  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDantzig) {
+    edge_weight_.assign(num_tot, 1.0);
+  } else if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex) {
     initialiseDevexFramework();
   } else if (primal_edge_weight_mode == PrimalEdgeWeightMode::kSteepestEdge) {
     initialisePrimalSteepestEdgeWeights();
@@ -949,10 +950,10 @@ void HEkkPrimal::chuzc() {
       double hyper_sparse_measure = 0;
       if (hyper_sparse_variable_in >= 0)
         hyper_sparse_measure = fabs(workDual[hyper_sparse_variable_in]) /
-                               devex_weight[hyper_sparse_variable_in];
+                               edge_weight_[hyper_sparse_variable_in];
       double measure = 0;
       if (variable_in >= 0)
-        measure = fabs(workDual[variable_in]) / devex_weight[variable_in];
+        measure = fabs(workDual[variable_in]) / edge_weight_[variable_in];
       double abs_measure_error = fabs(hyper_sparse_measure - measure);
       bool measure_error = abs_measure_error > 1e-12;
       // if (measure_error)
@@ -995,7 +996,7 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
           HighsInt iCol = nonbasic_free_col_set_entry[ix];
           double dual_infeasibility = fabs(workDual[iCol]);
           if (dual_infeasibility > dual_feasibility_tolerance) {
-            double measure = dual_infeasibility / devex_weight[iCol];
+            double measure = dual_infeasibility / edge_weight_[iCol];
             addToDecreasingHeap(
                 num_hyper_chuzc_candidates, max_num_hyper_chuzc_candidates,
                 hyper_chuzc_measure, hyper_chuzc_candidate, measure, iCol);
@@ -1006,7 +1007,7 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
       for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
         double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
         if (dual_infeasibility > dual_feasibility_tolerance) {
-          double measure = dual_infeasibility / devex_weight[iCol];
+          double measure = dual_infeasibility / edge_weight_[iCol];
           addToDecreasingHeap(
               num_hyper_chuzc_candidates, max_num_hyper_chuzc_candidates,
               hyper_chuzc_measure, hyper_chuzc_candidate, measure, iCol);
@@ -1042,9 +1043,9 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
         HighsInt iCol = nonbasic_free_col_set_entry[ix];
         double dual_infeasibility = fabs(workDual[iCol]);
         if (dual_infeasibility > dual_feasibility_tolerance &&
-            dual_infeasibility > best_measure * devex_weight[iCol]) {
+            dual_infeasibility > best_measure * edge_weight_[iCol]) {
           variable_in = iCol;
-          best_measure = dual_infeasibility / devex_weight[iCol];
+          best_measure = dual_infeasibility / edge_weight_[iCol];
         }
       }
     }
@@ -1052,9 +1053,9 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
     for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
       double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
       if (dual_infeasibility > dual_feasibility_tolerance &&
-          dual_infeasibility > best_measure * devex_weight[iCol]) {
+          dual_infeasibility > best_measure * edge_weight_[iCol]) {
         variable_in = iCol;
-        best_measure = dual_infeasibility / devex_weight[iCol];
+        best_measure = dual_infeasibility / edge_weight_[iCol];
       }
     }
     analysis->simplexTimerStop(ChuzcPrimalClock);
@@ -1480,7 +1481,8 @@ void HEkkPrimal::update() {
   updateDual();
 
   // Update the devex weight
-  updateDevex();
+  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex)
+    updateDevex();
 
   // If entering column was nonbasic free, remove it from the set
   removeNonbasicFreeColumn();
@@ -1517,7 +1519,8 @@ void HEkkPrimal::update() {
   ekk_instance_.iteration_count_++;
 
   // Reset the devex when there are too many errors
-  if (num_bad_devex_weight > allowed_num_bad_devex_weight) initialiseDevexFramework();
+  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex &&
+      num_bad_devex_weight_ > kAllowedNumBadDevexWeight) initialiseDevexFramework();
 
   // Report on the iteration
   iterationAnalysis();
@@ -1566,8 +1569,8 @@ void HEkkPrimal::hyperChooseColumn() {
           dual_infeasibility = fabs(workDual[iCol]);
       }
       if (dual_infeasibility > dual_feasibility_tolerance) {
-        if (dual_infeasibility > best_measure * devex_weight[iCol]) {
-          best_measure = dual_infeasibility / devex_weight[iCol];
+        if (dual_infeasibility > best_measure * edge_weight_[iCol]) {
+          best_measure = dual_infeasibility / edge_weight_[iCol];
           variable_in = iCol;
         }
       }
@@ -1615,14 +1618,14 @@ void HEkkPrimal::hyperChooseColumnClear() {
 
 void HEkkPrimal::hyperChooseColumnChangedInfeasibility(
     const double infeasibility, const HighsInt iCol) {
-  if (infeasibility > max_changed_measure_value * devex_weight[iCol]) {
+  if (infeasibility > max_changed_measure_value * edge_weight_[iCol]) {
     max_hyper_chuzc_non_candidate_measure =
         max(max_changed_measure_value, max_hyper_chuzc_non_candidate_measure);
-    max_changed_measure_value = infeasibility / devex_weight[iCol];
+    max_changed_measure_value = infeasibility / edge_weight_[iCol];
     max_changed_measure_column = iCol;
   } else if (infeasibility >
-             max_hyper_chuzc_non_candidate_measure * devex_weight[iCol]) {
-    max_hyper_chuzc_non_candidate_measure = infeasibility / devex_weight[iCol];
+             max_hyper_chuzc_non_candidate_measure * edge_weight_[iCol]) {
+    max_hyper_chuzc_non_candidate_measure = infeasibility / edge_weight_[iCol];
   }
 }
 
@@ -1694,7 +1697,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     }
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
-      double measure = dual_infeasibility / devex_weight[iCol];
+      double measure = dual_infeasibility / edge_weight_[iCol];
       if (report_hyper_chuzc) {
         printf("Changing column %" HIGHSINT_FORMAT ": measure = %g \n",
                check_column, measure);
@@ -1716,7 +1719,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     HighsInt iCol = iRow + num_col;
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
-      double measure = dual_infeasibility / devex_weight[iCol];
+      double measure = dual_infeasibility / edge_weight_[iCol];
       if (report_hyper_chuzc) {
         printf("Changing column %" HIGHSINT_FORMAT ": measure = %g \n",
                check_column, measure);
@@ -2267,14 +2270,14 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
 }
 
 void HEkkPrimal::initialiseDevexFramework() {
-  devex_weight.assign(num_tot, 1.0);
-  devex_index.assign(num_tot, 0);
+  edge_weight_.assign(num_tot, 1.0);
+  devex_index_.assign(num_tot, 0);
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     const HighsInt nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_[iCol];
-    devex_index[iCol] = nonbasicFlag * nonbasicFlag;
+    devex_index_[iCol] = nonbasicFlag * nonbasicFlag;
   }
-  num_devex_iterations = 0;
-  num_bad_devex_weight = 0;
+  num_devex_iterations_ = 0;
+  num_bad_devex_weight_ = 0;
   if (report_hyper_chuzc) printf("initialiseDevexFramework\n");
   hyperChooseColumnClear();
 }
@@ -2294,15 +2297,15 @@ void HEkkPrimal::updateDevex() {
       iRow = iEntry;
     }
     HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
-    double dAlpha = devex_index[iCol] * col_aq.array[iRow];
+    double dAlpha = devex_index_[iCol] * col_aq.array[iRow];
     dPivotWeight += dAlpha * dAlpha;
   }
-  dPivotWeight += devex_index[variable_in] * 1.0;
+  dPivotWeight += devex_index_[variable_in] * 1.0;
   dPivotWeight = sqrt(dPivotWeight);
 
   // Check if the saved weight is too large
-  if (devex_weight[variable_in] > bad_devex_weight_factor * dPivotWeight)
-    num_bad_devex_weight++;
+  if (edge_weight_[variable_in] > kBadDevexWeightFactor * dPivotWeight)
+    num_bad_devex_weight_++;
 
   // Update the devex weight for all
   double dPivot = col_aq.array[row_out];
@@ -2312,9 +2315,9 @@ void HEkkPrimal::updateDevex() {
     HighsInt iCol = row_ap.index[iEl];
     double alpha = row_ap.array[iCol];
     double devex = dPivotWeight * fabs(alpha);
-    devex += devex_index[iCol] * 1.0;
-    if (devex_weight[iCol] < devex) {
-      devex_weight[iCol] = devex;
+    devex += devex_index_[iCol] * 1.0;
+    if (edge_weight_[iCol] < devex) {
+      edge_weight_[iCol] = devex;
     }
   }
   for (HighsInt iEl = 0; iEl < row_ep.count; iEl++) {
@@ -2322,19 +2325,21 @@ void HEkkPrimal::updateDevex() {
     HighsInt iCol = iRow + num_col;
     double alpha = row_ep.array[iRow];
     double devex = dPivotWeight * fabs(alpha);
-    devex += devex_index[iCol] * 1.0;
-    if (devex_weight[iCol] < devex) {
-      devex_weight[iCol] = devex;
+    devex += devex_index_[iCol] * 1.0;
+    if (edge_weight_[iCol] < devex) {
+      edge_weight_[iCol] = devex;
     }
   }
   // Update devex weight for the pivots
-  devex_weight[variable_out] = max(1.0, dPivotWeight);
-  devex_weight[variable_in] = 1.0;
-  num_devex_iterations++;
+  edge_weight_[variable_out] = max(1.0, dPivotWeight);
+  edge_weight_[variable_in] = 1.0;
+  num_devex_iterations_++;
   analysis->simplexTimerStop(DevexUpdateWeightClock);
 }
 
 void HEkkPrimal::initialisePrimalSteepestEdgeWeights() {
+  assert(ekk_instance_.logicalBasis());
+  edge_weight_.assign(num_tot, 1.0);
 }
 
 void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
@@ -2413,7 +2418,7 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->edge_weight_mode = DualEdgeWeightMode::kDevex;
   analysis->solve_phase = solve_phase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;
-  analysis->devex_iteration_count = num_devex_iterations;
+  analysis->devex_iteration_count = num_devex_iterations_;
   analysis->pivotal_row_index = row_out;
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
@@ -2427,14 +2432,14 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_column = alpha_col;
   analysis->pivot_value_from_row = alpha_row;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->edge_weight_error = ekk_instance_.edge_weight_error;
+  analysis->edge_weight_error = ekk_instance_.edge_weight_error_;
   analysis->objective_value = info.updated_primal_objective_value;
   analysis->num_primal_infeasibility = info.num_primal_infeasibilities;
   analysis->num_dual_infeasibility = info.num_dual_infeasibilities;
   analysis->sum_primal_infeasibility = info.sum_primal_infeasibilities;
   analysis->sum_dual_infeasibility = info.sum_dual_infeasibilities;
   if ((analysis->edge_weight_mode == DualEdgeWeightMode::kDevex) &&
-      (num_devex_iterations == 0))
+      (num_devex_iterations_ == 0))
     analysis->num_devex_framework++;
   analysis->col_aq_density = info.col_aq_density;
   analysis->row_ep_density = info.row_ep_density;
@@ -2503,7 +2508,7 @@ void HEkkPrimal::localReportIter(const bool header) {
              check_column, flag, move, lower, value, upper);
       if (flag == kNonbasicFlagTrue) {
         double dual = info.workDual_[check_column];
-        double weight = devex_weight[check_column];
+        double weight = edge_weight_[check_column];
         double infeasibility = -move * dual;
         if (lower == -kHighsInf && upper == kHighsInf)
           infeasibility = fabs(dual);
