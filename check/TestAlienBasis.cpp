@@ -206,6 +206,10 @@ TEST_CASE("AlienBasis-rectangular-completion", "[highs_test_alien_basis]") {
   double solution_error = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     solution_error += std::abs(rhs.array[iRow] - solution[iRow]);
+  printf("AlienBasis-rectangular-completion: solution_error = %g\n",
+         solution_error);
+  fflush(stdout);
+
   REQUIRE(solution_error < 1e-8);
 }
 

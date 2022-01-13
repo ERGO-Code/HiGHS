@@ -100,7 +100,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
 
   REQUIRE(info.mip_node_count == 1);
   REQUIRE(fabs(info.mip_dual_bound + 6) < double_equal_tolerance);
-  REQUIRE(info.mip_gap == 0);
+  REQUIRE(std::fabs(info.mip_gap) < 1e-12);
 }
 
 TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {

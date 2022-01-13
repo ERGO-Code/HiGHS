@@ -326,7 +326,7 @@ restart:
       // because we first want to check if the node is not fathomed due to
       // new global information before we perform separation rounds for the node
       if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
-          search.currentNodeToQueue(mipdata_->nodequeue);
+        search.currentNodeToQueue(mipdata_->nodequeue);
 
       // if the node was pruned we remove it from the search and install the
       // next node from the queue
