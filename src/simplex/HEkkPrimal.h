@@ -83,7 +83,7 @@ class HEkkPrimal {
 
   void considerInfeasibleValueIn();
 
-  void resetDevex();
+  void initialiseDevexFramework();
   void updateDevex();
   void initialisePrimalSteepestEdgeWeights();
   void updatePrimalSteepestEdgeWeights();

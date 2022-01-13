@@ -425,7 +425,7 @@ void HEkkPrimal::initialiseSolve() {
   }
   assert(primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex);
   if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex) {
-    resetDevex();
+    initialiseDevexFramework();
   } else if (primal_edge_weight_mode == PrimalEdgeWeightMode::kSteepestEdge) {
     initialisePrimalSteepestEdgeWeights();
   }
@@ -1517,7 +1517,7 @@ void HEkkPrimal::update() {
   ekk_instance_.iteration_count_++;
 
   // Reset the devex when there are too many errors
-  if (num_bad_devex_weight > allowed_num_bad_devex_weight) resetDevex();
+  if (num_bad_devex_weight > allowed_num_bad_devex_weight) initialiseDevexFramework();
 
   // Report on the iteration
   iterationAnalysis();
@@ -2266,7 +2266,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   analysis->simplexTimerStop(PriceBasicFeasibilityChangeClock);
 }
 
-void HEkkPrimal::resetDevex() {
+void HEkkPrimal::initialiseDevexFramework() {
   devex_weight.assign(num_tot, 1.0);
   devex_index.assign(num_tot, 0);
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
@@ -2275,7 +2275,7 @@ void HEkkPrimal::resetDevex() {
   }
   num_devex_iterations = 0;
   num_bad_devex_weight = 0;
-  if (report_hyper_chuzc) printf("resetDevex\n");
+  if (report_hyper_chuzc) printf("initialiseDevexFramework\n");
   hyperChooseColumnClear();
 }
 

@@ -185,11 +185,8 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       // Indicate that edge weights are known
       status.has_dual_steepest_edge_weights = true;
     }
-    if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
-      // Using Devex pricing, so set up the first framework
-      info.devex_index_.assign(solver_num_tot, 0);
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) 
       initialiseDevexFramework();
-    }
     // Check on consistency between dual_edge_weight_mode and
     // status.has_dual_steepest_edge_weights
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
@@ -1383,8 +1380,6 @@ void HEkkDual::iterationAnalysis() {
     const bool switch_to_devex = ekk_instance_.switchToDevex();
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
-      // Using dual Devex edge weights, so set up the first framework
-      ekk_instance_.info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
   }
@@ -2229,11 +2224,13 @@ void HEkkDual::updatePivots() {
   */
 }
 
-void HEkkDual::initialiseDevexFramework(const bool parallel) {
+void HEkkDual::initialiseDevexFramework() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   // Initialise the Devex framework: reference set is all basic
   // variables
   analysis->simplexTimerStart(DevexIzClock);
+  // Resize in case this is the first call
+  ekk_instance_.info_.devex_index_.resize(solver_num_tot);
   const vector<int8_t>& nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_;
   // Initialise the devex framework. The devex reference set is
   // initialise to be the current set of basic variables - and never

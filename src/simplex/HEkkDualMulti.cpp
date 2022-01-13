@@ -573,12 +573,7 @@ void HEkkDual::majorUpdate() {
   // Major update - primal and factor
   majorUpdatePrimal();
   majorUpdateFactor();
-  if (new_devex_framework) {
-    //    printf("Iter %7" HIGHSINT_FORMAT ": New Devex framework\n",
-    //    ekk_instance_.iteration_count_);
-    const bool parallel = true;
-    initialiseDevexFramework(parallel);
-  }
+  if (new_devex_framework) initialiseDevexFramework();
   iterationAnalysisMajor();
 }
 
@@ -1022,7 +1017,6 @@ void HEkkDual::iterationAnalysisMajor() {
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
       // Set up the Devex framework
-      ekk_instance_.info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
   }

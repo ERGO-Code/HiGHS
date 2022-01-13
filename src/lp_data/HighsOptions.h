@@ -525,7 +525,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int =
-        new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
+        new OptionRecordInt("simplex_strategy", "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
                             advanced, &simplex_strategy, kSimplexStrategyMin,
                             kSimplexStrategyDual, kSimplexStrategyMax);
     records.push_back(record_int);
@@ -558,7 +558,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt("simplex_primal_edge_weight_strategy",
                             "Strategy for simplex primal edge weights: Choose "
-                            "/ Dantzig / Devex (-1/0/1)",
+                            "/ Dantzig / Devex / Steepest "
+			    "Edge (-1/0/1/2)",
                             advanced, &simplex_primal_edge_weight_strategy,
                             kSimplexPrimalEdgeWeightStrategyMin,
                             kSimplexPrimalEdgeWeightStrategyChoose,

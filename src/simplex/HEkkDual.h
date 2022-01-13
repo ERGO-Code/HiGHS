@@ -255,7 +255,7 @@ class HEkkDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void initialiseDevexFramework(const bool parallel = false);
+  void initialiseDevexFramework();
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
