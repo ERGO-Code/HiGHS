@@ -118,7 +118,9 @@ restart:
     bool considerHeuristics = true;
     while (true) {
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        search.evaluateNode();
+        if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
+          search.currentNodeToQueue(mipdata_->nodequeue);
+
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
@@ -143,7 +145,9 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-        search.dive();
+        if (search.dive() == HighsSearch::NodeResult::kSubOptimal)
+          search.currentNodeToQueue(mipdata_->nodequeue);
+
         ++mipdata_->num_leaves;
 
         search.flushStatistics();
@@ -185,12 +189,14 @@ restart:
         mipdata_->domain, mipdata_->feastol);
 
     // if global propagation detected infeasibility, stop here
-    if (mipdata_->domain.infeasible() || mipdata_->nodequeue.empty()) {
+    if (mipdata_->domain.infeasible()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
       break;
     }
+
+    if (mipdata_->nodequeue.empty()) break;
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
@@ -319,7 +325,8 @@ restart:
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to
       // new global information before we perform separation rounds for the node
-      search.evaluateNode();
+      if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
+          search.currentNodeToQueue(mipdata_->nodequeue);
 
       // if the node was pruned we remove it from the search and install the
       // next node from the queue
@@ -416,39 +423,38 @@ void HighsMipSolver::cleanupSolve() {
   else
     gap = kHighsInf;
   std::array<char, 128> gapString;
-  std::array<char, 128> lbToleranceString;
 
   if (gap == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
-    if (options_mip_->mip_rel_gap == 0.0)
-      std::snprintf(gapString.data(), gapString.size(), "%.2f%%", gap);
+    double gapTol = options_mip_->mip_rel_gap;
+
+    if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
+      gapTol = primal_bound_ == 0.0
+                   ? kHighsInf
+                   : std::max(gapTol,
+                              options_mip_->mip_abs_gap / fabs(primal_bound_));
+    }
+
+    if (gapTol == 0.0)
+      std::snprintf(gapString.data(), gapString.size(), "%.2f%%", 100. * gap);
+    else if (gapTol != kHighsInf)
+      std::snprintf(gapString.data(), gapString.size(),
+                    "%.2f%% (tolerance: %.2f%%)", 100. * gap, 100. * gapTol);
     else
       std::snprintf(gapString.data(), gapString.size(),
-                    "%.2f%% (tolerance: %.2f%%)", gap,
-                    100. * options_mip_->mip_rel_gap);
+                    "%.2f%% (tolerance: inf)", 100. * gap);
   }
 
-  double lbTol = options_mip_->mip_abs_gap;
-
-  if (primal_bound_ != kHighsInf)
-    lbTol = std::max(lbTol, options_mip_->mip_rel_gap * fabs(primal_bound_));
-
-  if (lbTol <= options_mip_->mip_feasibility_tolerance)
-    std::strcpy(lbToleranceString.data(), "");
-  else
-    std::snprintf(lbToleranceString.data(), lbToleranceString.size(),
-                  " (tolerance: %.9g)", lbTol);
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n"
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
-               "  Dual bound        %.12g%s\n"
+               "  Dual bound        %.12g\n"
                "  Gap               %s\n"
                "  Solution status   %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, lbToleranceString.data(), gapString.data(),
-               solutionstatus.c_str());
+               dual_bound_, gapString.data(), solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"

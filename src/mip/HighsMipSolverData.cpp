@@ -103,7 +103,7 @@ double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
     // is definitely included in the remaining search
     new_upper_limit += feastol;
   } else {
-    new_upper_limit = ub - epsilon;
+    new_upper_limit = ub - feastol;
 
     if (mip_rel_gap != 0.0)
       new_upper_limit =
@@ -237,6 +237,7 @@ void HighsMipSolverData::init() {
   lower_bound = -kHighsInf;
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
+  optimality_limit = mipsolver.options_mip_->objective_bound;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -273,6 +274,7 @@ void HighsMipSolverData::runSetup() {
 
   // transform the objective limit to the current model
   upper_limit -= mipsolver.model_->offset_;
+  optimality_limit -= mipsolver.model_->offset_;
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
@@ -281,6 +283,7 @@ void HighsMipSolverData::runSetup() {
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
   nodequeue.setNumCol(mipsolver.numCol());
+  nodequeue.setOptimalityLimit(optimality_limit);
 
   continuous_cols.clear();
   integer_cols.clear();
@@ -689,6 +692,7 @@ void HighsMipSolverData::performRestart() {
   // transform the objective upper bound into the original space, as it is
   // expected during presolve
   upper_limit += mipsolver.model_->offset_;
+  optimality_limit += mipsolver.model_->offset_;
   upper_bound += mipsolver.model_->offset_;
   lower_bound += mipsolver.model_->offset_;
 
@@ -759,13 +763,15 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     if (solobj >= upper_bound) return false;
     upper_bound = solobj;
     incumbent = sol;
-    double new_upper_limit =
-        computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
-                             mipsolver.options_mip_->mip_rel_gap);
+    double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
       upper_limit = new_upper_limit;
+      optimality_limit =
+          computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
+                               mipsolver.options_mip_->mip_rel_gap);
+      nodequeue.setOptimalityLimit(optimality_limit);
       debugSolution.newIncumbentFound();
       redcostfixing.propagateRootRedcost(mipsolver);
       if (domain.infeasible()) {
@@ -1024,8 +1030,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       }
     }
 
-    if (lower_bound > upper_limit) {
-      lower_bound = std::min(kHighsInf, upper_bound);
+    if (lower_bound > optimality_limit) {
       pruned_treeweight = 1.0;
       num_nodes += 1;
       num_leaves += 1;

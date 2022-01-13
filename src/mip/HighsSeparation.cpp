@@ -150,7 +150,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // double firstobj = lp->getObjective();
     double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
-    while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
+    while (lp->getObjective() < mipsolver.mipdata_->optimality_limit) {
       double lastobj = lp->getObjective();
 
       size_t nlpiters = -lp->getNumLpIterations();

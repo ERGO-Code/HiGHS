@@ -34,6 +34,11 @@ template <>
 struct RbTreeTraits<HighsNodeQueue::NodeHybridEstimRbTree> {
   using KeyType = std::tuple<double, HighsInt, HighsInt>;
 };
+
+template <>
+struct RbTreeTraits<HighsNodeQueue::SuboptimalNodeRbTree> {
+  using KeyType = std::pair<double, HighsInt>;
+};
 }  // namespace highs
 
 using namespace highs;
@@ -85,6 +90,28 @@ class HighsNodeQueue::NodeHybridEstimRbTree
   }
 };
 
+class HighsNodeQueue::SuboptimalNodeRbTree
+    : public CacheMinRbTree<SuboptimalNodeRbTree> {
+  HighsNodeQueue* nodeQueue;
+
+ public:
+  SuboptimalNodeRbTree(HighsNodeQueue* nodeQueue)
+      : CacheMinRbTree<SuboptimalNodeRbTree>(nodeQueue->suboptimalRoot,
+                                             nodeQueue->suboptimalMin),
+        nodeQueue(nodeQueue) {}
+
+  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+    return nodeQueue->nodes[node].lowerLinks;
+  }
+  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+    return nodeQueue->nodes[node].lowerLinks;
+  }
+
+  std::pair<double, HighsInt> getKey(HighsInt node) const {
+    return std::make_pair(nodeQueue->nodes[node].lower_bound, node);
+  }
+};
+
 void HighsNodeQueue::link_estim(HighsInt node) {
   assert(node != -1);
   NodeHybridEstimRbTree rbTree(this);
@@ -107,6 +134,20 @@ void HighsNodeQueue::unlink_lower(HighsInt node) {
   assert(node != -1);
   NodeLowerRbTree rbTree(this);
   rbTree.unlink(node);
+}
+
+void HighsNodeQueue::link_suboptimal(HighsInt node) {
+  assert(node != -1);
+  SuboptimalNodeRbTree rbTree(this);
+  rbTree.link(node);
+  ++numSuboptimal;
+}
+
+void HighsNodeQueue::unlink_suboptimal(HighsInt node) {
+  assert(node != -1);
+  SuboptimalNodeRbTree rbTree(this);
+  rbTree.unlink(node);
+  --numSuboptimal;
 }
 
 void HighsNodeQueue::link_domchgs(HighsInt node) {
@@ -149,14 +190,25 @@ void HighsNodeQueue::unlink_domchgs(HighsInt node) {
 }
 
 void HighsNodeQueue::link(HighsInt node) {
-  link_estim(node);
-  link_lower(node);
-  link_domchgs(node);
+  if (nodes[node].lower_bound > optimality_limit) {
+    assert(nodes[node].estimate != kHighsInf);
+    nodes[node].estimate = kHighsInf;
+    link_suboptimal(node);
+    link_domchgs(node);
+  } else {
+    link_estim(node);
+    link_lower(node);
+    link_domchgs(node);
+  }
 }
 
 void HighsNodeQueue::unlink(HighsInt node) {
-  unlink_estim(node);
-  unlink_lower(node);
+  if (nodes[node].estimate == kHighsInf) {
+    unlink_suboptimal(node);
+  } else {
+    unlink_estim(node);
+    unlink_lower(node);
+  }
   unlink_domchgs(node);
   freeslots.push(node);
 }
@@ -254,6 +306,30 @@ double HighsNodeQueue::performBounding(double upper_limit) {
     maxLbNode = next;
   }
 
+  if (optimality_limit < upper_limit) {
+    while (maxLbNode != -1) {
+      if (nodes[maxLbNode].lower_bound < optimality_limit) break;
+      HighsInt next = lowerTree.predecessor(maxLbNode);
+      assert(nodes[maxLbNode].estimate != kHighsInf);
+      unlink_estim(maxLbNode);
+      unlink_lower(maxLbNode);
+      nodes[maxLbNode].estimate = kHighsInf;
+      link_suboptimal(maxLbNode);
+      maxLbNode = next;
+    }
+  }
+
+  if (numSuboptimal) {
+    SuboptimalNodeRbTree suboptimalTree(this);
+    maxLbNode = suboptimalTree.last();
+    while (maxLbNode != -1) {
+      if (nodes[maxLbNode].lower_bound < upper_limit) break;
+      HighsInt next = suboptimalTree.predecessor(maxLbNode);
+      treeweight += pruneNode(maxLbNode);
+      maxLbNode = next;
+    }
+  }
+
   return double(treeweight);
 }
 
@@ -262,6 +338,8 @@ void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
                                  double lower_bound, double estimate,
                                  HighsInt depth) {
   HighsInt pos;
+
+  assert(estimate != kHighsInf);
 
   if (freeslots.empty()) {
     pos = nodes.size();
@@ -298,7 +376,9 @@ HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestBoundNode() {
 }
 
 double HighsNodeQueue::getBestLowerBound() {
-  if (lowerMin == -1) return kHighsInf;
+  double lb = lowerMin == -1 ? kHighsInf : nodes[lowerMin].lower_bound;
 
-  return nodes[lowerMin].lower_bound;
+  if (suboptimalMin == -1) return lb;
+
+  return std::min(nodes[suboptimalMin].lower_bound, lb);
 }

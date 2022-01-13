@@ -66,6 +66,7 @@ class HighsSearch {
     kDomainInfeasible,
     kLpInfeasible,
     kBranched,
+    kSubOptimal,
     kOpen,
   };
 

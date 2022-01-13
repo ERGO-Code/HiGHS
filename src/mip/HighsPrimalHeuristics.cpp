@@ -90,8 +90,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.mip_pscost_minreliable = 0;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  submipoptions.objective_bound = mipsolver.mipdata_->computeNewUpperLimit(
-      mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->feastol, 0.0);
+  submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
   submipoptions.mip_rel_gap = 0.0;
   submipoptions.mip_abs_gap = mipsolver.mipdata_->feastol;
   submipoptions.presolve = "on";
@@ -273,8 +272,7 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
 
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
-  heurlp.setObjectiveLimit(mipsolver.mipdata_->computeNewUpperLimit(
-      mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->feastol, 0.0));
+  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
@@ -519,8 +517,7 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
 
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
-  heurlp.setObjectiveLimit(mipsolver.mipdata_->computeNewUpperLimit(
-      mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->feastol, 0.0));
+  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
   heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 

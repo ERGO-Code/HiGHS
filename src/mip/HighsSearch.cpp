@@ -808,13 +808,6 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
   } else
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
   nodestack.back().opensubtrees = 0;
-
-  backtrack();
-  lp->flushDomain(localdom);
-  if (!nodestack.empty() && nodestack.back().nodeBasis) {
-    lp->setStoredBasis(nodestack.back().nodeBasis);
-    lp->recoverBasis();
-  }
 }
 
 void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
@@ -944,6 +937,10 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   const NodeData* parent = getParentNodeData();
 
   const auto& domchgstack = localdom.getDomainChangeStack();
+
+  if (!inheuristic &&
+      currnode.lower_bound > mipsolver.mipdata_->optimality_limit)
+    return NodeResult::kSubOptimal;
 
   localdom.propagate();
 
@@ -1098,6 +1095,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     currnode.opensubtrees = 0;
+  } else if (!inheuristic) {
+    if (currnode.lower_bound > mipsolver.mipdata_->optimality_limit)
+      result = NodeResult::kSubOptimal;
   }
 
   return result;
@@ -1303,6 +1303,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
     assert(!localdom.getChangedCols().empty());
     result = evaluateNode();
+    if (result == NodeResult::kSubOptimal) break;
   }
   inbranching = false;
   NodeData& currnode = nodestack.back();
@@ -1311,7 +1312,8 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
   assert(currnode.opensubtrees == 2 || currnode.opensubtrees == 0);
 
-  if (currnode.opensubtrees != 2) return result;
+  if (currnode.opensubtrees != 2 || result == NodeResult::kSubOptimal)
+    return result;
 
   if (currnode.branchingdecision.column == -1) {
     double bestscore = -1.0;
@@ -1651,46 +1653,52 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
-    bool nodeToQueue = false;
+    bool nodeToQueue =
+        nodestack.back().lower_bound > mipsolver.mipdata_->optimality_limit;
     // we check if switching to the other branch of an anchestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
-    for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
-      if (nodestack[i].opensubtrees == 0) continue;
+    if (!nodeToQueue) {
+      for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
+        if (nodestack[i].opensubtrees == 0) continue;
 
-      bool fallbackbranch = nodestack[i].branchingdecision.boundval ==
-                            nodestack[i].branching_point;
-      double branchpoint = fallbackbranch ? 0.5 : nodestack[i].branching_point;
-      double ancestorScoreActive;
-      double ancestorScoreInactive;
-      if (nodestack[i].branchingdecision.boundtype == HighsBoundType::kLower) {
-        ancestorScoreInactive = pseudocost.getScoreDown(
-            nodestack[i].branchingdecision.column, branchpoint);
-        ancestorScoreActive = pseudocost.getScoreUp(
-            nodestack[i].branchingdecision.column, branchpoint);
-      } else {
-        ancestorScoreActive = pseudocost.getScoreDown(
-            nodestack[i].branchingdecision.column, branchpoint);
-        ancestorScoreInactive = pseudocost.getScoreUp(
-            nodestack[i].branchingdecision.column, branchpoint);
+        bool fallbackbranch = nodestack[i].branchingdecision.boundval ==
+                              nodestack[i].branching_point;
+        double branchpoint =
+            fallbackbranch ? 0.5 : nodestack[i].branching_point;
+        double ancestorScoreActive;
+        double ancestorScoreInactive;
+        if (nodestack[i].branchingdecision.boundtype ==
+            HighsBoundType::kLower) {
+          ancestorScoreInactive = pseudocost.getScoreDown(
+              nodestack[i].branchingdecision.column, branchpoint);
+          ancestorScoreActive = pseudocost.getScoreUp(
+              nodestack[i].branchingdecision.column, branchpoint);
+        } else {
+          ancestorScoreActive = pseudocost.getScoreDown(
+              nodestack[i].branchingdecision.column, branchpoint);
+          ancestorScoreInactive = pseudocost.getScoreUp(
+              nodestack[i].branchingdecision.column, branchpoint);
+        }
+
+        // if (!mipsolver.submip)
+        //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
+        //   ancestorScore);
+        nodeToQueue = ancestorScoreInactive - ancestorScoreActive >
+                      nodeScore + mipsolver.mipdata_->feastol;
+        break;
       }
-
-      // if (!mipsolver.submip)
-      //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
-      //   ancestorScore);
-      nodeToQueue = ancestorScoreInactive - ancestorScoreActive >
-                    nodeScore + mipsolver.mipdata_->feastol;
-      break;
     }
+
     if (nodeToQueue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
-      localdom.backtrack();
-      localdom.clearChangedCols(numChangedCols);
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
       nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
                             nodestack.back().lower_bound,
                             nodestack.back().estimate, getCurrentDepth() + 1);
+      localdom.backtrack();
+      localdom.clearChangedCols(numChangedCols);
       continue;
     }
     nodestack.emplace_back(

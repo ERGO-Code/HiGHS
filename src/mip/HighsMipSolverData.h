@@ -104,6 +104,7 @@ struct HighsMipSolverData {
   double lower_bound;
   double upper_bound;
   double upper_limit;
+  double optimality_limit;
   std::vector<double> incumbent;
 
   HighsNodeQueue nodequeue;
