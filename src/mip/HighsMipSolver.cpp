@@ -169,16 +169,19 @@ restart:
           options_mip_->mip_pool_soft_limit)
         mipdata_->conflictPool.performAging();
 
+      search.flushStatistics();
       mipdata_->printDisplayLine();
       // printf("continue plunging due to good esitmate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
-    mipdata_->lower_bound = std::min(mipdata_->upper_bound,
-                                     mipdata_->nodequeue.getBestLowerBound());
+    search.flushStatistics();
 
-    if (limit_reached) break;
-
-    mipdata_->printDisplayLine();
+    if (limit_reached) {
+      mipdata_->lower_bound = std::min(mipdata_->upper_bound,
+                                       mipdata_->nodequeue.getBestLowerBound());
+      mipdata_->printDisplayLine();
+      break;
+    }
 
     // the search datastructure should have no installed node now
     assert(!search.hasNode());
@@ -193,9 +196,13 @@ restart:
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+      mipdata_->printDisplayLine();
       break;
     }
 
+    mipdata_->lower_bound = std::min(mipdata_->upper_bound,
+                                     mipdata_->nodequeue.getBestLowerBound());
+    mipdata_->printDisplayLine();
     if (mipdata_->nodequeue.empty()) break;
 
     // if global propagation found bound changes, we update the local domain
@@ -392,7 +399,15 @@ restart:
 void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
-  dual_bound_ = mipdata_->lower_bound + model_->offset_;
+  dual_bound_ = mipdata_->lower_bound;
+  if (mipdata_->objintscale != 0.0) {
+    double rounded_lower_bound =
+        std::ceil(mipdata_->lower_bound * mipdata_->objintscale -
+                  mipdata_->feastol) /
+        mipdata_->objintscale;
+    dual_bound_ = std::max(dual_bound_, rounded_lower_bound);
+  }
+  dual_bound_ += model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
 

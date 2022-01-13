@@ -238,6 +238,7 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  objintscale = 0.0;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -875,7 +876,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
   ++num_disp_lines;
 
   std::array<char, 16> print_nodes = convertToPrintString(num_nodes);
-  std::array<char, 16> queue_nodes = convertToPrintString(nodequeue.numNodes());
+  std::array<char, 16> queue_nodes =
+      convertToPrintString(nodequeue.numActiveNodes());
   std::array<char, 16> print_leaves =
       convertToPrintString(num_leaves - num_leaves_before_run);
 

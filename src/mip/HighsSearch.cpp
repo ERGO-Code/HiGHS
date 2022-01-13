@@ -311,8 +311,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     for (HighsInt k : evalqueue) {
       double score;
 
-      if (upscore[k] <= oldminscore) upscorereliable[k] = 1;
-      if (downscore[k] <= oldminscore) downscorereliable[k] = 1;
+      if (upscore[k] <= oldminscore) upscorereliable[k] = true;
+      if (downscore[k] <= oldminscore) downscorereliable[k] = true;
 
       double s = 1e-3 * std::min(upscorereliable[k] ? upscore[k] : 0,
                                  downscorereliable[k] ? downscore[k] : 0);
@@ -561,7 +561,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         if (objdelta <= mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         downscore[candidate] = objdelta;
-        downscorereliable[candidate] = 1;
+        downscorereliable[candidate] = true;
 
         markBranchingVarDownReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
@@ -578,16 +578,20 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         }
 
         if (lp->unscaledDualFeasible(status)) {
-          if (solobj > getCutoffBound()) {
-            mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-            addBoundExceedingConflict();
+          if (solobj > mipsolver.mipdata_->optimality_limit) {
+            bool pruned = solobj > getCutoffBound();
+            if (pruned) {
+              mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+              addBoundExceedingConflict();
+            }
             localdom.backtrack();
             lp->flushDomain(localdom);
 
             branchUpwards(col, upval, fracval);
-            nodestack[nodestack.size() - 2].opensubtrees = 0;
-            nodestack[nodestack.size() - 2].skipDepthCount = 1;
-            depthoffset -= 1;
+            nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
+            nodestack[nodestack.size() - 2].other_child_lb = solobj;
+            nodestack[nodestack.size() - 2].skipDepthCount = pruned;
+            depthoffset -= pruned;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             lp->recoverBasis();
@@ -700,7 +704,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         if (objdelta <= mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         upscore[candidate] = objdelta;
-        upscorereliable[candidate] = 1;
+        upscorereliable[candidate] = true;
 
         markBranchingVarUpReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
@@ -717,16 +721,20 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         }
 
         if (lp->unscaledDualFeasible(status)) {
-          if (solobj > getCutoffBound()) {
-            mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-            addBoundExceedingConflict();
+          if (solobj > mipsolver.mipdata_->optimality_limit) {
+            bool pruned = solobj > getCutoffBound();
+            if (pruned) {
+              mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+              addBoundExceedingConflict();
+            }
             localdom.backtrack();
             lp->flushDomain(localdom);
 
             branchDownwards(col, downval, fracval);
-            nodestack[nodestack.size() - 2].opensubtrees = 0;
-            nodestack[nodestack.size() - 2].skipDepthCount = 1;
-            depthoffset -= 1;
+            nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
+            nodestack[nodestack.size() - 2].other_child_lb = solobj;
+            nodestack[nodestack.size() - 2].skipDepthCount = pruned;
+            depthoffset -= pruned;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             lp->recoverBasis();
@@ -802,9 +810,10 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
   if (!prune) {
     std::vector<HighsInt> branchPositions;
     auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-    nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
-                          nodestack.back().lower_bound,
-                          nodestack.back().estimate, getCurrentDepth());
+    treeweight += nodequeue.emplaceNode(
+        std::move(domchgStack), std::move(branchPositions),
+        nodestack.back().lower_bound, nodestack.back().estimate,
+        getCurrentDepth());
   } else
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
   nodestack.back().opensubtrees = 0;
@@ -836,9 +845,10 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
     if (!prune) {
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
-                            nodestack.back().lower_bound,
-                            nodestack.back().estimate, getCurrentDepth());
+      treeweight += nodequeue.emplaceNode(
+          std::move(domchgStack), std::move(branchPositions),
+          nodestack.back().lower_bound, nodestack.back().estimate,
+          getCurrentDepth());
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
       treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
@@ -1505,8 +1515,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     bool passStabilizerToChildNode =
         orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
-    bool prune = nodestack.back().lower_bound > getCutoffBound() ||
-                 localdom.infeasible();
+    double nodelb = std::max(currnode.lower_bound, currnode.other_child_lb);
+    bool prune = nodelb > getCutoffBound() || localdom.infeasible();
     if (!prune) {
       localdom.propagate();
       prune = localdom.infeasible();
@@ -1527,7 +1537,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
       continue;
     }
     nodestack.emplace_back(
-        currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
+        nodelb, currnode.estimate, currnode.nodeBasis,
         passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
     lp->flushDomain(localdom);
@@ -1632,8 +1642,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     bool passStabilizerToChildNode =
         orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
-    bool prune = nodestack.back().lower_bound > getCutoffBound() ||
-                 localdom.infeasible();
+    double nodelb = std::max(currnode.lower_bound, currnode.other_child_lb);
+    bool prune = nodelb > getCutoffBound() || localdom.infeasible();
     if (!prune) {
       localdom.propagate();
       prune = localdom.infeasible();
@@ -1653,8 +1663,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
-    bool nodeToQueue =
-        nodestack.back().lower_bound > mipsolver.mipdata_->optimality_limit;
+
+    bool nodeToQueue = nodelb > mipsolver.mipdata_->optimality_limit;
     // we check if switching to the other branch of an anchestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
@@ -1694,15 +1704,15 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
-                            nodestack.back().lower_bound,
-                            nodestack.back().estimate, getCurrentDepth() + 1);
+      treeweight += nodequeue.emplaceNode(
+          std::move(domchgStack), std::move(branchPositions), nodelb,
+          nodestack.back().estimate, getCurrentDepth() + 1);
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
       continue;
     }
     nodestack.emplace_back(
-        currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
+        nodelb, currnode.estimate, currnode.nodeBasis,
         passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
     lp->flushDomain(localdom);

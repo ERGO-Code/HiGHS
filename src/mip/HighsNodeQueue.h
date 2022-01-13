@@ -105,7 +105,7 @@ class HighsNodeQueue {
 
   void unlink_domchgs(HighsInt node);
 
-  void link(HighsInt node);
+  double link(HighsInt node);
 
   void unlink(HighsInt node);
 
@@ -118,9 +118,9 @@ class HighsNodeQueue {
 
   void setNumCol(HighsInt numcol);
 
-  void emplaceNode(std::vector<HighsDomainChange>&& domchgs,
-                   std::vector<HighsInt>&& branchings, double lower_bound,
-                   double estimate, HighsInt depth);
+  double emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                     std::vector<HighsInt>&& branchings, double lower_bound,
+                     double estimate, HighsInt depth);
 
   OpenNode&& popBestNode();
 
@@ -167,7 +167,11 @@ class HighsNodeQueue {
 
   int64_t numNodes() const { return nodes.size() - freeslots.size(); }
 
-  bool empty() const { return numNodes() - numSuboptimal == 0; }
+  int64_t numActiveNodes() const {
+    return nodes.size() - freeslots.size() - numSuboptimal;
+  }
+
+  bool empty() const { return numActiveNodes() == 0; }
 };
 
 #endif

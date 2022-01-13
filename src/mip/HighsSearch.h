@@ -85,6 +85,7 @@ class HighsSearch {
     // the objective for pseudocost updates and tiebreaking of best bound node
     // selection
     double lp_objective;
+    double other_child_lb;
     std::shared_ptr<const HighsBasis> nodeBasis;
     std::shared_ptr<const StabilizerOrbits> stabilizerOrbits;
     HighsDomainChange branchingdecision;
@@ -98,6 +99,7 @@ class HighsSearch {
         : lower_bound(parentlb),
           estimate(parentestimate),
           lp_objective(-kHighsInf),
+          other_child_lb(parentlb),
           nodeBasis(std::move(parentBasis)),
           stabilizerOrbits(std::move(stabilizerOrbits)),
           branchingdecision{0.0, -1, HighsBoundType::kLower},

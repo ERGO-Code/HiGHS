@@ -189,17 +189,19 @@ void HighsNodeQueue::unlink_domchgs(HighsInt node) {
   nodes[node].domchglinks.shrink_to_fit();
 }
 
-void HighsNodeQueue::link(HighsInt node) {
+double HighsNodeQueue::link(HighsInt node) {
   if (nodes[node].lower_bound > optimality_limit) {
     assert(nodes[node].estimate != kHighsInf);
     nodes[node].estimate = kHighsInf;
     link_suboptimal(node);
     link_domchgs(node);
-  } else {
-    link_estim(node);
-    link_lower(node);
-    link_domchgs(node);
+    return std::ldexp(1.0, 1 - nodes[node].depth);
   }
+
+  link_estim(node);
+  link_lower(node);
+  link_domchgs(node);
+  return 0.0;
 }
 
 void HighsNodeQueue::unlink(HighsInt node) {
@@ -313,6 +315,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
       assert(nodes[maxLbNode].estimate != kHighsInf);
       unlink_estim(maxLbNode);
       unlink_lower(maxLbNode);
+      treeweight += std::ldexp(1.0, 1 - nodes[maxLbNode].depth);
       nodes[maxLbNode].estimate = kHighsInf;
       link_suboptimal(maxLbNode);
       maxLbNode = next;
@@ -325,7 +328,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
     while (maxLbNode != -1) {
       if (nodes[maxLbNode].lower_bound < upper_limit) break;
       HighsInt next = suboptimalTree.predecessor(maxLbNode);
-      treeweight += pruneNode(maxLbNode);
+      unlink(maxLbNode);
       maxLbNode = next;
     }
   }
@@ -333,10 +336,10 @@ double HighsNodeQueue::performBounding(double upper_limit) {
   return double(treeweight);
 }
 
-void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
-                                 std::vector<HighsInt>&& branchPositions,
-                                 double lower_bound, double estimate,
-                                 HighsInt depth) {
+double HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                                   std::vector<HighsInt>&& branchPositions,
+                                   double lower_bound, double estimate,
+                                   HighsInt depth) {
   HighsInt pos;
 
   assert(estimate != kHighsInf);
@@ -356,7 +359,7 @@ void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
   assert(nodes[pos].estimate == estimate);
   assert(nodes[pos].depth == depth);
 
-  link(pos);
+  return link(pos);
 }
 
 HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestNode() {
