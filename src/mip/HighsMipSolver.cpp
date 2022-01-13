@@ -410,6 +410,7 @@ void HighsMipSolver::cleanupSolve() {
   dual_bound_ += model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
+  dual_bound_ = std::min(dual_bound_, primal_bound_);
 
   if (modelstatus_ == HighsModelStatus::kNotset) {
     if (havesolution)
