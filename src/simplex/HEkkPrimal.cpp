@@ -406,12 +406,29 @@ void HEkkPrimal::initialiseSolve() {
   if (!ekk_instance_.status_.has_dual_steepest_edge_weights) {
     // No dual weights to maintain, so ensure that the vectors are
     // assigned since they are used around factorization and when
-    // seeting up the backtracking information. ToDo Eliminate this
+    // setting up the backtracking information. ToDo Eliminate this
     // opacity
     ekk_instance_.dual_edge_weight_.assign(num_row, 1.0);
     ekk_instance_.scattered_dual_edge_weight_.resize(num_tot);
   }
-  resetDevex();
+  const HighsInt edge_weight_strategy =
+    ekk_instance_.options_->simplex_primal_edge_weight_strategy;
+  if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
+      edge_weight_strategy == kSimplexDualEdgeWeightStrategyDevex) {
+    // By default, use Devex
+    primal_edge_weight_mode = PrimalEdgeWeightMode::kDevex;
+  } else if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyDantzig) {
+    primal_edge_weight_mode = PrimalEdgeWeightMode::kDantzig;
+  } else {
+    assert(edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge);
+    primal_edge_weight_mode = PrimalEdgeWeightMode::kSteepestEdge;
+  }
+  assert(primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex);
+  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex) {
+    resetDevex();
+  } else if (primal_edge_weight_mode == PrimalEdgeWeightMode::kSteepestEdge) {
+    initialisePrimalSteepestEdgeWeights();
+  }
 }
 
 void HEkkPrimal::solvePhase1() {
@@ -2317,10 +2334,18 @@ void HEkkPrimal::updateDevex() {
   analysis->simplexTimerStop(DevexUpdateWeightClock);
 }
 
+void HEkkPrimal::initialisePrimalSteepestEdgeWeights() {
+}
+
+void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
+}
+
 void HEkkPrimal::updateDualSteepestEdgeWeights() {
   col_DSE.copy(&row_ep);
   updateFtranDSE(col_DSE);
   std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
+  // Compute the weight from row_ep and over-write the updated weight
+  edge_weight[row_out] = row_ep.norm2();
   const double new_pivotal_edge_weight =
       edge_weight[row_out] / (alpha_col * alpha_col);
   const double Kai = -2 / alpha_col;

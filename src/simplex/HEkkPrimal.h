@@ -85,6 +85,8 @@ class HEkkPrimal {
 
   void resetDevex();
   void updateDevex();
+  void initialisePrimalSteepestEdgeWeights();
+  void updatePrimalSteepestEdgeWeights();
   void updateDualSteepestEdgeWeights();
   void updateFtranDSE(HVector& DSE_vector);
 
@@ -119,6 +121,7 @@ class HEkkPrimal {
   HighsInt num_row;
   HighsInt num_tot;
   HighsInt solve_phase;
+  PrimalEdgeWeightMode primal_edge_weight_mode;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double objective_target;

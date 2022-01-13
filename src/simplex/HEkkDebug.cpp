@@ -1422,7 +1422,7 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeights(
     }
     // Just check a few weights
     num_check_weight =
-        std::max((HighsInt)1, std::min((HighsInt)100, num_row / 10));
+        std::max((HighsInt)1, std::min((HighsInt)10, num_row / 10));
     HVector row_ep;
     row_ep.setup(num_row);
     for (HighsInt iCheck = 0; iCheck < num_check_weight; iCheck++) {
