@@ -412,7 +412,7 @@ class HEkkDual {
   bool initial_basis_is_logical_;
 
   // Options
-  DualEdgeWeightMode dual_edge_weight_mode;
+  EdgeWeightMode edge_weight_mode;
   bool allow_dual_steepest_edge_to_devex_switch;
 
   double Tp;  // Tolerance for primal

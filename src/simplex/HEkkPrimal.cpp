@@ -416,18 +416,18 @@ void HEkkPrimal::initialiseSolve() {
   if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
       edge_weight_strategy == kSimplexDualEdgeWeightStrategyDevex) {
     // By default, use Devex
-    primal_edge_weight_mode = PrimalEdgeWeightMode::kDevex;
+    edge_weight_mode = EdgeWeightMode::kDevex;
   } else if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyDantzig) {
-    primal_edge_weight_mode = PrimalEdgeWeightMode::kDantzig;
+    edge_weight_mode = EdgeWeightMode::kDantzig;
   } else {
     assert(edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge);
-    primal_edge_weight_mode = PrimalEdgeWeightMode::kSteepestEdge;
+    edge_weight_mode = EdgeWeightMode::kSteepestEdge;
   }
-  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDantzig) {
+  if (edge_weight_mode == EdgeWeightMode::kDantzig) {
     edge_weight_.assign(num_tot, 1.0);
-  } else if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex) {
+  } else if (edge_weight_mode == EdgeWeightMode::kDevex) {
     initialiseDevexFramework();
-  } else if (primal_edge_weight_mode == PrimalEdgeWeightMode::kSteepestEdge) {
+  } else if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
     initialisePrimalSteepestEdgeWeights();
   }
 }
@@ -1481,7 +1481,7 @@ void HEkkPrimal::update() {
   updateDual();
 
   // Update the devex weight
-  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex)
+  if (edge_weight_mode == EdgeWeightMode::kDevex)
     updateDevex();
 
   // If entering column was nonbasic free, remove it from the set
@@ -1519,7 +1519,7 @@ void HEkkPrimal::update() {
   ekk_instance_.iteration_count_++;
 
   // Reset the devex when there are too many errors
-  if (primal_edge_weight_mode == PrimalEdgeWeightMode::kDevex &&
+  if (edge_weight_mode == EdgeWeightMode::kDevex &&
       num_bad_devex_weight_ > kAllowedNumBadDevexWeight) initialiseDevexFramework();
 
   // Report on the iteration
@@ -2415,7 +2415,7 @@ void HEkkPrimal::iterationAnalysisData() {
     ekk_instance_.computeInfeasibilitiesForReporting(SimplexAlgorithm::kPrimal);
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->simplex_strategy = kSimplexStrategyPrimal;
-  analysis->edge_weight_mode = DualEdgeWeightMode::kDevex;
+  analysis->edge_weight_mode = EdgeWeightMode::kDevex;
   analysis->solve_phase = solve_phase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;
   analysis->devex_iteration_count = num_devex_iterations_;
@@ -2438,7 +2438,7 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->num_dual_infeasibility = info.num_dual_infeasibilities;
   analysis->sum_primal_infeasibility = info.sum_primal_infeasibilities;
   analysis->sum_dual_infeasibility = info.sum_dual_infeasibilities;
-  if ((analysis->edge_weight_mode == DualEdgeWeightMode::kDevex) &&
+  if ((analysis->edge_weight_mode == EdgeWeightMode::kDevex) &&
       (num_devex_iterations_ == 0))
     analysis->num_devex_framework++;
   analysis->col_aq_density = info.col_aq_density;

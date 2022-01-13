@@ -147,8 +147,7 @@ enum SimplexNlaOperation {
   kNumSimplexNlaOperation
 };
 
-enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
-enum class PrimalEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
+enum class EdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
 const HighsInt kDualTasksMinConcurrency = 3;
 const HighsInt kDualMultiMinConcurrency = 1;  // 2;

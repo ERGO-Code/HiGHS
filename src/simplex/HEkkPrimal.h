@@ -121,7 +121,7 @@ class HEkkPrimal {
   HighsInt num_row;
   HighsInt num_tot;
   HighsInt solve_phase;
-  PrimalEdgeWeightMode primal_edge_weight_mode;
+  EdgeWeightMode edge_weight_mode;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double objective_target;
