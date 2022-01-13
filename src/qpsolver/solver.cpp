@@ -27,12 +27,18 @@ void Solver::solve() {
   }
   Basis basis(runtime, crash->active, crash->rowstatus, crash->inactive);
   solve(crash->primal, crash->rowact, basis);
+  printf("%lf %lf %d %d\n", 
+    runtime.statistics.time[runtime.statistics.time.size()-1],
+    runtime.instance.objval(runtime.primal),
+    runtime.statistics.nullspacedimension[runtime.statistics.nullspacedimension.size()-1],
+    runtime.statistics.num_iterations
+  );
 }
 
 Solver::Solver(Runtime& rt) : runtime(rt) {}
 
 void Solver::loginformation(Runtime& rt, Basis& basis,
-                            NewCholeskyFactor& factor) {
+                            CholeskyFactor& factor) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
@@ -86,7 +92,7 @@ void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 
 // VECTOR
 Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
-                                     NewCholeskyFactor& cf,
+                                     CholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
   Vector g2 = -redgrad.get();
   g2.sanitize();
@@ -99,7 +105,7 @@ Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 
 // VECTOR
 Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
-                                     NewCholeskyFactor& factor,
+                                     CholeskyFactor& factor,
                                      const Vector& yp, Gradient& gradient,
                                      Vector& gyp, Vector& l, Vector& p) {
   Vector yyp = yp;
@@ -186,7 +192,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Gradient gradient(runtime);
   ReducedCosts redcosts(runtime, basis, gradient);
   ReducedGradient redgrad(runtime, basis, gradient);
-  NewCholeskyFactor factor(runtime, basis);
+  CholeskyFactor factor(runtime, basis);
   runtime.instance.A.mat_vec(runtime.primal, runtime.rowactivity);
   std::unique_ptr<Pricing> pricing =
       std::unique_ptr<Pricing>(new DevexPricing(runtime, basis, redcosts));
@@ -309,6 +315,8 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
   loginformation(runtime, basis, factor);
   runtime.endofiterationevent.fire(runtime);
+
+  runtime.instance.sumnumprimalinfeasibilities(runtime.primal, runtime.instance.A.mat_vec(runtime.primal));
 
   Vector lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {

@@ -98,6 +98,18 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   assert(initialactive.size() + initialinactive.size() ==
          runtime.instance.num_var);
 
+  for (HighsInt ia : initialinactive) {
+    if (ia < runtime.instance.num_con) {
+      printf("free row %d\n", ia);
+      assert(runtime.instance.con_lo[ia] == -std::numeric_limits<double>::infinity());
+      assert(runtime.instance.con_up[ia] == std::numeric_limits<double>::infinity());
+    } else {
+      // printf("free col %d\n", ia);
+      assert(runtime.instance.var_lo[ia-runtime.instance.num_con] == -std::numeric_limits<double>::infinity());
+      assert(runtime.instance.var_up[ia-runtime.instance.num_con] == std::numeric_limits<double>::infinity());
+    }
+  }
+
   result =
       new CrashSolution(runtime.instance.num_var, runtime.instance.num_con);
   result->rowstatus = atlower;

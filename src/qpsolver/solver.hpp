@@ -17,7 +17,7 @@ struct Solver {
  private:
   Runtime& runtime;
 
-  void loginformation(Runtime& rt, Basis& basis, NewCholeskyFactor& factor);
+  void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor);
 };
 
 #endif

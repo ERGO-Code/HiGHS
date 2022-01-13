@@ -9,9 +9,10 @@
 
 using std::min;
 
-class NewCholeskyFactor {
+class CholeskyFactor {
  private:
   bool uptodate = false;
+  HighsInt numberofreduces = 0;
 
   Runtime& runtime;
 
@@ -24,8 +25,10 @@ class NewCholeskyFactor {
   void recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();
+    numberofreduces = 0;
 
     orig.assign(dim_ns, std::vector<double>(dim_ns, 0.0));
+    resize(dim_ns);
 
     Matrix temp(dim_ns, 0);
 
@@ -76,7 +79,7 @@ class NewCholeskyFactor {
   }
 
  public:
-  NewCholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
+  CholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
     uptodate = false;
     current_k_max =
         max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
@@ -92,18 +95,23 @@ class NewCholeskyFactor {
     l.resparsify();
     double lambda = mu - l.norm2();
 
-    assert(lambda > 0);
+    if (lambda > 0.0) {
+       if (current_k_max <= current_k + 1) {
+        resize(current_k_max * 2);
+      }
 
-    if (current_k_max <= current_k + 1) {
-      resize(current_k_max * 2);
-    }
+      for (HighsInt i = 0; i < current_k; i++) {
+        L[i * current_k_max + current_k] = l.value[i];
+      }
+      L[current_k * current_k_max + current_k] = sqrt(lambda);
 
-    for (HighsInt i = 0; i < current_k; i++) {
-      L[i * current_k_max + current_k] = l.value[i];
-    }
-    L[current_k * current_k_max + current_k] = sqrt(lambda);
-
-    current_k++;
+      current_k++;
+    } else {
+      assert(lambda > 0);
+      assert(fabs(lambda) < 0.02);
+      exit(1);
+      // TODO
+    } 
   }
 
   void solveL(Vector& rhs) {
@@ -133,7 +141,8 @@ class NewCholeskyFactor {
 
  public:
   void solve(Vector& rhs) {
-    if (!uptodate) {
+    if (!uptodate || numberofreduces >= runtime.instance.num_con / 2) {
+      printf("reinvert Z'QZ\n");
       recompute();
     }
     solveL(rhs);
@@ -206,6 +215,10 @@ class NewCholeskyFactor {
     if (current_k == 0) {
       return;
     }
+    if (!uptodate) {
+      return;
+    }
+    numberofreduces++;
 
     unsigned p = maxabsd;  // col we push to the right and remove
 
