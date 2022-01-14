@@ -91,8 +91,21 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
-  submipoptions.mip_rel_gap = 0.0;
-  submipoptions.mip_abs_gap = mipsolver.mipdata_->feastol;
+
+  if (!mipsolver.submip) {
+    double curr_abs_gap =
+        mipsolver.mipdata_->upper_limit - mipsolver.mipdata_->lower_bound;
+
+    if (curr_abs_gap == kHighsInf) {
+      curr_abs_gap = fabs(mipsolver.mipdata_->lower_bound);
+      if (curr_abs_gap == kHighsInf) curr_abs_gap = 0.0;
+    }
+
+    submipoptions.mip_rel_gap = 0.0;
+    submipoptions.mip_abs_gap =
+        mipsolver.mipdata_->feastol * std::max(curr_abs_gap, 1000.0);
+  }
+
   submipoptions.presolve = "on";
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
@@ -746,7 +759,8 @@ retry:
 
   // printf("fixing rate is %g\n", fixingrate);
   fixingrate = neighborhood.getFixingRate();
-  if (fixingrate < 0.1) {
+  if (fixingrate < 0.1 ||
+      (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
