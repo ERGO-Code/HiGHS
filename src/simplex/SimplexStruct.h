@@ -163,6 +163,7 @@ struct HighsSimplexInfo {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_steepest_edge_density;
   double col_basic_feasibility_change_density;
   double row_basic_feasibility_change_density;
   double col_BFRT_density;

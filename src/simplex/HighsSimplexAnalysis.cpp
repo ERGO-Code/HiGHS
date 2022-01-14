@@ -66,6 +66,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+  col_steepest_edge_density = 0;
   col_basic_feasibility_change_density = 0;
   row_basic_feasibility_change_density = 0;
   col_BFRT_density = 0;
@@ -170,6 +171,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     AnIter->AnIterOpName = "FTRAN BFRT";
     AnIter = &AnIterOp[kSimplexNlaFtranDse];
     AnIter->AnIterOpName = "FTRAN DSE";
+    AnIter = &AnIterOp[kSimplexNlaBtranPse];
+    AnIter->AnIterOpName = "BTRAN PSE";
     for (HighsInt k = 0; k < kNumSimplexNlaOperation; k++) {
       AnIter = &AnIterOp[k];
       if ((k == kSimplexNlaPriceAp) ||
@@ -671,12 +674,14 @@ void HighsSimplexAnalysis::iterationRecord() {
       lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] = row_ap_density;
       lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] = col_aq_density;
       if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
-        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = row_DSE_density;
+	lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = row_DSE_density;
+        lcAnIter.AnIterTraceDensity[kSimplexNlaBtranPse] = col_steepest_edge_density;
         lcAnIter.AnIterTraceCostlyDse = costly_DSE_measure;
       } else {
         lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
         lcAnIter.AnIterTraceCostlyDse = 0;
       }
+      lcAnIter.AnIterTrace_simplex_strategy = (HighsInt)simplex_strategy;
       lcAnIter.AnIterTrace_edge_weight_mode = (HighsInt)edge_weight_mode;
     }
   }
@@ -1028,23 +1033,28 @@ void HighsSimplexAnalysis::summaryReport() {
       lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] = col_aq_density;
       if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
         lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = row_DSE_density;
+        lcAnIter.AnIterTraceDensity[kSimplexNlaBtranPse] = col_steepest_edge_density;
         lcAnIter.AnIterTraceCostlyDse = costly_DSE_measure;
       } else {
         lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
         lcAnIter.AnIterTraceCostlyDse = 0;
       }
+      lcAnIter.AnIterTrace_simplex_strategy = (HighsInt)simplex_strategy;
       lcAnIter.AnIterTrace_edge_weight_mode = (HighsInt)edge_weight_mode;
     }
     // Determine whether the Multi and steepest edge columns should be reported
     double su_multi_values = 0;
     double su_dse_values = 0;
+    double su_pse_values = 0;
     for (HighsInt rec = 1; rec <= AnIterTraceNumRec; rec++) {
       AnIterTraceRec& lcAnIter = AnIterTrace[rec];
       su_multi_values += fabs(lcAnIter.AnIterTraceMulti);
       su_dse_values += fabs(lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse]);
+      su_pse_values += fabs(lcAnIter.AnIterTraceDensity[kSimplexNlaBtranPse]);
     }
     const bool report_multi = su_multi_values > 0;
     const bool rp_dual_steepest_edge = su_dse_values > 0;
+    const bool rp_primal_steepest_edge = su_pse_values > 0;
     printf("\n Iteration speed analysis\n");
     AnIterTraceRec& lcAnIter = AnIterTrace[0];
     HighsInt fmIter = lcAnIter.AnIterTraceIter;
@@ -1053,6 +1063,7 @@ void HighsSimplexAnalysis::summaryReport() {
     if (report_multi) printf("| PAMI ");
     printf("| C_Aq R_Ep R_Ap ");
     if (rp_dual_steepest_edge) printf(" DSE ");
+    if (rp_primal_steepest_edge) printf(" PSE ");
     printf("| EdWt ");
     if (rp_dual_steepest_edge) {
       printf("| CostlyDse\n");
@@ -1072,6 +1083,8 @@ void HighsSimplexAnalysis::summaryReport() {
       double dlTime = toTime - fmTime;
       HighsInt iterSpeed = 0;
       if (dlTime > 0) iterSpeed = dlIter / dlTime;
+      HighsInt lc_simplex_strategy =
+          lcAnIter.AnIterTrace_simplex_strategy;
       HighsInt lc_edge_weight_mode =
           lcAnIter.AnIterTrace_edge_weight_mode;
       std::string str_edge_weight_mode;
@@ -1095,16 +1108,17 @@ void HighsSimplexAnalysis::summaryReport() {
       printOneDensity(lcAnIter.AnIterTraceDensity[kSimplexNlaFtran]);
       printOneDensity(lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp]);
       printOneDensity(lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp]);
-      double use_row_DSE_density;
+      double use_DSE_density;
+      HighsInt local_simplex_strategy = lcAnIter.AnIterTrace_simplex_strategy;
       if (rp_dual_steepest_edge) {
         if (lc_edge_weight_mode ==
             (HighsInt)EdgeWeightMode::kSteepestEdge) {
-          use_row_DSE_density =
+          use_DSE_density =
               lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse];
         } else {
-          use_row_DSE_density = 0;
+          use_DSE_density = 0;
         }
-        printOneDensity(use_row_DSE_density);
+        printOneDensity(use_DSE_density);
       }
       printf(" |  %3s ", str_edge_weight_mode.c_str());
       if (rp_dual_steepest_edge) {
@@ -1378,12 +1392,12 @@ void HighsSimplexAnalysis::printOneDensity(const double density) {
 
 void HighsSimplexAnalysis::reportDensity(const bool header) {
   assert(analyse_simplex_runtime_data);
-  const bool rp_dual_steepest_edge =
+  const bool rp_steepest_edge =
       edge_weight_mode == EdgeWeightMode::kSteepestEdge;
   if (header) {
     *analysis_log << highsFormatToString(" C_Aq R_Ep R_Ap");
-    if (rp_dual_steepest_edge) {
-      *analysis_log << highsFormatToString("  DSE");
+    if (rp_steepest_edge) {
+      *analysis_log << highsFormatToString(" S_Ed");
     } else {
       *analysis_log << highsFormatToString("     ");
     }
@@ -1391,13 +1405,17 @@ void HighsSimplexAnalysis::reportDensity(const bool header) {
     reportOneDensity(col_aq_density);
     reportOneDensity(row_ep_density);
     reportOneDensity(row_ap_density);
-    double use_row_DSE_density;
-    if (rp_dual_steepest_edge) {
-      use_row_DSE_density = row_DSE_density;
+    double use_steepest_edge_density;
+    if (rp_steepest_edge) {
+      if (simplex_strategy == kSimplexStrategyPrimal) {
+	use_steepest_edge_density = col_steepest_edge_density;
+      } else {
+	use_steepest_edge_density = row_DSE_density;
+      }
     } else {
-      use_row_DSE_density = 0;
+      use_steepest_edge_density = 0;
     }
-    reportOneDensity(use_row_DSE_density);
+    reportOneDensity(use_steepest_edge_density);
   }
 }
 

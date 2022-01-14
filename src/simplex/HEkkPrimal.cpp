@@ -352,7 +352,7 @@ void HEkkPrimal::initialiseInstance() {
   row_ap.setup(num_col);
   col_basic_feasibility_change.setup(num_row);
   row_basic_feasibility_change.setup(num_col);
-  col_DSE.setup(num_row);
+  col_steepest_edge.setup(num_row);
 
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
@@ -1480,9 +1480,12 @@ void HEkkPrimal::update() {
   theta_dual = info.workDual_[variable_in];
   updateDual();
 
-  // Update the devex weight
-  if (edge_weight_mode == EdgeWeightMode::kDevex)
+  // Update any non-unit primal edge weights
+  if (edge_weight_mode == EdgeWeightMode::kDevex) {
     updateDevex();
+  } else if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
+    updatePrimalSteepestEdgeWeights();
+  }
 
   // If entering column was nonbasic free, remove it from the set
   removeNonbasicFreeColumn();
@@ -2343,11 +2346,14 @@ void HEkkPrimal::initialisePrimalSteepestEdgeWeights() {
 }
 
 void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
+  col_steepest_edge.copy(&col_aq);
+  updateBtranPSE(col_steepest_edge);
+ 
 }
 
 void HEkkPrimal::updateDualSteepestEdgeWeights() {
-  col_DSE.copy(&row_ep);
-  updateFtranDSE(col_DSE);
+  col_steepest_edge.copy(&row_ep);
+  updateFtranDSE(col_steepest_edge);
   std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   // Compute the weight from row_ep and over-write the updated weight
   edge_weight[row_out] = row_ep.norm2();
@@ -2355,24 +2361,40 @@ void HEkkPrimal::updateDualSteepestEdgeWeights() {
       edge_weight[row_out] / (alpha_col * alpha_col);
   const double Kai = -2 / alpha_col;
   ekk_instance_.updateDualSteepestEdgeWeights(&col_aq, new_pivotal_edge_weight,
-                                              Kai, &col_DSE.array[0]);
+                                              Kai, &col_steepest_edge.array[0]);
   edge_weight[row_out] = new_pivotal_edge_weight;
 }
 
-void HEkkPrimal::updateFtranDSE(HVector& col_DSE) {
+void HEkkPrimal::updateFtranDSE(HVector& col_steepest_edge) {
   analysis->simplexTimerStart(FtranDseClock);
   if (analysis->analyse_simplex_summary_data)
-    analysis->operationRecordBefore(kSimplexNlaFtranDse, col_DSE,
+    analysis->operationRecordBefore(kSimplexNlaFtranDse, col_steepest_edge,
                                     ekk_instance_.info_.row_DSE_density);
   // Perform FTRAN DSE
-  ekk_instance_.simplex_nla_.ftran(col_DSE, ekk_instance_.info_.row_DSE_density,
+  ekk_instance_.simplex_nla_.ftran(col_steepest_edge, ekk_instance_.info_.row_DSE_density,
                                    analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
-    analysis->operationRecordAfter(kSimplexNlaFtranDse, col_DSE);
+    analysis->operationRecordAfter(kSimplexNlaFtranDse, col_steepest_edge);
   analysis->simplexTimerStop(FtranDseClock);
-  const double local_row_DSE_density = (1.0 * col_DSE.count) / num_row;
+  const double local_row_DSE_density = (1.0 * col_steepest_edge.count) / num_row;
   ekk_instance_.updateOperationResultDensity(
       local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
+}
+
+void HEkkPrimal::updateBtranPSE(HVector& col_steepest_edge) {
+  analysis->simplexTimerStart(BtranPseClock);
+  if (analysis->analyse_simplex_summary_data)
+    analysis->operationRecordBefore(kSimplexNlaBtranPse, col_steepest_edge,
+                                    ekk_instance_.info_.col_steepest_edge_density);
+  // Perform BTRAN PSE
+  ekk_instance_.simplex_nla_.btran(col_steepest_edge, ekk_instance_.info_.col_steepest_edge_density,
+                                   analysis->pointer_serial_factor_clocks);
+  if (analysis->analyse_simplex_summary_data)
+    analysis->operationRecordAfter(kSimplexNlaBtranPse, col_steepest_edge);
+  analysis->simplexTimerStop(BtranPseClock);
+  const double local_col_steepest_edge_density = (1.0 * col_steepest_edge.count) / num_row;
+  ekk_instance_.updateOperationResultDensity(
+      local_col_steepest_edge_density, ekk_instance_.info_.col_steepest_edge_density);
 }
 
 void HEkkPrimal::updateVerify() {
@@ -2415,7 +2437,7 @@ void HEkkPrimal::iterationAnalysisData() {
     ekk_instance_.computeInfeasibilitiesForReporting(SimplexAlgorithm::kPrimal);
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->simplex_strategy = kSimplexStrategyPrimal;
-  analysis->edge_weight_mode = EdgeWeightMode::kDevex;
+  analysis->edge_weight_mode = edge_weight_mode;
   analysis->solve_phase = solve_phase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;
   analysis->devex_iteration_count = num_devex_iterations_;
@@ -2438,13 +2460,14 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->num_dual_infeasibility = info.num_dual_infeasibilities;
   analysis->sum_primal_infeasibility = info.sum_primal_infeasibilities;
   analysis->sum_dual_infeasibility = info.sum_dual_infeasibilities;
-  if ((analysis->edge_weight_mode == EdgeWeightMode::kDevex) &&
+  if ((edge_weight_mode == EdgeWeightMode::kDevex) &&
       (num_devex_iterations_ == 0))
     analysis->num_devex_framework++;
   analysis->col_aq_density = info.col_aq_density;
   analysis->row_ep_density = info.row_ep_density;
   analysis->row_ap_density = info.row_ap_density;
   analysis->row_DSE_density = info.row_DSE_density;
+  analysis->col_steepest_edge_density = info.col_steepest_edge_density;
   analysis->col_basic_feasibility_change_density =
       info.col_basic_feasibility_change_density;
   analysis->row_basic_feasibility_change_density =

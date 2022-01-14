@@ -144,6 +144,7 @@ enum SimplexNlaOperation {
   kSimplexNlaFtran,
   kSimplexNlaFtranBfrt,
   kSimplexNlaFtranDse,
+  kSimplexNlaBtranPse,
   kNumSimplexNlaOperation
 };
 

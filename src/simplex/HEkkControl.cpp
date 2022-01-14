@@ -29,6 +29,7 @@ void HEkk::initialiseControl() {
   info_.row_ep_density = 0;
   info_.row_ap_density = 0;
   info_.row_DSE_density = 0;
+  info_.col_steepest_edge_density = 0;
   info_.col_basic_feasibility_change_density = 0;
   info_.row_basic_feasibility_change_density = 0;
   info_.col_BFRT_density = 0;
@@ -40,6 +41,7 @@ void HEkk::initialiseControl() {
   // Devex
   info_.costly_DSE_frequency = 0;
   info_.num_costly_DSE_iteration = 0;
+  info_.costly_DSE_measure = 0;
   info_.average_log_low_DSE_weight_error = 0;
   info_.average_log_high_DSE_weight_error = 0;
 }

@@ -256,6 +256,7 @@ void HEkk::clearEkkControlInfo() {
   info.row_ep_density = 0.0;
   info.row_ap_density = 0.0;
   info.row_DSE_density = 0.0;
+  info.col_steepest_edge_density = 0.0;
   info.col_basic_feasibility_change_density = 0.0;
   info.row_basic_feasibility_change_density = 0.0;
   info.col_BFRT_density = 0.0;
@@ -3430,10 +3431,7 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
   if (time_report_) timeReporting(1);
   // Note that in timeReporting(1), analysis_.analyse_simplex_time
   // reverts to its value given by options_
-  if (analysis_.analyse_simplex_time) {
-    analysis_.reportSimplexTimer();
-    assert(!analysis_.analyse_simplex_time);
-  }
+  if (analysis_.analyse_simplex_time) analysis_.reportSimplexTimer();
 
   return return_status;
 }

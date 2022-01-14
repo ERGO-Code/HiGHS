@@ -200,6 +200,7 @@ class HighsSimplexAnalysis {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_steepest_edge_density;
   double col_basic_feasibility_change_density;
   double row_basic_feasibility_change_density;
   double col_BFRT_density;
@@ -352,6 +353,7 @@ class HighsSimplexAnalysis {
     double AnIterTraceDensity[kNumSimplexNlaOperation];
     double AnIterTraceCostlyDse;
     HighsInt AnIterTraceIter;
+    HighsInt AnIterTrace_simplex_strategy;
     HighsInt AnIterTrace_edge_weight_mode;
   };
 
