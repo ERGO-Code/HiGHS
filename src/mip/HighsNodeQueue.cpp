@@ -235,7 +235,8 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
     delnodes.insert(it->second);
 
   for (HighsInt delnode : delnodes) {
-    treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
+    if (nodes[delnode].estimate != kHighsInf)
+      treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
     unlink(delnode);
   }
 }
@@ -288,7 +289,9 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 }
 
 double HighsNodeQueue::pruneNode(HighsInt nodeId) {
-  double treeweight = std::ldexp(1.0, 1 - nodes[nodeId].depth);
+  double treeweight = nodes[nodeId].estimate != kHighsInf
+                          ? std::ldexp(1.0, 1 - nodes[nodeId].depth)
+                          : 0.0;
   unlink(nodeId);
   return treeweight;
 }

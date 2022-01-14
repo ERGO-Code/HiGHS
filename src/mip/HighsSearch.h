@@ -47,6 +47,7 @@ class HighsSearch {
   HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
+  bool countTreeWeight;
 
  public:
   enum class ChildSelectionRule {

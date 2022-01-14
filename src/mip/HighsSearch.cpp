@@ -34,6 +34,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   upper_limit = kHighsInf;
   inheuristic = false;
   inbranching = false;
+  countTreeWeight = true;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -810,15 +811,15 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
   if (!prune) {
     std::vector<HighsInt> branchPositions;
     auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-    const NodeData* parentData = getParentNodeData();
     double tmpTreeWeight = nodequeue.emplaceNode(
         std::move(domchgStack), std::move(branchPositions),
         nodestack.back().lower_bound, nodestack.back().estimate,
         getCurrentDepth());
-    if (parentData && parentData->skipDepthCount == 0)
-      treeweight += tmpTreeWeight;
-  } else
-    treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
+    if (countTreeWeight) treeweight += tmpTreeWeight;
+  } else {
+    mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+    if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
+  }
   nodestack.back().opensubtrees = 0;
 }
 
@@ -848,16 +849,14 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
     if (!prune) {
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      const NodeData* parentData = getParentNodeData();
       double tmpTreeWeight = nodequeue.emplaceNode(
           std::move(domchgStack), std::move(branchPositions),
           nodestack.back().lower_bound, nodestack.back().estimate,
           getCurrentDepth());
-      if (parentData && parentData->skipDepthCount == 0)
-        treeweight += tmpTreeWeight;
+      if (countTreeWeight) treeweight += tmpTreeWeight;
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-      treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
+      if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     }
     nodestack.back().opensubtrees = 0;
     backtrack(false);
@@ -1449,9 +1448,9 @@ bool HighsSearch::backtrack(bool recoverBasis) {
   if (nodestack.empty()) return false;
   assert(!nodestack.empty());
   assert(nodestack.back().opensubtrees == 0);
-
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
+      countTreeWeight = true;
       depthoffset += nodestack.back().skipDepthCount;
       if (nodestack.size() == 1) {
         if (recoverBasis && nodestack.back().nodeBasis)
@@ -1470,6 +1469,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
           localdom.backtrack();
 
       if (nodestack.back().opensubtrees != 0) {
+        countTreeWeight = nodestack.back().skipDepthCount == 0;
         // repropagate the node, as it may have become infeasible due to
         // conflicts
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
@@ -1484,7 +1484,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
-          if (nodestack.back().skipDepthCount == 0)
+          if (countTreeWeight)
             treeweight += std::ldexp(1.0, -getCurrentDepth());
           nodestack.back().opensubtrees = 0;
         }
@@ -1542,7 +1542,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     if (prune) {
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      treeweight += std::ldexp(1.0, -getCurrentDepth());
+      if (countTreeWeight) treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
     nodestack.emplace_back(
@@ -1572,6 +1572,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
+      countTreeWeight = true;
       depthoffset += nodestack.back().skipDepthCount;
 
       if (nodestack.size() == 1) {
@@ -1591,6 +1592,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
           localdom.backtrack();
 
       if (nodestack.back().opensubtrees != 0) {
+        countTreeWeight = nodestack.back().skipDepthCount == 0;
         // repropagate the node, as it may have become infeasible due to
         // conflicts
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
@@ -1605,7 +1607,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
-          if (nodestack.back().skipDepthCount == 0)
+          if (countTreeWeight)
             treeweight += std::ldexp(1.0, -getCurrentDepth());
           nodestack.back().opensubtrees = 0;
         }
@@ -1670,7 +1672,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     if (prune) {
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      treeweight += std::ldexp(1.0, -getCurrentDepth());
+      if (countTreeWeight) treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
 
@@ -1714,12 +1716,10 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      const NodeData* parentData = getParentNodeData();
       double tmpTreeWeight = nodequeue.emplaceNode(
           std::move(domchgStack), std::move(branchPositions), nodelb,
           nodestack.back().estimate, getCurrentDepth() + 1);
-      if (parentData && parentData->skipDepthCount == 0)
-        treeweight += tmpTreeWeight;
+      if (countTreeWeight) treeweight += tmpTreeWeight;
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
       continue;
