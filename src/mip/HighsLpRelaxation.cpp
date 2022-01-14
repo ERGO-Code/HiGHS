@@ -342,6 +342,7 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
   HighsInt agelimit;
 
   if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid ||
+      lpsolver.getInfo().max_dual_infeasibility > mipsolver.mipdata_->feastol ||
       !lpsolver.getSolution().dual_valid)
     return;
 
@@ -389,6 +390,7 @@ void HighsLpRelaxation::resetAges() {
          (HighsInt)lpsolver.getLp().row_lower_.size());
 
   if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid ||
+      lpsolver.getInfo().max_dual_infeasibility > mipsolver.mipdata_->feastol ||
       !lpsolver.getSolution().dual_valid)
     return;
 
