@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_LP_RELAXATION_H_
@@ -32,6 +32,7 @@ class HighsLpRelaxation {
     kUnscaledDualFeasible,
     kUnscaledPrimalFeasible,
     kUnscaledInfeasible,
+    kUnbounded,
     kError,
   };
 
@@ -68,7 +69,8 @@ class HighsLpRelaxation {
   std::vector<double> dualproofvals;
   std::vector<HighsInt> dualproofinds;
   std::vector<double> dualproofbuffer;
-  std::vector<HighsInt> mask;
+  std::vector<double> colLbBuffer;
+  std::vector<double> colUbBuffer;
   double dualproofrhs;
   bool hasdualproof;
   double objective;
@@ -81,6 +83,7 @@ class HighsLpRelaxation {
   size_t epochs;
   HighsInt maxNumFractional;
   Status status;
+  bool adjustSymBranchingCol;
 
   void storeDualInfProof();
 
@@ -107,6 +110,10 @@ class HighsLpRelaxation {
   bool isRowIntegral(HighsInt row) const {
     assert(row < (HighsInt)lprows.size());
     return lprows[row].isIntegral(mipsolver);
+  }
+
+  void setAdjustSymmetricBranchingCol(bool adjustSymBranchingCol) {
+    this->adjustSymBranchingCol = adjustSymBranchingCol;
   }
 
   double getAvgSolveIters() { return avgSolveIters; }

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HFactor.h
@@ -250,6 +250,7 @@ class HFactor {
 
   void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
                 const bool full = true) const;
+  void reportAsm();
 
   // Information required to perform refactorization of the current
   // basis
@@ -381,7 +382,7 @@ class HFactor {
   void buildReportRankDeficiency();
   void buildMarkSingC();
   void buildFinish();
-
+  void zeroCol(const HighsInt iCol);
   void luClear();
   // Rebuild using refactor information
   HighsInt rebuild(HighsTimerClock* factor_timer_clock_pointer);

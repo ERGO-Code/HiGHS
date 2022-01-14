@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsMatrixUtils.cpp
@@ -54,8 +54,8 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value) {
-  if (assessMatrixDimensions(num_vec, partitioned, matrix_start, matrix_p_end,
-                             matrix_index,
+  if (assessMatrixDimensions(log_options, num_vec, partitioned, matrix_start,
+                             matrix_p_end, matrix_index,
                              matrix_value) == HighsStatus::kError) {
     return HighsStatus::kError;
   }
@@ -279,7 +279,8 @@ HighsStatus assessMatrix(
   return return_status;
 }
 
-HighsStatus assessMatrixDimensions(const HighsInt num_vec,
+HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
+                                   const HighsInt num_vec,
                                    const bool partitioned,
                                    const vector<HighsInt>& matrix_start,
                                    const vector<HighsInt>& matrix_p_end,
@@ -287,20 +288,55 @@ HighsStatus assessMatrixDimensions(const HighsInt num_vec,
                                    const vector<double>& matrix_value) {
   bool ok = true;
   // Assess main dimensions
-  ok = num_vec >= 0 && ok;
+  const bool legal_num_vec = num_vec >= 0;
+  if (!legal_num_vec)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Matrix dimension validation fails on number of vectors = %d < 0\n",
+        (int)num_vec);
+  ok = legal_num_vec && ok;
   const bool legal_matrix_start_size = matrix_start.size() >= num_vec + 1;
+  if (!legal_matrix_start_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Matrix dimension validation fails on start size = %d < %d = "
+                 "num vectors + 1\n",
+                 (int)matrix_start.size(), (int)(num_vec + 1));
   ok = legal_matrix_start_size && ok;
-  if (partitioned) ok = matrix_p_end.size() >= num_vec + 1 && ok;
+  if (partitioned) {
+    const bool legal_matrix_p_end_size = matrix_p_end.size() >= num_vec + 1;
+    if (!legal_matrix_p_end_size)
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Matrix dimension validation fails on p_end size = %d < %d "
+                   "= num vectors + 1\n",
+                   (int)matrix_p_end.size(), (int)(num_vec + 1));
+    ok = matrix_p_end.size() >= num_vec + 1 && ok;
+  }
   // Possibly check the sizes of the index and value vectors. Can only
   // do this with the number of nonzeros, and this is only known if
   // the start vector has a legal size. Setting num_nz = 0 otherwise
   // means that all tests pass, as they just check that the sizes of
   // the index and value vectors are non-negative.
-  HighsInt num_nz = 0;
-  if (legal_matrix_start_size) num_nz = matrix_start[num_vec];
+  const HighsInt num_nz = legal_matrix_start_size ? matrix_start[num_vec] : 0;
   if (num_nz >= 0) {
-    ok = matrix_index.size() >= num_nz && matrix_value.size() >= num_nz && ok;
+    const bool legal_matrix_index_size = matrix_index.size() >= num_nz;
+    if (!legal_matrix_index_size)
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Matrix dimension validation fails on index size = %d < %d "
+                   "= number of nonzeros\n",
+                   (int)matrix_index.size(), (int)num_nz);
+    ok = legal_matrix_index_size && ok;
+    const bool legal_matrix_value_size = matrix_value.size() >= num_nz;
+    if (!legal_matrix_value_size)
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Matrix dimension validation fails on value size = %d < %d "
+                   "= number of nonzeros\n",
+                   (int)matrix_value.size(), (int)num_nz);
+    ok = legal_matrix_value_size && ok;
   } else {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Matrix dimension validation fails on number of nonzeros = %d < 0\n",
+        (int)num_nz);
     ok = false;
   }
   if (ok) return HighsStatus::kOk;

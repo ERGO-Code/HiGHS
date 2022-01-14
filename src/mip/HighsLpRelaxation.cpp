@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsLpRelaxation.h"
@@ -121,6 +121,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   lastAgeCall = 0;
   objective = -kHighsInf;
   currentbasisstored = false;
+  adjustSymBranchingCol = true;
 }
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
@@ -129,12 +130,15 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       fractionalints(other.fractionalints),
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
-      currentbasisstored(other.currentbasisstored) {
+      currentbasisstored(other.currentbasisstored),
+      adjustSymBranchingCol(other.adjustSymBranchingCol) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.passOptions(other.lpsolver.getOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
-  mask.resize(mipsolver.numCol());
+  colLbBuffer.resize(mipsolver.numCol());
+  colUbBuffer.resize(mipsolver.numCol());
+  status = Status::kNotSet;
   numlpiters = 0;
   avgSolveIters = 0;
   numSolved = 0;
@@ -157,7 +161,8 @@ void HighsLpRelaxation::loadModel() {
   lpsolver.clearSolver();
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
-  mask.resize(lpmodel.num_col_);
+  colLbBuffer.resize(lpmodel.num_col_);
+  colUbBuffer.resize(lpmodel.num_col_);
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
@@ -403,17 +408,18 @@ void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
   if (!domain.getChangedCols().empty()) {
     if (&domain == &mipsolver.mipdata_->domain) continuous = true;
     currentbasisstored = false;
-    for (HighsInt col : domain.getChangedCols()) {
-      if (!continuous &&
-          mipsolver.variableType(col) == HighsVarType::kContinuous)
-        continue;
-      mask[col] = 1;
+    if (!continuous) domain.removeContinuousChangedCols();
+    HighsInt numChgCols = domain.getChangedCols().size();
+    if (numChgCols == 0) return;
+    const HighsInt* chgCols = domain.getChangedCols().data();
+    for (HighsInt i = 0; i < numChgCols; ++i) {
+      HighsInt col = chgCols[i];
+      colLbBuffer[i] = domain.col_lower_[col];
+      colUbBuffer[i] = domain.col_upper_[col];
     }
 
-    lpsolver.changeColsBounds(mask.data(), domain.col_lower_.data(),
-                              domain.col_upper_.data());
-
-    for (HighsInt col : domain.getChangedCols()) mask[col] = 0;
+    lpsolver.changeColsBounds(numChgCols, domain.getChangedCols().data(),
+                              colLbBuffer.data(), colUbBuffer.data());
 
     domain.clearChangedCols();
   }
@@ -469,11 +475,11 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
-                       globaldomain.col_lower_[i] == globaldomain.col_upper_[i];
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
 
     if (!removeValue &&
-        mipsolver.variableType(i) == HighsVarType::kContinuous) {
+        (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
+         mipsolver.variableType(i) == HighsVarType::kContinuous)) {
       if (val > 0)
         removeValue =
             lpsolver.getSolution().col_value[i] - globaldomain.col_lower_[i] <=
@@ -516,9 +522,9 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
 void HighsLpRelaxation::storeDualInfProof() {
   assert(lpsolver.getModelStatus(true) == HighsModelStatus::kInfeasible);
-
-  HighsInt numrow = lpsolver.getNumRow();
   hasdualproof = false;
+  if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid) return;
+  HighsInt numrow = lpsolver.getNumRow();
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
@@ -569,6 +575,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     }
   }
 
+  const HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
     HighsInt start = lp.a_matrix_.start_[i];
     HighsInt end = lp.a_matrix_.start_[i + 1];
@@ -584,16 +592,28 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
-        std::abs(val) <= mipsolver.mipdata_->feastol ||
-        mipsolver.mipdata_->domain.col_lower_[i] ==
-            mipsolver.mipdata_->domain.col_upper_[i]) {
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
+
+    if (!removeValue &&
+        (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
+         mipsolver.variableType(i) == HighsVarType::kContinuous)) {
+      // remove continuous entries and globally fixed entries whenever the
+      // local LP's bound is not tighter than the global bound
+      if (val > 0)
+        removeValue = lp.col_lower_[i] - globaldomain.col_lower_[i] <=
+                      mipsolver.mipdata_->feastol;
+      else
+        removeValue = globaldomain.col_upper_[i] - lp.col_upper_[i] <=
+                      mipsolver.mipdata_->feastol;
+    }
+
+    if (removeValue) {
       if (val < 0) {
-        if (mipsolver.mipdata_->domain.col_upper_[i] == kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.col_upper_[i];
+        if (globaldomain.col_upper_[i] == kHighsInf) return;
+        upper -= val * globaldomain.col_upper_[i];
       } else {
-        if (mipsolver.mipdata_->domain.col_lower_[i] == -kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.col_lower_[i];
+        if (globaldomain.col_lower_[i] == -kHighsInf) return;
+        upper -= val * globaldomain.col_lower_[i];
       }
 
       continue;
@@ -623,9 +643,13 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
 
-  hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
-                                  mipsolver.mipdata_->upper_limit,
-                                  dualproofinds, dualproofvals, dualproofrhs);
+  if (lpsolver.getSolution().dual_valid)
+    hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
+                                    mipsolver.mipdata_->upper_limit,
+                                    dualproofinds, dualproofvals, dualproofrhs);
+  else
+    hasdualproof = false;
+
   if (!hasdualproof) dualproofrhs = kHighsInf;
 }
 
@@ -676,10 +700,14 @@ void HighsLpRelaxation::recoverBasis() {
 }
 
 void HighsLpRelaxation::setObjectiveLimit(double objlim) {
-  lpsolver.setOptionValue(
-      "objective_bound",
-      objlim + std::max(0.5, mipsolver.mipdata_->lower_bound *
-                                 mipsolver.mipdata_->feastol));
+  double offset;
+  if (mipsolver.mipdata_->objintscale != 0.0)
+    offset = 0.5 / mipsolver.mipdata_->objintscale;
+  else
+    offset = std::max(1000.0 * mipsolver.mipdata_->feastol,
+                      std::abs(objlim) * kHighsTiny);
+
+  lpsolver.setOptionValue("objective_bound", objlim + offset);
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
@@ -729,21 +757,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
 
       storeDualUBProof();
-      if (hasdualproof && checkDualProof()) {
-        // printf("proof constraint for obj limit %g valid\n",
-        //        lpsolver.getOptions().objective_bound);
-        return Status::kInfeasible;
-      } else {
-        double objbound = lpsolver.getOptions().objective_bound;
-        // printf(
-        //     "proof constraint for obj limit %g not valid, solving without "
-        //     "objlim\n",
-        //     objbound);
-        lpsolver.setOptionValue("objective_bound", kHighsInf);
-        Status result = run(resolve_on_error);
-        lpsolver.setOptionValue("objective_bound", objbound);
-        return result;
-      }
+      return Status::kInfeasible;
     case HighsModelStatus::kInfeasible: {
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
@@ -784,6 +798,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::kError;
     }
+    case HighsModelStatus::kUnbounded:
+      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+
+      if (info.primal_solution_status == kSolutionStatusFeasible)
+        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
+
+      return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
       if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
       // fall through
@@ -802,7 +823,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kUnscaledDualFeasible;
 
-      return Status::kUnscaledInfeasible;
+      if (scaledmodelstatus == HighsModelStatus::kOptimal)
+        return Status::kUnscaledInfeasible;
+
+      return Status::kError;
     case HighsModelStatus::kIterationLimit: {
       if (!mipsolver.submip && resolve_on_error) {
         // printf(
@@ -901,8 +925,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
               subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
             }
 
-            col = mipsolver.mipdata_->symmetries.getBranchingColumn(
-                getLp().col_lower_, getLp().col_upper_, col);
+            if (adjustSymBranchingCol)
+              col = mipsolver.mipdata_->symmetries.getBranchingColumn(
+                  getLp().col_lower_, getLp().col_upper_, col);
 
             auto& pair = fracints[col];
             pair.first += val;

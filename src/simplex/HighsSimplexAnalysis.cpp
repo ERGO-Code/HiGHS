@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexAnalysis.cpp
@@ -319,7 +319,7 @@ void HighsSimplexAnalysis::iterationReport() {
         (int)simplex_iteration_count, (int)leaving_variable,
         (int)entering_variable, primal_delta, dual_step, primal_step);
   }
-  if ((HighsInt)kIterationReportLogType > *log_options.log_dev_level) return;
+  if (*log_options.log_dev_level < (HighsInt)kIterationReportLogType) return;
   const bool header = (num_iteration_report_since_last_header < 0) ||
                       (num_iteration_report_since_last_header > 49);
   if (header) {
@@ -1265,6 +1265,7 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
   if (analyse_simplex_runtime_data) {
     reportDensity(header);
     reportIterationData(header);
+    reportInfeasibility(header);
   }
   highsLogDev(log_options, kIterationReportLogType, "%s\n",
               analysis_log->str().c_str());
@@ -1302,7 +1303,9 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
   } else {
     // Primal infeasibility information may not be known if dual ray
     // has proved primal infeasibility
-    if (num_primal_infeasibility < 0 || sum_primal_infeasibility < 0) return;
+    if (num_primal_infeasibility <= kHighsIllegalInfeasibilityCount ||
+        sum_primal_infeasibility >= kHighsIllegalInfeasibilityMeasure)
+      return;
     if (solve_phase == 1) {
       *analysis_log << highsFormatToString(" Ph1: %" HIGHSINT_FORMAT "(%g)",
                                            num_primal_infeasibility,

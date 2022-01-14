@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsOptions.h
@@ -348,6 +348,8 @@ struct HighsOptionsStruct {
   HighsInt mip_pscost_minreliable;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
+  double mip_rel_gap;
+  double mip_abs_gap;
   double mip_heuristic_effort;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -693,6 +695,20 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "mip_rel_gap",
+        "tolerance on relative gap, |ub-lb|/|ub|, to determine whether "
+        "optimality has been reached for a MIP instance",
+        advanced, &mip_rel_gap, 0.0, 1e-4, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "mip_abs_gap",
+        "tolerance on absolute gap of MIP, |ub-lb|, to determine whether "
+        "optimality has been reached for a MIP instance",
+        advanced, &mip_abs_gap, 0.0, 1e-6, kHighsInf);
     records.push_back(record_double);
 
     // Advanced options

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsMatrixUtils.h
@@ -48,7 +48,8 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value);
 
-HighsStatus assessMatrixDimensions(const HighsInt num_vec,
+HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
+                                   const HighsInt num_vec,
                                    const bool partitioned,
                                    const vector<HighsInt>& matrix_start,
                                    const vector<HighsInt>& matrix_p_end,

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsSearch.h"
@@ -35,6 +35,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   inheuristic = false;
   inbranching = false;
   agecuts = true;
+  countTreeWeight = true;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -249,7 +250,9 @@ void HighsSearch::addInfeasibleConflict() {
   }
 }
 
-HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
+HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
+                                               double& downNodeLb,
+                                               double& upNodeLb) {
   assert(!lp->getFractionalIntegers().empty());
 
   static constexpr HighsInt basisstart_threshold = 20;
@@ -257,12 +260,16 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
   std::vector<double> downscore;
   std::vector<uint8_t> upscorereliable;
   std::vector<uint8_t> downscorereliable;
+  std::vector<double> upbound;
+  std::vector<double> downbound;
 
   HighsInt numfrac = lp->getFractionalIntegers().size();
   const auto& fracints = lp->getFractionalIntegers();
 
   upscore.resize(numfrac, kHighsInf);
   downscore.resize(numfrac, kHighsInf);
+  upbound.resize(numfrac, getCurrentLowerBound());
+  downbound.resize(numfrac, getCurrentLowerBound());
 
   upscorereliable.resize(numfrac, 0);
   downscorereliable.resize(numfrac, 0);
@@ -319,8 +326,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     for (HighsInt k : evalqueue) {
       double score;
 
-      if (upscore[k] <= oldminscore) upscorereliable[k] = 1;
-      if (downscore[k] <= oldminscore) downscorereliable[k] = 1;
+      if (upscore[k] <= oldminscore) upscorereliable[k] = true;
+      if (downscore[k] <= oldminscore) downscorereliable[k] = true;
 
       double s = 1e-3 * std::min(upscorereliable[k] ? upscore[k] : 0,
                                  downscorereliable[k] ? downscore[k] : 0);
@@ -376,6 +383,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         lp->recoverBasis();
         lp->run();
       }
+      downNodeLb = downbound[candidate];
+      upNodeLb = upbound[candidate];
       return candidate;
     }
 
@@ -542,6 +551,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
+        lp->recoverBasis();
         return -1;
       }
 
@@ -571,7 +581,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         if (objdelta <= mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         downscore[candidate] = objdelta;
-        downscorereliable[candidate] = 1;
+        downscorereliable[candidate] = true;
 
         markBranchingVarDownReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
@@ -588,19 +598,24 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         }
 
         if (lp->unscaledDualFeasible(status)) {
-          if (solobj > getCutoffBound()) {
-            mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+          downbound[candidate] = solobj;
+          if (solobj > mipsolver.mipdata_->optimality_limit) {
             addBoundExceedingConflict();
+
+            bool pruned = solobj > getCutoffBound();
+            if (pruned) mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+
             localdom.backtrack();
             lp->flushDomain(localdom);
 
             branchUpwards(col, upval, fracval);
-            nodestack[nodestack.size() - 2].opensubtrees = 0;
+            nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
+            nodestack[nodestack.size() - 2].other_child_lb = solobj;
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -617,7 +632,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         }
@@ -634,7 +649,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
-        if (numiters > basisstart_threshold) lp->recoverBasis();
+        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -682,6 +697,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
+        lp->recoverBasis();
         return -1;
       }
 
@@ -713,7 +729,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         if (objdelta <= mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         upscore[candidate] = objdelta;
-        upscorereliable[candidate] = 1;
+        upscorereliable[candidate] = true;
 
         markBranchingVarUpReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
@@ -730,19 +746,24 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         }
 
         if (lp->unscaledDualFeasible(status)) {
-          if (solobj > getCutoffBound()) {
-            mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+          upbound[candidate] = solobj;
+          if (solobj > mipsolver.mipdata_->optimality_limit) {
             addBoundExceedingConflict();
+
+            bool pruned = solobj > getCutoffBound();
+            if (pruned) mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+
             localdom.backtrack();
             lp->flushDomain(localdom);
 
             branchDownwards(col, downval, fracval);
-            nodestack[nodestack.size() - 2].opensubtrees = 0;
+            nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
+            nodestack[nodestack.size() - 2].other_child_lb = solobj;
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -759,7 +780,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
-            if (numiters > basisstart_threshold) lp->recoverBasis();
+            lp->recoverBasis();
             return -1;
           }
         }
@@ -776,7 +797,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
-        if (numiters > basisstart_threshold) lp->recoverBasis();
+        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -815,30 +836,31 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
   if (!prune) {
     std::vector<HighsInt> branchPositions;
     auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-    nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
-                          nodestack.back().lower_bound,
-                          nodestack.back().estimate, getCurrentDepth());
-  } else
-    treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
-  nodestack.back().opensubtrees = 0;
-
-  backtrack();
-  lp->flushDomain(localdom);
-  if (!nodestack.empty() && nodestack.back().nodeBasis) {
-    lp->setStoredBasis(nodestack.back().nodeBasis);
-    lp->recoverBasis();
+    double tmpTreeWeight = nodequeue.emplaceNode(
+        std::move(domchgStack), std::move(branchPositions),
+        nodestack.back().lower_bound, nodestack.back().estimate,
+        getCurrentDepth());
+    if (countTreeWeight) treeweight += tmpTreeWeight;
+  } else {
+    mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+    if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
   }
+  nodestack.back().opensubtrees = 0;
 }
 
 void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   if (nodestack.empty()) return;
 
+  // get the basis of the node highest up in the tree
   std::shared_ptr<const HighsBasis> basis;
-  if (nodestack.back().opensubtrees == 0) {
-    if (nodestack.back().nodeBasis)
-      basis = std::move(nodestack.back().nodeBasis);
-    backtrack(false);
+  for (NodeData& nodeData : nodestack) {
+    if (nodeData.nodeBasis) {
+      basis = std::move(nodeData.nodeBasis);
+      break;
+    }
   }
+
+  if (nodestack.back().opensubtrees == 0) backtrack(false);
 
   while (!nodestack.empty()) {
     auto oldchangedcols = localdom.getChangedCols().size();
@@ -852,17 +874,16 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
     if (!prune) {
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
-                            nodestack.back().lower_bound,
-                            nodestack.back().estimate, getCurrentDepth());
+      double tmpTreeWeight = nodequeue.emplaceNode(
+          std::move(domchgStack), std::move(branchPositions),
+          nodestack.back().lower_bound, nodestack.back().estimate,
+          getCurrentDepth());
+      if (countTreeWeight) treeweight += tmpTreeWeight;
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-      treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
+      if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     }
     nodestack.back().opensubtrees = 0;
-    if (nodestack.back().nodeBasis)
-      basis = std::move(nodestack.back().nodeBasis);
-
     backtrack(false);
   }
 
@@ -900,6 +921,8 @@ int64_t HighsSearch::getTotalLpIterations() const {
 }
 
 int64_t HighsSearch::getLocalLpIterations() const { return lpiterations; }
+
+int64_t HighsSearch::getLocalNodes() const { return nnodes; }
 
 int64_t HighsSearch::getStrongBranchingLpIterations() const {
   return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
@@ -955,9 +978,13 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   const auto& domchgstack = localdom.getDomainChangeStack();
 
+  if (!inheuristic &&
+      currnode.lower_bound > mipsolver.mipdata_->optimality_limit)
+    return NodeResult::kSubOptimal;
+
   localdom.propagate();
 
-  if (!localdom.infeasible()) {
+  if (!inheuristic && !localdom.infeasible()) {
     if (mipsolver.mipdata_->symmetries.numPerms > 0 &&
         !currnode.stabilizerOrbits &&
         (parent == nullptr || !parent->stabilizerOrbits ||
@@ -1111,6 +1138,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     currnode.opensubtrees = 0;
+  } else if (!inheuristic) {
+    if (currnode.lower_bound > mipsolver.mipdata_->optimality_limit) {
+      result = NodeResult::kSubOptimal;
+      addBoundExceedingConflict();
+    }
   }
 
   return result;
@@ -1124,7 +1156,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
   inbranching = true;
 
   HighsInt minrel = pseudocost.getMinReliable();
-
+  double childLb = getCurrentLowerBound();
   NodeResult result = NodeResult::kOpen;
   while (nodestack.back().opensubtrees == 2 &&
          lp->scaledOptimal(lp->getStatus()) &&
@@ -1153,10 +1185,14 @@ HighsSearch::NodeResult HighsSearch::branch() {
     // if (!mipsolver.submip)
     //  printf("selecting branching cand with minrel=%d\n",
     //         pseudocost.getMinReliable());
-    HighsInt branchcand = selectBranchingCandidate(sbmaxiters);
+    double downNodeLb = getCurrentLowerBound();
+    double upNodeLb = getCurrentLowerBound();
+    HighsInt branchcand =
+        selectBranchingCandidate(sbmaxiters, downNodeLb, upNodeLb);
     // if (!mipsolver.submip)
     //   printf("branching cand returned as %d\n", branchcand);
     NodeData& currnode = nodestack.back();
+    childLb = currnode.lower_bound;
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];
       currnode.branchingdecision.column = branching.first;
@@ -1171,11 +1207,15 @@ HighsSearch::NodeResult HighsSearch::branch() {
           currnode.branchingdecision.boundtype = HighsBoundType::kLower;
           currnode.branchingdecision.boundval =
               std::ceil(currnode.branching_point);
+          currnode.other_child_lb = downNodeLb;
+          childLb = upNodeLb;
           break;
         case ChildSelectionRule::kDown:
           currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
           currnode.branchingdecision.boundval =
               std::floor(currnode.branching_point);
+          currnode.other_child_lb = upNodeLb;
+          childLb = downNodeLb;
           break;
         case ChildSelectionRule::kRootSol: {
           double downPrio = pseudocost.getAvgInferencesDown(col) +
@@ -1211,9 +1251,13 @@ HighsSearch::NodeResult HighsSearch::branch() {
           if (upPrio + mipsolver.mipdata_->epsilon >= downPrio) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval = upVal;
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval = downVal;
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           }
           break;
         }
@@ -1222,10 +1266,14 @@ HighsSearch::NodeResult HighsSearch::branch() {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           }
           break;
         case ChildSelectionRule::kRandom:
@@ -1233,10 +1281,14 @@ HighsSearch::NodeResult HighsSearch::branch() {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           }
           break;
         case ChildSelectionRule::kBestCost: {
@@ -1247,10 +1299,14 @@ HighsSearch::NodeResult HighsSearch::branch() {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           }
           break;
         }
@@ -1260,10 +1316,14 @@ HighsSearch::NodeResult HighsSearch::branch() {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           }
           break;
         case ChildSelectionRule::kDisjunction: {
@@ -1275,19 +1335,27 @@ HighsSearch::NodeResult HighsSearch::branch() {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           } else if (numnodesdown > numnodesup) {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           } else {
             if (mipsolver.colCost(col) >= 0) {
               currnode.branchingdecision.boundtype = HighsBoundType::kLower;
               currnode.branchingdecision.boundval =
                   std::ceil(currnode.branching_point);
+              currnode.other_child_lb = downNodeLb;
+              childLb = upNodeLb;
             } else {
               currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
               currnode.branchingdecision.boundval =
                   std::floor(currnode.branching_point);
+              currnode.other_child_lb = upNodeLb;
+              childLb = downNodeLb;
             }
           }
           break;
@@ -1307,9 +1375,13 @@ HighsSearch::NodeResult HighsSearch::branch() {
           if (upScore >= downScore) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval = upVal;
+            currnode.other_child_lb = downNodeLb;
+            childLb = upNodeLb;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval = downVal;
+            currnode.other_child_lb = upNodeLb;
+            childLb = downNodeLb;
           }
         }
       }
@@ -1319,6 +1391,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
     assert(!localdom.getChangedCols().empty());
     result = evaluateNode();
+    if (result == NodeResult::kSubOptimal) break;
   }
   inbranching = false;
   NodeData& currnode = nodestack.back();
@@ -1327,7 +1400,8 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
   assert(currnode.opensubtrees == 2 || currnode.opensubtrees == 0);
 
-  if (currnode.opensubtrees != 2) return result;
+  if (currnode.opensubtrees != 2 || result == NodeResult::kSubOptimal)
+    return result;
 
   if (currnode.branchingdecision.column == -1) {
     double bestscore = -1.0;
@@ -1432,9 +1506,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
       orbitsValidInChildNode(currnode.branchingdecision);
   localdom.changeBound(currnode.branchingdecision);
   currnode.opensubtrees = 1;
-
   nodestack.emplace_back(
-      currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
+      std::max(childLb, currnode.lower_bound), currnode.estimate,
+      currnode.nodeBasis,
       passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
   nodestack.back().domgchgStackPos = domchgPos;
 
@@ -1445,24 +1519,28 @@ bool HighsSearch::backtrack(bool recoverBasis) {
   if (nodestack.empty()) return false;
   assert(!nodestack.empty());
   assert(nodestack.back().opensubtrees == 0);
-
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
+      countTreeWeight = true;
       depthoffset += nodestack.back().skipDepthCount;
-      nodestack.pop_back();
-
-      if (nodestack.empty()) {
+      if (nodestack.size() == 1) {
+        if (recoverBasis && nodestack.back().nodeBasis)
+          lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
+        nodestack.pop_back();
         localdom.backtrackToGlobal();
         lp->flushDomain(localdom);
+        if (recoverBasis) lp->recoverBasis();
         return false;
       }
 
+      nodestack.pop_back();
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif
           localdom.backtrack();
 
       if (nodestack.back().opensubtrees != 0) {
+        countTreeWeight = nodestack.back().skipDepthCount == 0;
         // repropagate the node, as it may have become infeasible due to
         // conflicts
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
@@ -1477,7 +1555,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
-          treeweight += std::ldexp(1.0, -getCurrentDepth());
+          if (countTreeWeight)
+            treeweight += std::ldexp(1.0, -getCurrentDepth());
           nodestack.back().opensubtrees = 0;
         }
       }
@@ -1516,8 +1595,8 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     bool passStabilizerToChildNode =
         orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
-    bool prune = nodestack.back().lower_bound > getCutoffBound() ||
-                 localdom.infeasible();
+    double nodelb = std::max(currnode.lower_bound, currnode.other_child_lb);
+    bool prune = nodelb > getCutoffBound() || localdom.infeasible();
     if (!prune) {
       localdom.propagate();
       prune = localdom.infeasible();
@@ -1534,11 +1613,11 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     if (prune) {
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      treeweight += std::ldexp(1.0, -getCurrentDepth());
+      if (countTreeWeight) treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
     nodestack.emplace_back(
-        currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
+        nodelb, currnode.estimate, currnode.nodeBasis,
         passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
     lp->flushDomain(localdom);
@@ -1564,20 +1643,27 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
+      countTreeWeight = true;
       depthoffset += nodestack.back().skipDepthCount;
-      nodestack.pop_back();
 
-      if (nodestack.empty()) {
+      if (nodestack.size() == 1) {
+        if (nodestack.back().nodeBasis)
+          lp->setStoredBasis(std::move(nodestack.back().nodeBasis));
+        nodestack.pop_back();
         localdom.backtrackToGlobal();
         lp->flushDomain(localdom);
+        lp->recoverBasis();
         return false;
       }
+
+      nodestack.pop_back();
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif
           localdom.backtrack();
 
       if (nodestack.back().opensubtrees != 0) {
+        countTreeWeight = nodestack.back().skipDepthCount == 0;
         // repropagate the node, as it may have become infeasible due to
         // conflicts
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
@@ -1592,7 +1678,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
-          treeweight += std::ldexp(1.0, -getCurrentDepth());
+          if (countTreeWeight)
+            treeweight += std::ldexp(1.0, -getCurrentDepth());
           nodestack.back().opensubtrees = 0;
         }
       }
@@ -1638,8 +1725,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     bool passStabilizerToChildNode =
         orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
-    bool prune = nodestack.back().lower_bound > getCutoffBound() ||
-                 localdom.infeasible();
+    double nodelb = std::max(currnode.lower_bound, currnode.other_child_lb);
+    bool prune = nodelb > getCutoffBound() || localdom.infeasible();
     if (!prune) {
       localdom.propagate();
       prune = localdom.infeasible();
@@ -1656,53 +1743,60 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     if (prune) {
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      treeweight += std::ldexp(1.0, -getCurrentDepth());
+      if (countTreeWeight) treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
-    bool nodeToQueue = false;
+
+    bool nodeToQueue = nodelb > mipsolver.mipdata_->optimality_limit;
     // we check if switching to the other branch of an anchestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
-    for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
-      if (nodestack[i].opensubtrees == 0) continue;
+    if (!nodeToQueue) {
+      for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
+        if (nodestack[i].opensubtrees == 0) continue;
 
-      bool fallbackbranch = nodestack[i].branchingdecision.boundval ==
-                            nodestack[i].branching_point;
-      double branchpoint = fallbackbranch ? 0.5 : nodestack[i].branching_point;
-      double ancestorScoreActive;
-      double ancestorScoreInactive;
-      if (nodestack[i].branchingdecision.boundtype == HighsBoundType::kLower) {
-        ancestorScoreInactive = pseudocost.getScoreDown(
-            nodestack[i].branchingdecision.column, branchpoint);
-        ancestorScoreActive = pseudocost.getScoreUp(
-            nodestack[i].branchingdecision.column, branchpoint);
-      } else {
-        ancestorScoreActive = pseudocost.getScoreDown(
-            nodestack[i].branchingdecision.column, branchpoint);
-        ancestorScoreInactive = pseudocost.getScoreUp(
-            nodestack[i].branchingdecision.column, branchpoint);
+        bool fallbackbranch = nodestack[i].branchingdecision.boundval ==
+                              nodestack[i].branching_point;
+        double branchpoint =
+            fallbackbranch ? 0.5 : nodestack[i].branching_point;
+        double ancestorScoreActive;
+        double ancestorScoreInactive;
+        if (nodestack[i].branchingdecision.boundtype ==
+            HighsBoundType::kLower) {
+          ancestorScoreInactive = pseudocost.getScoreDown(
+              nodestack[i].branchingdecision.column, branchpoint);
+          ancestorScoreActive = pseudocost.getScoreUp(
+              nodestack[i].branchingdecision.column, branchpoint);
+        } else {
+          ancestorScoreActive = pseudocost.getScoreDown(
+              nodestack[i].branchingdecision.column, branchpoint);
+          ancestorScoreInactive = pseudocost.getScoreUp(
+              nodestack[i].branchingdecision.column, branchpoint);
+        }
+
+        // if (!mipsolver.submip)
+        //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
+        //   ancestorScore);
+        nodeToQueue = ancestorScoreInactive - ancestorScoreActive >
+                      nodeScore + mipsolver.mipdata_->feastol;
+        break;
       }
-
-      // if (!mipsolver.submip)
-      //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
-      //   ancestorScore);
-      nodeToQueue = ancestorScoreInactive - ancestorScoreActive >
-                    nodeScore + mipsolver.mipdata_->feastol;
-      break;
     }
+
     if (nodeToQueue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
-      localdom.backtrack();
-      localdom.clearChangedCols(numChangedCols);
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
-      nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
-                            nodestack.back().lower_bound,
-                            nodestack.back().estimate, getCurrentDepth() + 1);
+      double tmpTreeWeight = nodequeue.emplaceNode(
+          std::move(domchgStack), std::move(branchPositions), nodelb,
+          nodestack.back().estimate, getCurrentDepth() + 1);
+      if (countTreeWeight) treeweight += tmpTreeWeight;
+      localdom.backtrack();
+      localdom.clearChangedCols(numChangedCols);
       continue;
     }
     nodestack.emplace_back(
-        currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
+        nodelb, currnode.estimate, currnode.nodeBasis,
         passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
     lp->flushDomain(localdom);

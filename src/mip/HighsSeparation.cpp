@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsSeparation.h"
@@ -150,7 +150,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // double firstobj = lp->getObjective();
     double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
-    while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
+    while (lp->getObjective() < mipsolver.mipdata_->optimality_limit) {
       double lastobj = lp->getObjective();
 
       size_t nlpiters = -lp->getNumLpIterations();
