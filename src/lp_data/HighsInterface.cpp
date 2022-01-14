@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsInterface.cpp
@@ -125,7 +125,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   if (valid_basis) appendNonbasicColsToBasisInterface(XnumNewCol);
   // Increase the number of columns in the LP
   lp.num_col_ += XnumNewCol;
-  assert(lp.dimensionsOk("addCols"));
+  assert(lpDimensionsOk("addCols", lp, options.log_options));
 
   // Deduce the consequences of adding new columns
   clearModelStatusSolutionAndInfo();
@@ -240,7 +240,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 
   // Increase the number of rows in the LP
   lp.num_row_ += XnumNewRow;
-  assert(lp.dimensionsOk("addRows"));
+  assert(lpDimensionsOk("addRows", lp, options.log_options));
 
   // Deduce the consequences of adding new rows
   clearModelStatusSolutionAndInfo();
@@ -292,7 +292,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(lp.dimensionsOk("deleteCols"));
+  assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
 }
 
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
@@ -334,7 +334,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(lp.dimensionsOk("deleteRows"));
+  assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
@@ -803,6 +803,10 @@ void Highs::setNonbasicStatusInterface(
   HighsInt ignore_from_ix;
   HighsInt ignore_to_ix = -1;
   HighsInt current_set_entry = 0;
+  // Given a basic-nonbasic partition, all status settings are defined
+  // by the bounds unless boxed, in which case any definitive (ie not
+  // just kNonbasic) existing status is retained. Otherwise, set to
+  // bound nearer to zero
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, set_from_ix, set_to_ix, ignore_from_ix,
                      ignore_to_ix, current_set_entry);
@@ -814,20 +818,28 @@ void Highs::setNonbasicStatusInterface(
         // Nonbasic column
         double lower = lp.col_lower_[iCol];
         double upper = lp.col_upper_[iCol];
-        HighsBasisStatus status = HighsBasisStatus::kNonbasic;
+        HighsBasisStatus status = highs_basis.col_status[iCol];
         HighsInt move = kIllegalMoveValue;
         if (lower == upper) {
-          status = HighsBasisStatus::kLower;
+          if (status == HighsBasisStatus::kNonbasic)
+            status = HighsBasisStatus::kLower;
           move = kNonbasicMoveZe;
         } else if (!highs_isInfinity(-lower)) {
           // Finite lower bound so boxed or lower
           if (!highs_isInfinity(upper)) {
             // Finite upper bound so boxed
-            if (fabs(lower) < fabs(upper)) {
-              status = HighsBasisStatus::kLower;
+            if (status == HighsBasisStatus::kNonbasic) {
+              // No definitive status, so set to bound nearer to zero
+              if (fabs(lower) < fabs(upper)) {
+                status = HighsBasisStatus::kLower;
+                move = kNonbasicMoveUp;
+              } else {
+                status = HighsBasisStatus::kUpper;
+                move = kNonbasicMoveDn;
+              }
+            } else if (status == HighsBasisStatus::kLower) {
               move = kNonbasicMoveUp;
             } else {
-              status = HighsBasisStatus::kUpper;
               move = kNonbasicMoveDn;
             }
           } else {
@@ -844,7 +856,6 @@ void Highs::setNonbasicStatusInterface(
           status = HighsBasisStatus::kZero;
           move = kNonbasicMoveZe;
         }
-        assert(status != HighsBasisStatus::kNonbasic);
         highs_basis.col_status[iCol] = status;
         if (has_simplex_basis) {
           assert(move != kIllegalMoveValue);
@@ -858,20 +869,28 @@ void Highs::setNonbasicStatusInterface(
         // Nonbasic column
         double lower = lp.row_lower_[iRow];
         double upper = lp.row_upper_[iRow];
-        HighsBasisStatus status = HighsBasisStatus::kNonbasic;
+        HighsBasisStatus status = highs_basis.row_status[iRow];
         HighsInt move = kIllegalMoveValue;
         if (lower == upper) {
-          status = HighsBasisStatus::kLower;
+          if (status == HighsBasisStatus::kNonbasic)
+            status = HighsBasisStatus::kLower;
           move = kNonbasicMoveZe;
         } else if (!highs_isInfinity(-lower)) {
           // Finite lower bound so boxed or lower
           if (!highs_isInfinity(upper)) {
             // Finite upper bound so boxed
-            if (fabs(lower) < fabs(upper)) {
-              status = HighsBasisStatus::kLower;
+            if (status == HighsBasisStatus::kNonbasic) {
+              // No definitive status, so set to bound nearer to zero
+              if (fabs(lower) < fabs(upper)) {
+                status = HighsBasisStatus::kLower;
+                move = kNonbasicMoveDn;
+              } else {
+                status = HighsBasisStatus::kUpper;
+                move = kNonbasicMoveUp;
+              }
+            } else if (status == HighsBasisStatus::kLower) {
               move = kNonbasicMoveDn;
             } else {
-              status = HighsBasisStatus::kUpper;
               move = kNonbasicMoveUp;
             }
           } else {
@@ -888,7 +907,6 @@ void Highs::setNonbasicStatusInterface(
           status = HighsBasisStatus::kZero;
           move = kNonbasicMoveZe;
         }
-        assert(status != HighsBasisStatus::kNonbasic);
         highs_basis.row_status[iRow] = status;
         if (has_simplex_basis) {
           assert(move != kIllegalMoveValue);
@@ -1352,9 +1370,23 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   return return_status;
 }
 
+bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {
+  if (!num_nz) return true;
+  const bool ok_format = format == (HighsInt)MatrixFormat::kColwise ||
+                         format == (HighsInt)MatrixFormat::kRowwise;
+  assert(ok_format);
+  if (!ok_format)
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Non-empty Constraint matrix has illegal format = %" HIGHSINT_FORMAT
+        "\n",
+        format);
+  return ok_format;
+}
+
 bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
   if (!num_nz) return true;
-  const bool ok_format = format == (HighsInt)MatrixFormat::kColwise;
+  const bool ok_format = format == (HighsInt)HessianFormat::kTriangular;
   assert(ok_format);
   if (!ok_format)
     highsLogUser(

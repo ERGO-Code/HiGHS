@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsMipSolverData.h"
@@ -117,7 +117,7 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
         ((total_lp_iterations - node_iters_curr_run) +
-         node_iters_curr_run / std::max(1e-3, double(pruned_treeweight)));
+         node_iters_curr_run / std::max(0.01, double(pruned_treeweight)));
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
     // exploration. Additionally we want to spent the proportional effort
@@ -955,6 +955,19 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       total_lp_iterations += lpIters;
       avgrootlpiters = lp.getAvgSolveIters();
       lpWasSolved = true;
+
+      if (status == HighsLpRelaxation::Status::kUnbounded) {
+        if (mipsolver.solution_.empty())
+          mipsolver.modelstatus_ = HighsModelStatus::kUnboundedOrInfeasible;
+        else
+          mipsolver.modelstatus_ = HighsModelStatus::kUnbounded;
+
+        pruned_treeweight = 1.0;
+        num_nodes += 1;
+        num_leaves += 1;
+        return status;
+      }
+
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
           addIncumbent(lp.getLpSolver().getSolution().col_value,
@@ -1059,7 +1072,9 @@ restart:
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
   lp.getLpSolver().setOptionValue("parallel", "off");
 
-  if (status == HighsLpRelaxation::Status::kInfeasible) return;
+  if (status == HighsLpRelaxation::Status::kInfeasible ||
+      status == HighsLpRelaxation::Status::kUnbounded)
+    return;
 
   heuristics.randomizedRounding(firstlpsol);
   heuristics.flushStatistics();
@@ -1317,6 +1332,22 @@ restart:
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   const HighsOptions& options = *mipsolver.options_mip_;
+
+  if (options.mip_gap_limit != 0.0) {
+    const double lb = lower_bound + mipsolver.model_->offset_;
+    const double ub = upper_bound + mipsolver.model_->offset_;
+    const double gap = (ub - lb) / std::max(1.0, std::abs(ub));
+
+    if (gap <= options.mip_gap_limit) {
+      if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+        highsLogDev(options.log_options, HighsLogType::kInfo,
+                    "reached MIP gap limit\n");
+        mipsolver.modelstatus_ = HighsModelStatus::kObjectiveTarget;
+      }
+      return true;
+    }
+  }
+
   if (options.mip_max_nodes != kHighsIInf &&
       num_nodes + nodeOffset >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {

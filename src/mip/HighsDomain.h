@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_DOMAIN_H_
@@ -326,6 +326,17 @@ class HighsDomain {
   void clearChangedCols() {
     for (HighsInt i : changedcols_) changedcolsflags_[i] = 0;
     changedcols_.clear();
+  }
+
+  void removeContinuousChangedCols() {
+    for (HighsInt i : changedcols_)
+      changedcolsflags_[i] =
+          mipsolver->variableType(i) != HighsVarType::kContinuous;
+
+    changedcols_.erase(
+        std::remove_if(changedcols_.begin(), changedcols_.end(),
+                       [&](HighsInt i) { return !changedcolsflags_[i]; }),
+        changedcols_.end());
   }
 
   void clearChangedCols(HighsInt start) {

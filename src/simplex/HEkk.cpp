@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkk.cpp
@@ -1011,12 +1011,13 @@ HighsStatus HEkk::unpermute() {
   return HighsStatus::kError;
 }
 
-HighsStatus HEkk::solve() {
+HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
-  const HighsInt debug_from_solve_call_num = -607;
-  const HighsInt debug_to_solve_call_num = debug_from_solve_call_num;
-  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
-                        debug_solve_call_num_ <= debug_to_solve_call_num;
+  debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
+  const HighsInt debug_from_solve_call_num = -7;
+  const HighsInt debug_build_synthetic_tick = -809680;
+  debug_solve_report_ = debug_solve_call_num_ == debug_from_solve_call_num &&
+                        build_synthetic_tick_ == debug_build_synthetic_tick;
   const HighsInt time_from_solve_call_num = -1;
   const HighsInt time_to_solve_call_num = time_from_solve_call_num;
   time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
@@ -1090,7 +1091,7 @@ HighsStatus HEkk::solve() {
     HEkkPrimal primal_solver(*this);
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
-    call_status = primal_solver.solve();
+    call_status = primal_solver.solve(force_phase2);
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
                                         return_status, "HEkkPrimal::solve");
@@ -1116,7 +1117,7 @@ HighsStatus HEkk::solve() {
     HEkkDual dual_solver(*this);
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
-    call_status = dual_solver.solve();
+    call_status = dual_solver.solve(force_phase2);
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
                                         return_status, "HEkkDual::solve");
@@ -1253,8 +1254,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   //
-  // The HighsBasis instance must not be alien
-  //  assert(!highs_basis.alien);
+  // The basis should be dual faeible unless it's alien
+  debug_dual_feasible = !highs_basis.was_alien;
   HighsOptions& options = *options_;
   if (debugHighsBasisConsistent(options, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
@@ -1271,10 +1272,6 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   basis_.debug_update_count = highs_basis.debug_update_count;
   basis_.debug_origin_name = highs_basis.debug_origin_name;
   assert(basis_.debug_origin_name != "");
-  //  printf("HEkk::setBasis Id = %9d; UpdateCount = %4d; Origin (%s)\n",
-  //	 (int)basis_.debug_id, (int)basis_.debug_update_count,
-  //	 basis_.debug_origin_name.c_str());
-
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
@@ -1287,12 +1284,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
-      if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
-        if (lower == upper) {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
-        } else {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
-        }
+      if (lower == upper) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
+      } else if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
       } else if (highs_basis.col_status[iCol] == HighsBasisStatus::kUpper) {
         basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
       } else {
@@ -1312,12 +1307,10 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
       HighsHashHelpers::sparse_combine(basis_.hash, iVar);
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
-      if (highs_basis.row_status[iRow] == HighsBasisStatus::kLower) {
-        if (lower == upper) {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
-        } else {
-          basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
-        }
+      if (lower == upper) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
+      } else if (highs_basis.row_status[iRow] == HighsBasisStatus::kLower) {
+        basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
       } else if (highs_basis.row_status[iRow] == HighsBasisStatus::kUpper) {
         basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
       } else {
@@ -1329,26 +1322,6 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   status_.has_basis = true;
   return HighsStatus::kOk;
 }
-
-/*
-HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
-  // Shouldn't have to check the incoming basis since this is an
-  // internal call, but it may be a basis that's set up internally
-  // with errors :-) ...
-  if (this->debugBasisConsistent() ==
-      HighsDebugStatus::kLogicalError) {
-    highsLogDev(this->options_->log_options, HighsLogType::kError,
-                "Supposed to be a Highs basis, but not valid\n");
-    return HighsStatus::kError;
-  }
-  this->basis_.nonbasicFlag_ = basis.nonbasicFlag_;
-  this->basis_.nonbasicMove_ = basis.nonbasicMove_;
-  this->basis_.basicIndex_ = basis.basicIndex_;
-  this->basis_.hash = basis.hash;
-  this->status_.has_basis = true;
-  return HighsStatus::kOk;
-}
-*/
 
 void HEkk::addCols(const HighsLp& lp,
                    const HighsSparseMatrix& scaled_a_matrix) {
@@ -1444,6 +1417,7 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
   }
   this->simplex_in_scaled_space_ = false;
 }
+
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values
@@ -1495,7 +1469,9 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
       basis_status = HighsBasisStatus::kUpper;
     } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe) {
       if (lower == upper) {
-        basis_status = HighsBasisStatus::kLower;
+        const double dual = (HighsInt)lp_.sense_ * info_.workDual_[iCol];
+        basis_status =
+            dual >= 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
       } else {
         basis_status = HighsBasisStatus::kZero;
       }
@@ -1515,7 +1491,9 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
       basis_status = HighsBasisStatus::kLower;
     } else if (basis_.nonbasicMove_[iVar] == kNonbasicMoveZe) {
       if (lower == upper) {
-        basis_status = HighsBasisStatus::kLower;
+        const double dual = (HighsInt)lp_.sense_ * info_.workDual_[iVar];
+        basis_status =
+            dual >= 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
       } else {
         basis_status = HighsBasisStatus::kZero;
       }
@@ -1524,6 +1502,7 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
   }
   highs_basis.valid = true;
   highs_basis.alien = false;
+  highs_basis.was_alien = false;
   highs_basis.debug_id =
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
   highs_basis.debug_update_count = info_.update_count;
@@ -1653,6 +1632,9 @@ void HEkk::handleRankDeficiency() {
         variable_out < lp_.num_col_ ? (int)variable_out
                                     : (int)(variable_out - lp_.num_col_),
         (int)row_out, (int)(row_in), (int)variable_in);
+    // NB Parameters row_out, variable_in, variable_out, since
+    // variable_in is the logical that must not come out to be
+    // replaced by the structural variable_out
     addBadBasisChange(row_out, variable_in, variable_out,
                       BadBasisChangeReason::kSingular, true);
   }
@@ -2178,6 +2160,20 @@ bool HEkk::lpFactorRowCompatible() {
                 "HEkk::initialiseSimplexLpBasisAndFactor: LP(%6d, %6d) has "
                 "factor_num_row = %d\n",
                 (int)this->lp_.num_col_, (int)this->lp_.num_row_,
+                (int)this->simplex_nla_.factor_.num_row);
+  }
+  return consistent_num_row;
+}
+
+bool HEkk::lpFactorRowCompatible(HighsInt expectedNumRow) {
+  // Check for LP-HFactor row compatibility
+  const bool consistent_num_row =
+      this->simplex_nla_.factor_.num_row == expectedNumRow;
+  if (!consistent_num_row) {
+    highsLogDev(options_->log_options, HighsLogType::kError,
+                "HEkk::initialiseSimplexLpBasisAndFactor: LP(%6d, %6d) has "
+                "factor_num_row = %d\n",
+                (int)this->lp_.num_col_, expectedNumRow,
                 (int)this->simplex_nla_.factor_.num_row);
   }
   return consistent_num_row;
@@ -2851,56 +2847,6 @@ void HEkk::computeDual() {
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 
-void HEkk::computeDualInfeasibleWithFlips() {
-  // Computes num/max/sum of dual infeasibliities according to
-  // nonbasicMove, using the bounds only to identify free variables
-  // and non-boxed. Fixed variables are assumed to have nonbasicMove=0
-  // so that no dual infeasibility is counted for them. Indeed, when
-  // called from cleanup() at the end of dual phase 1, nonbasicMove
-  // relates to the phase 1 bounds, but workLower and workUpper will
-  // have been set to phase 2 values!
-  const double scaled_dual_feasibility_tolerance =
-      options_->dual_feasibility_tolerance;
-  // Possibly verify that nonbasicMove is correct for fixed variables
-  //  debugFixedNonbasicMove(ekk_instance_);
-
-  HighsInt num_dual_infeasibility = 0;
-  double max_dual_infeasibility = 0;
-  double sum_dual_infeasibility = 0;
-  const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
-
-  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
-    if (!basis_.nonbasicFlag_[iVar]) continue;
-    // Nonbasic column
-    const double lower = info_.workLower_[iVar];
-    const double upper = info_.workUpper_[iVar];
-    const double dual = info_.workDual_[iVar];
-    double dual_infeasibility = 0;
-    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-      // Free: any nonzero dual value is infeasible
-      dual_infeasibility = fabs(dual);
-    } else if (highs_isInfinity(-lower) || highs_isInfinity(upper)) {
-      // Not free or boxed: any dual infeasibility is given by value
-      // signed by nonbasicMove.
-      //
-      // For boxed variables, nonbasicMove may have the wrong sign for
-      // dual, but nonbasicMove and the primal value can be flipped to
-      // achieve dual feasiblility.
-      dual_infeasibility = -basis_.nonbasicMove_[iVar] * dual;
-    }
-    if (dual_infeasibility > 0) {
-      if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
-        num_dual_infeasibility++;
-      max_dual_infeasibility =
-          std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibility += dual_infeasibility;
-    }
-  }
-  info_.num_dual_infeasibilities = num_dual_infeasibility;
-  info_.max_dual_infeasibility = max_dual_infeasibility;
-  info_.sum_dual_infeasibilities = sum_dual_infeasibility;
-}
-
 double HEkk::computeDualForTableauColumn(const HighsInt iVar,
                                          const HVector& tableau_column) {
   const vector<double>& workCost = info_.workCost_;
@@ -2912,146 +2858,6 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
     dual -= tableau_column.array[iRow] * workCost[basicIndex[iRow]];
   }
   return dual;
-}
-
-void HEkk::correctDual(HighsInt* free_infeasibility_count) {
-  const double tau_d = options_->dual_feasibility_tolerance;
-  const double inf = kHighsInf;
-  HighsInt workCount = 0;
-  double flip_dual_objective_value_change = 0;
-  double shift_dual_objective_value_change = 0;
-  HighsInt num_flip = 0;
-  HighsInt num_shift = 0;
-  double sum_flip = 0;
-  double sum_shift = 0;
-  double max_flip = 0;
-  double max_shift = 0;
-  double min_dual_infeasibility_for_flip = kHighsInf;
-  double max_dual_infeasibility_for_flip = 0;
-  HighsInt num_dual_infeasibilities_for_flip = 0;
-  double sum_dual_infeasibilities_for_flip = 0;
-  HighsInt num_dual_infeasibilities_for_shift = 0;
-  double max_dual_infeasibility_for_shift = 0;
-  double sum_dual_infeasibilities_for_shift = 0;
-  const double kUseFlipMultiplier = 1000;
-  const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
-  for (HighsInt i = 0; i < num_tot; i++) {
-    if (!basis_.nonbasicFlag_[i]) continue;
-    // Nonbasic
-    if (info_.workLower_[i] == -inf && info_.workUpper_[i] == inf) {
-      // FREE variable
-      workCount += (fabs(info_.workDual_[i]) >= tau_d);
-      continue;
-    }
-    const HighsInt move = basis_.nonbasicMove_[i];
-    const double current_dual = info_.workDual_[i];
-    const double dual_infeasibility = -move * current_dual;
-    const double kDualInfeasibilityMargin = 1;
-    if (kDualInfeasibilityMargin * dual_infeasibility < tau_d) continue;
-    // There is a dual infeasiblity to remove so, if boxed, consider doing so
-    // via flip
-    const bool fixed = info_.workLower_[i] == info_.workUpper_[i];
-    const bool boxed =
-        info_.workLower_[i] != -inf && info_.workUpper_[i] != inf;
-    if (boxed) {
-      // Boxed variable, so could flip
-      if (fixed || dual_infeasibility > kUseFlipMultiplier * tau_d) {
-        // Fixed, or dual infeasibility is relatively large, so flip
-        min_dual_infeasibility_for_flip =
-            min(dual_infeasibility, min_dual_infeasibility_for_flip);
-        if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_flip++;
-        sum_dual_infeasibilities_for_flip += dual_infeasibility;
-        max_dual_infeasibility_for_flip =
-            max(dual_infeasibility, max_dual_infeasibility_for_flip);
-        flipBound(i);
-        // Negative dual at lower bound (move=1): flip to upper
-        // bound so objective contribution is change in value (flip)
-        // times dual, being move*flip*dual
-        //
-        // Positive dual at upper bound (move=-1): flip to lower
-        // bound so objective contribution is change in value
-        // (-flip) times dual, being move*flip*dual
-        const double flip = info_.workUpper_[i] - info_.workLower_[i];
-        double local_dual_objective_change = move * flip * current_dual;
-        local_dual_objective_change *= cost_scale_;
-        flip_dual_objective_value_change += local_dual_objective_change;
-        num_flip++;
-        max_flip = max(fabs(flip), max_flip);
-        sum_flip += fabs(flip);
-        continue;
-      }
-    }
-    // Either one-sided or flip not performed, so shift
-    //
-    // Cost shifting must always be possible
-    assert(info_.allow_cost_shifting);
-    // Other variable = shift
-    if (dual_infeasibility >= tau_d) num_dual_infeasibilities_for_shift++;
-    sum_dual_infeasibilities_for_shift += dual_infeasibility;
-    max_dual_infeasibility_for_shift =
-        max(dual_infeasibility, max_dual_infeasibility_for_shift);
-    info_.costs_shifted = true;
-    double shift;
-    if (move == kNonbasicMoveUp) {
-      double new_dual = (1 + random_.fraction()) * tau_d;
-      shift = new_dual - current_dual;
-      info_.workDual_[i] = new_dual;
-      info_.workCost_[i] = info_.workCost_[i] + shift;
-    } else {
-      double new_dual = -(1 + random_.fraction()) * tau_d;
-      shift = new_dual - current_dual;
-      info_.workDual_[i] = new_dual;
-      info_.workCost_[i] = info_.workCost_[i] + shift;
-    }
-    double local_dual_objective_change = shift * info_.workValue_[i];
-    local_dual_objective_change *= cost_scale_;
-    shift_dual_objective_value_change += local_dual_objective_change;
-    num_shift++;
-    max_shift = max(fabs(shift), max_shift);
-    sum_shift += fabs(shift);
-    const std::string direction = move == kNonbasicMoveUp ? "  up" : "down";
-    highsLogDev(options_->log_options, HighsLogType::kVerbose,
-                "Move %s: cost shift = %g; objective change = %g\n",
-                direction.c_str(), shift, local_dual_objective_change);
-  }
-  analysis_.num_correct_dual_primal_flip += num_flip;
-  analysis_.max_correct_dual_primal_flip =
-      max(max_flip, analysis_.max_correct_dual_primal_flip);
-  analysis_.min_correct_dual_primal_flip_dual_infeasibility =
-      min(min_dual_infeasibility_for_flip,
-          analysis_.min_correct_dual_primal_flip_dual_infeasibility);
-  if (num_flip)
-    highsLogDev(
-        options_->log_options, HighsLogType::kDetailed,
-        "Performed num / max / sum = %" HIGHSINT_FORMAT
-        " / %g / %g flip(s) for num / min / max / sum dual infeasibility of "
-        "%" HIGHSINT_FORMAT " / %g / %g / %g; objective change = %g\n",
-        num_flip, max_flip, sum_flip, num_dual_infeasibilities_for_flip,
-        min_dual_infeasibility_for_flip, max_dual_infeasibility_for_flip,
-        sum_dual_infeasibilities_for_flip, flip_dual_objective_value_change);
-  analysis_.num_correct_dual_cost_shift += num_shift;
-  analysis_.max_correct_dual_cost_shift =
-      max(max_shift, analysis_.max_correct_dual_cost_shift);
-  analysis_.max_correct_dual_cost_shift_dual_infeasibility =
-      max(max_dual_infeasibility_for_shift,
-          analysis_.max_correct_dual_cost_shift_dual_infeasibility);
-  if (num_shift)
-    highsLogDev(
-        options_->log_options, HighsLogType::kDetailed,
-        "Performed num / max / sum = %" HIGHSINT_FORMAT
-        " / %g / %g shift(s) for num / max / sum dual infeasibility of "
-        "%" HIGHSINT_FORMAT " / %g / %g; objective change = %g\n",
-        num_shift, max_shift, sum_shift, num_dual_infeasibilities_for_shift,
-        max_dual_infeasibility_for_shift, sum_dual_infeasibilities_for_shift,
-        shift_dual_objective_value_change);
-  *free_infeasibility_count = workCount;
-}
-
-void HEkk::flipBound(const HighsInt iCol) {
-  int8_t* nonbasicMove = &basis_.nonbasicMove_[0];
-  const int8_t move = nonbasicMove[iCol] = -nonbasicMove[iCol];
-  info_.workValue_[iCol] =
-      move == 1 ? info_.workLower_[iCol] : info_.workUpper_[iCol];
 }
 
 bool HEkk::reinvertOnNumericalTrouble(
@@ -3106,6 +2912,12 @@ bool HEkk::reinvertOnNumericalTrouble(
 void HEkk::transformForUpdate(HVector* column, HVector* row_ep,
                               const HighsInt variable_in, HighsInt* row_out) {
   simplex_nla_.transformForUpdate(column, row_ep, variable_in, *row_out);
+}
+
+void HEkk::flipBound(const HighsInt iCol) {
+  const int8_t move = basis_.nonbasicMove_[iCol] = -basis_.nonbasicMove_[iCol];
+  info_.workValue_[iCol] =
+      move == 1 ? info_.workLower_[iCol] : info_.workUpper_[iCol];
 }
 
 void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
@@ -3185,13 +2997,11 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
-                              const HighsInt variable_in,
-                              const HighsInt row_out,
-                              const HighsInt rebuild_reason) {
-  HighsInt bad_basis_change_num = -1;
-  if (rebuild_reason) return bad_basis_change_num;
-  if (variable_in == -1 || row_out == -1) return bad_basis_change_num;
+bool HEkk::isBadBasisChange(const SimplexAlgorithm algorithm,
+                            const HighsInt variable_in, const HighsInt row_out,
+                            const HighsInt rebuild_reason) {
+  if (rebuild_reason) return false;
+  if (variable_in == -1 || row_out == -1) return false;
   uint64_t currhash = basis_.hash;
   HighsInt variable_out = basis_.basicIndex_[row_out];
 
@@ -3223,23 +3033,22 @@ HighsInt HEkk::badBasisChange(const SimplexAlgorithm algorithm,
                 " basis change (%d out; %d in) is bad\n", (int)variable_out,
                 (int)variable_in);
     addBadBasisChange(row_out, variable_out, variable_in,
-                      BadBasisChangeReason::kCycling);
-    bad_basis_change_num = bad_basis_change_.size() - 1;
+                      BadBasisChangeReason::kCycling, true);
+    return true;
   } else {
     // Look to see whether this basis change is in the list of bad
     // ones
     for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
       if (bad_basis_change_[iX].variable_out == variable_out &&
-          bad_basis_change_[iX].variable_in == variable_in) {
-        bad_basis_change_num = iX;
-        break;
+          bad_basis_change_[iX].variable_in == variable_in &&
+          bad_basis_change_[iX].row_out == row_out) {
+        bad_basis_change_[iX].taboo = true;
+        return true;
       }
     }
   }
-  if (bad_basis_change_num >= 0) {
-    bad_basis_change_[bad_basis_change_num].taboo = true;
-  }
-  return bad_basis_change_num;
+
+  return false;
 }
 
 void HEkk::updateMatrix(const HighsInt variable_in,
@@ -3248,6 +3057,24 @@ void HEkk::updateMatrix(const HighsInt variable_in,
   ar_matrix_.update(variable_in, variable_out, lp_.a_matrix_);
   //  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(UpdateMatrixClock);
+}
+
+void HEkk::computeInfeasibilitiesForReporting(const SimplexAlgorithm algorithm,
+                                              const HighsInt solve_phase) {
+  if (algorithm == SimplexAlgorithm::kPrimal) {
+    // Report the primal and dual infeasiblities
+    computeSimplexInfeasible();
+  } else {
+    // Report the primal infeasiblities
+    computeSimplexPrimalInfeasible();
+    if (solve_phase == kSolvePhase1) {
+      // In phase 1, report the simplex LP dual infeasiblities
+      computeSimplexLpDualInfeasible();
+    } else {
+      // In phase 2, report the simplex dual infeasiblities
+      computeSimplexDualInfeasible();
+    }
+  }
 }
 
 void HEkk::computeSimplexInfeasible() {
@@ -3897,21 +3724,64 @@ double HEkk::factorSolveError() {
   return solution_error;
 }
 
-void HEkk::addBadBasisChange(const HighsInt row_out,
-                             const HighsInt variable_out,
-                             const HighsInt variable_in,
-                             const BadBasisChangeReason reason,
-                             const bool taboo) {
+void HEkk::clearBadBasisChange(const BadBasisChangeReason reason) {
+  if (reason == BadBasisChangeReason::kAll) {
+    bad_basis_change_.clear();
+  } else {
+    const HighsInt num_bad_basis_change = bad_basis_change_.size();
+    HighsInt new_num_bad_basis_change = 0;
+    for (HighsInt Ix = 0; Ix < num_bad_basis_change; Ix++) {
+      HighsSimplexBadBasisChangeRecord& record = bad_basis_change_[Ix];
+      if (record.reason == reason) continue;
+      bad_basis_change_[new_num_bad_basis_change++] = record;
+    }
+    // Windows doesn't like to resize to zero?
+    if (new_num_bad_basis_change > 0) {
+      bad_basis_change_.resize(new_num_bad_basis_change);
+    } else {
+      bad_basis_change_.clear();
+    }
+  }
+}
+
+HighsInt HEkk::addBadBasisChange(const HighsInt row_out,
+                                 const HighsInt variable_out,
+                                 const HighsInt variable_in,
+                                 const BadBasisChangeReason reason,
+                                 const bool taboo) {
   assert(0 <= row_out && row_out <= lp_.num_row_);
   assert(0 <= variable_out && variable_out <= lp_.num_col_ + lp_.num_row_);
-  assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
-  HighsSimplexBadBasisChangeRecord record;
-  record.taboo = taboo;
-  record.row_out = row_out;
-  record.variable_out = variable_out;
-  record.variable_in = variable_in;
-  record.reason = reason;
-  bad_basis_change_.push_back(record);
+  if (variable_in >= 0) {
+    assert(0 <= variable_in && variable_in <= lp_.num_col_ + lp_.num_row_);
+  } else {
+    assert(variable_in == -1);
+  }
+  // Check that this is not already on the list
+  const HighsInt num_bad_basis_change = bad_basis_change_.size();
+  HighsInt bad_basis_change_num = -1;
+  for (HighsInt Ix = 0; Ix < num_bad_basis_change; Ix++) {
+    HighsSimplexBadBasisChangeRecord& record = bad_basis_change_[Ix];
+    if (record.row_out == row_out && record.variable_out == variable_out &&
+        record.variable_in == variable_in && record.reason == reason) {
+      bad_basis_change_num = Ix;
+      break;
+    }
+  }
+  if (bad_basis_change_num < 0) {
+    // Not on the list so create record
+    HighsSimplexBadBasisChangeRecord record;
+    record.taboo = taboo;
+    record.row_out = row_out;
+    record.variable_out = variable_out;
+    record.variable_in = variable_in;
+    record.reason = reason;
+    bad_basis_change_.push_back(record);
+    bad_basis_change_num = bad_basis_change_.size() - 1;
+  } else {
+    // On the list so just update whether it is taboo
+    bad_basis_change_[bad_basis_change_num].taboo = taboo;
+  }
+  return bad_basis_change_num;
 }
 
 void HEkk::clearBadBasisChangeTabooFlag() {
@@ -3926,7 +3796,8 @@ bool HEkk::tabooBadBasisChange() {
   return false;
 }
 
-void HEkk::applyTabooRowOut(vector<double>& values, double overwrite_with) {
+void HEkk::applyTabooRowOut(vector<double>& values,
+                            const double overwrite_with) {
   assert(values.size() >= lp_.num_row_);
   for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
     if (bad_basis_change_[iX].taboo) {
@@ -3939,12 +3810,17 @@ void HEkk::applyTabooRowOut(vector<double>& values, double overwrite_with) {
 
 void HEkk::unapplyTabooRowOut(vector<double>& values) {
   assert(values.size() >= lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+  // Unapply taboo rows in opposite order in case the row appears
+  // twice in the list. This way the first saved value for the row is
+  // what remains, not overwrite_with
+  for (HighsInt iX = (HighsInt)bad_basis_change_.size() - 1; iX >= 0; iX--) {
     if (bad_basis_change_[iX].taboo)
       values[bad_basis_change_[iX].row_out] = bad_basis_change_[iX].save_value;
+  }
 }
 
-void HEkk::applyTabooVariableIn(vector<double>& values, double overwrite_with) {
+void HEkk::applyTabooVariableIn(vector<double>& values,
+                                const double overwrite_with) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
   for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++) {
     if (bad_basis_change_[iX].taboo) {
@@ -3957,10 +3833,14 @@ void HEkk::applyTabooVariableIn(vector<double>& values, double overwrite_with) {
 
 void HEkk::unapplyTabooVariableIn(vector<double>& values) {
   assert(values.size() >= lp_.num_col_ + lp_.num_row_);
-  for (HighsInt iX = 0; iX < (HighsInt)bad_basis_change_.size(); iX++)
+  // Unapply taboo variables in opposite order in case the row appears
+  // twice in the list. This way the first saved value for the
+  // variable is what remains, not overwrite_with
+  for (HighsInt iX = (HighsInt)bad_basis_change_.size() - 1; iX >= 0; iX--) {
     if (bad_basis_change_[iX].taboo)
       values[bad_basis_change_[iX].variable_in] =
           bad_basis_change_[iX].save_value;
+  }
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {
@@ -3982,17 +3862,18 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   HighsLp& lp = this->lp_;
 
   HighsInt debug_product_report = kDebugReportOff;
-  const bool debug_proof_report_on = false;
+  const bool debug_proof_report_on = true;
   bool debug_rows_report = false;
   bool debug_proof_report = false;
   if (debug_iteration_report_) {
-    if (debug_proof_report_on) debug_product_report = kDebugReportAll;
+    if (debug_proof_report_on)
+      debug_product_report = kDebugReportOff;  // kDebugReportAll; //
     debug_rows_report = debug_proof_report_on;
     debug_proof_report = debug_proof_report_on;
   }
 
   const bool use_row_wise_matrix = status_.has_ar_matrix;
-  const bool use_iterative_refinement = false;
+  const bool use_iterative_refinement = false;  // debug_iteration_report_;//
   if (use_iterative_refinement) {
     simplex_nla_.reportArray("Row e_p.0", lp.num_col_, &row_ep, true);
     unitBtranIterativeRefinement(row_out, row_ep);
@@ -4005,6 +3886,14 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   // refinement_tolerance);
   // Determine the maximum absolute value in row_ep
   HighsCDouble proof_lower = 0.0;
+  const HighsInt max_num_basic_proof_report = 25;
+  const HighsInt max_num_zeroed_report = 25;
+  HighsInt num_zeroed_for_small_report = 0;
+  double max_zeroed_for_small_value = 0;
+  HighsInt num_zeroed_for_lb_report = 0;
+  double max_zeroed_for_lb_value = 0;
+  HighsInt num_zeroed_for_ub_report = 0;
+  double max_zeroed_for_ub_value = 0;
   for (HighsInt iX = 0; iX < row_ep.count; iX++) {
     HighsInt iRow = row_ep.index[iX];
     // Give row_ep the sign of the leaving row - as is done in
@@ -4013,11 +3902,18 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     assert(row_ep_value);
     if (std::abs(row_ep_value * getMaxAbsRowValue(iRow)) <=
         options_->small_matrix_value) {
-      if (debug_proof_report)
-        printf(
-            "Zeroed row_ep.array[%6d] = %11.4g due to being small in "
-            "contribution\n",
-            (int)iRow, row_ep_value);
+      if (debug_proof_report) {
+        const double abs_row_ep_value = std::abs(row_ep_value);
+        if (num_zeroed_for_small_report < max_num_zeroed_report &&
+            max_zeroed_for_small_value < abs_row_ep_value) {
+          printf(
+              "Zeroed row_ep.array[%6d] = %11.4g due to being small in "
+              "contribution\n",
+              (int)iRow, row_ep_value);
+          num_zeroed_for_small_report++;
+          max_zeroed_for_small_value = abs_row_ep_value;
+        }
+      }
       row_ep.array[iRow] = 0.0;
       continue;
     }
@@ -4030,11 +3926,18 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       rowBound = lp.row_lower_[iRow];
       if (highs_isInfinity(-rowBound)) {
         // row lower bound is infinite
-        if (debug_proof_report)
-          printf(
-              "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
-              "bound\n",
-              (int)iRow, row_ep_value);
+        if (debug_proof_report) {
+          const double abs_row_ep_value = std::abs(row_ep_value);
+          if (num_zeroed_for_lb_report < max_num_zeroed_report &&
+              max_zeroed_for_lb_value < abs_row_ep_value) {
+            printf(
+                "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
+                "bound\n",
+                (int)iRow, row_ep_value);
+            num_zeroed_for_lb_report++;
+            max_zeroed_for_lb_value = abs_row_ep_value;
+          }
+        }
         row_ep.array[iRow] = 0.0;
         continue;
       }
@@ -4043,16 +3946,22 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
       rowBound = lp.row_upper_[iRow];
       if (highs_isInfinity(rowBound)) {
         // row upper bound is infinite
-        if (debug_proof_report)
-          printf(
-              "Zeroed row_ep.array[%6d] = %11.4g due to infinite lower "
-              "bound\n",
-              (int)iRow, row_ep_value);
+        if (debug_proof_report) {
+          const double abs_row_ep_value = std::abs(row_ep_value);
+          if (num_zeroed_for_ub_report < max_num_zeroed_report &&
+              max_zeroed_for_ub_value < abs_row_ep_value) {
+            printf(
+                "Zeroed row_ep.array[%6d] = %11.4g due to infinite upper "
+                "bound\n",
+                (int)iRow, row_ep_value);
+            num_zeroed_for_ub_report++;
+            max_zeroed_for_ub_value = abs_row_ep_value;
+          }
+        }
         row_ep.array[iRow] = 0.0;
         continue;
       }
     }
-
     // add up lower bound of proof constraint
     proof_lower += row_ep.array[iRow] * rowBound;
   }
@@ -4075,18 +3984,23 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
     simplex_nla_.reportVector("Proof", proof_num_nz, proof_value, proof_index,
                               true);
   }
-  if (debug_proof_report)
+  if (debug_proof_report) {
     printf(
         "HEkk::proofOfPrimalInfeasibility row_ep.count = %d; proof_num_nz = "
         "%d; row_ep_scale = %g\n",
         (int)row_ep.count, (int)proof_num_nz, row_ep_scale);
-  if (debug_proof_report) {
+    HighsInt num_basic_proof_report = 0;
+    double max_basic_proof_value = 0;
     for (HighsInt i = 0; i < proof_num_nz; ++i) {
       const HighsInt iCol = proof_index[i];
       const double value = proof_value[i];
-      if (!basis_.nonbasicFlag_[iCol]) {
+      const double abs_value = std::abs(value);
+      if (!basis_.nonbasicFlag_[iCol] && max_basic_proof_value < abs_value &&
+          num_basic_proof_report < max_num_basic_proof_report) {
         printf("Proof entry %6d (Column %6d) is basic with value %11.4g\n",
                (int)i, (int)iCol, value);
+        max_basic_proof_value = abs_value;
+        num_basic_proof_report++;
       }
     }
   }
@@ -4116,6 +4030,16 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
   const double gap = double(proof_lower - implied_upper);
   const bool gap_ok = gap > options_->primal_feasibility_tolerance;
   const bool proof_of_primal_infeasibility = !infinite_implied_upper && gap_ok;
+
+  const double local_report = false;
+  if (!proof_of_primal_infeasibility && local_report) {
+    printf(
+        "HEkk::proofOfPrimalInfeasibility: row %6d; gap = %11.4g (%s); "
+        "sumInf = %11.4g (%s) so proof is %s\n",
+        (int)row_out, gap, highsBoolToString(gap_ok).c_str(), (double)sumInf,
+        highsBoolToString(infinite_implied_upper).c_str(),
+        highsBoolToString(proof_of_primal_infeasibility).c_str());
+  }
   if (debug_proof_report) {
     printf("HEkk::proofOfPrimalInfeasibility has %sfinite implied upper bound",
            infinite_implied_upper ? "in" : "");

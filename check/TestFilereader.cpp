@@ -79,6 +79,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     REQUIRE(read_status == HighsStatus::kError);
   }
 }
+
 TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";

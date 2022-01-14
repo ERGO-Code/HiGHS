@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HUtils.h
@@ -131,8 +131,8 @@ double highsRelativeDifference(const double v0, const double v1);
  * different values
  */
 void analyseVectorValues(
-    const HighsLogOptions& log_options,
-    const char* message,             //!< Message to be printed
+    const HighsLogOptions* log_options,
+    const std::string message,       //!< Message to be printed
     HighsInt vecDim,                 //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of

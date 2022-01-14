@@ -346,3 +346,47 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     return_status = highs.clearModel();
   }
 }
+
+TEST_CASE("test-semi-definite", "[qpsolver]") {
+  HighsStatus return_status;
+  HighsModelStatus model_status;
+  double required_objective_function_value;
+
+  HighsModel local_model;
+  HighsLp& lp = local_model.lp_;
+  HighsHessian& hessian = local_model.hessian_;
+  const double inf = kHighsInf;
+  // Construct a QP with positive semi-definite Hessian
+  const double col_lower = 0;
+  const double col_upper = inf;  // 10.0;
+
+  lp.model_name_ = "semi-definite";
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1.0, 1.0, 2.0};
+  lp.col_lower_ = {col_lower, col_lower, col_lower};
+  lp.col_upper_ = {col_upper, col_upper, col_upper};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {2};
+  lp.row_upper_ = {inf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0, 1.0};
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 2, 2, 3};
+  hessian.index_ = {0, 2, 2};
+  hessian.value_ = {2.0, -1.0, 1.0};
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  return_status = highs.passModel(local_model);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  //  highs.writeModel("semi-definite.mps");
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+}

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,8 +19,8 @@
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
 
-bool loadOptions(int argc, char** argv, HighsOptions& options,
-                 std::string& model_file) {
+bool loadOptions(const HighsLogOptions& report_log_options, int argc,
+                 char** argv, HighsOptions& options, std::string& model_file) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
@@ -88,28 +88,31 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
 
     if (result.count(kPresolveString)) {
       std::string value = result[kPresolveString].as<std::string>();
-      if (setLocalOptionValue(options.log_options, kPresolveString,
-                              options.records, value) != OptionStatus::kOk)
+      if (setLocalOptionValue(report_log_options, kPresolveString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
         return false;
     }
 
     if (result.count(kSolverString)) {
       std::string value = result[kSolverString].as<std::string>();
-      if (setLocalOptionValue(options.log_options, kSolverString,
-                              options.records, value) != OptionStatus::kOk)
+      if (setLocalOptionValue(report_log_options, kSolverString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
         return false;
     }
 
     if (result.count(kParallelString)) {
       std::string value = result[kParallelString].as<std::string>();
-      if (setLocalOptionValue(options.log_options, kParallelString,
-                              options.records, value) != OptionStatus::kOk)
+      if (setLocalOptionValue(report_log_options, kParallelString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
         return false;
     }
 
     if (result.count(kTimeLimitString)) {
       double value = result[kTimeLimitString].as<double>();
-      if (setLocalOptionValue(options.log_options, kTimeLimitString,
+      if (setLocalOptionValue(report_log_options, kTimeLimitString,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
@@ -120,7 +123,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
         std::cout << "Multiple options files not implemented.\n";
         return false;
       }
-      if (!loadOptionsFromFile(options, v[0])) return false;
+      if (!loadOptionsFromFile(report_log_options, options, v[0])) return false;
     }
 
     if (result.count(kSolutionFileString)) {
@@ -129,29 +132,31 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
         std::cout << "Multiple solution files not implemented.\n";
         return false;
       }
-      if (setLocalOptionValue(options.log_options, kSolutionFileString,
-                              options.records, v[0]) != OptionStatus::kOk ||
-          setLocalOptionValue(options.log_options, "write_solution_to_file",
+      if (setLocalOptionValue(report_log_options, kSolutionFileString,
+                              options.log_options, options.records,
+                              v[0]) != OptionStatus::kOk ||
+          setLocalOptionValue(report_log_options, "write_solution_to_file",
                               options.records, true) != OptionStatus::kOk)
         return false;
     }
 
     if (result.count(kRandomSeedString)) {
       HighsInt value = result[kRandomSeedString].as<HighsInt>();
-      if (setLocalOptionValue(options.log_options, kRandomSeedString,
+      if (setLocalOptionValue(report_log_options, kRandomSeedString,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
 
     if (result.count(kRangingString)) {
       std::string value = result[kRangingString].as<std::string>();
-      if (setLocalOptionValue(options.log_options, kRangingString,
-                              options.records, value) != OptionStatus::kOk)
+      if (setLocalOptionValue(report_log_options, kRangingString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
         return false;
     }
 
   } catch (const cxxopts::OptionException& e) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogUser(report_log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());
     return false;
   }

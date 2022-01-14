@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsCliqueTable.h"
@@ -1162,7 +1162,6 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
       minact += vals[i] * globaldom.col_upper_[inds[i]];
     }
   }
-  if (nbin == 0) return;
 
   for (HighsInt i = 0; i != len; ++i) {
     if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous) continue;
@@ -1173,13 +1172,17 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
                             globaldom.feastol());
       globaldom.changeBound(HighsBoundType::kUpper, inds[i], boundVal,
                             HighsDomain::Reason::unspecified());
+      if (globaldom.infeasible()) return;
     } else {
       boundVal = std::ceil(boundVal + globaldom.col_upper_[inds[i]] -
                            globaldom.feastol());
       globaldom.changeBound(HighsBoundType::kLower, inds[i], boundVal,
                             HighsDomain::Reason::unspecified());
+      if (globaldom.infeasible()) return;
     }
   }
+
+  if (nbin <= 1) return;
 
   std::vector<HighsInt> perm;
   perm.resize(len);

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/Highs.cpp
@@ -80,16 +80,18 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const std::string value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
+  HighsLogOptions report_log_options = options_.log_options;
+  if (setLocalOptionValue(report_log_options, option, options_.log_options,
+                          options_.records, value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const char* value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
+  HighsLogOptions report_log_options = options_.log_options;
+  if (setLocalOptionValue(report_log_options, option, options_.log_options,
+                          options_.records, value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -100,7 +102,9 @@ HighsStatus Highs::readOptions(const std::string filename) {
                  "Empty file name so not reading options\n");
     return HighsStatus::kWarning;
   }
-  if (!loadOptionsFromFile(options_, filename)) return HighsStatus::kError;
+  HighsLogOptions report_log_options = options_.log_options;
+  if (!loadOptionsFromFile(report_log_options, options_, filename))
+    return HighsStatus::kError;
   return HighsStatus::kOk;
 }
 
@@ -224,6 +228,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
+  assert(lp.a_matrix_.formatOk());
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
     // rows. Clearly the matrix is empty, so may have no orientation
@@ -244,6 +249,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   assert(!lp.is_scaled_);
   assert(!lp.is_moved_);
   lp.resetScale();
+  // Check that the LP array dimensions are valid
+  if (!lpDimensionsOk("passModel", lp, options_.log_options))
+    return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
@@ -263,8 +271,16 @@ HighsStatus Highs::passModel(HighsModel model) {
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  clearZeroHessian();
-
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.numNz() == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
@@ -280,7 +296,7 @@ HighsStatus Highs::passModel(HighsLp lp) {
 }
 
 HighsStatus Highs::passModel(
-    const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
+    const HighsInt num_col, const HighsInt num_row, const HighsInt a_num_nz,
     const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
     const HighsInt sense, const double offset, const double* costs,
     const double* col_lower, const double* col_upper, const double* row_lower,
@@ -290,11 +306,12 @@ HighsStatus Highs::passModel(
   HighsModel model;
   HighsLp& lp = model.lp_;
   // Check that the formats of the constraint matrix and Hessian are valid
-  if (!lp.a_matrix_.formatOk()) return HighsStatus::kError;
+  if (!aFormatOk(a_num_nz, a_format)) return HighsStatus::kError;
   if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
 
-  bool a_rowwise = false;
-  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
+  const bool a_rowwise =
+      a_num_nz > 0 ? a_format == (HighsInt)MatrixFormat::kRowwise : false;
+  //  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
 
   lp.num_col_ = num_col;
   lp.num_row_ = num_row;
@@ -312,7 +329,7 @@ HighsStatus Highs::passModel(
     lp.row_lower_.assign(row_lower, row_lower + num_row);
     lp.row_upper_.assign(row_upper, row_upper + num_row);
   }
-  if (num_nz > 0) {
+  if (a_num_nz > 0) {
     assert(num_col > 0);
     assert(num_row > 0);
     assert(astart != NULL);
@@ -323,16 +340,16 @@ HighsStatus Highs::passModel(
     } else {
       lp.a_matrix_.start_.assign(astart, astart + num_col);
     }
-    lp.a_matrix_.index_.assign(aindex, aindex + num_nz);
-    lp.a_matrix_.value_.assign(avalue, avalue + num_nz);
+    lp.a_matrix_.index_.assign(aindex, aindex + a_num_nz);
+    lp.a_matrix_.value_.assign(avalue, avalue + a_num_nz);
   }
   if (a_rowwise) {
     lp.a_matrix_.start_.resize(num_row + 1);
-    lp.a_matrix_.start_[num_row] = num_nz;
+    lp.a_matrix_.start_[num_row] = a_num_nz;
     lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   } else {
     lp.a_matrix_.start_.resize(num_col + 1);
-    lp.a_matrix_.start_[num_col] = num_nz;
+    lp.a_matrix_.start_[num_col] = a_num_nz;
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
@@ -345,8 +362,18 @@ HighsStatus Highs::passModel(
     lp.integrality_.resize(num_col);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       HighsInt integrality_status = integrality[iCol];
-      assert(integrality_status == (HighsInt)HighsVarType::kContinuous ||
-             integrality_status == (HighsInt)HighsVarType::kInteger);
+      const bool legal_integrality_status =
+          integrality_status == (HighsInt)HighsVarType::kContinuous ||
+          integrality_status == (HighsInt)HighsVarType::kInteger ||
+          integrality_status == (HighsInt)HighsVarType::kSemiContinuous ||
+          integrality_status == (HighsInt)HighsVarType::kSemiInteger;
+      if (!legal_integrality_status) {
+        highsLogDev(
+            options_.log_options, HighsLogType::kError,
+            "Model has illegal integer value of %d for integrality[%d]\n",
+            (int)integrality_status, iCol);
+        return HighsStatus::kError;
+      }
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }
@@ -389,7 +416,16 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  clearZeroHessian();
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.numNz() == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -556,7 +592,7 @@ HighsStatus Highs::run() {
     }
   }
   if (ekk_instance_.status_.has_nla)
-    assert(ekk_instance_.lpFactorRowCompatible());
+    assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
   highs::parallel::initialize_scheduler(options_.threads);
 
@@ -819,6 +855,8 @@ HighsStatus Highs::run() {
         basis_.clear();
         basis_.debug_origin_name = "Presolve to empty";
         basis_.valid = true;
+        basis_.alien = false;
+        basis_.was_alien = false;
         solution_.value_valid = true;
         solution_.dual_valid = true;
         have_optimal_solution = true;
@@ -844,8 +882,7 @@ HighsStatus Highs::run() {
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
         // can't reurn this. Use primal simplex solver on the original
         // LP
-        std::string solver = options_.solver;
-        HighsInt simplex_strategy = options_.simplex_strategy;
+        HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
@@ -863,6 +900,8 @@ HighsStatus Highs::run() {
           options_.output_flag = output_flag;
         }
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        // Recover the options
+        options_ = save_options;
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
         // ToDo Eliminate setBasisValidity once ctest passes. Asserts
@@ -935,7 +974,7 @@ HighsStatus Highs::run() {
           solution_.value_valid = true;
           if (ipx_no_crossover) {
             // IPX was used without crossover, so only have a primal solution
-            solution_.dual_valid = false;
+            solution_.dual_valid = true;
             basis_.clear();
             basis_.valid = false;
           } else {
@@ -1392,13 +1431,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
-    highsLogDev(
-        options_.log_options, HighsLogType::kInfo,
-        "Highs::setBasis Alien basis origin_name = (%s); origin =  (%s)\n",
-        basis.debug_origin_name.c_str(), origin.c_str());
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
     HighsBasis modifiable_basis = basis;
+    modifiable_basis.was_alien = true;
     HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                       info_, ekk_instance_, options_, timer_);
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
@@ -1418,7 +1454,16 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   basis_.valid = true;
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
-  // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());
+  assert(!basis_.alien);
+  if (basis_.was_alien) {
+    highsLogDev(
+        options_.log_options, HighsLogType::kInfo,
+        "Highs::setBasis Was alien = %-5s; Id = %9d; UpdateCount = %4d; Origin "
+        "(%s)\n",
+        highsBoolToString(basis_.was_alien).c_str(), (int)basis_.debug_id,
+        (int)basis_.debug_update_count, basis_.debug_origin_name.c_str());
+  }
+
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -2154,7 +2199,8 @@ HighsPresolveStatus Highs::runPresolve() {
                                       (HighsInt)reduced_lp.a_matrix_.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(reduced_lp.dimensionsOk("RunPresolve: reduced_lp"));
+      assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
+                            options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -2293,6 +2339,7 @@ HighsStatus Highs::callSolveQp() {
   instance.A.mat.index = lp.a_matrix_.index_;
   instance.A.mat.value = lp.a_matrix_.value_;
   instance.c.value = lp.col_cost_;
+  instance.offset = lp.offset_;
   instance.con_lo = lp.row_lower_;
   instance.con_up = lp.row_upper_;
   instance.var_lo = lp.col_lower_;
@@ -2314,7 +2361,7 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  Runtime runtime(instance);
+  Runtime runtime(instance, timer_);
 
   runtime.settings.reportingfequency = 1000;
   runtime.endofiterationevent.subscribe([this](Runtime& rt) {
@@ -2330,21 +2377,35 @@ HighsStatus Highs::callSolveQp() {
                  rt.statistics.density_nullspace[rep],
                  rt.statistics.density_factor[rep]);
   });
+
+  runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
   runtime.settings.ratiotest =
       new RatiotestTwopass(instance, 0.000000001, 0.000001);
   Solver solver(runtime);
   solver.solve();
-  // Set the return_status, model status and, for completeness, scaled
-  // model status
+
+  //
+  // Cheating now, but need to set this honestly!
+  HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
-  model_status_ = runtime.status == ProblemStatus::OPTIMAL
-                      ? HighsModelStatus::kOptimal
-                      : runtime.status == ProblemStatus::UNBOUNDED
-                            ? HighsModelStatus::kUnbounded
-                            : HighsModelStatus::kInfeasible;
-  scaled_model_status_ = model_status_;
-  // Extract the solution
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "QpSolver");
+  if (return_status == HighsStatus::kError) return return_status;
+  // Cheating now, but need to set this honestly!
+  scaled_model_status_ =
+      runtime.status == ProblemStatus::OPTIMAL
+          ? HighsModelStatus::kOptimal
+          : runtime.status == ProblemStatus::UNBOUNDED
+                ? HighsModelStatus::kUnbounded
+                : runtime.status == ProblemStatus::INFEASIBLE
+                      ? HighsModelStatus::kInfeasible
+                      : runtime.status == ProblemStatus::ITERATIONLIMIT
+                            ? HighsModelStatus::kIterationLimit
+                            : runtime.status == ProblemStatus::TIMELIMIT
+                                  ? HighsModelStatus::kTimeLimit
+                                  : HighsModelStatus::kNotset;
+  model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -2436,15 +2497,27 @@ HighsStatus Highs::callSolveMip() {
   if (use_mip_feasibility_tolerance) {
     // Overwrite max infeasibility to include integrality if there is a solution
     if (solver.solution_objective_ != kHighsInf) {
-      info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-      info_.max_primal_infeasibility =
-          std::max({solver.row_violation_, solver.bound_violation_,
-                    solver.integrality_violation_});
-      if (info_.max_primal_infeasibility > options_.mip_feasibility_tolerance) {
+      const double mip_max_bound_violation =
+          std::max(solver.row_violation_, solver.bound_violation_);
+      const double mip_max_infeasibility =
+          std::max(mip_max_bound_violation, solver.integrality_violation_);
+      const double delta_max_bound_violation =
+          std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
+      // Possibly report a mis-match between the max bound violation
+      // returned by the MIP solver, and the value obtained from the
+      // solution
+      if (delta_max_bound_violation > 1e-12)
+        highsLogDev(options_.log_options, HighsLogType::kWarning,
+                    "Inconsistent max bound violation: MIP solver (%10.4g); LP "
+                    "(%10.4g); Difference of %10.4g\n",
+                    mip_max_bound_violation, info_.max_primal_infeasibility,
+                    delta_max_bound_violation);
+      info_.max_integrality_violation = solver.integrality_violation_;
+      if (info_.max_integrality_violation >
+          options_.mip_feasibility_tolerance) {
         info_.primal_solution_status = kSolutionStatusInfeasible;
-        // model_status_ = HighsModelStatus::kNotset;
+        assert(model_status_ == HighsModelStatus::kInfeasible);
       }
-      info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
     }
     // Recover the primal feasibility tolerance
     options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
@@ -2641,7 +2714,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
-          (options_.solver == kIpmString && options_.run_crossover)) {
+          (options_.solver == kIpmString && options_.run_crossover) ||
+          model_.isMip()) {
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::kOk);
       } else {
@@ -2778,13 +2852,14 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   // Stop the HiGHS run clock if it is running
   if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
-  const bool dimensions_ok = model_.lp_.dimensionsOk("returnFromHighs");
+  const bool dimensions_ok =
+      lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
-    if (!ekk_instance_.lpFactorRowCompatible()) {
+    if (!ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_)) {
       highsLogDev(options_.log_options, HighsLogType::kWarning,
                   "Highs::returnFromHighs(): LP and HFactor have inconsistent "
                   "numbers of rows\n");
@@ -2845,5 +2920,10 @@ HighsStatus Highs::crossover(HighsSolution& solution) {
   return HighsStatus::kError;
 #endif
 
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::openLogFile(const std::string log_file) {
+  highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }

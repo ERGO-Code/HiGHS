@@ -36,6 +36,7 @@ set(TEST_SOURCES
     TestHighsHessian.cpp
     TestHighsModel.cpp
     TestHSet.cpp
+    TestLogging.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp
@@ -170,8 +171,8 @@ set(successInstances
     "80bau3b\;3686\; 9.8722419241\;"
     "adlittle\;74\; 2.2549496316\;"
     "afiro\;22\;-4.6475314286\;"
-    "etamacro\;540\;-7.5571523330\;"
-    "greenbea\;4907\;-7.2555248130\;"
+    "etamacro\;532\;-7.5571523330\;"
+    "greenbea\;5273\;-7.2555248130\;"
     "shell\;623\; 1.2088253460\;"
     "stair\;529\;-2.5126695119\;"
     "standata\;72\; 1.2576995000\;"
@@ -186,8 +187,8 @@ set(infeasibleInstances
     "forest6\;       infeasible"
     "galenet\;       infeasible"
     "gams10am\;      infeasible"
-    "klein1\;        infeasible"
-#    "refinery\;      infeasible"
+#    "klein1\;        infeasible"
+    "refinery\;      infeasible"
     "woodinfe\;      infeasible"
     )
 
