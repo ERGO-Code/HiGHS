@@ -119,7 +119,7 @@ restart:
     while (true) {
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
         if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
-          search.currentNodeToQueue(mipdata_->nodequeue);
+          break;
 
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
@@ -145,8 +145,7 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-        if (search.dive() == HighsSearch::NodeResult::kSubOptimal)
-          search.currentNodeToQueue(mipdata_->nodequeue);
+        if (search.dive() == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;
 
@@ -309,9 +308,14 @@ restart:
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
         lastLbLeave = numQueueLeaves;
       } else {
-        search.installNode(mipdata_->nodequeue.popBestNode());
-        if (search.getCurrentLowerBound() == mipdata_->lower_bound)
+        HighsInt bestBoundNodeStackSize =
+            mipdata_->nodequeue.getBestBoundDomchgStackSize();
+        double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
+        HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
+        if (nextNode.lower_bound == bestBoundNodeLb &&
+            nextNode.domchgstack.size() == bestBoundNodeStackSize)
           lastLbLeave = numQueueLeaves;
+        search.installNode(std::move(nextNode));
       }
 
       ++numQueueLeaves;

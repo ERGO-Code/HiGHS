@@ -157,7 +157,9 @@ class HighsNodeQueue {
 
   double pruneNode(HighsInt nodeId);
 
-  double getBestLowerBound();
+  double getBestLowerBound() const;
+
+  HighsInt getBestBoundDomchgStackSize() const;
 
   void clear() {
     HighsNodeQueue nodequeue;

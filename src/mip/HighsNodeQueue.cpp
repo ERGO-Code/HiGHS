@@ -27,7 +27,7 @@
 namespace highs {
 template <>
 struct RbTreeTraits<HighsNodeQueue::NodeLowerRbTree> {
-  using KeyType = std::tuple<double, double, HighsInt>;
+  using KeyType = std::tuple<double, HighsInt, double, HighsInt>;
 };
 
 template <>
@@ -58,8 +58,9 @@ class HighsNodeQueue::NodeLowerRbTree : public CacheMinRbTree<NodeLowerRbTree> {
   const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
     return nodeQueue->nodes[node].lowerLinks;
   }
-  std::tuple<double, double, HighsInt> getKey(HighsInt node) const {
+  std::tuple<double, HighsInt, double, HighsInt> getKey(HighsInt node) const {
     return std::make_tuple(nodeQueue->nodes[node].lower_bound,
+                           HighsInt(nodeQueue->nodes[node].domchgstack.size()),
                            nodeQueue->nodes[node].estimate, node);
   }
 };
@@ -381,10 +382,20 @@ HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestBoundNode() {
   return std::move(nodes[bestBoundNode]);
 }
 
-double HighsNodeQueue::getBestLowerBound() {
+double HighsNodeQueue::getBestLowerBound() const {
   double lb = lowerMin == -1 ? kHighsInf : nodes[lowerMin].lower_bound;
 
   if (suboptimalMin == -1) return lb;
 
   return std::min(nodes[suboptimalMin].lower_bound, lb);
+}
+
+HighsInt HighsNodeQueue::getBestBoundDomchgStackSize() const {
+  HighsInt domchgStackSize = lowerMin == -1
+                                 ? kHighsIInf
+                                 : HighsInt(nodes[lowerMin].domchgstack.size());
+  if (suboptimalMin == -1) return domchgStackSize;
+
+  return std::min(HighsInt(nodes[suboptimalMin].domchgstack.size()),
+                  domchgStackSize);
 }

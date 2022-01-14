@@ -205,7 +205,8 @@ class HighsSearch {
 
   void addInfeasibleConflict();
 
-  HighsInt selectBranchingCandidate(int64_t maxSbIters);
+  HighsInt selectBranchingCandidate(int64_t maxSbIters, double& downNodeLb,
+                                    double& upNodeLb);
 
   void evalUnreliableBranchCands();
 
