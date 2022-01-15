@@ -904,7 +904,11 @@ void HighsMipSolverData::printDisplayLine(char first) {
     else
       gap = 100. * (ub - lb) / fabs(ub);
 
-    gap = std::min(gap, 9999.);
+    std::array<char, 16> gap_string;
+    if (gap >= 9999.)
+      std::strcpy(gap_string.data(), "Large");
+    else
+      std::snprintf(gap_string.data(), gap_string.size(), "%.2f%%", gap);
 
     std::array<char, 16> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -918,12 +922,12 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
         first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        explored, lb_string.data(), ub_string.data(), gap_string.data(),
+        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
+        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
   } else {
     std::array<char, 16> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
