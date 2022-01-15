@@ -24,6 +24,7 @@
 class HighsCutPool;
 class HighsDomain;
 class HighsMipSolver;
+class HighsLp;
 
 class HighsCliqueTable {
  public:
@@ -95,9 +96,10 @@ class HighsCliqueTable {
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<uint8_t> iscandidate;
   std::vector<uint8_t> colDeleted;
-  std::vector<uint16_t> cliquehits;
+  std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
   std::vector<HighsInt> stack;
+  std::vector<uint8_t> neighborhoodFlags;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
@@ -105,14 +107,19 @@ class HighsCliqueTable {
   HighsRandom randgen;
   HighsInt nfixings;
   HighsInt numEntries;
+  HighsInt maxEntries;
   bool inPresolve;
-  HighsInt splay(HighsInt cliqueid, HighsInt root);
+  HighsInt splay(int64_t& numQueries, HighsInt cliqueid, HighsInt root);
 
   void unlink(HighsInt node);
 
   void link(HighsInt node);
 
-  HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2);
+  HighsInt findCommonCliqueId(int64_t& numQueries, CliqueVar v1, CliqueVar v2);
+
+  HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
+    return findCommonCliqueId(numNeighborhoodQueries, v1, v2);
+  }
 
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
@@ -154,6 +161,8 @@ class HighsCliqueTable {
   void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,
                    bool equality = false, HighsInt origin = kHighsIInf);
 
+  void queryNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
+
  public:
   int64_t numNeighborhoodQueries;
 
@@ -161,17 +170,23 @@ class HighsCliqueTable {
     cliquesetroot.resize(2 * ncols, -1);
     sizeTwoCliquesetRoot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
+    neighborhoodFlags.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;
     numNeighborhoodQueries = 0;
     numEntries = 0;
+    maxEntries = kHighsIInf;
     inPresolve = false;
   }
 
   void setPresolveFlag(bool inPresolve) { this->inPresolve = inPresolve; }
 
   HighsInt getNumEntries() const { return numEntries; }
+
+  HighsInt partitionNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
+
+  HighsInt shrinkToNeighborhood(CliqueVar v, CliqueVar* q, HighsInt N);
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
@@ -209,6 +224,12 @@ class HighsCliqueTable {
     return cliqueextensions;
   }
 
+  void setMaxEntries(HighsInt numNz) {
+    this->maxEntries = 2000000 + 10 * numNz;
+  }
+
+  bool isFull() const { return numEntries >= maxEntries; }
+
   HighsInt getNumFixings() const { return nfixings; }
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
@@ -226,6 +247,11 @@ class HighsCliqueTable {
   bool haveCommonClique(CliqueVar v1, CliqueVar v2) {
     if (v1.col == v2.col) return false;
     return findCommonCliqueId(v1, v2) != -1;
+  }
+
+  bool haveCommonClique(int64_t& numQueries, CliqueVar v1, CliqueVar v2) {
+    if (v1.col == v2.col) return false;
+    return findCommonCliqueId(numQueries, v1, v2) != -1;
   }
 
   std::pair<const CliqueVar*, HighsInt> findCommonClique(CliqueVar v1,
@@ -265,7 +291,7 @@ class HighsCliqueTable {
                const std::vector<HighsInt>& cIndex,
                const std::vector<HighsInt>& rIndex);
 
-  void buildFrom(const HighsCliqueTable& init);
+  void buildFrom(const HighsLp* origModel, const HighsCliqueTable& init);
 
   HighsInt numCliques() const { return cliques.size() - freeslots.size(); }
 

@@ -203,7 +203,8 @@ void HighsMipSolverData::init() {
   postSolveStack.initializeIndexMaps(mipsolver.model_->num_row_,
                                      mipsolver.model_->num_col_);
   mipsolver.orig_model_ = mipsolver.model_;
-  if (mipsolver.clqtableinit) cliquetable.buildFrom(*mipsolver.clqtableinit);
+  if (mipsolver.clqtableinit)
+    cliquetable.buildFrom(mipsolver.orig_model_, *mipsolver.clqtableinit);
   if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;
@@ -232,6 +233,7 @@ void HighsMipSolverData::init() {
   sb_lp_iterations_before_run = 0;
   num_disp_lines = 0;
   numCliqueEntriesAfterPresolve = 0;
+  numCliqueEntriesAfterFirstPresolve = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
@@ -411,9 +413,10 @@ void HighsMipSolverData::runSetup() {
 
   numintegercols = integer_cols.size();
   detectSymmetries = detectSymmetries && numBin > 0;
+  numCliqueEntriesAfterPresolve = cliquetable.getNumEntries();
 
   if (numRestarts == 0) {
-    numCliqueEntriesAfterPresolve = cliquetable.getNumEntries();
+    numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  // clang-format off
                "\nSolving MIP model with:\n"
@@ -819,7 +822,8 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
   return printString;
 }
 
-static std::array<char, 16> convertToPrintString(double val) {
+static std::array<char, 16> convertToPrintString(double val,
+                                                 const char* trailingStr = "") {
   std::array<char, 16> printString;
   double l = std::abs(val) == kHighsInf
                  ? 0.0
@@ -829,23 +833,23 @@ static std::array<char, 16> convertToPrintString(double val) {
     case 1:
     case 2:
     case 3:
-      std::snprintf(printString.data(), 16, "%.10g", val);
+      std::snprintf(printString.data(), 16, "%.10g%s", val, trailingStr);
       break;
     case 4:
-      std::snprintf(printString.data(), 16, "%.11g", val);
+      std::snprintf(printString.data(), 16, "%.11g%s", val, trailingStr);
       break;
     case 5:
-      std::snprintf(printString.data(), 16, "%.12g", val);
+      std::snprintf(printString.data(), 16, "%.12g%s", val, trailingStr);
       break;
     case 6:
     case 7:
     case 8:
     case 9:
     case 10:
-      std::snprintf(printString.data(), 16, "%.13g", val);
+      std::snprintf(printString.data(), 16, "%.13g%s", val, trailingStr);
       break;
     default:
-      std::snprintf(printString.data(), 16, "%.9g", val);
+      std::snprintf(printString.data(), 16, "%.9g%s", val, trailingStr);
   }
 
   return printString;
@@ -892,9 +896,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
       convertToPrintString(total_lp_iterations);
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
+
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
-
     if (ub == 0.0)
       gap = lb == 0.0 ? 0.0 : kHighsInf;
     else
@@ -902,8 +906,14 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
     gap = std::min(gap, 9999.);
 
+    std::array<char, 16> ub_string;
+    if (mipsolver.options_mip_->objective_bound < ub) {
+      ub = mipsolver.options_mip_->objective_bound;
+      ub_string = convertToPrintString(ub, "*");
+    } else
+      ub_string = convertToPrintString(ub);
+
     std::array<char, 16> lb_string = convertToPrintString(lb);
-    std::array<char, 16> ub_string = convertToPrintString(ub);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -915,8 +925,14 @@ void HighsMipSolverData::printDisplayLine(char first) {
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   } else {
+    std::array<char, 16> ub_string;
+    if (mipsolver.options_mip_->objective_bound < ub) {
+      ub = mipsolver.options_mip_->objective_bound;
+      ub_string = convertToPrintString(ub, "*");
+    } else
+      ub_string = convertToPrintString(ub);
+
     std::array<char, 16> lb_string = convertToPrintString(lb);
-    std::array<char, 16> ub_string = convertToPrintString(ub);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
