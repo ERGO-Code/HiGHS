@@ -31,13 +31,27 @@ template <HighsInt k, typename FoundModKCut>
 static void separateModKCuts(const std::vector<int64_t>& intSystemValue,
                              const std::vector<HighsInt>& intSystemIndex,
                              const std::vector<HighsInt>& intSystemStart,
-                             HighsInt numCol, FoundModKCut&& foundModKCut) {
+                             HighsInt numCol, bool& addPos, bool& addNeg,
+                             FoundModKCut&& foundModKCut) {
   HighsGFkSolve GFkSolve;
+
+  addPos = true;
+  addNeg = k == 2;
 
   GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
                       numCol + 1);
   GFkSolve.setRhs<k>(numCol, k - 1);
   GFkSolve.solve<k>(foundModKCut);
+
+  if (k != 2) {
+    addPos = false;
+    addNeg = true;
+
+    GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
+                        numCol + 1);
+    GFkSolve.setRhs<k>(numCol, 1);
+    GFkSolve.solve<k>(foundModKCut);
+  }
 }
 
 void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
@@ -87,14 +101,13 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   for (HighsInt row = 0; row != lp.num_row_; ++row) {
     if (skipRow[row]) continue;
 
-    if (lp.row_upper_[row] - lpSolution.row_value[row] <=
-        mipsolver.mipdata_->feastol)
-      rhs = lp.row_upper_[row];
-    else if (lpSolution.row_value[row] - lp.row_lower_[row] <=
-             mipsolver.mipdata_->feastol)
-      rhs = lp.row_lower_[row];
-    else
-      continue;
+    bool atUpper = lp.row_upper_[row] - lpSolution.row_value[row] <=
+                   mipsolver.mipdata_->feastol;
+
+    bool atLower = lpSolution.row_value[row] - lp.row_lower_[row] <=
+                   mipsolver.mipdata_->feastol;
+
+    if (!atUpper && !atLower) continue;
 
     HighsInt rowlen;
     const HighsInt* rowinds;
@@ -102,8 +115,21 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
 
-    inds.assign(rowinds, rowinds + rowlen);
-    vals.assign(rowvals, rowvals + rowlen);
+    if (atUpper) {
+      rhs = lp.row_upper_[row];
+      inds.assign(rowinds, rowinds + rowlen);
+      vals.assign(rowvals, rowvals + rowlen);
+    } else {
+      assert(lpSolution.row_value[row] - lp.row_lower_[row] <=
+             mipsolver.mipdata_->feastol);
+
+      rhs = -lp.row_lower_[row];
+      inds.assign(rowinds, rowinds + rowlen);
+      vals.resize(rowlen);
+      std::transform(rowvals, rowvals + rowlen, vals.begin(),
+                     [](double x) { return -x; });
+    }
+
     bool integralPositive = false;
     if (!transLp.transform(vals, upper, solval, inds, rhs, integralPositive,
                            true))
@@ -112,33 +138,43 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     rowlen = inds.size();
     if (rowlen > maxIntRowLen) {
       HighsInt intRowLen = 0;
-      for (HighsInt i = 0; i < rowlen; ++i)
-        intRowLen +=
-            (mipsolver.variableType(inds[i]) != HighsVarType::kContinuous) &
-            (solval[i] > mipsolver.mipdata_->feastol);
+      for (HighsInt i = 0; i < rowlen; ++i) {
+        if (solval[i] <= mipsolver.mipdata_->feastol) continue;
+        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
+          continue;
+        ++intRowLen;
+      }
 
-      if (intRowLen > maxIntRowLen) continue;
+      // skip row if either too long or 0 = 0 row
+      if (intRowLen > maxIntRowLen ||
+          (intRowLen == 0 && fabs(rhs) <= mipsolver.mipdata_->epsilon))
+        continue;
     }
+
+    double intscale;
+    int64_t intrhs;
 
     if (!lpRelaxation.isRowIntegral(row)) {
       scaleVals.clear();
-      for (HighsInt i = 0; i < rowlen; ++i) {
+      for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (solval[i] > mipsolver.mipdata_->feastol)
           scaleVals.push_back(vals[i]);
       }
 
-      double deltaUp = mipsolver.mipdata_->epsilon;
-      double deltaDown = mipsolver.mipdata_->epsilon;
-      if (fabs(rhs) > mipsolver.mipdata_->epsilon) scaleVals.push_back(rhs);
+      if (fabs(rhs) > mipsolver.mipdata_->epsilon) scaleVals.push_back(-rhs);
 
-      double intscale =
-          HighsIntegers::integralScale(scaleVals, deltaDown, deltaUp);
+      const double deltaDown = atLower && atUpper ? mipsolver.mipdata_->epsilon
+                                                  : mipsolver.mipdata_->feastol;
+      const double deltaUp = mipsolver.mipdata_->epsilon;
+
+      intscale = HighsIntegers::integralScale(scaleVals, deltaDown, deltaUp);
       if (intscale == 0.0 || intscale > 1e6) continue;
 
-      int64_t intrhs = (int64_t)std::round(intscale * rhs);
-      for (HighsInt i = 0; i < rowlen; ++i) {
+      intrhs = std::round(intscale * rhs);
+
+      for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (solval[i] > mipsolver.mipdata_->feastol) {
@@ -147,63 +183,68 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         }
       }
 
-      numNonzeroRhs += (intrhs != 0);
-      intSystemIndex.push_back(lp.num_col_);
-      intSystemValue.push_back(intrhs);
-      intSystemStart.push_back(intSystemValue.size());
-      integralScales.emplace_back(row, intscale);
+      if (atLower && atUpper) {
+        numNonzeroRhs += (intrhs != 0);
 
-      intscale = -intscale;
-      intrhs = (int64_t)std::round(intscale * rhs);
-      for (HighsInt i = 0; i < rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
-          continue;
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back((int64_t)std::round(intscale * vals[i]));
+        intSystemIndex.push_back(lp.num_col_);
+        intSystemValue.push_back(intrhs);
+        intSystemStart.push_back(intSystemValue.size());
+        integralScales.emplace_back(row, intscale);
+
+        intscale = -intscale;
+        intrhs = std::round(intscale * rhs);
+
+        for (HighsInt i = 0; i != rowlen; ++i) {
+          if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
+            continue;
+          if (solval[i] > mipsolver.mipdata_->feastol) {
+            intSystemIndex.push_back(inds[i]);
+            intSystemValue.push_back((int64_t)std::round(intscale * vals[i]));
+          }
         }
       }
-
-      numNonzeroRhs += (intrhs != 0);
-      intSystemIndex.push_back(lp.num_col_);
-      intSystemValue.push_back(intrhs);
-      intSystemStart.push_back(intSystemValue.size());
-      integralScales.emplace_back(row, intscale);
-
     } else {
-      int64_t intrhs = (int64_t)std::round(rhs);
+      intscale = 1.0;
+      intrhs = (int64_t)std::round(rhs);
 
-      for (HighsInt i = 0; i < rowlen; ++i) {
+      for (HighsInt i = 0; i != rowlen; ++i) {
         if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
           intSystemValue.push_back((int64_t)std::round(vals[i]));
         }
       }
 
-      numNonzeroRhs += (intrhs != 0);
-      intSystemIndex.push_back(lp.num_col_);
-      intSystemValue.push_back(intrhs);
-      intSystemStart.push_back(intSystemValue.size());
-      integralScales.emplace_back(row, 1.0);
+      if (atLower && atUpper) {
+        numNonzeroRhs += (intrhs != 0);
 
-      intrhs = (int64_t)-std::round(rhs);
+        intSystemIndex.push_back(lp.num_col_);
+        intSystemValue.push_back(intrhs);
+        intSystemStart.push_back(intSystemValue.size());
+        integralScales.emplace_back(row, intscale);
 
-      for (HighsInt i = 0; i < rowlen; ++i) {
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back((int64_t)-std::round(vals[i]));
+        intscale = -1.0;
+        intrhs = (int64_t)std::round(-rhs);
+
+        for (HighsInt i = 0; i != rowlen; ++i) {
+          if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
+            continue;
+          if (solval[i] > mipsolver.mipdata_->feastol) {
+            intSystemIndex.push_back(inds[i]);
+            intSystemValue.push_back((int64_t)std::round(-vals[i]));
+          }
         }
       }
-
-      numNonzeroRhs += (intrhs != 0);
-      intSystemIndex.push_back(lp.num_col_);
-      intSystemValue.push_back(intrhs);
-      intSystemStart.push_back(intSystemValue.size());
-      integralScales.emplace_back(row, -1.0);
     }
+
+    numNonzeroRhs += (intrhs != 0);
+
+    intSystemIndex.push_back(lp.num_col_);
+    intSystemValue.push_back(intrhs);
+    intSystemStart.push_back(intSystemValue.size());
+    integralScales.emplace_back(row, intscale);
   }
 
-  if (numNonzeroRhs == 0) return;
+  if (integralScales.empty() || numNonzeroRhs == 0) return;
 
   std::vector<HighsInt> tmpinds;
   std::vector<double> tmpvals;
@@ -213,7 +254,11 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   //                   HighsVectorHasher, HighsVectorEqual>
   //    usedWeights;
   HighsInt k;
+  bool addPos;
+  bool addNeg;
   auto foundCut = [&](std::vector<HighsGFkSolve::SolutionEntry>& weights) {
+    // cuts which come from a single row can already be found with the
+    // aggregation heuristic
     if (weights.empty()) return;
 
     pdqsort(weights.begin(), weights.end());
@@ -225,36 +270,45 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       lpAggregator.addRow(row, weight);
     }
 
-    lpAggregator.getCurrentAggregation(inds, vals, false);
+    if (addPos) {
+      lpAggregator.getCurrentAggregation(inds, vals, false);
 
-    rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+      rhs = 0.0;
+      cutGen.generateCut(transLp, inds, vals, rhs, true);
+    }
+
+    if (addNeg) {
+      lpAggregator.getCurrentAggregation(inds, vals, true);
+
+      rhs = 0.0;
+      cutGen.generateCut(transLp, inds, vals, rhs, true);
+    }
   };
 
   k = 2;
   HighsInt numCuts = -cutpool.getNumCuts();
   separateModKCuts<2>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, foundCut);
+                      lp.num_col_, addPos, addNeg, foundCut);
   numCuts += cutpool.getNumCuts();
   if (numCuts > 0) return;
 
   k = 3;
   numCuts = -cutpool.getNumCuts();
   separateModKCuts<3>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, foundCut);
+                      lp.num_col_, addPos, addNeg, foundCut);
   numCuts += cutpool.getNumCuts();
   if (numCuts > 0) return;
 
   k = 5;
   numCuts = -cutpool.getNumCuts();
   separateModKCuts<5>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, foundCut);
+                      lp.num_col_, addPos, addNeg, foundCut);
   numCuts += cutpool.getNumCuts();
   if (numCuts > 0) return;
 
   k = 7;
   numCuts = -cutpool.getNumCuts();
   separateModKCuts<7>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, foundCut);
+                      lp.num_col_, addPos, addNeg, foundCut);
   numCuts += cutpool.getNumCuts();
 }
