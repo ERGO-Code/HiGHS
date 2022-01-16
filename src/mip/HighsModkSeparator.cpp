@@ -133,6 +133,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       double deltaDown = mipsolver.mipdata_->epsilon;
       if (fabs(rhs) > mipsolver.mipdata_->epsilon) scaleVals.push_back(rhs);
 
+      if (scaleVals.empty()) continue;
+
       double intscale =
           HighsIntegers::integralScale(scaleVals, deltaDown, deltaUp);
       if (intscale == 0.0 || intscale > 1e6) continue;
