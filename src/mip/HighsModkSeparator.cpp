@@ -121,6 +121,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     if (!lpRelaxation.isRowIntegral(row)) {
+      scaleVals.clear();
       for (HighsInt i = 0; i < rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
