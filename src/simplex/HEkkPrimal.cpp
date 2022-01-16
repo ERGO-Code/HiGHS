@@ -2327,8 +2327,6 @@ void HEkkPrimal::updateDevex() {
     dPivotWeight += dAlpha * dAlpha;
   }
   dPivotWeight += devex_index_[variable_in] * 1.0;
-  // Use Squared Devex weights
-  //  dPivotWeight = sqrt(dPivotWeight);
 
   // Check if the saved weight is too large
   if (edge_weight_[variable_in] > kBadDevexWeightFactor * dPivotWeight)
@@ -2336,16 +2334,12 @@ void HEkkPrimal::updateDevex() {
 
   // Update the devex weight for all
   double dPivot = col_aq.array[row_out];
-  dPivotWeight /= fabs(dPivot);
-  // Use Squared Devex weights
-  dPivotWeight /= fabs(dPivot);
+  dPivotWeight /= (dPivot * dPivot);
 
   for (HighsInt iEl = 0; iEl < row_ap.count; iEl++) {
     HighsInt iCol = row_ap.index[iEl];
     double alpha = row_ap.array[iCol];
-    double devex = dPivotWeight * fabs(alpha);
-  // Use Squared Devex weights
-    devex *= fabs(alpha);
+    double devex = dPivotWeight * alpha * alpha;
     devex += devex_index_[iCol] * 1.0;
     if (edge_weight_[iCol] < devex) {
       edge_weight_[iCol] = devex;
@@ -2355,9 +2349,7 @@ void HEkkPrimal::updateDevex() {
     HighsInt iRow = row_ep.index[iEl];
     HighsInt iCol = iRow + num_col;
     double alpha = row_ep.array[iRow];
-    double devex = dPivotWeight * fabs(alpha);
-  // Use Squared Devex weights
-    devex *= fabs(alpha);
+    double devex = dPivotWeight * alpha * alpha;
     devex += devex_index_[iCol] * 1.0;
     if (edge_weight_[iCol] < devex) {
       edge_weight_[iCol] = devex;
