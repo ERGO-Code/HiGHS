@@ -2440,7 +2440,7 @@ void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
     edge_weight_[iVar] += (lambda * lambda * col_aq_squared_2norm - 2 * lambda * mu_aj);
     edge_weight_[iVar] += lambda * lambda;
     if (edge_weight_[iVar] < min_weight) {
-      printf("Augmenting weight(%2d)=%10.4g to %10.4g\n", (int)iVar, edge_weight_[iVar], min_weight);
+      //      printf("Augmenting weight(%2d)=%10.4g to %10.4g\n", (int)iVar, edge_weight_[iVar], min_weight);
       edge_weight_[iVar] = min_weight;
     }
   }
@@ -2843,7 +2843,7 @@ HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(const std::string me
   // Possibly force the expensive check for development work
   const bool check_primal_edge_weights = true;
   if (check_primal_edge_weights) {
-    const bool check_all_primal_edge_weights = true;
+    const bool check_all_primal_edge_weights = false;
     const HighsInt alt_debug_level = check_all_primal_edge_weights
       ? (HighsInt)kHighsDebugLevelExpensive
       : (HighsInt)kHighsDebugLevelCostly;
