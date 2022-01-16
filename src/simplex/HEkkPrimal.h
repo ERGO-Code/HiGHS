@@ -85,7 +85,9 @@ class HEkkPrimal {
 
   void initialiseDevexFramework();
   void updateDevex();
-  void initialisePrimalSteepestEdgeWeights();
+  void computePrimalSteepestEdgeWeights();
+  double computePrimalSteepestEdgeWeight(const HighsInt iVar,
+					 HVector& local_col_aq);
   void updatePrimalSteepestEdgeWeights();
   void updateDualSteepestEdgeWeights();
   void updateFtranDSE(HVector& col_steepest_edge);
@@ -109,6 +111,9 @@ class HEkkPrimal {
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);
+  HighsDebugStatus debugPrimalSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus debugPrimalSteepestEdgeWeights(const HighsInt alt_debug_level = -1);
+
   bool isBadBasisChange();
 
   // References:
@@ -173,9 +178,11 @@ class HEkkPrimal {
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
   HVector col_steepest_edge;
+  HighsRandom random_; // Just for checking PSE weights
 
   const HighsInt primal_correction_strategy =
       kSimplexPrimalCorrectionStrategyAlways;
+  double debug_max_relative_primal_steepest_edge_weight_error = 0;
 
   const HighsInt check_iter = 9999999;
   const HighsInt check_column = -2133;

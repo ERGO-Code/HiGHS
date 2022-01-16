@@ -140,7 +140,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
     // Dual steepest edge weights are known, so possibly check
     assert(ekk_instance_.dual_edge_weight_.size() >= solver_num_row);
     assert(ekk_instance_.scattered_dual_edge_weight_.size() >= solver_num_tot);
-    ekk_instance_.devDebugSteepestEdgeWeights("before solve");
+    ekk_instance_.devDebugDualSteepestEdgeWeights("before solve");
   } else {
     // Set up edge weights
     //
@@ -1400,7 +1400,7 @@ void HEkkDual::chooseRow() {
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
-    HighsDebugStatus return_status = ekk_instance_.debugSteepestEdgeWeights();
+    HighsDebugStatus return_status = ekk_instance_.debugDualSteepestEdgeWeights();
     assert(return_status == HighsDebugStatus::kNotChecked ||
            return_status == HighsDebugStatus::kOk);
   }
