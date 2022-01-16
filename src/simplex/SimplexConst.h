@@ -87,7 +87,8 @@ enum SimplexPrimalEdgeWeightStrategy {
   kSimplexPrimalEdgeWeightStrategyDantzig,
   kSimplexPrimalEdgeWeightStrategyDevex,
   kSimplexPrimalEdgeWeightStrategySteepestEdge,
-  kSimplexPrimalEdgeWeightStrategyMax = kSimplexPrimalEdgeWeightStrategySteepestEdge
+  kSimplexPrimalEdgeWeightStrategyMax =
+      kSimplexPrimalEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPriceStrategy {
@@ -205,7 +206,6 @@ enum class BadBasisChangeReason {
 
 const HighsInt kAllowedNumBadDevexWeight = 3;
 const double kBadDevexWeightFactor = 3;
-
 
 //
 // Relation between HiGHS basis and Simplex basis

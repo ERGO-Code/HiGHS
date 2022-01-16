@@ -178,8 +178,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       // Indicate that edge weights are known
       status.has_dual_steepest_edge_weights = true;
     }
-    if (edge_weight_mode == EdgeWeightMode::kDevex) 
-      initialiseDevexFramework();
+    if (edge_weight_mode == EdgeWeightMode::kDevex) initialiseDevexFramework();
     // Check on consistency between edge_weight_mode and
     // status.has_dual_steepest_edge_weights
     if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
@@ -1400,7 +1399,8 @@ void HEkkDual::chooseRow() {
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
-    HighsDebugStatus return_status = ekk_instance_.debugDualSteepestEdgeWeights();
+    HighsDebugStatus return_status =
+        ekk_instance_.debugDualSteepestEdgeWeights();
     assert(return_status == HighsDebugStatus::kNotChecked ||
            return_status == HighsDebugStatus::kOk);
   }
@@ -1695,8 +1695,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
                                     // numerical checking
   theta_dual = dualRow.workTheta;   // Dual step length
 
-  if (edge_weight_mode == EdgeWeightMode::kDevex &&
-      !new_devex_framework) {
+  if (edge_weight_mode == EdgeWeightMode::kDevex && !new_devex_framework) {
     // When using Devex, unless a new framework is to be used, get the
     // exact weight for the pivotal row and, based on its accuracy,
     // determine that a new framework is to be used. In serial
@@ -1893,8 +1892,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   alpha_row = dualRow.workAlpha;
   theta_dual = dualRow.workTheta;
 
-  if (edge_weight_mode == EdgeWeightMode::kDevex &&
-      !new_devex_framework) {
+  if (edge_weight_mode == EdgeWeightMode::kDevex && !new_devex_framework) {
     // When using Devex, unless a new framework is to be used, get the
     // exact weight for the pivotal row and, based on its accuracy,
     // determine that a new framework is to be used. In serial

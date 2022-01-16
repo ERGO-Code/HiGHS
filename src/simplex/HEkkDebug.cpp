@@ -1388,7 +1388,8 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(const std::string message) {
+HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
+    const std::string message) {
   // Possibly force the expensive check for development work
   const bool check_dual_edge_weights = true;
   if (check_dual_edge_weights) {
@@ -1439,7 +1440,8 @@ HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       dual_steepest_edge_weight_norm +=
           std::fabs(this->dual_edge_weight_[iRow]);
-      const double error = std::fabs(updated_dual_edge_weight[iRow] - this->dual_edge_weight_[iRow]);
+      const double error = std::fabs(updated_dual_edge_weight[iRow] -
+                                     this->dual_edge_weight_[iRow]);
       dual_steepest_edge_weight_error += error;
     }
     this->dual_edge_weight_ = updated_dual_edge_weight;
@@ -1452,7 +1454,8 @@ HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
   if (relative_dual_steepest_edge_weight_error >
       10 * debug_max_relative_dual_steepest_edge_weight_error) {
     printf(
-        "HEkk::debugDualSteepestEdgeWeights   Iteration %5d: Checked %2d weights: "
+        "HEkk::debugDualSteepestEdgeWeights   Iteration %5d: Checked %2d "
+        "weights: "
         "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
         (int)iteration_count_, (int)num_check_weight,
         dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,

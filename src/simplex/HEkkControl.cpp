@@ -57,7 +57,7 @@ void HEkk::assessDSEWeightError(const double computed_edge_weight,
   // Compute the (relative) dual steepest edge weight error for
   // analysis and debugging
   edge_weight_error_ = std::fabs(updated_edge_weight - computed_edge_weight) /
-                      std::max(1.0, computed_edge_weight);
+                       std::max(1.0, computed_edge_weight);
   if (edge_weight_error_ > options_->dual_steepest_edge_weight_error_tolerance)
     highsLogDev(options_->log_options, HighsLogType::kInfo,
                 "Dual steepest edge weight error is %g\n", edge_weight_error_);

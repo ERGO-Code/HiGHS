@@ -412,7 +412,7 @@ void HEkkPrimal::initialiseSolve() {
     ekk_instance_.scattered_dual_edge_weight_.resize(num_tot);
   }
   const HighsInt edge_weight_strategy =
-    ekk_instance_.options_->simplex_primal_edge_weight_strategy;
+      ekk_instance_.options_->simplex_primal_edge_weight_strategy;
   if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
       edge_weight_strategy == kSimplexDualEdgeWeightStrategyDevex) {
     // By default, use Devex
@@ -948,12 +948,18 @@ void HEkkPrimal::chuzc() {
       HighsInt hyper_sparse_variable_in = variable_in;
       chooseColumn(false);
       double hyper_sparse_measure = 0;
-      if (hyper_sparse_variable_in >= 0)
-        hyper_sparse_measure = fabs(workDual[hyper_sparse_variable_in]) /
-                               edge_weight_[hyper_sparse_variable_in];
+      if (hyper_sparse_variable_in >= 0) {
+        double squared_dual_infeasibility = workDual[hyper_sparse_variable_in] *
+                                            workDual[hyper_sparse_variable_in];
+        hyper_sparse_measure =
+            squared_dual_infeasibility / edge_weight_[hyper_sparse_variable_in];
+      }
       double measure = 0;
-      if (variable_in >= 0)
-        measure = fabs(workDual[variable_in]) / edge_weight_[variable_in];
+      if (variable_in >= 0) {
+        double squared_dual_infeasibility =
+            workDual[variable_in] * workDual[variable_in];
+        measure = squared_dual_infeasibility / edge_weight_[variable_in];
+      }
       double abs_measure_error = fabs(hyper_sparse_measure - measure);
       bool measure_error = abs_measure_error > 1e-12;
       // if (measure_error)
@@ -996,7 +1002,8 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
           HighsInt iCol = nonbasic_free_col_set_entry[ix];
           double dual_infeasibility = fabs(workDual[iCol]);
           if (dual_infeasibility > dual_feasibility_tolerance) {
-            double measure = dual_infeasibility / edge_weight_[iCol];
+            double measure =
+                dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
             addToDecreasingHeap(
                 num_hyper_chuzc_candidates, max_num_hyper_chuzc_candidates,
                 hyper_chuzc_measure, hyper_chuzc_candidate, measure, iCol);
@@ -1007,7 +1014,8 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
       for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
         double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
         if (dual_infeasibility > dual_feasibility_tolerance) {
-          double measure = dual_infeasibility / edge_weight_[iCol];
+          double measure =
+              dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
           addToDecreasingHeap(
               num_hyper_chuzc_candidates, max_num_hyper_chuzc_candidates,
               hyper_chuzc_measure, hyper_chuzc_candidate, measure, iCol);
@@ -1043,9 +1051,11 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
         HighsInt iCol = nonbasic_free_col_set_entry[ix];
         double dual_infeasibility = fabs(workDual[iCol]);
         if (dual_infeasibility > dual_feasibility_tolerance &&
-            dual_infeasibility > best_measure * edge_weight_[iCol]) {
+            dual_infeasibility * dual_infeasibility >
+                best_measure * edge_weight_[iCol]) {
           variable_in = iCol;
-          best_measure = dual_infeasibility / edge_weight_[iCol];
+          best_measure =
+              dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
         }
       }
     }
@@ -1053,9 +1063,11 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
     for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
       double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
       if (dual_infeasibility > dual_feasibility_tolerance &&
-          dual_infeasibility > best_measure * edge_weight_[iCol]) {
+          dual_infeasibility * dual_infeasibility >
+              best_measure * edge_weight_[iCol]) {
         variable_in = iCol;
-        best_measure = dual_infeasibility / edge_weight_[iCol];
+        best_measure =
+            dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
       }
     }
     analysis->simplexTimerStop(ChuzcPrimalClock);
@@ -1526,7 +1538,8 @@ void HEkkPrimal::update() {
 
   // Reset the devex when there are too many errors
   if (edge_weight_mode == EdgeWeightMode::kDevex &&
-      num_bad_devex_weight_ > kAllowedNumBadDevexWeight) initialiseDevexFramework();
+      num_bad_devex_weight_ > kAllowedNumBadDevexWeight)
+    initialiseDevexFramework();
 
   // Report on the iteration
   iterationAnalysis();
@@ -1575,8 +1588,10 @@ void HEkkPrimal::hyperChooseColumn() {
           dual_infeasibility = fabs(workDual[iCol]);
       }
       if (dual_infeasibility > dual_feasibility_tolerance) {
-        if (dual_infeasibility > best_measure * edge_weight_[iCol]) {
-          best_measure = dual_infeasibility / edge_weight_[iCol];
+        if (dual_infeasibility * dual_infeasibility >
+            best_measure * edge_weight_[iCol]) {
+          best_measure =
+              dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
           variable_in = iCol;
         }
       }
@@ -1624,14 +1639,17 @@ void HEkkPrimal::hyperChooseColumnClear() {
 
 void HEkkPrimal::hyperChooseColumnChangedInfeasibility(
     const double infeasibility, const HighsInt iCol) {
-  if (infeasibility > max_changed_measure_value * edge_weight_[iCol]) {
+  if (infeasibility * infeasibility >
+      max_changed_measure_value * edge_weight_[iCol]) {
     max_hyper_chuzc_non_candidate_measure =
         max(max_changed_measure_value, max_hyper_chuzc_non_candidate_measure);
-    max_changed_measure_value = infeasibility / edge_weight_[iCol];
+    max_changed_measure_value =
+        infeasibility * infeasibility / edge_weight_[iCol];
     max_changed_measure_column = iCol;
-  } else if (infeasibility >
+  } else if (infeasibility * infeasibility >
              max_hyper_chuzc_non_candidate_measure * edge_weight_[iCol]) {
-    max_hyper_chuzc_non_candidate_measure = infeasibility / edge_weight_[iCol];
+    max_hyper_chuzc_non_candidate_measure =
+        infeasibility * infeasibility / edge_weight_[iCol];
   }
 }
 
@@ -1703,7 +1721,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     }
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
-      double measure = dual_infeasibility / edge_weight_[iCol];
+      double measure =
+          dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
       if (report_hyper_chuzc) {
         printf("Changing column %" HIGHSINT_FORMAT ": measure = %g \n",
                check_column, measure);
@@ -1725,7 +1744,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     HighsInt iCol = iRow + num_col;
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
-      double measure = dual_infeasibility / edge_weight_[iCol];
+      double measure =
+          dual_infeasibility * dual_infeasibility / edge_weight_[iCol];
       if (report_hyper_chuzc) {
         printf("Changing column %" HIGHSINT_FORMAT ": measure = %g \n",
                check_column, measure);
@@ -2307,7 +2327,8 @@ void HEkkPrimal::updateDevex() {
     dPivotWeight += dAlpha * dAlpha;
   }
   dPivotWeight += devex_index_[variable_in] * 1.0;
-  dPivotWeight = sqrt(dPivotWeight);
+  // Use Squared Devex weights
+  //  dPivotWeight = sqrt(dPivotWeight);
 
   // Check if the saved weight is too large
   if (edge_weight_[variable_in] > kBadDevexWeightFactor * dPivotWeight)
@@ -2316,11 +2337,15 @@ void HEkkPrimal::updateDevex() {
   // Update the devex weight for all
   double dPivot = col_aq.array[row_out];
   dPivotWeight /= fabs(dPivot);
+  // Use Squared Devex weights
+  dPivotWeight /= fabs(dPivot);
 
   for (HighsInt iEl = 0; iEl < row_ap.count; iEl++) {
     HighsInt iCol = row_ap.index[iEl];
     double alpha = row_ap.array[iCol];
     double devex = dPivotWeight * fabs(alpha);
+  // Use Squared Devex weights
+    devex *= fabs(alpha);
     devex += devex_index_[iCol] * 1.0;
     if (edge_weight_[iCol] < devex) {
       edge_weight_[iCol] = devex;
@@ -2331,6 +2356,8 @@ void HEkkPrimal::updateDevex() {
     HighsInt iCol = iRow + num_col;
     double alpha = row_ep.array[iRow];
     double devex = dPivotWeight * fabs(alpha);
+  // Use Squared Devex weights
+    devex *= fabs(alpha);
     devex += devex_index_[iCol] * 1.0;
     if (edge_weight_[iCol] < devex) {
       edge_weight_[iCol] = devex;
@@ -2350,36 +2377,41 @@ void HEkkPrimal::computePrimalSteepestEdgeWeights() {
     HighsSparseMatrix& a_matrix = ekk_instance_.lp_.a_matrix_;
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       edge_weight_[iCol] = 1;
-      for (HighsInt iEl = a_matrix.start_[iCol]; iEl < a_matrix.start_[iCol+1]; iEl++)
-	edge_weight_[iCol] += a_matrix.value_[iEl] * a_matrix.value_[iEl];
+      for (HighsInt iEl = a_matrix.start_[iCol];
+           iEl < a_matrix.start_[iCol + 1]; iEl++)
+        edge_weight_[iCol] += a_matrix.value_[iEl] * a_matrix.value_[iEl];
     }
   } else {
     HVector local_col_aq;
     local_col_aq.setup(num_row);
     for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
       if (ekk_instance_.basis_.nonbasicFlag_[iVar]) {
-	edge_weight_[iVar] = computePrimalSteepestEdgeWeight(iVar, local_col_aq);
-	if (iVar == report_var) {
-	  printf("Tableau column %d\nRow       Value\n", (int)report_var);
-	  for(HighsInt iRow = 0; iRow < num_row; iRow++) {
-	    if (local_col_aq.array[iRow])
-	      printf("%3d  %10.7g\n", (int)iRow, local_col_aq.array[iRow]);	    
-	  }
-	}
+        edge_weight_[iVar] =
+            computePrimalSteepestEdgeWeight(iVar, local_col_aq);
+        if (iVar == report_var) {
+          printf("Tableau column %d\nRow       Value\n", (int)report_var);
+          for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+            if (local_col_aq.array[iRow])
+              printf("%3d  %10.7g\n", (int)iRow, local_col_aq.array[iRow]);
+          }
+        }
       }
     }
   }
 }
 
 double HEkkPrimal::computePrimalSteepestEdgeWeight(const HighsInt iVar,
-						   HVector& local_col_aq) {
+                                                   HVector& local_col_aq) {
   local_col_aq.clear();
   ekk_instance_.lp_.a_matrix_.collectAj(local_col_aq, iVar, 1);
   local_col_aq.packFlag = false;
-  ekk_instance_.simplex_nla_.ftran(local_col_aq, ekk_instance_.info_.col_aq_density,
-				   ekk_instance_.analysis_.pointer_serial_factor_clocks);
-  const double local_col_aq_density = (1.0 * local_col_aq.count) / ekk_instance_.lp_.num_row_;
-  ekk_instance_.updateOperationResultDensity(local_col_aq_density, ekk_instance_.info_.col_aq_density);
+  ekk_instance_.simplex_nla_.ftran(
+      local_col_aq, ekk_instance_.info_.col_aq_density,
+      ekk_instance_.analysis_.pointer_serial_factor_clocks);
+  const double local_col_aq_density =
+      (1.0 * local_col_aq.count) / ekk_instance_.lp_.num_row_;
+  ekk_instance_.updateOperationResultDensity(
+      local_col_aq_density, ekk_instance_.info_.col_aq_density);
   return 1 + local_col_aq.norm2();
 }
 
@@ -2388,11 +2420,12 @@ void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
   //
   // lambda_j = hat{a}_{pj} / hat{a}_{pq}
   //
-  // Then contribution to updated weight j is 
+  // Then contribution to updated weight j is
   //
   // 1 + (hat{a}_j - lambda_j*hat{a}_q).(hat{a}_j - lambda_j*hat{a}_q)
   //
-  // = 1 + hat{a}_j.hat{a}_j - 2*lambda_j*hat{a}_qB^{-1}a_j + lambda_j^2*hat{a}_q.hat{a}_q
+  // = 1 + hat{a}_j.hat{a}_j - 2*lambda_j*hat{a}_qB^{-1}a_j +
+  // lambda_j^2*hat{a}_q.hat{a}_q
   //
   // = w_j - 2*lambda_j*(hat{a}_qB^{-1})a_j + lambda_j^2*||hat{a}_q||^2
   //
@@ -2406,23 +2439,25 @@ void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
   const double col_aq_squared_2norm = col_aq.norm2();
   const bool report_col_aq = false;
   if (report_col_aq) {
-    printf("updatePrimalSteepestEdgeWeights: in = %d; out = %d; ||col_aq||^2 = %g\n",
-	   (int)variable_in, (int)variable_out, col_aq_squared_2norm);
+    printf(
+        "updatePrimalSteepestEdgeWeights: in = %d; out = %d; ||col_aq||^2 = "
+        "%g\n",
+        (int)variable_in, (int)variable_out, col_aq_squared_2norm);
     printf("Pivotal column %d\nRow       Value\n", (int)variable_in);
-    for(HighsInt iRow = 0; iRow < num_row; iRow++) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       if (col_aq.array[iRow])
-	printf("%3d  %10.7g\n", (int)iRow, col_aq.array[iRow]);	    
+        printf("%3d  %10.7g\n", (int)iRow, col_aq.array[iRow]);
     }
   }
   assert(ekk_instance_.basis_.nonbasicFlag_[variable_in]);
   HighsInt iVar;
   double pivotal_row_value;
-  for (HighsInt iX=0; iX < row_ap.count + row_ep.count; iX++) {
+  for (HighsInt iX = 0; iX < row_ap.count + row_ep.count; iX++) {
     if (iX < row_ap.count) {
       iVar = row_ap.index[iX];
       pivotal_row_value = row_ap.array[iVar];
     } else {
-      HighsInt iRow = row_ep.index[iX-row_ap.count];
+      HighsInt iRow = row_ep.index[iX - row_ap.count];
       iVar = num_col + iRow;
       pivotal_row_value = row_ep.array[iRow];
     }
@@ -2431,16 +2466,20 @@ void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
     const double lambda = pivotal_row_value / alpha_col;
     double mu_aj = 0;
     if (iVar < num_col) {
-      for (HighsInt iEl = a_matrix.start_[iVar]; iEl < a_matrix.start_[iVar+1]; iEl++)
-	mu_aj += col_steepest_edge.array[a_matrix.index_[iEl]] * a_matrix.value_[iEl];
+      for (HighsInt iEl = a_matrix.start_[iVar];
+           iEl < a_matrix.start_[iVar + 1]; iEl++)
+        mu_aj += col_steepest_edge.array[a_matrix.index_[iEl]] *
+                 a_matrix.value_[iEl];
     } else {
       mu_aj = col_steepest_edge.array[iVar - num_col];
     }
     const double min_weight = 1 + lambda * lambda;
-    edge_weight_[iVar] += (lambda * lambda * col_aq_squared_2norm - 2 * lambda * mu_aj);
+    edge_weight_[iVar] +=
+        (lambda * lambda * col_aq_squared_2norm - 2 * lambda * mu_aj);
     edge_weight_[iVar] += lambda * lambda;
     if (edge_weight_[iVar] < min_weight) {
-      //      printf("Augmenting weight(%2d)=%10.4g to %10.4g\n", (int)iVar, edge_weight_[iVar], min_weight);
+      //      printf("Augmenting weight(%2d)=%10.4g to %10.4g\n", (int)iVar,
+      //      edge_weight_[iVar], min_weight);
       edge_weight_[iVar] = min_weight;
     }
   }
@@ -2458,7 +2497,8 @@ void HEkkPrimal::updatePrimalSteepestEdgeWeights() {
   // = col_aq_squared_2norm/pivot^2 + 1/pivot^2
   //
   // = (col_aq_squared_2norm + 1) / pivot^2
-  edge_weight_[variable_out] = (1 + col_aq_squared_2norm) / (alpha_col * alpha_col);  
+  edge_weight_[variable_out] =
+      (1 + col_aq_squared_2norm) / (alpha_col * alpha_col);
   edge_weight_[variable_in] = 0;
 }
 
@@ -2482,12 +2522,14 @@ void HEkkPrimal::updateFtranDSE(HVector& col_steepest_edge) {
     analysis->operationRecordBefore(kSimplexNlaFtranDse, col_steepest_edge,
                                     ekk_instance_.info_.row_DSE_density);
   // Perform FTRAN DSE
-  ekk_instance_.simplex_nla_.ftran(col_steepest_edge, ekk_instance_.info_.row_DSE_density,
+  ekk_instance_.simplex_nla_.ftran(col_steepest_edge,
+                                   ekk_instance_.info_.row_DSE_density,
                                    analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, col_steepest_edge);
   analysis->simplexTimerStop(FtranDseClock);
-  const double local_row_DSE_density = (1.0 * col_steepest_edge.count) / num_row;
+  const double local_row_DSE_density =
+      (1.0 * col_steepest_edge.count) / num_row;
   ekk_instance_.updateOperationResultDensity(
       local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
 }
@@ -2495,17 +2537,21 @@ void HEkkPrimal::updateFtranDSE(HVector& col_steepest_edge) {
 void HEkkPrimal::updateBtranPSE(HVector& col_steepest_edge) {
   analysis->simplexTimerStart(BtranPseClock);
   if (analysis->analyse_simplex_summary_data)
-    analysis->operationRecordBefore(kSimplexNlaBtranPse, col_steepest_edge,
-                                    ekk_instance_.info_.col_steepest_edge_density);
+    analysis->operationRecordBefore(
+        kSimplexNlaBtranPse, col_steepest_edge,
+        ekk_instance_.info_.col_steepest_edge_density);
   // Perform BTRAN PSE
-  ekk_instance_.simplex_nla_.btran(col_steepest_edge, ekk_instance_.info_.col_steepest_edge_density,
-                                   analysis->pointer_serial_factor_clocks);
+  ekk_instance_.simplex_nla_.btran(
+      col_steepest_edge, ekk_instance_.info_.col_steepest_edge_density,
+      analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaBtranPse, col_steepest_edge);
   analysis->simplexTimerStop(BtranPseClock);
-  const double local_col_steepest_edge_density = (1.0 * col_steepest_edge.count) / num_row;
+  const double local_col_steepest_edge_density =
+      (1.0 * col_steepest_edge.count) / num_row;
   ekk_instance_.updateOperationResultDensity(
-      local_col_steepest_edge_density, ekk_instance_.info_.col_steepest_edge_density);
+      local_col_steepest_edge_density,
+      ekk_instance_.info_.col_steepest_edge_density);
 }
 
 void HEkkPrimal::updateVerify() {
@@ -2647,7 +2693,7 @@ void HEkkPrimal::localReportIter(const bool header) {
         if (lower == -kHighsInf && upper == kHighsInf)
           infeasibility = fabs(dual);
         if (infeasibility < dual_feasibility_tolerance) infeasibility = 0;
-        double measure = infeasibility / weight;
+        double measure = infeasibility * infeasibility / weight;
         printf(" Du = %9.4g; Wt = %9.4g; Ms = %9.4g", dual, weight, measure);
       }
     }
@@ -2839,15 +2885,17 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(const std::string message) {
+HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
+    const std::string message) {
   // Possibly force the expensive check for development work
   const bool check_primal_edge_weights = true;
   if (check_primal_edge_weights) {
     const bool check_all_primal_edge_weights = false;
     const HighsInt alt_debug_level = check_all_primal_edge_weights
-      ? (HighsInt)kHighsDebugLevelExpensive
-      : (HighsInt)kHighsDebugLevelCostly;
-    //    printf("\nPerforming level %1d check %s for primal steepest edge weights\n", (int)alt_debug_level, message.c_str());
+                                         ? (HighsInt)kHighsDebugLevelExpensive
+                                         : (HighsInt)kHighsDebugLevelCostly;
+    //    printf("\nPerforming level %1d check %s for primal steepest edge
+    //    weights\n", (int)alt_debug_level, message.c_str());
     return debugPrimalSteepestEdgeWeights(alt_debug_level);
   } else {
     return debugPrimalSteepestEdgeWeights();
@@ -2856,9 +2904,9 @@ HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(const std::string me
 
 HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
     const HighsInt alt_debug_level) {
-  const HighsInt use_debug_level = alt_debug_level >= 0
-                                       ? alt_debug_level
-                                       : ekk_instance_.options_->highs_debug_level;
+  const HighsInt use_debug_level =
+      alt_debug_level >= 0 ? alt_debug_level
+                           : ekk_instance_.options_->highs_debug_level;
   if (use_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   const HighsLp& lp = ekk_instance_.lp_;
@@ -2871,18 +2919,20 @@ HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
   local_col_aq.setup(num_row);
   if (use_debug_level < kHighsDebugLevelExpensive) {
     for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
-      primal_steepest_edge_weight_norm += std::fabs(nonbasic_flag[iVar]*edge_weight_[iVar]);
+      primal_steepest_edge_weight_norm +=
+          std::fabs(nonbasic_flag[iVar] * edge_weight_[iVar]);
     }
     // Just check a few weights
     num_check_weight =
         std::max((HighsInt)1, std::min((HighsInt)10, num_tot / 10));
     for (HighsInt iCheck = 0; iCheck < num_check_weight; iCheck++) {
       HighsInt iVar;
-      for(;;) {
-	iVar = random_.integer(num_tot);
-	if (nonbasic_flag[iVar]) break;
+      for (;;) {
+        iVar = random_.integer(num_tot);
+        if (nonbasic_flag[iVar]) break;
       }
-      const double true_weight = computePrimalSteepestEdgeWeight(iVar, local_col_aq);
+      const double true_weight =
+          computePrimalSteepestEdgeWeight(iVar, local_col_aq);
       primal_steepest_edge_weight_error +=
           std::fabs(edge_weight_[iVar] - true_weight);
     }
@@ -2894,10 +2944,14 @@ HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
     for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
       if (!nonbasic_flag[iVar]) continue;
       primal_steepest_edge_weight_norm += std::fabs(edge_weight_[iVar]);
-      const double error = std::fabs(updated_primal_edge_weight[iVar] - edge_weight_[iVar]);
+      const double error =
+          std::fabs(updated_primal_edge_weight[iVar] - edge_weight_[iVar]);
       if (error > 1e-4)
-	printf("debugPrimalSteepestEdgeWeights: var = %2d; weight (true = %10.4g; updated = %10.4g) error = %10.4g\n",
-	       (int)iVar, edge_weight_[iVar], updated_primal_edge_weight[iVar], error);
+        printf(
+            "debugPrimalSteepestEdgeWeights: var = %2d; weight (true = %10.4g; "
+            "updated = %10.4g) error = %10.4g\n",
+            (int)iVar, edge_weight_[iVar], updated_primal_edge_weight[iVar],
+            error);
       primal_steepest_edge_weight_error += error;
     }
     edge_weight_ = updated_primal_edge_weight;
@@ -2910,7 +2964,8 @@ HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
   if (relative_primal_steepest_edge_weight_error >
       10 * debug_max_relative_primal_steepest_edge_weight_error) {
     printf(
-        "HEkk::debugPrimalSteepestEdgeWeights Iteration %5d: Checked %2d weights: "
+        "HEkk::debugPrimalSteepestEdgeWeights Iteration %5d: Checked %2d "
+        "weights: "
         "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
         (int)ekk_instance_.iteration_count_, (int)num_check_weight,
         primal_steepest_edge_weight_error, primal_steepest_edge_weight_norm,

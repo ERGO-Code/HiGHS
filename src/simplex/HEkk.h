@@ -348,7 +348,8 @@ class HEkk {
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
   HighsDebugStatus devDebugDualSteepestEdgeWeights(const std::string message);
-  HighsDebugStatus debugDualSteepestEdgeWeights(const HighsInt alt_debug_level = -1);
+  HighsDebugStatus debugDualSteepestEdgeWeights(
+      const HighsInt alt_debug_level = -1);
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;

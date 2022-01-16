@@ -392,8 +392,7 @@ void HEkkDual::minorUpdatePrimal() {
   }
   finish->theta_primal = theta_primal;
 
-  if (edge_weight_mode == EdgeWeightMode::kDevex &&
-      !new_devex_framework) {
+  if (edge_weight_mode == EdgeWeightMode::kDevex && !new_devex_framework) {
     std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
     assert(row_out >= 0);
     if (row_out < 0)
@@ -794,8 +793,7 @@ void HEkkDual::majorUpdatePrimal() {
         100);
 
     if (edge_weight_mode == EdgeWeightMode::kSteepestEdge ||
-        (edge_weight_mode == EdgeWeightMode::kDevex &&
-         !new_devex_framework)) {
+        (edge_weight_mode == EdgeWeightMode::kDevex && !new_devex_framework)) {
       // Dense update of any edge weights (except weights for pivotal rows)
       std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
       for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -871,8 +869,7 @@ void HEkkDual::majorUpdatePrimal() {
 
   // Update any edge weights for the rows pivotal in this set of MI.
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge ||
-      (edge_weight_mode == EdgeWeightMode::kDevex &&
-       !new_devex_framework)) {
+      (edge_weight_mode == EdgeWeightMode::kDevex && !new_devex_framework)) {
     // Update weights for the pivots using the computed values.
     std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
