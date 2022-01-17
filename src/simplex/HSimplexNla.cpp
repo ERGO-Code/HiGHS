@@ -159,6 +159,65 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
   }
 }
 
+void HSimplexNla::scaleFtranResult(HVector& rhs) const {
+  unapplyBasisMatrixColScale(rhs);  
+}
+
+void HSimplexNla::scaleBtranResult(HVector& rhs) const {
+  unapplyBasisMatrixRowScale(rhs);  
+}
+
+double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow, const HVector& row_ep) const {
+  if (scale_ == NULL) {
+    return row_ep.norm2();
+  }
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
+  // Get the 2-norm of row_ep in the scaled space otherwise for
+  // checking
+  HVector alt_row_ep;
+  alt_row_ep.setup(lp_->num_row_);
+  alt_row_ep.clear();
+  alt_row_ep.count = 1;
+  alt_row_ep.index[0] = iRow;
+  alt_row_ep.array[iRow] = 1;
+  alt_row_ep.packFlag = false;
+  factor_.btranCall(alt_row_ep, 0);
+  const double alt_row_ep_2norm = alt_row_ep.norm2();
+  // Get the 2-norm of row_ep in the scaled space
+  //
+  // Determine the scaling that was applied to the unit RHS before
+  // scaled BTRAN. This must be unapplied to all components of the
+  // result.
+  double col_scale_value;
+  HighsInt iVar = basic_index_[iRow];
+  if (iVar < lp_->num_col_) {
+    col_scale_value = col_scale[iVar];
+  } else {
+    col_scale_value = 1 / row_scale[iVar - lp_->num_col_];
+  }
+  // Now compute the 2-norm of row_ep in the scaled space, unapplying
+  // the scaling that was applied after BTRAN
+  double row_ep_2norm = 0;
+  HighsInt to_entry;
+  const bool use_row_indices =
+      sparseLoopStyle(row_ep.count, lp_->num_row_, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    HighsInt iRow;
+    if (use_row_indices) {
+      iRow = row_ep.index[iEntry];
+    } else {
+      iRow = iEntry;
+    }
+    const double value_in_scaled_space = row_ep.array[iRow] / (row_scale[iRow] * col_scale_value);
+    row_ep_2norm += value_in_scaled_space * value_in_scaled_space;
+  }
+  const double error = fabs(row_ep_2norm - alt_row_ep_2norm);
+  if (error>1e-12) printf("rowEp2NormInScaledSpace: iRow = %2d has deduced norm = %10.4g and alt norm = %10.4g, giving error %10.4g\n",
+			  (int)iRow, row_ep_2norm, alt_row_ep_2norm, error);
+  return row_ep_2norm;
+}
+
 void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
                                      const HighsInt variable_in,
                                      const HighsInt row_out) {
@@ -245,6 +304,47 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
       rhs.array[iCol] *= col_scale[iVar];
     } else {
       rhs.array[iCol] /= row_scale[iVar - lp_->num_col_];
+    }
+  }
+}
+
+void HSimplexNla::unapplyBasisMatrixRowScale(HVector& rhs) const {
+  if (scale_ == NULL) return;
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
+  HighsInt to_entry;
+  const bool use_row_indices =
+      sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    HighsInt iRow;
+    if (use_row_indices) {
+      iRow = rhs.index[iEntry];
+    } else {
+      iRow = iEntry;
+    }
+    rhs.array[iRow] /= row_scale[iRow];
+  }
+}
+
+void HSimplexNla::unapplyBasisMatrixColScale(HVector& rhs) const {
+  if (scale_ == NULL) return;
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
+  HighsInt to_entry;
+  const bool use_row_indices =
+      sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    HighsInt iCol;
+    if (use_row_indices) {
+      iCol = rhs.index[iEntry];
+    } else {
+      iCol = iEntry;
+    }
+    HighsInt iVar = basic_index_[iCol];
+    if (iVar < lp_->num_col_) {
+      rhs.array[iCol] /= col_scale[iVar];
+    } else {
+      rhs.array[iCol] *= row_scale[iVar - lp_->num_col_];
     }
   }
 }

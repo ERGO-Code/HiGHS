@@ -432,6 +432,9 @@ class HEkkDual {
   HVector col_BFRT;
   HVector col_DSE;
 
+  HVector dev_row_ep;
+  HVector dev_col_DSE;
+
   HEkkDualRow dualRow;
 
   // Solving related buffers

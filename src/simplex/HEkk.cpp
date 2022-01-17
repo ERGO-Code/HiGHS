@@ -2129,7 +2129,7 @@ HighsInt HEkk::computeFactor() {
   return rank_deficiency;
 }
 
-void HEkk::computeDualSteepestEdgeWeights() {
+void HEkk::computeDualSteepestEdgeWeights(const bool initial) {
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStart(SimplexIzDseWtClock);
     analysis_.simplexTimerStart(DseIzClock);
@@ -2138,25 +2138,17 @@ void HEkk::computeDualSteepestEdgeWeights() {
   HVector row_ep;
   row_ep.setup(num_row);
   assert(dual_edge_weight_.size() >= num_row);
-  for (HighsInt i = 0; i < num_row; i++) {
-    row_ep.clear();
-    row_ep.count = 1;
-    row_ep.index[0] = i;
-    row_ep.array[i] = 1;
-    row_ep.packFlag = false;
-    simplex_nla_.btran(row_ep, info_.row_ep_density,
-                       analysis_.pointer_serial_factor_clocks);
-    const double local_row_ep_density = (double)row_ep.count / num_row;
-    updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
-    dual_edge_weight_[i] = row_ep.norm2();
-  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    dual_edge_weight_[iRow] = computeDualSteepestEdgeWeight(iRow, row_ep);
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStop(SimplexIzDseWtClock);
     analysis_.simplexTimerStop(DseIzClock);
-    double IzDseWtTT = analysis_.simplexTimerRead(SimplexIzDseWtClock);
-    highsLogDev(options_->log_options, HighsLogType::kDetailed,
-                "Computed %" HIGHSINT_FORMAT " initial DSE weights in %gs\n",
-                num_row, IzDseWtTT);
+    if (initial) {
+      double IzDseWtTT = analysis_.simplexTimerRead(SimplexIzDseWtClock);
+      highsLogDev(options_->log_options, HighsLogType::kDetailed,
+		  "Computed %" HIGHSINT_FORMAT " initial DSE weights in %gs\n",
+		  num_row, IzDseWtTT);
+    }
   }
 }
 
@@ -2167,11 +2159,22 @@ double HEkk::computeDualSteepestEdgeWeight(const HighsInt iRow,
   row_ep.index[0] = iRow;
   row_ep.array[iRow] = 1;
   row_ep.packFlag = false;
+  // Undo any column-wise scaling so that, if solving the unscaled LP
+  // with scaled NLA, the BTRAN is performed in the scaled space with
+  // unit RHS. If not solving the unscaled LP with scaled NLA, method
+  // just returns.
+  //  simplex_nla_.unapplyBasisMatrixColScale(row_ep);
   simplex_nla_.btran(row_ep, info_.row_ep_density,
                      analysis_.pointer_serial_factor_clocks);
+  // Undo any row-wise scaling so that, if solving the unscaled LP
+  // with scaled NLA, the result corresponds to BTRAN performed in the
+  // scaled space with unit RHS. If not solving the unscaled LP with
+  // scaled NLA, method just returns.
+  //  simplex_nla_.unapplyBasisMatrixRowScale(row_ep);
+  
   const double local_row_ep_density = (1.0 * row_ep.count) / lp_.num_row_;
   updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
-  return row_ep.norm2();
+  return simplex_nla_.rowEp2NormInScaledSpace(iRow, row_ep);//row_ep.norm2();
 }
 
 // Update the DSE weights

@@ -171,7 +171,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
           highsLogDev(
               options.log_options, HighsLogType::kDetailed,
               "Basis is not logical, so compute steepest edge weights\n");
-          ekk_instance_.computeDualSteepestEdgeWeights();
+          ekk_instance_.computeDualSteepestEdgeWeights(true);
           status.has_dual_steepest_edge_weights = true;
         }
       }
@@ -424,6 +424,9 @@ void HEkkDual::initialiseInstance() {
   col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
+
+  dev_row_ep.setup(solver_num_row);
+  dev_col_DSE.setup(solver_num_row);
 
   // Setup other buffers
   dualRow.setup();
@@ -1400,7 +1403,7 @@ void HEkkDual::chooseRow() {
   // detected
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
     HighsDebugStatus return_status =
-        ekk_instance_.debugDualSteepestEdgeWeights();
+        ekk_instance_.devDebugDualSteepestEdgeWeights("chooseRow");
     assert(return_status == HighsDebugStatus::kNotChecked ||
            return_status == HighsDebugStatus::kOk);
   }
@@ -1436,7 +1439,11 @@ void HEkkDual::chooseRow() {
       // Save the updated weight
       double updated_edge_weight = edge_weight[row_out];
       // Compute the weight from row_ep and over-write the updated weight
-      computed_edge_weight = edge_weight[row_out] = row_ep.norm2();
+      if (ekk_instance_.simplex_in_scaled_space_) {
+	computed_edge_weight = edge_weight[row_out] = row_ep.norm2();
+      } else {
+	computed_edge_weight = edge_weight[row_out] = simplex_nla->rowEp2NormInScaledSpace(row_out, row_ep);
+      }
       // If the weight error is acceptable then break out of the
       // loop. All we worry about is accepting rows with weights
       // which are not too small, since this can make the row look

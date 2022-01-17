@@ -222,7 +222,7 @@ class HEkk {
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
-  void computeDualSteepestEdgeWeights();
+  void computeDualSteepestEdgeWeights(const bool initial = false);
   double computeDualSteepestEdgeWeight(const HighsInt iRow, HVector& row_ep);
   void updateDualSteepestEdgeWeights(const HVector* column,
                                      const double new_pivotal_edge_weight,

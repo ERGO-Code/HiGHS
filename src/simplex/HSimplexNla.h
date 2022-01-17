@@ -76,6 +76,9 @@ class HSimplexNla {
   void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
+  void scaleFtranResult(HVector& rhs) const;
+  void scaleBtranResult(HVector& rhs) const;
+
   void frozenBasisClearAllData();
   void frozenBasisClearAllUpdate();
   bool frozenBasisAllDataClear();
@@ -93,6 +96,9 @@ class HSimplexNla {
   void passScalePointer(const HighsScale* scale);
   void applyBasisMatrixColScale(HVector& rhs) const;
   void applyBasisMatrixRowScale(HVector& rhs) const;
+  void unapplyBasisMatrixColScale(HVector& rhs) const;
+  void unapplyBasisMatrixRowScale(HVector& rhs) const;
+  double rowEp2NormInScaledSpace(const HighsInt iRow, const HVector& row_ep) const;
   void addCols(const HighsLp* updated_lp);
   void addRows(const HighsLp* updated_lp, HighsInt* basic_index,
                const HighsSparseMatrix* scaled_ar_matrix);
