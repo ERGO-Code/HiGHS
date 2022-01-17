@@ -38,7 +38,9 @@ void testGFkSolve(const std::vector<HighsInt>& Avalue,
   REQUIRE(nnz == GFkSolve.numNonzeros());
 
   GFkSolve.solve<k>(
-      [&](const std::vector<HighsGFkSolve::SolutionEntry>& solution) {
+      [&](const std::vector<HighsGFkSolve::SolutionEntry>& solution,
+          int rhsIndex) {
+        REQUIRE(rhsIndex == 0);
         HighsInt numSolutionNnz = solution.size();
         if (dev_run)
           printf("solution (k=%d) has %" HIGHSINT_FORMAT " nonzeros\n", k,
