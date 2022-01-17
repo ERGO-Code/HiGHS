@@ -1393,7 +1393,7 @@ HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
   // Possibly force the expensive check for development work
   const bool check_dual_edge_weights = true;
   if (check_dual_edge_weights) {
-    const bool check_all_dual_edge_weights = true;
+    const bool check_all_dual_edge_weights = false;
     const HighsInt alt_debug_level = check_all_dual_edge_weights
                                          ? (HighsInt)kHighsDebugLevelExpensive
                                          : (HighsInt)kHighsDebugLevelCostly;
@@ -1460,6 +1460,7 @@ HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
         (int)iteration_count_, (int)num_check_weight,
         dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,
         relative_dual_steepest_edge_weight_error);
+    fflush(stdout);
     debug_max_relative_dual_steepest_edge_weight_error =
         relative_dual_steepest_edge_weight_error;
     if (relative_dual_steepest_edge_weight_error >

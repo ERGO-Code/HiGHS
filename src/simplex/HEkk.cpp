@@ -2214,16 +2214,29 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
 
   const double col_ap_scale = simplex_nla_.basicColScaleFactor(row_out);
 
-  double dse_column_error = 0;
+  double max_dse_column_error = 0;
+  double sum_dse_column_error = 0;
+  HighsInt num_dse_column_error = 0;
+  const double dse_column_error_tolerance = 1e-8;
   for (HighsInt iRow = 0; iRow<num_row; iRow++) {
     const double dual_steepest_edge_array_value = dual_steepest_edge_array[iRow] / col_ap_scale;
-    dse_column_error += std::fabs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array_value);
+    const double dse_column_error =
+      std::abs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array_value) /
+      std::max(1.0, std::abs(dual_steepest_edge_array_value));
+    sum_dse_column_error += dse_column_error;
+    if (dse_column_error > dse_column_error_tolerance) {
+      max_dse_column_error = std::max(dse_column_error, max_dse_column_error);
+      num_dse_column_error++;
+    }
   }
-  if (dse_column_error > 1e-4) {
-    printf("HEkk::updateDualSteepestEdgeWeights: Iter %2d has DSE column error = %g\n",
-	   (int)iteration_count_, dse_column_error);
+  if (max_dse_column_error > dse_column_error_tolerance) {
+    printf("HEkk::updateDualSteepestEdgeWeights: Iter %2d has num / max / sum = %d / %g / %g DSE column errors exceeding = %g\n",
+	   (int)iteration_count_,
+	   (int)num_dse_column_error,
+	   max_dse_column_error,
+	   sum_dse_column_error, dse_column_error_tolerance);
     fflush(stdout);
-    assert(dse_column_error<1e-4);
+    assert(max_dse_column_error<dse_column_error_tolerance);
   }
   
   if ((HighsInt)dual_edge_weight_.size() < num_row) {

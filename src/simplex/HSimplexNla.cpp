@@ -222,8 +222,8 @@ double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow, const HVector& 
     const double value_in_scaled_space = row_ep.array[iRow] / (row_scale[iRow] * col_scale_value);
     row_ep_2norm += value_in_scaled_space * value_in_scaled_space;
   }
-  const double error = fabs(row_ep_2norm - alt_row_ep_2norm);
-  if (error>1e-12) printf("rowEp2NormInScaledSpace: iRow = %2d has deduced norm = %10.4g and alt norm = %10.4g, giving error %10.4g\n",
+  const double error = std::fabs(row_ep_2norm - alt_row_ep_2norm) / std::max(1.0, row_ep_2norm);
+  if (error>1e-4) printf("rowEp2NormInScaledSpace: iRow = %2d has deduced norm = %10.4g and alt norm = %10.4g, giving error %10.4g\n",
 			  (int)iRow, row_ep_2norm, alt_row_ep_2norm, error);
   return row_ep_2norm;
 }
