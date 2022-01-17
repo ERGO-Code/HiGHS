@@ -35,7 +35,7 @@ class HighsIntegers {
     return r + (a < 0) * m;
   }
 
-  static constexpr int64_t nearestInteger(double x) {
+  static int64_t nearestInteger(double x) {
     return (int64_t)(x + std::copysign(0.5, x));
   }
 
