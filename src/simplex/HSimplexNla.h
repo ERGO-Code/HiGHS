@@ -97,7 +97,11 @@ class HSimplexNla {
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
-
+  double variableScaleFactor(const HighsInt iVar) const;
+  double basicColScaleFactor(const HighsInt iCol) const;
+  double pivotInScaledSpace(const HVector* aq, 
+			    const HighsInt variable_in,
+			    const HighsInt row_out) const;
   void setPivotThreshold(const double new_pivot_threshold);
 
   void passLpPointer(const HighsLp* lp);

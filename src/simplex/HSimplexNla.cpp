@@ -248,12 +248,15 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   } else {
     scale_factor = 1.0 / scale_->row[variable_in - lp_->num_col_];
   }
+  double alt_scale_factor = variableScaleFactor(variable_in);
+  assert(alt_scale_factor == scale_factor);
+
   for (HighsInt ix = 0; ix < aq->packCount; ix++)
     aq->packValue[ix] *= scale_factor;
   reportPackValue("pack aq Af ", aq);
   //
   // Now focus on the pivot value, aq->array[row_out]
-  //
+  double pivot_in_scaled_space = pivotInScaledSpace(aq, variable_in, row_out);
   // First scale by cq
   aq->array[row_out] *= scale_factor;
   //
@@ -264,13 +267,37 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   } else {
     scale_factor = 1.0 / scale_->row[variable_out - lp_->num_col_];
   }
+  alt_scale_factor = variableScaleFactor(variable_out);
+  assert(alt_scale_factor == scale_factor);
+
   aq->array[row_out] /= scale_factor;
+  assert(pivot_in_scaled_space == aq->array[row_out]);
   // For (\hat)ep, UPDATE needs packValue to correspond to
   // \bar{B}^{-T}ep, but R.\bar{B}^{-T}(CB.ep) has been computed.
   //
   // Hence packValue needs to be unscaled by cp
   for (HighsInt ix = 0; ix < ep->packCount; ix++)
     ep->packValue[ix] /= scale_factor;
+}
+
+double HSimplexNla::variableScaleFactor(const HighsInt iVar) const {
+  if (scale_ == NULL) return 1.0;
+  return iVar < lp_->num_col_ ?
+    scale_->col[iVar] :
+    1.0 / scale_->row[iVar - lp_->num_col_];
+}
+
+double HSimplexNla::basicColScaleFactor(const HighsInt iCol) const {
+  if (scale_ == NULL) return 1.0;
+  return variableScaleFactor(basic_index_[iCol]);
+}
+
+double HSimplexNla::pivotInScaledSpace(const HVector* aq, 
+				       const HighsInt variable_in,
+				       const HighsInt row_out) const {
+  return aq->array[row_out]
+    * variableScaleFactor(variable_in)
+    / variableScaleFactor(basic_index_[row_out]);
 }
 
 void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {

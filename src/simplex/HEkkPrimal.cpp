@@ -2499,11 +2499,18 @@ void HEkkPrimal::updateDualSteepestEdgeWeights() {
   updateFtranDSE(col_steepest_edge);
   std::vector<double>& edge_weight = ekk_instance_.dual_edge_weight_;
   // Compute the weight from row_ep and over-write the updated weight
-  edge_weight[row_out] = row_ep.norm2();
+  if (ekk_instance_.simplex_in_scaled_space_) {
+    edge_weight[row_out] = row_ep.norm2();
+  } else {
+    edge_weight[row_out] = ekk_instance_.simplex_nla_.rowEp2NormInScaledSpace(row_out, row_ep);
+  }
+  const double pivot_in_scaled_space = ekk_instance_.simplex_nla_.pivotInScaledSpace(&col_aq, variable_in, row_out);
+  if (ekk_instance_.simplex_in_scaled_space_) assert(pivot_in_scaled_space == alpha_col);
   const double new_pivotal_edge_weight =
-      edge_weight[row_out] / (alpha_col * alpha_col);
-  const double Kai = -2 / alpha_col;
-  ekk_instance_.updateDualSteepestEdgeWeights(row_out, &col_aq, new_pivotal_edge_weight,
+      edge_weight[row_out] / (pivot_in_scaled_space * pivot_in_scaled_space);
+  const double Kai = -2 / pivot_in_scaled_space;
+  ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in,
+					      &col_aq, new_pivotal_edge_weight,
                                               Kai, &col_steepest_edge.array[0]);
   edge_weight[row_out] = new_pivotal_edge_weight;
 }
