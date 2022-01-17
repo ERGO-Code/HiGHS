@@ -36,28 +36,18 @@ static bool separateModKCuts(const std::vector<int64_t>& intSystemValue,
                              const std::vector<HighsInt>& intSystemIndex,
                              const std::vector<HighsInt>& intSystemStart,
                              const HighsCutPool& cutpool, HighsInt numCol,
-                             bool& addPos, bool& addNeg,
                              FoundModKCut&& foundModKCut) {
   HighsGFkSolve GFkSolve;
 
+  constexpr int kNumRhs = k == 2 ? 1 : 2;
+
   HighsInt numCuts = cutpool.getNumCuts();
-  addPos = true;
-  addNeg = k == 2;
 
-  GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
-                      numCol + 1);
-  GFkSolve.setRhs<k>(numCol, k - 1);
-  GFkSolve.solve<k>(foundModKCut);
-
-  if (k != 2) {
-    addPos = false;
-    addNeg = true;
-
-    GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
-                        numCol + 1);
-    GFkSolve.setRhs<k>(numCol, 1);
-    GFkSolve.solve<k>(foundModKCut);
-  }
+  GFkSolve.fromCSC<k, kNumRhs>(intSystemValue, intSystemIndex, intSystemStart,
+                               numCol + 1);
+  GFkSolve.setRhs<k, kNumRhs>(numCol, k - 1, 0);
+  if (kNumRhs != 1) GFkSolve.setRhs<k, kNumRhs>(numCol, 1, 1);
+  GFkSolve.solve<k, kNumRhs>(foundModKCut);
 
   return cutpool.getNumCuts() != numCuts;
 }
@@ -94,9 +84,14 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   intSystemIndex.reserve(intSystemValue.size());
   intSystemStart.reserve(lp.num_row_ + 1);
   intSystemStart.push_back(0);
+
   std::vector<HighsInt> inds;
   std::vector<double> vals;
   std::vector<double> scaleVals;
+
+  inds.reserve(lp.num_col_);
+  vals.reserve(lp.num_col_);
+  scaleVals.reserve(lp.num_col_);
 
   std::vector<double> upper;
   std::vector<double> solval;
@@ -167,7 +162,6 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (!lpRelaxation.isRowIntegral(row)) {
       scaleVals.clear();
-      scaleVals.reserve(rowlen);
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
@@ -223,9 +217,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   //                   HighsVectorHasher, HighsVectorEqual>
   //    usedWeights;
   HighsInt k;
-  bool addPos;
-  bool addNeg;
-  auto foundCut = [&](std::vector<HighsGFkSolve::SolutionEntry>& weights) {
+  auto foundCut = [&](std::vector<HighsGFkSolve::SolutionEntry>& weights,
+                      int rhsIndex) {
     // cuts which come from a single row can already be found with the
     // aggregation heuristic
     if (weights.empty()) return;
@@ -239,14 +232,16 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       lpAggregator.addRow(row, weight);
     }
 
-    if (addPos) {
+    int rhsModulus = rhsIndex == 0 ? k - 1 : 1;
+
+    if (rhsModulus == k - 1) {
       lpAggregator.getCurrentAggregation(inds, vals, false);
 
       rhs = 0.0;
       cutGen.generateCut(transLp, inds, vals, rhs, true);
     }
 
-    if (addNeg) {
+    if (rhsModulus == 1) {
       lpAggregator.getCurrentAggregation(inds, vals, true);
 
       rhs = 0.0;
@@ -256,21 +251,21 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   k = 2;
   if (separateModKCuts<2>(intSystemValue, intSystemIndex, intSystemStart,
-                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+                          cutpool, lp.num_col_, foundCut))
     return;
 
   k = 3;
   if (separateModKCuts<3>(intSystemValue, intSystemIndex, intSystemStart,
-                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+                          cutpool, lp.num_col_, foundCut))
     return;
 
   k = 5;
   if (separateModKCuts<5>(intSystemValue, intSystemIndex, intSystemStart,
-                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+                          cutpool, lp.num_col_, foundCut))
     return;
 
   k = 7;
   if (separateModKCuts<7>(intSystemValue, intSystemIndex, intSystemStart,
-                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+                          cutpool, lp.num_col_, foundCut))
     return;
 }
