@@ -224,7 +224,8 @@ class HEkk {
   HighsInt computeFactor();
   void computeDualSteepestEdgeWeights(const bool initial = false);
   double computeDualSteepestEdgeWeight(const HighsInt iRow, HVector& row_ep);
-  void updateDualSteepestEdgeWeights(const HVector* column,
+  void updateDualSteepestEdgeWeights(const HighsInt row_in,
+				     const HVector* column,
                                      const double new_pivotal_edge_weight,
                                      const double Kai,
                                      const double* dual_steepest_edge_array);

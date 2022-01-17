@@ -2159,28 +2159,19 @@ double HEkk::computeDualSteepestEdgeWeight(const HighsInt iRow,
   row_ep.index[0] = iRow;
   row_ep.array[iRow] = 1;
   row_ep.packFlag = false;
-  // Undo any column-wise scaling so that, if solving the unscaled LP
-  // with scaled NLA, the BTRAN is performed in the scaled space with
-  // unit RHS. If not solving the unscaled LP with scaled NLA, method
-  // just returns.
-  //  simplex_nla_.unapplyBasisMatrixColScale(row_ep);
-  simplex_nla_.btran(row_ep, info_.row_ep_density,
+  simplex_nla_.btranInScaledSpace(row_ep, info_.row_ep_density,
                      analysis_.pointer_serial_factor_clocks);
-  // Undo any row-wise scaling so that, if solving the unscaled LP
-  // with scaled NLA, the result corresponds to BTRAN performed in the
-  // scaled space with unit RHS. If not solving the unscaled LP with
-  // scaled NLA, method just returns.
-  //  simplex_nla_.unapplyBasisMatrixRowScale(row_ep);
-  
   const double local_row_ep_density = (1.0 * row_ep.count) / lp_.num_row_;
   updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
-  return simplex_nla_.rowEp2NormInScaledSpace(iRow, row_ep);//row_ep.norm2();
+  return row_ep.norm2();
 }
 
 // Update the DSE weights
-void HEkk::updateDualSteepestEdgeWeights(
-    const HVector* column, const double new_pivotal_edge_weight,
-    const double Kai, const double* dual_steepest_edge_array) {
+void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
+				         const HVector* column,
+					 const double new_pivotal_edge_weight,
+					 const double Kai,
+					 const double* dual_steepest_edge_array) {
   analysis_.simplexTimerStart(DseUpdateWeightClock);
 
   const HighsInt num_row = lp_.num_row_;
@@ -2188,6 +2179,26 @@ void HEkk::updateDualSteepestEdgeWeights(
   const HighsInt* variable_index = &column->index[0];
   const double* column_array = &column->array[0];
 
+  // Compute the DSE column otherwise to check
+  HVector alt_dual_steepest_edge_column;
+  alt_dual_steepest_edge_column.setup(num_row);
+  alt_dual_steepest_edge_column.clear();
+  alt_dual_steepest_edge_column.count = 1;
+  alt_dual_steepest_edge_column.index[0] = row_out;
+  alt_dual_steepest_edge_column.array[row_out] = 1;
+  alt_dual_steepest_edge_column.packFlag = false;
+  simplex_nla_.btranInScaledSpace(alt_dual_steepest_edge_column, info_.row_ep_density,
+				  analysis_.pointer_serial_factor_clocks);
+  simplex_nla_.ftranInScaledSpace(alt_dual_steepest_edge_column, info_.row_DSE_density,
+				  analysis_.pointer_serial_factor_clocks);
+  double dse_column_error = 0;
+  for (HighsInt iRow = 0; iRow<num_row; iRow++)
+    dse_column_error += std::fabs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array[iRow]);
+  if (dse_column_error > 1e-4)
+    printf("HEkk::updateDualSteepestEdgeWeights: Iter %2d has DSE column error = %g\n",
+	   (int)iteration_count_, dse_column_error);
+ 
+  
   if ((HighsInt)dual_edge_weight_.size() < num_row) {
     printf(
         "HEkk::updateDualSteepestEdgeWeights solve %d: "

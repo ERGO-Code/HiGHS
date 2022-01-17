@@ -102,17 +102,27 @@ HighsInt HSimplexNla::invert() {
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   applyBasisMatrixColScale(rhs);
-  frozenBtran(rhs);
-  factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
+  btranInScaledSpace(rhs, expected_density, factor_timer_clock_pointer);
   applyBasisMatrixRowScale(rhs);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   applyBasisMatrixRowScale(rhs);
+  ftranInScaledSpace(rhs, expected_density, factor_timer_clock_pointer);
+  applyBasisMatrixColScale(rhs);
+}
+
+void HSimplexNla::btranInScaledSpace(HVector& rhs, const double expected_density,
+                        HighsTimerClock* factor_timer_clock_pointer) const {
+  frozenBtran(rhs);
+  factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
+}
+
+void HSimplexNla::ftranInScaledSpace(HVector& rhs, const double expected_density,
+                        HighsTimerClock* factor_timer_clock_pointer) const {
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
   frozenFtran(rhs);
-  applyBasisMatrixColScale(rhs);
 }
 
 void HSimplexNla::frozenBtran(HVector& rhs) const {

@@ -68,10 +68,18 @@ class HSimplexNla {
                    HighsSimplexAnalysis* analysis = NULL);
   void clear();
   HighsInt invert();
-  void btran(HVector& rhs, const double expected_density,
+  void btran(HVector& rhs,
+	     const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
-  void ftran(HVector& rhs, const double expected_density,
+  void ftran(HVector& rhs,
+	     const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void btranInScaledSpace(HVector& rhs,
+			  const double expected_density,
+			  HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void ftranInScaledSpace(HVector& rhs,
+			  const double expected_density,
+			  HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void frozenBtran(HVector& rhs) const;
   void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);

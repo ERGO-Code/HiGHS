@@ -2118,7 +2118,7 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
     const double new_pivotal_edge_weight =
         edge_weight[row_out] / (alpha_col * alpha_col);
     const double Kai = -2 / alpha_col;
-    ekk_instance_.updateDualSteepestEdgeWeights(
+    ekk_instance_.updateDualSteepestEdgeWeights(row_out,
         &col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
     edge_weight[row_out] = new_pivotal_edge_weight;
   } else if (edge_weight_mode == EdgeWeightMode::kDevex) {
