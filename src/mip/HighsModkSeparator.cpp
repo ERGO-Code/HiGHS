@@ -27,10 +27,6 @@
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
-static constexpr int64_t doubleToInteger(double x) {
-  return (int64_t)(x + std::copysign(0.5, x));
-}
-
 template <HighsInt k, typename FoundModKCut>
 static bool separateModKCuts(const std::vector<int64_t>& intSystemValue,
                              const std::vector<HighsInt>& intSystemIndex,
@@ -177,24 +173,25 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           scaleVals, mipsolver.mipdata_->feastol, mipsolver.mipdata_->epsilon);
       if (intscale == 0.0 || intscale > 1e6) continue;
 
-      intrhs = doubleToInteger(intscale * rhs);
+      intrhs = HighsIntegers::nearestInteger(intscale * rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back(doubleToInteger(intscale * vals[i]));
+          intSystemValue.push_back(
+              HighsIntegers::nearestInteger(intscale * vals[i]));
         }
       }
     } else {
       intscale = 1.0;
-      intrhs = doubleToInteger(rhs);
+      intrhs = HighsIntegers::nearestInteger(rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back(doubleToInteger(vals[i]));
+          intSystemValue.push_back(HighsIntegers::nearestInteger(vals[i]));
         }
       }
     }
