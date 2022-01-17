@@ -254,16 +254,19 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                           cutpool, lp.num_col_, foundCut))
     return;
 
+  usedWeights.clear();
   k = 3;
   if (separateModKCuts<3>(intSystemValue, intSystemIndex, intSystemStart,
                           cutpool, lp.num_col_, foundCut))
     return;
 
+  usedWeights.clear();
   k = 5;
   if (separateModKCuts<5>(intSystemValue, intSystemIndex, intSystemStart,
                           cutpool, lp.num_col_, foundCut))
     return;
 
+  usedWeights.clear();
   k = 7;
   if (separateModKCuts<7>(intSystemValue, intSystemIndex, intSystemStart,
                           cutpool, lp.num_col_, foundCut))
