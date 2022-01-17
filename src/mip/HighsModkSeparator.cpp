@@ -27,14 +27,20 @@
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
+static constexpr int64_t doubleToInteger(double x) {
+  return (int64_t)(x + std::copysign(0.5, x));
+}
+
 template <HighsInt k, typename FoundModKCut>
-static void separateModKCuts(const std::vector<int64_t>& intSystemValue,
+static bool separateModKCuts(const std::vector<int64_t>& intSystemValue,
                              const std::vector<HighsInt>& intSystemIndex,
                              const std::vector<HighsInt>& intSystemStart,
-                             HighsInt numCol, bool& addPos, bool& addNeg,
+                             const HighsCutPool& cutpool, HighsInt numCol,
+                             bool& addPos, bool& addNeg,
                              FoundModKCut&& foundModKCut) {
   HighsGFkSolve GFkSolve;
 
+  HighsInt numCuts = cutpool.getNumCuts();
   addPos = true;
   addNeg = k == 2;
 
@@ -52,6 +58,8 @@ static void separateModKCuts(const std::vector<int64_t>& intSystemValue,
     GFkSolve.setRhs<k>(numCol, 1);
     GFkSolve.solve<k>(foundModKCut);
   }
+
+  return cutpool.getNumCuts() != numCuts;
 }
 
 void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
@@ -82,9 +90,9 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<HighsInt> intSystemIndex;
   std::vector<HighsInt> intSystemStart;
 
-  intSystemValue.reserve(2 * (lp.a_matrix_.value_.size() + lp.num_row_));
+  intSystemValue.reserve(lp.a_matrix_.value_.size() + lp.num_row_);
   intSystemIndex.reserve(intSystemValue.size());
-  intSystemStart.reserve(2 * (lp.num_row_ + 1));
+  intSystemStart.reserve(lp.num_row_ + 1);
   intSystemStart.push_back(0);
   std::vector<HighsInt> inds;
   std::vector<double> vals;
@@ -101,13 +109,16 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   for (HighsInt row = 0; row != lp.num_row_; ++row) {
     if (skipRow[row]) continue;
 
-    bool atUpper = lp.row_upper_[row] - lpSolution.row_value[row] <=
-                   mipsolver.mipdata_->feastol;
+    bool leqRow;
 
-    bool atLower = lpSolution.row_value[row] - lp.row_lower_[row] <=
-                   mipsolver.mipdata_->feastol;
-
-    if (!atUpper && !atLower) continue;
+    if (lp.row_upper_[row] - lpSolution.row_value[row] <=
+        mipsolver.mipdata_->feastol)
+      leqRow = true;
+    else if (lpSolution.row_value[row] - lp.row_lower_[row] <=
+             mipsolver.mipdata_->feastol)
+      leqRow = false;
+    else
+      continue;
 
     HighsInt rowlen;
     const HighsInt* rowinds;
@@ -115,7 +126,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
 
-    if (atUpper) {
+    if (leqRow) {
       rhs = lp.row_upper_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.assign(rowvals, rowvals + rowlen);
@@ -156,82 +167,40 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (!lpRelaxation.isRowIntegral(row)) {
       scaleVals.clear();
+      scaleVals.reserve(rowlen);
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
-        if (solval[i] > mipsolver.mipdata_->feastol)
+        if (solval[i] > mipsolver.mipdata_->feastol) {
           scaleVals.push_back(vals[i]);
+        }
       }
 
       if (fabs(rhs) > mipsolver.mipdata_->epsilon) scaleVals.push_back(-rhs);
+      if (scaleVals.empty()) continue;
 
-      const double deltaDown = atLower && atUpper ? mipsolver.mipdata_->epsilon
-                                                  : mipsolver.mipdata_->feastol;
-      const double deltaUp = mipsolver.mipdata_->epsilon;
-
-      intscale = HighsIntegers::integralScale(scaleVals, deltaDown, deltaUp);
+      intscale = HighsIntegers::integralScale(
+          scaleVals, mipsolver.mipdata_->feastol, mipsolver.mipdata_->epsilon);
       if (intscale == 0.0 || intscale > 1e6) continue;
 
-      intrhs = std::round(intscale * rhs);
+      intrhs = doubleToInteger(intscale * rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back((int64_t)std::round(intscale * vals[i]));
-        }
-      }
-
-      if (atLower && atUpper) {
-        numNonzeroRhs += (intrhs != 0);
-
-        intSystemIndex.push_back(lp.num_col_);
-        intSystemValue.push_back(intrhs);
-        intSystemStart.push_back(intSystemValue.size());
-        integralScales.emplace_back(row, intscale);
-
-        intscale = -intscale;
-        intrhs = std::round(intscale * rhs);
-
-        for (HighsInt i = 0; i != rowlen; ++i) {
-          if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
-            continue;
-          if (solval[i] > mipsolver.mipdata_->feastol) {
-            intSystemIndex.push_back(inds[i]);
-            intSystemValue.push_back((int64_t)std::round(intscale * vals[i]));
-          }
+          intSystemValue.push_back(doubleToInteger(intscale * vals[i]));
         }
       }
     } else {
       intscale = 1.0;
-      intrhs = (int64_t)std::round(rhs);
+      intrhs = doubleToInteger(rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (solval[i] > mipsolver.mipdata_->feastol) {
           intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back((int64_t)std::round(vals[i]));
-        }
-      }
-
-      if (atLower && atUpper) {
-        numNonzeroRhs += (intrhs != 0);
-
-        intSystemIndex.push_back(lp.num_col_);
-        intSystemValue.push_back(intrhs);
-        intSystemStart.push_back(intSystemValue.size());
-        integralScales.emplace_back(row, intscale);
-
-        intscale = -1.0;
-        intrhs = (int64_t)std::round(-rhs);
-
-        for (HighsInt i = 0; i != rowlen; ++i) {
-          if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
-            continue;
-          if (solval[i] > mipsolver.mipdata_->feastol) {
-            intSystemIndex.push_back(inds[i]);
-            intSystemValue.push_back((int64_t)std::round(-vals[i]));
-          }
+          intSystemValue.push_back(doubleToInteger(vals[i]));
         }
       }
     }
@@ -286,29 +255,22 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   };
 
   k = 2;
-  HighsInt numCuts = -cutpool.getNumCuts();
-  separateModKCuts<2>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, addPos, addNeg, foundCut);
-  numCuts += cutpool.getNumCuts();
-  if (numCuts > 0) return;
+  if (separateModKCuts<2>(intSystemValue, intSystemIndex, intSystemStart,
+                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+    return;
 
   k = 3;
-  numCuts = -cutpool.getNumCuts();
-  separateModKCuts<3>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, addPos, addNeg, foundCut);
-  numCuts += cutpool.getNumCuts();
-  if (numCuts > 0) return;
+  if (separateModKCuts<3>(intSystemValue, intSystemIndex, intSystemStart,
+                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+    return;
 
   k = 5;
-  numCuts = -cutpool.getNumCuts();
-  separateModKCuts<5>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, addPos, addNeg, foundCut);
-  numCuts += cutpool.getNumCuts();
-  if (numCuts > 0) return;
+  if (separateModKCuts<5>(intSystemValue, intSystemIndex, intSystemStart,
+                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+    return;
 
   k = 7;
-  numCuts = -cutpool.getNumCuts();
-  separateModKCuts<7>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.num_col_, addPos, addNeg, foundCut);
-  numCuts += cutpool.getNumCuts();
+  if (separateModKCuts<7>(intSystemValue, intSystemIndex, intSystemStart,
+                          cutpool, lp.num_col_, addPos, addNeg, foundCut))
+    return;
 }
