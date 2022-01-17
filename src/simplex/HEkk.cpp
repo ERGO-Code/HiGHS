@@ -2193,15 +2193,25 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
   simplex_nla_.ftranInScaledSpace(alt_dual_steepest_edge_column, info_.row_DSE_density,
 				  analysis_.pointer_serial_factor_clocks);
   // Compute the pivotal column in the scaled space otherwise to check
+  //
+  // Need \bar{B}^{-1}(R.aq.cq) = \bar{B}^{-1}R.(cq.aq)
+  //
   HVector alt_pivotal_column;
   alt_pivotal_column.setup(num_row);
   alt_pivotal_column.clear();
-  lp_.a_matrix_.collectAj(alt_pivotal_column, variable_in, 1);
+  // 
+  // Determine cq, and apply it in forming RHS
+  // 
+  const double col_aq_scale = simplex_nla_.variableScaleFactor(variable_in);
+  lp_.a_matrix_.collectAj(alt_pivotal_column, variable_in, col_aq_scale);
   simplex_nla_.applyBasisMatrixRowScale(alt_pivotal_column);
   simplex_nla_.ftranInScaledSpace(alt_pivotal_column, info_.col_aq_density,
 				  analysis_.pointer_serial_factor_clocks);
 
-  
+  simplex_nla_.reportArray("alt_dual_steepest_edge_column",
+			   &alt_dual_steepest_edge_column, true);
+			   
+
   double dse_column_error = 0;
   for (HighsInt iRow = 0; iRow<num_row; iRow++)
     dse_column_error += std::fabs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array[iRow]);
@@ -2224,16 +2234,19 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
   const bool convert_to_scaled_space = !simplex_in_scaled_space_;
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
-    double aa_iRow;
+    double aa_iRow = column_array[iRow];
+    if (!aa_iRow) continue;
     if (convert_to_scaled_space) {
-      aa_iRow = column_array[iRow] / simplex_nla_.basicColScaleFactor(iRow);
-    } else {
-      aa_iRow = column_array[iRow];
+      double basic_col_scale = simplex_nla_.basicColScaleFactor(iRow);
+      aa_iRow /= basic_col_scale;
+      aa_iRow *= col_aq_scale;      
     }
     const double pivotal_column_error = std::abs(aa_iRow - alt_pivotal_column.array[iRow]);
-    if (pivotal_column_error > 1e-4)
+    if (pivotal_column_error > 1e-4) {
       printf("HEkk::updateDualSteepestEdgeWeights Row %2d of pivotal column has error %10.4g\n",
-	     (int)iRow, pivotal_column_error);
+	     (int)iRow, pivotal_column_error); fflush(stdout);
+    }
+    assert(pivotal_column_error<1e-4);
     dual_edge_weight_[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
                                           Kai * dual_steepest_edge_array[iRow]);
     dual_edge_weight_[iRow] =

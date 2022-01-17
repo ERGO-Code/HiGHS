@@ -1993,7 +1993,19 @@ void HEkkDual::updateFtranBFRT() {
 
 void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   // Compute the vector required to update DSE weights - being FTRAN
-  // applied to the pivotal column (FTRAN-DSE)
+  // applied to row_ep (FTRAN-DSE)
+  //
+  // When solving the unscaled LP with scaled NLA, have computed
+  //
+  // row_ep = R\bar{B}^{-T}C_B.e_p = cb.R\bar{B}^{-T}e_p
+  //
+  // to get row_ep in the unscaled space.
+  //
+  // To update DSE weights requires \bar{B}^{-1}\bar{B}^{-T}e_p, being
+  //
+  // (1/cp).\bar{B}^{-1}R^{-1}(cb.R\bar{B}^{-T}e_p)
+  //
+  // where cb.R\bar{B}^{-T}e_p is row_ep in the unscaled space.
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
