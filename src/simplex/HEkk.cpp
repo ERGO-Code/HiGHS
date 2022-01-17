@@ -2208,17 +2208,23 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
   simplex_nla_.ftranInScaledSpace(alt_pivotal_column, info_.col_aq_density,
 				  analysis_.pointer_serial_factor_clocks);
 
-  simplex_nla_.reportArray("alt_dual_steepest_edge_column",
-			   &alt_dual_steepest_edge_column, true);
+  //  simplex_nla_.reportArray("alt_dual_steepest_edge_column",
+  //			   &alt_dual_steepest_edge_column, true);
 			   
 
+  const double col_ap_scale = simplex_nla_.basicColScaleFactor(row_out);
+
   double dse_column_error = 0;
-  for (HighsInt iRow = 0; iRow<num_row; iRow++)
-    dse_column_error += std::fabs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array[iRow]);
-  if (dse_column_error > 1e-4)
+  for (HighsInt iRow = 0; iRow<num_row; iRow++) {
+    const double dual_steepest_edge_array_value = dual_steepest_edge_array[iRow] / col_ap_scale;
+    dse_column_error += std::fabs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array_value);
+  }
+  if (dse_column_error > 1e-4) {
     printf("HEkk::updateDualSteepestEdgeWeights: Iter %2d has DSE column error = %g\n",
 	   (int)iteration_count_, dse_column_error);
- 
+    fflush(stdout);
+    assert(dse_column_error<1e-4);
+  }
   
   if ((HighsInt)dual_edge_weight_.size() < num_row) {
     printf(
@@ -2236,10 +2242,12 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
     double aa_iRow = column_array[iRow];
     if (!aa_iRow) continue;
+    double dual_steepest_edge_array_value = dual_steepest_edge_array[iRow];
     if (convert_to_scaled_space) {
       double basic_col_scale = simplex_nla_.basicColScaleFactor(iRow);
       aa_iRow /= basic_col_scale;
-      aa_iRow *= col_aq_scale;      
+      aa_iRow *= col_aq_scale;
+      dual_steepest_edge_array_value /= col_ap_scale;
     }
     const double pivotal_column_error = std::abs(aa_iRow - alt_pivotal_column.array[iRow]);
     if (pivotal_column_error > 1e-4) {
@@ -2248,7 +2256,7 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
     }
     assert(pivotal_column_error<1e-4);
     dual_edge_weight_[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
-                                          Kai * dual_steepest_edge_array[iRow]);
+                                          Kai * dual_steepest_edge_array_value);
     dual_edge_weight_[iRow] =
         std::max(kMinDualSteepestEdgeWeight, dual_edge_weight_[iRow]);
   }

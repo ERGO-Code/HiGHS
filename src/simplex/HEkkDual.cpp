@@ -2007,15 +2007,21 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   //
   // where cb.R\bar{B}^{-T}e_p is row_ep in the unscaled space.
   //
+  // Operation R^{-1} is performed here. Operation (1/cp) is performed
+  // when updating weights
+  //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranDseClock);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtranDse, *DSE_Vector,
                                     ekk_instance_.info_.row_DSE_density);
+  // Apply R{-1}
+  simplex_nla->unapplyBasisMatrixRowScale(*DSE_Vector);
+  
   // Perform FTRAN DSE
-  simplex_nla->ftran(*DSE_Vector, ekk_instance_.info_.row_DSE_density,
-                     analysis->pointer_serial_factor_clocks);
+  simplex_nla->ftranInScaledSpace(*DSE_Vector, ekk_instance_.info_.row_DSE_density,
+				  analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, *DSE_Vector);
   analysis->simplexTimerStop(FtranDseClock);
