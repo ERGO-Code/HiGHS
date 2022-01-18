@@ -20,7 +20,9 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
 #endif
 #include <inttypes.h>
 
