@@ -1103,7 +1103,7 @@ class Highs {
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
 
-  void exactResizeModel() { 
+  void exactResizeModel() {
     this->model_.lp_.exactResize();
     this->model_.hessian_.exactResize();
   }

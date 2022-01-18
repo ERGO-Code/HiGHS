@@ -105,13 +105,10 @@ void HighsLp::exactResize() {
   this->row_lower_.resize(this->num_row_);
   this->row_upper_.resize(this->num_row_);
   this->a_matrix_.exactResize();
-  
-  if ((int)this->col_names_.size())
-    this->col_names_.resize(this->num_col_);
-  if ((int)this->row_names_.size())
-    this->row_names_.resize(this->num_row_);
-  if ((int)this->integrality_.size())
-    this->integrality_.resize(this->num_col_);
+
+  if ((int)this->col_names_.size()) this->col_names_.resize(this->num_col_);
+  if ((int)this->row_names_.size()) this->row_names_.resize(this->num_row_);
+  if ((int)this->integrality_.size()) this->integrality_.resize(this->num_col_);
 }
 
 void HighsLp::clear() {

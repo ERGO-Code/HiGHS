@@ -1879,12 +1879,11 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
     return HighsStatus::kError;
   }
   const double abs_value = std::fabs(value);
-  if (abs_value <= options_.small_matrix_value) {
+  if (0 < abs_value && abs_value <= options_.small_matrix_value) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "|Value| of %g supplied to Highs::changeCoeff is less than or "
-                 "equal to %g: ignored\n",
+                 "|Value| of %g supplied to Highs::changeCoeff is in (0, %g]: "
+                 "zeroes any existing coefficient, otherwise ignored\n",
                  abs_value, options_.small_matrix_value);
-    return HighsStatus::kWarning;
   }
   changeCoefficientInterface(row, col, value);
   return returnFromHighs(HighsStatus::kOk);

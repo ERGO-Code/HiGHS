@@ -29,7 +29,7 @@ void HighsHessian::clear() {
 
 void HighsHessian::exactResize() {
   if (this->dim_) {
-    this->start_.resize(this->dim_+1);
+    this->start_.resize(this->dim_ + 1);
     HighsInt num_nz = this->start_[this->dim_];
     this->index_.resize(num_nz);
     this->value_.resize(num_nz);

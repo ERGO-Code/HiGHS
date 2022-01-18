@@ -1374,30 +1374,50 @@ void deleteScale(vector<double>& scale,
 }
 
 void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value) {
+                               const HighsInt col, const double new_value,
+                               const bool zero_new_value) {
   assert(0 <= row && row < lp.num_row_);
   assert(0 <= col && col < lp.num_col_);
-  HighsInt changeElement = -1;
+
+  // Determine whether the coefficient corresponds to an existing
+  // nonzero
+  HighsInt change_el = -1;
   for (HighsInt el = lp.a_matrix_.start_[col];
        el < lp.a_matrix_.start_[col + 1]; el++) {
     if (lp.a_matrix_.index_[el] == row) {
-      changeElement = el;
+      change_el = el;
       break;
     }
   }
-  if (changeElement < 0) {
-    changeElement = lp.a_matrix_.start_[col + 1];
+  if (change_el < 0) {
+    // Coefficient doesn't correspond to an existing nonzero
+    //
+    // If coefficient is small, then just ignore it
+    if (zero_new_value) return;
+    // New nonzero goes at the end of column "col", so have to shift
+    // all index and value entries forward by 1 to accommodate it
+    change_el = lp.a_matrix_.start_[col + 1];
     HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] + 1;
     lp.a_matrix_.index_.resize(new_num_nz);
     lp.a_matrix_.value_.resize(new_num_nz);
     for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]++;
-    for (HighsInt el = new_num_nz - 1; el > changeElement; el--) {
+    for (HighsInt el = new_num_nz - 1; el > change_el; el--) {
       lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el - 1];
       lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el - 1];
     }
+  } else if (zero_new_value) {
+    // Coefficient zeroes an existing nonzero, so shift all index and
+    // value entries backward by 1 to eliminate it
+    HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] - 1;
+    for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]--;
+    for (HighsInt el = change_el; el < new_num_nz; el++) {
+      lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el + 1];
+      lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el + 1];
+    }
+    return;
   }
-  lp.a_matrix_.index_[changeElement] = row;
-  lp.a_matrix_.value_[changeElement] = new_value;
+  lp.a_matrix_.index_[change_el] = row;
+  lp.a_matrix_.value_[change_el] = new_value;
 }
 
 void changeLpIntegrality(HighsLp& lp,
