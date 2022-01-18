@@ -581,6 +581,12 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   const bool allow_scaling =
       lp.num_col_ > 0 &&
       options.simplex_scale_strategy != kSimplexScaleStrategyOff;
+  if (lp.scale_.has_scaling && !allow_scaling) {
+    // LP had scaling before, but now it is not permitted, clear any
+    // scaling. Return true as scaling position has changed
+    lp.clearScale();
+    return true;
+  }
   const bool scaling_not_tried = lp.scale_.strategy == kSimplexScaleStrategyOff;
   const bool new_scaling_strategy =
       options.simplex_scale_strategy != lp.scale_.strategy &&
