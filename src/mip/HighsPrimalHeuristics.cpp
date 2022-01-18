@@ -24,6 +24,7 @@
 #include "mip/HighsMipSolverData.h"
 #include "pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
+#include "util/HighsIntegers.h"
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
@@ -643,7 +644,7 @@ retry:
 
         if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
             mipsolver.mipdata_->feastol) {
-          double fixval = std::round(currlpsol[i]);
+          double fixval = HighsIntegers::nearestInteger(currlpsol[i]);
           HighsInt oldNumBranched = numBranched;
           if (localdom.col_lower_[i] < fixval) {
             ++numBranched;

@@ -39,6 +39,11 @@ class HighsIntegers {
     return (int64_t)(x + std::copysign(0.5, x));
   }
 
+  static bool isIntegral(double x, double eps) {
+    double y = std::fabs(x - (int64_t)x);
+    return std::min(y, 1.0 - y) <= eps;
+  }
+
   static int64_t modularInverse(int64_t a, int64_t m) {
     int64_t y = 0;
     int64_t x = 1;
