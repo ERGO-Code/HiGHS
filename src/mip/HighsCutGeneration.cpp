@@ -548,7 +548,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   }
 
   if (continuoussqrnorm == 0 && deltas.size() > 1) {
-    double intScale = HighsIntegers::integralScale(deltas, feastol, epsilon);
+    double intScale = HighsIntegers::integralScale(deltas, feastol, kHighsTiny);
 
     if (intScale != 0.0 && intScale <= 1e4) {
       double scalrhs = double(rhs) * intScale;
@@ -593,7 +593,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
-      double downaj = fast_floor(scalaj + epsilon);
+      double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
       double aj = downaj + std::max(0.0, fj - f0);
 
@@ -627,7 +627,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
-      double downaj = fast_floor(scalaj + epsilon);
+      double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
       double aj = downaj + std::max(0.0, fj - f0);
 
@@ -683,7 +683,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
-      double downaj = fast_floor(scalaj + epsilon);
+      double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
       double aj = downaj + std::max(0.0, fj - f0);
 
@@ -723,7 +723,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       }
     } else {
       HighsCDouble scalaj = scale * vals[j];
-      double downaj = floor(double(scalaj + epsilon));
+      double downaj = floor(double(scalaj + kHighsTiny));
       HighsCDouble fj = scalaj - downaj;
       HighsCDouble aj = downaj;
       if (fj > f0) aj += fj - f0;
