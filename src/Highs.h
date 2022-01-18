@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file Highs.h
@@ -937,6 +937,17 @@ class Highs {
                : ekk_instance_.dual_edge_weight_.data();
   }
 
+  /**
+   * @brief Runs ipx crossover and if successful loads basis into Highs::basis_
+   */
+  HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
+
+  /**
+   * @brief Opens a named log file
+   */
+  HighsStatus openLogFile(const std::string log_file = "");
+
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string solutionStatusToString(const HighsInt solution_status) const;
@@ -1046,10 +1057,6 @@ class Highs {
     deprecationMessage("getSimplexIterationCount", "None");
     return info_.simplex_iteration_count;
   }
-
-  // Runs ipx crossover and if successful loads basis into Highs::basis_
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 

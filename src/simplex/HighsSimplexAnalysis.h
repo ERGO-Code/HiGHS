@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexAnalysis.h
@@ -165,7 +165,7 @@ class HighsSimplexAnalysis {
 
   // Local copies of simplex data for reporting
   HighsInt simplex_strategy = 0;
-  DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
+  EdgeWeightMode edge_weight_mode = EdgeWeightMode::kSteepestEdge;
   HighsInt solve_phase = 0;
   HighsInt simplex_iteration_count = 0;
   HighsInt devex_iteration_count = 0;
@@ -200,6 +200,7 @@ class HighsSimplexAnalysis {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_steepest_edge_density;
   double col_basic_feasibility_change_density;
   double row_basic_feasibility_change_density;
   double col_BFRT_density;
@@ -352,7 +353,8 @@ class HighsSimplexAnalysis {
     double AnIterTraceDensity[kNumSimplexNlaOperation];
     double AnIterTraceCostlyDse;
     HighsInt AnIterTraceIter;
-    HighsInt AnIterTrace_dual_edge_weight_mode;
+    HighsInt AnIterTrace_simplex_strategy;
+    HighsInt AnIterTrace_edge_weight_mode;
   };
 
   HighsInt AnIterTraceNumRec;
@@ -360,7 +362,7 @@ class HighsSimplexAnalysis {
   AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];
 
   HighsInt AnIterNumInvert[kRebuildReasonCount];
-  HighsInt AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kCount];
+  HighsInt AnIterNumEdWtIt[(HighsInt)EdgeWeightMode::kCount];
 
   HighsValueDistribution primal_step_distribution;
   HighsValueDistribution dual_step_distribution;

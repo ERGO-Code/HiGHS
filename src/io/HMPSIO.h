@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HMPSIO.h
@@ -55,7 +55,9 @@ FilereaderRetcode readMps(
     vector<double>& colLower, vector<double>& colUpper,
     vector<double>& rowLower, vector<double>& rowUpper,
     vector<HighsVarType>& integerColumn, vector<std::string>& col_names,
-    vector<std::string>& row_names, const HighsInt keep_n_rows = 0);
+    vector<std::string>& row_names, HighsInt& Qdim, vector<HighsInt>& Qstart,
+    vector<HighsInt>& Qindex, vector<double>& Qvalue,
+    const HighsInt keep_n_rows = 0);
 
 HighsStatus writeMps(
     const HighsLogOptions& log_options, const std::string filename,

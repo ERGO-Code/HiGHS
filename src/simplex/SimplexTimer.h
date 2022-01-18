@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/SimplexTimer.h
@@ -97,6 +97,7 @@ enum iClockSimplex {
   PriceFullClock,                         //!< PRICE - full
   FtranClock,                             //!< FTRAN - pivotal column
   FtranDseClock,                          //!< FTRAN for DSE weights
+  BtranPseClock,                          //!< BTRAN for PSE weights
   FtranMixParClock,                       //!< FTRAN for PAMI - parallel
   FtranMixFinalClock,                     //!< FTRAN for PAMI - final
   FtranBfrtClock,                         //!< FTRAN for BFRT
@@ -215,6 +216,7 @@ class SimplexTimer {
     clock[PriceFullClock] = timer_pointer->clock_def("PRICE_FULL", "PCF");
     clock[FtranClock] = timer_pointer->clock_def("FTRAN", "COL");
     clock[FtranDseClock] = timer_pointer->clock_def("FTRAN_DSE", "DSE");
+    clock[BtranPseClock] = timer_pointer->clock_def("BTRAN_PSE", "PSE");
     clock[FtranMixParClock] = timer_pointer->clock_def("FTRAN_MIX_PAR", "FMP");
     clock[FtranMixFinalClock] =
         timer_pointer->clock_def("FTRAN_MIX_FINAL", "FMF");
@@ -343,6 +345,7 @@ class SimplexTimer {
         UpdateDualBasicFeasibilityChangeClock,
         FtranBfrtClock,
         FtranDseClock,
+        BtranPseClock,
         BtranFullClock,
         PriceFullClock,
         DevexWtClock,
@@ -406,6 +409,7 @@ class SimplexTimer {
         FtranClock,
         FtranBfrtClock,
         FtranDseClock,
+        BtranPseClock,
         FtranMixParClock,
         FtranMixFinalClock,
         UpdateRowClock,

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef SIMPLEX_HAPP_H_
@@ -22,7 +22,9 @@
 //#include <set>
 //#include <vector>
 
+#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "simplex/HEkk.h"
 #include "simplex/HSimplex.h"
@@ -188,8 +190,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
            !ekk_instance.status_.is_dualised);
     if (options.cost_scale_factor) {
       double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
-      printf("Objective = %11.4g\n",
-             cost_scale_factor * ekk_instance.info_.dual_objective_value);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Objective = %11.4g\n",
+                  cost_scale_factor * ekk_instance.info_.dual_objective_value);
       ekk_instance.model_status_ = HighsModelStatus::kNotset;
       return_status = HighsStatus::kError;
     }
@@ -213,8 +216,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       //
       if (options.cost_scale_factor) {
         double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
-        printf("Objective = %11.4g\n",
-               cost_scale_factor * ekk_instance.info_.dual_objective_value);
+        highsLogDev(
+            options.log_options, HighsLogType::kInfo, "Objective = %11.4g\n",
+            cost_scale_factor * ekk_instance.info_.dual_objective_value);
         ekk_instance.model_status_ = HighsModelStatus::kNotset;
         return_status = HighsStatus::kError;
       }
@@ -276,6 +280,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
         return returnFromSolveLpSimplex(solver_object, return_status);
       }
+    } else {
+      // LP is scaled, but simplex_unscaled_solution_strategy is
+      // kSimplexUnscaledSolutionStrategyDirect, so have to move back
+      // the LP and unscale it
+      assert(options.simplex_unscaled_solution_strategy ==
+	     kSimplexUnscaledSolutionStrategyDirect);
+      incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
     }
     assert(options.simplex_unscaled_solution_strategy ==
                kSimplexUnscaledSolutionStrategyDirect ||
@@ -293,6 +304,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // LP, see whether the proof still holds for the unscaled LP. If
     // it does, then there's no need to solve the unscaled LP
     bool solve_unscaled_lp = true;
+    // ToDo: ekk_instance.status_.has_dual_ray should now be true if
+    // scaled_model_status == HighsModelStatus::kInfeasible since this
+    // model status depends on the infeasibility proof being true
     if (scaled_model_status == HighsModelStatus::kInfeasible &&
         ekk_instance.status_.has_dual_ray) {
       ekk_instance.setNlaPointersForLpAndScale(ekk_lp);
@@ -305,32 +319,57 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
           options.dual_simplex_cost_perturbation_multiplier;
       HighsInt simplex_dual_edge_weight_strategy =
           ekk_info.dual_edge_weight_strategy;
-      if (num_unscaled_primal_infeasibilities == 0) {
-        // Only dual infeasibilities, so use primal simplex
+      if (num_unscaled_primal_infeasibilities == 0 ||
+          scaled_model_status == HighsModelStatus::kObjectiveBound) {
+        // Only dual infeasibilities, or primal infeasibilities do not
+        // matter due to solution status, so use primal simplex phase
+        // 2
         options.simplex_strategy = kSimplexStrategyPrimal;
+        if (scaled_model_status == HighsModelStatus::kObjectiveBound) {
+          highsLogDev(
+              options.log_options, HighsLogType::kInfo,
+              "solveLpSimplex: Calling primal simplex after "
+              "scaled_model_status == HighsModelStatus::kObjectiveBound: solve "
+              "= %d; tick = %d; iter = %d\n",
+              (int)ekk_instance.debug_solve_call_num_,
+              (int)ekk_instance.debug_initial_build_synthetic_tick_,
+              (int)ekk_instance.iteration_count_);
+        }
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
-        //    if (status.has_basis || basis.valid) {
-        // ToDo Track whether steepest edge weights are known &&
-        // !status.has_dual_steepest_edge_weights) {
-        if (status.has_dual_steepest_edge_weights) {
-          printf(
-              "HApp.h: Solving unscaled LP with dual simplex after solving "
-              "scaled LP."
-              " Using Devex despite having dual steepest edge weights\n");
-          fflush(stdout);
-          assert(909 == 0);
-        }
-        ekk_info.dual_edge_weight_strategy =
+	if ((status.has_basis || basis.valid) &&
+	    !status.has_dual_steepest_edge_weights) {
+	  ekk_info.dual_edge_weight_strategy =
             kSimplexDualEdgeWeightStrategyDevex;
-        // options.dual_simplex_cost_perturbation_multiplier = 0;
+	}
       }
       //
       // Solve the unscaled LP with scaled NLA
       //
-      return_status = ekk_instance.solve();
+      // Force the simplex solver to start in phase 2 unless solving
+      // the LP directly as unscaled
+      //
+      const bool force_phase2 = options.simplex_unscaled_solution_strategy !=
+	     kSimplexUnscaledSolutionStrategyDirect;
+      return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;
+
+      if (scaled_model_status != HighsModelStatus::kObjectiveBound &&
+          ekk_instance.model_status_ == HighsModelStatus::kObjectiveBound) {
+        // it may happen that the unscaled LP detected status kObjectiveBound
+        // for the first time in which case we again call solve with primal
+        // simplex if not dual feasible
+        const bool objective_bound_refinement =
+            ekk_instance.model_status_ == HighsModelStatus::kObjectiveBound &&
+            ekk_info.num_dual_infeasibilities > 0;
+
+        if (objective_bound_refinement) {
+          options.simplex_strategy = kSimplexStrategyPrimal;
+          return_status = ekk_instance.solve(force_phase2);
+        }
+      }
+
       //
       // Restore the options/strategies that may have been changed
       options.simplex_strategy = simplex_strategy;

@@ -2,9 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ipm/IpxWrapper.cpp
@@ -217,9 +220,15 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   else
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Ipx: %s not run\n", method_name.c_str());
-    return HighsStatus::kWarning;
+    if (ipm_status || options.run_crossover) {
+      // Warn if method not run is IPM or run_crossover option is true
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+		   "Ipx: %s not run\n", method_name.c_str());
+      return HighsStatus::kWarning;
+    }
+    // OK if method not run is crossover and run_crossover option is
+    // false!
+    return HighsStatus::kOk;
   } else if (status == IPX_STATUS_optimal) {
     highsLogUser(options.log_options, HighsLogType::kInfo, "Ipx: %s optimal\n",
                  method_name.c_str());

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HEkkDebug.cpp
@@ -1388,7 +1388,8 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus HEkk::devDebugSteepestEdgeWeights(const std::string message) {
+HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
+    const std::string message) {
   // Possibly force the expensive check for development work
   const bool check_dual_edge_weights = true;
   if (check_dual_edge_weights) {
@@ -1398,13 +1399,13 @@ HighsDebugStatus HEkk::devDebugSteepestEdgeWeights(const std::string message) {
                                          : (HighsInt)kHighsDebugLevelCostly;
     //    printf("Performing level %1d check %s for dual steepest edge
     //    weights\n", (int)alt_debug_level, message.c_str());
-    return debugSteepestEdgeWeights(alt_debug_level);
+    return debugDualSteepestEdgeWeights(alt_debug_level);
   } else {
-    return debugSteepestEdgeWeights();
+    return debugDualSteepestEdgeWeights();
   }
 }
 
-HighsDebugStatus HEkk::debugSteepestEdgeWeights(
+HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
     const HighsInt alt_debug_level) {
   const HighsInt use_debug_level = alt_debug_level >= 0
                                        ? alt_debug_level
@@ -1434,33 +1435,34 @@ HighsDebugStatus HEkk::debugSteepestEdgeWeights(
   } else {
     // Check all weights
     num_check_weight = num_row;
-    std::vector<double> save_dual_edge_weight = this->dual_edge_weight_;
+    std::vector<double> updated_dual_edge_weight = this->dual_edge_weight_;
     computeDualSteepestEdgeWeights();
-    std::vector<double>& true_dual_steepest_edge_weight =
-        this->dual_edge_weight_;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       dual_steepest_edge_weight_norm +=
-          std::fabs(true_dual_steepest_edge_weight[iRow]);
-      dual_steepest_edge_weight_error += std::fabs(
-          this->dual_edge_weight_[iRow] - true_dual_steepest_edge_weight[iRow]);
+          std::fabs(this->dual_edge_weight_[iRow]);
+      const double error = std::fabs(updated_dual_edge_weight[iRow] -
+                                     this->dual_edge_weight_[iRow]);
+      dual_steepest_edge_weight_error += error;
     }
-    this->dual_edge_weight_ = save_dual_edge_weight;
+    this->dual_edge_weight_ = updated_dual_edge_weight;
   }
   // Now assess the relative error
   assert(dual_steepest_edge_weight_norm > 0);
   double relative_dual_steepest_edge_weight_error =
       dual_steepest_edge_weight_error / dual_steepest_edge_weight_norm;
-  const double error_report_tolerance = 1e-8;
   const double large_relative_dual_steepest_edge_weight_error = 1e-3;
-  assert(large_relative_dual_steepest_edge_weight_error >
-         error_report_tolerance);
-  if (relative_dual_steepest_edge_weight_error > error_report_tolerance) {
+  if (relative_dual_steepest_edge_weight_error >
+      10 * debug_max_relative_dual_steepest_edge_weight_error) {
     printf(
-        "HEkk::debugSteepestEdgeWeights Checked %2d weights: "
+        "HEkk::debugDualSteepestEdgeWeights   Iteration %5d: Checked %2d "
+        "weights: "
         "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
-        (int)num_check_weight, dual_steepest_edge_weight_error,
-        dual_steepest_edge_weight_norm,
+        (int)iteration_count_, (int)num_check_weight,
+        dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,
         relative_dual_steepest_edge_weight_error);
+    fflush(stdout);
+    debug_max_relative_dual_steepest_edge_weight_error =
+        relative_dual_steepest_edge_weight_error;
     if (relative_dual_steepest_edge_weight_error >
         large_relative_dual_steepest_edge_weight_error)
       return HighsDebugStatus::kLargeError;
@@ -1552,10 +1554,10 @@ HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
         (int)iteration_count_, (int)num_dual_sign_change);
     printf("   |cB| = %g; |cN| = %g; zero delta dual = %g\n", norm_basic_costs,
            norm_nonbasic_costs, zero_delta_dual);
-    //    analyseVectorValues(options.log_options, "Previous duals", num_tot,
-    //    previous_dual); analyseVectorValues(options.log_options, "New duals",
+    //    analyseVectorValues(&options.log_options, "Previous duals", num_tot,
+    //    previous_dual); analyseVectorValues(&options.log_options, "New duals",
     //    num_tot, new_dual);
-    analyseVectorValues(options.log_options, "Delta duals", num_tot,
+    analyseVectorValues(&options.log_options, "Delta duals", num_tot,
                         delta_dual);
   }
   return HighsDebugStatus::kOk;
