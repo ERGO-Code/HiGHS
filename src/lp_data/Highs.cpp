@@ -610,6 +610,8 @@ HighsStatus Highs::run() {
                 "Highs::run() called with called_return_from_run false\n");
     return HighsStatus::kError;
   }
+  // Ensure that all vectors in the model have exactly the right size
+  exactResizeModel();
   // Set this so that calls to returnFromRun() can be checked
   called_return_from_run = false;
   // From here all return statements execute returnFromRun()
