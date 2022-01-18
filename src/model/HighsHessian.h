@@ -34,13 +34,14 @@ class HighsHessian {
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
+  void exactResize();
   void clear();
   bool formatOk() const {
     return (this->format_ == HessianFormat::kTriangular ||
             this->format_ == HessianFormat::kSquare);
   };
   HighsInt numNz() const;
-  void print();
+  void print() const;
 };
 
 #endif

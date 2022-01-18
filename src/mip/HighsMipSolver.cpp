@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsMipSolver.h"
@@ -118,7 +118,9 @@ restart:
     bool considerHeuristics = true;
     while (true) {
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        search.evaluateNode();
+        if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
+          break;
+
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
@@ -143,7 +145,8 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-        search.dive();
+        if (search.dive() == HighsSearch::NodeResult::kSubOptimal) break;
+
         ++mipdata_->num_leaves;
 
         search.flushStatistics();
@@ -165,16 +168,19 @@ restart:
           options_mip_->mip_pool_soft_limit)
         mipdata_->conflictPool.performAging();
 
+      search.flushStatistics();
       mipdata_->printDisplayLine();
       // printf("continue plunging due to good esitmate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
-    mipdata_->lower_bound = std::min(mipdata_->upper_bound,
-                                     mipdata_->nodequeue.getBestLowerBound());
+    search.flushStatistics();
 
-    if (limit_reached) break;
-
-    mipdata_->printDisplayLine();
+    if (limit_reached) {
+      mipdata_->lower_bound = std::min(mipdata_->upper_bound,
+                                       mipdata_->nodequeue.getBestLowerBound());
+      mipdata_->printDisplayLine();
+      break;
+    }
 
     // the search datastructure should have no installed node now
     assert(!search.hasNode());
@@ -185,12 +191,18 @@ restart:
         mipdata_->domain, mipdata_->feastol);
 
     // if global propagation detected infeasibility, stop here
-    if (mipdata_->domain.infeasible() || mipdata_->nodequeue.empty()) {
+    if (mipdata_->domain.infeasible()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+      mipdata_->printDisplayLine();
       break;
     }
+
+    mipdata_->lower_bound = std::min(mipdata_->upper_bound,
+                                     mipdata_->nodequeue.getBestLowerBound());
+    mipdata_->printDisplayLine();
+    if (mipdata_->nodequeue.empty()) break;
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
@@ -296,9 +308,14 @@ restart:
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
         lastLbLeave = numQueueLeaves;
       } else {
-        search.installNode(mipdata_->nodequeue.popBestNode());
-        if (search.getCurrentLowerBound() == mipdata_->lower_bound)
+        HighsInt bestBoundNodeStackSize =
+            mipdata_->nodequeue.getBestBoundDomchgStackSize();
+        double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
+        HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
+        if (nextNode.lower_bound == bestBoundNodeLb &&
+            nextNode.domchgstack.size() == bestBoundNodeStackSize)
           lastLbLeave = numQueueLeaves;
+        search.installNode(std::move(nextNode));
       }
 
       ++numQueueLeaves;
@@ -319,7 +336,8 @@ restart:
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to
       // new global information before we perform separation rounds for the node
-      search.evaluateNode();
+      if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
+        search.currentNodeToQueue(mipdata_->nodequeue);
 
       // if the node was pruned we remove it from the search and install the
       // next node from the queue
@@ -385,9 +403,18 @@ restart:
 void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
-  dual_bound_ = mipdata_->lower_bound + model_->offset_;
+  dual_bound_ = mipdata_->lower_bound;
+  if (mipdata_->objintscale != 0.0) {
+    double rounded_lower_bound =
+        std::ceil(mipdata_->lower_bound * mipdata_->objintscale -
+                  mipdata_->feastol) /
+        mipdata_->objintscale;
+    dual_bound_ = std::max(dual_bound_, rounded_lower_bound);
+  }
+  dual_bound_ += model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
+  dual_bound_ = std::min(dual_bound_, primal_bound_);
 
   if (modelstatus_ == HighsModelStatus::kNotset) {
     if (havesolution)
@@ -407,14 +434,47 @@ void HighsMipSolver::cleanupSolve() {
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     solutionstatus = feasible ? "feasible" : "infeasible";
   }
+
+  double gap = fabs(primal_bound_ - dual_bound_);
+  if (primal_bound_ == 0.0)
+    gap = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
+  else if (primal_bound_ != kHighsInf)
+    gap = fabs(primal_bound_ - dual_bound_) / fabs(primal_bound_);
+  else
+    gap = kHighsInf;
+  std::array<char, 128> gapString;
+
+  if (gap == kHighsInf)
+    std::strcpy(gapString.data(), "inf");
+  else {
+    double gapTol = options_mip_->mip_rel_gap;
+
+    if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
+      gapTol = primal_bound_ == 0.0
+                   ? kHighsInf
+                   : std::max(gapTol,
+                              options_mip_->mip_abs_gap / fabs(primal_bound_));
+    }
+
+    if (gapTol == 0.0)
+      std::snprintf(gapString.data(), gapString.size(), "%.2f%%", 100. * gap);
+    else if (gapTol != kHighsInf)
+      std::snprintf(gapString.data(), gapString.size(),
+                    "%.2f%% (tolerance: %.2f%%)", 100. * gap, 100. * gapTol);
+    else
+      std::snprintf(gapString.data(), gapString.size(),
+                    "%.2f%% (tolerance: inf)", 100. * gap);
+  }
+
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n"
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
+               "  Gap               %s\n"
                "  Solution status   %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, solutionstatus.c_str());
+               dual_bound_, gapString.data(), solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"

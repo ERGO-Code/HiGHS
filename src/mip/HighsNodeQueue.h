@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -73,6 +73,7 @@ class HighsNodeQueue {
  private:
   class NodeLowerRbTree;
   class NodeHybridEstimRbTree;
+  class SuboptimalNodeRbTree;
 
   std::vector<OpenNode> nodes;
   std::vector<std::set<std::pair<double, HighsInt>>> colLowerNodes;
@@ -83,6 +84,10 @@ class HighsNodeQueue {
   HighsInt lowerMin = -1;
   HighsInt hybridEstimRoot = -1;
   HighsInt hybridEstimMin = -1;
+  HighsInt suboptimalRoot = -1;
+  HighsInt suboptimalMin = -1;
+  HighsInt numSuboptimal = 0;
+  double optimality_limit = kHighsInf;
 
   void link_estim(HighsInt node);
 
@@ -92,22 +97,30 @@ class HighsNodeQueue {
 
   void unlink_lower(HighsInt node);
 
+  void link_suboptimal(HighsInt node);
+
+  void unlink_suboptimal(HighsInt node);
+
   void link_domchgs(HighsInt node);
 
   void unlink_domchgs(HighsInt node);
 
-  void link(HighsInt node);
+  double link(HighsInt node);
 
   void unlink(HighsInt node);
 
  public:
+  void setOptimalityLimit(double optimality_limit) {
+    this->optimality_limit = optimality_limit;
+  }
+
   double performBounding(double upper_limit);
 
   void setNumCol(HighsInt numcol);
 
-  void emplaceNode(std::vector<HighsDomainChange>&& domchgs,
-                   std::vector<HighsInt>&& branchings, double lower_bound,
-                   double estimate, HighsInt depth);
+  double emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                     std::vector<HighsInt>&& branchings, double lower_bound,
+                     double estimate, HighsInt depth);
 
   OpenNode&& popBestNode();
 
@@ -144,7 +157,9 @@ class HighsNodeQueue {
 
   double pruneNode(HighsInt nodeId);
 
-  double getBestLowerBound();
+  double getBestLowerBound() const;
+
+  HighsInt getBestBoundDomchgStackSize() const;
 
   void clear() {
     HighsNodeQueue nodequeue;
@@ -152,9 +167,13 @@ class HighsNodeQueue {
     *this = std::move(nodequeue);
   }
 
-  bool empty() const { return nodes.size() == freeslots.size(); }
-
   int64_t numNodes() const { return nodes.size() - freeslots.size(); }
+
+  int64_t numActiveNodes() const {
+    return nodes.size() - freeslots.size() - numSuboptimal;
+  }
+
+  bool empty() const { return numActiveNodes() == 0; }
 };
 
 #endif

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
@@ -94,135 +94,21 @@ void HighsLp::resetScale() {
   this->clearScale();
 }
 
-bool HighsLp::dimensionsOk(std::string message) const {
-  bool ok = true;
-  const HighsInt num_col = this->num_col_;
-  const HighsInt num_row = this->num_row_;
-  if (!(num_col >= 0))
-    printf("HighsLp::dimensionsOK (%s) fails on num_col >= 0\n",
-           message.c_str());
-  ok = num_col >= 0 && ok;
-  if (!(num_row >= 0))
-    printf("HighsLp::dimensionsOK (%s) fails on num_row >= 0\n",
-           message.c_str());
-  ok = num_row >= 0 && ok;
-  if (!ok) return ok;
-
-  HighsInt col_cost_size = this->col_cost_.size();
-  HighsInt col_lower_size = this->col_lower_.size();
-  HighsInt col_upper_size = this->col_upper_.size();
-  HighsInt matrix_start_size = this->a_matrix_.start_.size();
-  bool legal_col_cost_size = col_cost_size >= num_col;
-  bool legal_col_lower_size = col_lower_size >= num_col;
-  bool legal_col_upper_size = col_lower_size >= num_col;
-  if (!legal_col_cost_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_col_cost_size\n",
-           message.c_str());
-  ok = legal_col_cost_size && ok;
-  if (!legal_col_lower_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_col_lower_size\n",
-           message.c_str());
-  ok = legal_col_lower_size && ok;
-  if (!legal_col_upper_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_col_upper_size\n",
-           message.c_str());
-  ok = legal_col_upper_size && ok;
-
-  bool legal_format = this->a_matrix_.format_ == MatrixFormat::kColwise ||
-                      this->a_matrix_.format_ == MatrixFormat::kRowwise;
-  if (!legal_format)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_format\n",
-           message.c_str());
-  ok = legal_format && ok;
-  HighsInt num_vec;
-  if (this->a_matrix_.isColwise()) {
-    num_vec = num_col;
-  } else {
-    num_vec = num_row;
-  }
-  const bool partitioned = false;
-  vector<HighsInt> a_matrix_p_end;
-  bool legal_matrix_dimensions =
-      assessMatrixDimensions(num_vec, partitioned, this->a_matrix_.start_,
-                             a_matrix_p_end, this->a_matrix_.index_,
-                             this->a_matrix_.value_) == HighsStatus::kOk;
-  if (!legal_matrix_dimensions)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_matrix_dimensions\n",
-           message.c_str());
-  ok = legal_matrix_dimensions && ok;
-
-  HighsInt row_lower_size = this->row_lower_.size();
-  HighsInt row_upper_size = this->row_upper_.size();
-  bool legal_row_lower_size = row_lower_size >= num_row;
-  bool legal_row_upper_size = row_lower_size >= num_row;
-  if (!legal_row_lower_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_row_lower_size\n",
-           message.c_str());
-  ok = legal_row_lower_size && ok;
-  if (!legal_row_upper_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_row_upper_size\n",
-           message.c_str());
-  ok = legal_row_upper_size && ok;
-
-  bool legal_a_matrix_num_col = this->a_matrix_.num_col_ == num_col;
-  bool legal_a_matrix_num_row = this->a_matrix_.num_row_ == num_row;
-  if (!legal_a_matrix_num_col)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_a_matrix_num_col\n",
-           message.c_str());
-  ok = legal_a_matrix_num_col && ok;
-  if (!legal_a_matrix_num_row)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_a_matrix_num_row\n",
-           message.c_str());
-  ok = legal_a_matrix_num_row && ok;
-
-  HighsInt scale_strategy = (HighsInt)this->scale_.strategy;
-  bool legal_scale_strategy = scale_strategy >= 0;
-  if (!legal_scale_strategy)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_strategy\n",
-           message.c_str());
-  ok = legal_scale_strategy && ok;
-  HighsInt scale_row_size = (HighsInt)this->scale_.row.size();
-  HighsInt scale_col_size = (HighsInt)this->scale_.col.size();
-  bool legal_scale_num_col = false;
-  bool legal_scale_num_row = false;
-  bool legal_scale_row_size = false;
-  bool legal_scale_col_size = false;
-  if (this->scale_.has_scaling) {
-    legal_scale_num_col = this->scale_.num_col == num_col;
-    legal_scale_num_row = this->scale_.num_row == num_row;
-    legal_scale_row_size = scale_row_size >= num_row;
-    legal_scale_col_size = scale_col_size >= num_col;
-  } else {
-    legal_scale_num_col = this->scale_.num_col == 0;
-    legal_scale_num_row = this->scale_.num_row == 0;
-    legal_scale_row_size = scale_row_size == 0;
-    legal_scale_col_size = scale_col_size == 0;
-  }
-  if (!legal_scale_num_col)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_num_col\n",
-           message.c_str());
-  ok = legal_scale_num_col && ok;
-  if (!legal_scale_num_row)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_num_row\n",
-           message.c_str());
-  ok = legal_scale_num_row && ok;
-  if (!legal_scale_row_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_row_size\n",
-           message.c_str());
-  ok = legal_scale_row_size && ok;
-  if (!legal_scale_col_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_col_size\n",
-           message.c_str());
-  ok = legal_scale_col_size && ok;
-  if (!ok) {
-    printf("HighsLp::dimensionsOK (%s) fails \n", message.c_str());
-  }
-
-  return ok;
-}
-
 void HighsLp::setFormat(const MatrixFormat format) {
   this->a_matrix_.setFormat(format);
+}
+
+void HighsLp::exactResize() {
+  this->col_cost_.resize(this->num_col_);
+  this->col_lower_.resize(this->num_col_);
+  this->col_upper_.resize(this->num_col_);
+  this->row_lower_.resize(this->num_row_);
+  this->row_upper_.resize(this->num_row_);
+  this->a_matrix_.exactResize();
+
+  if ((int)this->col_names_.size()) this->col_names_.resize(this->num_col_);
+  if ((int)this->row_names_.size()) this->row_names_.resize(this->num_row_);
+  if ((int)this->integrality_.size()) this->integrality_.resize(this->num_col_);
 }
 
 void HighsLp::clear() {

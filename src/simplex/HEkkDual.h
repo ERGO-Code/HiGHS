@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDual.h
@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-//#include "HConfig.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
@@ -51,7 +50,7 @@ class HEkkDual {
   /**
    * @brief Solve a model instance
    */
-  HighsStatus solve();
+  HighsStatus solve(const bool force_phase2 = false);
 
   const SimplexAlgorithm algorithm = SimplexAlgorithm::kDual;
 
@@ -357,6 +356,10 @@ class HEkkDual {
   void majorRollback();
 
   // private:
+  void possiblyUseLiDualSteepestEdge();
+  void computeDualInfeasibilitiesWithFixedVariableFlips();
+  void correctDualInfeasibilities(HighsInt& free_infeasibility_count);
+
   bool proofOfPrimalInfeasibility();
   void saveDualRay();
   void assessPhase1Optimality();
@@ -372,7 +375,8 @@ class HEkkDual {
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
-  bool badBasisChange();
+  bool isBadBasisChange();
+  void assessPossiblyDualUnbounded();
 
   // Devex scalars
   HighsInt num_devex_iterations =
@@ -423,6 +427,7 @@ class HEkkDual {
   double dual_feasibility_tolerance;
   double objective_bound;
 
+  bool force_phase2;
   HighsInt solve_phase;
   HighsInt rebuild_reason;
 
@@ -509,9 +514,6 @@ class HEkkDual {
   HighsInt multi_chooseAgain;
   MChoice multi_choice[kSimplexConcurrencyLimit];
   MFinish multi_finish[kSimplexConcurrencyLimit];
-
-  //  double build_synthetic_tick;
-  //  double total_synthetic_tick;
 };
 
 #endif /* SIMPLEX_HEKKDUAL_H_ */

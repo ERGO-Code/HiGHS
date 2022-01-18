@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_UTIL_INTEGERS_H_
@@ -33,6 +33,15 @@ class HighsIntegers {
   static double mod(double a, double m) {
     int64_t r = std::fmod(a, m);
     return r + (a < 0) * m;
+  }
+
+  static int64_t nearestInteger(double x) {
+    return (int64_t)(x + std::copysign(0.5, x));
+  }
+
+  static bool isIntegral(double x, double eps) {
+    double y = std::fabs(x - (int64_t)x);
+    return std::min(y, 1.0 - y) <= eps;
   }
 
   static int64_t modularInverse(int64_t a, int64_t m) {

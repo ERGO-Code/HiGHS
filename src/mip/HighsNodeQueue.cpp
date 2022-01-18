@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsNodeQueue.h"
@@ -27,12 +27,17 @@
 namespace highs {
 template <>
 struct RbTreeTraits<HighsNodeQueue::NodeLowerRbTree> {
-  using KeyType = std::tuple<double, double, HighsInt>;
+  using KeyType = std::tuple<double, HighsInt, double, HighsInt>;
 };
 
 template <>
 struct RbTreeTraits<HighsNodeQueue::NodeHybridEstimRbTree> {
   using KeyType = std::tuple<double, HighsInt, HighsInt>;
+};
+
+template <>
+struct RbTreeTraits<HighsNodeQueue::SuboptimalNodeRbTree> {
+  using KeyType = std::pair<double, HighsInt>;
 };
 }  // namespace highs
 
@@ -53,8 +58,9 @@ class HighsNodeQueue::NodeLowerRbTree : public CacheMinRbTree<NodeLowerRbTree> {
   const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
     return nodeQueue->nodes[node].lowerLinks;
   }
-  std::tuple<double, double, HighsInt> getKey(HighsInt node) const {
+  std::tuple<double, HighsInt, double, HighsInt> getKey(HighsInt node) const {
     return std::make_tuple(nodeQueue->nodes[node].lower_bound,
+                           HighsInt(nodeQueue->nodes[node].domchgstack.size()),
                            nodeQueue->nodes[node].estimate, node);
   }
 };
@@ -85,6 +91,28 @@ class HighsNodeQueue::NodeHybridEstimRbTree
   }
 };
 
+class HighsNodeQueue::SuboptimalNodeRbTree
+    : public CacheMinRbTree<SuboptimalNodeRbTree> {
+  HighsNodeQueue* nodeQueue;
+
+ public:
+  SuboptimalNodeRbTree(HighsNodeQueue* nodeQueue)
+      : CacheMinRbTree<SuboptimalNodeRbTree>(nodeQueue->suboptimalRoot,
+                                             nodeQueue->suboptimalMin),
+        nodeQueue(nodeQueue) {}
+
+  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+    return nodeQueue->nodes[node].lowerLinks;
+  }
+  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+    return nodeQueue->nodes[node].lowerLinks;
+  }
+
+  std::pair<double, HighsInt> getKey(HighsInt node) const {
+    return std::make_pair(nodeQueue->nodes[node].lower_bound, node);
+  }
+};
+
 void HighsNodeQueue::link_estim(HighsInt node) {
   assert(node != -1);
   NodeHybridEstimRbTree rbTree(this);
@@ -107,6 +135,20 @@ void HighsNodeQueue::unlink_lower(HighsInt node) {
   assert(node != -1);
   NodeLowerRbTree rbTree(this);
   rbTree.unlink(node);
+}
+
+void HighsNodeQueue::link_suboptimal(HighsInt node) {
+  assert(node != -1);
+  SuboptimalNodeRbTree rbTree(this);
+  rbTree.link(node);
+  ++numSuboptimal;
+}
+
+void HighsNodeQueue::unlink_suboptimal(HighsInt node) {
+  assert(node != -1);
+  SuboptimalNodeRbTree rbTree(this);
+  rbTree.unlink(node);
+  --numSuboptimal;
 }
 
 void HighsNodeQueue::link_domchgs(HighsInt node) {
@@ -148,15 +190,28 @@ void HighsNodeQueue::unlink_domchgs(HighsInt node) {
   nodes[node].domchglinks.shrink_to_fit();
 }
 
-void HighsNodeQueue::link(HighsInt node) {
+double HighsNodeQueue::link(HighsInt node) {
+  if (nodes[node].lower_bound > optimality_limit) {
+    assert(nodes[node].estimate != kHighsInf);
+    nodes[node].estimate = kHighsInf;
+    link_suboptimal(node);
+    link_domchgs(node);
+    return std::ldexp(1.0, 1 - nodes[node].depth);
+  }
+
   link_estim(node);
   link_lower(node);
   link_domchgs(node);
+  return 0.0;
 }
 
 void HighsNodeQueue::unlink(HighsInt node) {
-  unlink_estim(node);
-  unlink_lower(node);
+  if (nodes[node].estimate == kHighsInf) {
+    unlink_suboptimal(node);
+  } else {
+    unlink_estim(node);
+    unlink_lower(node);
+  }
   unlink_domchgs(node);
   freeslots.push(node);
 }
@@ -181,7 +236,8 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
     delnodes.insert(it->second);
 
   for (HighsInt delnode : delnodes) {
-    treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
+    if (nodes[delnode].estimate != kHighsInf)
+      treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
     unlink(delnode);
   }
 }
@@ -234,7 +290,9 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 }
 
 double HighsNodeQueue::pruneNode(HighsInt nodeId) {
-  double treeweight = std::ldexp(1.0, 1 - nodes[nodeId].depth);
+  double treeweight = nodes[nodeId].estimate != kHighsInf
+                          ? std::ldexp(1.0, 1 - nodes[nodeId].depth)
+                          : 0.0;
   unlink(nodeId);
   return treeweight;
 }
@@ -254,14 +312,41 @@ double HighsNodeQueue::performBounding(double upper_limit) {
     maxLbNode = next;
   }
 
+  if (optimality_limit < upper_limit) {
+    while (maxLbNode != -1) {
+      if (nodes[maxLbNode].lower_bound < optimality_limit) break;
+      HighsInt next = lowerTree.predecessor(maxLbNode);
+      assert(nodes[maxLbNode].estimate != kHighsInf);
+      unlink_estim(maxLbNode);
+      unlink_lower(maxLbNode);
+      treeweight += std::ldexp(1.0, 1 - nodes[maxLbNode].depth);
+      nodes[maxLbNode].estimate = kHighsInf;
+      link_suboptimal(maxLbNode);
+      maxLbNode = next;
+    }
+  }
+
+  if (numSuboptimal) {
+    SuboptimalNodeRbTree suboptimalTree(this);
+    maxLbNode = suboptimalTree.last();
+    while (maxLbNode != -1) {
+      if (nodes[maxLbNode].lower_bound < upper_limit) break;
+      HighsInt next = suboptimalTree.predecessor(maxLbNode);
+      unlink(maxLbNode);
+      maxLbNode = next;
+    }
+  }
+
   return double(treeweight);
 }
 
-void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
-                                 std::vector<HighsInt>&& branchPositions,
-                                 double lower_bound, double estimate,
-                                 HighsInt depth) {
+double HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                                   std::vector<HighsInt>&& branchPositions,
+                                   double lower_bound, double estimate,
+                                   HighsInt depth) {
   HighsInt pos;
+
+  assert(estimate != kHighsInf);
 
   if (freeslots.empty()) {
     pos = nodes.size();
@@ -278,7 +363,7 @@ void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
   assert(nodes[pos].estimate == estimate);
   assert(nodes[pos].depth == depth);
 
-  link(pos);
+  return link(pos);
 }
 
 HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestNode() {
@@ -297,8 +382,20 @@ HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestBoundNode() {
   return std::move(nodes[bestBoundNode]);
 }
 
-double HighsNodeQueue::getBestLowerBound() {
-  if (lowerMin == -1) return kHighsInf;
+double HighsNodeQueue::getBestLowerBound() const {
+  double lb = lowerMin == -1 ? kHighsInf : nodes[lowerMin].lower_bound;
 
-  return nodes[lowerMin].lower_bound;
+  if (suboptimalMin == -1) return lb;
+
+  return std::min(nodes[suboptimalMin].lower_bound, lb);
+}
+
+HighsInt HighsNodeQueue::getBestBoundDomchgStackSize() const {
+  HighsInt domchgStackSize = lowerMin == -1
+                                 ? kHighsIInf
+                                 : HighsInt(nodes[lowerMin].domchgstack.size());
+  if (suboptimalMin == -1) return domchgStackSize;
+
+  return std::min(HighsInt(nodes[suboptimalMin].domchgstack.size()),
+                  domchgStackSize);
 }

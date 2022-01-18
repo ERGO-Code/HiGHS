@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsInfo.h
@@ -140,6 +140,7 @@ struct HighsInfoStruct {
   double objective_function_value;
   double mip_dual_bound;
   double mip_gap;
+  double max_integrality_violation;
   HighsInt num_primal_infeasibilities;
   double max_primal_infeasibility;
   double sum_primal_infeasibilities;
@@ -259,6 +260,11 @@ class HighsInfo : public HighsInfoStruct {
 
     record_double = new InfoRecordDouble("mip_gap", "MIP solver gap (%)",
                                          advanced, &mip_gap, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble("max_integrality_violation",
+                                         "Max integrality violation", advanced,
+                                         &max_integrality_violation, 0);
     records.push_back(record_double);
 
     record_int = new InfoRecordInt("num_primal_infeasibilities",

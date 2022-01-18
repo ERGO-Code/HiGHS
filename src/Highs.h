@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file Highs.h
@@ -927,6 +927,17 @@ class Highs {
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
 
+  /**
+   * @brief Runs ipx crossover and if successful loads basis into Highs::basis_
+   */
+  HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
+
+  /**
+   * @brief Opens a named log file
+   */
+  HighsStatus openLogFile(const std::string log_file = "");
+
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string solutionStatusToString(const HighsInt solution_status) const;
@@ -1037,10 +1048,6 @@ class Highs {
     return info_.simplex_iteration_count;
   }
 
-  // Runs ipx crossover and if successful loads basis into Highs::basis_
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
-
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
   HighsStatus setHighsOutput(FILE* output = NULL);
@@ -1095,6 +1102,11 @@ class Highs {
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
+
+  void exactResizeModel() {
+    this->model_.lp_.exactResize();
+    this->model_.hessian_.exactResize();
+  }
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
