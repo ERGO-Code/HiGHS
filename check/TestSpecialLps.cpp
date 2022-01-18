@@ -1,9 +1,8 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
-//#include "lp_data/HConst.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -370,7 +369,9 @@ void issue669(Highs& highs) {
     highs.changeColCost(25, 10.000000);
     highs.changeColCost(26, 10.000000);
   }
-  solve(highs, "on", "simplex", require_model_status, 0, -1);
+  const double require_optimal_objective = 4.9726034324e+03;
+  solve(highs, "on", "simplex", require_model_status,
+        require_optimal_objective);
 }
 
 void mpsGalenet(Highs& highs) {

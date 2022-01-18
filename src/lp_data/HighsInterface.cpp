@@ -674,6 +674,7 @@ void Highs::changeCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
   lp.ensureColwise();
   assert(0 <= Xrow && Xrow < lp.num_row_);
   assert(0 <= Xcol && Xcol < lp.num_col_);
+  assert(std::fabs(XnewValue) > options_.small_matrix_value);
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   // Deduce the consequences of a changed element
   //
