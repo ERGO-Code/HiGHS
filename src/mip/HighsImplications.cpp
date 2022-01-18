@@ -301,6 +301,8 @@ void HighsImplications::rebuild(HighsInt ncols,
   vlbs.resize(ncols);
   HighsInt oldncols = oldvubs.size();
 
+  nextCleanupCall = mipsolver.numNonzero();
+
   for (HighsInt i = 0; i != oldncols; ++i) {
     HighsInt newi = orig2reducedcol[i];
 
@@ -368,16 +370,45 @@ void HighsImplications::separateImpliedBounds(
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
-  for (std::pair<HighsInt, double> fracint :
-       lpRelaxation.getFractionalIntegers()) {
-    HighsInt col = fracint.first;
-    if (globaldomain.col_lower_[col] != 0.0 ||
-        globaldomain.col_upper_[col] != 1.0)
-      continue;
+  if (!mipsolver.mipdata_->cliquetable.isFull()) {
+    auto oldNumQueries = mipsolver.mipdata_->cliquetable.numNeighborhoodQueries;
+    HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
 
-    if (runProbing(col, numboundchgs)) {
-      if (globaldomain.infeasible()) return;
+    for (std::pair<HighsInt, double> fracint :
+         lpRelaxation.getFractionalIntegers()) {
+      HighsInt col = fracint.first;
+      if (globaldomain.col_lower_[col] != 0.0 ||
+          globaldomain.col_upper_[col] != 1.0 ||
+          (implicationsCached(col, 0) && implicationsCached(col, 1)))
+        continue;
+
+      if (runProbing(col, numboundchgs)) {
+        if (globaldomain.infeasible()) return;
+      }
+
+      if (mipsolver.mipdata_->cliquetable.isFull()) break;
     }
+
+    // if (!mipsolver.submip)
+    //   printf("numEntries: %d, beforeProbing: %d\n",
+    //          mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
+    HighsInt numNewEntries =
+        mipsolver.mipdata_->cliquetable.getNumEntries() - oldNumEntries;
+
+    nextCleanupCall -= std::max(HighsInt{0}, numNewEntries);
+
+    if (nextCleanupCall < 0) {
+      HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
+      mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldomain);
+      // printf("numEntries: %d, beforeMerging: %d\n",
+      //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
+      nextCleanupCall =
+          std::min(mipsolver.mipdata_->numCliqueEntriesAfterFirstPresolve,
+                   mipsolver.mipdata_->cliquetable.getNumEntries());
+      // printf("nextCleanupCall: %d\n", nextCleanupCall);
+    }
+
+    mipsolver.mipdata_->cliquetable.numNeighborhoodQueries = oldNumQueries;
   }
 
   for (std::pair<HighsInt, double> fracint :
@@ -390,97 +421,100 @@ void HighsImplications::separateImpliedBounds(
 
     bool infeas;
     const HighsDomainChange* implics = nullptr;
+    if (implicationsCached(col, 1)) {
+      HighsInt nimplics = getImplications(col, 1, implics, infeas);
+      if (globaldomain.infeasible()) return;
 
-    HighsInt nimplics = getImplications(col, 1, implics, infeas);
-    if (globaldomain.infeasible()) return;
-
-    if (infeas) {
-      vals[0] = 1.0;
-      inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, true, false);
-      continue;
-    }
-
-    for (HighsInt i = 0; i != nimplics; ++i) {
-      if (implics[i].boundtype == HighsBoundType::kUpper) {
-        if (implics[i].boundval + feastol >=
-            globaldomain.col_upper_[implics[i].column])
-          continue;
-
+      if (infeas) {
         vals[0] = 1.0;
-        inds[0] = implics[i].column;
-        vals[1] =
-            globaldomain.col_upper_[implics[i].column] - implics[i].boundval;
-        inds[1] = col;
-        rhs = globaldomain.col_upper_[implics[i].column];
-
-      } else {
-        if (implics[i].boundval - feastol <=
-            globaldomain.col_lower_[implics[i].column])
-          continue;
-
-        vals[0] = -1.0;
-        inds[0] = implics[i].column;
-        vals[1] =
-            globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
-        inds[1] = col;
-        rhs = -globaldomain.col_lower_[implics[i].column];
+        inds[0] = col;
+        cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, true, false);
+        continue;
       }
 
-      double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
+      for (HighsInt i = 0; i != nimplics; ++i) {
+        if (implics[i].boundtype == HighsBoundType::kUpper) {
+          if (implics[i].boundval + feastol >=
+              globaldomain.col_upper_[implics[i].column])
+            continue;
 
-      if (viol > feastol) {
-        // printf("added implied bound cut to pool\n");
-        cutpool.addCut(mipsolver, inds, vals, 2, rhs,
-                       mipsolver.variableType(implics[i].column) !=
-                           HighsVarType::kContinuous,
-                       false, false);
+          vals[0] = 1.0;
+          inds[0] = implics[i].column;
+          vals[1] =
+              globaldomain.col_upper_[implics[i].column] - implics[i].boundval;
+          inds[1] = col;
+          rhs = globaldomain.col_upper_[implics[i].column];
+
+        } else {
+          if (implics[i].boundval - feastol <=
+              globaldomain.col_lower_[implics[i].column])
+            continue;
+
+          vals[0] = -1.0;
+          inds[0] = implics[i].column;
+          vals[1] =
+              globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
+          inds[1] = col;
+          rhs = -globaldomain.col_lower_[implics[i].column];
+        }
+
+        double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
+
+        if (viol > feastol) {
+          // printf("added implied bound cut to pool\n");
+          cutpool.addCut(mipsolver, inds, vals, 2, rhs,
+                         mipsolver.variableType(implics[i].column) !=
+                             HighsVarType::kContinuous,
+                         false, false, false);
+        }
       }
     }
 
-    nimplics = getImplications(col, 0, implics, infeas);
-    if (globaldomain.infeasible()) return;
+    if (implicationsCached(col, 0)) {
+      HighsInt nimplics = getImplications(col, 0, implics, infeas);
+      if (globaldomain.infeasible()) return;
 
-    if (infeas) {
-      vals[0] = -1.0;
-      inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, true, false);
-      continue;
-    }
-
-    for (HighsInt i = 0; i != nimplics; ++i) {
-      if (implics[i].boundtype == HighsBoundType::kUpper) {
-        if (implics[i].boundval + feastol >=
-            globaldomain.col_upper_[implics[i].column])
-          continue;
-
-        vals[0] = 1.0;
-        inds[0] = implics[i].column;
-        vals[1] =
-            implics[i].boundval - globaldomain.col_upper_[implics[i].column];
-        inds[1] = col;
-        rhs = implics[i].boundval;
-      } else {
-        if (implics[i].boundval - feastol <=
-            globaldomain.col_lower_[implics[i].column])
-          continue;
-
+      if (infeas) {
         vals[0] = -1.0;
-        inds[0] = implics[i].column;
-        vals[1] =
-            globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
-        inds[1] = col;
-        rhs = -implics[i].boundval;
+        inds[0] = col;
+        cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, true, false);
+        continue;
       }
 
-      double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
+      for (HighsInt i = 0; i != nimplics; ++i) {
+        if (implics[i].boundtype == HighsBoundType::kUpper) {
+          if (implics[i].boundval + feastol >=
+              globaldomain.col_upper_[implics[i].column])
+            continue;
 
-      if (viol > feastol) {
-        // printf("added implied bound cut to pool\n");
-        cutpool.addCut(mipsolver, inds, vals, 2, rhs,
-                       mipsolver.variableType(implics[i].column) !=
-                           HighsVarType::kContinuous,
-                       false, false);
+          vals[0] = 1.0;
+          inds[0] = implics[i].column;
+          vals[1] =
+              implics[i].boundval - globaldomain.col_upper_[implics[i].column];
+          inds[1] = col;
+          rhs = implics[i].boundval;
+        } else {
+          if (implics[i].boundval - feastol <=
+              globaldomain.col_lower_[implics[i].column])
+            continue;
+
+          vals[0] = -1.0;
+          inds[0] = implics[i].column;
+          vals[1] =
+              globaldomain.col_lower_[implics[i].column] - implics[i].boundval;
+          inds[1] = col;
+          rhs = -implics[i].boundval;
+        }
+
+        double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
+
+        if (viol > feastol) {
+          // printf("added implied bound cut to pool\n");
+          cutpool.addCut(mipsolver, inds, vals, 2, rhs,
+                         mipsolver.variableType(implics[i].column) !=
+                             HighsVarType::kContinuous,
+                         false, false, false);
+        }
       }
     }
   }

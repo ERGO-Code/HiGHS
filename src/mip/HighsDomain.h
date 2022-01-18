@@ -62,13 +62,15 @@ class HighsDomain {
     friend class HighsDomain;
     HighsDomain& localdom;
     HighsDomain& globaldom;
-    std::set<HighsInt> reasonSideFrontier;
-    std::set<HighsInt> reconvergenceFrontier;
-    std::vector<HighsInt> resolveQueue;
-    std::vector<HighsInt> resolvedDomainChanges;
-    std::vector<std::tuple<double, HighsInt, HighsInt>> resolveBuffer;
 
    public:
+    struct LocalDomChg {
+      HighsInt pos;
+      mutable HighsDomainChange domchg;
+
+      bool operator<(const LocalDomChg& other) const { return pos < other.pos; }
+    };
+
     ConflictSet(HighsDomain& localdom);
 
     void conflictAnalysis(HighsConflictPool& conflictPool);
@@ -77,13 +79,35 @@ class HighsDomain {
                           HighsConflictPool& conflictPool);
 
    private:
-    void pushQueue(HighsInt domchgPos);
-    HighsInt popQueue();
+    std::set<LocalDomChg> reasonSideFrontier;
+    std::set<LocalDomChg> reconvergenceFrontier;
+    std::vector<std::set<LocalDomChg>::iterator> resolveQueue;
+    std::vector<LocalDomChg> resolvedDomainChanges;
+
+    struct ResolveCandidate {
+      double delta;
+      double baseBound;
+      double prio;
+      HighsInt boundPos;
+      HighsInt valuePos;
+
+      bool operator<(const ResolveCandidate& other) const {
+        if (prio > other.prio) return true;
+        if (other.prio > prio) return false;
+
+        return boundPos < other.boundPos;
+      }
+    };
+
+    std::vector<ResolveCandidate> resolveBuffer;
+
+    void pushQueue(std::set<LocalDomChg>::iterator domchgPos);
+    std::set<LocalDomChg>::iterator popQueue();
     void clearQueue();
     HighsInt queueSize();
     bool resolvable(HighsInt domChgPos);
 
-    HighsInt resolveDepth(std::set<HighsInt>& frontier, HighsInt depthLevel,
+    HighsInt resolveDepth(std::set<LocalDomChg>& frontier, HighsInt depthLevel,
                           HighsInt stopSize, HighsInt minResolve = 0,
                           bool increaseConflictScore = false);
 
@@ -100,21 +124,31 @@ class HighsDomain {
     bool explainInfeasibilityGeq(const HighsInt* inds, const double* vals,
                                  HighsInt len, double rhs, double maxActivity);
 
-    bool explainBoundChange(HighsInt pos);
+    bool explainBoundChange(const std::set<LocalDomChg>& currentFrontier,
+                            LocalDomChg domchg);
 
-    bool explainBoundChangeConflict(HighsInt domchgPos,
+    // bool explainBoundChange(HighsInt pos) {
+    //   return explainBoundChange(LocalDomChg{pos,
+    //   localdom.domchgstack_[pos]});
+    // }
+
+    bool explainBoundChangeConflict(const LocalDomChg& domchg,
                                     const HighsDomainChange* conflict,
                                     HighsInt len);
 
-    bool explainBoundChangeLeq(const HighsDomainChange& domchg,
-                               HighsInt domchgPos, const HighsInt* inds,
+    bool explainBoundChangeLeq(const std::set<LocalDomChg>& currentFrontier,
+                               const LocalDomChg& domChg, const HighsInt* inds,
                                const double* vals, HighsInt len, double rhs,
                                double minActivity);
 
-    bool explainBoundChangeGeq(const HighsDomainChange& domchg,
-                               HighsInt domchgPos, const HighsInt* inds,
+    bool explainBoundChangeGeq(const std::set<LocalDomChg>& currentFrontier,
+                               const LocalDomChg& domChg, const HighsInt* inds,
                                const double* vals, HighsInt len, double rhs,
                                double maxActivity);
+
+    bool resolveLinearLeq(HighsCDouble M, double Mlower, const double* vals);
+
+    bool resolveLinearGeq(HighsCDouble M, double Mupper, const double* vals);
   };
 
   struct CutpoolPropagation {
