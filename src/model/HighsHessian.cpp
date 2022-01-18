@@ -19,12 +19,25 @@
 #include <cstdio>
 
 void HighsHessian::clear() {
-  dim_ = 0;
+  this->dim_ = 0;
   this->start_.clear();
   this->index_.clear();
   this->value_.clear();
   this->format_ = HessianFormat::kTriangular;
   this->start_.assign(1, 0);
+}
+
+void HighsHessian::exactResize() {
+  if (this->dim_) {
+    this->start_.resize(this->dim_ + 1);
+    HighsInt num_nz = this->start_[this->dim_];
+    this->index_.resize(num_nz);
+    this->value_.resize(num_nz);
+  } else {
+    this->start_.clear();
+    this->index_.clear();
+    this->value_.clear();
+  }
 }
 
 HighsInt HighsHessian::numNz() const {
