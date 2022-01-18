@@ -371,6 +371,7 @@ restart:
 
       if (mipdata_->domain.infeasible()) {
         search.cutoffNode();
+        search.openNodesToQueue(mipdata_->nodequeue);
         mipdata_->nodequeue.clear();
         mipdata_->pruned_treeweight = 1.0;
         mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
