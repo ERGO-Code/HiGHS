@@ -66,6 +66,7 @@ class HighsLp {
   void applyScale();
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp lp);
+  void exactResize();
   void clear();
 };
 

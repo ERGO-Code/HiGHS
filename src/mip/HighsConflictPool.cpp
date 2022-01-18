@@ -16,7 +16,8 @@
 #include "mip/HighsDomain.h"
 
 void HighsConflictPool::addConflictCut(
-    const HighsDomain& domain, const std::set<HighsInt>& reasonSideFrontier) {
+    const HighsDomain& domain,
+    const std::set<HighsDomain::ConflictSet::LocalDomChg>& reasonSideFrontier) {
   HighsInt conflictIndex;
   HighsInt start;
   HighsInt end;
@@ -64,11 +65,12 @@ void HighsConflictPool::addConflictCut(
   const std::vector<HighsDomainChange>& domchgStack_ =
       domain.getDomainChangeStack();
   double feastol = domain.feastol();
-  for (HighsInt pos : reasonSideFrontier) {
+  for (const HighsDomain::ConflictSet::LocalDomChg& domchg :
+       reasonSideFrontier) {
     assert(i < end);
-    assert(pos >= 0);
-    assert(pos < (HighsInt)domchgStack_.size());
-    conflictEntries_[i] = domchgStack_[pos];
+    assert(domchg.pos >= 0);
+    assert(domchg.pos < (HighsInt)domchgStack_.size());
+    conflictEntries_[i] = domchg.domchg;
     if (domain.variableType(conflictEntries_[i].column) ==
         HighsVarType::kContinuous) {
       if (conflictEntries_[i].boundtype == HighsBoundType::kLower)
@@ -84,7 +86,9 @@ void HighsConflictPool::addConflictCut(
 }
 
 void HighsConflictPool::addReconvergenceCut(
-    const HighsDomain& domain, const std::set<HighsInt>& reconvergenceFrontier,
+    const HighsDomain& domain,
+    const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+        reconvergenceFrontier,
     const HighsDomainChange& reconvergenceDomchg) {
   HighsInt conflictIndex;
   HighsInt start;
@@ -135,11 +139,12 @@ void HighsConflictPool::addReconvergenceCut(
   assert(i < end);
   conflictEntries_[i++] = domain.flip(reconvergenceDomchg);
   double feastol = domain.feastol();
-  for (HighsInt pos : reconvergenceFrontier) {
+  for (const HighsDomain::ConflictSet::LocalDomChg& domchg :
+       reconvergenceFrontier) {
     assert(i < end);
-    assert(pos >= 0);
-    assert(pos < (HighsInt)domchgStack_.size());
-    conflictEntries_[i] = domchgStack_[pos];
+    assert(domchg.pos >= 0);
+    assert(domchg.pos < (HighsInt)domchgStack_.size());
+    conflictEntries_[i] = domchg.domchg;
     if (domain.variableType(conflictEntries_[i].column) ==
         HighsVarType::kContinuous) {
       if (conflictEntries_[i].boundtype == HighsBoundType::kLower)
