@@ -94,7 +94,8 @@ void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection);
 
 void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value);
+                               const HighsInt col, const double new_value,
+                               const bool zero_new_value);
 
 void changeLpIntegrality(HighsLp& lp,
                          const HighsIndexCollection& index_collection,

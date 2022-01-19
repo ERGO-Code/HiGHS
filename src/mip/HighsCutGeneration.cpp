@@ -340,7 +340,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
     if (std::abs(vals[j]) < 1000 * feastol) continue;
 
     double mudival = double(mu / vals[j]);
-    if (std::abs(std::round(mudival) - mudival) <= feastol) continue;
+    if (HighsIntegers::isIntegral(mudival, feastol)) continue;
     double eta = ceil(mudival);
 
     HighsCDouble ulminusetaplusone = HighsCDouble(ub) - eta + 1.0;
@@ -807,22 +807,26 @@ bool HighsCutGeneration::postprocessCut() {
     bool scaleSmallestValToOne = true;
 
     if (intscale != 0.0 &&
-        intscale * std::max(1.0, maxAbsValue) <= (double)(uint64_t{1} << 53)) {
+        intscale * std::max(1.0, maxAbsValue) <= (double)(uint64_t{1} << 52)) {
       // A scale to make all value integral was found. The scale is only
       // rejected if it is in a range where not all integral values are
-      // representable in double precision anymore. Otherwise we want to always
-      // use the scale to adjust the coefficients and right hand side for
-      // numerical safety reasons. If the resulting integral values are too
-      // large, however, we scale the cut down by shifting the exponent.
+      // representable in double precision anymore or cannot be correctly
+      // rounded by adding 0.5 and casting to an int. The latter starts at 2^52
+      // + 1 since adding 0.5 will round upwards to the next even number for
+      // that magnitude. So the largest acceptable value is 2^52 and when at
+      // most that value we want to always use the scale to adjust the
+      // coefficients and right hand side for numerical safety reasons. If the
+      // resulting integral values are too large, however, we scale the cut down
+      // by shifting the exponent.
       rhs.renormalize();
       rhs *= intscale;
-      maxAbsValue = std::round(maxAbsValue * intscale);
+      maxAbsValue = HighsIntegers::nearestInteger(maxAbsValue * intscale);
       for (HighsInt i = 0; i != rowlen; ++i) {
         HighsCDouble scaleval = intscale * HighsCDouble(vals[i]);
-        HighsCDouble intval = round(scaleval);
+        double intval = HighsIntegers::nearestInteger(double(scaleval));
         double delta = double(scaleval - intval);
 
-        vals[i] = (double)intval;
+        vals[i] = intval;
 
         // if the coefficient would be strengthened by rounding, we add the
         // upperbound constraint to make it exactly integral instead and

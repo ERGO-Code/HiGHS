@@ -553,7 +553,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
     auto IsZero = [&](HighsInt col, double val) {
       assert(col < mip.numCol());
-      return std::round(val) == 0.0;
+      return fabs(val) < 0.5;
     };
 
     vectorsum.cleanup(IsZero);

@@ -610,6 +610,8 @@ HighsStatus Highs::run() {
                 "Highs::run() called with called_return_from_run false\n");
     return HighsStatus::kError;
   }
+  // Ensure that all vectors in the model have exactly the right size
+  exactResizeModel();
   // Set this so that calls to returnFromRun() can be checked
   called_return_from_run = false;
   // From here all return statements execute returnFromRun()
@@ -1911,6 +1913,13 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
                  "%" HIGHSINT_FORMAT "]\n",
                  col, model_.lp_.num_col_);
     return HighsStatus::kError;
+  }
+  const double abs_value = std::fabs(value);
+  if (0 < abs_value && abs_value <= options_.small_matrix_value) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "|Value| of %g supplied to Highs::changeCoeff is in (0, %g]: "
+                 "zeroes any existing coefficient, otherwise ignored\n",
+                 abs_value, options_.small_matrix_value);
   }
   changeCoefficientInterface(row, col, value);
   return returnFromHighs(HighsStatus::kOk);

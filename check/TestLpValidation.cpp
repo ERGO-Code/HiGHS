@@ -360,3 +360,48 @@ TEST_CASE("LP-validation", "[highs_data]") {
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
 }
+
+TEST_CASE("LP-change-coefficient", "[highs_data]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs highs;
+  highs.readModel(filename);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  const HighsInt change_coefficient_col = 4;
+  const HighsInt zero_coefficient_row = 4;
+  const HighsInt add_coefficient_row = 5;
+  const double zero_coefficient_value = 1e-10;
+  const double add_coefficient_value = -3;
+  double required_objective_value;
+  double delta_objective_value;
+  double original_value;
+  REQUIRE(highs.getCoeff(zero_coefficient_row, change_coefficient_col,
+                         original_value) == HighsStatus::kOk);
+  REQUIRE(original_value == -1);
+  // Change coefficient (4, 4) from -1 to a small value - zeroing it
+  REQUIRE(highs.changeCoeff(zero_coefficient_row, change_coefficient_col,
+                            zero_coefficient_value) == HighsStatus::kOk);
+  required_objective_value = -8.6666666667;
+  highs.run();
+  delta_objective_value = std::fabs(required_objective_value -
+                                    highs.getInfo().objective_function_value);
+  REQUIRE(delta_objective_value < 1e-8);
+
+  // Restore coefficient (4, 4)
+  REQUIRE(highs.changeCoeff(zero_coefficient_row, change_coefficient_col,
+                            original_value) == HighsStatus::kOk);
+  required_objective_value = -7.75;
+  highs.run();
+  delta_objective_value = std::fabs(required_objective_value -
+                                    highs.getInfo().objective_function_value);
+  REQUIRE(delta_objective_value < 1e-8);
+
+  // Change coefficient (5, 4) to -3
+  REQUIRE(highs.changeCoeff(add_coefficient_row, change_coefficient_col,
+                            add_coefficient_value) == HighsStatus::kOk);
+  required_objective_value = -7.5;
+  highs.run();
+  delta_objective_value = std::fabs(required_objective_value -
+                                    highs.getInfo().objective_function_value);
+  REQUIRE(delta_objective_value < 1e-8);
+}
