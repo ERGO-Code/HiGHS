@@ -206,8 +206,9 @@ TEST_CASE("AlienBasis-rectangular-completion", "[highs_test_alien_basis]") {
   double solution_error = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     solution_error += std::abs(rhs.array[iRow] - solution[iRow]);
-  if (dev_run) printf("AlienBasis-rectangular-completion: solution_error = %g\n",
-		      solution_error);
+  if (dev_run)
+    printf("AlienBasis-rectangular-completion: solution_error = %g\n",
+           solution_error);
   fflush(stdout);
 
   REQUIRE(solution_error < 1e-8);
@@ -546,18 +547,21 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   highs.addRow(-inf, 108, 3, &new_index[0], &new_value[0]);
   const bool singlar_also = true;
   if (singlar_also) {
+    const HighsInt from_col = 0;
+    const HighsInt to_col = 0;
     HighsInt get_num_col;
     double get_cost;
     double get_lower;
     double get_upper;
     HighsInt get_num_nz;
-    highs.getCols(0, 0, get_num_col, &get_cost, &get_lower, &get_upper,
-                  get_num_nz, NULL, NULL, NULL);
+    highs.getCols(from_col, to_col, get_num_col, &get_cost, &get_lower,
+                  &get_upper, get_num_nz, NULL, NULL, NULL);
     vector<HighsInt> get_start(get_num_col + 1);
     vector<HighsInt> get_index(get_num_nz);
     vector<double> get_value(get_num_nz);
-    highs.getCols(0, 0, get_num_col, &get_cost, &get_lower, &get_upper,
-                  get_num_nz, &get_start[0], &get_index[0], &get_value[0]);
+    highs.getCols(from_col, to_col, get_num_col, &get_cost, &get_lower,
+                  &get_upper, get_num_nz, &get_start[0], &get_index[0],
+                  &get_value[0]);
 
     // Make the first two columns parallel, so that the saved basis is
     // singular, as well as having too few basic variables
