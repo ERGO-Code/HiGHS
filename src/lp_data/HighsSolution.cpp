@@ -91,6 +91,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool& have_basis = basis.valid;
+  const bool have_integrality = lp.integrality_.size() > 0;
   // Check that there is no dual solution if there's no primal solution
   assert(have_primal_solution || !have_dual_solution);
   // Check that there is no basis if there's no dual solution
@@ -189,8 +190,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   // Set status_pointer to be NULL unless we have a basis, in which
   // case it's the pointer to status. Can't make it a pointer to the
   // entry of basis since this is const.
-  HighsBasisStatus* status_pointer = NULL;
-  if (have_basis) status_pointer = &status;
+  const HighsBasisStatus* status_pointer = have_basis ? &status : NULL;
 
   double primal_infeasibility;
   double dual_infeasibility;
@@ -199,6 +199,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   double upper;
   double value;
   double dual = 0;
+  HighsVarType integrality = HighsVarType::kContinuous;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     if (iVar < lp.num_col_) {
       HighsInt iCol = iVar;
@@ -207,6 +208,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       value = solution.col_value[iCol];
       if (have_dual_solution) dual = solution.col_dual[iCol];
       if (have_basis) status = basis.col_status[iCol];
+      if (have_integrality) integrality = lp.integrality_[iCol];
     } else {
       HighsInt iRow = iVar - lp.num_col_;
       lower = lp.row_lower_[iRow];
@@ -215,13 +217,14 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       // @FlipRowDual -solution.row_dual[iRow]; became solution.row_dual[iRow];
       if (have_dual_solution) dual = solution.row_dual[iRow];
       if (have_basis) status = basis.row_status[iRow];
+      integrality = HighsVarType::kContinuous;
     }
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
     getVariableKktFailures(  // const HighsLogOptions& log_options,
         primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
-        value, dual, status_pointer, primal_infeasibility, dual_infeasibility,
-        value_residual);
+        value, dual, status_pointer, integrality, primal_infeasibility,
+        dual_infeasibility, value_residual);
     // Accumulate primal infeasiblilties
     if (primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibility++;
@@ -322,7 +325,8 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
-                            HighsBasisStatus* status_pointer,
+                            const HighsBasisStatus* status_pointer,
+                            const HighsVarType integrality,
                             double& primal_infeasibility,
                             double& dual_infeasibility,
                             double& value_residual) {
@@ -336,6 +340,12 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
     // Above upper
     primal_infeasibility = value - upper;
   }
+  // Account for semi-variables
+  if (primal_infeasibility > 0 &&
+      (integrality == HighsVarType::kSemiContinuous ||
+       integrality == HighsVarType::kSemiInteger) &&
+      std::fabs(value) < primal_feasibility_tolerance)
+    primal_infeasibility = 0;
   value_residual = std::min(std::fabs(lower - value), std::fabs(value - upper));
   // Determine whether the variable is at a bound using the basis
   // status (if valid) or value residual.
