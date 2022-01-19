@@ -24,7 +24,7 @@ class HighsMipSolver;
 #include <vector>
 
 #include "mip/HighsCliqueTable.h"
-#include "mip/HighsDomainChange.h"
+#include "mip/HighsDomain.h"
 
 #ifdef HIGHS_DEBUGSOL
 
@@ -74,11 +74,13 @@ struct HighsDebugSol {
                 double vlbconstant) const;
 
   void checkConflictReasonFrontier(
-      const std::set<HighsInt>& reasonSideFrontier,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>& reasonSideFrontier,
       const std::vector<HighsDomainChange>& domchgstack) const;
 
   void checkConflictReconvergenceFrontier(
-      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+          reconvergenceFrontier,
+      const HighsDomain::ConflictSet::LocalDomChg& reconvDomchgPos,
       const std::vector<HighsDomainChange>& domchgstack) const;
 };
 
@@ -121,11 +123,13 @@ struct HighsDebugSol {
                 double vlbconstant) const {}
 
   void checkConflictReasonFrontier(
-      const std::set<HighsInt>& reasonSideFrontier,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>& reasonSideFrontier,
       const std::vector<HighsDomainChange>& domchgstack) const {}
 
   void checkConflictReconvergenceFrontier(
-      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+          reconvergenceFrontier,
+      const HighsDomain::ConflictSet::LocalDomChg& reconvDomchgPos,
       const std::vector<HighsDomainChange>& domchgstack) const {}
 };
 #endif

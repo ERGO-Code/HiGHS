@@ -34,6 +34,7 @@ class HighsHessian {
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
+  void exactResize();
   void clear();
   bool formatOk() const {
     return (this->format_ == HessianFormat::kTriangular ||

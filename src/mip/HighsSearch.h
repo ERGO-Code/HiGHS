@@ -47,6 +47,7 @@ class HighsSearch {
   HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
+  bool countTreeWeight;
 
  public:
   enum class ChildSelectionRule {
@@ -66,6 +67,7 @@ class HighsSearch {
     kDomainInfeasible,
     kLpInfeasible,
     kBranched,
+    kSubOptimal,
     kOpen,
   };
 
@@ -84,6 +86,7 @@ class HighsSearch {
     // the objective for pseudocost updates and tiebreaking of best bound node
     // selection
     double lp_objective;
+    double other_child_lb;
     std::shared_ptr<const HighsBasis> nodeBasis;
     std::shared_ptr<const StabilizerOrbits> stabilizerOrbits;
     HighsDomainChange branchingdecision;
@@ -97,6 +100,7 @@ class HighsSearch {
         : lower_bound(parentlb),
           estimate(parentestimate),
           lp_objective(-kHighsInf),
+          other_child_lb(parentlb),
           nodeBasis(std::move(parentBasis)),
           stabilizerOrbits(std::move(stabilizerOrbits)),
           branchingdecision{0.0, -1, HighsBoundType::kLower},
@@ -177,6 +181,8 @@ class HighsSearch {
 
   int64_t getLocalLpIterations() const;
 
+  int64_t getLocalNodes() const;
+
   int64_t getStrongBranchingLpIterations() const;
 
   bool hasNode() const { return !nodestack.empty(); }
@@ -199,7 +205,8 @@ class HighsSearch {
 
   void addInfeasibleConflict();
 
-  HighsInt selectBranchingCandidate(int64_t maxSbIters);
+  HighsInt selectBranchingCandidate(int64_t maxSbIters, double& downNodeLb,
+                                    double& upNodeLb);
 
   void evalUnreliableBranchCands();
 

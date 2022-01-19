@@ -349,8 +349,9 @@ struct HighsOptionsStruct {
   HighsInt mip_pscost_minreliable;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
+  double mip_rel_gap;
+  double mip_abs_gap;
   double mip_heuristic_effort;
-  double mip_gap_limit;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
@@ -701,9 +702,17 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "mip_gap_limit",
-        "limit to stop the MIP solve when the gap is at most this value",
-        advanced, &mip_gap_limit, 0.0, 0.0, kHighsInf);
+        "mip_rel_gap",
+        "tolerance on relative gap, |ub-lb|/|ub|, to determine whether "
+        "optimality has been reached for a MIP instance",
+        advanced, &mip_rel_gap, 0.0, 1e-4, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "mip_abs_gap",
+        "tolerance on absolute gap of MIP, |ub-lb|, to determine whether "
+        "optimality has been reached for a MIP instance",
+        advanced, &mip_abs_gap, 0.0, 1e-6, kHighsInf);
     records.push_back(record_double);
 
     // Advanced options
