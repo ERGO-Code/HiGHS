@@ -2208,24 +2208,27 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
   simplex_nla_.ftranInScaledSpace(alt_pivotal_column, info_.col_aq_density,
 				  analysis_.pointer_serial_factor_clocks);
 
-    printf("Simplex in scaled space = %d\n", this->simplex_in_scaled_space_);
   const double col_ap_scale = simplex_nla_.basicColScaleFactor(row_out);
 
   double max_dse_column_error = 0;
   double sum_dse_column_error = 0;
   HighsInt num_dse_column_error = 0;
-  const double dse_column_error_tolerance = 1e-8;
+  const double dse_column_value_tolerance = 1e-2;
+  const double dse_column_error_tolerance = 1e-4;
   HighsInt DSE_array_count=0;
   for (HighsInt iRow = 0; iRow<num_row; iRow++) {
     const double dual_steepest_edge_array_value = dual_steepest_edge_array[iRow] / col_ap_scale;
     if (dual_steepest_edge_array_value) DSE_array_count++;
-    const double dse_column_error =
-      std::abs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array_value) /
-      std::max(1.0, std::abs(dual_steepest_edge_array_value));
-    sum_dse_column_error += dse_column_error;
-    if (dse_column_error > dse_column_error_tolerance) {
-      max_dse_column_error = std::max(dse_column_error, max_dse_column_error);
-      num_dse_column_error++;
+    if (std::abs(dual_steepest_edge_array_value) > dse_column_value_tolerance ||
+	std::abs(alt_dual_steepest_edge_column.array[iRow]) > dse_column_value_tolerance) {
+      const double dse_column_error =
+	std::abs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array_value) /
+	std::max(1.0, std::abs(dual_steepest_edge_array_value));
+      sum_dse_column_error += dse_column_error;
+      if (dse_column_error > dse_column_error_tolerance) {
+	max_dse_column_error = std::max(dse_column_error, max_dse_column_error);
+	num_dse_column_error++;
+      }
     }
   }
   if (max_dse_column_error > dse_column_error_tolerance) {
@@ -2242,6 +2245,7 @@ void HEkk::updateDualSteepestEdgeWeights(const HighsInt row_out,
 	const double dse_column_error =
 	  std::abs(alt_dual_steepest_edge_column.array[iRow]-dual_steepest_edge_array_value) /
 	  std::max(1.0, std::abs(dual_steepest_edge_array_value));
+	if (dse_column_error>1e-10)
 	printf("Row %4d: DSE column (alt = %11.4g; og = %11.4g) difference %10.4g\n",
 	       (int)iRow, alt_dual_steepest_edge_column.array[iRow],
 	       dual_steepest_edge_array_value, dse_column_error);
@@ -2600,13 +2604,6 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     //      updateValueDistribution(perturbation2,
     //                              analysis_.cost_perturbation2_distribution);
     //    }
-  }
-  // Apply a significant cost perturbation to a variable
-  const HighsInt extra_perturbation_col = -1;
-  if (extra_perturbation_col>=0) {
-    const double extra_perturbation_value = 10.0;
-    info_.workCost_[extra_perturbation_col] += extra_perturbation_value;
-    printf("Perturbed workCost_[%d] by %g to %g\n", (int)extra_perturbation_col, extra_perturbation_value, info_.workCost_[extra_perturbation_col]);
   }
   info_.costs_perturbed = true;
 }
