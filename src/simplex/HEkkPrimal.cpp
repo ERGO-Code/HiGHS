@@ -2516,14 +2516,18 @@ void HEkkPrimal::updateDualSteepestEdgeWeights() {
 }
 
 void HEkkPrimal::updateFtranDSE(HVector& col_steepest_edge) {
+  // For comments on scaling actions, see HEkkDual::updateFtranDSE
   analysis->simplexTimerStart(FtranDseClock);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordBefore(kSimplexNlaFtranDse, col_steepest_edge,
                                     ekk_instance_.info_.row_DSE_density);
+  // Apply R{-1}
+  ekk_instance_.simplex_nla_.unapplyBasisMatrixRowScale(col_steepest_edge);
+  
   // Perform FTRAN DSE
-  ekk_instance_.simplex_nla_.ftran(col_steepest_edge,
-                                   ekk_instance_.info_.row_DSE_density,
-                                   analysis->pointer_serial_factor_clocks);
+  ekk_instance_.simplex_nla_.ftranInScaledSpace(col_steepest_edge,
+						ekk_instance_.info_.row_DSE_density,
+						analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, col_steepest_edge);
   analysis->simplexTimerStop(FtranDseClock);
