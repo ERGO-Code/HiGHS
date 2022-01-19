@@ -2502,16 +2502,20 @@ void HEkkPrimal::updateDualSteepestEdgeWeights() {
   if (ekk_instance_.simplex_in_scaled_space_) {
     edge_weight[row_out] = row_ep.norm2();
   } else {
-    edge_weight[row_out] = ekk_instance_.simplex_nla_.rowEp2NormInScaledSpace(row_out, row_ep);
+    edge_weight[row_out] =
+        ekk_instance_.simplex_nla_.rowEp2NormInScaledSpace(row_out, row_ep);
   }
-  const double pivot_in_scaled_space = ekk_instance_.simplex_nla_.pivotInScaledSpace(&col_aq, variable_in, row_out);
-  if (ekk_instance_.simplex_in_scaled_space_) assert(pivot_in_scaled_space == alpha_col);
+  const double pivot_in_scaled_space =
+      ekk_instance_.simplex_nla_.pivotInScaledSpace(&col_aq, variable_in,
+                                                    row_out);
+  if (ekk_instance_.simplex_in_scaled_space_)
+    assert(pivot_in_scaled_space == alpha_col);
   const double new_pivotal_edge_weight =
       edge_weight[row_out] / (pivot_in_scaled_space * pivot_in_scaled_space);
   const double Kai = -2 / pivot_in_scaled_space;
-  ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in,
-					      &col_aq, new_pivotal_edge_weight,
-                                              Kai, &col_steepest_edge.array[0]);
+  ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, &col_aq,
+                                              new_pivotal_edge_weight, Kai,
+                                              &col_steepest_edge.array[0]);
   edge_weight[row_out] = new_pivotal_edge_weight;
 }
 
@@ -2523,11 +2527,11 @@ void HEkkPrimal::updateFtranDSE(HVector& col_steepest_edge) {
                                     ekk_instance_.info_.row_DSE_density);
   // Apply R{-1}
   ekk_instance_.simplex_nla_.unapplyBasisMatrixRowScale(col_steepest_edge);
-  
+
   // Perform FTRAN DSE
-  ekk_instance_.simplex_nla_.ftranInScaledSpace(col_steepest_edge,
-						ekk_instance_.info_.row_DSE_density,
-						analysis->pointer_serial_factor_clocks);
+  ekk_instance_.simplex_nla_.ftranInScaledSpace(
+      col_steepest_edge, ekk_instance_.info_.row_DSE_density,
+      analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, col_steepest_edge);
   analysis->simplexTimerStop(FtranDseClock);

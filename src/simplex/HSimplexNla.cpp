@@ -113,14 +113,16 @@ void HSimplexNla::ftran(HVector& rhs, const double expected_density,
   applyBasisMatrixColScale(rhs);
 }
 
-void HSimplexNla::btranInScaledSpace(HVector& rhs, const double expected_density,
-                        HighsTimerClock* factor_timer_clock_pointer) const {
+void HSimplexNla::btranInScaledSpace(
+    HVector& rhs, const double expected_density,
+    HighsTimerClock* factor_timer_clock_pointer) const {
   frozenBtran(rhs);
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
-void HSimplexNla::ftranInScaledSpace(HVector& rhs, const double expected_density,
-                        HighsTimerClock* factor_timer_clock_pointer) const {
+void HSimplexNla::ftranInScaledSpace(
+    HVector& rhs, const double expected_density,
+    HighsTimerClock* factor_timer_clock_pointer) const {
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
   frozenFtran(rhs);
 }
@@ -170,14 +172,15 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
 }
 
 void HSimplexNla::scaleFtranResult(HVector& rhs) const {
-  unapplyBasisMatrixColScale(rhs);  
+  unapplyBasisMatrixColScale(rhs);
 }
 
 void HSimplexNla::scaleBtranResult(HVector& rhs) const {
-  unapplyBasisMatrixRowScale(rhs);  
+  unapplyBasisMatrixRowScale(rhs);
 }
 
-double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow, const HVector& row_ep) const {
+double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow,
+                                            const HVector& row_ep) const {
   if (scale_ == NULL) {
     return row_ep.norm2();
   }
@@ -219,12 +222,17 @@ double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow, const HVector& 
     } else {
       iRow = iEntry;
     }
-    const double value_in_scaled_space = row_ep.array[iRow] / (row_scale[iRow] * col_scale_value);
+    const double value_in_scaled_space =
+        row_ep.array[iRow] / (row_scale[iRow] * col_scale_value);
     row_ep_2norm += value_in_scaled_space * value_in_scaled_space;
   }
-  const double error = std::fabs(row_ep_2norm - alt_row_ep_2norm) / std::max(1.0, row_ep_2norm);
-  if (error>1e-4) printf("rowEp2NormInScaledSpace: iRow = %2d has deduced norm = %10.4g and alt norm = %10.4g, giving error %10.4g\n",
-			  (int)iRow, row_ep_2norm, alt_row_ep_2norm, error);
+  const double error =
+      std::fabs(row_ep_2norm - alt_row_ep_2norm) / std::max(1.0, row_ep_2norm);
+  if (error > 1e-4)
+    printf(
+        "rowEp2NormInScaledSpace: iRow = %2d has deduced norm = %10.4g and alt "
+        "norm = %10.4g, giving error %10.4g\n",
+        (int)iRow, row_ep_2norm, alt_row_ep_2norm, error);
   return row_ep_2norm;
 }
 
@@ -282,9 +290,8 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
 
 double HSimplexNla::variableScaleFactor(const HighsInt iVar) const {
   if (scale_ == NULL) return 1.0;
-  return iVar < lp_->num_col_ ?
-    scale_->col[iVar] :
-    1.0 / scale_->row[iVar - lp_->num_col_];
+  return iVar < lp_->num_col_ ? scale_->col[iVar]
+                              : 1.0 / scale_->row[iVar - lp_->num_col_];
 }
 
 double HSimplexNla::basicColScaleFactor(const HighsInt iCol) const {
@@ -292,12 +299,11 @@ double HSimplexNla::basicColScaleFactor(const HighsInt iCol) const {
   return variableScaleFactor(basic_index_[iCol]);
 }
 
-double HSimplexNla::pivotInScaledSpace(const HVector* aq, 
-				       const HighsInt variable_in,
-				       const HighsInt row_out) const {
-  return aq->array[row_out]
-    * variableScaleFactor(variable_in)
-    / variableScaleFactor(basic_index_[row_out]);
+double HSimplexNla::pivotInScaledSpace(const HVector* aq,
+                                       const HighsInt variable_in,
+                                       const HighsInt row_out) const {
+  return aq->array[row_out] * variableScaleFactor(variable_in) /
+         variableScaleFactor(basic_index_[row_out]);
 }
 
 void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
