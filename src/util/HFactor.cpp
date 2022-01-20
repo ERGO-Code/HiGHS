@@ -518,9 +518,14 @@ void HFactor::buildSimple() {
    * 1. Prepare basis matrix and deal with unit columns
    */
 
-  const bool report_unit = false;
-  const bool report_singletons = false;
-  const bool report_markowitz = false;
+  const bool report_switch = 
+    num_col == 15 && num_row == 3 && num_basic == 13;
+  const bool report_unit = report_switch;
+  const bool report_singletons = report_switch;
+  const bool report_markowitz = report_switch;
+  //  const bool report_unit = false;
+  //  const bool report_singletons = false;
+  //const bool report_markowitz = false;
   const bool report_anything =
       report_unit || report_singletons || report_markowitz;
   HighsInt BcountX = 0;

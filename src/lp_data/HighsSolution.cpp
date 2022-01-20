@@ -1083,6 +1083,9 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
       basic_index.push_back(num_col + iRow);
   }
   HighsInt num_basic_variables = basic_index.size();
+  if (lp.num_col_ == 15 && lp.num_row_ == 3 && num_basic_variables == 13) {
+    printf("lp.num_col_ == 15 && lp.num_row_ == 3 && num_basic_variables == 13\n");
+  }
   HFactor factor;
   factor.setupGeneral(&lp.a_matrix_, num_basic_variables, &basic_index[0],
                       kDefaultPivotThreshold, kDefaultPivotTolerance,
