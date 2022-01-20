@@ -85,13 +85,7 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
     return false;
   }
 
-  if (options.strategy == ICrashStrategy::kPenalty)
-    // std::cout << "ICrash Warning: Using solveSubproblemICA with lambda = 0."
-    //           << std::endl;
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "ICrash Warning: Using solveSubproblemICA with lambda = 0.\n");
-
-  return true;
+  if (options.strategy == ICrashStrategy::kPenalty) return true;
 }
 
 Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
