@@ -154,10 +154,10 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       return true;
 
     // analyze implications
-    const HighsDomainChange* implicsup;
-    const HighsDomainChange* implicsdown;
-    HighsInt nimplicsup;
-    HighsInt nimplicsdown;
+    const HighsDomainChange* implicsup = nullptr;
+    const HighsDomainChange* implicsdown = nullptr;
+    HighsInt nimplicsup = 0;
+    HighsInt nimplicsdown = 0;
     nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
     nimplicsup = getImplications(col, 1, implicsup, infeasible);
     HighsInt u = 0;
