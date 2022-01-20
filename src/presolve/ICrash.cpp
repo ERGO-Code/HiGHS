@@ -409,6 +409,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   reportSubproblem(options, idata, 0);
   idata.details.push_back(fillDetails(0, idata));
 
+  double residual_0 = idata.residual_norm_2;
   // Initialize clocks.
   std::chrono::time_point<std::chrono::system_clock> start, end,
       start_iteration, end_iteration;
@@ -442,6 +443,13 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
                    "Solution feasible within exit tolerance: %g\n");
       iteration++;
       break;
+    }
+
+    // Exit if residual much larger
+    if (idata.residual_norm_2 > (5.0 * residual_0)) {
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "Residual growing too large: exit iCrash\n");
+      return HighsStatus::kError;
     }
   }
   // Fill in return values.
