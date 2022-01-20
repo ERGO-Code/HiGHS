@@ -85,7 +85,7 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
     return false;
   }
 
-  if (options.strategy == ICrashStrategy::kPenalty) return true;
+  return true;
 }
 
 Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
@@ -441,7 +441,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
       // std::cout << "Solution feasible within exit tolerance: " <<
       // kExitTolerance << std::endl;
       highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "Solution feasible within exit tolerance: %g\n");
+                   "Solution feasible within exit tolerance: %g\n", kExitTolerance);
       iteration++;
       break;
     }
