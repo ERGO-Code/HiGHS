@@ -24,6 +24,7 @@
 #include "mip/HighsMipSolverData.h"
 #include "pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
+#include "util/HighsIntegers.h"
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
@@ -91,6 +92,21 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
+
+  if (!mipsolver.submip) {
+    double curr_abs_gap =
+        mipsolver.mipdata_->upper_limit - mipsolver.mipdata_->lower_bound;
+
+    if (curr_abs_gap == kHighsInf) {
+      curr_abs_gap = fabs(mipsolver.mipdata_->lower_bound);
+      if (curr_abs_gap == kHighsInf) curr_abs_gap = 0.0;
+    }
+
+    submipoptions.mip_rel_gap = 0.0;
+    submipoptions.mip_abs_gap =
+        mipsolver.mipdata_->feastol * std::max(curr_abs_gap, 1000.0);
+  }
+
   submipoptions.presolve = "on";
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
@@ -190,7 +206,7 @@ class HeuristicNeighborhood {
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
 
-    return fixedCols.size() / (double)numTotal;
+    return numTotal ? fixedCols.size() / (double)numTotal : 0.0;
   }
 
   void backtracked() {
@@ -628,7 +644,7 @@ retry:
 
         if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
             mipsolver.mipdata_->feastol) {
-          double fixval = std::round(currlpsol[i]);
+          double fixval = HighsIntegers::nearestInteger(currlpsol[i]);
           HighsInt oldNumBranched = numBranched;
           if (localdom.col_lower_[i] < fixval) {
             ++numBranched;
@@ -744,7 +760,8 @@ retry:
 
   // printf("fixing rate is %g\n", fixingrate);
   fixingrate = neighborhood.getFixingRate();
-  if (fixingrate < 0.1) {
+  if (fixingrate < 0.1 ||
+      (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
@@ -979,19 +996,6 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
   std::vector<HighsInt> mask(mipsolver.model_->num_col_, 1);
   std::vector<double> cost(mipsolver.model_->num_col_, 0.0);
-  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
-    std::vector<HighsInt> objinds;
-    std::vector<double> objval;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.colCost(i) != 0) {
-        objinds.push_back(i);
-        objval.push_back(mipsolver.colCost(i));
-      }
-    }
-
-    lprelax.getLpSolver().addRow(-kHighsInf, mipsolver.mipdata_->upper_limit,
-                                 objinds.size(), objinds.data(), objval.data());
-  }
 
   lprelax.getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyPrimal);

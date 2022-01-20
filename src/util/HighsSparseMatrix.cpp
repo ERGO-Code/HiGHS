@@ -52,6 +52,24 @@ void HighsSparseMatrix::clear() {
   this->start_.assign(1, 0);
 }
 
+void HighsSparseMatrix::exactResize() {
+  if (this->isColwise()) {
+    this->start_.resize(this->num_col_ + 1);
+  } else {
+    this->start_.resize(this->num_row_ + 1);
+  }
+  const HighsInt num_nz = this->isColwise() ? this->start_[this->num_col_]
+                                            : this->start_[this->num_row_];
+  if (this->format_ == MatrixFormat::kRowwisePartitioned) {
+    this->p_end_.resize(this->num_row_);
+  } else {
+    assert((int)this->p_end_.size() == 0);
+    this->p_end_.clear();
+  }
+  this->index_.resize(num_nz);
+  this->value_.resize(num_nz);
+}
+
 bool HighsSparseMatrix::isRowwise() const {
   return this->format_ == MatrixFormat::kRowwise ||
          this->format_ == MatrixFormat::kRowwisePartitioned;

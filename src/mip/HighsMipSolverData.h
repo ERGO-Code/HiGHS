@@ -53,6 +53,7 @@ struct HighsMipSolverData {
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
   HighsInt numCliqueEntriesAfterPresolve;
+  HighsInt numCliqueEntriesAfterFirstPresolve;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
@@ -104,6 +105,7 @@ struct HighsMipSolverData {
   double lower_bound;
   double upper_bound;
   double upper_limit;
+  double optimality_limit;
   std::vector<double> incumbent;
 
   HighsNodeQueue nodequeue;
@@ -127,6 +129,8 @@ struct HighsMipSolverData {
     domain.addConflictPool(conflictPool);
   }
 
+  double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
+                              double mip_rel_gap) const;
   bool moreHeuristicsAllowed();
   void removeFixedIndices();
   void init();

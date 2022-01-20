@@ -240,6 +240,7 @@ set(headers
     model/HighsModel.h
     parallel/HighsBinarySemaphore.h
     parallel/HighsCacheAlign.h
+    parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
     parallel/HighsSpinMutex.h
@@ -695,6 +696,7 @@ set(headers_fast_build_
     model/HighsModel.h
     parallel/HighsBinarySemaphore.h
     parallel/HighsCacheAlign.h
+    parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
     parallel/HighsSpinMutex.h
