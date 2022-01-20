@@ -1440,9 +1440,10 @@ void HEkkDual::chooseRow() {
       double updated_edge_weight = edge_weight[row_out];
       // Compute the weight from row_ep and over-write the updated weight
       if (ekk_instance_.simplex_in_scaled_space_) {
-	computed_edge_weight = edge_weight[row_out] = row_ep.norm2();
+        computed_edge_weight = edge_weight[row_out] = row_ep.norm2();
       } else {
-	computed_edge_weight = edge_weight[row_out] = simplex_nla->rowEp2NormInScaledSpace(row_out, row_ep);
+        computed_edge_weight = edge_weight[row_out] =
+            simplex_nla->rowEp2NormInScaledSpace(row_out, row_ep);
       }
       // If the weight error is acceptable then break out of the
       // loop. All we worry about is accepting rows with weights
@@ -2018,10 +2019,11 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
                                     ekk_instance_.info_.row_DSE_density);
   // Apply R{-1}
   simplex_nla->unapplyBasisMatrixRowScale(*DSE_Vector);
-  
+
   // Perform FTRAN DSE
-  simplex_nla->ftranInScaledSpace(*DSE_Vector, ekk_instance_.info_.row_DSE_density,
-				  analysis->pointer_serial_factor_clocks);
+  simplex_nla->ftranInScaledSpace(*DSE_Vector,
+                                  ekk_instance_.info_.row_DSE_density,
+                                  analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_summary_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse, *DSE_Vector);
   analysis->simplexTimerStop(FtranDseClock);
@@ -2133,13 +2135,17 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   theta_primal = (x_out - (delta_primal < 0 ? l_out : u_out)) / alpha_col;
   dualRHS.updatePrimal(&col_aq, theta_primal);
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
-    const double pivot_in_scaled_space = ekk_instance_.simplex_nla_.pivotInScaledSpace(&col_aq, variable_in, row_out);
-    if (ekk_instance_.simplex_in_scaled_space_) assert(pivot_in_scaled_space == alpha_col);
+    const double pivot_in_scaled_space =
+        ekk_instance_.simplex_nla_.pivotInScaledSpace(&col_aq, variable_in,
+                                                      row_out);
+    if (ekk_instance_.simplex_in_scaled_space_)
+      assert(pivot_in_scaled_space == alpha_col);
     const double new_pivotal_edge_weight =
         edge_weight[row_out] / (pivot_in_scaled_space * pivot_in_scaled_space);
     const double Kai = -2 / pivot_in_scaled_space;
-    ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in,
-        &col_aq, new_pivotal_edge_weight, Kai, &DSE_Vector->array[0]);
+    ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, &col_aq,
+                                                new_pivotal_edge_weight, Kai,
+                                                &DSE_Vector->array[0]);
     edge_weight[row_out] = new_pivotal_edge_weight;
   } else if (edge_weight_mode == EdgeWeightMode::kDevex) {
     // Pivotal row is for the current basis: weights are required for

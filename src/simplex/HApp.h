@@ -285,7 +285,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // kSimplexUnscaledSolutionStrategyDirect, so have to move back
       // the LP and unscale it
       assert(options.simplex_unscaled_solution_strategy ==
-	     kSimplexUnscaledSolutionStrategyDirect);
+             kSimplexUnscaledSolutionStrategyDirect);
       incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
     }
     assert(options.simplex_unscaled_solution_strategy ==
@@ -338,11 +338,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
-	if ((status.has_basis || basis.valid) &&
-	    !status.has_dual_steepest_edge_weights) {
-	  ekk_info.dual_edge_weight_strategy =
-            kSimplexDualEdgeWeightStrategyDevex;
-	}
+        if ((status.has_basis || basis.valid) &&
+            !status.has_dual_steepest_edge_weights) {
+          ekk_info.dual_edge_weight_strategy =
+              kSimplexDualEdgeWeightStrategyDevex;
+        }
       }
       //
       // Solve the unscaled LP with scaled NLA
@@ -351,7 +351,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // the LP directly as unscaled
       //
       const bool force_phase2 = options.simplex_unscaled_solution_strategy !=
-	     kSimplexUnscaledSolutionStrategyDirect;
+                                kSimplexUnscaledSolutionStrategyDirect;
       return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;
 
