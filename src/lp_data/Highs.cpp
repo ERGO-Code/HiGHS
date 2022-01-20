@@ -724,6 +724,7 @@ HighsStatus Highs::run() {
     called_return_from_run = true;
 
     options_.icrash = false; // to avoid loop
+    timer_.stopRunHighsClock();
     run();
 
     // todo: add "dual" values

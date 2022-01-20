@@ -333,7 +333,7 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
     }
     case ICrashStrategy::kPenalty: {
       assert(!options.exact);
-      solveSubproblemICA(idata, options);
+      solveSubproblemQP(idata, options);
       break;
     }
     default: {
