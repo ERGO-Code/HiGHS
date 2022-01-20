@@ -230,11 +230,11 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       if (iteration % 3 == 0) {
         idata.mu = 0.1 * idata.mu;
       } else {
-        std::vector<double> residual_ica(idata.lp.num_row_, 0);
-        updateResidualIca(idata.lp, idata.xk, residual_ica);
+        std::vector<double> residual(idata.lp.num_row_, 0);
+        updateResidualFast(idata.lp, idata.xk, residual);
         for (int row = 0; row < idata.lp.num_row_; row++)
           // todo: double check clp.
-          idata.lambda[row] = idata.lambda[row] + idata.mu * residual_ica[row];
+          idata.lambda[row] = idata.lambda[row] + idata.mu * residual[row];
       }
       break;
     }
