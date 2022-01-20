@@ -40,6 +40,10 @@ void printMinorIterationDetails(const double iteration, const double col,
 bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda);
 
+double minimizeComponentQP(const int col, const double mu,
+                           const HighsLp& lp, double& objective,
+                           std::vector<double>& residual, HighsSolution& sol);
+
 double minimizeComponentIca(const int col, const double mu,
                             const std::vector<double>& lambda,
                             const HighsLp& lp, double& objective,
@@ -50,6 +54,8 @@ double minimizeComponentBreakpoints();
 
 void updateResidual(bool piecewise, const HighsLp& lp, const HighsSolution& sol,
                     std::vector<double>& residual);
+void updateResidualFast(const HighsLp& lp, const HighsSolution& sol,
+                       std::vector<double>& residual);
 
 // Allows negative residuals
 void updateResidualIca(const HighsLp& lp, const HighsSolution& sol,

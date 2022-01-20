@@ -289,6 +289,39 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   }
 }
 
+void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
+  bool minor_iteration_details = false;
+
+  std::vector<double> residual(idata.lp.num_row_, 0);
+  updateResidualFast(idata.lp, idata.xk, residual);
+  double objective = 0;
+
+  // todo: Ax = rv
+  calculateRowValues(idata.lp, idata.xk);
+  for (int k = 0; k < options.approximate_minimization_iterations; k++) {
+    for (int col = 0; col < idata.lp.num_col_; col++) {
+      // determine whether to minimize for col.
+      // if empty skip.
+      if (idata.lp.a_matrix_.start_[col] == idata.lp.a_matrix_.start_[col + 1])
+        continue;
+
+      double old_value = idata.xk.col_value[col];
+      minimizeComponentQP(col, idata.mu, idata.lp, objective,
+                          residual, idata.xk);
+
+      double new_value = idata.xk.col_value[col];
+      double delta_x = new_value - old_value;
+      if (minor_iteration_details) {
+        double quadratic_objective = getQuadraticObjective(idata);
+        printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
+                                   delta_x, objective, residual,
+                                   quadratic_objective);
+      }
+    }
+
+  }
+}
+
 bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
   switch (options.strategy) {
     case ICrashStrategy::kUpdatePenalty:
@@ -299,11 +332,9 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       break;
     }
     case ICrashStrategy::kPenalty: {
-      //  std::cout <<              "ICrashError: Not implemented yet." <<
-      //  std::endl;
-      highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "ICrashError: not implemented yet.\n");
-      return false;
+      assert(!options.exact);
+      solveSubproblemICA(idata, options);
+      break;
     }
     default: {
       // std::cout <<               "ICrashError: Not implemented yet." <<
