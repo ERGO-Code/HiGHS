@@ -103,7 +103,6 @@ bool initialize(Quadratic& idata, const ICrashOptions& options);
 void update(Quadratic& idata);
 void updateParameters(Quadratic& idata, const ICrashOptions& options,
                       const int iteration);
-void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options);
 bool solveSubproblem(Quadratic& idata, const ICrashOptions& options);
 
 // Functions: Util.

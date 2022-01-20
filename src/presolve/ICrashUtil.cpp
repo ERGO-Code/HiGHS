@@ -221,6 +221,7 @@ double minimizeComponentIca(const int col, const double mu,
     int row = lp.a_matrix_.index_[k];
     residual[row] -= lp.a_matrix_.value_[k] * delta_x;
     sol.row_value[row] += lp.a_matrix_.value_[k] * delta_x;
+    // residual[row] = fabs(lp.row_upper_[row] - sol.row_value[row]); # ~~~
   }
 
   return delta_x;

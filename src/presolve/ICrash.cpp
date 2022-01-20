@@ -230,6 +230,7 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       if (iteration % 3 == 0) {
         idata.mu = 0.1 * idata.mu;
       } else {
+        calculateRowValues(idata.lp, idata.xk);
         std::vector<double> residual(idata.lp.num_row_, 0);
         updateResidualFast(idata.lp, idata.xk, residual);
         for (int row = 0; row < idata.lp.num_row_; row++)
@@ -263,7 +264,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
       double delta_x = new_value - old_value;
       if (minor_iteration_details) {
         double quadratic_objective = getQuadraticObjective(idata);
-        printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
+                printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
                                    delta_x, objective_ica, residual_ica,
                                    quadratic_objective);
       }
@@ -286,12 +287,12 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
 void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 
+  calculateRowValues(idata.lp, idata.xk);
   std::vector<double> residual(idata.lp.num_row_, 0);
   updateResidualFast(idata.lp, idata.xk, residual);
   double objective = 0;
 
   // todo: Ax = rv
-  calculateRowValues(idata.lp, idata.xk);
   for (int k = 0; k < options.approximate_minimization_iterations; k++) {
     for (int col = 0; col < idata.lp.num_col_; col++) {
       // determine whether to minimize for col.
