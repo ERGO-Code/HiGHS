@@ -98,6 +98,19 @@ void HighsLp::setFormat(const MatrixFormat format) {
   this->a_matrix_.setFormat(format);
 }
 
+void HighsLp::exactResize() {
+  this->col_cost_.resize(this->num_col_);
+  this->col_lower_.resize(this->num_col_);
+  this->col_upper_.resize(this->num_col_);
+  this->row_lower_.resize(this->num_row_);
+  this->row_upper_.resize(this->num_row_);
+  this->a_matrix_.exactResize();
+
+  if ((int)this->col_names_.size()) this->col_names_.resize(this->num_col_);
+  if ((int)this->row_names_.size()) this->row_names_.resize(this->num_row_);
+  if ((int)this->integrality_.size()) this->integrality_.resize(this->num_col_);
+}
+
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;

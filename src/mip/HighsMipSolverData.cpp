@@ -129,7 +129,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
   if (mipsolver.submip) {
     return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
   } else if (pruned_treeweight < 1e-3 &&
-             num_leaves - num_leaves_before_run < 10) {
+             num_leaves - num_leaves_before_run < 10 &&
+             num_nodes - num_nodes_before_run < 1000) {
     // in the main MIP solver allow an initial offset of 10000 heuristic LP
     // iterations
     if (heuristic_lp_iterations <
@@ -673,20 +674,23 @@ void HighsMipSolverData::performRestart() {
   presolvedModel = lp.getLp();
   presolvedModel.offset_ = offset;
   presolvedModel.integrality_ = std::move(integrality);
-  const HighsBasis& basis = lp.getLpSolver().getBasis();
+
+  const HighsBasis& basis = firstrootbasis;
   if (basis.valid) {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
     root_basis.col_status.resize(postSolveStack.getOrigNumCol());
-    root_basis.row_status.resize(postSolveStack.getOrigNumRow());
+    root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
+                                 HighsBasisStatus::kBasic);
     root_basis.valid = true;
 
-    for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i)
+    for (HighsInt i = 0; i < mipsolver.model_->num_col_; ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i)
+    HighsInt numRow = basis.row_status.size();
+    for (HighsInt i = 0; i < numRow; ++i)
       root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
@@ -735,7 +739,7 @@ void HighsMipSolverData::basisTransfer() {
   // if a root basis is given, construct a basis for the root LP from
   // in the reduced problem space after presolving
   if (mipsolver.rootbasis) {
-    const HighsInt numRow = mipsolver.numRow() + cutpool.getNumCuts();
+    const HighsInt numRow = mipsolver.numRow();
     const HighsInt numCol = mipsolver.numCol();
     firstrootbasis.col_status.assign(numCol, HighsBasisStatus::kNonbasic);
     firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
@@ -904,7 +908,11 @@ void HighsMipSolverData::printDisplayLine(char first) {
     else
       gap = 100. * (ub - lb) / fabs(ub);
 
-    gap = std::min(gap, 9999.);
+    std::array<char, 16> gap_string;
+    if (gap >= 9999.)
+      std::strcpy(gap_string.data(), "Large");
+    else
+      std::snprintf(gap_string.data(), gap_string.size(), "%.2f%%", gap);
 
     std::array<char, 16> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -918,12 +926,12 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
         first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        explored, lb_string.data(), ub_string.data(), gap_string.data(),
+        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
+        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
   } else {
     std::array<char, 16> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -1072,28 +1080,7 @@ restart:
   if (symmetries.numPerms != 0)
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
-  // add all cuts again after restart
-  if (cutpool.getNumCuts() != 0) {
-    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                "\nAdding %" HIGHSINT_FORMAT
-                " cuts to the LP after performing a restart\n",
-                cutpool.getNumCuts());
-    assert(numRestarts != 0);
-    HighsCutSet cutset;
-    cutpool.separateLpCutsAfterRestart(cutset);
-#ifdef HIGHS_DEBUGSOL
-    for (HighsInt i = 0; i < cutset.numCuts(); ++i) {
-      debugSolution.checkCut(cutset.ARindex_.data() + cutset.ARstart_[i],
-                             cutset.ARvalue_.data() + cutset.ARstart_[i],
-                             cutset.ARstart_[i + 1] - cutset.ARstart_[i],
-                             cutset.upper_[i]);
-    }
-#endif
-    lp.addCuts(cutset);
-    // solve the first root lp
-    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                "Solving root node LP relaxation\n");
-  } else if (numRestarts == 0) {
+  if (numRestarts == 0) {
     // solve the first root lp
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\nSolving root node LP relaxation\n");
@@ -1115,21 +1102,15 @@ restart:
 
   lp.getLpSolver().setOptionValue("output_flag", false);
   lp.getLpSolver().setOptionValue("presolve", "off");
-  lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
   lp.getLpSolver().setOptionValue("parallel", "off");
 
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
     return;
 
-  heuristics.randomizedRounding(firstlpsol);
-  heuristics.flushStatistics();
-
-  status = evaluateRootLp();
-  if (status == HighsLpRelaxation::Status::kInfeasible) return;
-
   firstlpsol = lp.getSolution().col_value;
   firstlpsolobj = lp.getObjective();
+  rootlpsolobj = firstlpsolobj;
 
   if (lp.getLpSolver().getBasis().valid && lp.numRows() == mipsolver.numRow())
     firstrootbasis = lp.getLpSolver().getBasis();
@@ -1143,6 +1124,33 @@ restart:
                                      HighsBasisStatus::kBasic);
     firstrootbasis.valid = true;
   }
+
+  if (cutpool.getNumCuts() != 0) {
+    assert(numRestarts != 0);
+    HighsCutSet cutset;
+    cutpool.separateLpCutsAfterRestart(cutset);
+#ifdef HIGHS_DEBUGSOL
+    for (HighsInt i = 0; i < cutset.numCuts(); ++i) {
+      debugSolution.checkCut(cutset.ARindex_.data() + cutset.ARstart_[i],
+                             cutset.ARvalue_.data() + cutset.ARstart_[i],
+                             cutset.ARstart_[i + 1] - cutset.ARstart_[i],
+                             cutset.upper_[i]);
+    }
+#endif
+    lp.addCuts(cutset);
+    status = evaluateRootLp();
+    lp.removeObsoleteRows();
+    if (status == HighsLpRelaxation::Status::kInfeasible) return;
+  }
+
+  lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+
+  heuristics.randomizedRounding(firstlpsol);
+  heuristics.flushStatistics();
+
+  status = evaluateRootLp();
+  if (status == HighsLpRelaxation::Status::kInfeasible) return;
+
   rootlpsolobj = firstlpsolobj;
 
   // begin separation

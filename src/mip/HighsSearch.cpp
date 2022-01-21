@@ -1074,14 +1074,12 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
       if (lp->unscaledPrimalFeasible(status)) {
         if (lp->getFractionalIntegers().empty()) {
-          result = NodeResult::kBoundExceeding;
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
               inheuristic ? 'H' : 'T');
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-          addBoundExceedingConflict();
         }
       }
 
