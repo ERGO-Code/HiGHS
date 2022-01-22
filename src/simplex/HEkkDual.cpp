@@ -166,6 +166,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
               "Basis is not logical, but near-optimal, so use Devex rather "
               "than compute steepest edge weights\n");
           edge_weight_mode = EdgeWeightMode::kDevex;
+          assert(!status.has_dual_steepest_edge_weights);
         } else {
           // Compute steepest edge weights
           highsLogDev(
@@ -175,8 +176,6 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
           status.has_dual_steepest_edge_weights = true;
         }
       }
-      // Indicate that edge weights are known
-      status.has_dual_steepest_edge_weights = true;
     }
     if (edge_weight_mode == EdgeWeightMode::kDevex) initialiseDevexFramework();
     // Check on consistency between edge_weight_mode and
