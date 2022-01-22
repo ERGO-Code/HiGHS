@@ -320,7 +320,7 @@ void checkStationarityOfLagrangian(const State& state,
         const int row = state.Aindex[k];
         assert(row >= 0 && row < state.numRow);
         if (state.flagRow[row])
-          lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
+          lagrV = lagrV - state.rowDual[row] * state.Avalue[k];
       }
 
       if (fabs(double(lagrV)) > tol) {
