@@ -558,7 +558,7 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.passModel(lp);
   highs.run();
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
   HighsBasis basis = highs.getBasis();
   // Add another variable
   vector<HighsInt> new_index = {0, 1, 2};
@@ -603,5 +603,5 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   basis.alien = true;
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
   highs.run();
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
 }
