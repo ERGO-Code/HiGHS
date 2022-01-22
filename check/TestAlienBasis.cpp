@@ -285,18 +285,20 @@ TEST_CASE("AlienBasis-qap10", "[highs_test_alien_basis]") {
   matrix.num_col_ = 15;
   matrix.num_row_ = 3;
   matrix.start_ = {0, 3, 5, 6, 8, 9, 10, 12, 14, 17, 20, 23, 26, 29, 31, 32};
-  matrix.index_ = {2, 0, 1, 2, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 2, 0, 1, 1, 0, 2, 0, 1,  2, 2, 1, 0, 2, 1, 0,  2, 0, 1};
-  matrix.value_ = {1, 0.5, 0.5, 0.75, 1, 1, 0.5, 1, 1, 1, 2, 0.5, 1, -1, 1, 1, 1, 1, 1, -1, 0.5, 0.5, 1.125, 1.5, 1, 1, -0.5, 2, 2, -0.5, 1, 1};
-  
+  matrix.index_ = {2, 0, 1, 2, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 2, 0,
+                   1, 1, 0, 2, 0, 1, 2, 2, 1, 0, 2, 1, 0, 2, 0, 1};
+  matrix.value_ = {1,     0.5, 0.5, 0.75, 1,    1, 0.5, 1,    1,  1,   2,
+                   0.5,   1,   -1,  1,    1,    1, 1,   1,    -1, 0.5, 0.5,
+                   1.125, 1.5, 1,   1,    -0.5, 2, 2,   -0.5, 1,  1};
+
   std::vector<HighsInt> col_set = {0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 15};
-  const HighsInt required_rank_deficiency = 0;
-  
+  const HighsInt required_rank_deficiency = 10;
+
   if (dev_run) reportColSet("\nOriginal", col_set);
   HFactor factor;
   factor.setup(matrix, col_set);
   HighsInt rank_deficiency = factor.build();
   REQUIRE(rank_deficiency == required_rank_deficiency);
-   
 }
 
 TEST_CASE("AlienBasis-LP", "[highs_test_alien_basis]") {
@@ -533,4 +535,3 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
     highs.run();
   }
 }
-
