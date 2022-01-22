@@ -1030,8 +1030,8 @@ HighsStatus HEkk::unpermute() {
 HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
   debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = 8;
-  const HighsInt debug_build_synthetic_tick = 241160;
+  const HighsInt debug_from_solve_call_num = -8;
+  const HighsInt debug_build_synthetic_tick = -241160;
   debug_solve_report_ = debug_solve_call_num_ == debug_from_solve_call_num &&
                         build_synthetic_tick_ == debug_build_synthetic_tick;
   const HighsInt time_from_solve_call_num = -1;
@@ -2178,89 +2178,94 @@ void HEkk::updateDualSteepestEdgeWeights(
   const HighsInt* variable_index = &column->index[0];
   const double* column_array = &column->array[0];
 
-  // Compute the DSE column otherwise to check
-  HVector alt_dual_steepest_edge_column;
-  alt_dual_steepest_edge_column.setup(num_row);
-  alt_dual_steepest_edge_column.clear();
-  alt_dual_steepest_edge_column.count = 1;
-  alt_dual_steepest_edge_column.index[0] = row_out;
-  alt_dual_steepest_edge_column.array[row_out] = 1;
-  alt_dual_steepest_edge_column.packFlag = false;
-  simplex_nla_.btranInScaledSpace(alt_dual_steepest_edge_column,
-                                  info_.row_ep_density,
-                                  analysis_.pointer_serial_factor_clocks);
-  simplex_nla_.ftranInScaledSpace(alt_dual_steepest_edge_column,
-                                  info_.row_DSE_density,
-                                  analysis_.pointer_serial_factor_clocks);
-  // Compute the pivotal column in the scaled space otherwise to check
-  //
-  // Need \bar{B}^{-1}(R.aq.cq) = \bar{B}^{-1}R.(cq.aq)
-  //
-  HVector alt_pivotal_column;
-  alt_pivotal_column.setup(num_row);
-  alt_pivotal_column.clear();
-  //
-  // Determine cq, and apply it in forming RHS
-  //
   const double col_aq_scale = simplex_nla_.variableScaleFactor(variable_in);
-  lp_.a_matrix_.collectAj(alt_pivotal_column, variable_in, col_aq_scale);
-  simplex_nla_.applyBasisMatrixRowScale(alt_pivotal_column);
-  simplex_nla_.ftranInScaledSpace(alt_pivotal_column, info_.col_aq_density,
-                                  analysis_.pointer_serial_factor_clocks);
-
   const double col_ap_scale = simplex_nla_.basicColScaleFactor(row_out);
 
-  double max_dse_column_error = 0;
-  double sum_dse_column_error = 0;
-  HighsInt num_dse_column_error = 0;
-  const double dse_column_value_tolerance = 1e-2;
-  const double dse_column_error_tolerance = 1e-4;
-  HighsInt DSE_array_count = 0;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    const double dual_steepest_edge_array_value =
-        dual_steepest_edge_array[iRow] / col_ap_scale;
-    if (dual_steepest_edge_array_value) DSE_array_count++;
-    if (std::abs(dual_steepest_edge_array_value) > dse_column_value_tolerance ||
-        std::abs(alt_dual_steepest_edge_column.array[iRow]) >
-            dse_column_value_tolerance) {
-      const double dse_column_error =
-          std::abs(alt_dual_steepest_edge_column.array[iRow] -
-                   dual_steepest_edge_array_value) /
-          std::max(1.0, std::abs(dual_steepest_edge_array_value));
-      sum_dse_column_error += dse_column_error;
-      if (dse_column_error > dse_column_error_tolerance) {
-        max_dse_column_error = std::max(dse_column_error, max_dse_column_error);
-        num_dse_column_error++;
-      }
-    }
-  }
-  if (max_dse_column_error > dse_column_error_tolerance) {
-    printf(
-        "HEkk::updateDualSteepestEdgeWeights: Iter %2d has num / max / sum = "
-        "%d / %g / %g DSE column errors exceeding = %g\n",
-        (int)iteration_count_, (int)num_dse_column_error, max_dse_column_error,
-        sum_dse_column_error, dse_column_error_tolerance);
-    printf("DSE column count alt = %d; og = %d)\n",
-           (int)alt_dual_steepest_edge_column.count, (int)DSE_array_count);
+  const bool DSE_check = false;
+  HVector alt_dual_steepest_edge_column;
+  HVector alt_pivotal_column;
+  if (DSE_check) {
+    // Compute the DSE column otherwise to check
+    alt_dual_steepest_edge_column.setup(num_row);
+    alt_dual_steepest_edge_column.clear();
+    alt_dual_steepest_edge_column.count = 1;
+    alt_dual_steepest_edge_column.index[0] = row_out;
+    alt_dual_steepest_edge_column.array[row_out] = 1;
+    alt_dual_steepest_edge_column.packFlag = false;
+    simplex_nla_.btranInScaledSpace(alt_dual_steepest_edge_column,
+                                    info_.row_ep_density,
+                                    analysis_.pointer_serial_factor_clocks);
+    simplex_nla_.ftranInScaledSpace(alt_dual_steepest_edge_column,
+                                    info_.row_DSE_density,
+                                    analysis_.pointer_serial_factor_clocks);
+    // Compute the pivotal column in the scaled space otherwise to check
+    //
+    // Need \bar{B}^{-1}(R.aq.cq) = \bar{B}^{-1}R.(cq.aq)
+    //
+    alt_pivotal_column.setup(num_row);
+    alt_pivotal_column.clear();
+    //
+    // Determine cq, and apply it in forming RHS
+    //
+    lp_.a_matrix_.collectAj(alt_pivotal_column, variable_in, col_aq_scale);
+    simplex_nla_.applyBasisMatrixRowScale(alt_pivotal_column);
+    simplex_nla_.ftranInScaledSpace(alt_pivotal_column, info_.col_aq_density,
+                                    analysis_.pointer_serial_factor_clocks);
+    double max_dse_column_error = 0;
+    double sum_dse_column_error = 0;
+    HighsInt num_dse_column_error = 0;
+    const double dse_column_value_tolerance = 1e-2;
+    const double dse_column_error_tolerance = 1e-4;
+    HighsInt DSE_array_count = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       const double dual_steepest_edge_array_value =
           dual_steepest_edge_array[iRow] / col_ap_scale;
-      if (alt_dual_steepest_edge_column.array[iRow] != 0 &&
-          dual_steepest_edge_array_value != 0) {
+      if (dual_steepest_edge_array_value) DSE_array_count++;
+      if (std::abs(dual_steepest_edge_array_value) >
+              dse_column_value_tolerance ||
+          std::abs(alt_dual_steepest_edge_column.array[iRow]) >
+              dse_column_value_tolerance) {
         const double dse_column_error =
             std::abs(alt_dual_steepest_edge_column.array[iRow] -
                      dual_steepest_edge_array_value) /
             std::max(1.0, std::abs(dual_steepest_edge_array_value));
-        if (dse_column_error > 1e-10)
-          printf(
-              "Row %4d: DSE column (alt = %11.4g; og = %11.4g) difference "
-              "%10.4g\n",
-              (int)iRow, alt_dual_steepest_edge_column.array[iRow],
-              dual_steepest_edge_array_value, dse_column_error);
+        sum_dse_column_error += dse_column_error;
+        if (dse_column_error > dse_column_error_tolerance) {
+          max_dse_column_error =
+              std::max(dse_column_error, max_dse_column_error);
+          num_dse_column_error++;
+        }
       }
     }
-    fflush(stdout);
-    assert(max_dse_column_error < dse_column_error_tolerance);
+    if (max_dse_column_error > dse_column_error_tolerance) {
+      printf(
+          "HEkk::updateDualSteepestEdgeWeights: Iter %2d has num / max / sum = "
+          "%d / %g / %g DSE column errors exceeding = %g\n",
+          (int)iteration_count_, (int)num_dse_column_error,
+          max_dse_column_error, sum_dse_column_error,
+          dse_column_error_tolerance);
+      printf("DSE column count alt = %d; og = %d)\n",
+             (int)alt_dual_steepest_edge_column.count, (int)DSE_array_count);
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+        const double dual_steepest_edge_array_value =
+            dual_steepest_edge_array[iRow] / col_ap_scale;
+        if (alt_dual_steepest_edge_column.array[iRow] != 0 &&
+            dual_steepest_edge_array_value != 0) {
+          const double dse_column_error =
+              std::abs(alt_dual_steepest_edge_column.array[iRow] -
+                       dual_steepest_edge_array_value) /
+              std::max(1.0, std::abs(dual_steepest_edge_array_value));
+          if (dse_column_error > 1e-10)
+            printf(
+                "Row %4d: DSE column (alt = %11.4g; og = %11.4g) difference "
+                "%10.4g\n",
+                (int)iRow, alt_dual_steepest_edge_column.array[iRow],
+                dual_steepest_edge_array_value, dse_column_error);
+        }
+      }
+      fflush(stdout);
+      assert(max_dse_column_error < dse_column_error_tolerance);
+    }
   }
 
   if ((HighsInt)dual_edge_weight_.size() < num_row) {
@@ -2286,16 +2291,18 @@ void HEkk::updateDualSteepestEdgeWeights(
       aa_iRow *= col_aq_scale;
       dual_steepest_edge_array_value /= col_ap_scale;
     }
-    const double pivotal_column_error =
-        std::abs(aa_iRow - alt_pivotal_column.array[iRow]);
-    if (pivotal_column_error > 1e-4) {
-      printf(
-          "HEkk::updateDualSteepestEdgeWeights Row %2d of pivotal column has "
-          "error %10.4g\n",
-          (int)iRow, pivotal_column_error);
-      fflush(stdout);
+    if (DSE_check) {
+      const double pivotal_column_error =
+          std::abs(aa_iRow - alt_pivotal_column.array[iRow]);
+      if (pivotal_column_error > 1e-4) {
+        printf(
+            "HEkk::updateDualSteepestEdgeWeights Row %2d of pivotal column has "
+            "error %10.4g\n",
+            (int)iRow, pivotal_column_error);
+        fflush(stdout);
+      }
+      assert(pivotal_column_error < 1e-4);
     }
-    assert(pivotal_column_error < 1e-4);
     dual_edge_weight_[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
                                           Kai * dual_steepest_edge_array_value);
     dual_edge_weight_[iRow] =
