@@ -165,6 +165,12 @@ void HighsLpRelaxation::loadModel() {
   colUbBuffer.resize(lpmodel.num_col_);
 }
 
+void HighsLpRelaxation::resetToGlobalDomain() {
+  lpsolver.changeColsBounds(0, mipsolver.numCol() - 1,
+                            mipsolver.mipdata_->domain.col_lower_.data(),
+                            mipsolver.mipdata_->domain.col_upper_.data());
+}
+
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   HighsCDouble estimate = objective;
 
@@ -934,6 +940,94 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             auto& pair = fracints[col];
             pair.first += val;
             pair.second += 1;
+          } else {
+            if (lpsolver.getBasis().col_status[i] == HighsBasisStatus::kBasic)
+              continue;
+
+            const double glb = mipsolver.mipdata_->domain.col_lower_[i];
+            const double gub = mipsolver.mipdata_->domain.col_upper_[i];
+            // if (fabs(sol.col_dual[i]) >
+            //    lpsolver.getOptions().dual_feasibility_tolerance) {
+            // if (sol.col_value[i] <= glb + mipsolver.mipdata_->feastol ||
+            //    sol.col_value[i] >= gub - mipsolver.mipdata_->feastol)
+            //  continue;
+            // }
+
+            const auto& matrix = lpsolver.getLp().a_matrix_;
+            const HighsInt colStart =
+                matrix.start_[i] + (mipsolver.model_->a_matrix_.start_[i + 1] -
+                                    mipsolver.model_->a_matrix_.start_[i]);
+            const HighsInt colEnd = matrix.start_[i + 1];
+
+            // column not present in any cutting planes
+            if (colStart == colEnd) continue;
+
+            bool resetNegativeCoefAge;
+            bool resetPositiveCoefAge;
+            if (sol.col_dual[i] >
+                lpsolver.getOptions().dual_feasibility_tolerance) {
+              // column is sitting at a local lower bound not equal to the upper
+              // bound reset ages of cutting planes where the column has a
+              // positive coefficient
+              resetNegativeCoefAge =
+                  sol.col_value[i] > glb + mipsolver.mipdata_->feastol;
+              resetPositiveCoefAge = false;
+            } else if (sol.col_dual[i] <
+                       -lpsolver.getOptions().dual_feasibility_tolerance) {
+              resetPositiveCoefAge =
+                  sol.col_value[i] < gub - mipsolver.mipdata_->feastol;
+              resetNegativeCoefAge = false;
+            } else {
+              resetNegativeCoefAge =
+                  sol.col_value[i] > glb + mipsolver.mipdata_->feastol;
+              resetPositiveCoefAge =
+                  sol.col_value[i] < gub - mipsolver.mipdata_->feastol;
+            }
+
+            if (resetPositiveCoefAge && resetNegativeCoefAge) {
+              for (HighsInt j = colStart; j < colEnd; ++j) {
+                HighsInt row = matrix.index_[j];
+                assert(row >= mipsolver.numRow());
+
+                if (lprows[row].age == 0) continue;
+
+                if (sol.row_value[row] <
+                    getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
+                  continue;
+
+                lprows[row].age = 0;
+              }
+            } else if (resetPositiveCoefAge) {
+              for (HighsInt j = colStart; j < colEnd; ++j) {
+                HighsInt row = matrix.index_[j];
+                assert(row >= mipsolver.numRow());
+
+                if (lprows[row].age == 0) continue;
+
+                if (matrix.value_[j] < 0) continue;
+
+                if (sol.row_value[row] <
+                    getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
+                  continue;
+
+                lprows[row].age = 0;
+              }
+            } else if (resetNegativeCoefAge) {
+              for (HighsInt j = colStart; j < colEnd; ++j) {
+                HighsInt row = matrix.index_[j];
+                assert(row >= mipsolver.numRow());
+
+                if (lprows[row].age == 0) continue;
+
+                if (matrix.value_[j] > 0) continue;
+
+                if (sol.row_value[row] <
+                    getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
+                  continue;
+
+                lprows[row].age = 0;
+              }
+            }
           }
         }
 

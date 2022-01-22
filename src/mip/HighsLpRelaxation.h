@@ -116,6 +116,8 @@ class HighsLpRelaxation {
     this->adjustSymBranchingCol = adjustSymBranchingCol;
   }
 
+  void resetToGlobalDomain();
+
   double getAvgSolveIters() { return avgSolveIters; }
 
   HighsInt getRowLen(HighsInt row) const {

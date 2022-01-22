@@ -47,7 +47,6 @@ class HighsSearch {
   HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
-  bool agecuts;
   bool countTreeWeight;
 
  public:

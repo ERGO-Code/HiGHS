@@ -34,7 +34,6 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   upper_limit = kHighsInf;
   inheuristic = false;
   inbranching = false;
-  agecuts = true;
   countTreeWeight = true;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
@@ -204,12 +203,8 @@ void HighsSearch::addBoundExceedingConflict() {
 
 void HighsSearch::addInfeasibleConflict() {
   double rhs;
-  if (lp->getLpSolver().getModelStatus() == HighsModelStatus::kObjectiveBound) {
-    if (agecuts)
-      lp->performAging();
-    else
-      lp->resetAges();
-  }
+  if (lp->getLpSolver().getModelStatus() == HighsModelStatus::kObjectiveBound)
+    lp->performAging();
 
   if (lp->computeDualInfProof(mipsolver.mipdata_->domain, inds, vals, rhs)) {
     if (mipsolver.mipdata_->domain.infeasible()) return;
@@ -567,10 +562,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
-        if (agecuts)
-          lp->performAging();
-        else
-          lp->resetAges();
+        lp->performAging();
 
         double delta = downval - fracval;
         bool integerfeasible;
@@ -713,10 +705,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
-        if (agecuts)
-          lp->performAging();
-        else
-          lp->resetAges();
+        lp->performAging();
 
         double delta = upval - fracval;
         bool integerfeasible;
@@ -929,9 +918,7 @@ int64_t HighsSearch::getStrongBranchingLpIterations() const {
 }
 
 void HighsSearch::resetLocalDomain() {
-  this->lp->getLpSolver().changeColsBounds(
-      0, mipsolver.numCol() - 1, mipsolver.mipdata_->domain.col_lower_.data(),
-      mipsolver.mipdata_->domain.col_upper_.data());
+  this->lp->resetToGlobalDomain();
   localdom = mipsolver.mipdata_->domain;
 
 #ifndef NDEBUG
@@ -945,7 +932,7 @@ void HighsSearch::resetLocalDomain() {
 }
 
 void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
-  agecuts = !localdom.setDomainChangeStack(node.domchgstack, node.branchings);
+  localdom.setDomainChangeStack(node.domchgstack, node.branchings);
   bool globalSymmetriesValid = true;
   if (mipsolver.mipdata_->globalOrbits) {
     // if global orbits have been computed we check whether they are still valid
@@ -1052,10 +1039,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
     } else if (lp->scaledOptimal(status)) {
       lp->storeBasis();
-      if (agecuts)
-        lp->performAging();
-      else
-        lp->resetAges();
+      lp->performAging();
 
       currnode.nodeBasis = lp->getStoredBasis();
       currnode.estimate = lp->computeBestEstimate(pseudocost);
@@ -1197,8 +1181,6 @@ HighsSearch::NodeResult HighsSearch::branch() {
       currnode.branching_point = branching.second;
 
       HighsInt col = branching.first;
-      if (localdom.col_upper_[col] - localdom.col_lower_[col] > 1.5)
-        agecuts = false;
 
       switch (childselrule) {
         case ChildSelectionRule::kUp:
