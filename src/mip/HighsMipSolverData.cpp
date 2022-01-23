@@ -129,7 +129,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
   if (mipsolver.submip) {
     return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
   } else if (pruned_treeweight < 1e-3 &&
-             num_leaves - num_leaves_before_run < 10) {
+             num_leaves - num_leaves_before_run < 10 &&
+             num_nodes - num_nodes_before_run < 1000) {
     // in the main MIP solver allow an initial offset of 10000 heuristic LP
     // iterations
     if (heuristic_lp_iterations <
