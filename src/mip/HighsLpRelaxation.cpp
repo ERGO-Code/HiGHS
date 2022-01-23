@@ -944,40 +944,36 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             if (lpsolver.getBasis().col_status[i] == HighsBasisStatus::kBasic)
               continue;
 
-            const double glb = mipsolver.mipdata_->domain.col_lower_[i];
-            const double gub = mipsolver.mipdata_->domain.col_upper_[i];
-            // if (fabs(sol.col_dual[i]) >
-            //    lpsolver.getOptions().dual_feasibility_tolerance) {
-            // if (sol.col_value[i] <= glb + mipsolver.mipdata_->feastol ||
-            //    sol.col_value[i] >= gub - mipsolver.mipdata_->feastol)
-            //  continue;
-            // }
-
             const auto& matrix = lpsolver.getLp().a_matrix_;
             const HighsInt colStart =
                 matrix.start_[i] + (mipsolver.model_->a_matrix_.start_[i + 1] -
                                     mipsolver.model_->a_matrix_.start_[i]);
             const HighsInt colEnd = matrix.start_[i + 1];
 
-            // column not present in any cutting planes
+            // skip further checks if the column has no entry in any cut
             if (colStart == colEnd) continue;
 
             bool resetNegativeCoefAge;
             bool resetPositiveCoefAge;
             if (sol.col_dual[i] >
                 lpsolver.getOptions().dual_feasibility_tolerance) {
-              // column is sitting at a local lower bound not equal to the upper
-              // bound reset ages of cutting planes where the column has a
-              // positive coefficient
+              // column is forced to a local lower bound that is not equal to
+              // the global lower bound, so we want to reset ages of cutting
+              // planes where the column has a negative coefficient when they
+              // have no slack.
+              const double glb = mipsolver.mipdata_->domain.col_lower_[i];
               resetNegativeCoefAge =
                   sol.col_value[i] > glb + mipsolver.mipdata_->feastol;
               resetPositiveCoefAge = false;
             } else if (sol.col_dual[i] <
                        -lpsolver.getOptions().dual_feasibility_tolerance) {
+              const double gub = mipsolver.mipdata_->domain.col_upper_[i];
               resetPositiveCoefAge =
                   sol.col_value[i] < gub - mipsolver.mipdata_->feastol;
               resetNegativeCoefAge = false;
             } else {
+              // the column is degenerate, so we reset ages of all cutting
+              // planes that have no slack regardless of coefficient
               resetNegativeCoefAge = true;
               resetPositiveCoefAge = true;
             }
@@ -987,8 +983,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                 HighsInt row = matrix.index_[j];
                 assert(row >= mipsolver.numRow());
 
+                // age is already zero, so irrelevant whether we reset it
                 if (lprows[row].age == 0) continue;
 
+                // check that row has no slack in the current solution
                 if (sol.row_value[row] <
                     getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
                   continue;
