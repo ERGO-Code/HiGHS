@@ -68,7 +68,6 @@ class HEkk {
   HighsStatus permute();
   HighsStatus unpermute();
   HighsStatus solve(const bool force_phase2 = false);
-  HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
 
@@ -285,8 +284,6 @@ class HEkk {
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
-  bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
-                       HighsInt& to_entry);
   void invalidatePrimalInfeasibilityRecord();
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();

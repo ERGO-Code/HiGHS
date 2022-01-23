@@ -72,23 +72,13 @@ enum SimplexCrashStrategy {
   kSimplexCrashStrategyMax = kSimplexCrashStrategyTestSing
 };
 
-enum SimplexDualEdgeWeightStrategy {
-  kSimplexDualEdgeWeightStrategyMin = -1,
-  kSimplexDualEdgeWeightStrategyChoose = kSimplexDualEdgeWeightStrategyMin,
-  kSimplexDualEdgeWeightStrategyDantzig,
-  kSimplexDualEdgeWeightStrategyDevex,
-  kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
-};
-
-enum SimplexPrimalEdgeWeightStrategy {
-  kSimplexPrimalEdgeWeightStrategyMin = -1,
-  kSimplexPrimalEdgeWeightStrategyChoose = kSimplexPrimalEdgeWeightStrategyMin,
-  kSimplexPrimalEdgeWeightStrategyDantzig,
-  kSimplexPrimalEdgeWeightStrategyDevex,
-  kSimplexPrimalEdgeWeightStrategySteepestEdge,
-  kSimplexPrimalEdgeWeightStrategyMax =
-      kSimplexPrimalEdgeWeightStrategySteepestEdge
+enum SimplexEdgeWeightStrategy {
+  kSimplexEdgeWeightStrategyMin = -1,
+  kSimplexEdgeWeightStrategyChoose = kSimplexEdgeWeightStrategyMin,
+  kSimplexEdgeWeightStrategyDantzig,
+  kSimplexEdgeWeightStrategyDevex,
+  kSimplexEdgeWeightStrategySteepestEdge,
+  kSimplexEdgeWeightStrategyMax = kSimplexEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPriceStrategy {

@@ -340,8 +340,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         // basis with no steepest edge weights
         if ((status.has_basis || basis.valid) &&
             !status.has_dual_steepest_edge_weights) {
-          ekk_info.dual_edge_weight_strategy =
-              kSimplexDualEdgeWeightStrategyDevex;
+          ekk_info.dual_edge_weight_strategy = kSimplexEdgeWeightStrategyDevex;
         }
       }
       //
