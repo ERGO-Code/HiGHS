@@ -81,7 +81,7 @@ class HVectorBase {
   /**
    * @brief Compute the squared 2-norm of the vector
    */
-  Real norm2();
+  Real norm2() const;
 
   /**
    * @brief Add a multiple pivotX of *pivot into this vector,

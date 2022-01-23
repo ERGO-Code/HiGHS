@@ -255,7 +255,7 @@ class HEkkDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void initialiseDevexFramework(const bool parallel = false);
+  void initialiseDevexFramework();
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
@@ -372,8 +372,6 @@ class HEkkDual {
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);
-  double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
-  double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
   bool isBadBasisChange();
   void assessPossiblyDualUnbounded();
@@ -414,11 +412,8 @@ class HEkkDual {
   bool initial_basis_is_logical_;
 
   // Options
-  DualEdgeWeightMode dual_edge_weight_mode;
-  bool initialise_dual_steepest_edge_weights;
+  EdgeWeightMode edge_weight_mode;
   bool allow_dual_steepest_edge_to_devex_switch;
-
-  const double min_dual_steepest_edge_weight = 1e-4;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;
@@ -436,6 +431,9 @@ class HEkkDual {
   HVector col_aq;
   HVector col_BFRT;
   HVector col_DSE;
+
+  HVector dev_row_ep;
+  HVector dev_col_DSE;
 
   HEkkDualRow dualRow;
 
