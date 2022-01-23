@@ -95,6 +95,46 @@ class HighsLpRelaxation {
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
 
+  class FrozenBasis {
+    friend class HighsLpRelaxation;
+    HighsInt freezeBasisId;
+    Highs* lpsolver;
+
+    FrozenBasis(Highs& lpsolver) : freezeBasisId(-1), lpsolver(&lpsolver) {
+      lpsolver.freezeBasis(freezeBasisId);
+    }
+
+   public:
+    FrozenBasis() : freezeBasisId(-1), lpsolver(nullptr) {}
+
+    FrozenBasis(FrozenBasis&& other)
+        : freezeBasisId(other.freezeBasisId), lpsolver(other.lpsolver) {
+      other.freezeBasisId = -1;
+    }
+
+    FrozenBasis& operator=(FrozenBasis&& other) {
+      recover();
+      lpsolver = other.lpsolver;
+      freezeBasisId = other.freezeBasisId;
+      other.freezeBasisId = -1;
+      return *this;
+    }
+
+    FrozenBasis(const FrozenBasis& other) = delete;
+    FrozenBasis& operator=(const FrozenBasis& other) = delete;
+
+    void recover() {
+      if (freezeBasisId != -1) {
+        lpsolver->unfreezeBasis(freezeBasisId);
+        freezeBasisId = -1;
+      }
+    }
+
+    ~FrozenBasis() { recover(); }
+  };
+
+  FrozenBasis freezeBasis() { return FrozenBasis(lpsolver); }
+
   void loadModel();
 
   void getRow(HighsInt row, HighsInt& len, const HighsInt*& inds,

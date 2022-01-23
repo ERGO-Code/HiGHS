@@ -360,7 +360,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     return best;
   };
 
-  bool resetBasis = false;
+  HighsLpRelaxation::FrozenBasis frozenBasis;
 
   while (true) {
     bool mustStop = getStrongBranchingLpIterations() >= maxSbIters ||
@@ -370,11 +370,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
-      if (resetBasis) {
-        lp->setStoredBasis(nodestack.back().nodeBasis);
-        lp->recoverBasis();
-        lp->run();
-      }
       downNodeLb = downbound[candidate];
       upNodeLb = upbound[candidate];
       return candidate;
@@ -542,16 +537,14 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         nodestack[nodestack.size() - 2].skipDepthCount = 1;
         depthoffset -= 1;
 
-        lp->setStoredBasis(nodestack.back().nodeBasis);
-        lp->recoverBasis();
         return -1;
       }
 
       pseudocost.addInferenceObservation(col, inferences, false);
 
-      lp->flushDomain(localdom);
+      frozenBasis = lp->freezeBasis();
 
-      resetBasis = true;
+      lp->flushDomain(localdom);
       int64_t numiters = lp->getNumLpIterations();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
@@ -603,8 +596,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
-            lp->setStoredBasis(nodestack.back().nodeBasis);
-            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -620,8 +611,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
-            lp->setStoredBasis(nodestack.back().nodeBasis);
-            lp->recoverBasis();
             return -1;
           }
         }
@@ -637,8 +626,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         nodestack[nodestack.size() - 2].skipDepthCount = 1;
         depthoffset -= 1;
 
-        lp->setStoredBasis(nodestack.back().nodeBasis);
-        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -654,7 +641,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       localdom.backtrack();
       lp->flushDomain(localdom);
-      if (numiters > basisstart_threshold) lp->recoverBasis();
     } else {
       // if (!mipsolver.submip)
       //  printf("up eval col=%d fracval=%g\n", col, fracval);
@@ -685,8 +671,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         nodestack[nodestack.size() - 2].skipDepthCount = 1;
         depthoffset -= 1;
 
-        lp->setStoredBasis(nodestack.back().nodeBasis);
-        lp->recoverBasis();
         return -1;
       }
 
@@ -694,7 +678,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       lp->flushDomain(localdom);
 
-      resetBasis = true;
       int64_t numiters = lp->getNumLpIterations();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
@@ -747,8 +730,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
-            lp->setStoredBasis(nodestack.back().nodeBasis);
-            lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -764,8 +745,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
-            lp->setStoredBasis(nodestack.back().nodeBasis);
-            lp->recoverBasis();
             return -1;
           }
         }
@@ -781,8 +760,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         nodestack[nodestack.size() - 2].skipDepthCount = 1;
         depthoffset -= 1;
 
-        lp->setStoredBasis(nodestack.back().nodeBasis);
-        lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -798,7 +775,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       localdom.backtrack();
       lp->flushDomain(localdom);
-      if (numiters > basisstart_threshold) lp->recoverBasis();
     }
   }
 }
