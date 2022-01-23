@@ -325,6 +325,7 @@ struct HighsOptionsStruct {
   bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
+  double dual_steepest_edge_weight_error_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
@@ -342,6 +343,7 @@ struct HighsOptionsStruct {
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
+  HighsInt mip_max_improving_sols;
   HighsInt mip_lp_age_limit;
   HighsInt mip_pool_age_limit;
   HighsInt mip_pool_soft_limit;
@@ -524,10 +526,12 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
-                            advanced, &simplex_strategy, kSimplexStrategyMin,
-                            kSimplexStrategyDual, kSimplexStrategyMax);
+    record_int = new OptionRecordInt(
+        "simplex_strategy",
+        "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
+        "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
+        advanced, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
+        kSimplexStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -551,18 +555,18 @@ class HighsOptions : public HighsOptionsStruct {
         "Dantzig / Devex / Steepest "
         "Edge (-1/0/1/2)",
         advanced, &simplex_dual_edge_weight_strategy,
-        kSimplexDualEdgeWeightStrategyMin, kSimplexDualEdgeWeightStrategyChoose,
-        kSimplexDualEdgeWeightStrategyMax);
+        kSimplexEdgeWeightStrategyMin, kSimplexEdgeWeightStrategyChoose,
+        kSimplexEdgeWeightStrategyMax);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("simplex_primal_edge_weight_strategy",
-                            "Strategy for simplex primal edge weights: Choose "
-                            "/ Dantzig / Devex (-1/0/1)",
-                            advanced, &simplex_primal_edge_weight_strategy,
-                            kSimplexPrimalEdgeWeightStrategyMin,
-                            kSimplexPrimalEdgeWeightStrategyChoose,
-                            kSimplexPrimalEdgeWeightStrategyMax);
+    record_int = new OptionRecordInt(
+        "simplex_primal_edge_weight_strategy",
+        "Strategy for simplex primal edge weights: Choose "
+        "/ Dantzig / Devex / Steepest "
+        "Edge (-1/0/1/2)",
+        advanced, &simplex_primal_edge_weight_strategy,
+        kSimplexEdgeWeightStrategyMin, kSimplexEdgeWeightStrategyChoose,
+        kSimplexEdgeWeightStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -653,6 +657,13 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
         &mip_max_leaves, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_improving_sols",
+        "limit on the number of improving solutions found to stop the MIP "
+        "solver prematurely",
+        advanced, &mip_max_improving_sols, 1, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_lp_age_limit",
@@ -838,6 +849,12 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex rebuild",
         advanced, &rebuild_refactor_solution_error_tolerance, -kHighsInf, 1e-8,
         kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_steepest_edge_weight_error_tolerance",
+        "Tolerance on dual steepest edge weight errors", advanced,
+        &dual_steepest_edge_weight_error_tolerance, 0.0, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

@@ -24,6 +24,8 @@
 /// relaxation by substituting bounds and aggregating rows
 class HighsTableauSeparator : public HighsSeparator {
  private:
+  int64_t numTries;
+
  public:
   void separateLpSolution(HighsLpRelaxation& lpRelaxation,
                           HighsLpAggregator& lpAggregator,
@@ -31,7 +33,7 @@ class HighsTableauSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsTableauSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "Tableau sepa", "Tbl") {}
+      : HighsSeparator(mipsolver, "Tableau sepa", "Tbl"), numTries(0) {}
 };
 
 #endif

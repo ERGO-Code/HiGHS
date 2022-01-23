@@ -197,7 +197,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
   if (mipsolver.submip) {
     return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
   } else if (pruned_treeweight < 1e-3 &&
-             num_leaves - num_leaves_before_run < 10) {
+             num_leaves - num_leaves_before_run < 10 &&
+             num_nodes - num_nodes_before_run < 1000) {
     // in the main MIP solver allow an initial offset of 10000 heuristic LP
     // iterations
     if (heuristic_lp_iterations <
@@ -1488,6 +1489,17 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     }
     return true;
   }
+
+  if (options.mip_max_improving_sols != kHighsIInf &&
+      numImprovingSols >= options.mip_max_improving_sols) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "reached improving solution limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+    }
+    return true;
+  }
+
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
