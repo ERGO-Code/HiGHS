@@ -589,6 +589,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
             localdom.backtrack();
             lp->flushDomain(localdom);
+            frozenBasis.recover();
 
             branchUpwards(col, upval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
@@ -605,6 +606,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
+            frozenBasis.recover();
 
             branchUpwards(col, upval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
@@ -620,6 +622,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         lp->flushDomain(localdom);
+        frozenBasis.recover();
 
         branchUpwards(col, upval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
@@ -641,6 +644,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       localdom.backtrack();
       lp->flushDomain(localdom);
+      frozenBasis.recover();
     } else {
       // if (!mipsolver.submip)
       //  printf("up eval col=%d fracval=%g\n", col, fracval);
@@ -676,6 +680,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       pseudocost.addInferenceObservation(col, inferences, true);
 
+      frozenBasis = lp->freezeBasis();
       lp->flushDomain(localdom);
 
       int64_t numiters = lp->getNumLpIterations();
@@ -723,6 +728,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
             localdom.backtrack();
             lp->flushDomain(localdom);
+            frozenBasis.recover();
 
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
@@ -739,6 +745,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
+            frozenBasis.recover();
 
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
@@ -754,6 +761,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         lp->flushDomain(localdom);
+        frozenBasis.recover();
 
         branchDownwards(col, downval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
@@ -775,6 +783,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       localdom.backtrack();
       lp->flushDomain(localdom);
+      frozenBasis.recover();
     }
   }
 }

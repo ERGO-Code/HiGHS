@@ -127,6 +127,9 @@ class HighsLpRelaxation {
       if (freezeBasisId != -1) {
         lpsolver->unfreezeBasis(freezeBasisId);
         freezeBasisId = -1;
+        lpsolver->setOptionValue("output_flag", true);
+        lpsolver->run();
+        lpsolver->setOptionValue("output_flag", false);
       }
     }
 
