@@ -1852,7 +1852,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
         "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
         "%d)\n",
         (int)debug_solve_call_num_, (int)iteration_count_);
-  fflush(stdout);
+
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {

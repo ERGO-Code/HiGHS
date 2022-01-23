@@ -343,6 +343,7 @@ struct HighsOptionsStruct {
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
+  HighsInt mip_max_improving_sols;
   HighsInt mip_lp_age_limit;
   HighsInt mip_pool_age_limit;
   HighsInt mip_pool_soft_limit;
@@ -656,6 +657,13 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
         &mip_max_leaves, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_improving_sols",
+        "limit on the number of improving solutions found to stop the MIP "
+        "solver prematurely",
+        advanced, &mip_max_improving_sols, 1, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_lp_age_limit",
