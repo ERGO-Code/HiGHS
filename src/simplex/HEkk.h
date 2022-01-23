@@ -68,7 +68,6 @@ class HEkk {
   HighsStatus permute();
   HighsStatus unpermute();
   HighsStatus solve(const bool force_phase2 = false);
-  HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
 

@@ -1170,42 +1170,6 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   return returnFromEkkSolve(return_status);
 }
 
-HighsStatus HEkk::cleanup() {
-  // Clean up from a point with either primal or dual
-  // infeasiblilities, but not both
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  if (info_.num_primal_infeasibilities) {
-    // Primal infeasibilities, so should be just dual phase 2
-    assert(!info_.num_dual_infeasibilities);
-    // Use dual simplex (phase 2) with Devex pricing and no perturbation
-    info_.simplex_strategy = kSimplexStrategyDual;
-    info_.dual_simplex_cost_perturbation_multiplier = 0;
-    info_.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
-    HEkkDual dual_solver(*this);
-    call_status = dual_solver.solve();
-    assert(called_return_from_solve_);
-    return_status =
-        interpretCallStatus(this->options_->log_options, call_status,
-                            return_status, "HEkkDual::solve");
-    if (return_status == HighsStatus::kError) return return_status;
-  } else {
-    // Dual infeasibilities, so should be just primal phase 2
-    assert(!info_.num_primal_infeasibilities);
-    // Use primal simplex (phase 2) with no perturbation
-    info_.simplex_strategy = kSimplexStrategyPrimal;
-    info_.primal_simplex_bound_perturbation_multiplier = 0;
-    HEkkPrimal primal_solver(*this);
-    call_status = primal_solver.solve();
-    assert(called_return_from_solve_);
-    return_status =
-        interpretCallStatus(this->options_->log_options, call_status,
-                            return_status, "HEkkPrimal::solve");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
-  return return_status;
-}
-
 HighsStatus HEkk::setBasis() {
   // Set up nonbasicFlag and basicIndex for a logical basis
   const HighsInt num_col = lp_.num_col_;
@@ -2281,7 +2245,8 @@ void HEkk::updateDualSteepestEdgeWeights(
   }
   assert(dual_edge_weight_.size() >= num_row);
   HighsInt to_entry;
-  const bool use_row_indices = simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
+  const bool use_row_indices =
+      simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
   const bool convert_to_scaled_space = !simplex_in_scaled_space_;
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
@@ -2334,7 +2299,8 @@ void HEkk::updateDualDevexWeights(const HVector* column,
   }
   assert(dual_edge_weight_.size() >= num_row);
   HighsInt to_entry;
-  const bool use_row_indices = simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
+  const bool use_row_indices =
+      simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
     const double aa_iRow = column_array[iRow];
@@ -3551,7 +3517,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
 
-  // Check that DSE weights are maintained 
+  // Check that DSE weights are maintained
   if (dev_had_dual_steepest_edge_weights) {
     fflush(stdout);
     assert(status_.has_dual_steepest_edge_weights);

@@ -403,14 +403,14 @@ void HEkkPrimal::initialiseSolve() {
   }
   const HighsInt edge_weight_strategy =
       ekk_instance_.options_->simplex_primal_edge_weight_strategy;
-  if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
-      edge_weight_strategy == kSimplexDualEdgeWeightStrategyDevex) {
+  if (edge_weight_strategy == kSimplexEdgeWeightStrategyChoose ||
+      edge_weight_strategy == kSimplexEdgeWeightStrategyDevex) {
     // By default, use Devex
     edge_weight_mode = EdgeWeightMode::kDevex;
-  } else if (edge_weight_strategy == kSimplexDualEdgeWeightStrategyDantzig) {
+  } else if (edge_weight_strategy == kSimplexEdgeWeightStrategyDantzig) {
     edge_weight_mode = EdgeWeightMode::kDantzig;
   } else {
-    assert(edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge);
+    assert(edge_weight_strategy == kSimplexEdgeWeightStrategySteepestEdge);
     edge_weight_mode = EdgeWeightMode::kSteepestEdge;
   }
   if (edge_weight_mode == EdgeWeightMode::kDantzig) {
@@ -420,7 +420,8 @@ void HEkkPrimal::initialiseSolve() {
   } else if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
     computePrimalSteepestEdgeWeights();
   }
-  ekk_instance_.dev_had_dual_steepest_edge_weights = ekk_instance_.status_.has_dual_steepest_edge_weights;
+  ekk_instance_.dev_had_dual_steepest_edge_weights =
+      ekk_instance_.status_.has_dual_steepest_edge_weights;
 }
 
 void HEkkPrimal::solvePhase1() {
@@ -1653,7 +1654,8 @@ void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
   const bool use_row_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
       row_basic_feasibility_change.count, num_col, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    const HighsInt iCol = use_row_indices ? row_basic_feasibility_change.index[iEntry] : iEntry;
+    const HighsInt iCol =
+        use_row_indices ? row_basic_feasibility_change.index[iEntry] : iEntry;
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (dual_infeasibility > dual_feasibility_tolerance)
       hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
@@ -1661,7 +1663,8 @@ void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
   const bool use_col_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
       col_basic_feasibility_change.count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    const HighsInt iRow = use_col_indices ? col_basic_feasibility_change.index[iEntry] : iEntry;
+    const HighsInt iRow =
+        use_col_indices ? col_basic_feasibility_change.index[iEntry] : iEntry;
     HighsInt iCol = num_col + iRow;
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (dual_infeasibility > dual_feasibility_tolerance)
@@ -1691,8 +1694,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
   const vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
   HighsInt to_entry;
   // Look at changes in the columns and assess any dual infeasibility
-  const bool use_row_indices =
-      ekk_instance_.simplex_nla_.sparseLoopStyle(row_ap.count, num_col, to_entry);
+  const bool use_row_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
+      row_ap.count, num_col, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iCol = use_row_indices ? row_ap.index[iEntry] : iEntry;
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
@@ -1708,8 +1711,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
       hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
   }
   // Look at changes in the rows and assess any dual infeasibility
-  const bool use_col_indices =
-      ekk_instance_.simplex_nla_.sparseLoopStyle(row_ep.count, num_row, to_entry);
+  const bool use_col_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
+      row_ep.count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_col_indices ? row_ep.index[iEntry] : iEntry;
     HighsInt iCol = iRow + num_col;
@@ -1959,8 +1962,8 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   const bool ignore_bounds =
       primal_correction_strategy == kSimplexPrimalCorrectionStrategyInRebuild;
   HighsInt to_entry;
-  const bool use_col_indices =
-      ekk_instance_.simplex_nla_.sparseLoopStyle(col_aq.count, num_row, to_entry);
+  const bool use_col_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
+      col_aq.count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_col_indices ? col_aq.index[iEntry] : iEntry;
     info.baseValue_[iRow] -= theta_primal * col_aq.array[iRow];
@@ -2139,13 +2142,15 @@ void HEkkPrimal::basicFeasibilityChangeUpdateDual() {
   const bool use_row_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
       row_basic_feasibility_change.count, num_col, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    const HighsInt iCol = use_row_indices ? row_basic_feasibility_change.index[iEntry] : iEntry;
+    const HighsInt iCol =
+        use_row_indices ? row_basic_feasibility_change.index[iEntry] : iEntry;
     info.workDual_[iCol] -= row_basic_feasibility_change.array[iCol];
   }
   const bool use_col_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
       col_basic_feasibility_change.count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    const HighsInt iRow = use_col_indices ? col_basic_feasibility_change.index[iEntry] : iEntry;
+    const HighsInt iRow =
+        use_col_indices ? col_basic_feasibility_change.index[iEntry] : iEntry;
     HighsInt iCol = num_col + iRow;
     info.workDual_[iCol] -= col_basic_feasibility_change.array[iRow];
   }
@@ -2269,8 +2274,8 @@ void HEkkPrimal::updateDevex() {
   // Compute the pivot weight from the reference set
   double dPivotWeight = 0.0;
   HighsInt to_entry;
-  const bool use_col_indices =
-      ekk_instance_.simplex_nla_.sparseLoopStyle(col_aq.count, num_row, to_entry);
+  const bool use_col_indices = ekk_instance_.simplex_nla_.sparseLoopStyle(
+      col_aq.count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_col_indices ? col_aq.index[iEntry] : iEntry;
     HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];

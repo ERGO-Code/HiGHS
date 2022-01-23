@@ -186,7 +186,8 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       assert(!status.has_dual_steepest_edge_weights);
     }
   }
-  ekk_instance_.dev_had_dual_steepest_edge_weights = ekk_instance_.status_.has_dual_steepest_edge_weights;
+  ekk_instance_.dev_had_dual_steepest_edge_weights =
+      ekk_instance_.status_.has_dual_steepest_edge_weights;
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weight_.resize(solver_num_tot);
 
@@ -2282,16 +2283,15 @@ void HEkkDual::initialiseDevexFramework() {
 void HEkkDual::interpretDualEdgeWeightStrategy(
     const HighsInt dual_edge_weight_strategy) {
   const bool always_initialise_dual_steepest_edge_weights = true;
-  if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose) {
+  if (dual_edge_weight_strategy == kSimplexEdgeWeightStrategyChoose) {
     edge_weight_mode = EdgeWeightMode::kSteepestEdge;
     allow_dual_steepest_edge_to_devex_switch = true;
-  } else if (dual_edge_weight_strategy ==
-             kSimplexDualEdgeWeightStrategyDantzig) {
+  } else if (dual_edge_weight_strategy == kSimplexEdgeWeightStrategyDantzig) {
     edge_weight_mode = EdgeWeightMode::kDantzig;
-  } else if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyDevex) {
+  } else if (dual_edge_weight_strategy == kSimplexEdgeWeightStrategyDevex) {
     edge_weight_mode = EdgeWeightMode::kDevex;
   } else if (dual_edge_weight_strategy ==
-             kSimplexDualEdgeWeightStrategySteepestEdge) {
+             kSimplexEdgeWeightStrategySteepestEdge) {
     edge_weight_mode = EdgeWeightMode::kSteepestEdge;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else {
