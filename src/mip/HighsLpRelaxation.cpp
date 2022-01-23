@@ -978,10 +978,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                   sol.col_value[i] < gub - mipsolver.mipdata_->feastol;
               resetNegativeCoefAge = false;
             } else {
-              resetNegativeCoefAge =
-                  sol.col_value[i] > glb + mipsolver.mipdata_->feastol;
-              resetPositiveCoefAge =
-                  sol.col_value[i] < gub - mipsolver.mipdata_->feastol;
+              resetNegativeCoefAge = true;
+              resetPositiveCoefAge = true;
             }
 
             if (resetPositiveCoefAge && resetNegativeCoefAge) {
