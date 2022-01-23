@@ -233,4 +233,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 HighsLp withoutSemiVariables(const HighsLp& lp);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
+
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

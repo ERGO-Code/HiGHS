@@ -928,6 +928,16 @@ class Highs {
   double getRunTime() { return timer_.readRunHighsClock(); }
 
   /**
+   * @brief Gets the dual edge weights (steepest/devex) in the order of the
+   * basic indices or NULL when they are not available.
+   */
+  const double* getDualEdgeWeights() const {
+    return ekk_instance_.dual_edge_weight_.empty()
+               ? nullptr
+               : ekk_instance_.dual_edge_weight_.data();
+  }
+
+  /**
    * @brief Runs ipx crossover and if successful loads basis into Highs::basis_
    */
   HighsStatus crossover();

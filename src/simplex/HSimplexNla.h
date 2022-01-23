@@ -47,6 +47,7 @@ struct FrozenBasis {
   HighsInt next_;
   ProductFormUpdate update_;
   SimplexBasis basis_;
+  std::vector<double> dual_edge_weight_;
   void clear();
 };
 
@@ -71,9 +72,18 @@ class HSimplexNla {
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void ftran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void btranInScaledSpace(
+      HVector& rhs, const double expected_density,
+      HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void ftranInScaledSpace(
+      HVector& rhs, const double expected_density,
+      HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void frozenBtran(HVector& rhs) const;
   void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
+
+  void scaleFtranResult(HVector& rhs) const;
+  void scaleBtranResult(HVector& rhs) const;
 
   void frozenBasisClearAllData();
   void frozenBasisClearAllUpdate();
@@ -85,13 +95,20 @@ class HSimplexNla {
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
-
+  double variableScaleFactor(const HighsInt iVar) const;
+  double basicColScaleFactor(const HighsInt iCol) const;
+  double pivotInScaledSpace(const HVector* aq, const HighsInt variable_in,
+                            const HighsInt row_out) const;
   void setPivotThreshold(const double new_pivot_threshold);
 
   void passLpPointer(const HighsLp* lp);
   void passScalePointer(const HighsScale* scale);
   void applyBasisMatrixColScale(HVector& rhs) const;
   void applyBasisMatrixRowScale(HVector& rhs) const;
+  void unapplyBasisMatrixColScale(HVector& rhs) const;
+  void unapplyBasisMatrixRowScale(HVector& rhs) const;
+  double rowEp2NormInScaledSpace(const HighsInt iRow,
+                                 const HVector& row_ep) const;
   void addCols(const HighsLp* updated_lp);
   void addRows(const HighsLp* updated_lp, HighsInt* basic_index,
                const HighsSparseMatrix* scaled_ar_matrix);

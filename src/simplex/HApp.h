@@ -280,6 +280,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
         return returnFromSolveLpSimplex(solver_object, return_status);
       }
+    } else {
+      // LP is scaled, but simplex_unscaled_solution_strategy is
+      // kSimplexUnscaledSolutionStrategyDirect, so have to move back
+      // the LP and unscale it
+      assert(options.simplex_unscaled_solution_strategy ==
+             kSimplexUnscaledSolutionStrategyDirect);
+      incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
     }
     assert(options.simplex_unscaled_solution_strategy ==
                kSimplexUnscaledSolutionStrategyDirect ||
@@ -331,18 +338,20 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       } else {
         // Using dual simplex, so force Devex if starting from an advanced
         // basis with no steepest edge weights
-        //    if (status.has_basis || basis.valid) {
-        // ToDo Track whether steepest edge weights are known &&
-        // !status.has_dual_steepest_edge_weights) {
-        ekk_info.dual_edge_weight_strategy =
-            kSimplexDualEdgeWeightStrategyDevex;
-        // options.dual_simplex_cost_perturbation_multiplier = 0;
+        if ((status.has_basis || basis.valid) &&
+            !status.has_dual_steepest_edge_weights) {
+          ekk_info.dual_edge_weight_strategy =
+              kSimplexDualEdgeWeightStrategyDevex;
+        }
       }
-
       //
-      // Solve the unscaled LP with scaled NLA and force to start in phase 2
+      // Solve the unscaled LP with scaled NLA
       //
-      const bool force_phase2 = true;
+      // Force the simplex solver to start in phase 2 unless solving
+      // the LP directly as unscaled
+      //
+      const bool force_phase2 = options.simplex_unscaled_solution_strategy !=
+                                kSimplexUnscaledSolutionStrategyDirect;
       return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;
 
