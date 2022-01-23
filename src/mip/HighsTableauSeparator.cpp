@@ -174,6 +174,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       fracvar.row_ep.emplace_back(row, weight);
     }
 
+    if (fracvar.row_ep.size() <= 1) continue;
+
     if (maxWeight / minWeight <= 1e4) {
       fracvar.score = fracvar.fractionality * (1.0 - fracvar.fractionality) /
                       fracvar.row_ep_norm2;
