@@ -285,8 +285,6 @@ class HEkk {
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
-  bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
-                       HighsInt& to_entry);
   void invalidatePrimalInfeasibilityRecord();
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();

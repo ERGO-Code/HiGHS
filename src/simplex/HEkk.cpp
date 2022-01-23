@@ -2278,7 +2278,7 @@ void HEkk::updateDualSteepestEdgeWeights(
   }
   assert(dual_edge_weight_.size() >= num_row);
   HighsInt to_entry;
-  const bool use_row_indices = sparseLoopStyle(column_count, num_row, to_entry);
+  const bool use_row_indices = simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
   const bool convert_to_scaled_space = !simplex_in_scaled_space_;
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
@@ -2331,7 +2331,7 @@ void HEkk::updateDualDevexWeights(const HVector* column,
   }
   assert(dual_edge_weight_.size() >= num_row);
   HighsInt to_entry;
-  const bool use_row_indices = sparseLoopStyle(column_count, num_row, to_entry);
+  const bool use_row_indices = simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
     const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
     const double aa_iRow = column_array[iRow];
@@ -3472,20 +3472,6 @@ void HEkk::computeSimplexLpDualInfeasible() {
       sum_dual_infeasibility += dual_infeasibility;
     }
   }
-}
-
-bool HEkk::sparseLoopStyle(const HighsInt count, const HighsInt dim,
-                           HighsInt& to_entry) {
-  // Parameter to decide whether to use just the values in a HVector, or
-  // use the indices of their nonzeros
-  const double density_for_indexing = 0.4;
-  const bool use_indices = count >= 0 && count < density_for_indexing * dim;
-  if (use_indices) {
-    to_entry = count;
-  } else {
-    to_entry = dim;
-  }
-  return use_indices;
 }
 
 void HEkk::invalidatePrimalMaxSumInfeasibilityRecord() {

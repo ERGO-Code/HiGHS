@@ -353,8 +353,7 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
                                   HighsInt& to_entry) const {
   // Parameter to decide whether to use just the values in a HVector, or
   // use the indices of their nonzeros
-  const double density_for_indexing = 0.4;
-  const bool use_indices = count >= 0 && count < density_for_indexing * dim;
+  const bool use_indices = count >= 0 && count < kDensityForIndexing * dim;
   if (use_indices) {
     to_entry = count;
   } else {

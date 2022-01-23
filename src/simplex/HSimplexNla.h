@@ -24,6 +24,7 @@
 #include "util/HFactor.h"
 
 const HighsInt kReportItemLimit = 25;
+const double kDensityForIndexing = 0.4;
 
 struct ProductFormUpdate {
   bool valid_ = false;
