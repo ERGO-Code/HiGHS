@@ -203,6 +203,7 @@ class HEkk {
   bool debug_basis_report_ = false;
   bool debug_dual_feasible = false;
   double debug_max_relative_dual_steepest_edge_weight_error = 0;
+  bool dev_had_dual_steepest_edge_weights = false;
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 

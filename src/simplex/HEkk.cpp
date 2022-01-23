@@ -160,6 +160,7 @@ void HEkk::clearEkkData() {
   this->debug_basis_report_ = false;
   this->debug_dual_feasible = false;
   this->debug_max_relative_dual_steepest_edge_weight_error = 0;
+  this->dev_had_dual_steepest_edge_weights = false;
 
   clearBadBasisChange();
 }
@@ -1052,6 +1053,8 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (debug_basis_report_) {
     printf("HEkk::solve basis %d\n", (int)debug_basis_id);
   }
+  dev_had_dual_steepest_edge_weights = status_.has_dual_steepest_edge_weights;
+
   initialiseAnalysis();
   initialiseControl();
 
@@ -3547,6 +3550,12 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   return_dual_solution_status_ = kSolutionStatusNone;
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
+
+  // Check that DSE weights are maintained 
+  if (dev_had_dual_steepest_edge_weights) {
+    fflush(stdout);
+    assert(status_.has_dual_steepest_edge_weights);
+  }
 
   // Check that an invert exists
   assert(status_.has_invert);

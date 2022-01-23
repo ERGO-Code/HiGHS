@@ -186,6 +186,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       assert(!status.has_dual_steepest_edge_weights);
     }
   }
+  ekk_instance_.dev_had_dual_steepest_edge_weights = ekk_instance_.status_.has_dual_steepest_edge_weights;
   // Resize the copy of scattered edge weights for backtracking
   info.backtracking_basis_edge_weight_.resize(solver_num_tot);
 

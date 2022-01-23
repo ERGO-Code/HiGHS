@@ -420,6 +420,7 @@ void HEkkPrimal::initialiseSolve() {
   } else if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
     computePrimalSteepestEdgeWeights();
   }
+  ekk_instance_.dev_had_dual_steepest_edge_weights = ekk_instance_.status_.has_dual_steepest_edge_weights;
 }
 
 void HEkkPrimal::solvePhase1() {
