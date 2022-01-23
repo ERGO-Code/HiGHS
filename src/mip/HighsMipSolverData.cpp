@@ -1405,6 +1405,17 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     }
     return true;
   }
+
+  if (options.mip_max_improving_sols != kHighsIInf &&
+      numImprovingSols >= options.mip_max_improving_sols) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "reached improving solution limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+    }
+    return true;
+  }
+
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
