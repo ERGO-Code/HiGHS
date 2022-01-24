@@ -944,6 +944,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             if (lpsolver.getBasis().col_status[i] == HighsBasisStatus::kBasic)
               continue;
 
+            const double glb = mipsolver.mipdata_->domain.col_lower_[i];
+            const double gub = mipsolver.mipdata_->domain.col_upper_[i];
+
+            if (std::min(gub - sol.col_value[i], sol.col_value[i] - glb) <=
+                mipsolver.mipdata_->feastol)
+              continue;
+
             const auto& matrix = lpsolver.getLp().a_matrix_;
             const HighsInt colStart =
                 matrix.start_[i] + (mipsolver.model_->a_matrix_.start_[i + 1] -
@@ -953,76 +960,19 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             // skip further checks if the column has no entry in any cut
             if (colStart == colEnd) continue;
 
-            bool resetNegativeCoefAge;
-            bool resetPositiveCoefAge;
-            if (sol.col_dual[i] >
-                lpsolver.getOptions().dual_feasibility_tolerance) {
-              // column is forced to a local lower bound that is not equal to
-              // the global lower bound, so we want to reset ages of cutting
-              // planes where the column has a negative coefficient when they
-              // have no slack.
-              const double glb = mipsolver.mipdata_->domain.col_lower_[i];
-              resetNegativeCoefAge =
-                  sol.col_value[i] > glb + mipsolver.mipdata_->feastol;
-              resetPositiveCoefAge = false;
-            } else if (sol.col_dual[i] <
-                       -lpsolver.getOptions().dual_feasibility_tolerance) {
-              const double gub = mipsolver.mipdata_->domain.col_upper_[i];
-              resetPositiveCoefAge =
-                  sol.col_value[i] < gub - mipsolver.mipdata_->feastol;
-              resetNegativeCoefAge = false;
-            } else {
-              // the column is degenerate, so we reset ages of all cutting
-              // planes that have no slack regardless of coefficient
-              resetNegativeCoefAge = true;
-              resetPositiveCoefAge = true;
-            }
+            for (HighsInt j = colStart; j < colEnd; ++j) {
+              HighsInt row = matrix.index_[j];
+              assert(row >= mipsolver.numRow());
 
-            if (resetPositiveCoefAge && resetNegativeCoefAge) {
-              for (HighsInt j = colStart; j < colEnd; ++j) {
-                HighsInt row = matrix.index_[j];
-                assert(row >= mipsolver.numRow());
+              // age is already zero, so irrelevant whether we reset it
+              if (lprows[row].age == 0) continue;
 
-                // age is already zero, so irrelevant whether we reset it
-                if (lprows[row].age == 0) continue;
+              // check that row has no slack in the current solution
+              if (sol.row_value[row] <
+                  getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
+                continue;
 
-                // check that row has no slack in the current solution
-                if (sol.row_value[row] <
-                    getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
-                  continue;
-
-                lprows[row].age = 0;
-              }
-            } else if (resetPositiveCoefAge) {
-              for (HighsInt j = colStart; j < colEnd; ++j) {
-                HighsInt row = matrix.index_[j];
-                assert(row >= mipsolver.numRow());
-
-                if (lprows[row].age == 0) continue;
-
-                if (matrix.value_[j] < 0) continue;
-
-                if (sol.row_value[row] <
-                    getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
-                  continue;
-
-                lprows[row].age = 0;
-              }
-            } else if (resetNegativeCoefAge) {
-              for (HighsInt j = colStart; j < colEnd; ++j) {
-                HighsInt row = matrix.index_[j];
-                assert(row >= mipsolver.numRow());
-
-                if (lprows[row].age == 0) continue;
-
-                if (matrix.value_[j] > 0) continue;
-
-                if (sol.row_value[row] <
-                    getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
-                  continue;
-
-                lprows[row].age = 0;
-              }
+              lprows[row].age = 0;
             }
           }
         }
