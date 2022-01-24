@@ -360,8 +360,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     return best;
   };
 
-  HighsLpRelaxation::ResolveGuard resolveGuard = lp->resolveGuard();
-
   while (true) {
     bool mustStop = getStrongBranchingLpIterations() >= maxSbIters ||
                     mipsolver.mipdata_->checkLimits();
