@@ -94,49 +94,46 @@ class HighsLpRelaxation {
   HighsLpRelaxation(const HighsMipSolver& mip);
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
-
-  class FrozenBasis {
+  class BasisGuard {
     friend class HighsLpRelaxation;
-    HighsInt freezeBasisId;
+    HighsInt fronzenBasisId;
     Highs* lpsolver;
 
-    FrozenBasis(Highs& lpsolver) : freezeBasisId(-1), lpsolver(&lpsolver) {
-      lpsolver.freezeBasis(freezeBasisId);
+    BasisGuard(Highs& lpsolver) : fronzenBasisId(-1), lpsolver(&lpsolver) {
+      lpsolver.freezeBasis(fronzenBasisId);
     }
 
    public:
-    FrozenBasis() : freezeBasisId(-1), lpsolver(nullptr) {}
+    BasisGuard() : fronzenBasisId(-1), lpsolver(nullptr) {}
 
-    FrozenBasis(FrozenBasis&& other)
-        : freezeBasisId(other.freezeBasisId), lpsolver(other.lpsolver) {
-      other.freezeBasisId = -1;
+    BasisGuard(BasisGuard&& other)
+        : fronzenBasisId(other.fronzenBasisId), lpsolver(other.lpsolver) {
+      other.fronzenBasisId = -1;
     }
 
-    FrozenBasis& operator=(FrozenBasis&& other) {
+    BasisGuard& operator=(BasisGuard&& other) {
       recover();
       lpsolver = other.lpsolver;
-      freezeBasisId = other.freezeBasisId;
-      other.freezeBasisId = -1;
+      fronzenBasisId = other.fronzenBasisId;
+      other.fronzenBasisId = -1;
       return *this;
     }
 
-    FrozenBasis(const FrozenBasis& other) = delete;
-    FrozenBasis& operator=(const FrozenBasis& other) = delete;
+    BasisGuard(const BasisGuard& other) = delete;
+    BasisGuard& operator=(const BasisGuard& other) = delete;
 
     void recover() {
-      if (freezeBasisId != -1) {
-        lpsolver->unfreezeBasis(freezeBasisId);
-        freezeBasisId = -1;
-        lpsolver->setOptionValue("output_flag", true);
+      if (fronzenBasisId != -1) {
+        lpsolver->unfreezeBasis(fronzenBasisId);
+        fronzenBasisId = -1;
         lpsolver->run();
-        lpsolver->setOptionValue("output_flag", false);
       }
     }
 
-    ~FrozenBasis() { recover(); }
+    ~BasisGuard() { recover(); }
   };
 
-  FrozenBasis freezeBasis() { return FrozenBasis(lpsolver); }
+  BasisGuard basisGuard() { return BasisGuard(lpsolver); }
 
   void loadModel();
 
