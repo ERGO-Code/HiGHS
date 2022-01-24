@@ -94,6 +94,31 @@ class HighsLpRelaxation {
   HighsLpRelaxation(const HighsMipSolver& mip);
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
+
+  class ResolveGuard {
+    friend class HighsLpRelaxation;
+    HighsLpRelaxation* lp;
+
+    ResolveGuard(HighsLpRelaxation* lp) : lp(lp) {}
+
+   public:
+    ResolveGuard() : lp(nullptr) {}
+
+    ResolveGuard(ResolveGuard&& other) : lp(other.lp) { other.lp = nullptr; }
+
+    ResolveGuard& operator=(ResolveGuard&& other) {
+      std::swap(lp, other.lp);
+      return *this;
+    }
+
+    ResolveGuard(const ResolveGuard& other) = delete;
+    ResolveGuard& operator=(const ResolveGuard& other) = delete;
+
+    ~ResolveGuard() {
+      if (lp && !lp->getLpSolver().getInfo().valid) lp->run();
+    }
+  };
+
   class BasisGuard {
     friend class HighsLpRelaxation;
     HighsInt frozenBasisId;
@@ -126,7 +151,6 @@ class HighsLpRelaxation {
       if (frozenBasisId != -1) {
         lpsolver->unfreezeBasis(frozenBasisId);
         frozenBasisId = -1;
-        //        lpsolver->run();
       }
     }
 
@@ -134,6 +158,8 @@ class HighsLpRelaxation {
   };
 
   BasisGuard basisGuard() { return BasisGuard(lpsolver); }
+
+  ResolveGuard resolveGuard() { return ResolveGuard(this); }
 
   void loadModel();
 
