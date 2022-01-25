@@ -33,14 +33,20 @@ The rest of this file gives brief documentation for HiGHS. Comprehensive documen
 Download
 --------
 
-Precompiled executables are available for a variety of platforms at https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases
+Precompiled executables and libraries are available for a variety of platforms at https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases
 
-Note that HiGHS is still pre-1.0, so the version numbers in the releases do not match versions of HiGHS in this repository.
+_These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
-For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` file
+**Notes**
 
-For Mac users: choose the `x86_64-apple-darwin.tar.gz` file.
+ * For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` file
+ * For M1 macOS users: choose the `aarch64-apple-darwin.tar.gz` file.
 
+**Missing files**
+
+If you encounter an error about a missing `libstdc++-6.dll` (or similar named file), download the platform-specific libraries from: 
+https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/tag/CompilerSupportLibraries-v0.5.1%2B0
+and copy the missing libraries into the same folder as the `highs` executable.
 
 Compilation
 -----------
