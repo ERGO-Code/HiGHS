@@ -128,6 +128,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt loc = 2 * col + val;
   implications[loc].computed = true;
   implications[loc].implics = std::move(implics);
+  this->numImplications += implications[loc].implics.size();
 
   return false;
 }
@@ -297,6 +298,7 @@ void HighsImplications::rebuild(HighsInt ncols,
   vlbs.clear();
   vlbs.shrink_to_fit();
   vlbs.resize(ncols);
+  numImplications = 0;
   HighsInt oldncols = oldvubs.size();
 
   nextCleanupCall = mipsolver.numNonzero();

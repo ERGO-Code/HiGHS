@@ -32,6 +32,7 @@ class HighsImplications {
     bool computed = false;
   };
   std::vector<Implics> implications;
+  int64_t numImplications;
 
   bool computeImplications(HighsInt col, bool val);
 
@@ -59,6 +60,7 @@ class HighsImplications {
     vubs.resize(numcol);
     vlbs.resize(numcol);
     nextCleanupCall = mipsolver.numNonzero();
+    numImplications = 0;
   }
 
   void reset() {
@@ -70,6 +72,7 @@ class HighsImplications {
     HighsInt numcol = mipsolver.numCol();
     implications.resize(2 * numcol);
     colsubstituted.resize(numcol);
+    numImplications = 0;
     vubs.clear();
     vubs.shrink_to_fit();
     vubs.resize(numcol);
@@ -80,7 +83,7 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
   }
 
-  HighsInt getNumImplications() const { return implications.size(); }
+  HighsInt getNumImplications() const { return numImplications; }
 
   const std::vector<HighsDomainChange>& getImplications(HighsInt col, bool val,
                                                         bool& infeasible) {
