@@ -200,7 +200,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           substitution.offset = lbDown;
           substitution.scale = lbUp - lbDown;
           substitutions.push_back(substitution);
-          colsubstituted[implicsup[u].column] = true;
+          colsubstituted[implcol] = true;
           ++numReductions;
         } else {
           double lb = std::min(lbDown, lbUp);
