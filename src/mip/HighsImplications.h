@@ -81,6 +81,8 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
   }
 
+  HighsInt getNumImplications() const { return implications.size(); }
+
   HighsInt getImplications(HighsInt col, bool val,
                            const HighsDomainChange*& implicationsstart,
                            bool& infeasible) {
