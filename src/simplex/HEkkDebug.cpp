@@ -89,7 +89,7 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
     this->options_->output_flag = true;
     this->options_->log_dev_level = log_dev_level_;
     this->options_->highs_analysis_level =
-        kHighsAnalysisLevelSolverSummaryData +
+        //        kHighsAnalysisLevelSolverSummaryData +
         kHighsAnalysisLevelSolverRuntimeData;
     this->options_->highs_debug_level = kHighsDebugLevelCostly;
     if (log_dev_level_ == kHighsLogDevLevelVerbose)
@@ -1391,7 +1391,7 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
 HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
     const std::string message) {
   // Possibly force the expensive check for development work
-  const bool check_dual_edge_weights = false;
+  const bool check_dual_edge_weights = false;  // true;
   if (check_dual_edge_weights) {
     const bool check_all_dual_edge_weights = false;
     const HighsInt alt_debug_level = check_all_dual_edge_weights
@@ -1453,8 +1453,12 @@ HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
   const double large_relative_dual_steepest_edge_weight_error = 1e-3;
   if (relative_dual_steepest_edge_weight_error >
       10 * debug_max_relative_dual_steepest_edge_weight_error) {
-    highsLogDev(
-        options_->log_options, HighsLogType::kInfo,
+    printf(
+        //    highsLogDev(options_->log_options, HighsLogType::kInfo,
+        "Call %2d; Tick %8d: ", (int)debug_solve_call_num_,
+        debug_initial_build_synthetic_tick_);
+    printf(
+        //    highsLogDev(options_->log_options, HighsLogType::kInfo,
         "HEkk::debugDualSteepestEdgeWeights   Iteration %5d: Checked %2d "
         "weights: "
         "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",

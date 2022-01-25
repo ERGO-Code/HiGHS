@@ -164,7 +164,8 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
   reportPackValue("  pack: aq Bf ", aq);
   reportPackValue("  pack: ep Bf ", ep);
   factor_.refactor_info_.clear();
-  if (last_frozen_basis_id_ == kNoLink) {
+  if (update_.valid_) assert(last_frozen_basis_id_ != kNoLink);
+  if (!update_.valid_) {  // last_frozen_basis_id_ == kNoLink) {
     factor_.update(aq, ep, iRow, hint);
   } else {
     *hint = update_.update(aq, iRow);

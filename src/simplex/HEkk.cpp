@@ -1030,21 +1030,18 @@ HighsStatus HEkk::unpermute() {
 HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
   debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = 14;
-  const HighsInt debug_num_solve = -3;
+  const HighsInt debug_from_solve_call_num = -12;
+  const HighsInt debug_num_solve = 3;
   const HighsInt debug_to_solve_call_num =
       debug_from_solve_call_num + debug_num_solve - 1;
-  const HighsInt debug_build_synthetic_tick0 = 477900;
-  const HighsInt debug_build_synthetic_tick1 = 480660;
-  debug_solve_report_ = debug_solve_call_num_ >= debug_from_solve_call_num &&
-                        debug_solve_call_num_ <= debug_to_solve_call_num;
-  if (debug_solve_report_) {
-    printf("HEkk::solve call %d build_synthetic_tick_ = %g\n",
-           (int)debug_solve_call_num_, build_synthetic_tick_);
+  const HighsInt debug_build_synthetic_tick = 445560;
+  if (debug_solve_call_num_ < debug_from_solve_call_num) {
+    debug_solve_report_ = false;
+  } else if (debug_solve_call_num_ == debug_from_solve_call_num) {
+    debug_solve_report_ = build_synthetic_tick_ == debug_build_synthetic_tick;
+  } else if (debug_solve_call_num_ > debug_to_solve_call_num) {
+    debug_solve_report_ = false;
   }
-  debug_solve_report_ = debug_solve_report_ &&
-                        (build_synthetic_tick_ == debug_build_synthetic_tick0 ||
-                         build_synthetic_tick_ == debug_build_synthetic_tick1);
   const HighsInt time_from_solve_call_num = -1;
   const HighsInt time_to_solve_call_num = time_from_solve_call_num;
   time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
@@ -1054,7 +1051,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (debug_solve_report_) {
     printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
     debugReporting(-1);
-    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed); //
   }
   if (time_report_) {
     timeReporting(-1);
@@ -3781,12 +3778,6 @@ void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
   frozen_basis_id =
       this->simplex_nla_.freeze(this->basis_, info_.col_aq_density);
   FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
-  if (frozen_basis.basis_.debug_id == 81360) {
-    printf(
-        "HEkk::freezeBasis: frozen_basis.basis_.debug_id == 81360; hash = "
-        "%ld\n",
-        frozen_basis.basis_.hash);
-  }
   if (this->status_.has_dual_steepest_edge_weights) {
     // Copy the dual edge weights
     frozen_basis.dual_edge_weight_ = this->dual_edge_weight_;
