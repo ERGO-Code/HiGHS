@@ -125,7 +125,26 @@ class HighsLpRelaxation {
     Highs* lpsolver;
 
     BasisGuard(Highs& lpsolver) : frozenBasisId(-1), lpsolver(&lpsolver) {
-      lpsolver.freezeBasis(frozenBasisId);
+      if (lpsolver.freezeBasis(frozenBasisId) != HighsStatus::kOk) {
+        lpsolver.run();
+        if (lpsolver.freezeBasis(frozenBasisId) != HighsStatus::kOk) {
+          printf(
+              "freezing basis failed, and failed again after calling run()\n");
+          assert(false);
+        } else {
+          // todo@Julian: it would be good if these situations could be avoided.
+          // It happens when the invertible representation from before calling
+          // freeze is not available after calling unfreeze. If I understood
+          // correctly this can happen when the basis needed refactoring during
+          // the call so run() while the basis was frozen. In that case it would
+          // be nice if the basis is automatically refactored when it is not
+          // available anymore during the call to unfreeze.
+          const bool printDevInformation = false;
+          if (printDevInformation)
+            printf(
+                "freezing basis failed, but succeeded after calling run()\n");
+        }
+      }
     }
 
    public:
