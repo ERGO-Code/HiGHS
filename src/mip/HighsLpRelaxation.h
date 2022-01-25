@@ -96,26 +96,26 @@ class HighsLpRelaxation {
   HighsLpRelaxation(const HighsLpRelaxation& other);
   class BasisGuard {
     friend class HighsLpRelaxation;
-    HighsInt fronzenBasisId;
+    HighsInt frozenBasisId;
     Highs* lpsolver;
 
-    BasisGuard(Highs& lpsolver) : fronzenBasisId(-1), lpsolver(&lpsolver) {
-      lpsolver.freezeBasis(fronzenBasisId);
+    BasisGuard(Highs& lpsolver) : frozenBasisId(-1), lpsolver(&lpsolver) {
+      lpsolver.freezeBasis(frozenBasisId);
     }
 
    public:
-    BasisGuard() : fronzenBasisId(-1), lpsolver(nullptr) {}
+    BasisGuard() : frozenBasisId(-1), lpsolver(nullptr) {}
 
     BasisGuard(BasisGuard&& other)
-        : fronzenBasisId(other.fronzenBasisId), lpsolver(other.lpsolver) {
-      other.fronzenBasisId = -1;
+        : frozenBasisId(other.frozenBasisId), lpsolver(other.lpsolver) {
+      other.frozenBasisId = -1;
     }
 
     BasisGuard& operator=(BasisGuard&& other) {
       recover();
       lpsolver = other.lpsolver;
-      fronzenBasisId = other.fronzenBasisId;
-      other.fronzenBasisId = -1;
+      frozenBasisId = other.frozenBasisId;
+      other.frozenBasisId = -1;
       return *this;
     }
 
@@ -123,10 +123,10 @@ class HighsLpRelaxation {
     BasisGuard& operator=(const BasisGuard& other) = delete;
 
     void recover() {
-      if (fronzenBasisId != -1) {
-        lpsolver->unfreezeBasis(fronzenBasisId);
-        fronzenBasisId = -1;
-        lpsolver->run();
+      if (frozenBasisId != -1) {
+        lpsolver->unfreezeBasis(frozenBasisId);
+        frozenBasisId = -1;
+//        lpsolver->run();
       }
     }
 

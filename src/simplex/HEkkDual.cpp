@@ -1178,8 +1178,8 @@ void HEkkDual::iterate() {
   // Reporting:
   // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
 
-  const HighsInt from_check_iter = -11;
-  const HighsInt to_check_iter = from_check_iter + 10;
+  const HighsInt from_check_iter = 0;
+  const HighsInt to_check_iter = from_check_iter + 100;
   if (ekk_instance_.debug_solve_report_) {
     ekk_instance_.debug_iteration_report_ =
         ekk_instance_.iteration_count_ >= from_check_iter &&

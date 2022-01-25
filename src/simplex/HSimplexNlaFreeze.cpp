@@ -58,9 +58,15 @@ bool HSimplexNla::frozenBasisIdValid(const HighsInt frozen_basis_id) const {
 }
 
 bool HSimplexNla::frozenBasisHasInvert(const HighsInt frozen_basis_id) const {
+  // Determine whether there will be an invertible representation to
+  // use after unfreezing this basis
+  //
+  // If there is no last frozen basis, then there can be no invertible
+  // representation
   if (this->last_frozen_basis_id_ == kNoLink) return false;
-  assert(frozenBasisIdValid(this->last_frozen_basis_id_));
-  return this->frozen_basis_[this->last_frozen_basis_id_].update_.valid_;
+  // Existence of the invertible representation depends on the
+  // validity of the current PF updates
+  return this->update_.valid_;
 }
 
 HighsInt HSimplexNla::freeze(const SimplexBasis& basis,
@@ -74,7 +80,8 @@ HighsInt HSimplexNla::freeze(const SimplexBasis& basis,
   frozen_basis.update_.clear();
   frozen_basis.basis_ = basis;
   if (this->last_frozen_basis_id_ == kNoLink) {
-    // There is thisly no frozen basis, so record this as the first
+    // There is previously no frozen basis, so record this as the
+    // first
     this->first_frozen_basis_id_ = this_frozen_basis_id;
   } else {
     // Update the forward link from the previous last frozen basis
