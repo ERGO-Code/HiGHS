@@ -56,10 +56,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,
                                                          val);
 
-  HighsInt loc = 2 * col + val;
-  HighsInt implstart = implications.size();
-
-  implications.reserve(implstart + numImplications);
+  std::vector<HighsDomainChange> implics;
+  implics.reserve(numImplications);
 
   HighsInt numEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
   HighsInt maxEntries = 100000 + mipsolver.numNonzero();
@@ -69,25 +67,24 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
         ((domchgreason[i].index >> 1) == col || numEntries >= maxEntries))
       continue;
 
-    implications.push_back(domchgstack[i]);
+    implics.push_back(domchgstack[i]);
   }
 
   globaldomain.backtrack();
   globaldomain.clearChangedCols(changedend);
 
   // add the implications of binary variables to the clique table
-  auto binstart =
-      std::partition(implications.begin() + implstart, implications.end(),
-                     [&](const HighsDomainChange& a) {
-                       return !globaldomain.isBinary(a.column);
-                     });
+  auto binstart = std::partition(implics.begin(), implics.end(),
+                                 [&](const HighsDomainChange& a) {
+                                   return !globaldomain.isBinary(a.column);
+                                 });
 
-  pdqsort(implications.begin() + implstart, binstart);
+  pdqsort(implics.begin(), binstart);
 
   HighsCliqueTable::CliqueVar clique[2];
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
-  for (auto i = binstart; i != implications.end(); ++i) {
+  for (auto i = binstart; i != implics.end(); ++i) {
     if (i->boundtype == HighsBoundType::kLower)
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 0);
     else
@@ -98,7 +95,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
 
   // store variable bounds derived from implications
-  for (auto i = implications.begin() + implstart; i != binstart; ++i) {
+  for (auto i = implics.begin(); i != binstart; ++i) {
     if (i->boundtype == HighsBoundType::kLower) {
       if (val == 1) {
         if (globaldomain.col_lower_[i->column] != -kHighsInf)
@@ -126,10 +123,11 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     }
   }
 
-  implications.erase(binstart, implications.end());
+  implics.erase(binstart, implics.end());
 
-  implicationmap[loc].start = implstart;
-  implicationmap[loc].num = implications.size() - implstart;
+  HighsInt loc = 2 * col + val;
+  implications[loc].computed = true;
+  implications[loc].implics = std::move(implics);
 
   return false;
 }
@@ -154,12 +152,12 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
       return true;
 
     // analyze implications
-    const HighsDomainChange* implicsup;
-    const HighsDomainChange* implicsdown;
-    HighsInt nimplicsup;
-    HighsInt nimplicsdown;
-    nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
-    nimplicsup = getImplications(col, 1, implicsup, infeasible);
+    const std::vector<HighsDomainChange>& implicsdown =
+        getImplications(col, 0, infeasible);
+    const std::vector<HighsDomainChange>& implicsup =
+        getImplications(col, 1, infeasible);
+    HighsInt nimplicsdown = implicsdown.size();
+    HighsInt nimplicsup = implicsup.size();
     HighsInt u = 0;
     HighsInt d = 0;
 
@@ -287,10 +285,10 @@ void HighsImplications::rebuild(HighsInt ncols,
 
   colsubstituted.clear();
   colsubstituted.shrink_to_fit();
-  implicationmap.clear();
-  implicationmap.shrink_to_fit();
+  implications.clear();
+  implications.shrink_to_fit();
 
-  implicationmap.resize(2 * ncols, {-1, 0});
+  implications.resize(2 * ncols);
   colsubstituted.resize(ncols);
   substitutions.clear();
   vubs.clear();
@@ -420,9 +418,9 @@ void HighsImplications::separateImpliedBounds(
       continue;
 
     bool infeas;
-    const HighsDomainChange* implics = nullptr;
     if (implicationsCached(col, 1)) {
-      HighsInt nimplics = getImplications(col, 1, implics, infeas);
+      const std::vector<HighsDomainChange>& implics =
+          getImplications(col, 1, infeas);
       if (globaldomain.infeasible()) return;
 
       if (infeas) {
@@ -432,7 +430,8 @@ void HighsImplications::separateImpliedBounds(
         continue;
       }
 
-      for (HighsInt i = 0; i != nimplics; ++i) {
+      HighsInt nimplics = implics.size();
+      for (HighsInt i = 0; i < nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::kUpper) {
           if (implics[i].boundval + feastol >=
               globaldomain.col_upper_[implics[i].column])
@@ -471,7 +470,8 @@ void HighsImplications::separateImpliedBounds(
     }
 
     if (implicationsCached(col, 0)) {
-      HighsInt nimplics = getImplications(col, 0, implics, infeas);
+      const std::vector<HighsDomainChange>& implics =
+          getImplications(col, 0, infeas);
       if (globaldomain.infeasible()) return;
 
       if (infeas) {
@@ -481,7 +481,8 @@ void HighsImplications::separateImpliedBounds(
         continue;
       }
 
-      for (HighsInt i = 0; i != nimplics; ++i) {
+      HighsInt nimplics = implics.size();
+      for (HighsInt i = 0; i < nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::kUpper) {
           if (implics[i].boundval + feastol >=
               globaldomain.col_upper_[implics[i].column])
