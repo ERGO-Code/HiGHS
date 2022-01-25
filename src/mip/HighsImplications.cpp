@@ -123,12 +123,13 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     }
   }
 
-  implics.erase(binstart, implics.end());
-
   HighsInt loc = 2 * col + val;
   implications[loc].computed = true;
-  implications[loc].implics = std::move(implics);
-  this->numImplications += implications[loc].implics.size();
+  implics.erase(binstart, implics.end());
+  if (!implics.empty()) {
+    implications[loc].implics = std::move(implics);
+    this->numImplications += implications[loc].implics.size();
+  }
 
   return false;
 }
