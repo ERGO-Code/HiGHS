@@ -113,13 +113,11 @@ bool iterate(const HighsInt variable_out, const HighsInt variable_in) {
 }
 
 bool testSolve() {
-  const bool test_all = false;
+  const bool test_all = true;
   bool test_sparse_ftran = test_all;
   bool test_sparse_btran = test_all;
   bool test_dense_ftran = test_all;
   bool test_dense_btran = test_all;
-  //  test_sparse_ftran = true;
-  test_sparse_btran = true;
   const HighsInt check_basis_change = -66;
   const bool debug_report = basis_change == check_basis_change;
   if (debug_report) {
