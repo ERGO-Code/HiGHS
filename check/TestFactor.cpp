@@ -83,12 +83,25 @@ bool iterate(const HighsInt row_out, const HighsInt variable_out, const HighsInt
     
   return testSolve();
 }
+
 bool testSolve() {
+  // FTRAN
   rhs.clear();
   for (HighsInt iCol=0; iCol<num_row; iCol++)
     lp.a_matrix_.collectAj(rhs, basic_set[iCol], solution[iCol]);
   factor.ftranCall(rhs, 1);
   double error_norm = 0;
+  for (HighsInt iRow=0; iRow<num_row; iRow++) 
+    error_norm = std::max(std::fabs(solution[iRow] - rhs.array[iRow]), error_norm);
+  if (error_norm > 1e-4) return false;
+  // BTRAN
+  rhs.clear();
+  for (HighsInt iCol=0; iCol<num_row; iCol++) {
+    rhs.array[iCol] = lp.a_matrix_.computeDot(solution, basic_set[iCol]);
+    if (rhs.array[iCol]) rhs.index[rhs.count++] = iCol;
+  }
+  factor.btranCall(rhs, 1);
+  error_norm = 0;
   for (HighsInt iRow=0; iRow<num_row; iRow++) 
     error_norm = std::max(std::fabs(solution[iRow] - rhs.array[iRow]), error_norm);
   return error_norm < 1e-4;
