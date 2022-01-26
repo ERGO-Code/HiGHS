@@ -2426,7 +2426,6 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
 
 InvertibleRepresentation HFactor::getInvert() const {
   InvertibleRepresentation invert;
-  // Factor L
   invert.l_pivot_index = this->l_pivot_index;
   invert.l_pivot_lookup = this->l_pivot_lookup;
   invert.l_start = this->l_start;
@@ -2436,12 +2435,9 @@ InvertibleRepresentation HFactor::getInvert() const {
   invert.lr_index = this->lr_index;
   invert.lr_value = this->lr_value;
 
-  // Factor U
   invert.u_pivot_lookup = this->u_pivot_lookup;
   invert.u_pivot_index = this->u_pivot_index;
   invert.u_pivot_value = this->u_pivot_value;
-
-  //  invert.u_total_x = this->u_total_x;
   invert.u_start = this->u_start;
   invert.u_last_p = this->u_last_p;
   invert.u_index = this->u_index;
@@ -2461,7 +2457,6 @@ InvertibleRepresentation HFactor::getInvert() const {
 }
 
 void HFactor::setInvert(const InvertibleRepresentation& invert) {
-  // Factor L
   this->l_pivot_index = invert.l_pivot_index;
   this->l_pivot_lookup = invert.l_pivot_lookup;
   this->l_start = invert.l_start;
@@ -2471,16 +2466,14 @@ void HFactor::setInvert(const InvertibleRepresentation& invert) {
   this->lr_index = invert.lr_index;
   this->lr_value = invert.lr_value;
 
-  // Factor U
   this->u_pivot_lookup = invert.u_pivot_lookup;
   this->u_pivot_index = invert.u_pivot_index;
   this->u_pivot_value = invert.u_pivot_value;
-
-  //  this->u_total_x = invert.u_total_x;
   this->u_start = invert.u_start;
   this->u_last_p = invert.u_last_p;
   this->u_index = invert.u_index;
   this->u_value = invert.u_value;
+
   this->ur_start = invert.ur_start;
   this->ur_lastp = invert.ur_lastp;
   this->ur_space = invert.ur_space;
@@ -2491,4 +2484,34 @@ void HFactor::setInvert(const InvertibleRepresentation& invert) {
   this->pf_value = invert.pf_value;
   this->pf_pivot_index = invert.pf_pivot_index;
   this->pf_pivot_value = invert.pf_pivot_value;
+}
+
+void InvertibleRepresentation::clear() {
+  this->l_pivot_index.clear();
+  this->l_pivot_lookup.clear();
+  this->l_start.clear();
+  this->l_index.clear();
+  this->l_value.clear();
+  this->lr_start.clear();
+  this->lr_index.clear();
+  this->lr_value.clear();
+
+  this->u_pivot_lookup.clear();
+  this->u_pivot_index.clear();
+  this->u_pivot_value.clear();
+  this->u_start.clear();
+  this->u_last_p.clear();
+  this->u_index.clear();
+  this->u_value.clear();
+
+  this->ur_start.clear();
+  this->ur_lastp.clear();
+  this->ur_space.clear();
+  this->ur_index.clear();
+  this->ur_value.clear();
+  this->pf_start.clear();
+  this->pf_index.clear();
+  this->pf_value.clear();
+  this->pf_pivot_index.clear();
+  this->pf_pivot_value.clear();
 }

@@ -1525,6 +1525,33 @@ HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
   return returnFromHighs(HighsStatus::kOk);
 }
 
+HighsStatus Highs::putIterate() {
+  // Check that there is a simplex iterate to put
+  if (!ekk_instance_.status_.has_invert) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "putIterate: no simplex iterate to put\n");
+    return HighsStatus::kError;
+  }
+  ekk_instance_.putIterate();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsStatus Highs::getIterate() {
+  // Check that there is a simplex iterate to get
+  if (!ekk_instance_.status_.initialised_for_new_lp) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "getIterate: no simplex iterate to get\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = ekk_instance_.getIterate();
+  if (call_status != HighsStatus::kOk) return call_status;
+  // Get the corresponding HiGHS basis
+  basis_ = ekk_instance_.getHighsBasis(model_.lp_);
+  // Clear everything else
+  clearModelStatusSolutionAndInfo();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
 HighsStatus Highs::addRow(const double lower_bound, const double upper_bound,
                           const HighsInt num_new_nz, const HighsInt* indices,
                           const double* values) {

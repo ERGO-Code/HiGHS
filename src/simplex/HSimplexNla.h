@@ -52,6 +52,14 @@ struct FrozenBasis {
   void clear();
 };
 
+struct SimplexIterate {
+  bool valid_ = false;
+  SimplexBasis basis_;
+  InvertibleRepresentation invert_;
+  std::vector<double> dual_edge_weight_;
+  void clear();
+};
+
 class HSimplexNla {
  private:
   void setup(const HighsLp* lp, HighsInt* basic_index,
@@ -90,6 +98,8 @@ class HSimplexNla {
   bool frozenBasisHasInvert(const HighsInt frozen_basis_id) const;
   HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
   void unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis);
+  void putInvert();
+  void getInvert();
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
@@ -165,6 +175,9 @@ class HSimplexNla {
   vector<FrozenBasis> frozen_basis_;
   ProductFormUpdate update_;
 
+  // Simplex iterate data
+  SimplexIterate simplex_iterate_;
+  
   friend class HEkk;
   friend class HEkkPrimal;
   friend class HEkkDual;

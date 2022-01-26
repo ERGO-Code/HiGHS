@@ -75,6 +75,9 @@ class HEkk {
   HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
   HighsStatus frozenBasisAllDataClear();
 
+  void putIterate();
+  HighsStatus getIterate();
+
   void addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix);
   void addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix);
   void deleteCols(const HighsIndexCollection& index_collection);

@@ -3822,6 +3822,34 @@ HighsStatus HEkk::frozenBasisAllDataClear() {
                                                 : HighsStatus::kError;
 }
 
+void HEkk::putIterate() {
+  assert(this->status_.has_invert);
+  SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
+  this->simplex_nla_.putInvert();
+  iterate.basis_ = this->basis_;
+  if (this->status_.has_dual_steepest_edge_weights) {
+    // Copy the dual edge weights
+    iterate.dual_edge_weight_ = this->dual_edge_weight_;
+  } else {
+    // Clear to indicate no weights
+    iterate.dual_edge_weight_.clear();
+  }
+}
+
+HighsStatus HEkk::getIterate() {
+  SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
+  if (!iterate.valid_) return HighsStatus::kError;
+  this->simplex_nla_.getInvert();
+  this->basis_ = iterate.basis_;
+  if (iterate.dual_edge_weight_.size()) {
+    this->dual_edge_weight_ = iterate.dual_edge_weight_;
+  } else {
+    this->status_.has_dual_steepest_edge_weights = false;
+  }
+  this->status_.has_invert = true;
+  return HighsStatus::kOk;
+}
+
 double HEkk::factorSolveError() {
   // Cheap assessment of factor accuracy.
   //

@@ -918,6 +918,20 @@ class Highs {
   }
 
   /**
+   * @Brief Put a copy of the current iterate - basis; invertible
+   * representation and dual edge weights - into storage within
+   * HSimplexNla. Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus putIterate();
+
+  /**
+   * @Brief Get a copy of the iterate stored within HSimplexNla and
+   * overwrite the current iterate. Advanced method: for HiGHS MIP
+   * solver
+   */
+  HighsStatus getIterate();
+
+  /**
    * @brief Gets the value of infinity used by HiGHS
    */
   double getInfinity() { return kHighsInf; }

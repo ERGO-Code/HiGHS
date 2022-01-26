@@ -19,6 +19,13 @@
 
 #include "simplex/HSimplexNla.h"
 
+void SimplexIterate::clear() {
+  this->valid_ = false;
+  this->basis_.clear();
+  this->invert_.clear();
+  this->dual_edge_weight_.clear();
+}
+
 void FrozenBasis::clear() {
   this->valid_ = false;
   this->prev_ = kNoLink;
@@ -138,4 +145,12 @@ void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id,
   // Clear any refactorization information in case we are unfreezing
   // immediately after a factorization for a later basis
   this->factor_.refactor_info_.clear();
+}
+
+void HSimplexNla::putInvert() {
+  simplex_iterate_.valid_ = true;
+  simplex_iterate_.invert_ = factor_.getInvert();
+}
+void HSimplexNla::getInvert() {
+  factor_.setInvert(simplex_iterate_.invert_);
 }
