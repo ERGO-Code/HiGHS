@@ -1519,6 +1519,7 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
           rhs_array[lr_index[k]] -= pivot_multiplier * lr_value[k];
       } else
         rhs_array[pivotRow] = 0;
+      if (this->debug_report_) printf("BTRAN_L Sps %d rhs.count = %d\n", (int)i, (int)rhs_count);
     }
 
     // Save the count
@@ -1687,12 +1688,17 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
     const HighsInt* ur_index = &this->ur_index[0];
     const double* ur_value = &this->ur_value[0];
 
+    const HighsInt check_i_logic = -53;
     // Transform
     HighsInt u_pivot_count = u_pivot_index.size();
     for (HighsInt i_logic = 0; i_logic < u_pivot_count; i_logic++) {
       // Skip void
       if (u_pivot_index[i_logic] == -1) continue;
 
+      bool local_report = false;
+      if (this->debug_report_ && i_logic == check_i_logic) {
+	local_report =true;
+      }
       // Normal part
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
@@ -1705,10 +1711,16 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
         if (i_logic >= num_row) {
           rhs_synthetic_tick += (end - start);
         }
-        for (HighsInt k = start; k < end; k++)
+        for (HighsInt k = start; k < end; k++) {
+	  double from_rhs_array = rhs_array[ur_index[k]];
           rhs_array[ur_index[k]] -= pivot_multiplier * ur_value[k];
+	  if (local_report) printf("%d: Subtract %g = %g * %g from rhs_array[%d] = %g to give %g\n",
+				   (int)k, pivot_multiplier * ur_value[k], pivot_multiplier, ur_value[k],
+				   (int)ur_index[k], from_rhs_array, rhs_array[ur_index[k]]);
+	}
       } else
         rhs_array[pivotRow] = 0;
+      if (this->debug_report_) printf("BTRAN_U Sps %d pivotRow = %d mu = %g; rhs.count = %d\n", (int)i_logic, (int)pivotRow, pivot_multiplier, (int)rhs_count);
     }
 
     // Save the count
@@ -2424,23 +2436,30 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
 
 InvertibleRepresentation HFactor::getInvert() const {
   InvertibleRepresentation invert;
+  // Factor L
+  invert.l_pivot_index = this->l_pivot_index;
+  invert.l_pivot_lookup = this->l_pivot_lookup;
   invert.l_start = this->l_start;
   invert.l_index = this->l_index;
   invert.l_value = this->l_value;
-  invert.l_pivot_index = this->l_pivot_index;
-  invert.l_pivot_lookup = this->l_pivot_lookup;
   invert.lr_start = this->lr_start;
   invert.lr_index = this->lr_index;
   invert.lr_value = this->lr_value;
+
+  // Factor U
+  invert.u_pivot_lookup = this->u_pivot_lookup;
+  invert.u_pivot_index = this->u_pivot_index;
+  invert.u_pivot_value = this->u_pivot_value;
+
+  //  invert.u_total_x = this->u_total_x;
   invert.u_start = this->u_start;
   invert.u_last_p = this->u_last_p;
   invert.u_index = this->u_index;
   invert.u_value = this->u_value;
-  invert.u_pivot_index = this->u_pivot_index;
-  invert.u_pivot_value = this->u_pivot_value;
-  invert.u_pivot_lookup = this->u_pivot_lookup;
+
   invert.ur_start = this->ur_start;
   invert.ur_lastp = this->ur_lastp;
+  invert.ur_space = this->ur_space;
   invert.ur_index = this->ur_index;
   invert.ur_value = this->ur_value;
   invert.pf_start = this->pf_start;
@@ -2452,23 +2471,29 @@ InvertibleRepresentation HFactor::getInvert() const {
 }
 
 void HFactor::setInvert(const InvertibleRepresentation& invert) {
+  // Factor L
+  this->l_pivot_index = invert.l_pivot_index;
+  this->l_pivot_lookup = invert.l_pivot_lookup;
   this->l_start = invert.l_start;
   this->l_index = invert.l_index;
   this->l_value = invert.l_value;
-  this->l_pivot_index = invert.l_pivot_index;
-  this->l_pivot_lookup = invert.l_pivot_lookup;
   this->lr_start = invert.lr_start;
   this->lr_index = invert.lr_index;
   this->lr_value = invert.lr_value;
+
+  // Factor U
+  this->u_pivot_lookup = invert.u_pivot_lookup;
+  this->u_pivot_index = invert.u_pivot_index;
+  this->u_pivot_value = invert.u_pivot_value;
+
+  //  this->u_total_x = invert.u_total_x;
   this->u_start = invert.u_start;
   this->u_last_p = invert.u_last_p;
   this->u_index = invert.u_index;
   this->u_value = invert.u_value;
-  this->u_pivot_index = invert.u_pivot_index;
-  this->u_pivot_value = invert.u_pivot_value;
-  this->u_pivot_lookup = invert.u_pivot_lookup;
   this->ur_start = invert.ur_start;
   this->ur_lastp = invert.ur_lastp;
+  this->ur_space = invert.ur_space;
   this->ur_index = invert.ur_index;
   this->ur_value = invert.ur_value;
   this->pf_start = invert.pf_start;
