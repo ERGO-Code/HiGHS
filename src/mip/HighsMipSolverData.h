@@ -29,6 +29,7 @@
 #include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "parallel/HighsParallel.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
@@ -49,6 +50,7 @@ struct HighsMipSolverData {
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
+  HighsModelStatus analyticCenterStatus;
   bool detectSymmetries;
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
@@ -76,6 +78,7 @@ struct HighsMipSolverData {
   double epsilon;
   double heuristic_effort;
   int64_t dispfreq;
+  std::vector<double> analyticCenter;
   std::vector<double> firstlpsol;
   std::vector<double> rootlpsol;
   double firstlpsolobj;
@@ -129,6 +132,10 @@ struct HighsMipSolverData {
     domain.addConflictPool(conflictPool);
   }
 
+  void startAnalyticCenterComputation(
+      const highs::parallel::TaskGroup& taskGroup);
+  void finishAnalyticCenterComputation(
+      const highs::parallel::TaskGroup& taskGroup);
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;
   bool moreHeuristicsAllowed();
