@@ -289,7 +289,9 @@ class HFactor {
   InvertibleRepresentation getInvert() const;
   void setInvert(const InvertibleRepresentation& invert);
 
-  void setDebugReport(const bool debug_report) {this->debug_report_ = debug_report; }
+  void setDebugReport(const bool debug_report) {
+    this->debug_report_ = debug_report;
+  }
 
   // Information required to perform refactorization of the current
   // basis
@@ -395,8 +397,8 @@ class HFactor {
   vector<HighsInt> u_pivot_index;
   vector<double> u_pivot_value;
 
-  HighsInt u_merit_x; // Only in PF and MPF
-  HighsInt u_total_x; // Only in PF and MPF
+  HighsInt u_merit_x;  // Only in PF and MPF
+  HighsInt u_total_x;  // Only in PF and MPF
   vector<HighsInt> u_start;
   vector<HighsInt> u_last_p;
   vector<HighsInt> u_index;

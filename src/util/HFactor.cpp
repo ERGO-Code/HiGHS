@@ -1519,7 +1519,8 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
           rhs_array[lr_index[k]] -= pivot_multiplier * lr_value[k];
       } else
         rhs_array[pivotRow] = 0;
-      if (this->debug_report_) printf("BTRAN_L Sps %d rhs.count = %d\n", (int)i, (int)rhs_count);
+      if (this->debug_report_)
+        printf("BTRAN_L Sps %d rhs.count = %d\n", (int)i, (int)rhs_count);
     }
 
     // Save the count
@@ -1688,17 +1689,12 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
     const HighsInt* ur_index = &this->ur_index[0];
     const double* ur_value = &this->ur_value[0];
 
-    const HighsInt check_i_logic = -53;
     // Transform
     HighsInt u_pivot_count = u_pivot_index.size();
     for (HighsInt i_logic = 0; i_logic < u_pivot_count; i_logic++) {
       // Skip void
       if (u_pivot_index[i_logic] == -1) continue;
 
-      bool local_report = false;
-      if (this->debug_report_ && i_logic == check_i_logic) {
-	local_report =true;
-      }
       // Normal part
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
@@ -1711,16 +1707,10 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
         if (i_logic >= num_row) {
           rhs_synthetic_tick += (end - start);
         }
-        for (HighsInt k = start; k < end; k++) {
-	  double from_rhs_array = rhs_array[ur_index[k]];
+        for (HighsInt k = start; k < end; k++)
           rhs_array[ur_index[k]] -= pivot_multiplier * ur_value[k];
-	  if (local_report) printf("%d: Subtract %g = %g * %g from rhs_array[%d] = %g to give %g\n",
-				   (int)k, pivot_multiplier * ur_value[k], pivot_multiplier, ur_value[k],
-				   (int)ur_index[k], from_rhs_array, rhs_array[ur_index[k]]);
-	}
       } else
         rhs_array[pivotRow] = 0;
-      if (this->debug_report_) printf("BTRAN_U Sps %d pivotRow = %d mu = %g; rhs.count = %d\n", (int)i_logic, (int)pivotRow, pivot_multiplier, (int)rhs_count);
     }
 
     // Save the count
@@ -2502,4 +2492,3 @@ void HFactor::setInvert(const InvertibleRepresentation& invert) {
   this->pf_pivot_index = invert.pf_pivot_index;
   this->pf_pivot_value = invert.pf_pivot_value;
 }
-
