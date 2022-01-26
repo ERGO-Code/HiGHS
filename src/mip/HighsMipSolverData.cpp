@@ -274,6 +274,10 @@ void HighsMipSolverData::init() {
   mipsolver.orig_model_ = mipsolver.model_;
   if (mipsolver.clqtableinit)
     cliquetable.buildFrom(mipsolver.orig_model_, *mipsolver.clqtableinit);
+  cliquetable.setMinEntriesForParallelism(
+      highs::parallel::num_threads() > 1
+          ? mipsolver.options_mip_->mip_min_cliquetable_entries_for_parallelism
+          : kHighsIInf);
   if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;

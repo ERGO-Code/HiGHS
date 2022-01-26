@@ -110,6 +110,7 @@ class HighsCliqueTable {
   HighsInt nfixings;
   HighsInt numEntries;
   HighsInt maxEntries;
+  HighsInt minEntriesForParallelism;
   bool inPresolve;
 
   void unlink(HighsInt node);
@@ -175,6 +176,7 @@ class HighsCliqueTable {
     numNeighborhoodQueries = 0;
     numEntries = 0;
     maxEntries = kHighsIInf;
+    minEntriesForParallelism = kHighsIInf;
     inPresolve = false;
   }
 
@@ -229,6 +231,10 @@ class HighsCliqueTable {
 
   void setMaxEntries(HighsInt numNz) {
     this->maxEntries = 2000000 + 10 * numNz;
+  }
+
+  void setMinEntriesForParallelism(HighsInt minEntriesForParallelism) {
+    this->minEntriesForParallelism = minEntriesForParallelism;
   }
 
   bool isFull() const { return numEntries >= maxEntries; }

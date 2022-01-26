@@ -203,6 +203,9 @@ void HighsSearch::addBoundExceedingConflict() {
 
 void HighsSearch::addInfeasibleConflict() {
   double rhs;
+  if (lp->getLpSolver().getModelStatus() == HighsModelStatus::kObjectiveBound)
+    lp->performAging();
+
   if (lp->computeDualInfProof(mipsolver.mipdata_->domain, inds, vals, rhs)) {
     if (mipsolver.mipdata_->domain.infeasible()) return;
     // double minactlocal = 0.0;
@@ -559,7 +562,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
-        lp->resetAges();
+        lp->performAging();
 
         double delta = downval - fracval;
         bool integerfeasible;
@@ -702,7 +705,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
       sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
-        lp->resetAges();
+        lp->performAging();
+
         double delta = upval - fracval;
         bool integerfeasible;
 
@@ -914,9 +918,7 @@ int64_t HighsSearch::getStrongBranchingLpIterations() const {
 }
 
 void HighsSearch::resetLocalDomain() {
-  this->lp->getLpSolver().changeColsBounds(
-      0, mipsolver.numCol() - 1, mipsolver.mipdata_->domain.col_lower_.data(),
-      mipsolver.mipdata_->domain.col_upper_.data());
+  this->lp->resetToGlobalDomain();
   localdom = mipsolver.mipdata_->domain;
 
 #ifndef NDEBUG
@@ -1037,7 +1039,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
     } else if (lp->scaledOptimal(status)) {
       lp->storeBasis();
-      lp->resetAges();
+      lp->performAging();
 
       currnode.nodeBasis = lp->getStoredBasis();
       currnode.estimate = lp->computeBestEstimate(pseudocost);
@@ -1179,6 +1181,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
       currnode.branching_point = branching.second;
 
       HighsInt col = branching.first;
+
       switch (childselrule) {
         case ChildSelectionRule::kUp:
           currnode.branchingdecision.boundtype = HighsBoundType::kLower;
