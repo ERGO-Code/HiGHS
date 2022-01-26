@@ -21,7 +21,6 @@
 #include <memory>
 #include <vector>
 
-//#include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
@@ -32,6 +31,32 @@
 using std::max;
 // using std::min;
 using std::vector;
+
+struct InvertibleRepresentation {
+  std::vector<HighsInt> l_start;
+  std::vector<HighsInt> l_index;
+  std::vector<double> l_value;
+  std::vector<HighsInt> l_pivot_index;
+  std::vector<HighsInt> l_pivot_lookup;
+  std::vector<HighsInt> lr_start;
+  std::vector<HighsInt> lr_index;
+  std::vector<double> lr_value;
+  std::vector<HighsInt> u_start;
+  std::vector<HighsInt> u_index;
+  std::vector<double> u_value;
+  std::vector<HighsInt> u_pivot_index;
+  std::vector<double> u_pivot_value;
+  std::vector<HighsInt> u_pivot_lookup;
+  std::vector<HighsInt> ur_start;
+  std::vector<HighsInt> ur_index;
+  std::vector<double> ur_value;
+  std::vector<HighsInt> pf_start;
+  std::vector<HighsInt> pf_index;
+  std::vector<double> pf_value;
+  std::vector<HighsInt> pf_pivot_index;
+  std::vector<double> pf_pivot_value;
+  void clear();
+};
 
 /**
  * @brief Basis matrix factorization, update and solves for HiGHS
@@ -251,6 +276,9 @@ class HFactor {
   void reportLu(const HighsInt l_u_or_both = kReportLuBoth,
                 const bool full = true) const;
   void reportAsm();
+
+  InvertibleRepresentation getInvert() const;
+  void setInvert(const InvertibleRepresentation& invert);
 
   // Information required to perform refactorization of the current
   // basis

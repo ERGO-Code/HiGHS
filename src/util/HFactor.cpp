@@ -2421,3 +2421,56 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
   // Store pivot
   pf_pivot_value.push_back(aq->array[iRow]);
 }
+
+InvertibleRepresentation HFactor::getInvert() const {
+  InvertibleRepresentation invert;
+  invert.l_start = this->l_start;
+  invert.l_index = this->l_index;
+  invert.l_value = this->l_value;
+  invert.l_pivot_index = this->l_pivot_index;
+  invert.l_pivot_lookup = this->l_pivot_lookup;
+  invert.lr_start = this->lr_start;
+  invert.lr_index = this->lr_index;
+  invert.lr_value = this->lr_value;
+  invert.u_start = this->u_start;
+  invert.u_index = this->u_index;
+  invert.u_value = this->u_value;
+  invert.u_pivot_index = this->u_pivot_index;
+  invert.u_pivot_value = this->u_pivot_value;
+  invert.u_pivot_lookup = this->u_pivot_lookup;
+  invert.ur_start = this->ur_start;
+  invert.ur_index = this->ur_index;
+  invert.ur_value = this->ur_value;
+  invert.pf_start = this->pf_start;
+  invert.pf_index = this->pf_index;
+  invert.pf_value = this->pf_value;
+  invert.pf_pivot_index = this->pf_pivot_index;
+  invert.pf_pivot_value = this->pf_pivot_value;
+  return invert;
+}
+
+void HFactor::setInvert(const InvertibleRepresentation& invert) {
+  this->l_start = invert.l_start;
+  this->l_index = invert.l_index;
+  this->l_value = invert.l_value;
+  this->l_pivot_index = invert.l_pivot_index;
+  this->l_pivot_lookup = invert.l_pivot_lookup;
+  this->lr_start = invert.lr_start;
+  this->lr_index = invert.lr_index;
+  this->lr_value = invert.lr_value;
+  this->u_start = invert.u_start;
+  this->u_index = invert.u_index;
+  this->u_value = invert.u_value;
+  this->u_pivot_index = invert.u_pivot_index;
+  this->u_pivot_value = invert.u_pivot_value;
+  this->u_pivot_lookup = invert.u_pivot_lookup;
+  this->ur_start = invert.ur_start;
+  this->ur_index = invert.ur_index;
+  this->ur_value = invert.ur_value;
+  this->pf_start = invert.pf_start;
+  this->pf_index = invert.pf_index;
+  this->pf_value = invert.pf_value;
+  this->pf_pivot_index = invert.pf_pivot_index;
+  this->pf_pivot_value = invert.pf_pivot_value;
+}
+
