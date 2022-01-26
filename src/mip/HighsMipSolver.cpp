@@ -448,7 +448,9 @@ void HighsMipSolver::cleanupSolve() {
   if (gap == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
-    std::array<char, 32> gapValString = highsDoubleToString(100.0 * gap, 1e-6);
+    double printTol = std::max(std::min(1e-2, 1e-1 * gap), 1e-6);
+    std::array<char, 32> gapValString =
+        highsDoubleToString(100.0 * gap, printTol);
     double gapTol = options_mip_->mip_rel_gap;
 
     if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
@@ -462,8 +464,9 @@ void HighsMipSolver::cleanupSolve() {
       std::snprintf(gapString.data(), gapString.size(), "%s%%",
                     gapValString.data());
     else if (gapTol != kHighsInf) {
+      printTol = std::max(std::min(1e-2, 1e-1 * gapTol), 1e-6);
       std::array<char, 32> gapTolString =
-          highsDoubleToString(100.0 * gapTol, 1e-6);
+          highsDoubleToString(100.0 * gapTol, printTol);
       std::snprintf(gapString.data(), gapString.size(),
                     "%s%% (tolerance: %s%%)", gapValString.data(),
                     gapTolString.data());
