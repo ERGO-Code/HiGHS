@@ -1442,7 +1442,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
     if (return_status != HighsStatus::kOk) return HighsStatus::kError;
     // Update the HiGHS basis
-    basis_ = modifiable_basis;
+    basis_ = std::move(modifiable_basis);
   } else {
     // Check the user-supplied basis
     if (!isBasisConsistent(model_.lp_, basis)) {
