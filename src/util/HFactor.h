@@ -42,12 +42,14 @@ struct InvertibleRepresentation {
   std::vector<HighsInt> lr_index;
   std::vector<double> lr_value;
   std::vector<HighsInt> u_start;
+  std::vector<HighsInt> u_last_p;
   std::vector<HighsInt> u_index;
   std::vector<double> u_value;
   std::vector<HighsInt> u_pivot_index;
   std::vector<double> u_pivot_value;
   std::vector<HighsInt> u_pivot_lookup;
   std::vector<HighsInt> ur_start;
+  std::vector<HighsInt> ur_lastp;
   std::vector<HighsInt> ur_index;
   std::vector<double> ur_value;
   std::vector<HighsInt> pf_start;
