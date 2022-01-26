@@ -502,9 +502,7 @@ struct ThreadNeighborhoodQueryData {
 
 void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
                                          HighsInt N) {
-  // todo, check performance impact of parallelism here
-  if (true || numEntries < 10000) {
-    // printf("numEntries: %d\n", numEntries);
+  if (numEntries < minEntriesForParallelism) {
     for (HighsInt i = 0; i < N; ++i)
       neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
   } else {
@@ -2276,6 +2274,7 @@ void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
                                const std::vector<HighsInt>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
   newCliqueTable.setPresolveFlag(inPresolve);
+  newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
   HighsInt ncliques = cliques.size();
   for (HighsInt i = 0; i != ncliques; ++i) {
     if (cliques[i].start == -1) continue;
@@ -2313,6 +2312,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
   HighsInt ncols = init.colsubstituted.size();
   HighsCliqueTable newCliqueTable(ncols);
   newCliqueTable.setPresolveFlag(inPresolve);
+  newCliqueTable.setPresolveFlag(minEntriesForParallelism);
   HighsInt ncliques = init.cliques.size();
   std::vector<CliqueVar> clqBuffer;
   clqBuffer.reserve(2 * origModel->num_col_);
