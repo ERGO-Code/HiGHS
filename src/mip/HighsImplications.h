@@ -25,14 +25,14 @@ class HighsCliqueTable;
 class HighsLpRelaxation;
 
 class HighsImplications {
-  std::vector<HighsDomainChange> implications;
   HighsInt nextCleanupCall;
 
   struct Implics {
-    HighsInt start;
-    HighsInt num;
+    std::vector<HighsDomainChange> implics;
+    bool computed = false;
   };
-  std::vector<Implics> implicationmap;
+  std::vector<Implics> implications;
+  int64_t numImplications;
 
   bool computeImplications(HighsInt col, bool val);
 
@@ -55,22 +55,24 @@ class HighsImplications {
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
-    implicationmap.resize(2 * numcol, {-1, 0});
+    implications.resize(2 * numcol);
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
     nextCleanupCall = mipsolver.numNonzero();
+    numImplications = 0;
   }
 
   void reset() {
     colsubstituted.clear();
     colsubstituted.shrink_to_fit();
-    implicationmap.clear();
-    implicationmap.shrink_to_fit();
+    implications.clear();
+    implications.shrink_to_fit();
 
     HighsInt numcol = mipsolver.numCol();
-    implicationmap.resize(2 * numcol, {-1, 0});
+    implications.resize(2 * numcol);
     colsubstituted.resize(numcol);
+    numImplications = 0;
     vubs.clear();
     vubs.shrink_to_fit();
     vubs.resize(numcol);
@@ -81,27 +83,24 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
   }
 
-  HighsInt getImplications(HighsInt col, bool val,
-                           const HighsDomainChange*& implicationsstart,
-                           bool& infeasible) {
-    HighsInt loc = 2 * col + val;
-    if (implicationmap[loc].start == -1) {
-      infeasible = computeImplications(col, val);
+  HighsInt getNumImplications() const { return numImplications; }
 
-      if (infeasible) return 0;
-    } else
+  const std::vector<HighsDomainChange>& getImplications(HighsInt col, bool val,
+                                                        bool& infeasible) {
+    HighsInt loc = 2 * col + val;
+    if (!implications[loc].computed)
+      infeasible = computeImplications(col, val);
+    else
       infeasible = false;
 
-    assert(implicationmap[loc].start != -1);
+    assert(implications[loc].computed);
 
-    implicationsstart = implications.data() + implicationmap[loc].start;
-
-    return implicationmap[loc].num;
+    return implications[loc].implics;
   }
 
   bool implicationsCached(HighsInt col, bool val) {
     HighsInt loc = 2 * col + val;
-    return implicationmap[loc].start != -1;
+    return implications[loc].computed;
   }
 
   void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
