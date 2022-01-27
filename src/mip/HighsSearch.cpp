@@ -546,9 +546,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       pseudocost.addInferenceObservation(col, inferences, false);
 
-      lp->flushDomain(localdom);
       int64_t numiters = lp->getNumLpIterations();
-      HighsLpRelaxation::Status status = playground.solveLp();
+      HighsLpRelaxation::Status status = playground.solveLp(localdom);
       numiters = lp->getNumLpIterations() - numiters;
       lpiterations += numiters;
       sblpiterations += numiters;
@@ -678,10 +677,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       pseudocost.addInferenceObservation(col, inferences, true);
 
-      lp->flushDomain(localdom);
-
       int64_t numiters = lp->getNumLpIterations();
-      HighsLpRelaxation::Status status = playground.solveLp();
+      HighsLpRelaxation::Status status = playground.solveLp(localdom);
       numiters = lp->getNumLpIterations() - numiters;
       lpiterations += numiters;
       sblpiterations += numiters;

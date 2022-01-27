@@ -115,11 +115,14 @@ class HighsLpRelaxation {
       return *this;
     }
 
-    HighsLpRelaxation::Status solveLp() {
+    HighsLpRelaxation::Status solveLp(HighsDomain& localdom) {
       if (iterateStored) {
+        lp->flushDomain(localdom);
         lp->getLpSolver().getIterate();
       } else {
+        assert(lp->getLpSolver().getInfo().valid);
         lp->getLpSolver().putIterate();
+        lp->flushDomain(localdom);
         iterateStored = true;
       }
 
