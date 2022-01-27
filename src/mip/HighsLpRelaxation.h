@@ -119,7 +119,6 @@ class HighsLpRelaxation {
       if (iterateStored) {
         lp->getLpSolver().getIterate();
       } else {
-        assert(lp->getLpSolver().getInfo().valid);
         lp->getLpSolver().putIterate();
         iterateStored = true;
       }
