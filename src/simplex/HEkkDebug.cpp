@@ -1453,12 +1453,11 @@ HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
   const double large_relative_dual_steepest_edge_weight_error = 1e-3;
   if (relative_dual_steepest_edge_weight_error >
       10 * debug_max_relative_dual_steepest_edge_weight_error) {
-    printf(
-        //    highsLogDev(options_->log_options, HighsLogType::kInfo,
-        "Call %2d; Tick %8d: ", (int)debug_solve_call_num_,
-        debug_initial_build_synthetic_tick_);
-    printf(
-        //    highsLogDev(options_->log_options, HighsLogType::kInfo,
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                "Call %2d; Tick %8d: ", (int)debug_solve_call_num_,
+                debug_initial_build_synthetic_tick_);
+    highsLogDev(
+        options_->log_options, HighsLogType::kInfo,
         "HEkk::debugDualSteepestEdgeWeights   Iteration %5d: Checked %2d "
         "weights: "
         "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
