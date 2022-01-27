@@ -1350,6 +1350,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     }
 
     HighsInt numCliquesStart = cliquetable.numCliques();
+    HighsInt numImplicsStart = implications.getNumImplications();
     HighsInt numDelStart = probingNumDelCol;
 
     HighsInt numDel = probingNumDelCol - numDelStart +
@@ -1380,6 +1381,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         // probing
         if (cliquetable.isFull() ||
             cliquetable.numCliques() - numCliquesStart >
+                std::max(HighsInt{1000000}, 2 * numNonzeros()) ||
+            implications.getNumImplications() - numImplicsStart >
                 std::max(HighsInt{1000000}, 2 * numNonzeros()))
           break;
 

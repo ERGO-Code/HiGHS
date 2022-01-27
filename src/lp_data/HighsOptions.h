@@ -348,6 +348,7 @@ struct HighsOptionsStruct {
   HighsInt mip_pool_age_limit;
   HighsInt mip_pool_soft_limit;
   HighsInt mip_pscost_minreliable;
+  HighsInt mip_min_cliquetable_entries_for_parallelism;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
   double mip_rel_gap;
@@ -691,6 +692,14 @@ class HighsOptions : public HighsOptionsStruct {
                                      "pseudo costs are considered reliable",
                                      advanced, &mip_pscost_minreliable, 0, 8,
                                      kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_min_cliquetable_entries_for_parallelism",
+        "minimal number of entries in the cliquetable before neighborhood "
+        "queries of the conflict graph use parallel processing",
+        advanced, &mip_min_cliquetable_entries_for_parallelism, 0, 100000,
+        kHighsIInf);
     records.push_back(record_int);
 
     record_int =
