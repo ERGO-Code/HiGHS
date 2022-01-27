@@ -151,6 +151,4 @@ void HSimplexNla::putInvert() {
   simplex_iterate_.valid_ = true;
   simplex_iterate_.invert_ = factor_.getInvert();
 }
-void HSimplexNla::getInvert() {
-  factor_.setInvert(simplex_iterate_.invert_);
-}
+void HSimplexNla::getInvert() { factor_.setInvert(simplex_iterate_.invert_); }

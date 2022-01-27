@@ -18,15 +18,60 @@ HighsInt rowOut(const HighsInt variable_out);
 bool iterate(const HighsInt variable_out, const HighsInt variable_in);
 bool testSolve();
 
+TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
+  std::string filename;
+  const bool avgas = false;  // true;//
+  std::string model = avgas ? "avgas" : "adlittle";
+  filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+  // Switch off presolve so that recovery of DSE weights can be
+  // assessed
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.run();
+  HighsSolution solution0 = highs.getSolution();
+  REQUIRE(highs.putIterate() == HighsStatus::kOk);
+  const HighsLp& lp = highs.getLp();
+  double value;
+  double integer_value;
+  double lower;
+  double upper;
+  HighsInt num_test = 0;
+  const HighsInt max_num_test = 10;
+  if (dev_run) {
+    highs.setOptionValue("highs_debug_level", 2);
+    highs.setOptionValue("log_dev_level", 2);
+  }
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    value = solution0.col_value[iCol];
+    integer_value = round(value);
+    if (std::fabs(value - integer_value) < 1e-1) continue;
+    if (value < integer_value) {
+      lower = integer_value;
+      upper = lp.col_upper_[iCol];
+    } else {
+      lower = integer_value + 1;
+      upper = lp.col_upper_[iCol];
+    }
+    if (lower > upper) continue;
+    if (dev_run)
+      printf(
+          "\nChanging bounds on column %2d (value %11.4g) from [%11.4g, "
+          "%11.4g] to [%11.4g, %11.4g]\n",
+          (int)iCol, value, lp.col_lower_[iCol], lp.col_upper_[iCol], lower,
+          upper);
+    highs.changeColBounds(iCol, lower, upper);
+    num_test++;
+    REQUIRE(highs.getIterate() == HighsStatus::kOk);
+    highs.run();
+    if (num_test == max_num_test) break;
+  }
+}
 TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   std::string filename;
-  std::string model;
   const bool avgas = false;  // true;//
-  if (avgas) {
-    model = "avgas";
-  } else {
-    model = "adlittle";
-  }
+  std::string model = avgas ? "avgas" : "adlittle";
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
 
   Highs highs;

@@ -349,6 +349,7 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
+  printf("\n!! Calling HFactor::build ||\n\n");
   const bool report_lu = false;
   // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);

@@ -177,7 +177,7 @@ class HSimplexNla {
 
   // Simplex iterate data
   SimplexIterate simplex_iterate_;
-  
+
   friend class HEkk;
   friend class HEkkPrimal;
   friend class HEkkDual;
