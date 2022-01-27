@@ -95,6 +95,50 @@ class HighsLpRelaxation {
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
 
+  class Playground {
+    friend class HighsLpRelaxation;
+    HighsLpRelaxation* lp;
+    bool iterateStored;
+
+    Playground(HighsLpRelaxation* lp) : lp(lp), iterateStored(false) {}
+
+   public:
+    Playground(Playground&& other)
+        : lp(other.lp), iterateStored(other.iterateStored) {
+      other.iterateStored = false;
+    }
+
+    Playground& operator=(Playground&& other) {
+      std::swap(lp, other.lp);
+      std::swap(iterateStored, other.iterateStored);
+      return *this;
+    }
+
+    HighsLpRelaxation::Status solveLp() {
+      if (iterateStored) {
+        // todo: add this call: lp->getLpSolver().getIterate();
+      } else {
+        assert(lp->getLpSolver().getInfo().valid);
+        // todo: add this call: lp->getLpSolver().putIterate();
+        iterateStored = true;
+      }
+
+      return lp->run(false);
+    }
+
+    Playground(const Playground& other) = delete;
+    Playground& operator=(const Playground& other) = delete;
+
+    ~Playground() {
+      if (iterateStored) {
+        // todo: add this call: lp->getLpSolver().getIterate();
+        lp->run();
+        // todo: if necessary here is the place to clear the stored iterate
+      }
+    }
+  };
+
+  // todo: class can be removed
   class ResolveGuard {
     friend class HighsLpRelaxation;
     HighsLpRelaxation* lp;
@@ -119,6 +163,7 @@ class HighsLpRelaxation {
     }
   };
 
+  // todo: class can be removed
   class BasisGuard {
     friend class HighsLpRelaxation;
     HighsInt frozenBasisId;
@@ -176,6 +221,9 @@ class HighsLpRelaxation {
     ~BasisGuard() { recover(); }
   };
 
+  Playground playground() { return Playground(this); }
+
+  // todo: following two functions can be removed
   BasisGuard basisGuard() { return BasisGuard(lpsolver); }
 
   ResolveGuard resolveGuard() { return ResolveGuard(this); }
