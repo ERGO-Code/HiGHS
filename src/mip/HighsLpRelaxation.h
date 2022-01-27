@@ -117,10 +117,10 @@ class HighsLpRelaxation {
 
     HighsLpRelaxation::Status solveLp() {
       if (iterateStored) {
-        // todo: add this call: lp->getLpSolver().getIterate();
+        lp->getLpSolver().getIterate();
       } else {
         assert(lp->getLpSolver().getInfo().valid);
-        // todo: add this call: lp->getLpSolver().putIterate();
+        lp->getLpSolver().putIterate();
         iterateStored = true;
       }
 
@@ -132,9 +132,9 @@ class HighsLpRelaxation {
 
     ~Playground() {
       if (iterateStored) {
-        // todo: add this call: lp->getLpSolver().getIterate();
+        lp->getLpSolver().getIterate();
         lp->run();
-        // todo: if necessary here is the place to clear the stored iterate
+        // If desired, here is the place to clear the stored iterate
       }
     }
   };
