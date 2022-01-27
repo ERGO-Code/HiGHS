@@ -360,6 +360,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     return best;
   };
 
+  // todo replace with: HighsLpRelaxation::Playground playground = lp->playground();
   HighsLpRelaxation::ResolveGuard resolveGuard = lp->resolveGuard();
 
   while (true) {
@@ -542,10 +543,12 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       pseudocost.addInferenceObservation(col, inferences, false);
 
+      // todo: remove following line
       HighsLpRelaxation::BasisGuard basisGuard = lp->basisGuard();
 
       lp->flushDomain(localdom);
       int64_t numiters = lp->getNumLpIterations();
+      // todo: replace following line with: HighsLpRelaxation::Status status = playground.solveLp();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
       lpiterations += numiters;
@@ -676,11 +679,13 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
       pseudocost.addInferenceObservation(col, inferences, true);
 
+      // todo: remove following line
       HighsLpRelaxation::BasisGuard basisGuard = lp->basisGuard();
 
       lp->flushDomain(localdom);
 
       int64_t numiters = lp->getNumLpIterations();
+      // todo: replace following line with: HighsLpRelaxation::Status status = playground.solveLp();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
       lpiterations += numiters;
