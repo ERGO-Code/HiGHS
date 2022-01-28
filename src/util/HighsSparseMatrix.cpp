@@ -1143,17 +1143,22 @@ bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
 void HighsSparseMatrix::priceByColumn(const bool quad_precision,
                                       HVector& result, const HVector& column,
                                       const HighsInt debug_report) const {
-  // Note tested for quad precision
-  assert(!quad_precision);
   assert(this->isColwise());
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByColumn:\n");
   result.count = 0;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     double value = 0;
-    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
-         iEl++) {
-      value += column.array[this->index_[iEl]] * this->value_[iEl];
+    if (quad_precision) {
+      HighsCDouble quad_value = 0.0;
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        quad_value += column.array[this->index_[iEl]] * this->value_[iEl];
+      value = (double)quad_value;
+    } else {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        value += column.array[this->index_[iEl]] * this->value_[iEl];
     }
     if (fabs(value) > kHighsTiny) {
       result.array[iCol] = value;
@@ -1165,8 +1170,6 @@ void HighsSparseMatrix::priceByColumn(const bool quad_precision,
 void HighsSparseMatrix::priceByRow(const bool quad_precision, HVector& result,
                                    const HVector& column,
                                    const HighsInt debug_report) const {
-  // Note tested for quad precision
-  assert(!quad_precision);
   assert(this->isRowwise());
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByRow:\n");

@@ -168,11 +168,12 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
     HighsInt random_seed = -3;
     if (random_seed >= 0) {
       if (setLocalOptionValue(report_log_options, kRandomSeedString,
-			      options.records, random_seed) != OptionStatus::kOk)
-	return false;
+                              options.records,
+                              random_seed) != OptionStatus::kOk)
+        return false;
     }
     model_file = "ml.mps";
-  }  
+  }
 
   if (model_file.size() == 0) {
     std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
