@@ -710,12 +710,13 @@ retry:
 
     double change = 0.0;
     // select a set of fractional variables to fix
-    for (auto fracint : heurlp.getFractionalIntegers()) {
-      double fixval = getFixVal(fracint.first, fracint.second);
+    for (auto fracint = heurlp.getFractionalIntegers().begin();
+         fracint != fixcandend; ++fracint) {
+      double fixval = getFixVal(fracint->first, fracint->second);
 
-      if (localdom.col_lower_[fracint.first] < fixval) {
+      if (localdom.col_lower_[fracint->first] < fixval) {
         ++numBranched;
-        heur.branchUpwards(fracint.first, fixval, fracint.second);
+        heur.branchUpwards(fracint->first, fixval, fracint->second);
         if (localdom.infeasible()) {
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           break;
@@ -724,9 +725,9 @@ retry:
         fixingrate = neighborhood.getFixingRate();
       }
 
-      if (localdom.col_upper_[fracint.first] > fixval) {
+      if (localdom.col_upper_[fracint->first] > fixval) {
         ++numBranched;
-        heur.branchDownwards(fracint.first, fixval, fracint.second);
+        heur.branchDownwards(fracint->first, fixval, fracint->second);
         if (localdom.infeasible()) {
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           break;
@@ -737,7 +738,7 @@ retry:
 
       if (fixingrate >= maxfixingrate) break;
 
-      change += std::abs(fixval - fracint.second);
+      change += std::abs(fixval - fracint->second);
       if (change >= 0.5) break;
     }
 
