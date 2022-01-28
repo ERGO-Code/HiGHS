@@ -281,6 +281,7 @@ restart:
 
       double activeIntegerRatio =
           1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
+      activeIntegerRatio *= activeIntegerRatio;
 
       if (!doRestart) {
         double gapReduction = 1.0;
