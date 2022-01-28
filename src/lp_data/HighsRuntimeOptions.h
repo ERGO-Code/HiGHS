@@ -161,6 +161,19 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
     return false;
   }
 
+  const bool horrible_hack_for_windows_visual_studio = false;
+  if (horrible_hack_for_windows_visual_studio) {
+    // Until I know how to debug an executable using command line
+    // arguments in Visual Studio on Windows, this is necessary!
+    HighsInt random_seed = -3;
+    if (random_seed >= 0) {
+      if (setLocalOptionValue(report_log_options, kRandomSeedString,
+			      options.records, random_seed) != OptionStatus::kOk)
+	return false;
+    }
+    model_file = "ml.mps";
+  }  
+
   if (model_file.size() == 0) {
     std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
     return false;
