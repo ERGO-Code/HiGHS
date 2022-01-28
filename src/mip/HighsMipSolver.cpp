@@ -27,6 +27,7 @@
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveComponent.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsIntegers.h"
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
@@ -278,15 +279,8 @@ restart:
 
       bool doRestart = false;
 
-      double percentageInactive = mipdata_->percentageInactiveIntegers();
-      if (percentageInactive >= 2.5 && numHugeTreeEstim > 0 &&
-          mipdata_->num_nodes - mipdata_->num_nodes_before_run <= 1000) {
-        doRestart =
-            currNodeEstim >=
-                (100.0 / mipdata_->percentageInactiveIntegers()) *
-                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run) &&
-            options_mip_->presolve != "off";
-      }
+      double activeIntegerRatio =
+          1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
 
       if (!doRestart) {
         double gapReduction = 1.0;
@@ -296,9 +290,10 @@ restart:
           gapReduction = oldGap / newGap;
         }
 
-        if (gapReduction < 1.05 &&
+        if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
             currNodeEstim >=
-                20 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+                activeIntegerRatio * 20 *
+                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
           nextCheck = mipdata_->num_nodes + 100;
           ++numHugeTreeEstim;
         } else {
@@ -311,8 +306,9 @@ restart:
 
         int64_t minHugeTreeOffset =
             (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
-        int64_t minHugeTreeEstim =
-            (10 + minHugeTreeOffset) * std::pow(1.5, nTreeRestarts);
+        int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+            activeIntegerRatio * (10 + minHugeTreeOffset) *
+            std::pow(1.5, nTreeRestarts));
 
         doRestart = numHugeTreeEstim >= minHugeTreeEstim;
       } else {
