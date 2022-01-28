@@ -1030,10 +1030,18 @@ HighsStatus HEkk::unpermute() {
 HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
   debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = -8;
-  const HighsInt debug_build_synthetic_tick = -241160;
-  debug_solve_report_ = debug_solve_call_num_ == debug_from_solve_call_num &&
-                        build_synthetic_tick_ == debug_build_synthetic_tick;
+  const HighsInt debug_from_solve_call_num = -12;
+  const HighsInt debug_num_solve = 3;
+  const HighsInt debug_to_solve_call_num =
+      debug_from_solve_call_num + debug_num_solve - 1;
+  const HighsInt debug_build_synthetic_tick = 445560;
+  if (debug_solve_call_num_ < debug_from_solve_call_num) {
+    debug_solve_report_ = false;
+  } else if (debug_solve_call_num_ == debug_from_solve_call_num) {
+    debug_solve_report_ = build_synthetic_tick_ == debug_build_synthetic_tick;
+  } else if (debug_solve_call_num_ > debug_to_solve_call_num) {
+    debug_solve_report_ = false;
+  }
   const HighsInt time_from_solve_call_num = -1;
   const HighsInt time_to_solve_call_num = time_from_solve_call_num;
   time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
@@ -1043,7 +1051,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (debug_solve_report_) {
     printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
     debugReporting(-1);
-    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed); //
   }
   if (time_report_) {
     timeReporting(-1);
@@ -3791,6 +3799,9 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   } else {
     this->status_.has_dual_steepest_edge_weights = false;
   }
+  // Need to identify now whether there will be an invertible
+  // representation to use after unfreezing this basis, as the
+  // evidence is destroyed by the call to unfreeze()
   const bool will_have_invert =
       this->simplex_nla_.frozenBasisHasInvert(frozen_basis_id);
   this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
@@ -3803,14 +3814,40 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   this->status_.has_invert = will_have_invert;
   // If there's no valid factorization, then there cannot be a fresh one
   if (!this->status_.has_invert) this->status_.has_fresh_invert = false;
-  // Check for consistency
-  if (!this->simplex_nla_.update_.valid_) assert(!this->status_.has_invert);
   return HighsStatus::kOk;
 }
 
 HighsStatus HEkk::frozenBasisAllDataClear() {
   return simplex_nla_.frozenBasisAllDataClear() ? HighsStatus::kOk
                                                 : HighsStatus::kError;
+}
+
+void HEkk::putIterate() {
+  assert(this->status_.has_invert);
+  SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
+  this->simplex_nla_.putInvert();
+  iterate.basis_ = this->basis_;
+  if (this->status_.has_dual_steepest_edge_weights) {
+    // Copy the dual edge weights
+    iterate.dual_edge_weight_ = this->dual_edge_weight_;
+  } else {
+    // Clear to indicate no weights
+    iterate.dual_edge_weight_.clear();
+  }
+}
+
+HighsStatus HEkk::getIterate() {
+  SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
+  if (!iterate.valid_) return HighsStatus::kError;
+  this->simplex_nla_.getInvert();
+  this->basis_ = iterate.basis_;
+  if (iterate.dual_edge_weight_.size()) {
+    this->dual_edge_weight_ = iterate.dual_edge_weight_;
+  } else {
+    this->status_.has_dual_steepest_edge_weights = false;
+  }
+  this->status_.has_invert = true;
+  return HighsStatus::kOk;
 }
 
 double HEkk::factorSolveError() {

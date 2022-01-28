@@ -107,7 +107,12 @@ class HighsSparseMatrix {
       const HighsInt debug_report = kDebugReportOff) const;
   void update(const HighsInt var_in, const HighsInt var_out,
               const HighsSparseMatrix& matrix);
-  double computeDot(const HVector& column, const HighsInt use_col) const;
+  double computeDot(const HVector& column, const HighsInt use_col) const {
+    return computeDot(column.array, use_col);
+  }
+
+  double computeDot(const std::vector<double>& array,
+                    const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
 

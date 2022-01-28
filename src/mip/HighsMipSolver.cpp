@@ -32,12 +32,46 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
     : options_mip_(&options),
       model_(&lp),
+      orig_model_(&lp),
       solution_objective_(kHighsInf),
       submip(submip),
       rootbasis(nullptr),
       pscostinit(nullptr),
       clqtableinit(nullptr),
-      implicinit(nullptr) {}
+      implicinit(nullptr) {
+  if (solution.value_valid) {
+    bound_violation_ = 0;
+    row_violation_ = 0;
+    integrality_violation_ = 0;
+
+    HighsCDouble obj = orig_model_->offset_;
+    assert((HighsInt)solution.col_value.size() == orig_model_->num_col_);
+    for (HighsInt i = 0; i != orig_model_->num_col_; ++i) {
+      obj += orig_model_->col_cost_[i] * solution.col_value[i];
+
+      bound_violation_ = std::max(
+          bound_violation_, orig_model_->col_lower_[i] - solution.col_value[i]);
+      bound_violation_ = std::max(
+          bound_violation_, solution.col_value[i] - orig_model_->col_upper_[i]);
+
+      if (orig_model_->integrality_[i] == HighsVarType::kInteger) {
+        double intval = std::floor(solution.col_value[i] + 0.5);
+        integrality_violation_ = std::max(
+            std::abs(intval - solution.col_value[i]), integrality_violation_);
+      }
+    }
+
+    for (HighsInt i = 0; i != orig_model_->num_row_; ++i) {
+      row_violation_ = std::max(
+          row_violation_, orig_model_->row_lower_[i] - solution.row_value[i]);
+      row_violation_ = std::max(
+          row_violation_, solution.row_value[i] - orig_model_->row_upper_[i]);
+    }
+
+    solution_objective_ = double(obj);
+    solution_ = solution.col_value;
+  }
+}
 
 HighsMipSolver::~HighsMipSolver() = default;
 

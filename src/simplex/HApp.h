@@ -173,15 +173,17 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsInt num_unscaled_primal_infeasibilities =
       kHighsIllegalInfeasibilityCount;
   HighsInt num_unscaled_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  // Record whether the unscaled LP has been solved. It's not solved
-  // if it's proved to be infeasible using the ray from the scaled LP,
-  // in which case the solution (FWIW) and basis are taken from the
-  // unscaled solution of the scaled LP.
+  // Record whether the unscaled LP is to be solved, and has been
+  // solved. It's not solved if it's proved to be infeasible using the
+  // ray from the scaled LP, in which case the solution (FWIW) and
+  // basis are taken from the unscaled solution of the scaled LP.
+  bool solve_unscaled_lp = false;
   bool solved_unscaled_lp = false;
   if (!incumbent_lp.scale_.has_scaling) {
     //
     // Solve the unscaled LP with unscaled NLA
     //
+    solve_unscaled_lp = true;
     return_status = ekk_instance.solve();
     solved_unscaled_lp = true;
     ekk_instance.unpermute();
@@ -303,7 +305,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // If refining after proving primal infeasibility of the scaled
     // LP, see whether the proof still holds for the unscaled LP. If
     // it does, then there's no need to solve the unscaled LP
-    bool solve_unscaled_lp = true;
+    solve_unscaled_lp = true;
     // ToDo: ekk_instance.status_.has_dual_ray should now be true if
     // scaled_model_status == HighsModelStatus::kInfeasible since this
     // model status depends on the infeasibility proof being true
@@ -353,7 +355,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
                                 kSimplexUnscaledSolutionStrategyDirect;
       return_status = ekk_instance.solve(force_phase2);
       solved_unscaled_lp = true;
-
       if (scaled_model_status != HighsModelStatus::kObjectiveBound &&
           ekk_instance.model_status_ == HighsModelStatus::kObjectiveBound) {
         // it may happen that the unscaled LP detected status kObjectiveBound
@@ -362,14 +363,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         const bool objective_bound_refinement =
             ekk_instance.model_status_ == HighsModelStatus::kObjectiveBound &&
             ekk_info.num_dual_infeasibilities > 0;
-
         if (objective_bound_refinement) {
           options.simplex_strategy = kSimplexStrategyPrimal;
           return_status = ekk_instance.solve(force_phase2);
         }
       }
-
-      //
       // Restore the options/strategies that may have been changed
       options.simplex_strategy = simplex_strategy;
       options.dual_simplex_cost_perturbation_multiplier =
@@ -400,15 +398,25 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(return_status == HighsStatus::kError);
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }
-  // The unscaled LP has been solved - either directly, or because
-  // there was no scaling. Copy values into the HighsInfo
-  // that are set (above) by the call to getUnscaledInfeasibilities
-  highs_info.num_primal_infeasibilities = ekk_info.num_primal_infeasibilities;
-  highs_info.max_primal_infeasibility = ekk_info.max_primal_infeasibility;
-  highs_info.sum_primal_infeasibilities = ekk_info.sum_primal_infeasibilities;
-  highs_info.num_dual_infeasibilities = ekk_info.num_dual_infeasibilities;
-  highs_info.max_dual_infeasibility = ekk_info.max_dual_infeasibility;
-  highs_info.sum_dual_infeasibilities = ekk_info.sum_dual_infeasibilities;
+  if (solved_unscaled_lp) {
+    // The unscaled LP has been solved - either directly, or because
+    // there was no scaling. Copy values into HighsInfo from solving
+    // the scaled LP.
+    assert(solve_unscaled_lp);
+    highs_info.num_primal_infeasibilities = ekk_info.num_primal_infeasibilities;
+    highs_info.max_primal_infeasibility = ekk_info.max_primal_infeasibility;
+    highs_info.sum_primal_infeasibilities = ekk_info.sum_primal_infeasibilities;
+    highs_info.num_dual_infeasibilities = ekk_info.num_dual_infeasibilities;
+    highs_info.max_dual_infeasibility = ekk_info.max_dual_infeasibility;
+    highs_info.sum_dual_infeasibilities = ekk_info.sum_dual_infeasibilities;
+  } else {
+    // The unscaled LP has not been solved because the scaled LP was
+    // infeasible and the proof of infeasibility held for the unscaled
+    // LP. Hence the values in HighsInfo that are set (above) by the
+    // call to getUnscaledInfeasibilities are correct
+    assert(!solve_unscaled_lp);
+    assert(scaled_model_status == HighsModelStatus::kInfeasible);
+  }
   setSolutionStatus(highs_info);
   unscaled_model_status = scaled_model_status;
   return_status = highsStatusFromHighsModelStatus(unscaled_model_status);

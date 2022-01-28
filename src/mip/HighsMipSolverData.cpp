@@ -355,6 +355,35 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
+  if (mipsolver.solution_objective_ != kHighsInf) {
+    incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
+    double solobj = mipsolver.solution_objective_ - mipsolver.model_->offset_;
+    bool feasible =
+        mipsolver.bound_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.integrality_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.row_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+    if (numRestarts == 0) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "\nMIP start solution is %s, objective value is %.12g\n",
+                   feasible ? "feasible" : "infeasible",
+                   mipsolver.solution_objective_);
+    }
+    if (feasible && solobj < upper_bound) {
+      upper_bound = solobj;
+      double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+      if (new_upper_limit < upper_limit) {
+        upper_limit = new_upper_limit;
+        optimality_limit =
+            computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
+                                 mipsolver.options_mip_->mip_rel_gap);
+        nodequeue.setOptimalityLimit(optimality_limit);
+      }
+    }
+  }
+
   if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
 
   redcostfixing = HighsRedcostFixing();

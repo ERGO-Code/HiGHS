@@ -1519,6 +1519,8 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
           rhs_array[lr_index[k]] -= pivot_multiplier * lr_value[k];
       } else
         rhs_array[pivotRow] = 0;
+      if (this->debug_report_)
+        printf("BTRAN_L Sps %d rhs.count = %d\n", (int)i, (int)rhs_count);
     }
 
     // Save the count
@@ -2420,4 +2422,96 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
 
   // Store pivot
   pf_pivot_value.push_back(aq->array[iRow]);
+}
+
+InvertibleRepresentation HFactor::getInvert() const {
+  InvertibleRepresentation invert;
+  invert.l_pivot_index = this->l_pivot_index;
+  invert.l_pivot_lookup = this->l_pivot_lookup;
+  invert.l_start = this->l_start;
+  invert.l_index = this->l_index;
+  invert.l_value = this->l_value;
+  invert.lr_start = this->lr_start;
+  invert.lr_index = this->lr_index;
+  invert.lr_value = this->lr_value;
+
+  invert.u_pivot_lookup = this->u_pivot_lookup;
+  invert.u_pivot_index = this->u_pivot_index;
+  invert.u_pivot_value = this->u_pivot_value;
+  invert.u_start = this->u_start;
+  invert.u_last_p = this->u_last_p;
+  invert.u_index = this->u_index;
+  invert.u_value = this->u_value;
+
+  invert.ur_start = this->ur_start;
+  invert.ur_lastp = this->ur_lastp;
+  invert.ur_space = this->ur_space;
+  invert.ur_index = this->ur_index;
+  invert.ur_value = this->ur_value;
+  invert.pf_start = this->pf_start;
+  invert.pf_index = this->pf_index;
+  invert.pf_value = this->pf_value;
+  invert.pf_pivot_index = this->pf_pivot_index;
+  invert.pf_pivot_value = this->pf_pivot_value;
+  return invert;
+}
+
+void HFactor::setInvert(const InvertibleRepresentation& invert) {
+  this->l_pivot_index = invert.l_pivot_index;
+  this->l_pivot_lookup = invert.l_pivot_lookup;
+  this->l_start = invert.l_start;
+  this->l_index = invert.l_index;
+  this->l_value = invert.l_value;
+  this->lr_start = invert.lr_start;
+  this->lr_index = invert.lr_index;
+  this->lr_value = invert.lr_value;
+
+  this->u_pivot_lookup = invert.u_pivot_lookup;
+  this->u_pivot_index = invert.u_pivot_index;
+  this->u_pivot_value = invert.u_pivot_value;
+  this->u_start = invert.u_start;
+  this->u_last_p = invert.u_last_p;
+  this->u_index = invert.u_index;
+  this->u_value = invert.u_value;
+
+  this->ur_start = invert.ur_start;
+  this->ur_lastp = invert.ur_lastp;
+  this->ur_space = invert.ur_space;
+  this->ur_index = invert.ur_index;
+  this->ur_value = invert.ur_value;
+  this->pf_start = invert.pf_start;
+  this->pf_index = invert.pf_index;
+  this->pf_value = invert.pf_value;
+  this->pf_pivot_index = invert.pf_pivot_index;
+  this->pf_pivot_value = invert.pf_pivot_value;
+}
+
+void InvertibleRepresentation::clear() {
+  this->l_pivot_index.clear();
+  this->l_pivot_lookup.clear();
+  this->l_start.clear();
+  this->l_index.clear();
+  this->l_value.clear();
+  this->lr_start.clear();
+  this->lr_index.clear();
+  this->lr_value.clear();
+
+  this->u_pivot_lookup.clear();
+  this->u_pivot_index.clear();
+  this->u_pivot_value.clear();
+  this->u_start.clear();
+  this->u_last_p.clear();
+  this->u_index.clear();
+  this->u_value.clear();
+
+  this->ur_start.clear();
+  this->ur_lastp.clear();
+  this->ur_space.clear();
+  this->ur_index.clear();
+  this->ur_value.clear();
+  this->pf_start.clear();
+  this->pf_index.clear();
+  this->pf_value.clear();
+  this->pf_pivot_index.clear();
+  this->pf_pivot_value.clear();
 }

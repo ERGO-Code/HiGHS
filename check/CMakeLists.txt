@@ -21,6 +21,7 @@ set(TEST_SOURCES
     TestDualise.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
+    TestFactor.cpp
     TestFreezeBasis.cpp
     TestHotStart.cpp
     TestMain.cpp

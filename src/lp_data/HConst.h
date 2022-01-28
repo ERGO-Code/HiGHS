@@ -172,7 +172,7 @@ enum class HighsModelStatus {
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
-enum class HighsBasisStatus {
+enum class HighsBasisStatus : uint8_t {
   kLower =
       0,   // (slack) variable is at its lower bound [including fixed variables]
   kBasic,  // (slack) variable is basic
