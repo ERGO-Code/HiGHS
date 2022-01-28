@@ -366,7 +366,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     Qdim = numCol;
     HighsInt hessian_nz = 0;
     HighsInt previous_col = -1;
-    bool has_diagonal;
+    bool has_diagonal = false;
     Qstart.clear();
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
       HighsInt iCol0 = colIndex[data[1]] - 1;

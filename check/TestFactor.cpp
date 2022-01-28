@@ -30,23 +30,29 @@ TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
   // assessed
   highs.setOptionValue("presolve", kHighsOffString);
   highs.run();
-  HighsSolution solution0 = highs.getSolution();
-  REQUIRE(highs.putIterate() == HighsStatus::kOk);
+  HighsSolution solution = highs.getSolution();
+  HighsBasis basis = highs.getBasis();
   const HighsLp& lp = highs.getLp();
   double value;
   double integer_value;
   double lower;
   double upper;
+  double save_lower;
+  double save_upper;
   HighsInt num_test = 0;
   const HighsInt max_num_test = 10;
+  bool put_iterate = false;
   if (dev_run) {
     highs.setOptionValue("highs_debug_level", 2);
     highs.setOptionValue("log_dev_level", 2);
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    value = solution0.col_value[iCol];
+    value = solution.col_value[iCol];
     integer_value = round(value);
     if (std::fabs(value - integer_value) < 1e-1) continue;
+    assert(basis.col_status[iCol] == HighsBasisStatus::kBasic);
+    save_lower = lp.col_lower_[iCol];
+    save_upper = lp.col_upper_[iCol];
     if (value < integer_value) {
       lower = integer_value;
       upper = lp.col_upper_[iCol];
@@ -57,15 +63,19 @@ TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
     if (lower > upper) continue;
     if (dev_run)
       printf(
-          "\nChanging bounds on column %2d (value %11.4g) from [%11.4g, "
-          "%11.4g] to [%11.4g, %11.4g]\n",
-          (int)iCol, value, lp.col_lower_[iCol], lp.col_upper_[iCol], lower,
-          upper);
+          "\nChanging bounds on column %d (value %g) from [%g, %g] to [%g, "
+          "%g]\n",
+          (int)iCol, value, save_lower, save_upper, lower, upper);
     highs.changeColBounds(iCol, lower, upper);
+    if (!put_iterate) {
+      REQUIRE(highs.putIterate() == HighsStatus::kOk);
+    } else {
+      REQUIRE(highs.getIterate() == HighsStatus::kOk);
+    }
     num_test++;
-    REQUIRE(highs.getIterate() == HighsStatus::kOk);
     highs.run();
     if (num_test == max_num_test) break;
+    highs.changeColBounds(iCol, save_lower, save_upper);
   }
 }
 TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
