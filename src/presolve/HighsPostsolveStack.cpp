@@ -59,11 +59,17 @@ void HighsPostsolveStack::compressIndexMaps(
 }
 
 void HighsPostsolveStack::LinearTransform::undo(const HighsOptions& options,
-                                                HighsSolution& solution) {
+                                                HighsSolution& solution) const {
   solution.col_value[col] *= scale;
   solution.col_value[col] += constant;
 
   if (solution.dual_valid) solution.col_dual[col] /= scale;
+}
+
+void HighsPostsolveStack::LinearTransform::transformToPresolvedSpace(
+    std::vector<double>& primalSol) const {
+  primalSol[col] -= constant;
+  primalSol[col] /= scale;
 }
 
 void HighsPostsolveStack::FreeColSubstitution::undo(
@@ -113,7 +119,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
 void HighsPostsolveStack::DoubletonEquation::undo(
     const HighsOptions& options, const std::vector<Nonzero>& colValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    HighsSolution& solution, HighsBasis& basis) const {
   // retrieve the row and column index, the row side and the two
   // coefficients then compute the primal values
   solution.col_value[colSubst] =
@@ -200,7 +206,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 
 void HighsPostsolveStack::EqualityRowAddition::undo(
     const HighsOptions& options, const std::vector<Nonzero>& eqRowValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    HighsSolution& solution, HighsBasis& basis) const {
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (!solution.dual_valid || solution.row_dual[row] == 0.0) return;
@@ -217,7 +223,7 @@ void HighsPostsolveStack::EqualityRowAddition::undo(
 void HighsPostsolveStack::EqualityRowAdditions::undo(
     const HighsOptions& options, const std::vector<Nonzero>& eqRowValues,
     const std::vector<Nonzero>& targetRows, HighsSolution& solution,
-    HighsBasis& basis) {
+    HighsBasis& basis) const {
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (!solution.dual_valid) return;
@@ -237,7 +243,7 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
 
 void HighsPostsolveStack::ForcingColumn::undo(
     const HighsOptions& options, const std::vector<Nonzero>& colValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    HighsSolution& solution, HighsBasis& basis) const {
   HighsInt nonbasicRow = -1;
   HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::kNonbasic;
   double colValFromNonbasicRow = colBound;
@@ -284,7 +290,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
 
 void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    HighsSolution& solution, HighsBasis& basis) const {
   // we use the row value as storage for the scaled value implied on the column
   // dual
   HighsCDouble val = rhs;
@@ -299,7 +305,7 @@ void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
 
 void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
-                                             HighsBasis& basis) {
+                                             HighsBasis& basis) const {
   // nothing to do if the rows dual value is zero in the dual solution or
   // there is no dual solution
   if (!solution.dual_valid) return;
@@ -369,7 +375,7 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
 void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
                                          const std::vector<Nonzero>& colValues,
                                          HighsSolution& solution,
-                                         HighsBasis& basis) {
+                                         HighsBasis& basis) const {
   // set solution value
   solution.col_value[col] = fixValue;
 
@@ -397,7 +403,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
 
 void HighsPostsolveStack::RedundantRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
-                                             HighsBasis& basis) {
+                                             HighsBasis& basis) const {
   // set row dual to zero if dual solution requested
   if (!solution.dual_valid) return;
 
@@ -408,7 +414,7 @@ void HighsPostsolveStack::RedundantRow::undo(const HighsOptions& options,
 
 void HighsPostsolveStack::ForcingRow::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    HighsSolution& solution, HighsBasis& basis) const {
   if (!solution.dual_valid) return;
 
   // compute the row dual multiplier and determine the new basic column
@@ -461,7 +467,7 @@ void HighsPostsolveStack::ForcingRow::undo(
 
 void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
-                                             HighsBasis& basis) {
+                                             HighsBasis& basis) const {
   if (!solution.dual_valid) return;
   if (!rowUpperTightened && !rowLowerTightened) {
     // simple case of row2 being redundant, in which case it just gets a
@@ -546,7 +552,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
 
 void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
                                                 HighsSolution& solution,
-                                                HighsBasis& basis) {
+                                                HighsBasis& basis) const {
   // the column dual of the duplicate column is easily computed by scaling
   // since col * colScale yields the coefficient values and cost of the
   // duplicate column.
@@ -659,6 +665,11 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     }
     solution.col_value[col] = colLower;
   }
+}
+
+void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
+    std::vector<double>& primalSol) const {
+  primalSol[col] = primalSol[col] + colScale * primalSol[duplicateCol];
 }
 
 }  // namespace presolve
