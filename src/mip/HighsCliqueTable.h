@@ -27,6 +27,10 @@ class HighsDomain;
 class HighsMipSolver;
 class HighsLp;
 
+namespace presolve {
+class HighsPostsolveStack;
+}
+
 class HighsCliqueTable {
  public:
   struct CliqueVar {
@@ -299,7 +303,9 @@ class HighsCliqueTable {
   void runCliqueMerging(HighsDomain& globaldomain,
                         std::vector<CliqueVar>& clique, bool equation = false);
 
-  void rebuild(HighsInt ncols, const HighsDomain& globaldomain,
+  void rebuild(HighsInt ncols,
+               const presolve::HighsPostsolveStack& postSolveStack,
+               const HighsDomain& globaldomain,
                const std::vector<HighsInt>& cIndex,
                const std::vector<HighsInt>& rIndex);
 

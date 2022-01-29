@@ -30,6 +30,8 @@ void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
 
   origColIndex.resize(numCol);
   std::iota(origColIndex.begin(), origColIndex.end(), 0);
+
+  linearlyTransformable.resize(numCol, true);
 }
 
 void HighsPostsolveStack::compressIndexMaps(

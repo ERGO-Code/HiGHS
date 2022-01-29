@@ -233,6 +233,7 @@ class HighsPostsolveStack {
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
   std::vector<std::pair<ReductionType, HighsInt>> primalColTransformations;
+  std::vector<uint8_t> linearlyTransformable;
 
   std::vector<Nonzero> rowValues;
   std::vector<Nonzero> colValues;
@@ -476,14 +477,18 @@ class HighsPostsolveStack {
                        double duplicateColLower, double duplicateColUpper,
                        HighsInt col, HighsInt duplicateCol, bool colIntegral,
                        bool duplicateColIntegral) {
+    const HighsInt origCol = origColIndex[col];
+    const HighsInt origDuplicateCol = origColIndex[duplicateCol];
     reductionValues.push(DuplicateColumn{
         colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
-        origColIndex[col], origColIndex[duplicateCol], colIntegral,
-        duplicateColIntegral});
+        origCol, origDuplicateCol, colIntegral, duplicateColIntegral});
     reductions.push_back(ReductionType::kDuplicateColumn);
     HighsInt position = reductionValues.getCurrentDataSize();
     primalColTransformations.emplace_back(ReductionType::kDuplicateColumn,
                                           position);
+    // mark columns as not linearly transformable
+    linearlyTransformable[origCol] = false;
+    linearlyTransformable[origDuplicateCol] = false;
   }
 
   std::vector<double> getReducedPrimalSolution(
@@ -518,6 +523,10 @@ class HighsPostsolveStack {
 
     reducedSolution.resize(reducedNumCol);
     return reducedSolution;
+  }
+
+  bool isColLinearlyTransformable(HighsInt col) const {
+    return linearlyTransformable[col];
   }
 
   /// undo presolve steps for primal dual solution and basis
