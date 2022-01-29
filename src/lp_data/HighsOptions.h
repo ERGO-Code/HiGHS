@@ -900,10 +900,10 @@ class HighsOptions : public HighsOptionsStruct {
         kMaxPivotThreshold);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt("presolve_substitution_maxfillin",
-                                     "Strategy for CHUZC sort in dual simplex",
-                                     advanced, &presolve_substitution_maxfillin,
-                                     0, 10, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "presolve_substitution_maxfillin",
+        "Maximal fillin allowed for substitutions in presolve", advanced,
+        &presolve_substitution_maxfillin, 0, 10, kHighsIInf);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
