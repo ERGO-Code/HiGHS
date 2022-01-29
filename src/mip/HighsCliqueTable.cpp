@@ -24,6 +24,7 @@
 #include "parallel/HighsCombinable.h"
 #include "parallel/HighsParallel.h"
 #include "pdqsort/pdqsort.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "util/HighsSplay.h"
 
 namespace highs {
@@ -2269,9 +2270,11 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   }
 }
 
-void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
-                               const std::vector<HighsInt>& orig2reducedcol,
-                               const std::vector<HighsInt>& orig2reducedrow) {
+void HighsCliqueTable::rebuild(
+    HighsInt ncols, const presolve::HighsPostsolveStack& postSolveStack,
+    const HighsDomain& globaldomain,
+    const std::vector<HighsInt>& orig2reducedcol,
+    const std::vector<HighsInt>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
   newCliqueTable.setPresolveFlag(inPresolve);
   newCliqueTable.setMinEntriesForParallelism(minEntriesForParallelism);
@@ -2282,7 +2285,8 @@ void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
     for (HighsInt k = cliques[i].start; k != cliques[i].end; ++k) {
       HighsInt col = orig2reducedcol[cliqueentries[k].col];
 
-      if (col == -1 || !globaldomain.isBinary(col))
+      if (col == -1 || !globaldomain.isBinary(col) ||
+          !postSolveStack.isColLinearlyTransformable(col))
         cliqueentries[k].col = kHighsIInf;
       else
         cliqueentries[k].col = col;

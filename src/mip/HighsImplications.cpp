@@ -307,24 +307,32 @@ void HighsImplications::rebuild(HighsInt ncols,
   for (HighsInt i = 0; i != oldncols; ++i) {
     HighsInt newi = orig2reducedcol[i];
 
-    if (newi == -1) continue;
+    if (newi == -1 ||
+        !mipsolver.mipdata_->postSolveStack.isColLinearlyTransformable(newi))
+      continue;
 
     for (const auto& oldvub : oldvubs[i]) {
-      if (orig2reducedcol[oldvub.first] == -1) continue;
+      HighsInt newVubCol = orig2reducedcol[oldvub.first];
+      if (newVubCol == -1) continue;
 
-      if (!mipsolver.mipdata_->domain.isBinary(orig2reducedcol[oldvub.first]))
+      if (!mipsolver.mipdata_->domain.isBinary(newVubCol) ||
+          !mipsolver.mipdata_->postSolveStack.isColLinearlyTransformable(
+              newVubCol))
         continue;
-      addVUB(newi, orig2reducedcol[oldvub.first], oldvub.second.coef,
-             oldvub.second.constant);
+
+      addVUB(newi, newVubCol, oldvub.second.coef, oldvub.second.constant);
     }
 
     for (const auto& oldvlb : oldvlbs[i]) {
-      if (orig2reducedcol[oldvlb.first] == -1) continue;
+      HighsInt newVlbCol = orig2reducedcol[oldvlb.first];
+      if (newVlbCol == -1) continue;
 
-      if (!mipsolver.mipdata_->domain.isBinary(orig2reducedcol[oldvlb.first]))
+      if (!mipsolver.mipdata_->domain.isBinary(newVlbCol) ||
+          !mipsolver.mipdata_->postSolveStack.isColLinearlyTransformable(
+              newVlbCol))
         continue;
-      addVLB(newi, orig2reducedcol[oldvlb.first], oldvlb.second.coef,
-             oldvlb.second.constant);
+
+      addVLB(newi, newVlbCol, oldvlb.second.coef, oldvlb.second.constant);
     }
 
     // todo also add old implications once implications can be added
