@@ -193,16 +193,16 @@ class HeuristicNeighborhood {
         numFixed(0),
         startCheckedChanges(localdom.getDomainChangeStack().size()),
         nCheckedChanges(startCheckedChanges) {
-    for (HighsInt i : mipsolver.mipdata_->integral_cols)
+    for (HighsInt i : mipsolver.mipdata_->integer_cols)
       if (localdom.col_lower_[i] == localdom.col_upper_[i]) ++numFixed;
 
-    numTotal = mipsolver.mipdata_->integral_cols.size() - numFixed;
+    numTotal = mipsolver.mipdata_->integer_cols.size() - numFixed;
   }
 
   double getFixingRate() {
     while (nCheckedChanges < localdom.getDomainChangeStack().size()) {
       HighsInt col = localdom.getDomainChangeStack()[nCheckedChanges++].column;
-      if (localdom.variableType(col) == HighsVarType::kContinuous) continue;
+      if (localdom.variableType(col) != HighsVarType::kInteger) continue;
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
 
