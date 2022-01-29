@@ -351,6 +351,8 @@ retry:
     for (HighsInt i : intcols) {
       if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
 
+      if (mipsolver.variableType(i) == HighsVarType::kImplicitInteger) continue;
+
       double downval =
           std::floor(relaxationsol[i] + mipsolver.mipdata_->feastol);
       double upval = std::ceil(relaxationsol[i] - mipsolver.mipdata_->feastol);
@@ -425,6 +427,9 @@ retry:
       double change = 0.0;
       // select a set of fractional variables to fix
       for (auto fracint : heurlp.getFractionalIntegers()) {
+        if (mipsolver.variableType(fracint.first) ==
+            HighsVarType::kImplicitInteger)
+          continue;
         double fixval = getFixVal(fracint.first, fracint.second);
 
         if (localdom.col_lower_[fracint.first] < fixval) {
@@ -595,9 +600,11 @@ retry:
         heurlp.getFractionalIntegers().begin(),
         heurlp.getFractionalIntegers().end(),
         [&](const std::pair<HighsInt, double>& fracvar) {
-          return std::abs(relaxationsol[fracvar.first] -
-                          mipsolver.mipdata_->incumbent[fracvar.first]) <=
-                 mipsolver.mipdata_->feastol;
+          return mipsolver.variableType(fracvar.first) !=
+                     HighsVarType::kImplicitInteger &&
+                 std::fabs(relaxationsol[fracvar.first] -
+                           mipsolver.mipdata_->incumbent[fracvar.first]) <=
+                     mipsolver.mipdata_->feastol;
         });
 
     bool fixtolpsol = true;
@@ -712,6 +719,9 @@ retry:
     // select a set of fractional variables to fix
     for (auto fracint = heurlp.getFractionalIntegers().begin();
          fracint != fixcandend; ++fracint) {
+      if (mipsolver.variableType(fracint->first) ==
+          HighsVarType::kImplicitInteger)
+        continue;
       double fixval = getFixVal(fracint->first, fracint->second);
 
       if (localdom.col_lower_[fracint->first] < fixval) {
