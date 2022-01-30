@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "util/HFactor.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 HVector rhs;
 HVector col_aq;
@@ -21,7 +21,7 @@ bool testSolveDense();
 
 TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   std::string filename;
-  const bool avgas = false;  // true;//
+  const bool avgas = true;//false;  // 
   std::string model = avgas ? "avgas" : "adlittle";
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -33,6 +33,8 @@ TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   basic_set.resize(num_row);
   // Get the optimal set of basic variables
   highs.getBasicVariables(&basic_set[0]);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) 
+    basic_set[iRow] = basic_set[iRow] < 0 ? -(num_col-basic_set[iRow]-1) : basic_set[iRow];
   factor.setup(lp.a_matrix_, basic_set);
   factor.build();
   solution.resize(num_row);
