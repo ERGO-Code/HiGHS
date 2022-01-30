@@ -334,6 +334,10 @@ void HFactor::setupGeneral(
   pf_start.reserve(kPFVectors + 1);
   pf_index.reserve(basis_matrix_limit_size * kPFEntriesMultiplier);
   pf_value.reserve(basis_matrix_limit_size * kPFEntriesMultiplier);
+
+  // Set up the local HVector for use when RHS is std::vector<double>
+  rhs_.setup(num_row);
+  rhs_.count = -1;
 }
 
 void HFactor::setupMatrix(const HighsInt* a_start_, const HighsInt* a_index_,
@@ -448,6 +452,18 @@ void HFactor::ftranCall(HVector& vector, const double expected_density,
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
   ftranL(vector, expected_density, factor_timer_clock_pointer);
   ftranU(vector, expected_density, factor_timer_clock_pointer);
+  factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
+}
+
+void HFactor::ftranCall(std::vector<double>& vector,
+                        HighsTimerClock* factor_timer_clock_pointer) {
+  FactorTimer factor_timer;
+  factor_timer.start(FactorFtran, factor_timer_clock_pointer);
+  this->rhs_.array = std::move(vector);
+  double expected_density = 1;
+  ftranL(rhs_, expected_density, factor_timer_clock_pointer);
+  ftranU(rhs_, expected_density, factor_timer_clock_pointer);
+  vector = std::move(this->rhs_.array);
   factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
@@ -1436,6 +1452,7 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranLower, factor_timer_clock_pointer);
   if (update_method == kUpdateMethodApf) {
+    assert(!(update_method == kUpdateMethodApf));
     factor_timer.start(FactorFtranLowerAPF, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();
@@ -1444,19 +1461,41 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
     rhs.tight();
   }
 
-  double current_density = 1.0 * rhs.count / num_row;
-  if (current_density > kHyperCancel || expected_density > kHyperFtranL) {
-    factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
-    // Alias to RHS
-    HighsInt rhs_count = 0;
-    HighsInt* rhs_index = &rhs.index[0];
-    double* rhs_array = &rhs.array[0];
+  // Alias to RHS
+  HighsInt* rhs_index = &rhs.index[0];
+  double* rhs_array = &rhs.array[0];
 
-    // Alias to factor L
-    const HighsInt* l_start = &this->l_start[0];
-    const HighsInt* l_index =
-        this->l_index.size() > 0 ? &this->l_index[0] : NULL;
-    const double* l_value = this->l_value.size() > 0 ? &this->l_value[0] : NULL;
+  // Alias to factor L
+  const HighsInt* l_start = &this->l_start[0];
+  const HighsInt* l_index =
+    this->l_index.size() > 0 ? &this->l_index[0] : NULL;
+  const double* l_value = this->l_value.size() > 0 ? &this->l_value[0] : NULL;
+
+  // Determine style of solve
+  double current_density = 1.0 * rhs.count / num_row;
+  const bool dense_solve = rhs.count < 0;
+  const bool sparse_solve = current_density > kHyperCancel || expected_density > kHyperFtranL;
+  if (dense_solve) {
+    assert(1==0);
+    factor_timer.start(FactorFtranLowerDse, factor_timer_clock_pointer);
+    // Transform
+    for (HighsInt i = 0; i < num_row; i++) {
+      HighsInt pivotRow = l_pivot_index[i];
+      const double pivot_multiplier = rhs_array[pivotRow];
+      if (fabs(pivot_multiplier) > kHighsTiny) {
+        const HighsInt start = l_start[i];
+        const HighsInt end = l_start[i + 1];
+        for (HighsInt k = start; k < end; k++)
+          rhs_array[l_index[k]] -= pivot_multiplier * l_value[k];
+      } else
+        rhs_array[pivotRow] = 0;
+    }
+    factor_timer.stop(FactorFtranLowerDse, factor_timer_clock_pointer);
+    
+  } else if (sparse_solve) {
+    factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
+    // Local accumulation of RHS count
+    HighsInt rhs_count = 0;
 
     // Transform
     for (HighsInt i = 0; i < num_row; i++) {
@@ -1476,6 +1515,7 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
     rhs.count = rhs_count;
     factor_timer.stop(FactorFtranLowerSps, factor_timer_clock_pointer);
   } else {
+    // Hyper-sparse solve
     factor_timer.start(FactorFtranLowerHyper, factor_timer_clock_pointer);
     const HighsInt* l_index =
         this->l_index.size() > 0 ? &this->l_index[0] : NULL;
