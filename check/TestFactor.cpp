@@ -140,6 +140,7 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   }
   HighsRandom random;
   solution.resize(num_row);
+  basic_set.clear();
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     solution[iRow] = random.fraction();
     basic_set.push_back(num_col + iRow);
