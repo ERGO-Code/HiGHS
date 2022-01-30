@@ -228,6 +228,10 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       if (maxAbsVal / minAbsVal > 1e6) continue;
     }
 
+    mip.mipdata_->debugSolution.checkRowAggregation(
+        lpSolver.getLp(), baseRowInds.data(), baseRowVals.data(),
+        baseRowInds.size());
+
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
     if (mip.mipdata_->domain.infeasible()) break;
