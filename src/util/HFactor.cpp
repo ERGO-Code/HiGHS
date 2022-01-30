@@ -1469,14 +1469,14 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
 
   // Alias to factor L
   const HighsInt* l_start = &this->l_start[0];
-  const HighsInt* l_index =
-    this->l_index.size() > 0 ? &this->l_index[0] : NULL;
+  const HighsInt* l_index = this->l_index.size() > 0 ? &this->l_index[0] : NULL;
   const double* l_value = this->l_value.size() > 0 ? &this->l_value[0] : NULL;
 
   // Determine style of solve
   double current_density = 1.0 * rhs.count / num_row;
   const bool dense_solve = rhs.count < 0;
-  const bool sparse_solve = current_density > kHyperCancel || expected_density > kHyperFtranL;
+  const bool sparse_solve =
+      current_density > kHyperCancel || expected_density > kHyperFtranL;
   if (dense_solve) {
     factor_timer.start(FactorFtranLowerDse, factor_timer_clock_pointer);
     // Transform
@@ -1492,7 +1492,7 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
         rhs_array[pivotRow] = 0;
     }
     factor_timer.stop(FactorFtranLowerDse, factor_timer_clock_pointer);
-    
+
   } else if (sparse_solve) {
     factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
     // Local accumulation of RHS count
@@ -1622,15 +1622,15 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
   // Alias to factor U
   const HighsInt* u_start = &this->u_start[0];
   const HighsInt* u_end = &this->u_last_p[0];
-  const HighsInt* u_index =
-    this->u_index.size() > 0 ? &this->u_index[0] : NULL;
+  const HighsInt* u_index = this->u_index.size() > 0 ? &this->u_index[0] : NULL;
   const double* u_value = this->u_value.size() > 0 ? &this->u_value[0] : NULL;
 
   // Determine style of solve
   const double current_density = 1.0 * rhs.count / num_row;
   const bool dense_solve = rhs.count < 0;
-  const bool sparse_solve = current_density > kHyperCancel || expected_density > kHyperFtranU;
-  
+  const bool sparse_solve =
+      current_density > kHyperCancel || expected_density > kHyperFtranU;
+
   if (dense_solve) {
     // Transform
     HighsInt u_pivot_count = u_pivot_index.size();
@@ -1654,7 +1654,7 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
 
   } else if (sparse_solve) {
     const bool report_ftran_upper_sparse =
-      false;  // current_density < kHyperCancel;
+        false;  // current_density < kHyperCancel;
     HighsInt use_clock;
     if (current_density < 0.1)
       use_clock = FactorFtranUpperSps2;
@@ -1852,7 +1852,7 @@ void HFactor::ftranFT(HVector& vector) const {
       const HighsInt start = pf_start[i];
       const HighsInt end = pf_start[i + 1];
       for (HighsInt k = start; k < end; k++)
-	value1 -= rhs_array[pf_index[k]] * pf_value[k];
+        value1 -= rhs_array[pf_index[k]] * pf_value[k];
       rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     }
   } else {
@@ -1864,11 +1864,11 @@ void HFactor::ftranFT(HVector& vector) const {
       const HighsInt start = pf_start[i];
       const HighsInt end = pf_start[i + 1];
       for (HighsInt k = start; k < end; k++)
-	value1 -= rhs_array[pf_index[k]] * pf_value[k];
+        value1 -= rhs_array[pf_index[k]] * pf_value[k];
       // This would skip the situation where they are both zeros
       if (value0 || value1) {
-	if (value0 == 0) rhs_index[rhs_count++] = iRow;
-	rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+        if (value0 == 0) rhs_index[rhs_count++] = iRow;
+        rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
       }
     }
     // Save count back

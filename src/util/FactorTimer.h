@@ -203,14 +203,16 @@ class FactorTimer {
   void reportFactorLevel2Clock(HighsTimerClock& factor_timer_clock) {
     std::vector<HighsInt> factor_clock_list{
         FactorInvertSimple,     FactorInvertKernel,     FactorInvertDeficient,
-        FactorInvertFinish,     FactorFtranLowerAPF,    FactorFtranLowerDse,    FactorFtranLowerSps,
-        FactorFtranLowerHyper,  FactorFtranUpperFT,     FactorFtranUpperMPF,
-        FactorFtranUpperDse,   FactorFtranUpperSps0,   FactorFtranUpperSps1,   FactorFtranUpperSps2,
-        FactorFtranUpperHyper0, FactorFtranUpperHyper1, FactorFtranUpperHyper2,
-        FactorFtranUpperHyper3, FactorFtranUpperHyper4, FactorFtranUpperHyper5,
-        FactorFtranUpperPF,     FactorBtranLowerDse,    FactorBtranLowerSps,    FactorBtranLowerHyper,
-        FactorBtranLowerAPF,    FactorBtranUpperPF,     FactorBtranUpperDse, FactorBtranUpperSps,
-        FactorBtranUpperHyper,  FactorBtranUpperFT,     FactorBtranUpperMPF};
+        FactorInvertFinish,     FactorFtranLowerAPF,    FactorFtranLowerDse,
+        FactorFtranLowerSps,    FactorFtranLowerHyper,  FactorFtranUpperFT,
+        FactorFtranUpperMPF,    FactorFtranUpperDse,    FactorFtranUpperSps0,
+        FactorFtranUpperSps1,   FactorFtranUpperSps2,   FactorFtranUpperHyper0,
+        FactorFtranUpperHyper1, FactorFtranUpperHyper2, FactorFtranUpperHyper3,
+        FactorFtranUpperHyper4, FactorFtranUpperHyper5, FactorFtranUpperPF,
+        FactorBtranLowerDse,    FactorBtranLowerSps,    FactorBtranLowerHyper,
+        FactorBtranLowerAPF,    FactorBtranUpperPF,     FactorBtranUpperDse,
+        FactorBtranUpperSps,    FactorBtranUpperHyper,  FactorBtranUpperFT,
+        FactorBtranUpperMPF};
     reportFactorClockList("FactorLevel2", factor_timer_clock,
                           factor_clock_list);
   };

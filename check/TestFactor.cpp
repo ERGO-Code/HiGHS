@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "util/HFactor.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 HVector rhs;
 HVector col_aq;
@@ -21,25 +21,26 @@ bool testSolveDense();
 
 TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   std::string filename;
-  const bool avgas = true;//false;  // 
+  const bool avgas = false;  // true;//
   std::string model = avgas ? "avgas" : "adlittle";
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);
-  const HighsLp& lp = highs.getLp();
+  lp = highs.getLp();
   num_row = lp.num_row_;
   highs.run();
   basic_set.resize(num_row);
   // Get the optimal set of basic variables
   highs.getBasicVariables(&basic_set[0]);
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) 
-    basic_set[iRow] = basic_set[iRow] < 0 ? -(num_col-basic_set[iRow]-1) : basic_set[iRow];
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    basic_set[iRow] =
+        basic_set[iRow] < 0 ? num_col - basic_set[iRow] + 1 : basic_set[iRow];
   factor.setup(lp.a_matrix_, basic_set);
   factor.build();
   solution.resize(num_row);
   HighsRandom random;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) 
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
     solution[iRow] = random.fraction();
   rhs.setup(num_row);
   REQUIRE(testSolveDense());
@@ -304,17 +305,33 @@ bool testSolveDense() {
   rhs.clear();
   std::vector<double> rhs_dense;
   rhs_dense.assign(num_row, 0);
-  for (HighsInt iCol = 0; iCol < num_row; iCol++)
-    lp.a_matrix_.collectAj(rhs, basic_set[iCol], solution[iCol]);
+  const bool unit_sol = false;
+  HighsInt iCol;
+  if (unit_sol) {
+    HighsRandom random;
+    iCol = random.integer(num_row);
+    lp.a_matrix_.collectAj(rhs, basic_set[iCol], 1);
+  } else {
+    for (HighsInt iCol = 0; iCol < num_row; iCol++)
+      lp.a_matrix_.collectAj(rhs, basic_set[iCol], solution[iCol]);
+  }
   rhs_dense = std::move(rhs.array);
   factor.ftranCall(rhs_dense);
   double error_norm = 0;
-  for (HighsInt iRow = 0; iRow < num_row; iRow++)
-    error_norm =
-      std::max(std::fabs(solution[iRow] - rhs_dense[iRow]), error_norm);
-  if (dev_run)
-    printf("Dense  FTRAN: %g\n", error_norm);
+  if (unit_sol) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      if (iRow == iCol) {
+        error_norm = std::max(std::fabs(1 - rhs_dense[iRow]), error_norm);
+      } else {
+        error_norm = std::max(std::fabs(rhs_dense[iRow]), error_norm);
+      }
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      error_norm =
+          std::max(std::fabs(solution[iRow] - rhs_dense[iRow]), error_norm);
+  }
+  if (dev_run) printf("Dense  FTRAN: %g\n", error_norm);
   if (error_norm > 1e-4) return false;
   return true;
 }
-

@@ -183,9 +183,8 @@ class HFactor {
       const double expected_density,  //!< Expected density of the result
       HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
-  void ftranCall(
-      std::vector<double>& vector,
-      HighsTimerClock* factor_timer_clock_pointer = NULL);
+  void ftranCall(std::vector<double>& vector,
+                 HighsTimerClock* factor_timer_clock_pointer = NULL);
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
@@ -195,9 +194,8 @@ class HFactor {
       const double expected_density,  //!< Expected density of the result
       HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
-  void btranCall(
-      std::vector<double>& vector,
-      HighsTimerClock* factor_timer_clock_pointer = NULL);
+  void btranCall(std::vector<double>& vector,
+                 HighsTimerClock* factor_timer_clock_pointer = NULL);
 
   /**
    * @brief Update according to
