@@ -1547,22 +1547,22 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
 
   // Alias to RHS
   double* rhs_array = &rhs.array[0];
-  
+
   // Alias to factor L
   const HighsInt* lr_start = &this->lr_start[0];
   const HighsInt* lr_index =
-    this->lr_index.size() > 0 ? &this->lr_index[0] : NULL;
+      this->lr_index.size() > 0 ? &this->lr_index[0] : NULL;
   const double* lr_value =
-    this->lr_value.size() > 0 ? &this->lr_value[0] : NULL;
+      this->lr_value.size() > 0 ? &this->lr_value[0] : NULL;
 
   // Determine style of solve
   const double current_density = 1.0 * rhs.count / num_row;
   const bool dense_solve = rhs.count < 0;
-  const bool sparse_solve = current_density > kHyperCancel || expected_density > kHyperBtranL;
+  const bool sparse_solve =
+      current_density > kHyperCancel || expected_density > kHyperBtranL;
 
   if (dense_solve) {
     // Transform
-    assert(1==0);
     factor_timer.start(FactorBtranLowerDse, factor_timer_clock_pointer);
     for (HighsInt i = num_row - 1; i >= 0; i--) {
       HighsInt pivotRow = l_pivot_index[i];
@@ -1799,7 +1799,8 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
   // Determine style of solve
   const double current_density = 1.0 * rhs.count / num_row;
   const bool dense_solve = rhs.count < 0;
-  const bool sparse_solve = current_density > kHyperCancel || expected_density > kHyperBtranU;
+  const bool sparse_solve =
+      current_density > kHyperCancel || expected_density > kHyperBtranU;
 
   if (dense_solve) {
     // Transform
@@ -1975,37 +1976,37 @@ void HFactor::btranFT(HVector& vector) const {
       HighsInt pivotRow = pf_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (pivot_multiplier) {
-	const HighsInt start = pf_start[i];
-	const HighsInt end = pf_start[i + 1];
-	for (HighsInt k = start; k < end; k++) {
-	  HighsInt iRow = pf_index[k];
-	  double value1 = rhs_array[iRow] - pivot_multiplier * pf_value[k];
-	  rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
-	}
+        const HighsInt start = pf_start[i];
+        const HighsInt end = pf_start[i + 1];
+        for (HighsInt k = start; k < end; k++) {
+          HighsInt iRow = pf_index[k];
+          double value1 = rhs_array[iRow] - pivot_multiplier * pf_value[k];
+          rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+        }
       }
     }
-  } else { 
+  } else {
     double rhs_synthetic_tick = 0;
     HighsInt* rhs_index = &vector.index[0];
     for (HighsInt i = pf_pivot_count - 1; i >= 0; i--) {
       HighsInt pivotRow = pf_pivot_index[i];
       double pivot_multiplier = rhs_array[pivotRow];
       if (pivot_multiplier) {
-	const HighsInt start = pf_start[i];
-	const HighsInt end = pf_start[i + 1];
-	rhs_synthetic_tick += (end - start);
-	for (HighsInt k = start; k < end; k++) {
-	  HighsInt iRow = pf_index[k];
-	  double value0 = rhs_array[iRow];
-	  double value1 = value0 - pivot_multiplier * pf_value[k];
-	  if (value0 == 0) rhs_index[rhs_count++] = iRow;
-	  rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
-	}
+        const HighsInt start = pf_start[i];
+        const HighsInt end = pf_start[i + 1];
+        rhs_synthetic_tick += (end - start);
+        for (HighsInt k = start; k < end; k++) {
+          HighsInt iRow = pf_index[k];
+          double value0 = rhs_array[iRow];
+          double value1 = value0 - pivot_multiplier * pf_value[k];
+          if (value0 == 0) rhs_index[rhs_count++] = iRow;
+          rhs_array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
+        }
       }
     }
 
     vector.synthetic_tick += rhs_synthetic_tick * 15 + pf_pivot_count * 10;
-    
+
     // Save count back
     vector.count = rhs_count;
   }

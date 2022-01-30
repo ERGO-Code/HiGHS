@@ -345,11 +345,13 @@ bool testSolveDense() {
   }
 
   if (test_sparse_btran) {
-    HighsRandom random;
-    iCol = random.integer(num_row);
+    // Sparse BTRAN
+    std::vector<double> unit;
+    unit.assign(num_row, 0);
+    unit[iCol] = 1.0;
     rhs_dense.clear();
     for (HighsInt iCol = 0; iCol < num_row; iCol++)
-      rhs_dense[iCol] = lp.a_matrix_.computeDot(solution, basic_set[iCol]);
+      rhs_dense[iCol] = lp.a_matrix_.computeDot(unit, basic_set[iCol]);
     factor.btranCall(rhs_dense);
     error_norm = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -363,6 +365,19 @@ bool testSolveDense() {
     if (error_norm > 1e-4) return false;
   }
 
+  if (test_dense_btran) {
+    // Dense BTRAN
+    rhs_dense.clear();
+    for (HighsInt iCol = 0; iCol < num_row; iCol++)
+      rhs_dense[iCol] = lp.a_matrix_.computeDot(solution, basic_set[iCol]);
+    factor.btranCall(rhs_dense);
+    error_norm = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      error_norm =
+          std::max(std::fabs(solution[iRow] - rhs_dense[iRow]), error_norm);
+    if (dev_run) printf("Sparse  BTRAN: %g\n", error_norm);
+    if (error_norm > 1e-4) return false;
+  }
 
   return true;
 }
