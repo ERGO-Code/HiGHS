@@ -29,7 +29,26 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   lp.num_col_ = runtime.instance.num_var;
   lp.num_row_ = runtime.instance.num_con;
   highs.passModel(lp);
+
+  HighsBasis basis;
+  basis.alien = true;
+  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+    basis.row_status.push_back(HighsBasisStatus::kNonbasic);
+  } 
+
+  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+    // make free variables basic
+    if (runtime.instance.var_lo[i] == -std::numeric_limits<double>::infinity() && runtime.instance.var_up[i] == std::numeric_limits<double>::infinity()) {
+      basis.col_status.push_back(HighsBasisStatus::kBasic);
+    } else {
+      basis.col_status.push_back(HighsBasisStatus::kNonbasic);
+    }
+  }
+
+  // highs.setBasis(basis, "qp phase 1");
   highs.run();
+
+  highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
 
   runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
 

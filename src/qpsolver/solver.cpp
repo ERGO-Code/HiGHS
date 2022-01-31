@@ -107,14 +107,15 @@ Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
                                      CholeskyFactor& factor,
                                      const Vector& yp, Gradient& gradient,
-                                     Vector& gyp, Vector& l, Vector& p) {
+                                     Vector& gyp, Vector& l, Vector& m, Vector& p) {
   Vector yyp = yp;
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
   runtime.instance.Q.mat_vec(yyp, gyp);
   if (basis.getnumactive() < runtime.instance.num_var) {
-    basis.Ztprod(gyp, l);
+    basis.Ztprod(gyp, m);
+    l = m;
     factor.solveL(l);
     Vector v = l;
     factor.solveLT(v);
@@ -189,6 +190,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   // TODO: remove redundant equations before starting
   // HOWTO: from crash start, check all (near-)equality constraints (not
   // bounds). if the residual is 0 (or near-zero?), remove constraint
+
   Gradient gradient(runtime);
   ReducedCosts redcosts(runtime, basis, gradient);
   ReducedGradient redgrad(runtime, basis, gradient);
@@ -203,6 +205,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Vector buffer_yp(runtime.instance.num_var);
   Vector buffer_gyp(runtime.instance.num_var);
   Vector buffer_l(runtime.instance.num_var);
+  Vector buffer_m(runtime.instance.num_var);
 
   Vector buffer_Qp(runtime.instance.num_var);
 
@@ -247,8 +250,9 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       basis.btran(buffer_yp, buffer_yp, true, minidx);
 
       buffer_l.dim = basis.getnuminactive();
+      buffer_m.dim = basis.getnuminactive();
       computesearchdirection_major(runtime, basis, factor, buffer_yp, gradient,
-                                   buffer_gyp, buffer_l, p);
+                                   buffer_gyp, buffer_l, buffer_m, p);
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
@@ -258,7 +262,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction)
-        factor.expand(buffer_yp, buffer_gyp, buffer_l);
+        factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
       // }
       redgrad.expand(buffer_yp);
     } else {

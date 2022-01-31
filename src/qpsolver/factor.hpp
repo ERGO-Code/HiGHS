@@ -22,6 +22,9 @@ class CholeskyFactor {
   HighsInt current_k_max;
   std::vector<double> L;
 
+  bool has_negative_eigenvalue;
+  std::vector<double> a;
+
   void recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();
@@ -87,7 +90,7 @@ class CholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
-  void expand(const Vector& yp, Vector& gyp, Vector& l) {
+  void expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
     if (!uptodate) {
       return;
     }
@@ -107,10 +110,59 @@ class CholeskyFactor {
 
       current_k++;
     } else {
-      assert(lambda > 0);
-      assert(fabs(lambda) < 0.02);
+      printf("new negative lambda in M_kk: %lf\n", lambda);
+      assert(lambda > 0.0);
       exit(1);
-      // TODO
+
+      //     |LL' 0|
+      // M = |0'  0| + bb' -aa'
+      // a = (k * m, alpha), b = (k * m, beta)
+      // b*b -a*a = mu
+      // k(b-a) = 1
+      // b + a = k*mu
+      const double tolerance = 0.001;
+
+      double beta = max(tolerance, sqrt(m.norm2() / L[0] + fabs(mu)));
+      double k = 1 / (beta + sqrt(beta * beta - mu));
+      double alpha = k * mu - beta;
+
+      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", current_k, alpha, beta, k);
+
+      a.clear();
+      a.resize(current_k + 1);
+      for (HighsInt i=0; i<current_k; i++) {
+        a[i] = k * m.value[i];
+      }
+      a[current_k] = alpha;
+
+      std::vector<double> b(current_k+1);
+      for (HighsInt i=0; i<current_k; i++) {
+        b[i] = k * m.value[i];
+      }
+      b[current_k] = beta;
+      
+      if (current_k_max <= current_k + 1) {
+        resize(current_k_max * 2);
+      }
+
+      // append b to the left of L
+      for (HighsInt row=current_k; row>0; row--) {
+        // move row one position down
+        for (HighsInt i = 0; i < current_k; i++) {
+          L[row * current_k_max + i] = L[(row-1) * current_k_max + i];
+        }
+      }
+      for (HighsInt i=0; i<current_k+1; i++) {
+        L[i] = b[i];
+      }
+
+      // re-triangulize
+      for (HighsInt i=0; i<current_k+1; i++) {
+        eliminate(L, i, i+1, current_k_max, current_k+1);
+      }
+
+      current_k = current_k + 1;
+      exit(1);
     } 
   }
 
@@ -138,10 +190,9 @@ class CholeskyFactor {
       rhs.value[i] = (rhs.value[i] - sum) / L[i * current_k_max + i];
     }
   }
-
- public:
+  
   void solve(Vector& rhs) {
-    if (!uptodate || numberofreduces >= runtime.instance.num_con / 2) {
+    if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 && !has_negative_eigenvalue)) {
       printf("reinvert Z'QZ\n");
       recompute();
     }

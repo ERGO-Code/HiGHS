@@ -2337,6 +2337,15 @@ HighsStatus Highs::callSolveQp() {
   triangularToSquareHessian(hessian, instance.Q.mat.start, instance.Q.mat.index,
                             instance.Q.mat.value);
 
+  // add small diagonal to hessian
+  for (HighsInt i=0; i<instance.num_var; i++) {
+    for (HighsInt index=instance.Q.mat.start[i]; index<instance.Q.mat.start[i+1]; index++) {
+      if (instance.Q.mat.index[index] == i) {
+        instance.Q.mat.value[index] += 0.0; //10E-5;
+      }
+    }
+  }
+
   for (HighsInt i = 0; i < instance.c.value.size(); i++) {
     if (instance.c.value[i] != 0.0) {
       instance.c.index[instance.c.num_nz++] = i;
