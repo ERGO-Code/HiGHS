@@ -223,6 +223,7 @@ class HighsDomain {
     void propagateConflict(HighsInt conflict);
   };
 
+ private:
   struct ObjectivePropagation {
     HighsDomain* domain = nullptr;
     const HighsObjectiveFunction* objFunc;
