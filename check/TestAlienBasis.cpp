@@ -150,8 +150,6 @@ TEST_CASE("AlienBasis-rectangular-completion", "[highs_test_alien_basis]") {
   required_rank_deficiency = 1;
   // The column set is all matrix columns except 2
   std::vector<HighsInt> col_set = {0, 1, 3, 4};
-
-  if (dev_run) reportColSet("\nOriginal", col_set);
   HFactor factor;
   factor.setup(matrix, col_set);
   rank_deficiency = factor.build();
@@ -209,6 +207,74 @@ TEST_CASE("AlienBasis-rectangular-completion", "[highs_test_alien_basis]") {
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     solution_error += std::abs(rhs.array[iRow] - solution[iRow]);
   REQUIRE(solution_error < 1e-8);
+}
+
+TEST_CASE("AlienBasis-delay-singularity0", "[highs_test_alien_basis]") {
+  // Test the use of HFactor to complete a rectangular matrix when
+  // (near) cancellation yields a (near-)zero row or column, to form a
+  // nonsingular square matrix.
+  //
+  // Set up a matrix with 6 columns, 5 rows and a column rank deficiency of 2
+  //
+  // Generates a singleton column with pivot 1e-12, then a singleton
+  // row with pivot 1e-12
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 6;
+  matrix.num_row_ = 5;
+  matrix.start_ = {0, 2, 4, 9, 12, 15, 18};
+  matrix.index_ = {0, 1, 0, 1, 0, 1, 2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4};
+  matrix.value_ = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 4, 1, 2, 3, 1, -1, -1};
+  const HighsInt perturbed_entry = 3;
+  const double perturbation = -1e-12;
+  matrix.value_[perturbed_entry] += perturbation;
+  const HighsInt num_row = matrix.num_row_;
+  const HighsInt num_col = matrix.num_col_;
+  const HighsInt num_basic_col = num_col;
+  HighsInt rank_deficiency;
+  HighsInt required_rank_deficiency;
+  required_rank_deficiency = 2;
+  // The column set is all matrix columns except 2
+  std::vector<HighsInt> col_set = {0, 1, 2, 3, 4, 5};
+
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
+}
+
+TEST_CASE("AlienBasis-delay-singularity1", "[highs_test_alien_basis]") {
+  // Test the use of HFactor to complete a rectangular matrix when
+  // (near) cancellation yields a (near-)zero row or column, to form a
+  // nonsingular square matrix
+  //
+  // Set up a matrix with 5 columns, 5 rows and a column rank deficiency of 1
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 5;
+  matrix.num_row_ = 5;
+  matrix.start_ = {0, 5, 10, 14, 17, 20};
+  matrix.index_ = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 1, 2, 3, 4, 2, 3, 4, 2, 3, 4};
+  matrix.value_ = {1, 1, 2, -1, 3, 1, 1, 2, -1, 3,
+                   1, 1, 2, 4,  1, 1, 1, 1, 2,  3};
+  const HighsInt perturbed_from_entry = 6;
+  const HighsInt perturbed_to_entry = 10;
+  const double perturbation_multiplier = 1 + 1e-12;
+  for (HighsInt iEl = perturbed_from_entry; iEl < perturbed_to_entry; iEl++)
+    matrix.value_[iEl] *= perturbation_multiplier;
+  const HighsInt num_row = matrix.num_row_;
+  const HighsInt num_col = matrix.num_col_;
+  const HighsInt num_basic_col = num_col;
+  HighsInt rank_deficiency;
+  HighsInt required_rank_deficiency;
+  required_rank_deficiency = 1;
+  // The column set is all matrix columns except 2
+  std::vector<HighsInt> col_set = {0, 1, 2, 3, 4};
+
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  HFactor factor;
+  factor.setup(matrix, col_set);
+  rank_deficiency = factor.build();
+  REQUIRE(rank_deficiency == required_rank_deficiency);
 }
 
 TEST_CASE("AlienBasis-LP", "[highs_test_alien_basis]") {

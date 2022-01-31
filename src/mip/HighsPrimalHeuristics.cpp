@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsPrimalHeuristics.h"
@@ -93,6 +93,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
   submipoptions.presolve = "on";
   submipoptions.mip_detect_symmetry = false;
+  submipoptions.mip_heuristic_effort = 0.8;
   // setup solver and run it
 
   HighsSolution solution;
@@ -270,6 +271,7 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
@@ -288,7 +290,6 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   //       heurlp.getLpSolver().getOptions().simplex_iteration_limit);
   HighsInt targetdepth = 1;
   HighsInt nbacktracks = -1;
-  std::shared_ptr<const HighsBasis> basis;
   HeuristicNeighborhood neighborhood(mipsolver, localdom);
 retry:
   ++nbacktracks;
@@ -297,22 +298,17 @@ retry:
   //        "   target depth : %" HIGHSINT_FORMAT "\n",
   //        heur.getCurrentDepth(), targetdepth);
   if (heur.getCurrentDepth() > targetdepth) {
-    if (!heur.backtrackUntilDepth(targetdepth)) return;
+    if (!heur.backtrackUntilDepth(targetdepth)) {
+      lp_iterations += heur.getLocalLpIterations();
+      return;
+    }
   }
 
   // printf("fixingrate before loop is %g\n", fixingrate);
   assert(heur.hasNode());
-  if (basis) {
-    heurlp.setStoredBasis(basis);
-    heurlp.recoverBasis();
-  }
   while (true) {
     // printf("evaluating node\n");
     heur.evaluateNode();
-    if (!basis) {
-      heurlp.storeBasis();
-      basis = heurlp.getStoredBasis();
-    }
     // printf("done evaluating node\n");
     if (heur.currentNodePruned()) {
       ++nbacktracks;
@@ -468,6 +464,7 @@ retry:
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
+    if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
     // pseudocost = heur.pseudocost;
     return;
@@ -479,13 +476,28 @@ retry:
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+    int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
+    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+        100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                   mipsolver.mipdata_->heuristic_lp_iterations -
+                   mipsolver.mipdata_->sb_lp_iterations) >>
+                  1)) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
     maxfixingrate = fixingrate * 0.5;
     // printf("infeasible in in root node, trying with lower fixing rate %g\n",
     //        maxfixingrate);
     goto retry;
   }
+
+  lp_iterations += heur.getLocalLpIterations();
 }
 
 void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
@@ -504,6 +516,7 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setAdjustSymmetricBranchingCol(false);
   heur.setLpRelaxation(&heurlp);
 
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
@@ -520,7 +533,6 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   bool stop = false;
   HighsInt nbacktracks = -1;
   HighsInt targetdepth = 1;
-  std::shared_ptr<const HighsBasis> basis;
   HeuristicNeighborhood neighborhood(mipsolver, localdom);
 retry:
   ++nbacktracks;
@@ -529,21 +541,16 @@ retry:
   // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
   //       targetdepth);
   if (heur.getCurrentDepth() > targetdepth) {
-    if (!heur.backtrackUntilDepth(targetdepth)) return;
+    if (!heur.backtrackUntilDepth(targetdepth)) {
+      lp_iterations += heur.getLocalLpIterations();
+      return;
+    }
   }
 
   assert(heur.hasNode());
-  if (basis) {
-    heurlp.setStoredBasis(basis);
-    heurlp.recoverBasis();
-  }
 
   while (true) {
     heur.evaluateNode();
-    if (!basis) {
-      heurlp.storeBasis();
-      basis = heurlp.getStoredBasis();
-    }
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");
@@ -742,6 +749,7 @@ retry:
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
+    if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
     // pseudocost = heur.pseudocost;
     return;
@@ -753,12 +761,27 @@ retry:
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+    int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
+    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+        100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                   mipsolver.mipdata_->heuristic_lp_iterations -
+                   mipsolver.mipdata_->sb_lp_iterations) >>
+                  1)) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
     // printf("infeasible in in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
     goto retry;
   }
+
+  lp_iterations += heur.getLocalLpIterations();
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,

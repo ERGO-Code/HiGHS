@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualRHS.cpp
@@ -75,8 +75,6 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
-          //	  printf("Dense: Row %4" HIGHSINT_FORMAT " weight = %g\n", iRow,
-          // myWeight);
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -87,14 +85,6 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
     *chIndex = bestIndex;
   } else {
     // SPARSE mode
-    // Moved the following to the top to avoid starting the clock for a trivial
-    // call.
-    //    if (workCount == 0)
-    //    {
-    //      *chIndex = -1;
-    //      return;
-    //    }
-
     HighsInt randomStart = ekk_instance_.random_.integer(workCount);
     double bestMerit = 0;
     HighsInt bestIndex = -1;
@@ -106,11 +96,6 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
         if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
-          /*
-          const double myMerit = myInfeas / myWeight;
-          printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
-          %11.4g; Merit = %11.4g\n", iRow, myInfeas, myWeight, myMerit);
-          */
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -333,34 +318,26 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
 
-  if (updatePrimal_inDense) {
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      baseValue[iRow] -= theta * columnArray[iRow];
-      const double value = baseValue[iRow];
-      const double less = baseLower[iRow] - value;
-      const double more = value - baseUpper[iRow];
-      double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      //    work_infeasibility[iRow] = infeas * infeas;
-      if (ekk_instance_.info_.store_squared_primal_infeasibility)
-        work_infeasibility[iRow] = infeas * infeas;
-      else
-        work_infeasibility[iRow] = fabs(infeas);
+  const HighsInt to_entry = updatePrimal_inDense ? numRow : columnCount;
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    const HighsInt iRow =
+        updatePrimal_inDense ? iEntry : variable_index[iEntry];
+    baseValue[iRow] -= theta * columnArray[iRow];
+    // @primal_infeasibility calculation
+    const double value = baseValue[iRow];
+    const double lower = baseLower[iRow];
+    const double upper = baseUpper[iRow];
+    double primal_infeasibility = 0;
+    if (value < lower - Tp) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + Tp) {
+      primal_infeasibility = value - upper;
     }
-  } else {
-    for (HighsInt i = 0; i < columnCount; i++) {
-      HighsInt iRow = variable_index[i];
-      baseValue[iRow] -= theta * columnArray[iRow];
-      const double value = baseValue[iRow];
-      const double less = baseLower[iRow] - value;
-      const double more = value - baseUpper[iRow];
-      double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      if (ekk_instance_.info_.store_squared_primal_infeasibility)
-        work_infeasibility[iRow] = infeas * infeas;
-      else
-        work_infeasibility[iRow] = fabs(infeas);
-    }
+    if (ekk_instance_.info_.store_squared_primal_infeasibility)
+      work_infeasibility[iRow] = primal_infeasibility * primal_infeasibility;
+    else
+      work_infeasibility[iRow] = fabs(primal_infeasibility);
   }
-
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
@@ -424,26 +401,26 @@ void HEkkDualRHS::updateWeightDevex(HVector* column,
   analysis->simplexTimerStop(DevexUpdateWeightClock);
 }
 
-void HEkkDualRHS::updatePivots(HighsInt iRow, double value) {
+void HEkkDualRHS::updatePivots(const HighsInt iRow, const double value) {
   // Update the primal value for the row (iRow) where the basis change
-  // has occurred, and set the corresponding squared primal
-  // infeasibility value in work_infeasibility
+  // has occurred, and set the corresponding primal infeasibility
+  // value in work_infeasibility
   //
-  const double* baseLower = &ekk_instance_.info_.baseLower_[0];
-  const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
   const double Tp = ekk_instance_.options_->primal_feasibility_tolerance;
-  double* baseValue = &ekk_instance_.info_.baseValue_[0];
-  baseValue[iRow] = value;
-  double pivotInfeas = 0;
-  if (baseValue[iRow] < baseLower[iRow] - Tp)
-    pivotInfeas = baseValue[iRow] - baseLower[iRow];
-  if (baseValue[iRow] > baseUpper[iRow] + Tp)
-    pivotInfeas = baseValue[iRow] - baseUpper[iRow];
-  // work_infeasibility[iRow] = pivotInfeas * pivotInfeas;
+  ekk_instance_.info_.baseValue_[iRow] = value;
+  // @primal_infeasibility calculation
+  const double lower = ekk_instance_.info_.baseLower_[iRow];
+  const double upper = ekk_instance_.info_.baseUpper_[iRow];
+  double primal_infeasibility = 0;
+  if (value < lower - Tp) {
+    primal_infeasibility = lower - value;
+  } else if (value > upper + Tp) {
+    primal_infeasibility = value - upper;
+  }
   if (ekk_instance_.info_.store_squared_primal_infeasibility)
-    work_infeasibility[iRow] = pivotInfeas * pivotInfeas;
+    work_infeasibility[iRow] = primal_infeasibility * primal_infeasibility;
   else
-    work_infeasibility[iRow] = fabs(pivotInfeas);
+    work_infeasibility[iRow] = fabs(primal_infeasibility);
 }
 
 void HEkkDualRHS::updateInfeasList(HVector* column) {
@@ -489,15 +466,20 @@ void HEkkDualRHS::createArrayOfPrimalInfeasibilities() {
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
   const double Tp = ekk_instance_.options_->primal_feasibility_tolerance;
   for (HighsInt i = 0; i < numRow; i++) {
+    // @primal_infeasibility calculation
     const double value = baseValue[i];
-    const double less = baseLower[i] - value;
-    const double more = value - baseUpper[i];
-    double infeas = less > Tp ? less : (more > Tp ? more : 0);
-    //    work_infeasibility[i] = infeas * infeas;
+    const double lower = baseLower[i];
+    const double upper = baseUpper[i];
+    double primal_infeasibility = 0;
+    if (value < lower - Tp) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + Tp) {
+      primal_infeasibility = value - upper;
+    }
     if (ekk_instance_.info_.store_squared_primal_infeasibility)
-      work_infeasibility[i] = infeas * infeas;
+      work_infeasibility[i] = primal_infeasibility * primal_infeasibility;
     else
-      work_infeasibility[i] = fabs(infeas);
+      work_infeasibility[i] = fabs(primal_infeasibility);
   }
 }
 
@@ -561,5 +543,42 @@ void HEkkDualRHS::createInfeasList(double columnDensity) {
   if (workCount > 0.2 * numRow) {
     workCount = -numRow;
     workCutoff = 0;
+  }
+}
+
+void HEkkDualRHS::assessOptimality() {
+  HighsInt num_work_infeasibilities = 0;
+  double max_work_infeasibility = 0;
+  const HighsInt num_row = ekk_instance_.lp_.num_row_;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (work_infeasibility[iRow] > kHighsZero) {
+      num_work_infeasibilities++;
+      max_work_infeasibility =
+          std::max(work_infeasibility[iRow], max_work_infeasibility);
+    }
+  }
+  ekk_instance_.computeSimplexPrimalInfeasible();
+  const HighsInt num_primal_infeasibilities =
+      ekk_instance_.info_.num_primal_infeasibilities;
+  const double max_primal_infeasibility =
+      ekk_instance_.info_.max_primal_infeasibility;
+  const bool regular_report = false;
+  if (regular_report ||
+      (num_work_infeasibilities && !num_primal_infeasibilities)) {
+    printf(
+        "assessOptimality: %6d rows; workCount = %4d (%6.4f) "
+        "num / max infeasibilities: work = %4d / %11.4g; simplex = %4d / "
+        "%11.4g: %s\n",
+        (int)num_row, (int)workCount,
+        workCount > 0 ? (1.0 * workCount) / num_row : 0,
+        (int)num_work_infeasibilities, max_work_infeasibility,
+        (int)num_primal_infeasibilities, max_primal_infeasibility,
+        num_primal_infeasibilities == 0 ? "Optimal" : "");
+    if (num_work_infeasibilities && !num_primal_infeasibilities) {
+      printf("assessOptimality: call %d; tick %d; iter %d\n",
+             (int)ekk_instance_.debug_solve_call_num_,
+             (int)ekk_instance_.debug_initial_build_synthetic_tick_,
+             (int)ekk_instance_.iteration_count_);
+    }
   }
 }

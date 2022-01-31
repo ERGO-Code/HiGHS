@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.h
@@ -57,7 +57,6 @@ class HighsLp {
   bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
-  bool dimensionsOk(std::string message) const;
   void setFormat(const MatrixFormat format);
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
   void ensureRowwise() { this->a_matrix_.ensureRowwise(); };

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkPrimal.h
@@ -35,7 +35,7 @@ class HEkkPrimal {
   /**
    * @brief Solve a model instance
    */
-  HighsStatus solve();
+  HighsStatus solve(const bool force_phase2 = false);
 
  private:
   /**
@@ -103,7 +103,7 @@ class HEkkPrimal {
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);
-  bool badBasisChange();
+  bool isBadBasisChange();
 
   // References:
   HEkk& ekk_instance_;

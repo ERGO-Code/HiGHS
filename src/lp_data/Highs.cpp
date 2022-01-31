@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/Highs.cpp
@@ -249,6 +249,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   assert(!lp.is_scaled_);
   assert(!lp.is_moved_);
   lp.resetScale();
+  // Check that the LP array dimensions are valid
+  if (!lpDimensionsOk("passModel", lp, options_.log_options))
+    return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
@@ -589,7 +592,7 @@ HighsStatus Highs::run() {
     }
   }
   if (ekk_instance_.status_.has_nla)
-    assert(ekk_instance_.lpFactorRowCompatible());
+    assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
   highs::parallel::initialize_scheduler(options_.threads);
 
@@ -852,6 +855,8 @@ HighsStatus Highs::run() {
         basis_.clear();
         basis_.debug_origin_name = "Presolve to empty";
         basis_.valid = true;
+        basis_.alien = false;
+        basis_.was_alien = false;
         solution_.value_valid = true;
         solution_.dual_valid = true;
         have_optimal_solution = true;
@@ -969,7 +974,7 @@ HighsStatus Highs::run() {
           solution_.value_valid = true;
           if (ipx_no_crossover) {
             // IPX was used without crossover, so only have a primal solution
-            solution_.dual_valid = false;
+            solution_.dual_valid = true;
             basis_.clear();
             basis_.valid = false;
           } else {
@@ -1426,13 +1431,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
-    highsLogDev(
-        options_.log_options, HighsLogType::kInfo,
-        "Highs::setBasis Alien basis origin_name = (%s); origin =  (%s)\n",
-        basis.debug_origin_name.c_str(), origin.c_str());
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
     HighsBasis modifiable_basis = basis;
+    modifiable_basis.was_alien = true;
     HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
                                       info_, ekk_instance_, options_, timer_);
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
@@ -1452,7 +1454,16 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   basis_.valid = true;
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
-  // printf("Highs::setBasis (%s)\n", basis_.debug_origin_name.c_str());
+  assert(!basis_.alien);
+  if (basis_.was_alien) {
+    highsLogDev(
+        options_.log_options, HighsLogType::kInfo,
+        "Highs::setBasis Was alien = %-5s; Id = %9d; UpdateCount = %4d; Origin "
+        "(%s)\n",
+        highsBoolToString(basis_.was_alien).c_str(), (int)basis_.debug_id,
+        (int)basis_.debug_update_count, basis_.debug_origin_name.c_str());
+  }
+
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -2188,7 +2199,8 @@ HighsPresolveStatus Highs::runPresolve() {
                                       (HighsInt)reduced_lp.a_matrix_.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
-      assert(reduced_lp.dimensionsOk("RunPresolve: reduced_lp"));
+      assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
+                            options_.log_options));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -2849,13 +2861,14 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   // Stop the HiGHS run clock if it is running
   if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
-  const bool dimensions_ok = model_.lp_.dimensionsOk("returnFromHighs");
+  const bool dimensions_ok =
+      lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
     printf("LP Dimension error in returnFromHighs()\n");
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
-    if (!ekk_instance_.lpFactorRowCompatible()) {
+    if (!ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_)) {
       highsLogDev(options_.log_options, HighsLogType::kWarning,
                   "Highs::returnFromHighs(): LP and HFactor have inconsistent "
                   "numbers of rows\n");
