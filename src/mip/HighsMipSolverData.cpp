@@ -1191,15 +1191,12 @@ restart:
   lp.loadModel();
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
+  lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
 
   if (symmetries.numPerms != 0)
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
-  if (numRestarts == 0) {
-    // solve the first root lp
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nSolving root node LP relaxation\n");
-  }
+  printDisplayLine();
 
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,

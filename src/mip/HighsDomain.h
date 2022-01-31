@@ -240,8 +240,7 @@ class HighsDomain {
         return contribution < other.contribution;
       }
     };
-    // one ObjContributionTree for each clique partition to quickly update and
-    // select the current contribution for each clique partition
+
     std::vector<uint8_t> isInHeap;
     std::vector<ObjectiveContribution> objectiveLowerContributions;
     std::vector<HighsInt> contributionHeapSize;
@@ -488,6 +487,13 @@ class HighsDomain {
 
   const std::vector<Reason>& getDomainChangeReason() const {
     return domchgreason_;
+  }
+
+  double getObjectiveLowerBound() const {
+    if (objProp_.isActive() && objProp_.numInfObjLower == 0)
+      return double(objProp_.objectiveLower);
+
+    return -kHighsInf;
   }
 
   HighsInt getNumDomainChanges() const { return domchgstack_.size(); }
