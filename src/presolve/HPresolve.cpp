@@ -26,6 +26,7 @@
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsObjectiveFunction.h"
 #include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "test/DevKkt.h"
@@ -833,6 +834,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
 
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->rowMatrixSet = false;
+    mipsolver->mipdata_->objectiveFunction = HighsObjectiveFunction(*mipsolver);
     mipsolver->mipdata_->domain = HighsDomain(*mipsolver);
     mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postSolveStack,
                                              mipsolver->mipdata_->domain,

@@ -613,6 +613,334 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
   }
 }
 
+HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
+    : domain(domain),
+      objFunc(&domain->mipsolver->mipdata_->objectiveFunction),
+      cost(domain->mipsolver->model_->col_cost_.data()) {
+  const auto& objNonzeros = objFunc->getObjectiveNonzeros();
+  const auto& partitionIndices = objFunc->getCliquePartitionIndices();
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+
+  HighsInt numPartitions = partitionStarts.size() - 1;
+
+  capacityThreshold = domain->feastol();
+  objectiveLower = 0.0;
+  objectiveLowerContributions.resize(partitionIndices.size());
+  contributionHeapSize.resize(numPartitions);
+  isInHeap.resize(domain->col_lower_.size(), false);
+
+  // for each clique partition first set up all columns as contributing with
+  // their largest possible value and then remove the largest contribution of
+  // each clique partition. For these columns we do not need to check for finite
+  // bounds as they must be binary. We do not assume, however, that they must be
+  // unfixed but could be fixed to 0 or 1. We maintain a heap that fulfills the
+  // invariant that the largest column may be not fixed to its value with the
+  // larger contribution.
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    for (HighsInt j = partitionStarts[i]; j < partitionStarts[i + 1]; ++j) {
+      HighsInt col = partitionIndices[j];
+      objectiveLowerContributions[j].col = col;
+      if (cost[col] > 0.0) {
+        objectiveLower += cost[col];
+        objectiveLowerContributions[j].contribution = cost[col];
+      } else {
+        objectiveLowerContributions[j].contribution = -cost[col];
+      }
+      isInHeap[col] = true;
+    }
+
+    auto heapStart = objectiveLowerContributions.begin() + partitionStarts[i];
+    auto heapEnd = objectiveLowerContributions.begin() + partitionStarts[i + 1];
+    std::make_heap(heapStart, heapEnd);
+    addNewPartitionContribution(i, heapStart, heapEnd);
+
+    if (contributionHeapSize[i] != 0)
+      capacityThreshold =
+          std::max(capacityThreshold,
+                   heapStart->contribution * (1.0 - domain->feastol()));
+  }
+
+  // add contribution of remaining objective nonzeros
+  for (HighsInt col : objNonzeros) {
+    if (objFunc->getColCliquePartition(col) != -1) continue;
+
+    double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
+    boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                      ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                      : domain->feastol();
+
+    if (cost[col] > 0.0) {
+      if (domain->col_lower_[col] == -kHighsInf)
+        ++numInfObjLower;
+      else
+        objectiveLower += domain->col_lower_[col] * cost[col];
+
+      capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+    } else {
+      if (domain->col_upper_[col] == kHighsInf)
+        ++numInfObjLower;
+      else
+        objectiveLower += domain->col_upper_[col] * cost[col];
+
+      capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+    }
+  }
+
+  double lb = numInfObjLower == 0
+                  ? double(objectiveLower) + domain->mipsolver->model_->offset_
+                  : -kHighsInf;
+  if (!domain->mipsolver->submip)
+    printf("Initial obj lower bound of domain: %g\n", lb);
+}
+
+void HighsDomain::ObjectivePropagation::addNewPartitionContribution(
+    HighsInt partition, std::vector<ObjectiveContribution>::iterator heapStart,
+    std::vector<ObjectiveContribution>::iterator heapEnd) {
+  while (heapStart != heapEnd) {
+    HighsInt worstCol = heapStart->col;
+    assert(isInHeap[worstCol]);
+    if (cost[worstCol] > 0.0) {
+      if (domain->col_lower_[worstCol] == 0.0) {
+        objectiveLower -= heapStart->contribution;
+        break;
+      }
+    } else {
+      if (domain->col_upper_[worstCol] == 1.0) {
+        objectiveLower -= heapStart->contribution;
+        break;
+      }
+    }
+    isInHeap[worstCol] = false;
+    std::pop_heap(heapStart, heapEnd);
+    --heapEnd;
+  }
+
+  contributionHeapSize[partition] = heapEnd - heapStart;
+}
+
+void HighsDomain::ObjectivePropagation::updateActivityLbChange(
+    HighsInt col, double oldbound, double newbound) {
+  if (cost[col] <= 0.0) return;
+
+  HighsInt partition = objFunc->getColCliquePartition(col);
+  if (partition == -1) {
+    if (oldbound == -kHighsInf)
+      --numInfObjLower;
+    else
+      objectiveLower -= oldbound * cost[col];
+
+    if (newbound == -kHighsInf)
+      ++numInfObjLower;
+    else
+      objectiveLower += newbound * cost[col];
+
+    if (newbound < oldbound) {
+      double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
+      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                        : domain->feastol();
+      capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+    } else {
+      double lb = numInfObjLower == 0 ? double(objectiveLower) +
+                                            domain->mipsolver->model_->offset_
+                                      : -kHighsInf;
+      if (!domain->mipsolver->submip)
+        printf("Updated obj lower bound of domain: %g\n", lb);
+
+      if (numInfObjLower == 0 &&
+          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+        // todo infeasible
+        printf(
+            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
+            double(objectiveLower) + domain->mipsolver->model_->offset_,
+            domain->mipsolver->mipdata_->upper_limit +
+                domain->mipsolver->model_->offset_);
+      }
+    }
+  } else {
+    const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+    std::vector<ObjectiveContribution>::iterator heapStart =
+        objectiveLowerContributions.begin() + partitionStarts[partition];
+    std::vector<ObjectiveContribution>::iterator heapEnd =
+        heapStart + contributionHeapSize[partition];
+
+    if (newbound == 0.0) {
+      assert(oldbound == 1.0);
+      // binary lower bound of variable in clique partition is relaxed to 0
+      // if we are still in the heap there is nothing to update
+      if (isInHeap[col]) return;
+
+      double oldContribution = 0.0;
+      if (contributionHeapSize[partition] != 0)
+        oldContribution = heapStart->contribution;
+
+      heapEnd->col = col;
+      heapEnd->contribution = cost[col];
+      ++heapEnd;
+      std::push_heap(heapStart, heapEnd);
+      ++contributionHeapSize[partition];
+      isInHeap[col] = true;
+
+      if (heapStart->contribution != oldContribution) {
+        objectiveLower += oldContribution;
+        objectiveLower -= heapStart->contribution;
+        capacityThreshold =
+            std::max(heapStart->contribution * (1.0 - domain->feastol()),
+                     capacityThreshold);
+      }
+    } else {
+      // binary lower bound of variable in clique partition is tightened to 1
+      assert(oldbound == 0.0);
+      assert(newbound == 1.0);
+      assert(isInHeap[col]);
+      assert(contributionHeapSize[partition] != 0);
+
+      // if the current contributing column is a different one we stay lazy and
+      // do nothing
+      if (heapStart->col != col) return;
+
+      objectiveLower += heapStart->contribution;
+      isInHeap[col] = false;
+      std::pop_heap(heapStart, heapEnd);
+      --heapEnd;
+      // call will also update the heap size
+      addNewPartitionContribution(partition, heapStart, heapEnd);
+
+      double lb = numInfObjLower == 0 ? double(objectiveLower) +
+                                            domain->mipsolver->model_->offset_
+                                      : -kHighsInf;
+      if (!domain->mipsolver->submip)
+        printf("Updated obj lower bound of domain: %g\n", lb);
+
+      if (numInfObjLower == 0 &&
+          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+        printf(
+            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
+            double(objectiveLower) + domain->mipsolver->model_->offset_,
+            domain->mipsolver->mipdata_->upper_limit +
+                domain->mipsolver->model_->offset_);
+      }
+    }
+  }
+}
+
+void HighsDomain::ObjectivePropagation::updateActivityUbChange(
+    HighsInt col, double oldbound, double newbound) {
+  if (cost[col] >= 0.0) return;
+
+  HighsInt partition = objFunc->getColCliquePartition(col);
+  if (partition == -1) {
+    if (oldbound == kHighsInf)
+      --numInfObjLower;
+    else
+      objectiveLower -= oldbound * cost[col];
+
+    if (newbound == kHighsInf)
+      ++numInfObjLower;
+    else
+      objectiveLower += newbound * cost[col];
+
+    if (newbound > oldbound) {
+      double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
+      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                        : domain->feastol();
+      capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+    } else {
+      double lb = numInfObjLower == 0 ? double(objectiveLower) +
+                                            domain->mipsolver->model_->offset_
+                                      : -kHighsInf;
+      if (!domain->mipsolver->submip)
+        printf("Updated obj lower bound of domain: %g\n", lb);
+      if (numInfObjLower == 0 &&
+          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+        printf(
+            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
+            double(objectiveLower) + domain->mipsolver->model_->offset_,
+            domain->mipsolver->mipdata_->upper_limit +
+                domain->mipsolver->model_->offset_);
+      }
+    }
+  } else {
+    const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+    std::vector<ObjectiveContribution>::iterator heapStart =
+        objectiveLowerContributions.begin() + partitionStarts[partition];
+    std::vector<ObjectiveContribution>::iterator heapEnd =
+        heapStart + contributionHeapSize[partition];
+
+    if (newbound == 1.0) {
+      assert(oldbound == 0.0);
+      // binary upper bound of variable in clique partition is relaxed to 1
+      // if we are still in the heap there is nothing to update
+      if (isInHeap[col]) return;
+
+      double oldContribution = 0.0;
+      if (contributionHeapSize[partition] != 0)
+        oldContribution = heapStart->contribution;
+
+      heapEnd->col = col;
+      heapEnd->contribution = -cost[col];
+      ++heapEnd;
+      std::push_heap(heapStart, heapEnd);
+      ++contributionHeapSize[partition];
+      isInHeap[col] = true;
+
+      if (heapStart->contribution != oldContribution) {
+        objectiveLower += oldContribution;
+        objectiveLower -= heapStart->contribution;
+        capacityThreshold =
+            std::max(heapStart->contribution * (1.0 - domain->feastol()),
+                     capacityThreshold);
+      }
+    } else {
+      // binary upper bound of variable in clique partition is tightened to 0
+      assert(oldbound == 1.0);
+      assert(newbound == 0.0);
+      assert(isInHeap[col]);
+      assert(contributionHeapSize[partition] != 0);
+
+      // if the current contributing column is a different one we stay lazy and
+      // do nothing
+      if (heapStart->col != col) return;
+
+      objectiveLower += heapStart->contribution;
+      isInHeap[col] = false;
+      std::pop_heap(heapStart, heapEnd);
+      --heapEnd;
+      // call will also update the heap size
+      addNewPartitionContribution(partition, heapStart, heapEnd);
+
+      double lb = numInfObjLower == 0 ? double(objectiveLower) +
+                                            domain->mipsolver->model_->offset_
+                                      : -kHighsInf;
+      if (!domain->mipsolver->submip)
+        printf("Updated obj lower bound of domain: %g\n", lb);
+
+      if (numInfObjLower == 0 &&
+          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+        printf(
+            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
+            double(objectiveLower) + domain->mipsolver->model_->offset_,
+            domain->mipsolver->mipdata_->upper_limit +
+                domain->mipsolver->model_->offset_);
+      }
+    }
+  }
+}
+
+bool HighsDomain::ObjectivePropagation::shouldBePropagated() const {
+  if (numInfObjLower > 1) return false;
+  double upperLimit = domain->mipsolver->mipdata_->upper_limit;
+  if (upperLimit == kHighsInf) return false;
+  if (upperLimit - double(objectiveLower) > capacityThreshold) return false;
+
+  return true;
+}
+
+void HighsDomain::ObjectivePropagation::propagate() {
+  double upperLimit = domain->mipsolver->mipdata_->upper_limit;
+}
+
 void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
@@ -956,6 +1284,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
   assert(!infeasible_);
 
+  if (objProp_.isActive()) {
+    objProp_.updateActivityLbChange(col, oldbound, newbound);
+  }
+
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
       double deltamin;
@@ -1097,6 +1429,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
     }
 
+    if (objProp_.isActive()) {
+      objProp_.updateActivityLbChange(col, oldbound, newbound);
+    }
+
     return;
   } else {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -1111,6 +1447,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
+
+  if (objProp_.isActive()) {
+    objProp_.updateActivityUbChange(col, oldbound, newbound);
+  }
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
@@ -1259,6 +1599,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
         activitymin_[mip->a_matrix_.index_[i]] += deltamin;
       }
+    }
+
+    if (objProp_.isActive()) {
+      objProp_.updateActivityUbChange(col, oldbound, newbound);
     }
 
     return;

@@ -464,6 +464,8 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
+  objectiveFunction.setupCliquePartition(domain, cliquetable);
+  domain.setupObjectivePropagation();
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {

@@ -24,6 +24,7 @@
 
 class HighsCutPool;
 class HighsConflictPool;
+class HighsObjectiveFunction;
 
 class HighsDomain {
  public:
@@ -222,7 +223,48 @@ class HighsDomain {
     void propagateConflict(HighsInt conflict);
   };
 
- private:
+  struct ObjectivePropagation {
+    HighsDomain* domain = nullptr;
+    const HighsObjectiveFunction* objFunc;
+    const double* cost;
+    HighsCDouble objectiveLower;
+    HighsInt numInfObjLower;
+    double capacityThreshold;
+
+    struct ObjectiveContribution {
+      HighsInt col;
+      double contribution;
+
+      bool operator<(const ObjectiveContribution& other) const {
+        return contribution < other.contribution;
+      }
+    };
+    // one ObjContributionTree for each clique partition to quickly update and
+    // select the current contribution for each clique partition
+    std::vector<uint8_t> isInHeap;
+    std::vector<ObjectiveContribution> objectiveLowerContributions;
+    std::vector<HighsInt> contributionHeapSize;
+
+    ObjectivePropagation() = default;
+    ObjectivePropagation(HighsDomain* domain);
+
+    bool isActive() const { return domain != nullptr; }
+
+    void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
+
+    void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
+
+    bool shouldBePropagated() const;
+
+    void propagate();
+
+   private:
+    void addNewPartitionContribution(
+        HighsInt partition,
+        std::vector<ObjectiveContribution>::iterator heapStart,
+        std::vector<ObjectiveContribution>::iterator heapEnd);
+  };
+
   std::vector<uint8_t> changedcolsflags_;
   std::vector<HighsInt> changedcols_;
 
@@ -239,6 +281,7 @@ class HighsDomain {
   std::vector<double> capacityThreshold_;
   std::vector<uint8_t> propagateflags_;
   std::vector<HighsInt> propagateinds_;
+  ObjectivePropagation objProp_;
 
   HighsMipSolver* mipsolver;
 
@@ -287,6 +330,7 @@ class HighsDomain {
         capacityThreshold_(other.capacityThreshold_),
         propagateflags_(other.propagateflags_),
         propagateinds_(other.propagateinds_),
+        objProp_(other.objProp_),
         mipsolver(other.mipsolver),
         cutpoolpropagation(other.cutpoolpropagation),
         conflictPoolPropagation(other.conflictPoolPropagation),
@@ -301,6 +345,7 @@ class HighsDomain {
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
+    if (objProp_.domain) objProp_.domain = this;
   }
 
   HighsDomain& operator=(const HighsDomain& other) {
@@ -316,6 +361,7 @@ class HighsDomain {
     capacityThreshold_ = other.capacityThreshold_;
     propagateflags_ = other.propagateflags_;
     propagateinds_ = other.propagateinds_;
+    objProp_ = other.objProp_;
     mipsolver = other.mipsolver;
     cutpoolpropagation = other.cutpoolpropagation;
     conflictPoolPropagation = other.conflictPoolPropagation;
@@ -330,6 +376,7 @@ class HighsDomain {
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
       conflictprop.domain = this;
+    if (objProp_.domain) objProp_.domain = this;
     return *this;
   }
 
@@ -390,6 +437,8 @@ class HighsDomain {
   }
 
   void markPropagateCut(Reason reason);
+
+  void setupObjectivePropagation() { objProp_ = ObjectivePropagation(this); }
 
   void computeRowActivities();
 

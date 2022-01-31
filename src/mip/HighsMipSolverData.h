@@ -24,6 +24,7 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsNodeQueue.h"
+#include "mip/HighsObjectiveFunction.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
@@ -45,6 +46,7 @@ struct HighsMipSolverData {
   HighsImplications implications;
   HighsPrimalHeuristics heuristics;
   HighsRedcostFixing redcostfixing;
+  HighsObjectiveFunction objectiveFunction;
   presolve::HighsPostsolveStack postSolveStack;
   HighsLp presolvedModel;
   bool cliquesExtracted;
@@ -127,6 +129,7 @@ struct HighsMipSolverData {
         cliquetable(mipsolver.numCol()),
         implications(mipsolver),
         heuristics(mipsolver),
+        objectiveFunction(mipsolver),
         debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
     domain.addConflictPool(conflictPool);
