@@ -1059,19 +1059,21 @@ void HighsCliqueTable::cliquePartition(std::vector<CliqueVar>& clqVars,
   HighsInt numClqVars = clqVars.size();
   partitionStart.clear();
   partitionStart.reserve(clqVars.size());
-  std::vector<CliqueVar>::iterator extensionEnd = clqVars.end();
+  HighsInt extensionEnd = numClqVars;
   partitionStart.push_back(0);
   for (HighsInt i = 0; i < numClqVars; ++i) {
-    if (clqVars.begin() + i == extensionEnd) {
+    if (i == extensionEnd) {
       partitionStart.push_back(i);
-      extensionEnd = clqVars.end();
+      extensionEnd = numClqVars;
     }
     CliqueVar v = clqVars[i];
-    auto extensionStart = clqVars.begin() + i + 1;
-    extensionEnd =
-        std::partition(clqVars.begin() + i + 1, extensionEnd,
-                       [&](CliqueVar z) { return haveCommonClique(v, z); });
+    HighsInt extensionStart = i + 1;
+    extensionEnd = partitionNeighborhood(v, clqVars.data() + extensionStart,
+                                         extensionEnd - extensionStart) +
+                   extensionStart;
   }
+
+  partitionStart.push_back(numClqVars);
 }
 
 bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
