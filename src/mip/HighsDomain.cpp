@@ -625,6 +625,7 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
 
   capacityThreshold = domain->feastol();
   objectiveLower = 0.0;
+  numInfObjLower = 0;
   objectiveLowerContributions.resize(partitionIndices.size());
   contributionHeapSize.resize(numPartitions);
   isInHeap.resize(domain->col_lower_.size(), false);
