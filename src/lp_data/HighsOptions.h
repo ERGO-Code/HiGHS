@@ -783,11 +783,12 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &cost_scale_factor, -20, 0, 20);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("allowed_matrix_scale_factor",
-                            "Largest power-of-two factor permitted when "
-                            "scaling the constraint matrix",
-                            advanced, &allowed_matrix_scale_factor, 0, 20, 30);
+    record_int = new OptionRecordInt(
+        "allowed_matrix_scale_factor",
+        "Largest power-of-two factor permitted when "
+        "scaling the constraint matrix",
+        advanced, &allowed_matrix_scale_factor, 0,
+        kDefaultAllowedMatrixPow2Scale, kMaxAllowedMatrixPow2Scale);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
