@@ -691,7 +691,8 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
                   ? double(objectiveLower) + domain->mipsolver->model_->offset_
                   : -kHighsInf;
   if (!domain->mipsolver->submip)
-    printf("Initial obj lower bound of domain: %g\n", lb);
+    printf("Initial obj lower bound of domain: %g, num clique partitions: %d\n",
+           lb, numPartitions);
 }
 
 void HighsDomain::ObjectivePropagation::addNewPartitionContribution(
@@ -741,22 +742,9 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
                         ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
                         : domain->feastol();
       capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
-    } else {
-      double lb = numInfObjLower == 0 ? double(objectiveLower) +
-                                            domain->mipsolver->model_->offset_
-                                      : -kHighsInf;
-      if (!domain->mipsolver->submip)
-        printf("Updated obj lower bound of domain: %g\n", lb);
-
-      if (numInfObjLower == 0 &&
-          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
-        // todo infeasible
-        printf(
-            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
-            double(objectiveLower) + domain->mipsolver->model_->offset_,
-            domain->mipsolver->mipdata_->upper_limit +
-                domain->mipsolver->model_->offset_);
-      }
+    } else if (numInfObjLower == 0 &&
+               objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+      // todo infeasible
     }
   } else {
     const auto& partitionStarts = objFunc->getCliquePartitionStarts();
@@ -807,19 +795,9 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
       // call will also update the heap size
       addNewPartitionContribution(partition, heapStart, heapEnd);
 
-      double lb = numInfObjLower == 0 ? double(objectiveLower) +
-                                            domain->mipsolver->model_->offset_
-                                      : -kHighsInf;
-      if (!domain->mipsolver->submip)
-        printf("Updated obj lower bound of domain: %g\n", lb);
-
       if (numInfObjLower == 0 &&
           objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
-        printf(
-            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
-            double(objectiveLower) + domain->mipsolver->model_->offset_,
-            domain->mipsolver->mipdata_->upper_limit +
-                domain->mipsolver->model_->offset_);
+        // todo infeasible
       }
     }
   }
@@ -847,20 +825,9 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
                         ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
                         : domain->feastol();
       capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
-    } else {
-      double lb = numInfObjLower == 0 ? double(objectiveLower) +
-                                            domain->mipsolver->model_->offset_
-                                      : -kHighsInf;
-      if (!domain->mipsolver->submip)
-        printf("Updated obj lower bound of domain: %g\n", lb);
-      if (numInfObjLower == 0 &&
-          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
-        printf(
-            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
-            double(objectiveLower) + domain->mipsolver->model_->offset_,
-            domain->mipsolver->mipdata_->upper_limit +
-                domain->mipsolver->model_->offset_);
-      }
+    } else if (numInfObjLower == 0 &&
+               objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+      // todo infeasible
     }
   } else {
     const auto& partitionStarts = objFunc->getCliquePartitionStarts();
@@ -911,19 +878,9 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
       // call will also update the heap size
       addNewPartitionContribution(partition, heapStart, heapEnd);
 
-      double lb = numInfObjLower == 0 ? double(objectiveLower) +
-                                            domain->mipsolver->model_->offset_
-                                      : -kHighsInf;
-      if (!domain->mipsolver->submip)
-        printf("Updated obj lower bound of domain: %g\n", lb);
-
       if (numInfObjLower == 0 &&
           objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
-        printf(
-            "obj prop detected infeasibility: lower_bound=%g, upper_limit=%g\n",
-            double(objectiveLower) + domain->mipsolver->model_->offset_,
-            domain->mipsolver->mipdata_->upper_limit +
-                domain->mipsolver->model_->offset_);
+        // todo infeasible
       }
     }
   }
