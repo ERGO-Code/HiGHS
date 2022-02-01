@@ -64,10 +64,10 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
   highsSetLogCallback(printtomessagehandler, logtomessagehandler,
                       (void*)handler_);
 
+  this->highs = new Highs();
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
-  this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
 
   // Because HiGHS calls highsSetLogCallback with the options, which overwrites
@@ -87,10 +87,10 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
   highsSetLogCallback(printtomessagehandler, logtomessagehandler,
                       (void*)handler_);
 
+  this->highs = new Highs();
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
-  this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
 
   // Because HiGHS calls highsSetLogCallback with the options, whichoverwrites
