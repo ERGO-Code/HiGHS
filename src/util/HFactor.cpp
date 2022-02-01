@@ -847,10 +847,10 @@ HighsInt HFactor::buildKernel() {
             break;
           }
         }
-        printf(
-            "HFactor::buildKernel stage = %6d: min_col_count = %3d; "
-            "min_row_count = %3d\n",
-            (int)search_k, (int)min_col_count, (int)min_row_count);
+        //        printf(
+        //            "HFactor::buildKernel stage = %6d: min_col_count = %3d; "
+        //            "min_row_count = %3d\n",
+        //            (int)search_k, (int)min_col_count, (int)min_row_count);
       }
     }
     search_k++;
