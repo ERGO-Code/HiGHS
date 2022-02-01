@@ -1197,6 +1197,8 @@ restart:
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
   printDisplayLine();
+  // make sure first line after solving root LP is printed
+  last_disptime = -kHighsInf;
 
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
