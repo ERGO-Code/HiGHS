@@ -39,6 +39,7 @@ class HighsDomain {
       kModelRowLower = -4,
       kCliqueTable = -5,
       kConflictingBounds = -6,
+      kObjective = -7,
     };
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
@@ -57,6 +58,7 @@ class HighsDomain {
     static Reason conflictingBounds(HighsInt pos) {
       return Reason{kConflictingBounds, pos};
     }
+    static Reason objective() { return Reason{kObjective, 0}; }
   };
 
   class ConflictSet {
@@ -259,6 +261,8 @@ class HighsDomain {
     void propagate();
 
    private:
+    void recomputeCapacityThreshold();
+
     void addNewPartitionContribution(
         HighsInt partition,
         std::vector<ObjectiveContribution>::iterator heapStart,
@@ -387,6 +391,10 @@ class HighsDomain {
   void computeMaxActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
                           const double* ARvalue, HighsInt& ninfmax,
                           HighsCDouble& activitymax);
+
+  double adjustedUb(HighsInt col, HighsCDouble boundVal, bool& accept) const;
+
+  double adjustedLb(HighsInt col, HighsCDouble boundVal, bool& accept) const;
 
   HighsInt propagateRowUpper(const HighsInt* Rindex, const double* Rvalue,
                              HighsInt Rlen, double Rupper,
