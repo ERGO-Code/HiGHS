@@ -332,6 +332,9 @@ endif()
 if (GAMS_FOUND)
     # todo replace by adding ${GAMS_ROOT}/apifiles/C/api/gcmt.c to ${sources} if present above
     target_compile_definitions(libhighs PUBLIC GC_NO_MUTEX)
+    if (UNIX)
+        target_link_libraries(libhighs dl)
+    endif()
 endif()
 
 if(${BUILD_SHARED_LIBS})
