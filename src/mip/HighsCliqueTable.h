@@ -248,6 +248,10 @@ class HighsCliqueTable {
   void cliquePartition(std::vector<CliqueVar>& clqVars,
                        std::vector<HighsInt>& partitionStart);
 
+  void cliquePartition(const std::vector<double>& objective,
+                       std::vector<CliqueVar>& clqVars,
+                       std::vector<HighsInt>& partitionStart);
+
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
   void extractCliques(HighsMipSolver& mipsolver, bool transformRows = true);

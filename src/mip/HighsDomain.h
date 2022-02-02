@@ -21,6 +21,7 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolver.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsRbTree.h"
 
 class HighsCutPool;
 class HighsConflictPool;
@@ -235,17 +236,16 @@ class HighsDomain {
     double capacityThreshold;
 
     struct ObjectiveContribution {
-      HighsInt col;
       double contribution;
-
-      bool operator<(const ObjectiveContribution& other) const {
-        return contribution < other.contribution;
-      }
+      HighsInt col;
+      HighsInt partition;
+      highs::RbTreeLinks links;
     };
 
-    std::vector<uint8_t> isInHeap;
+    class ObjectiveContributionTree;
+
     std::vector<ObjectiveContribution> objectiveLowerContributions;
-    std::vector<HighsInt> contributionHeapSize;
+    std::vector<std::pair<HighsInt,HighsInt>> contributionPartitionSets;
 
     ObjectivePropagation() = default;
     ObjectivePropagation(HighsDomain* domain);
@@ -260,13 +260,9 @@ class HighsDomain {
 
     void propagate();
 
+    void debugCheckObjectiveLower() const;
    private:
     void recomputeCapacityThreshold();
-
-    void addNewPartitionContribution(
-        HighsInt partition,
-        std::vector<ObjectiveContribution>::iterator heapStart,
-        std::vector<ObjectiveContribution>::iterator heapEnd);
   };
 
   std::vector<uint8_t> changedcolsflags_;

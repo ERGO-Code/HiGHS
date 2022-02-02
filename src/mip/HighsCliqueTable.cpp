@@ -1076,6 +1076,42 @@ void HighsCliqueTable::cliquePartition(std::vector<CliqueVar>& clqVars,
   partitionStart.push_back(numClqVars);
 }
 
+void HighsCliqueTable::cliquePartition(const std::vector<double>& objective,
+                                       std::vector<CliqueVar>& clqVars,
+                                       std::vector<HighsInt>& partitionStart) {
+  randgen.shuffle(clqVars.data(), clqVars.size());
+
+  pdqsort_branchless(clqVars.begin(), clqVars.end(),
+                     [&](CliqueVar v1, CliqueVar v2) {
+                       return (2 * v1.val - 1) * objective[v1.col] >
+                              (2 * v2.val - 1) * objective[v2.col];
+                     });
+
+  HighsInt numClqVars = clqVars.size();
+  partitionStart.clear();
+  partitionStart.reserve(clqVars.size());
+  HighsInt extensionEnd = numClqVars;
+  partitionStart.push_back(0);
+  for (HighsInt i = 0; i < numClqVars; ++i) {
+    if (i == extensionEnd) {
+      partitionStart.push_back(i);
+      extensionEnd = numClqVars;
+      pdqsort_branchless(clqVars.begin() + i, clqVars.end(),
+                         [&](CliqueVar v1, CliqueVar v2) {
+                           return (2 * v1.val - 1) * objective[v1.col] >
+                                  (2 * v2.val - 1) * objective[v2.col];
+                         });
+    }
+    CliqueVar v = clqVars[i];
+    HighsInt extensionStart = i + 1;
+    extensionEnd = partitionNeighborhood(v, clqVars.data() + extensionStart,
+                                         extensionEnd - extensionStart) +
+                   extensionStart;
+  }
+
+  partitionStart.push_back(numClqVars);
+}
+
 bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
                                   CliqueVar v2) {
   bool equality = false;
