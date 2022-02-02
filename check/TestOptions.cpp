@@ -66,8 +66,9 @@ TEST_CASE("internal-options", "[highs_options]") {
       options.log_options, "allowed_matrix_scale_factor", options.records, -1);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  return_status = setLocalOptionValue(
-      options.log_options, "allowed_matrix_scale_factor", options.records, 25);
+  return_status =
+      setLocalOptionValue(options.log_options, "allowed_matrix_scale_factor",
+                          options.records, kMaxAllowedMatrixPow2Scale + 5);
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   std::string allowed_matrix_scale_factor_string = "1e-7";
@@ -218,7 +219,8 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.setOptionValue("allowed_matrix_scale_factor", -1);
   REQUIRE(return_status == HighsStatus::kError);
 
-  return_status = highs.setOptionValue("allowed_matrix_scale_factor", 25);
+  return_status = highs.setOptionValue("allowed_matrix_scale_factor",
+                                       kMaxAllowedMatrixPow2Scale + 5);
   REQUIRE(return_status == HighsStatus::kError);
 
   std::string allowed_matrix_scale_factor_string = "1e-7";
