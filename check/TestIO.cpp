@@ -9,6 +9,13 @@ const bool dev_run = false;
 char printedmsg[100000];
 void* receiveddata = NULL;
 
+using std::memset;
+using std::strcmp;
+using std::strcpy;
+using std::strlen;
+using std::strncmp;
+using std::strstr;
+
 // callback that saves message away for comparison
 static void myprintmsgcb(HighsInt level, const char* msg, void* msgcb_data) {
   strcpy(printedmsg, msg);
