@@ -331,16 +331,28 @@ if (IPX_ON)
     target_link_libraries(libhighs libipx)
 endif()
 
+if (GAMS_FOUND)
+    # todo replace by adding ${GAMS_ROOT}/apifiles/C/api/gcmt.c to ${sources} if present above
+    target_compile_definitions(libhighs PUBLIC GC_NO_MUTEX)
+    if (UNIX)
+        target_link_libraries(libhighs dl)
+    endif()
+endif()
+
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
         VERSION 
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
+    if(MINGW)
+        target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+    endif()
 else()
     # create static highs library with pic
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 # on UNIX system the 'lib' prefix is automatically added
@@ -508,6 +520,9 @@ add_library(libhighs)
 
 if (NOT ${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+elseif(MINGW)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 target_sources(libhighs PRIVATE

@@ -77,7 +77,6 @@ static enum gmoVarEquBasisStatus translateBasisStatus(HighsBasisStatus status) {
     case HighsBasisStatus::kLower:
       return gmoBstat_Lower;
     case HighsBasisStatus::kNonbasic:
-    case HighsBasisStatus::SUPER:
     case HighsBasisStatus::kZero:
       return gmoBstat_Super;
     case HighsBasisStatus::kUpper:
@@ -94,12 +93,12 @@ static HighsBasisStatus translateBasisStatus(enum gmoVarEquBasisStatus status) {
     case gmoBstat_Lower:
       return HighsBasisStatus::kLower;
     case gmoBstat_Super:
-      return HighsBasisStatus::SUPER;
+      return HighsBasisStatus::kNonbasic;
     case gmoBstat_Upper:
       return HighsBasisStatus::kUpper;
   }
   // this should never happen
-  return HighsBasisStatus::SUPER;
+  return HighsBasisStatus::kNonbasic;
 }
 
 static HighsInt setupOptions(gamshighs_t* gh) {
@@ -118,7 +117,7 @@ static HighsInt setupOptions(gamshighs_t* gh) {
   if (gmoOptFile(gh->gmo) > 0) {
     char optfilename[GMS_SSSIZE];
     gmoNameOptFile(gh->gmo, optfilename);
-    if (!loadOptionsFromFile(*gh->options, optfilename)) return 1;
+    if (!loadOptionsFromFile(gh->options->log_options, *gh->options, optfilename)) return 1;
   }
 
   gh->options->printmsgcb = gevprint;
@@ -142,7 +141,8 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   assert(gh->highs == NULL);
   assert(gh->lp == NULL);
 
-  gh->highs = new Highs(*gh->options);
+  gh->highs = new Highs();
+  gh->highs->passOptions(*gh->options);
 
   numCol = gmoN(gh->gmo);
   numRow = gmoM(gh->gmo);
