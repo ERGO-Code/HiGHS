@@ -775,7 +775,7 @@ void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
   const auto& partitionStarts = objFunc->getCliquePartitionStarts();
   HighsInt numPartitions = objFunc->getNumCliquePartitions();
 
-  capacityThreshold = 0.0;
+  capacityThreshold = -domain->feastol();
   for (HighsInt i = 0; i < numPartitions; ++i) {
     ObjectiveContributionTree contributionTree(this, i);
     HighsInt worstPos = contributionTree.first();
