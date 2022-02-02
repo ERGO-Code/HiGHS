@@ -245,7 +245,15 @@ class HighsDomain {
     class ObjectiveContributionTree;
 
     std::vector<ObjectiveContribution> objectiveLowerContributions;
-    std::vector<std::pair<HighsInt,HighsInt>> contributionPartitionSets;
+    std::vector<std::pair<HighsInt, HighsInt>> contributionPartitionSets;
+    std::vector<double> propagationConsBuffer;
+    struct PartitionCliqueData {
+      double multiplier;
+      HighsInt rhs;
+      bool changed;
+    };
+
+    std::vector<PartitionCliqueData> partitionCliqueData;
 
     ObjectivePropagation() = default;
     ObjectivePropagation(HighsDomain* domain);
@@ -261,6 +269,13 @@ class HighsDomain {
     void propagate();
 
     void debugCheckObjectiveLower() const;
+
+    // construct the proot constraint at the time when the domain change stack
+    // had the given size
+    void getPropagationConstraint(HighsInt domchgStackSize, const double*& vals,
+                                  const HighsInt*& inds, HighsInt& len,
+                                  double& rhs);
+
    private:
     void recomputeCapacityThreshold();
   };

@@ -650,15 +650,19 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
       objFunc(&domain->mipsolver->mipdata_->objectiveFunction),
       cost(domain->mipsolver->model_->col_cost_.data()) {
   const auto& objNonzeros = objFunc->getObjectiveNonzeros();
-  const auto& partitionIndices = objFunc->getCliquePartitionIndices();
   const auto& partitionStarts = objFunc->getCliquePartitionStarts();
 
   HighsInt numPartitions = objFunc->getNumCliquePartitions();
 
+  if (numPartitions != 0) {
+    propagationConsBuffer = objFunc->getObjectiveValuesPacked();
+    partitionCliqueData.resize(objFunc->getNumCliquePartitions());
+  }
+
   capacityThreshold = kHighsInf;
   objectiveLower = 0.0;
   numInfObjLower = 0;
-  objectiveLowerContributions.resize(partitionIndices.size());
+  objectiveLowerContributions.resize(partitionStarts[numPartitions]);
   contributionPartitionSets.resize(numPartitions,
                                    std::make_pair(HighsInt{-1}, HighsInt{-1}));
 
@@ -671,13 +675,15 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
   // larger contribution.
   for (HighsInt i = 0; i < numPartitions; ++i) {
     ObjectiveContributionTree contributionTree(this, i);
+    partitionCliqueData[i].rhs = 1;
     for (HighsInt j = partitionStarts[i]; j < partitionStarts[i + 1]; ++j) {
-      HighsInt col = partitionIndices[j];
+      HighsInt col = objNonzeros[j];
       objectiveLowerContributions[j].col = col;
       objectiveLowerContributions[j].partition = i;
       if (cost[col] > 0.0) {
         objectiveLower += cost[col];
         objectiveLowerContributions[j].contribution = cost[col];
+        partitionCliqueData[i].rhs -= 1;
         if (domain->col_lower_[col] == 0.0) contributionTree.link(j);
       } else {
         objectiveLowerContributions[j].contribution = -cost[col];
@@ -691,8 +697,9 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
   }
 
   // add contribution of remaining objective nonzeros
-  for (HighsInt col : objNonzeros) {
-    if (objFunc->getColCliquePartition(col) != -1) continue;
+  const HighsInt numObjNz = objNonzeros.size();
+  for (HighsInt i = partitionStarts[numPartitions]; i < numObjNz; ++i) {
+    HighsInt col = objNonzeros[i];
     if (cost[col] > 0.0) {
       if (domain->col_lower_[col] == -kHighsInf)
         ++numInfObjLower;
@@ -715,6 +722,50 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
 
   recomputeCapacityThreshold();
   debugCheckObjectiveLower();
+}
+
+void HighsDomain::ObjectivePropagation::getPropagationConstraint(
+    HighsInt domchgStackSize, const double*& vals, const HighsInt*& inds,
+    HighsInt& len, double& rhs) {
+  const HighsInt numPartitions = objFunc->getNumCliquePartitions();
+  inds = objFunc->getObjectiveNonzeros().data();
+  len = objFunc->getObjectiveNonzeros().size();
+  if (numPartitions == 0) {
+    vals = objFunc->getObjectiveValuesPacked().data();
+    rhs = domain->mipsolver->mipdata_->upper_limit;
+    return;
+  }
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+
+  HighsCDouble tmpRhs = domain->mipsolver->mipdata_->upper_limit;
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    HighsInt start = partitionStarts[i];
+    HighsInt end = partitionStarts[i + 1];
+    double largest = 0.0;
+    for (HighsInt j = start; j < end; ++j) {
+      HighsInt c = inds[j];
+      HighsInt pos;
+      if (cost[c] > 0) {
+        double lb = domain->getColLowerPos(c, domchgStackSize, pos);
+        if (lb < 1) largest = std::max(largest, cost[c]);
+      } else {
+        double ub = domain->getColUpperPos(c, domchgStackSize, pos);
+        if (ub > 0) largest = std::max(largest, -cost[c]);
+      }
+    }
+
+    tmpRhs += largest * partitionCliqueData[i].rhs;
+    if (partitionCliqueData[i].multiplier != largest) {
+      partitionCliqueData[i].multiplier = largest;
+      const auto& packedObjVals = objFunc->getObjectiveValuesPacked();
+      for (HighsInt j = start; j < end; ++j)
+        propagationConsBuffer[j] =
+            packedObjVals[j] - std::copysign(largest, packedObjVals[j]);
+    }
+  }
+
+  vals = propagationConsBuffer.data();
+  rhs = double(tmpRhs);
 }
 
 void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
@@ -1003,7 +1054,7 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
     HighsInt end = objFunc->getCliquePartitionStarts()[i + 1];
     double largest = 0.0;
     for (HighsInt j = start; j < end; ++j) {
-      HighsInt c = objFunc->getCliquePartitionIndices()[j];
+      HighsInt c = objFunc->getObjectiveNonzeros()[j];
       if (cost[c] > 0) {
         lowerFromScratch += cost[c];
 
@@ -1034,7 +1085,6 @@ void HighsDomain::ObjectivePropagation::propagate() {
   }
 
   const auto& objNonzeros = objFunc->getObjectiveNonzeros();
-  const auto& partitionIndices = objFunc->getCliquePartitionIndices();
   const auto& partitionStarts = objFunc->getCliquePartitionStarts();
 
   HighsCDouble capacity = upperLimit - objectiveLower;
@@ -3103,8 +3153,20 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
           inds, vals, len, localdom.mipsolver->rowUpper(rowIndex), minAct);
     }
     case Reason::kObjective: {
-      // todo
-      return false;
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      double rhs;
+
+      localdom.objProp_.getPropagationConstraint(localdom.infeasible_pos, vals,
+                                                 inds, len, rhs);
+
+      HighsInt ninfmin;
+      HighsCDouble minAct;
+      globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
+      assert(ninfmin == 0);
+
+      return explainInfeasibilityLeq(inds, vals, len, rhs, double(minAct));
     }
     default:
       assert(localdom.infeasible_reason.type >= 0);
@@ -3350,8 +3412,24 @@ bool HighsDomain::ConflictSet::explainBoundChange(
                                    minAct);
     }
     case Reason::kObjective: {
-      // todo
-      return false;
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      double rhs;
+
+      localdom.objProp_.getPropagationConstraint(domchg.pos, vals, inds, len,
+                                                 rhs);
+
+      HighsInt ninfmin;
+      HighsCDouble minAct;
+      globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
+      assert(ninfmin <= 1);
+      // todo: treat case with a single infinite contribution that propagated a
+      // bound
+      if (ninfmin == 1) return false;
+
+      return explainBoundChangeLeq(currentFrontier, domchg, inds, vals, len,
+                                   rhs, double(minAct));
     }
     default:
       assert(localdom.domchgreason_[domchg.pos].type >= 0);
