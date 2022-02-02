@@ -39,16 +39,17 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   for (HighsInt i=0; i<runtime.instance.num_var; i++) {
     // make free variables basic
     if (runtime.instance.var_lo[i] == -std::numeric_limits<double>::infinity() && runtime.instance.var_up[i] == std::numeric_limits<double>::infinity()) {
+      // free variable
       basis.col_status.push_back(HighsBasisStatus::kBasic);
     } else {
       basis.col_status.push_back(HighsBasisStatus::kNonbasic);
     }
   }
 
-  // highs.setBasis(basis, "qp phase 1");
-  highs.run();
-
+  highs.setBasis(basis, "qp phase 1");
+  
   highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+  highs.run();
 
   runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
 
