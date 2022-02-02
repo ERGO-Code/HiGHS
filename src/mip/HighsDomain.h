@@ -274,7 +274,7 @@ class HighsDomain {
     // had the given size
     void getPropagationConstraint(HighsInt domchgStackSize, const double*& vals,
                                   const HighsInt*& inds, HighsInt& len,
-                                  double& rhs);
+                                  double& rhs, HighsInt domchgCol = -1);
 
    private:
     void recomputeCapacityThreshold();

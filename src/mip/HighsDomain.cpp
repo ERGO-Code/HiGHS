@@ -726,7 +726,7 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
 
 void HighsDomain::ObjectivePropagation::getPropagationConstraint(
     HighsInt domchgStackSize, const double*& vals, const HighsInt*& inds,
-    HighsInt& len, double& rhs) {
+    HighsInt& len, double& rhs, HighsInt domchgCol) {
   const HighsInt numPartitions = objFunc->getNumCliquePartitions();
   inds = objFunc->getObjectiveNonzeros().data();
   len = objFunc->getObjectiveNonzeros().size();
@@ -745,6 +745,9 @@ void HighsDomain::ObjectivePropagation::getPropagationConstraint(
     for (HighsInt j = start; j < end; ++j) {
       HighsInt c = inds[j];
       HighsInt pos;
+      // skip the column we might want to explain a bound change for and take
+      // the second largest column instead.
+      if (c == domchgCol) continue;
       if (cost[c] > 0) {
         double lb = domain->getColLowerPos(c, domchgStackSize, pos);
         if (lb < 1) largest = std::max(largest, cost[c]);
@@ -2970,7 +2973,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered <= localdom.mipsolver->mipdata_->epsilon);
+      assert(covered <= localdom.mipsolver->mipdata_->feastol);
     }
   }
 
@@ -3084,7 +3087,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered >= -localdom.mipsolver->mipdata_->epsilon);
+      assert(covered >= -localdom.mipsolver->mipdata_->feastol);
     }
   }
   return true;
@@ -3418,7 +3421,7 @@ bool HighsDomain::ConflictSet::explainBoundChange(
       double rhs;
 
       localdom.objProp_.getPropagationConstraint(domchg.pos, vals, inds, len,
-                                                 rhs);
+                                                 rhs, domchg.domchg.column);
 
       HighsInt ninfmin;
       HighsCDouble minAct;
