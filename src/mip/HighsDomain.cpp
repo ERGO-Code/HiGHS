@@ -1219,7 +1219,6 @@ void HighsDomain::ObjectivePropagation::propagate() {
   }
 
   recomputeCapacityThreshold();
-  assert(!shouldBePropagated());
   isPropagated = true;
 }
 
