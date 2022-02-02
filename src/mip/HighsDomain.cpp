@@ -659,6 +659,7 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
     partitionCliqueData.resize(objFunc->getNumCliquePartitions());
   }
 
+  isPropagated = false;
   capacityThreshold = kHighsInf;
   objectiveLower = 0.0;
   numInfObjLower = 0;
@@ -792,8 +793,9 @@ void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
   }
 
   const auto& objNonzeros = objFunc->getObjectiveNonzeros();
-  for (HighsInt col : objNonzeros) {
-    if (objFunc->getColCliquePartition(col) != -1) continue;
+  const HighsInt numObjNzs = objNonzeros.size();
+  for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
+    HighsInt col = objNonzeros[i];
 
     double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
     boundRange -= domain->variableType(col) == HighsVarType::kContinuous
@@ -813,10 +815,13 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
                         ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
                         : domain->feastol();
       capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+      isPropagated = false;
     }
     debugCheckObjectiveLower();
     return;
   }
+
+  isPropagated = false;
 
   HighsInt partitionPos = objFunc->getColCliquePartition(col);
   if (partitionPos == -1) {
@@ -923,10 +928,13 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
                         ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
                         : domain->feastol();
       capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+      isPropagated = false;
     }
     debugCheckObjectiveLower();
     return;
   }
+
+  isPropagated = false;
 
   HighsInt partitionPos = objFunc->getColCliquePartition(col);
   if (partitionPos == -1) {
@@ -1024,6 +1032,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
 }
 
 bool HighsDomain::ObjectivePropagation::shouldBePropagated() const {
+  if (isPropagated) return false;
   if (numInfObjLower > 1) return false;
   if (domain->infeasible_) return false;
   double upperLimit = domain->mipsolver->mipdata_->upper_limit;
@@ -1211,6 +1220,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
 
   recomputeCapacityThreshold();
   assert(!shouldBePropagated());
+  isPropagated = true;
 }
 
 void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,

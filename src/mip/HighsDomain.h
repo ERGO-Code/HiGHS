@@ -234,6 +234,7 @@ class HighsDomain {
     HighsCDouble objectiveLower;
     HighsInt numInfObjLower;
     double capacityThreshold;
+    bool isPropagated;
 
     struct ObjectiveContribution {
       double contribution;
