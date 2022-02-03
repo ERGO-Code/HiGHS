@@ -295,14 +295,6 @@ endif()
 
 set(IPX_ON ON)
 
-option(GAMS_ROOT "GAMS root folder." "OFF")
-if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
-    message(STATUS "GAMS root folder set: " ${GAMS_ROOT})
-    set(GAMS_FOUND ON)
-else ()
-    set(GAMS_FOUND OFF)
-endif ()
-
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
