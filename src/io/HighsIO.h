@@ -23,6 +23,8 @@
 
 class HighsOptions;
 
+const HighsInt kIoBufferSize = 65536;
+
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
