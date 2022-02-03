@@ -34,7 +34,6 @@ static void userLogCallback(HighsLogType type, const char* message,
 TEST_CASE("run-callback", "[highs_io]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.setLogCallback(userLogCallback);
   highs.readModel(filename);
   highs.run();
