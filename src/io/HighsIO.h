@@ -44,6 +44,8 @@ struct HighsLogOptions {
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;
+  void (*logmsgcb)(HighsLogType, const char*, void*);
+  void* msgcb_data;
 };
 
 /**
@@ -70,21 +72,6 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
  */
 void highsReportDevInfo(const HighsLogOptions* log_options,
                         const std::string line);
-
-/*
- * @brief sets the callbacks used to log output
- *
- * Set to NULL to reset to default, which is to print to logfile
- */
-void highsSetLogCallback(void (*logmsgcb_)(HighsLogType type, const char* msg,
-                                           void* msgcb_data),
-                         void* msgcb_data_);
-
-/*
- * @brief sets callbacks from options
- */
-void highsSetLogCallback(HighsOptions& options  //!< the options
-);
 
 void highsOpenLogFile(HighsOptions& options, const std::string log_file);
 

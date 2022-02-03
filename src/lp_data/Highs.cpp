@@ -657,7 +657,6 @@ HighsStatus Highs::run() {
       return returnFromRun(return_status);
     }
   }
-  highsSetLogCallback(options_);
 
   if (model_.lp_.model_name_.compare(""))
     highsLogDev(options_.log_options, HighsLogType::kVerbose,

@@ -32,7 +32,8 @@ TEST_CASE("msgcb", "[highs_io]") {
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  highsSetLogCallback(mylogmsgcb, (void*)&dummydata);
+  log_options.logmsgcb = mylogmsgcb;
+  log_options.msgcb_data = (void*)&dummydata;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);
