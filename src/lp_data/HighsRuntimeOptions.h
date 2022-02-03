@@ -50,6 +50,9 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         (kSolutionFileString,
         "File for writing out model solution.",
         cxxopts::value<std::vector<std::string>>())
+        (kWriteModelFileString,
+        "File for writing out model.",
+        cxxopts::value<std::vector<std::string>>())
         (kRandomSeedString,
         "Seed to initialize random number generation.",
         cxxopts::value<HighsInt>())
@@ -136,6 +139,20 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
                               options.log_options, options.records,
                               v[0]) != OptionStatus::kOk ||
           setLocalOptionValue(report_log_options, "write_solution_to_file",
+                              options.records, true) != OptionStatus::kOk)
+        return false;
+    }
+
+    if (result.count(kWriteModelFileString)) {
+      auto& v = result[kWriteModelFileString].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        std::cout << "Multiple write model files not implemented.\n";
+        return false;
+      }
+      if (setLocalOptionValue(report_log_options, kWriteModelFileString,
+                              options.log_options, options.records,
+                              v[0]) != OptionStatus::kOk ||
+          setLocalOptionValue(report_log_options, "write_model_to_file",
                               options.records, true) != OptionStatus::kOk)
         return false;
     }
