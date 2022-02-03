@@ -3609,6 +3609,15 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
   LocalDomChg startPos =
       LocalDomChg{depthLevel == 0 ? 0 : localdom.branchPos_[depthLevel - 1] + 1,
                   HighsDomainChange()};
+  while (depthLevel < localdom.branchPos_.size()) {
+    HighsInt branchPos = localdom.branchPos_[depthLevel];
+    if (localdom.domchgstack_[branchPos].boundval !=
+        localdom.prevboundval_[branchPos].first)
+      break;
+    // printf("skipping redundant depth\n");
+    ++depthLevel;
+  }
+
   auto iterEnd =
       depthLevel == localdom.branchPos_.size()
           ? frontier.end()
