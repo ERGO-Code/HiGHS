@@ -359,7 +359,6 @@ struct HighsOptionsStruct {
 #endif
 
   // Logging callback identifiers
-  void (*printmsgcb)(HighsInt level, const char* msg, void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsLogType type, const char* msg, void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
   HighsLogOptions log_options;

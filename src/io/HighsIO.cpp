@@ -22,7 +22,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-static void (*printmsgcb)(HighsInt, const char*, void*) = NULL;
 static void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
 static void* msgcb_data = NULL;
 
@@ -123,9 +122,10 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       if (flush_streams) fflush(stdout);
     }
   } else {
-    int len;
-    len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
-                   HighsLogTypeTag[(int)type]);
+    int len = 0;
+    if (prefix)
+      len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
+                     HighsLogTypeTag[(int)type]);
     if (len < (int)sizeof(msgbuffer))
       len +=
           vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
@@ -196,18 +196,14 @@ void highsReportDevInfo(const HighsLogOptions* log_options,
   }
 }
 
-void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
-                                             void* msgcb_data),
-                         void (*logmsgcb_)(HighsLogType type, const char* msg,
+void highsSetLogCallback(void (*logmsgcb_)(HighsLogType type, const char* msg,
                                            void* msgcb_data),
                          void* msgcb_data_) {
-  printmsgcb = printmsgcb_;
   logmsgcb = logmsgcb_;
   msgcb_data = msgcb_data_;
 }
 
 void highsSetLogCallback(HighsOptions& options) {
-  printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
 }

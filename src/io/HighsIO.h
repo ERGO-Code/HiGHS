@@ -72,13 +72,11 @@ void highsReportDevInfo(const HighsLogOptions* log_options,
                         const std::string line);
 
 /*
- * @brief sets the callbacks used to print output and and log
+ * @brief sets the callbacks used to log output
  *
- * Set to NULL to reset to default, which is to print to logfile and output file
+ * Set to NULL to reset to default, which is to print to logfile
  */
-void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
-                                             void* msgcb_data),
-                         void (*logmsgcb_)(HighsLogType type, const char* msg,
+void highsSetLogCallback(void (*logmsgcb_)(HighsLogType type, const char* msg,
                                            void* msgcb_data),
                          void* msgcb_data_);
 
