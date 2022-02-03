@@ -10,7 +10,7 @@ const bool dev_run = false;
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
   HighsLogOptions report_log_options = options.log_options;
-  options.output_flag = false;
+  if (!dev_run) options.output_flag = false;
   OptionStatus return_status =
       checkOptions(report_log_options, options.records);
   REQUIRE(return_status == OptionStatus::kOk);
