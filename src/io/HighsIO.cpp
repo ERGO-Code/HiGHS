@@ -25,8 +25,6 @@
 static void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
 static void* msgcb_data = NULL;
 
-static char msgbuffer[65536];
-
 std::array<char, 32> highsDoubleToString(double val, double tolerance) {
   std::array<char, 32> printString;
   double l =
@@ -123,6 +121,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
     }
   } else {
     int len = 0;
+    char msgbuffer[65536];
     if (prefix)
       len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
                      HighsLogTypeTag[(int)type]);
@@ -177,6 +176,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     }
   } else {
     int len;
+    char msgbuffer[65536];
     len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
     if (len >= (int)sizeof(msgbuffer)) {
       // Output was truncated: for now just ensure string is null-terminated
@@ -230,14 +230,16 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
 std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  int len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+  int len;
+  char msgbuffer[65536];
+  len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+
   if (len >= (int)sizeof(msgbuffer)) {
     // Output was truncated: for now just ensure string is null-terminated
     msgbuffer[sizeof(msgbuffer) - 1] = '\0';
   }
   va_end(argptr);
-  std::string local_string(msgbuffer);
-  return local_string;
+  return std::string(msgbuffer);
 }
 
 const std::string highsBoolToString(const bool b) {
