@@ -99,7 +99,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.logmsgcb) {
+  if (!log_options_.log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
       if (prefix)
@@ -129,7 +129,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.logmsgcb(type, msgbuffer, log_options_.msgcb_data);
+    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
   }
   va_end(argptr);
 }
@@ -157,7 +157,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.logmsgcb) {
+  if (!log_options_.log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
       // Write to log file stream
@@ -179,7 +179,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.logmsgcb(type, msgbuffer, log_options_.msgcb_data);
+    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
   }
   va_end(argptr);
 }

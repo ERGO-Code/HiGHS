@@ -3894,7 +3894,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "\nPresolving model\n");
+                   "Presolving model\n");
 
     auto report = [&]() {
       if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {

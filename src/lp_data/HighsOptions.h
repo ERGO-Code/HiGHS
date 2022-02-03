@@ -944,8 +944,8 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;
-    log_options.logmsgcb = nullptr;
-    log_options.msgcb_data = nullptr;
+    log_options.log_callback = nullptr;
+    log_options.log_callback_data = nullptr;
   }
 
   void deleteRecords() {

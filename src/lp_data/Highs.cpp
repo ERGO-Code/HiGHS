@@ -1430,11 +1430,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setLogMessageCallback(void (*logmsgcb)(HighsLogType,
-                                                          const char*, void*),
-                                         void* msgcb_data) {
-  options_.log_options.logmsgcb = logmsgcb;
-  options_.log_options.msgcb_data = msgcb_data;
+HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
+                                                       const char*, void*),
+                                  void* log_callback_data) {
+  options_.log_options.log_callback = log_callback;
+  options_.log_options.log_callback_data = log_callback_data;
   return HighsStatus::kOk;
 }
 

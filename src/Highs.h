@@ -881,12 +881,11 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Sets the callback and callback user data that HiGHS will use for log
-   * messages
+   * @brief Sets the callback method and user data to use for logging
    */
-  HighsStatus setLogMessageCallback(void (*logmsgcb)(HighsLogType, const char*,
-                                                     void*),
-                                    void* msgcb_data = nullptr);
+  HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
+                                                  void*),
+                             void* log_callback_data = nullptr);
 
   /**
    * @brief Uses the HighsBasis passed to set basis_
