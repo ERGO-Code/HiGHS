@@ -1047,26 +1047,17 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
   if (domain->infeasible_) return;
   HighsCDouble lowerFromScratch = 0.0;
   HighsInt numInf = 0;
-  for (HighsInt i : objFunc->getObjectiveNonzeros()) {
-    if (objFunc->getColCliquePartition(i) != -1) continue;
-    if (cost[i] > 0) {
-      if (domain->col_lower_[i] > -kHighsInf)
-        lowerFromScratch += domain->col_lower_[i] * cost[i];
-      else
-        ++numInf;
-    } else {
-      if (domain->col_upper_[i] < kHighsInf)
-        lowerFromScratch += domain->col_upper_[i] * cost[i];
-      else
-        ++numInf;
-    }
-  }
-  for (HighsInt i = 0; i < objFunc->getNumCliquePartitions(); ++i) {
-    HighsInt start = objFunc->getCliquePartitionStarts()[i];
-    HighsInt end = objFunc->getCliquePartitionStarts()[i + 1];
+  const HighsInt numPartitions = objFunc->getNumCliquePartitions();
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+  const auto& objNonzeros = objFunc->getObjectiveNonzeros();
+
+  const HighsInt numObjNzs = objNonzeros.size();
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    HighsInt start = partitionStarts[i];
+    HighsInt end = partitionStarts[i + 1];
     double largest = 0.0;
     for (HighsInt j = start; j < end; ++j) {
-      HighsInt c = objFunc->getObjectiveNonzeros()[j];
+      HighsInt c = objNonzeros[j];
       if (cost[c] > 0) {
         lowerFromScratch += cost[c];
 
@@ -1076,6 +1067,21 @@ void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
       }
     }
     lowerFromScratch -= largest;
+  }
+
+  for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
+    HighsInt col = objNonzeros[i];
+    if (cost[col] > 0) {
+      if (domain->col_lower_[col] > -kHighsInf)
+        lowerFromScratch += domain->col_lower_[col] * cost[col];
+      else
+        ++numInf;
+    } else {
+      if (domain->col_upper_[col] < kHighsInf)
+        lowerFromScratch += domain->col_upper_[col] * cost[col];
+      else
+        ++numInf;
+    }
   }
   assert(std::fabs(double(lowerFromScratch - objectiveLower)) <=
          domain->feastol());
@@ -1097,7 +1103,6 @@ void HighsDomain::ObjectivePropagation::propagate() {
   }
 
   const auto& objNonzeros = objFunc->getObjectiveNonzeros();
-  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
 
   HighsCDouble capacity = upperLimit - objectiveLower;
   if (numInfObjLower == 1) {
@@ -1176,8 +1181,11 @@ void HighsDomain::ObjectivePropagation::propagate() {
       }
 
       if (domain->infeasible_) break;
-      for (HighsInt col : objNonzeros) {
-        if (objFunc->getColCliquePartition(col) != -1) continue;
+
+      const HighsInt numObjNzs = objNonzeros.size();
+      for (HighsInt i = objFunc->getCliquePartitionStarts()[numPartitions];
+           i < numObjNzs; ++i) {
+        HighsInt col = objNonzeros[i];
 
         if (cost[col] > 0) {
           bool accept;
