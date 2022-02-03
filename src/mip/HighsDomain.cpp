@@ -2569,8 +2569,18 @@ void HighsDomain::conflictAnalyzeReconvergence(
   conflictSet.reconvergenceFrontier.insert(
       conflictSet.resolvedDomainChanges.begin(),
       conflictSet.resolvedDomainChanges.end());
-  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, branchPos_.size(),
-                           0);
+
+  HighsInt depth = branchPos_.size();
+
+  while (depth > 0) {
+    HighsInt branchPos = branchPos_[depth - 1];
+    if (domchgstack_[branchPos].boundval != prevboundval_[branchPos].first)
+      break;
+
+    --depth;
+  }
+
+  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, depth, 0);
   conflictPool.addReconvergenceCut(*this, conflictSet.reconvergenceFrontier,
                                    domchg);
 }
@@ -3623,10 +3633,14 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
           ? frontier.end()
           : frontier.upper_bound(LocalDomChg{localdom.branchPos_[depthLevel],
                                              HighsDomainChange()});
+  bool empty = true;
   for (auto it = frontier.lower_bound(startPos); it != iterEnd; ++it) {
     assert(it != frontier.end());
+    empty = false;
     if (resolvable(it->pos)) pushQueue(it);
   }
+
+  if (empty) return -1;
 
   HighsInt numResolved = 0;
 
@@ -3683,9 +3697,9 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
   HighsInt numResolved =
       resolveDepth(reasonSideFrontier, depthLevel, 1,
                    depthLevel == localdom.branchPos_.size() ? 1 : 0, true);
-
+  if (numResolved == -1) return -1;
   HighsInt numConflicts = 0;
-  if (numResolved != 0) {
+  if (numResolved > 0) {
     // add conflict cut
     localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
         reasonSideFrontier, localdom.domchgstack_);
@@ -3705,7 +3719,7 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
     reconvergenceFrontier.insert(uip);
     HighsInt numResolved = resolveDepth(reconvergenceFrontier, depthLevel, 0);
 
-    if (numResolved != 0 && reconvergenceFrontier.count(uip) == 0) {
+    if (numResolved > 0 && reconvergenceFrontier.count(uip) == 0) {
       localdom.mipsolver->mipdata_->debugSolution
           .checkConflictReconvergenceFrontier(reconvergenceFrontier, uip,
                                               localdom.domchgstack_);
@@ -3745,6 +3759,7 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
+  // printf("start conflict analysis\n");
   for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
        --currDepth) {
     if (currDepth > 0) {
@@ -3755,8 +3770,12 @@ void HighsDomain::ConflictSet::conflictAnalysis(
           localdom.prevboundval_[branchpos].first)
         continue;
     }
-    numConflicts += computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    // if the depth level was empty, do not consider it
+    if (numNewConflicts == -1) continue;
+    numConflicts += numNewConflicts;
 
+    //    printf("depth %d: %d conflicts\n", currDepth, numConflicts);
     if (numConflicts == 0) break;
   }
 }
@@ -3809,7 +3828,10 @@ void HighsDomain::ConflictSet::conflictAnalysis(
           localdom.prevboundval_[branchpos].first)
         continue;
     }
-    numConflicts += computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    // if the depth level was empty, do not consider it
+    if (numNewConflicts == -1) continue;
+    numConflicts += numNewConflicts;
 
     // at least in the highest depth level conflicts must be found, otherwise
     // we can immediately stop
