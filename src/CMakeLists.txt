@@ -305,13 +305,6 @@ set(headers
     interfaces/highs_c_api.h
 )
 
-if (GAMS_FOUND)
-    set(sources ${sources} interfaces/GAMS.cpp)
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gmomcc.c")
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gevmcc.c")
-    include_directories(${GAMS_ROOT}/apifiles/C/api)
-endif()
-
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
@@ -327,14 +320,6 @@ add_library(libhighs ${sources})
 
 if (IPX_ON)
     target_link_libraries(libhighs libipx)
-endif()
-
-if (GAMS_FOUND)
-    # todo replace by adding ${GAMS_ROOT}/apifiles/C/api/gcmt.c to ${sources} if present above
-    target_compile_definitions(libhighs PUBLIC GC_NO_MUTEX)
-    if (UNIX)
-        target_link_libraries(libhighs dl)
-    endif()
 endif()
 
 if(${BUILD_SHARED_LIBS})
