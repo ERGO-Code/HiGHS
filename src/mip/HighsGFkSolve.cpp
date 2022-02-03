@@ -12,6 +12,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsGFkSolve.h"
 
+#include <cassert>
+
 #include "util/HighsSplay.h"
 
 void HighsGFkSolve::link(HighsInt pos) {
@@ -56,6 +58,7 @@ void HighsGFkSolve::unlink(HighsInt pos) {
 void HighsGFkSolve::storeRowPositions(HighsInt pos) {
   if (pos == -1) return;
 
+  assert(iterstack.empty());
   iterstack.push_back(pos);
   do {
     pos = iterstack.back();
