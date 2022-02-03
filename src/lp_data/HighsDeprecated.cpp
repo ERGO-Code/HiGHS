@@ -107,6 +107,13 @@ HighsStatus Highs::setHighsLogfile(FILE* logfile) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::setHighsLogMessageCallback(
+    void (*logmsgcb)(HighsLogType, const char*, void*), void* msgcb_data) {
+  options_.log_options.logmsgcb = logmsgcb;
+  options_.log_options.msgcb_data = msgcb_data;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setHighsOutput(FILE* output) {
   deprecationMessage("setHighsOutput", "None");
   options_.output_flag = false;

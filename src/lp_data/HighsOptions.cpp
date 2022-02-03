@@ -902,6 +902,4 @@ void HighsOptions::setLogOptions() {
   this->log_options.output_flag = &this->output_flag;
   this->log_options.log_to_console = &this->log_to_console;
   this->log_options.log_dev_level = &this->log_dev_level;
-  this->log_options.logmsgcb = this->logmsgcb;
-  this->log_options.msgcb_data = this->msgcb_data;
 }
