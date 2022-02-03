@@ -1430,6 +1430,14 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::setLogMessageCallback(void (*logmsgcb)(HighsLogType,
+                                                          const char*, void*),
+                                         void* msgcb_data) {
+  options_.log_options.logmsgcb = logmsgcb;
+  options_.log_options.msgcb_data = msgcb_data;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be

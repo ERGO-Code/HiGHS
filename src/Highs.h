@@ -881,6 +881,14 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
+   * @brief Sets the callback and callback user data that HiGHS will use for log
+   * messages
+   */
+  HighsStatus setLogMessageCallback(void (*logmsgcb)(HighsLogType, const char*,
+                                                     void*),
+                                    void* msgcb_data = nullptr);
+
+  /**
    * @brief Uses the HighsBasis passed to set basis_
    */
   HighsStatus setBasis(const HighsBasis& basis, const std::string origin = "");
@@ -1073,10 +1081,6 @@ class Highs {
   }
 
   HighsStatus setHighsLogfile(FILE* logfile = nullptr);
-
-  HighsStatus setHighsLogMessageCallback(void (*logmsgcb)(HighsLogType,
-                                                          const char*, void*),
-                                         void* msgcb_data = nullptr);
 
   HighsStatus setHighsOutput(FILE* output = nullptr);
 
