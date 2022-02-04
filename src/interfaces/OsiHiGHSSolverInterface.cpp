@@ -26,26 +26,11 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 
-static void printtomessagehandler(HighsInt level, const char* msg,
-                                  void* msgcb_data) {
-  assert(msgcb_data != NULL);
-
-  CoinMessageHandler* handler = (CoinMessageHandler*)msgcb_data;
-
-  HighsInt len = strlen(msg);
-  if (len > 0 && msg[len - 1] == '\n') {
-    const_cast<char*>(msg)[len - 1] = '\0';
-    handler->message(0, "HiGHS", msg, ' ') << CoinMessageEol;
-    const_cast<char*>(msg)[len - 1] = '\n';
-  } else
-    handler->message(0, "HiGHS", msg, ' ');
-}
-
 static void logtomessagehandler(HighsLogType type, const char* msg,
-                                void* msgcb_data) {
-  assert(msgcb_data != NULL);
+                                void* log_callback_data) {
+  assert(log_callback_data != NULL);
 
-  CoinMessageHandler* handler = (CoinMessageHandler*)msgcb_data;
+  CoinMessageHandler* handler = (CoinMessageHandler*)log_callback_data;
 
   // we know log message end with a newline, replace by coin-eol
   HighsInt len = strlen(msg);
@@ -61,20 +46,14 @@ static void logtomessagehandler(HighsLogType type, const char* msg,
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
     //  : status(HighsStatus::Init) {
     : status(HighsStatus::kOk) {
-  highsSetLogCallback(printtomessagehandler, logtomessagehandler,
-                      (void*)handler_);
-
   this->highs = new Highs();
+
+  this->highs->setLogCallback(logtomessagehandler, (void*)handler_);
+
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->dummy_solution = new HighsSolution;
-
-  // Because HiGHS calls highsSetLogCallback with the options, which overwrites
-  // the previous setting
-  this->highs->options_.printmsgcb = printtomessagehandler;
-  this->highs->options_.logmsgcb = logtomessagehandler;
-  this->highs->options_.msgcb_data = (void*)handler_;
 
   setStrParam(OsiSolverName, "HiGHS");
 }
@@ -84,20 +63,14 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
     : OsiSolverInterface(original),
       //      status(HighsStatus::Init)
       status(HighsStatus::kOk) {
-  highsSetLogCallback(printtomessagehandler, logtomessagehandler,
-                      (void*)handler_);
-
   this->highs = new Highs();
+
+  this->highs->setLogCallback(logtomessagehandler, (void*)handler_);
+
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->dummy_solution = new HighsSolution;
-
-  // Because HiGHS calls highsSetLogCallback with the options, whichoverwrites
-  // the previous setting
-  this->highs->options_.printmsgcb = printtomessagehandler;
-  this->highs->options_.logmsgcb = logtomessagehandler;
-  this->highs->options_.msgcb_data = (void*)handler_;
 
   this->highs->passModel(original.highs->getLp());
   setStrParam(OsiSolverName, "HiGHS");
@@ -108,7 +81,7 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface()\n");
 
-  highsSetLogCallback(NULL, NULL, NULL);
+  this->highs->setLogCallback(NULL, NULL, NULL);
 
   delete this->highs;
 
@@ -919,14 +892,7 @@ void OsiHiGHSSolverInterface::passInMessageHandler(
     CoinMessageHandler* handler) {
   OsiSolverInterface::passInMessageHandler(handler);
 
-  highsSetLogCallback(printtomessagehandler, logtomessagehandler,
-                      (void*)handler);
-
-  // Because HiGHS calls highsSetLogCallback with the options,
-  // which overwrites the previous setting
-  this->highs->options_.printmsgcb = printtomessagehandler;
-  this->highs->options_.logmsgcb = logtomessagehandler;
-  this->highs->options_.msgcb_data = (void*)handler_;
+  this->highs->setLogCallback(logtomessagehandler, (void*)handler);
 }
 
 const double* OsiHiGHSSolverInterface::getColSolution() const {

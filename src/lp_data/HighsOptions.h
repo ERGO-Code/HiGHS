@@ -362,9 +362,6 @@ struct HighsOptionsStruct {
 #endif
 
   // Logging callback identifiers
-  void (*printmsgcb)(HighsInt level, const char* msg, void* msgcb_data) = NULL;
-  void (*logmsgcb)(HighsLogType type, const char* msg, void* msgcb_data) = NULL;
-  void* msgcb_data = NULL;
   HighsLogOptions log_options;
   virtual ~HighsOptionsStruct() {}
 };
@@ -960,6 +957,8 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;
+    log_options.log_callback = nullptr;
+    log_options.log_callback_data = nullptr;
   }
 
   void deleteRecords() {
