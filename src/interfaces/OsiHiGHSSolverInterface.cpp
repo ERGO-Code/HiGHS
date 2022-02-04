@@ -81,7 +81,7 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface()\n");
 
-  this->highs->setLogCallback(NULL, NULL, NULL);
+  this->highs->setLogCallback(NULL, NULL);
 
   delete this->highs;
 
