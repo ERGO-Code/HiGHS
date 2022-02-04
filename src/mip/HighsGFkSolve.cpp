@@ -12,6 +12,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsGFkSolve.h"
 
+#include <cassert>
+
 #include "util/HighsSplay.h"
 
 void HighsGFkSolve::link(HighsInt pos) {
@@ -56,10 +58,18 @@ void HighsGFkSolve::unlink(HighsInt pos) {
 void HighsGFkSolve::storeRowPositions(HighsInt pos) {
   if (pos == -1) return;
 
-  storeRowPositions(ARleft[pos]);
-  rowpositions.push_back(pos);
-  rowposColsizes.push_back(colsize[Acol[pos]]);
-  storeRowPositions(ARright[pos]);
+  assert(iterstack.empty());
+  iterstack.push_back(pos);
+  do {
+    pos = iterstack.back();
+    iterstack.pop_back();
+
+    rowpositions.push_back(pos);
+    rowposColsizes.push_back(colsize[Acol[pos]]);
+
+    if (ARleft[pos] != -1) iterstack.push_back(ARleft[pos]);
+    if (ARright[pos] != -1) iterstack.push_back(ARright[pos]);
+  } while (!iterstack.empty());
 }
 
 HighsInt HighsGFkSolve::findNonzero(HighsInt row, HighsInt col) {
