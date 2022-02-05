@@ -305,13 +305,6 @@ set(headers
     interfaces/highs_c_api.h
 )
 
-if (GAMS_FOUND)
-    set(sources ${sources} interfaces/GAMS.cpp)
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gmomcc.c")
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gevmcc.c")
-    include_directories(${GAMS_ROOT}/apifiles/C/api)
-endif()
-
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
@@ -335,10 +328,14 @@ if(${BUILD_SHARED_LIBS})
         VERSION 
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
+    if(MINGW)
+        target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+    endif()
 else()
     # create static highs library with pic
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 # on UNIX system the 'lib' prefix is automatically added
@@ -506,6 +503,9 @@ add_library(libhighs)
 
 if (NOT ${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+elseif(MINGW)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 target_sources(libhighs PRIVATE

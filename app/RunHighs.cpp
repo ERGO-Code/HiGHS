@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
   //
   // Solve the model
   HighsStatus run_status = highs.run();
+  if (run_status == HighsStatus::kError) return 1;  // todo: change to run error
+  //
 
   // Possibly compute the ranging information
   if (options.ranging == kHighsOnString) highs.getRanging();
@@ -64,6 +66,13 @@ int main(int argc, char** argv) {
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
     highs.writeSolution(options.solution_file, options.write_solution_style);
+
+  // Possibly write the model to a file
+  if (options.write_model_to_file) {
+    HighsStatus write_model_status = highs.writeModel(options.write_model_file);
+    if (write_model_status == HighsStatus::kError)
+      return 1;  // todo: change to write model error
+  }
 
   return (int)run_status;
 }
@@ -74,7 +83,7 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options) {
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
                (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Copyright (c) 2021 ERGO-Code under MIT licence terms\n");
+               "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
 }
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,

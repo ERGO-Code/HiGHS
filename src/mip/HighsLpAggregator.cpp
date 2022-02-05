@@ -37,8 +37,16 @@ void HighsLpAggregator::getCurrentAggregation(std::vector<HighsInt>& inds,
                                               bool negate) {
   const double droptol =
       lprelaxation.getMipSolver().options_mip_->small_matrix_value;
-  vectorsum.cleanup(
-      [droptol](HighsInt col, double val) { return std::abs(val) <= droptol; });
+  const HighsInt numCol = lprelaxation.numCols();
+  vectorsum.cleanup([droptol, numCol](HighsInt col, double val) {
+    // only drop values for columns and not for slack variables of rows as the
+    // former are the only ones which might be subject to numerical error. The
+    // values for row slack variables are exact copies of the weights used
+    // (assuming that separators only add each row once). Also all the
+    // separators will only allow rows that do have meaningful coefficient
+    // contributions with the used weight
+    return col < numCol && std::fabs(val) <= droptol;
+  });
 
   inds = vectorsum.getNonzeros();
   HighsInt len = inds.size();

@@ -352,8 +352,8 @@ struct HighsHashHelpers {
     // make sure input value is never zero and at most 31bits are used
     value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
 
-    // make sure that the constant has at most 61 bits, as otherwise the modulo
-    // algorithm for multiplication mod M61 might not work properly due to
+    // make sure that the constant has at most 31 bits, as otherwise the modulo
+    // algorithm for multiplication mod M31 might not work properly due to
     // overflow
     u32 a = c[index & 63] & M31();
     HighsInt degree = (index >> 6) + 1;
@@ -378,7 +378,7 @@ struct HighsHashHelpers {
 
     u32 a = c[index & 63] & M31();
     HighsInt degree = (index >> 6) + 1;
-    // add the additive inverse (M61() - hashvalue) instead of the hash value
+    // add the additive inverse (M31() - hashvalue) instead of the hash value
     // itself
     hash += M31() - multiply_modM31(value, modexp_M31(a, degree));
     hash = (hash >> 31) + (hash & M31());
