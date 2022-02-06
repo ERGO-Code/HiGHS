@@ -1550,6 +1550,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
 void HighsMipSolverData::checkObjIntegrality() {
   objintscale = 600.0;
 
+  objectiveFunction.checkIntegrality(epsilon);
+
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     if (mipsolver.colCost(i) == 0.0) continue;
 
@@ -1581,10 +1583,17 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    if (numRestarts == 0)
+    if (numRestarts == 0) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "Objective function is integral with scale %g\n",
                    objintscale);
+      objectiveFunction.checkIntegrality(epsilon);
+      printf("objective int. scale is currently %g, new %g\n", objintscale,
+             objectiveFunction.integralScale());
+    }
+  } else if (objectiveFunction.integralScale() != 0.0) {
+    printf("objective int. scale is currently %g, new %g\n", objintscale,
+           objectiveFunction.integralScale());
   }
 }
 
