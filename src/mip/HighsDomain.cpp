@@ -784,9 +784,9 @@ void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
     if (domain->isFixed(objectiveLowerContributions[worstPos].col)) continue;
 
     double contribution = objectiveLowerContributions[worstPos].contribution;
-    HighsInt nextPos = contributionTree.successor(worstPos);
-    if (nextPos != -1)
-      contribution -= objectiveLowerContributions[nextPos].contribution;
+    HighsInt bestPos = contributionTree.last();
+    if (bestPos != worstPos)
+      contribution -= objectiveLowerContributions[bestPos].contribution;
 
     capacityThreshold =
         std::max(capacityThreshold, contribution * (1.0 - domain->feastol()));
@@ -854,29 +854,45 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
     if (newbound == 0.0) {
       assert(oldbound == 1.0);
       // binary lower bound of variable in clique partition is relaxed to 0
-      // if we are still in the heap there is nothing to update
       HighsInt partition = objectiveLowerContributions[partitionPos].partition;
       ObjectiveContributionTree contributionTree(this, partition);
       HighsInt currFirst = contributionTree.first();
 
       contributionTree.link(partitionPos);
 
-      if (currFirst != contributionTree.first()) {
-        double oldContribution = 0.0;
-        if (currFirst != -1)
-          oldContribution = objectiveLowerContributions[currFirst].contribution;
-        if (objectiveLowerContributions[partitionPos].contribution !=
-            oldContribution) {
-          objectiveLower += oldContribution;
-          objectiveLower -=
-              objectiveLowerContributions[partitionPos].contribution;
-          capacityThreshold =
-              std::max((objectiveLowerContributions[partitionPos].contribution -
-                        oldContribution) *
-                           (1.0 - domain->feastol()),
-                       capacityThreshold);
-        }
+      double oldContribution = 0.0;
+      if (currFirst != -1)
+        oldContribution = objectiveLowerContributions[currFirst].contribution;
+
+      if (partitionPos == contributionTree.first() &&
+          objectiveLowerContributions[partitionPos].contribution !=
+              oldContribution) {
+        objectiveLower += oldContribution;
+        objectiveLower -=
+            objectiveLowerContributions[partitionPos].contribution;
+
+        // update the capacity threshold with the difference of the new highest
+        // contribution position to the lowest consitribution as the column with
+        // the lowest contribution can be fixed to its bound that yields the
+        // highest objective value.
+        HighsInt bestPos = contributionTree.last();
+        double delta = objectiveLowerContributions[partitionPos].contribution;
+        if (bestPos != partitionPos)
+          delta -= objectiveLowerContributions[bestPos].contribution;
+        capacityThreshold =
+            std::max(delta * (1.0 - domain->feastol()), capacityThreshold);
+      } else {
+        // the new linked column could be the one with the new lowest
+        // contribution so update the capacity threshold to ensure propagation
+        // runs when it can be fixed to the bound that yields the highest
+        // objective value
+        capacityThreshold =
+            std::max((oldContribution -
+                      objectiveLowerContributions[partitionPos].contribution) *
+                         (1.0 - domain->feastol()),
+                     capacityThreshold);
       }
+
       debugCheckObjectiveLower();
     } else {
       // binary lower bound of variable in clique partition is tightened to 1
@@ -892,18 +908,10 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
 
       contributionTree.unlink(partitionPos);
 
-      double newContribution;
-      HighsInt newWorst = contributionTree.first();
-      if (newWorst != -1) {
-        if (wasFirst)
+      if (wasFirst) {
+        HighsInt newWorst = contributionTree.first();
+        if (newWorst != -1)
           objectiveLower -= objectiveLowerContributions[newWorst].contribution;
-        double delta = objectiveLowerContributions[newWorst].contribution;
-        HighsInt secondWorst = contributionTree.successor(newWorst);
-        if (secondWorst != -1)
-          delta -= objectiveLowerContributions[secondWorst].contribution;
-
-        capacityThreshold =
-            std::max(delta * (1.0 - domain->feastol()), capacityThreshold);
       }
 
       debugCheckObjectiveLower();
@@ -967,29 +975,45 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
     if (newbound == 1.0) {
       assert(oldbound == 0.0);
       // binary upper bound of variable in clique partition is relaxed to 1
-      // if we are still in the heap there is nothing to update
       HighsInt partition = objectiveLowerContributions[partitionPos].partition;
       ObjectiveContributionTree contributionTree(this, partition);
       HighsInt currFirst = contributionTree.first();
 
       contributionTree.link(partitionPos);
 
-      if (currFirst != contributionTree.first()) {
-        double oldContribution = 0.0;
-        if (currFirst != -1)
-          oldContribution = objectiveLowerContributions[currFirst].contribution;
-        if (objectiveLowerContributions[partitionPos].contribution !=
-            oldContribution) {
-          objectiveLower += oldContribution;
-          objectiveLower -=
-              objectiveLowerContributions[partitionPos].contribution;
-          capacityThreshold =
-              std::max((objectiveLowerContributions[partitionPos].contribution -
-                        oldContribution) *
-                           (1.0 - domain->feastol()),
-                       capacityThreshold);
-        }
+      double oldContribution = 0.0;
+      if (currFirst != -1)
+        oldContribution = objectiveLowerContributions[currFirst].contribution;
+
+      if (partitionPos == contributionTree.first() &&
+          objectiveLowerContributions[partitionPos].contribution !=
+              oldContribution) {
+        objectiveLower += oldContribution;
+        objectiveLower -=
+            objectiveLowerContributions[partitionPos].contribution;
+
+        // update the capacity threshold with the difference of the new highest
+        // contribution position to the lowest consitribution as the column with
+        // the lowest contribution can be fixed to its bound that yields the
+        // highest objective value.
+        HighsInt bestPos = contributionTree.last();
+        double delta = objectiveLowerContributions[partitionPos].contribution;
+        if (bestPos != partitionPos)
+          delta -= objectiveLowerContributions[bestPos].contribution;
+        capacityThreshold =
+            std::max(delta * (1.0 - domain->feastol()), capacityThreshold);
+      } else {
+        // the new linked column could be the one with the new lowest
+        // contribution so update the capacity threshold to ensure propagation
+        // runs when it can be fixed to the bound that yields the highest
+        // objective valueu
+        capacityThreshold =
+            std::max((oldContribution -
+                      objectiveLowerContributions[partitionPos].contribution) *
+                         (1.0 - domain->feastol()),
+                     capacityThreshold);
       }
+
       debugCheckObjectiveLower();
     } else {
       // binary upper bound of variable in clique partition is tightened to 0
@@ -1004,18 +1028,10 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
 
       contributionTree.unlink(partitionPos);
 
-      double newContribution;
-      HighsInt newWorst = contributionTree.first();
-      if (newWorst != -1) {
-        if (wasFirst)
+      if (wasFirst) {
+        HighsInt newWorst = contributionTree.first();
+        if (newWorst != -1)
           objectiveLower -= objectiveLowerContributions[newWorst].contribution;
-        double delta = objectiveLowerContributions[newWorst].contribution;
-        HighsInt secondWorst = contributionTree.successor(newWorst);
-        if (secondWorst != -1)
-          delta -= objectiveLowerContributions[secondWorst].contribution;
-
-        capacityThreshold =
-            std::max(delta * (1.0 - domain->feastol()), capacityThreshold);
       }
 
       debugCheckObjectiveLower();
@@ -1176,6 +1192,37 @@ void HighsDomain::ObjectivePropagation::propagate() {
                                   Reason::objective());
               if (domain->infeasible_) break;
             }
+          }
+        } else if (secondWorst != -1) {
+          // it might be that we can the column with the lowest possible
+          // contribution to its bound value that yields the highest objective
+          // contribution.
+          HighsInt next = contributionTree.last();
+          while (next != secondWorst) {
+            // difference to the column with the highest contribution is the
+            // objective increase when fixing the column to its bound with the
+            // lowest objective contribution. Due to the clique information that
+            // means the current column with the highest contribution will
+            // contribute with its worst bound.
+            if (objectiveLowerContributions[worst].contribution -
+                    objectiveLowerContributions[next].contribution >
+                capacity) {
+              HighsInt col = objectiveLowerContributions[worst].col;
+              if (cost[col] > 0) {
+                assert(domain->col_lower_[col] < 1.0);
+                domain->changeBound(HighsBoundType::kLower, col, 1.0,
+                                    Reason::objective());
+                if (domain->infeasible_) break;
+              } else {
+                assert(domain->col_upper_[col] > 0.0);
+                domain->changeBound(HighsBoundType::kUpper, col, 0.0,
+                                    Reason::objective());
+                if (domain->infeasible_) break;
+              }
+            } else
+              break;
+
+            next = contributionTree.predecessor(next);
           }
         }
       }
