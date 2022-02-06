@@ -1197,17 +1197,18 @@ void HighsDomain::ObjectivePropagation::propagate() {
           // it might be that we can the column with the lowest possible
           // contribution to its bound value that yields the highest objective
           // contribution.
-          HighsInt next = contributionTree.last();
-          while (next != secondWorst) {
+          HighsInt best = contributionTree.last();
+          while (best != contributionTree.first()) {
             // difference to the column with the highest contribution is the
             // objective increase when fixing the column to its bound with the
             // lowest objective contribution. Due to the clique information that
             // means the current column with the highest contribution will
             // contribute with its worst bound.
-            if (objectiveLowerContributions[worst].contribution -
-                    objectiveLowerContributions[next].contribution >
+            if (objectiveLowerContributions[contributionTree.first()]
+                        .contribution -
+                    objectiveLowerContributions[best].contribution >
                 capacity) {
-              HighsInt col = objectiveLowerContributions[worst].col;
+              HighsInt col = objectiveLowerContributions[best].col;
               if (cost[col] > 0) {
                 assert(domain->col_lower_[col] < 1.0);
                 domain->changeBound(HighsBoundType::kLower, col, 1.0,
@@ -1222,8 +1223,10 @@ void HighsDomain::ObjectivePropagation::propagate() {
             } else
               break;
 
-            next = contributionTree.predecessor(next);
+            best = contributionTree.last();
           }
+
+          if (domain->infeasible_) break;
         }
       }
 

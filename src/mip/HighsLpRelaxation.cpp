@@ -709,8 +709,8 @@ void HighsLpRelaxation::recoverBasis() {
 
 void HighsLpRelaxation::setObjectiveLimit(double objlim) {
   double offset;
-  if (mipsolver.mipdata_->objintscale != 0.0)
-    offset = 0.5 / mipsolver.mipdata_->objintscale;
+  if (mipsolver.mipdata_->objectiveFunction.isIntegral())
+    offset = 0.5 / mipsolver.mipdata_->objectiveFunction.integralScale();
   else
     offset = std::max(1000.0 * mipsolver.mipdata_->feastol,
                       std::abs(objlim) * kHighsTiny);

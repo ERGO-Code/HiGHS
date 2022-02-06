@@ -436,11 +436,12 @@ void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   dual_bound_ = mipdata_->lower_bound;
-  if (mipdata_->objintscale != 0.0) {
+  if (mipdata_->objectiveFunction.isIntegral()) {
     double rounded_lower_bound =
-        std::ceil(mipdata_->lower_bound * mipdata_->objintscale -
+        std::ceil(mipdata_->lower_bound *
+                      mipdata_->objectiveFunction.integralScale() -
                   mipdata_->feastol) /
-        mipdata_->objintscale;
+        mipdata_->objectiveFunction.integralScale();
     dual_bound_ = std::max(dual_bound_, rounded_lower_bound);
   }
   dual_bound_ += model_->offset_;

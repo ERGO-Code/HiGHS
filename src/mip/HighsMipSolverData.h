@@ -74,8 +74,6 @@ struct HighsMipSolverData {
   HighsSymmetries symmetries;
   std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
-  double objintscale;
-
   double feastol;
   double epsilon;
   double heuristic_effort;
