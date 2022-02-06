@@ -625,11 +625,11 @@ double HighsMipSolverData::transformNewIncumbent(
     const std::vector<double>& sol) {
   HighsSolution solution;
   solution.col_value = sol;
-  calculateRowValues(*mipsolver.model_, solution);
+  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   solution.value_valid = true;
 
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
-  calculateRowValues(*mipsolver.orig_model_, solution);
+  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   bool allow_try_again = true;
 try_again:
 
@@ -672,7 +672,7 @@ try_again:
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
       row_violation_ <=
-          mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+          mipsolver.options_mip_->mip_feasibility_tolerance;
 
   if (!feasible && allow_try_again) {
     // printf(
