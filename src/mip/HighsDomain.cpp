@@ -3824,9 +3824,6 @@ void HighsDomain::ConflictSet::conflictAnalysis(
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) continue;
     numConflicts += numNewConflicts;
-
-    //    printf("depth %d: %d conflicts\n", currDepth, numConflicts);
-    if (numConflicts == 0) break;
   }
 }
 
@@ -3882,9 +3879,5 @@ void HighsDomain::ConflictSet::conflictAnalysis(
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) continue;
     numConflicts += numNewConflicts;
-
-    // at least in the highest depth level conflicts must be found, otherwise
-    // we can immediately stop
-    if (numConflicts == 0) break;
   }
 }
