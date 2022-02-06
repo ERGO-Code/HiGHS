@@ -259,6 +259,7 @@ const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
 const string kRangingString = "ranging";
+const string kWriteModelFileString = "write_model_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -295,8 +296,10 @@ struct HighsOptionsStruct {
   HighsInt simplex_min_concurrency;
   HighsInt simplex_max_concurrency;
   HighsInt ipm_iteration_limit;
+  std::string write_model_file;
   std::string solution_file;
   std::string log_file;
+  bool write_model_to_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
   // Control of HiGHS log
@@ -359,9 +362,6 @@ struct HighsOptionsStruct {
 #endif
 
   // Logging callback identifiers
-  void (*printmsgcb)(HighsInt level, const char* msg, void* msgcb_data) = NULL;
-  void (*logmsgcb)(HighsLogType type, const char* msg, void* msgcb_data) = NULL;
-  void* msgcb_data = NULL;
   HighsLogOptions log_options;
   virtual ~HighsOptionsStruct() {}
 };
@@ -631,6 +631,16 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &write_solution_style, kSolutionStyleMin,
                             kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
+
+    record_string = new OptionRecordString(
+        kWriteModelFileString, "Write model file", advanced, &write_model_file,
+        kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_bool =
+        new OptionRecordBool("write_model_to_file", "Write the model to a file",
+                             advanced, &write_model_to_file, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("mip_detect_symmetry",
                                        "Whether symmetry should be detected",
@@ -947,6 +957,8 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;
+    log_options.log_callback = nullptr;
+    log_options.log_callback_data = nullptr;
   }
 
   void deleteRecords() {

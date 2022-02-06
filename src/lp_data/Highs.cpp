@@ -657,7 +657,6 @@ HighsStatus Highs::run() {
       return returnFromRun(return_status);
     }
   }
-  highsSetLogCallback(options_);
 
   if (model_.lp_.model_name_.compare(""))
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -1429,6 +1428,14 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     solution_.dual_valid = false;
   }
   return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
+                                                       const char*, void*),
+                                  void* log_callback_data) {
+  options_.log_options.log_callback = log_callback;
+  options_.log_options.log_callback_data = log_callback_data;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
