@@ -1591,7 +1591,8 @@ void HighsMipSolverData::checkObjIntegrality() {
       printf("objective int. scale is currently %g, new %g\n", objintscale,
              objectiveFunction.integralScale());
       assert(std::fabs(objectiveFunction.integralScale() - objintscale) <=
-             epsilon);
+                 feastol ||
+             objectiveFunction.isZero());
     }
   } else if (objectiveFunction.integralScale() != 0.0) {
     printf("objective int. scale is currently %g, new %g\n", objintscale,

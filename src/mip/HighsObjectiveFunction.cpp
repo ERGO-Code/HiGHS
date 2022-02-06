@@ -121,6 +121,11 @@ void HighsObjectiveFunction::setupCliquePartition(
 }
 
 void HighsObjectiveFunction::checkIntegrality(double epsilon) {
-  if (numIntegral == objectiveNonzeros.size())
-    objIntScale = HighsIntegers::integralScale(objectiveVals, epsilon, epsilon);
+  if (numIntegral == objectiveNonzeros.size()) {
+    if (numIntegral)
+      objIntScale =
+          HighsIntegers::integralScale(objectiveVals, epsilon, epsilon);
+    else
+      objIntScale = 1.0;
+  }
 }
