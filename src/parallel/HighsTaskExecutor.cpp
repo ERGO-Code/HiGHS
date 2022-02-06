@@ -14,3 +14,5 @@ thread_local HighsSplitDeque* HighsTaskExecutor::threadLocalWorkerDequePtr{
 
 cache_aligned::shared_ptr<HighsTaskExecutor> HighsTaskExecutor::globalExecutor{
     nullptr};
+
+HighsSpinMutex HighsTaskExecutor::initMutex;
