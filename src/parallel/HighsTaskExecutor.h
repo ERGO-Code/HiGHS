@@ -49,6 +49,7 @@ class HighsTaskExecutor {
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::atomic<bool> active;
+  static HighsSpinMutex initMutex;
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -127,9 +128,13 @@ class HighsTaskExecutor {
 
   static void initialize(int numThreads) {
     if (!globalExecutor) {
-      globalExecutor =
-          cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
-      globalExecutor->active.store(true, std::memory_order_release);
+      std::lock_guard<HighsSpinMutex> lg{initMutex};
+      if( !globalExecutor )
+      {
+        globalExecutor =
+            cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
+        globalExecutor->active.store(true, std::memory_order_release);
+      }
     }
   }
 
