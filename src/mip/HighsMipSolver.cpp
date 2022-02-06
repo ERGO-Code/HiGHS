@@ -29,6 +29,8 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
 
+using std::fabs;
+
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
     : options_mip_(&options),
@@ -48,25 +50,42 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
     HighsCDouble obj = orig_model_->offset_;
     assert((HighsInt)solution.col_value.size() == orig_model_->num_col_);
     for (HighsInt i = 0; i != orig_model_->num_col_; ++i) {
-      obj += orig_model_->col_cost_[i] * solution.col_value[i];
-
-      bound_violation_ = std::max(
-          bound_violation_, orig_model_->col_lower_[i] - solution.col_value[i]);
-      bound_violation_ = std::max(
-          bound_violation_, solution.col_value[i] - orig_model_->col_upper_[i]);
+      const double value = solution.col_value[i];
+      obj += orig_model_->col_cost_[i] * value;
 
       if (orig_model_->integrality_[i] == HighsVarType::kInteger) {
-        double intval = std::floor(solution.col_value[i] + 0.5);
-        integrality_violation_ = std::max(
-            std::abs(intval - solution.col_value[i]), integrality_violation_);
+        double intval = std::floor(value + 0.5);
+        integrality_violation_ =
+            std::max(fabs(intval - value), integrality_violation_);
       }
+
+      const double lower = orig_model_->col_lower_[i];
+      const double upper = orig_model_->col_upper_[i];
+      double primal_infeasibility;
+      if (value < lower - options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      } else
+        continue;
+
+      bound_violation_ = std::max(bound_violation_, primal_infeasibility);
     }
 
     for (HighsInt i = 0; i != orig_model_->num_row_; ++i) {
-      row_violation_ = std::max(
-          row_violation_, orig_model_->row_lower_[i] - solution.row_value[i]);
-      row_violation_ = std::max(
-          row_violation_, solution.row_value[i] - orig_model_->row_upper_[i]);
+      const double value = solution.row_value[i];
+      const double lower = orig_model_->row_lower_[i];
+      const double upper = orig_model_->row_upper_[i];
+
+      double primal_infeasibility;
+      if (value < lower - options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      } else
+        continue;
+
+      row_violation_ = std::max(row_violation_, primal_infeasibility);
     }
 
     solution_objective_ = double(obj);
