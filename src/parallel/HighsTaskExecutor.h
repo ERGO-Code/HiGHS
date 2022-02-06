@@ -45,11 +45,11 @@ class HighsTaskExecutor {
 
   static LIBHIGHS_EXPORT cache_aligned::shared_ptr<HighsTaskExecutor>
       globalExecutor;
+  static LIBHIGHS_EXPORT HighsSpinMutex initMutex;
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::atomic<bool> active;
-  static HighsSpinMutex initMutex;
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -129,8 +129,7 @@ class HighsTaskExecutor {
   static void initialize(int numThreads) {
     if (!globalExecutor) {
       std::lock_guard<HighsSpinMutex> lg{initMutex};
-      if( !globalExecutor )
-      {
+      if (!globalExecutor) {
         globalExecutor =
             cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
         globalExecutor->active.store(true, std::memory_order_release);
@@ -141,8 +140,7 @@ class HighsTaskExecutor {
   static void shutdown() {
     if (globalExecutor) {
       // first spin until every worker has acquired its executor reference
-      while (globalExecutor.use_count() !=
-             globalExecutor->workerDeques.size())
+      while (globalExecutor.use_count() != globalExecutor->workerDeques.size())
         HighsSpinMutex::yieldProcessor();
       // set the active flag to false first with release ordering
       globalExecutor->active.store(false, std::memory_order_release);
