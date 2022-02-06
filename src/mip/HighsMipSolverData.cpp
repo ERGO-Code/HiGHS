@@ -671,8 +671,7 @@ try_again:
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
-      row_violation_ <=
-          mipsolver.options_mip_->mip_feasibility_tolerance;
+      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
 
   if (!feasible && allow_try_again) {
     // printf(
