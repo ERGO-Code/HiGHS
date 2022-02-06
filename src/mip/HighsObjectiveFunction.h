@@ -40,6 +40,8 @@ class HighsObjectiveFunction {
   void setupCliquePartition(const HighsDomain& globaldom,
                             HighsCliqueTable& cliqueTable);
 
+  void checkIntegrality(double epsilon);
+
   /// returns the vector of column indices with nonzero objective value
   /// They will be ordered so that binary columns come first
   const std::vector<HighsInt>& getObjectiveNonzeros() const {

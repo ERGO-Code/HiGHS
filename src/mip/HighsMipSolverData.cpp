@@ -1610,5 +1610,10 @@ void HighsMipSolverData::setupDomainPropagation() {
   }
 
   domain = HighsDomain(mipsolver);
+  if (upper_limit < kHighsInf) {
+    objectiveFunction = HighsObjectiveFunction(mipsolver);
+    objectiveFunction.setupCliquePartition(domain, cliquetable);
+    domain.setupObjectivePropagation();
+  }
   domain.computeRowActivities();
 }

@@ -66,12 +66,7 @@ HighsObjectiveFunction::HighsObjectiveFunction(const HighsMipSolver& mipsolver)
   for (HighsInt i : objectiveNonzeros)
     objectiveVals.push_back(model->col_cost_[i]);
 
-  if (numIntegral == objectiveNonzeros.size()) {
-    objIntScale = HighsIntegers::integralScale(
-        objectiveVals, mipsolver.options_mip_->small_matrix_value,
-        mipsolver.options_mip_->small_matrix_value);
-  } else
-    objIntScale = 0.0;
+  objIntScale = 0.0;
 }
 
 void HighsObjectiveFunction::setupCliquePartition(
@@ -123,4 +118,9 @@ void HighsObjectiveFunction::setupCliquePartition(
     for (HighsInt i = 0; i < numBinary; ++i)
       objectiveVals[i] = model->col_cost_[objectiveNonzeros[i]];
   }
+}
+
+void HighsObjectiveFunction::checkIntegrality(double epsilon) {
+  if (numIntegral == objectiveNonzeros.size())
+    objIntScale = HighsIntegers::integralScale(objectiveVals, epsilon, epsilon);
 }
