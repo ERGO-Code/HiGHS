@@ -86,7 +86,7 @@ TEST_CASE("log-callback", "[highs_io]") {
     long_message[sizeof(long_message) - 1] = '\n';
     highsLogUser(log_options, HighsLogType::kWarning, long_message);
     if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-    REQUIRE(strstr(printed_log, "HHHH") != NULL);
+    REQUIRE(strstr(printed_log, "HHHH") != nullptr);
     REQUIRE(strlen(printed_log) <= sizeof(printed_log));
   }
 }
