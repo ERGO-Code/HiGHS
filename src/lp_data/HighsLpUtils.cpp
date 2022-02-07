@@ -2242,6 +2242,34 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   return HighsStatus::kOk;
 }
 
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
+  // assert(solution.col_value.size() > 0);
+  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+
+  std::vector<HighsCDouble> row_value;
+  row_value.assign(lp.num_row_, HighsCDouble{0.0});
+
+  solution.row_value.assign(lp.num_row_, 0);
+
+  for (HighsInt col = 0; col < lp.num_col_; col++) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; i++) {
+      const HighsInt row = lp.a_matrix_.index_[i];
+      assert(row >= 0);
+      assert(row < lp.num_row_);
+
+      row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+    }
+  }
+
+  // assign quad values to double vector
+  solution.row_value.resize(lp.num_row_);
+  std::transform(row_value.begin(), row_value.end(), solution.row_value.begin(),
+                 [](HighsCDouble x) { return double(x); });
+
+  return HighsStatus::kOk;
+}
+
 bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
   HighsInt num_bound_infeasible = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
