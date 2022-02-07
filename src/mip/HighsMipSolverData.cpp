@@ -358,13 +358,12 @@ void HighsMipSolverData::runSetup() {
   if (mipsolver.solution_objective_ != kHighsInf) {
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     double solobj = mipsolver.solution_objective_ - mipsolver.model_->offset_;
-    bool feasible =
-        mipsolver.bound_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance &&
-        mipsolver.integrality_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance &&
-        mipsolver.row_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+    bool feasible = mipsolver.bound_violation_ <=
+                        mipsolver.options_mip_->mip_feasibility_tolerance &&
+                    mipsolver.integrality_violation_ <=
+                        mipsolver.options_mip_->mip_feasibility_tolerance &&
+                    mipsolver.row_violation_ <=
+                        mipsolver.options_mip_->mip_feasibility_tolerance;
     if (numRestarts == 0) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "\nMIP start solution is %s, objective value is %.12g\n",
@@ -625,11 +624,11 @@ double HighsMipSolverData::transformNewIncumbent(
     const std::vector<double>& sol) {
   HighsSolution solution;
   solution.col_value = sol;
-  calculateRowValues(*mipsolver.model_, solution);
+  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   solution.value_valid = true;
 
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
-  calculateRowValues(*mipsolver.orig_model_, solution);
+  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   bool allow_try_again = true;
 try_again:
 
@@ -642,37 +641,50 @@ try_again:
   assert((HighsInt)solution.col_value.size() ==
          mipsolver.orig_model_->num_col_);
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
-    obj += mipsolver.orig_model_->col_cost_[i] * solution.col_value[i];
-
-    bound_violation_ =
-        std::max(bound_violation_,
-                 mipsolver.orig_model_->col_lower_[i] - solution.col_value[i]);
-    bound_violation_ =
-        std::max(bound_violation_,
-                 solution.col_value[i] - mipsolver.orig_model_->col_upper_[i]);
+    const double value = solution.col_value[i];
+    obj += mipsolver.orig_model_->col_cost_[i] * value;
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
-      double intval = std::floor(solution.col_value[i] + 0.5);
-      integrality_violation_ = std::max(
-          std::abs(intval - solution.col_value[i]), integrality_violation_);
+      double intval = std::floor(value + 0.5);
+      integrality_violation_ =
+          std::max(std::fabs(intval - value), integrality_violation_);
     }
+
+    const double lower = mipsolver.orig_model_->col_lower_[i];
+    const double upper = mipsolver.orig_model_->col_upper_[i];
+    double primal_infeasibility = 0;
+    if (value < lower - mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value >
+               upper + mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else
+      continue;
+
+    bound_violation_ = std::max(bound_violation_, primal_infeasibility);
   }
 
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_row_; ++i) {
-    row_violation_ =
-        std::max(row_violation_,
-                 mipsolver.orig_model_->row_lower_[i] - solution.row_value[i]);
-    row_violation_ =
-        std::max(row_violation_,
-                 solution.row_value[i] - mipsolver.orig_model_->row_upper_[i]);
+    const double value = solution.row_value[i];
+    const double lower = mipsolver.orig_model_->row_lower_[i];
+    const double upper = mipsolver.orig_model_->row_upper_[i];
+    double primal_infeasibility;
+    if (value < lower - mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value >
+               upper + mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else
+      continue;
+
+    row_violation_ = std::max(row_violation_, primal_infeasibility);
   }
 
   bool feasible =
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
-      row_violation_ <=
-          mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
 
   if (!feasible && allow_try_again) {
     // printf(
@@ -722,7 +734,7 @@ try_again:
         mipsolver.integrality_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+            mipsolver.options_mip_->mip_feasibility_tolerance;
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kWarning,
         "Untransformed solution with objective %g is violated by %.12g for the "

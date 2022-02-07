@@ -504,7 +504,7 @@ void HFactor::buildSimple() {
    */
   luClear();
 
-  const bool progress_report = num_basic != num_row;
+  const bool progress_report = false;
   const HighsInt progress_frequency = 100000;
 
   // Set all values of permute to -1 so that unpermuted (rank
@@ -808,7 +808,7 @@ HighsInt HFactor::buildKernel() {
   double fake_fill = 0;
   double fake_eliminate = 0;
 
-  const bool progress_report = num_basic != num_row;
+  const bool progress_report = false;  // num_basic != num_row;
   const HighsInt progress_frequency = 10000;
   HighsInt search_k = 0;
 
@@ -847,10 +847,10 @@ HighsInt HFactor::buildKernel() {
             break;
           }
         }
-        //        printf(
-        //            "HFactor::buildKernel stage = %6d: min_col_count = %3d; "
-        //            "min_row_count = %3d\n",
-        //            (int)search_k, (int)min_col_count, (int)min_row_count);
+        printf(
+            "HFactor::buildKernel stage = %6d: min_col_count = %3d; "
+            "min_row_count = %3d\n",
+            (int)search_k, (int)min_col_count, (int)min_row_count);
       }
     }
     search_k++;

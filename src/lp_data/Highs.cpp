@@ -597,6 +597,15 @@ HighsStatus Highs::run() {
   highs::parallel::initialize_scheduler(options_.threads);
 
   max_threads = highs::parallel::num_threads();
+  if (options_.threads != 0 && max_threads != options_.threads) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Option 'threads' is set to %d but global scheduler has already been "
+        "initialized to use %d threads. The previous scheduler instance can be "
+        "destroyed by calling HighsTaskExecutor::shutdown().\n",
+        (int)options_.threads, max_threads);
+    return HighsStatus::kError;
+  }
   assert(max_threads > 0);
   if (max_threads <= 0)
     highsLogDev(options_.log_options, HighsLogType::kWarning,
