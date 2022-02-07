@@ -183,7 +183,7 @@ enum class HighsBasisStatus : uint8_t {
 };
 
 // Default and max allowed power-of-two matrix scale factor
-const HighsInt kDefaultAllowedMatrixPow2Scale = 10;
+const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
 const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 
 // Illegal values of num/max/sum infeasibility - used to indicate that true
