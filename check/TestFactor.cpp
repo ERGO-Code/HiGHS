@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "util/HFactor.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 HVector rhs;
 HVector col_aq;
