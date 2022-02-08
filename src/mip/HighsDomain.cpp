@@ -618,6 +618,7 @@ template <>
 struct RbTreeTraits<
     HighsDomain::ObjectivePropagation::ObjectiveContributionTree> {
   using KeyType = std::pair<double, HighsInt>;
+  using LinkType = HighsInt;
 };
 }  // namespace highs
 
@@ -632,11 +633,11 @@ class HighsDomain::ObjectivePropagation::ObjectiveContributionTree
             objProp->contributionPartitionSets[partition].second),
         nodes(objProp->objectiveLowerContributions) {}
 
-  highs::RbTreeLinks& getRbTreeLinks(HighsInt node) {
+  highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) {
     return nodes[node].links;
   }
 
-  const highs::RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  const highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) const {
     return nodes[node].links;
   }
 

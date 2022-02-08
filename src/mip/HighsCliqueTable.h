@@ -73,7 +73,7 @@ class HighsCliqueTable {
  private:
   struct CliqueSetNode {
     HighsInt cliqueid;
-    highs::RbTreeLinks links;
+    highs::RbTreeLinks<HighsInt> links;
 
     CliqueSetNode(HighsInt cliqueid) : cliqueid(cliqueid) {}
 

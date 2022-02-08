@@ -36,8 +36,8 @@ class HighsNodeQueue {
     double lower_bound;
     double estimate;
     HighsInt depth;
-    highs::RbTreeLinks lowerLinks;
-    highs::RbTreeLinks hybridEstimLinks;
+    highs::RbTreeLinks<int64_t> lowerLinks;
+    highs::RbTreeLinks<int64_t> hybridEstimLinks;
 
     OpenNode()
         : domchgstack(),
@@ -80,34 +80,34 @@ class HighsNodeQueue {
   std::vector<std::set<std::pair<double, HighsInt>>> colUpperNodes;
   std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
       freeslots;
-  HighsInt lowerRoot = -1;
-  HighsInt lowerMin = -1;
-  HighsInt hybridEstimRoot = -1;
-  HighsInt hybridEstimMin = -1;
-  HighsInt suboptimalRoot = -1;
-  HighsInt suboptimalMin = -1;
-  HighsInt numSuboptimal = 0;
+  int64_t lowerRoot = -1;
+  int64_t lowerMin = -1;
+  int64_t hybridEstimRoot = -1;
+  int64_t hybridEstimMin = -1;
+  int64_t suboptimalRoot = -1;
+  int64_t suboptimalMin = -1;
+  int64_t numSuboptimal = 0;
   double optimality_limit = kHighsInf;
 
-  void link_estim(HighsInt node);
+  void link_estim(int64_t node);
 
-  void unlink_estim(HighsInt node);
+  void unlink_estim(int64_t node);
 
-  void link_lower(HighsInt node);
+  void link_lower(int64_t node);
 
-  void unlink_lower(HighsInt node);
+  void unlink_lower(int64_t node);
 
-  void link_suboptimal(HighsInt node);
+  void link_suboptimal(int64_t node);
 
-  void unlink_suboptimal(HighsInt node);
+  void unlink_suboptimal(int64_t node);
 
-  void link_domchgs(HighsInt node);
+  void link_domchgs(int64_t node);
 
-  void unlink_domchgs(HighsInt node);
+  void unlink_domchgs(int64_t node);
 
-  double link(HighsInt node);
+  double link(int64_t node);
 
-  void unlink(HighsInt node);
+  void unlink(int64_t node);
 
  public:
   void setOptimalityLimit(double optimality_limit) {
@@ -155,7 +155,7 @@ class HighsNodeQueue {
 
   double pruneInfeasibleNodes(HighsDomain& globaldomain, double feastol);
 
-  double pruneNode(HighsInt nodeId);
+  double pruneNode(int64_t nodeId);
 
   double getBestLowerBound() const;
 

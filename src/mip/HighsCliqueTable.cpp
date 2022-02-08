@@ -31,6 +31,7 @@ namespace highs {
 template <>
 struct RbTreeTraits<HighsCliqueTable::CliqueSet> {
   using KeyType = HighsInt;
+  using LinkType = HighsInt;
 };
 
 }  // namespace highs
@@ -47,10 +48,10 @@ class HighsCliqueTable::CliqueSet : public highs::CacheMinRbTree<CliqueSet> {
                     : clqtable->cliquesetTree[v.index()].first),
         clqtable(clqtable) {}
 
-  highs::RbTreeLinks& getRbTreeLinks(HighsInt node) {
+  highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) {
     return clqtable->cliquesets[node].links;
   }
-  const highs::RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  const highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) const {
     return clqtable->cliquesets[node].links;
   }
   HighsInt getKey(HighsInt node) const {

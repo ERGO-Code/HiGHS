@@ -27,17 +27,20 @@
 namespace highs {
 template <>
 struct RbTreeTraits<HighsNodeQueue::NodeLowerRbTree> {
-  using KeyType = std::tuple<double, HighsInt, double, HighsInt>;
+  using KeyType = std::tuple<double, HighsInt, double, int64_t>;
+  using LinkType = int64_t;
 };
 
 template <>
 struct RbTreeTraits<HighsNodeQueue::NodeHybridEstimRbTree> {
-  using KeyType = std::tuple<double, HighsInt, HighsInt>;
+  using KeyType = std::tuple<double, HighsInt, int64_t>;
+  using LinkType = int64_t;
 };
 
 template <>
 struct RbTreeTraits<HighsNodeQueue::SuboptimalNodeRbTree> {
-  using KeyType = std::pair<double, HighsInt>;
+  using KeyType = std::pair<double, int64_t>;
+  using LinkType = int64_t;
 };
 }  // namespace highs
 
@@ -52,13 +55,13 @@ class HighsNodeQueue::NodeLowerRbTree : public CacheMinRbTree<NodeLowerRbTree> {
                                         nodeQueue->lowerMin),
         nodeQueue(nodeQueue) {}
 
-  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+  RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) {
     return nodeQueue->nodes[node].lowerLinks;
   }
-  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  const RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) const {
     return nodeQueue->nodes[node].lowerLinks;
   }
-  std::tuple<double, HighsInt, double, HighsInt> getKey(HighsInt node) const {
+  std::tuple<double, HighsInt, double, int64_t> getKey(HighsInt node) const {
     return std::make_tuple(nodeQueue->nodes[node].lower_bound,
                            HighsInt(nodeQueue->nodes[node].domchgstack.size()),
                            nodeQueue->nodes[node].estimate, node);
@@ -75,13 +78,13 @@ class HighsNodeQueue::NodeHybridEstimRbTree
                                               nodeQueue->hybridEstimMin),
         nodeQueue(nodeQueue) {}
 
-  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+  RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) {
     return nodeQueue->nodes[node].hybridEstimLinks;
   }
-  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  const RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) const {
     return nodeQueue->nodes[node].hybridEstimLinks;
   }
-  std::tuple<double, HighsInt, HighsInt> getKey(HighsInt node) const {
+  std::tuple<double, HighsInt, int64_t> getKey(int64_t node) const {
     constexpr double kLbWeight = 0.5;
     constexpr double kEstimWeight = 0.5;
     return std::make_tuple(kLbWeight * nodeQueue->nodes[node].lower_bound +
@@ -101,57 +104,57 @@ class HighsNodeQueue::SuboptimalNodeRbTree
                                              nodeQueue->suboptimalMin),
         nodeQueue(nodeQueue) {}
 
-  RbTreeLinks& getRbTreeLinks(HighsInt node) {
+  RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) {
     return nodeQueue->nodes[node].lowerLinks;
   }
-  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  const RbTreeLinks<int64_t>& getRbTreeLinks(int64_t node) const {
     return nodeQueue->nodes[node].lowerLinks;
   }
 
-  std::pair<double, HighsInt> getKey(HighsInt node) const {
+  std::pair<double, int64_t> getKey(int64_t node) const {
     return std::make_pair(nodeQueue->nodes[node].lower_bound, node);
   }
 };
 
-void HighsNodeQueue::link_estim(HighsInt node) {
+void HighsNodeQueue::link_estim(int64_t node) {
   assert(node != -1);
   NodeHybridEstimRbTree rbTree(this);
   rbTree.link(node);
 }
 
-void HighsNodeQueue::unlink_estim(HighsInt node) {
+void HighsNodeQueue::unlink_estim(int64_t node) {
   assert(node != -1);
   NodeHybridEstimRbTree rbTree(this);
   rbTree.unlink(node);
 }
 
-void HighsNodeQueue::link_lower(HighsInt node) {
+void HighsNodeQueue::link_lower(int64_t node) {
   assert(node != -1);
   NodeLowerRbTree rbTree(this);
   rbTree.link(node);
 }
 
-void HighsNodeQueue::unlink_lower(HighsInt node) {
+void HighsNodeQueue::unlink_lower(int64_t node) {
   assert(node != -1);
   NodeLowerRbTree rbTree(this);
   rbTree.unlink(node);
 }
 
-void HighsNodeQueue::link_suboptimal(HighsInt node) {
+void HighsNodeQueue::link_suboptimal(int64_t node) {
   assert(node != -1);
   SuboptimalNodeRbTree rbTree(this);
   rbTree.link(node);
   ++numSuboptimal;
 }
 
-void HighsNodeQueue::unlink_suboptimal(HighsInt node) {
+void HighsNodeQueue::unlink_suboptimal(int64_t node) {
   assert(node != -1);
   SuboptimalNodeRbTree rbTree(this);
   rbTree.unlink(node);
   --numSuboptimal;
 }
 
-void HighsNodeQueue::link_domchgs(HighsInt node) {
+void HighsNodeQueue::link_domchgs(int64_t node) {
   assert(node != -1);
   HighsInt numchgs = nodes[node].domchgstack.size();
   nodes[node].domchglinks.resize(numchgs);
@@ -171,7 +174,7 @@ void HighsNodeQueue::link_domchgs(HighsInt node) {
   }
 }
 
-void HighsNodeQueue::unlink_domchgs(HighsInt node) {
+void HighsNodeQueue::unlink_domchgs(int64_t node) {
   assert(node != -1);
   HighsInt numchgs = nodes[node].domchgstack.size();
 
@@ -190,7 +193,7 @@ void HighsNodeQueue::unlink_domchgs(HighsInt node) {
   nodes[node].domchglinks.shrink_to_fit();
 }
 
-double HighsNodeQueue::link(HighsInt node) {
+double HighsNodeQueue::link(int64_t node) {
   if (nodes[node].lower_bound > optimality_limit) {
     assert(nodes[node].estimate != kHighsInf);
     nodes[node].estimate = kHighsInf;
@@ -205,7 +208,7 @@ double HighsNodeQueue::link(HighsInt node) {
   return 0.0;
 }
 
-void HighsNodeQueue::unlink(HighsInt node) {
+void HighsNodeQueue::unlink(int64_t node) {
   if (nodes[node].estimate == kHighsInf) {
     unlink_suboptimal(node);
   } else {
@@ -289,7 +292,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
   return double(treeweight);
 }
 
-double HighsNodeQueue::pruneNode(HighsInt nodeId) {
+double HighsNodeQueue::pruneNode(int64_t nodeId) {
   double treeweight = nodes[nodeId].estimate != kHighsInf
                           ? std::ldexp(1.0, 1 - nodes[nodeId].depth)
                           : 0.0;

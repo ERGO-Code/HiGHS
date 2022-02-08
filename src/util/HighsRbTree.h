@@ -21,36 +21,71 @@
 
 namespace highs {
 
+template <typename T>
 struct RbTreeLinks {
   enum Direction {
     kLeft = 0,
     kRight = 1,
   };
 
-  HighsInt child[2];
-#ifdef HIGHSINT64
-  HighsUInt parent : 63;
-  HighsUInt color : 1;
-#else
-  HighsUInt parent : 31;
-  HighsUInt color : 1;
-#endif
+  T child[2];
 
-  bool isBlack() const { return color == 0; }
+  using ParentStorageType =
+      typename std::make_unsigned<typename std::conditional<
+          std::is_pointer<T>::value, uintptr_t, T>::type>::type;
 
-  bool isRed() const { return color == 1; }
+  static constexpr int colorBitPos() {
+    return std::is_pointer<T>::value ? 0 : sizeof(ParentStorageType) * 8 - 1;
+  }
 
-  void makeRed() { color = 1; }
+  static constexpr ParentStorageType colorBitMask() {
+    return ParentStorageType{1} << colorBitPos();
+  }
 
-  void makeBlack() { color = 0; }
+  ParentStorageType parentAndColor;
 
-  HighsUInt getColor() const { return color; }
+  template <typename U = T,
+            typename std::enable_if<std::is_integral<U>::value, int>::type = 0>
+  static constexpr T noLink() {
+    return -1;
+  }
 
-  void setColor(HighsUInt color) { this->color = color; }
+  template <typename U = T,
+            typename std::enable_if<std::is_pointer<U>::value, int>::type = 0>
+  static constexpr T noLink() {
+    return nullptr;
+  }
 
-  void setParent(HighsInt p) { parent = p + 1; }
+  bool getColor() const { return (parentAndColor >> colorBitPos()); }
 
-  HighsInt getParent() const { return HighsInt(parent) - 1; }
+  bool isBlack() const { return getColor() == 0; }
+
+  bool isRed() const { return getColor() == 1; }
+
+  void makeRed() { parentAndColor |= colorBitMask(); }
+
+  void makeBlack() { parentAndColor &= ~colorBitMask(); }
+
+  void setColor(bool color) {
+    makeBlack();
+    parentAndColor |= ParentStorageType(color) << colorBitPos();
+  }
+
+  void setParent(T p) {
+    if (std::is_pointer<T>::value)
+      parentAndColor =
+          (colorBitMask() & parentAndColor) | (ParentStorageType)(p);
+    else
+      parentAndColor =
+          (colorBitMask() & parentAndColor) | (ParentStorageType)(p + 1);
+  }
+
+  T getParent() const {
+    if (std::is_pointer<T>::value)
+      return (T)(parentAndColor & ~colorBitMask());
+    else
+      return ((T)(parentAndColor & ~colorBitMask())) - 1;
+  }
 };
 
 template <typename Impl>
@@ -58,7 +93,15 @@ struct RbTreeTraits;
 
 template <typename Impl>
 class RbTree {
-  HighsInt& rootNode;
+  enum Dir {
+    kLeft = 0,
+    kRight = 1,
+  };
+
+  using KeyType = typename RbTreeTraits<Impl>::KeyType;
+  using LinkType = typename RbTreeTraits<Impl>::LinkType;
+
+  LinkType& rootNode;
   // static_assert(
   //     std::is_same<RbTreeLinks&, decltype(static_cast<Impl*>(nullptr)
   //                                             ->getRbTreeLinks(0))>::value,
@@ -72,8 +115,6 @@ class RbTree {
   //              "RbTree implementation must provide a getRbTreeLinks() const "
   //              "function that returns a const reference of RbTreeLinks given
   //              " "the index of a node");
-  using KeyType = typename RbTreeTraits<Impl>::KeyType;
-  using Dir = RbTreeLinks::Direction;
   // static_assert(
   //    std::is_same<bool, decltype((*static_cast<KeyType*>(nullptr)) <
   //                                (*static_cast<KeyType*>(nullptr)))>::value,
@@ -81,64 +122,66 @@ class RbTree {
   //    " "index of a node, returns its key which must have a type that has "
   //    "operator< defined");
 
-  bool isRed(HighsInt node) const {
-    return node != -1 &&
+  static constexpr LinkType kNoLink = RbTreeLinks<LinkType>::noLink();
+
+  bool isRed(LinkType node) const {
+    return node != kNoLink &&
            static_cast<const Impl*>(this)->getRbTreeLinks(node).isRed();
   }
 
-  bool isBlack(HighsInt node) const {
-    return node == -1 ||
+  bool isBlack(LinkType node) const {
+    return node == kNoLink ||
            static_cast<const Impl*>(this)->getRbTreeLinks(node).isBlack();
   }
 
-  void makeRed(HighsInt node) {
+  void makeRed(LinkType node) {
     static_cast<Impl*>(this)->getRbTreeLinks(node).makeRed();
   }
 
-  void makeBlack(HighsInt node) {
+  void makeBlack(LinkType node) {
     static_cast<Impl*>(this)->getRbTreeLinks(node).makeBlack();
   }
 
-  void setColor(HighsInt node, HighsUInt color) {
+  void setColor(LinkType node, HighsUInt color) {
     static_cast<Impl*>(this)->getRbTreeLinks(node).setColor(color);
   }
 
-  HighsUInt getColor(HighsInt node) const {
+  HighsUInt getColor(LinkType node) const {
     return static_cast<const Impl*>(this)->getRbTreeLinks(node).getColor();
   }
 
-  void setParent(HighsInt node, HighsInt parent) {
+  void setParent(LinkType node, LinkType parent) {
     static_cast<Impl*>(this)->getRbTreeLinks(node).setParent(parent);
   }
 
-  HighsInt getParent(HighsInt node) const {
+  LinkType getParent(LinkType node) const {
     return static_cast<const Impl*>(this)->getRbTreeLinks(node).getParent();
   }
 
-  KeyType getKey(HighsInt node) const {
+  KeyType getKey(LinkType node) const {
     return static_cast<const Impl*>(this)->getKey(node);
   }
 
   static constexpr Dir opposite(Dir dir) { return Dir(1 - dir); }
 
-  HighsInt getChild(HighsInt node, Dir dir) const {
+  LinkType getChild(LinkType node, Dir dir) const {
     return static_cast<const Impl*>(this)->getRbTreeLinks(node).child[dir];
   }
 
-  void setChild(HighsInt node, Dir dir, HighsInt child) {
+  void setChild(LinkType node, Dir dir, LinkType child) {
     static_cast<Impl*>(this)->getRbTreeLinks(node).child[dir] = child;
   }
 
-  void rotate(HighsInt x, Dir dir) {
-    HighsInt y = getChild(x, opposite(dir));
-    HighsInt yDir = getChild(y, dir);
+  void rotate(LinkType x, Dir dir) {
+    LinkType y = getChild(x, opposite(dir));
+    LinkType yDir = getChild(y, dir);
     setChild(x, opposite(dir), yDir);
-    if (yDir != -1) setParent(yDir, x);
+    if (yDir != kNoLink) setParent(yDir, x);
 
-    HighsInt pX = getParent(x);
+    LinkType pX = getParent(x);
     setParent(y, pX);
 
-    if (pX == -1)
+    if (pX == kNoLink)
       rootNode = y;
     else
       setChild(pX, Dir((x != getChild(pX, dir)) ^ dir), y);
@@ -147,15 +190,15 @@ class RbTree {
     setParent(x, y);
   }
 
-  void insertFixup(HighsInt z) {
-    HighsInt pZ = getParent(z);
+  void insertFixup(LinkType z) {
+    LinkType pZ = getParent(z);
     while (isRed(pZ)) {
-      HighsInt zGrandParent = getParent(pZ);
-      assert(zGrandParent != -1);
+      LinkType zGrandParent = getParent(pZ);
+      assert(zGrandParent != kNoLink);
 
-      Dir dir = Dir(getChild(zGrandParent, RbTreeLinks::kLeft) == pZ);
+      Dir dir = Dir(getChild(zGrandParent, kLeft) == pZ);
 
-      HighsInt y = getChild(zGrandParent, dir);
+      LinkType y = getChild(zGrandParent, dir);
       if (isRed(y)) {
         makeBlack(pZ);
         makeBlack(y);
@@ -167,7 +210,7 @@ class RbTree {
           rotate(z, opposite(dir));
           pZ = getParent(z);
           zGrandParent = getParent(pZ);
-          assert(zGrandParent != -1);
+          assert(zGrandParent != kNoLink);
         }
 
         makeBlack(pZ);
@@ -181,40 +224,40 @@ class RbTree {
     makeBlack(rootNode);
   }
 
-  void transplant(HighsInt u, HighsInt v, HighsInt& nilParent) {
-    HighsInt p = getParent(u);
+  void transplant(LinkType u, LinkType v, LinkType& nilParent) {
+    LinkType p = getParent(u);
 
-    if (p == -1)
+    if (p == kNoLink)
       rootNode = v;
     else
-      setChild(p, Dir(u != getChild(p, RbTreeLinks::kLeft)), v);
+      setChild(p, Dir(u != getChild(p, kLeft)), v);
 
-    if (v == -1)
+    if (v == kNoLink)
       nilParent = p;
     else
       setParent(v, p);
   }
 
-  void deleteFixup(HighsInt x, const HighsInt nilParent) {
+  void deleteFixup(LinkType x, const LinkType nilParent) {
     while (x != rootNode && isBlack(x)) {
       Dir dir;
 
-      HighsInt p = x == -1 ? nilParent : getParent(x);
-      dir = Dir(x == getChild(p, RbTreeLinks::kLeft));
-      HighsInt w = getChild(p, dir);
-      assert(w != -1);
+      LinkType p = x == kNoLink ? nilParent : getParent(x);
+      dir = Dir(x == getChild(p, kLeft));
+      LinkType w = getChild(p, dir);
+      assert(w != kNoLink);
 
       if (isRed(w)) {
         makeBlack(w);
         makeRed(p);
         rotate(p, opposite(dir));
-        assert((x == -1 && p == nilParent) || (x != -1 && p == getParent(x)));
+        assert((x == kNoLink && p == nilParent) ||
+               (x != kNoLink && p == getParent(x)));
         w = getChild(p, dir);
-        assert(w != -1);
+        assert(w != kNoLink);
       }
 
-      if (isBlack(getChild(w, RbTreeLinks::kLeft)) &&
-          isBlack(getChild(w, RbTreeLinks::kRight))) {
+      if (isBlack(getChild(w, kLeft)) && isBlack(getChild(w, kRight))) {
         makeRed(w);
         x = p;
       } else {
@@ -222,7 +265,8 @@ class RbTree {
           makeBlack(getChild(w, opposite(dir)));
           makeRed(w);
           rotate(w, dir);
-          assert((x == -1 && p == nilParent) || (x != -1 && p == getParent(x)));
+          assert((x == kNoLink && p == nilParent) ||
+                 (x != kNoLink && p == getParent(x)));
           w = getChild(p, dir);
         }
         setColor(w, getColor(p));
@@ -233,44 +277,44 @@ class RbTree {
       }
     }
 
-    if (x != -1) makeBlack(x);
+    if (x != kNoLink) makeBlack(x);
   }
 
  public:
-  RbTree(HighsInt& rootNode) : rootNode(rootNode) {}
+  RbTree(LinkType& rootNode) : rootNode(rootNode) {}
 
-  bool empty() const { return rootNode == -1; }
+  bool empty() const { return rootNode == kNoLink; }
 
-  HighsInt first(HighsInt x) const {
-    if (x == -1) return -1;
+  LinkType first(LinkType x) const {
+    if (x == kNoLink) return kNoLink;
 
     while (true) {
-      HighsInt lX = getChild(x, RbTreeLinks::kLeft);
-      if (lX == -1) return x;
+      LinkType lX = getChild(x, kLeft);
+      if (lX == kNoLink) return x;
       x = lX;
     }
   }
 
-  HighsInt last(HighsInt x) const {
-    if (x == -1) return -1;
+  LinkType last(LinkType x) const {
+    if (x == kNoLink) return kNoLink;
 
     while (true) {
-      HighsInt rX = getChild(x, RbTreeLinks::kRight);
-      if (rX == -1) return x;
+      LinkType rX = getChild(x, kRight);
+      if (rX == kNoLink) return x;
       x = rX;
     }
   }
 
-  HighsInt first() const { return first(rootNode); }
+  LinkType first() const { return first(rootNode); }
 
-  HighsInt last() const { return last(rootNode); }
+  LinkType last() const { return last(rootNode); }
 
-  HighsInt successor(HighsInt x) const {
-    HighsInt y = getChild(x, RbTreeLinks::kRight);
-    if (y != -1) return first(y);
+  LinkType successor(LinkType x) const {
+    LinkType y = getChild(x, kRight);
+    if (y != kNoLink) return first(y);
 
     y = getParent(x);
-    while (y != -1 && x == getChild(y, RbTreeLinks::kRight)) {
+    while (y != kNoLink && x == getChild(y, kRight)) {
       x = y;
       y = getParent(x);
     }
@@ -278,12 +322,12 @@ class RbTree {
     return y;
   }
 
-  HighsInt predecessor(HighsInt x) const {
-    HighsInt y = getChild(x, RbTreeLinks::kLeft);
-    if (y != -1) return last(y);
+  LinkType predecessor(LinkType x) const {
+    LinkType y = getChild(x, kLeft);
+    if (y != kNoLink) return last(y);
 
     y = getParent(x);
-    while (y != -1 && x == getChild(y, RbTreeLinks::kLeft)) {
+    while (y != kNoLink && x == getChild(y, kLeft)) {
       x = y;
       y = getParent(x);
     }
@@ -291,48 +335,48 @@ class RbTree {
     return y;
   }
 
-  std::pair<HighsInt, bool> find(const KeyType& key, HighsInt treeRoot) {
-    HighsInt y = -1;
-    HighsInt x = treeRoot;
-    while (x != -1) {
+  std::pair<LinkType, bool> find(const KeyType& key, LinkType treeRoot) {
+    LinkType y = kNoLink;
+    LinkType x = treeRoot;
+    while (x != kNoLink) {
       HighsInt cmp = 1 - (getKey(x) < key) + (key < getKey(x));
       switch (cmp) {
         case 0:
           y = x;
-          x = getChild(y, RbTreeLinks::kRight);
+          x = getChild(y, kRight);
           break;
         case 1:
           return std::make_pair(x, true);
         case 2:
           y = x;
-          x = getChild(y, RbTreeLinks::kLeft);
+          x = getChild(y, kLeft);
       }
     }
 
     return std::make_pair(y, false);
   }
 
-  std::pair<HighsInt, bool> find(const KeyType& key) {
+  std::pair<LinkType, bool> find(const KeyType& key) {
     return find(key, rootNode);
   }
 
-  void link(HighsInt z, HighsInt parent) {
+  void link(LinkType z, LinkType parent) {
     setParent(z, parent);
-    if (parent == -1)
+    if (parent == kNoLink)
       rootNode = z;
     else
       setChild(parent, Dir(getKey(parent) < getKey(z)), z);
 
-    setChild(z, RbTreeLinks::kLeft, -1);
-    setChild(z, RbTreeLinks::kRight, -1);
+    setChild(z, kLeft, kNoLink);
+    setChild(z, kRight, kNoLink);
     makeRed(z);
     insertFixup(z);
   }
 
-  void link(HighsInt z) {
-    HighsInt y = -1;
-    HighsInt x = rootNode;
-    while (x != -1) {
+  void link(LinkType z) {
+    LinkType y = kNoLink;
+    LinkType x = rootNode;
+    while (x != kNoLink) {
       y = x;
       x = getChild(y, Dir(getKey(x) < getKey(z)));
     }
@@ -340,36 +384,36 @@ class RbTree {
     static_cast<Impl*>(this)->link(z, y);
   }
 
-  void unlink(HighsInt z) {
-    HighsInt nilParent = -1;
-    HighsInt y = z;
+  void unlink(LinkType z) {
+    LinkType nilParent = kNoLink;
+    LinkType y = z;
     bool yWasBlack = isBlack(y);
-    HighsInt x;
+    LinkType x;
 
-    if (getChild(z, RbTreeLinks::kLeft) == -1) {
-      x = getChild(z, RbTreeLinks::kRight);
+    if (getChild(z, kLeft) == kNoLink) {
+      x = getChild(z, kRight);
       transplant(z, x, nilParent);
-    } else if (getChild(z, RbTreeLinks::kRight) == -1) {
-      x = getChild(z, RbTreeLinks::kLeft);
+    } else if (getChild(z, kRight) == kNoLink) {
+      x = getChild(z, kLeft);
       transplant(z, x, nilParent);
     } else {
-      y = first(getChild(z, RbTreeLinks::kRight));
+      y = first(getChild(z, kRight));
       yWasBlack = isBlack(y);
-      x = getChild(y, RbTreeLinks::kRight);
+      x = getChild(y, kRight);
       if (getParent(y) == z) {
-        if (x == -1)
+        if (x == kNoLink)
           nilParent = y;
         else
           setParent(x, y);
       } else {
-        transplant(y, getChild(y, RbTreeLinks::kRight), nilParent);
-        HighsInt zRight = getChild(z, RbTreeLinks::kRight);
-        setChild(y, RbTreeLinks::kRight, zRight);
+        transplant(y, getChild(y, kRight), nilParent);
+        LinkType zRight = getChild(z, kRight);
+        setChild(y, kRight, zRight);
         setParent(zRight, y);
       }
       transplant(z, y, nilParent);
-      HighsInt zLeft = getChild(z, RbTreeLinks::kLeft);
-      setChild(y, RbTreeLinks::kLeft, zLeft);
+      LinkType zLeft = getChild(z, kLeft);
+      setChild(y, kLeft, zLeft);
       setParent(zLeft, y);
       setColor(y, getColor(z));
     }
@@ -380,19 +424,21 @@ class RbTree {
 
 template <typename Impl>
 class CacheMinRbTree : public RbTree<Impl> {
-  HighsInt& first_;
+  using LinkType = typename RbTreeTraits<Impl>::LinkType;
+  LinkType& first_;
 
  public:
-  CacheMinRbTree(HighsInt& rootNode, HighsInt& first)
+  CacheMinRbTree(LinkType& rootNode, LinkType& first)
       : RbTree<Impl>(rootNode), first_(first) {}
 
-  HighsInt first() const { return first_; };
+  LinkType first() const { return first_; };
   using RbTree<Impl>::first;
 
-  void link(HighsInt z, HighsInt parent) {
+  void link(LinkType z, LinkType parent) {
     if (first_ == parent) {
-      if (parent == -1 || static_cast<const Impl*>(this)->getKey(z) <
-                              static_cast<const Impl*>(this)->getKey(parent))
+      if (parent == RbTreeLinks<LinkType>::noLink() ||
+          static_cast<const Impl*>(this)->getKey(z) <
+              static_cast<const Impl*>(this)->getKey(parent))
         first_ = z;
     }
 
@@ -400,7 +446,7 @@ class CacheMinRbTree : public RbTree<Impl> {
   }
   using RbTree<Impl>::link;
 
-  void unlink(HighsInt z) {
+  void unlink(LinkType z) {
     if (z == first_) first_ = this->successor(first_);
     RbTree<Impl>::unlink(z);
   }

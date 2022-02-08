@@ -240,7 +240,7 @@ class HighsDomain {
       double contribution;
       HighsInt col;
       HighsInt partition;
-      highs::RbTreeLinks links;
+      highs::RbTreeLinks<HighsInt> links;
     };
 
     class ObjectiveContributionTree;
