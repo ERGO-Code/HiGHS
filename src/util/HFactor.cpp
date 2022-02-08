@@ -450,10 +450,13 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
 
 void HFactor::ftranCall(HVector& vector, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
+  //  const bool use_indices = count >= 0;
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
   ftranL(vector, expected_density, factor_timer_clock_pointer);
   ftranU(vector, expected_density, factor_timer_clock_pointer);
+  // Possibly find the indices in order
+  //  if (use_indices) vector.reIndex();
   factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
@@ -461,33 +464,41 @@ void HFactor::ftranCall(std::vector<double>& vector,
                         HighsTimerClock* factor_timer_clock_pointer) {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
+  // Only have to clear the scalars of the local HVector, since the
+  // array is moved in. Set the count to -1 to indicate that indices
+  // aren't known.
+  this->rhs_.clearScalars();
   this->rhs_.array = std::move(vector);
-  double expected_density = 1;
-  ftranL(rhs_, expected_density, factor_timer_clock_pointer);
-  ftranU(rhs_, expected_density, factor_timer_clock_pointer);
+  this->rhs_.count = -1;
+  const double expected_density = 1;
+  ftranCall(this->rhs_, expected_density, factor_timer_clock_pointer);
   vector = std::move(this->rhs_.array);
   factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
 void HFactor::btranCall(HVector& vector, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
+  //  const bool use_indices = count >= 0;
   FactorTimer factor_timer;
   factor_timer.start(FactorBtran, factor_timer_clock_pointer);
   btranU(vector, expected_density, factor_timer_clock_pointer);
   btranL(vector, expected_density, factor_timer_clock_pointer);
+  // Possibly find the indices in order
+  //  if (use_indices) vector.reIndex();
   factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
 void HFactor::btranCall(std::vector<double>& vector,
                         HighsTimerClock* factor_timer_clock_pointer) {
-  FactorTimer factor_timer;
-  factor_timer.start(FactorBtran, factor_timer_clock_pointer);
+  // Only have to clear the scalars of the local HVector, since the
+  // array is moved in. Set the count to -1 to indicate that indices
+  // aren't known.
+  this->rhs_.clearScalars();
   this->rhs_.array = std::move(vector);
-  double expected_density = 1;
-  btranU(rhs_, expected_density, factor_timer_clock_pointer);
-  btranL(rhs_, expected_density, factor_timer_clock_pointer);
+  this->rhs_.count = -1;
+  const double expected_density = 1;
+  btranCall(this->rhs_, expected_density, factor_timer_clock_pointer);
   vector = std::move(this->rhs_.array);
-  factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
 void HFactor::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
