@@ -450,13 +450,13 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
 
 void HFactor::ftranCall(HVector& vector, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
-  //  const bool use_indices = count >= 0;
+  const bool use_indices = vector.count >= 0;
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
   ftranL(vector, expected_density, factor_timer_clock_pointer);
   ftranU(vector, expected_density, factor_timer_clock_pointer);
   // Possibly find the indices in order
-  //  if (use_indices) vector.reIndex();
+  if (use_indices) vector.reIndex();
   factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
@@ -478,13 +478,13 @@ void HFactor::ftranCall(std::vector<double>& vector,
 
 void HFactor::btranCall(HVector& vector, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
-  //  const bool use_indices = count >= 0;
+  const bool use_indices = vector.count >= 0;
   FactorTimer factor_timer;
   factor_timer.start(FactorBtran, factor_timer_clock_pointer);
   btranU(vector, expected_density, factor_timer_clock_pointer);
   btranL(vector, expected_density, factor_timer_clock_pointer);
   // Possibly find the indices in order
-  //  if (use_indices) vector.reIndex();
+  if (use_indices) vector.reIndex();
   factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
