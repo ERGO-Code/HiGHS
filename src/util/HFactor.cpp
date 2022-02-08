@@ -1721,56 +1721,29 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
 
   // The regular part
   //
-  // Alias to RHS
-  double* rhs_array = &rhs.array[0];
-
-  // Alias to factor U
-  const HighsInt* ur_start = &this->ur_start[0];
-  const HighsInt* ur_end = &this->ur_lastp[0];
-  const HighsInt* ur_index = &this->ur_index[0];
-  const double* ur_value = &this->ur_value[0];
-
   // Determine style of solve
   const double current_density = 1.0 * rhs.count / num_row;
-  const bool dense_solve = rhs.count < 0;
-  const bool sparse_solve =
+  const bool sparse_solve = rhs.count < 0 ||
       current_density > kHyperCancel || expected_density > kHyperBtranU;
-
-  if (dense_solve) {
-    // Transform
-    factor_timer.start(FactorBtranUpperDse, factor_timer_clock_pointer);
-    HighsInt u_pivot_count = u_pivot_index.size();
-    for (HighsInt i_logic = 0; i_logic < u_pivot_count; i_logic++) {
-      // Skip void
-      if (u_pivot_index[i_logic] == -1) continue;
-
-      // Normal part
-      const HighsInt pivotRow = u_pivot_index[i_logic];
-      double pivot_multiplier = rhs_array[pivotRow];
-      if (fabs(pivot_multiplier) > kHighsTiny) {
-        pivot_multiplier /= u_pivot_value[i_logic];
-        rhs_array[pivotRow] = pivot_multiplier;
-        const HighsInt start = ur_start[i_logic];
-        const HighsInt end = ur_end[i_logic];
-        for (HighsInt k = start; k < end; k++)
-          rhs_array[ur_index[k]] -= pivot_multiplier * ur_value[k];
-      } else
-        rhs_array[pivotRow] = 0;
-    }
-    factor_timer.stop(FactorBtranUpperDse, factor_timer_clock_pointer);
-  } else if (sparse_solve) {
+  if (sparse_solve) {
     factor_timer.start(FactorBtranUpperSps, factor_timer_clock_pointer);
     // Alias to non constant
     double rhs_synthetic_tick = 0;
-    HighsInt rhs_count = 0;
+    // Alias to RHS
+    double* rhs_array = &rhs.array[0];
     HighsInt* rhs_index = &rhs.index[0];
-
+    // Alias to factor U
+    const HighsInt* ur_start = &this->ur_start[0];
+    const HighsInt* ur_end = &this->ur_lastp[0];
+    const HighsInt* ur_index = &this->ur_index[0];
+    const double* ur_value = &this->ur_value[0];
+    // Local accumulation of RHS count
+    HighsInt rhs_count = 0;
     // Transform
     HighsInt u_pivot_count = u_pivot_index.size();
     for (HighsInt i_logic = 0; i_logic < u_pivot_count; i_logic++) {
       // Skip void
       if (u_pivot_index[i_logic] == -1) continue;
-
       // Normal part
       const HighsInt pivotRow = u_pivot_index[i_logic];
       double pivot_multiplier = rhs_array[pivotRow];
@@ -1788,7 +1761,6 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
       } else
         rhs_array[pivotRow] = 0;
     }
-
     // Save the count
     rhs.count = rhs_count;
     rhs.synthetic_tick +=
@@ -1803,15 +1775,11 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
   }
 
   // The update part
+  assert(rhs.count>=0);
   if (update_method == kUpdateMethodFt) {
     factor_timer.start(FactorBtranUpperFT, factor_timer_clock_pointer);
-    const bool dense_solve = rhs.count < 0;
-    if (dense_solve) {
-      assert(!rhs.packFlag);
-    } else {
-      rhs.tight();
-      rhs.pack();
-    }
+    rhs.tight();
+    rhs.pack();
     btranFT(rhs);
     rhs.tight();
     factor_timer.stop(FactorBtranUpperFT, factor_timer_clock_pointer);
