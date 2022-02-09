@@ -255,12 +255,12 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
   // Adding columns to a row-wise partitioned matrix needs the
   // partition information
   const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
+  // Cannot handle the row-wise partitioned case
+  assert(!partitioned);
   if (partitioned) {
     //    if (in_partition == NULL) { printf("in_partition == NULL\n"); }
     assert(in_partition != NULL);
   }
-  // Cannot handle the row-wise case
-  assert(!this->isRowwise());
   assert(num_new_col >= 0);
   assert(num_new_nz >= 0);
   if (num_new_col == 0) {
@@ -283,7 +283,8 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
   // Check that nonzeros aren't being appended to a matrix with no rows
   assert(num_new_nz <= 0 || num_row > 0);
 
-  if (this->format_ == MatrixFormat::kRowwise) {
+  const bool allow_flip_090222 = false;
+  if (allow_flip_090222 && this->format_ == MatrixFormat::kRowwise) {
     // Matrix is currently a standard row-wise matrix, so flip
     // column-wise if there are more new nonzeros than current
     // nonzeros
@@ -321,12 +322,44 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
     this->value_.resize(new_num_nz);
     // Copy in the new indices and values
     for (HighsInt iEl = 0; iEl < num_new_nz; iEl++) {
+      assert(99==33);
       this->index_[num_nz + iEl] = new_matrix_index[iEl];
       this->value_[num_nz + iEl] = new_matrix_value[iEl];
     }
   } else {
     // Matrix is row-wise
-    assert(1 == 0);
+    //
+    // Determine the row lengths of the new columns being added
+    std::vector<HighsInt> new_row_length;
+    new_row_length.assign(num_row, 0);
+    for (HighsInt iEl = 0; iEl < num_new_nz; iEl++) 
+      new_row_length[new_matrix_index[iEl]]++;
+    // Now shift the indices and values to make space    
+    HighsInt entry_offset = num_new_nz;
+    HighsInt to_original_el = this->start_[num_row];
+    for (HighsInt iRow = num_row-1; iRow>0; iRow--) {
+      entry_offset -= new_row_length[iRow];
+      HighsInt from_original_el = this->start_[iRow];
+      // Can now use this new_row_length to store the start for the
+      // new entries
+      new_row_length[iRow] = from_original_el + entry_offset;
+      for (HighsInt iEl = to_original_el-1; iEl >= from_original_el; iEl--) {
+	this->index_[iEl + entry_offset] = this->index_[iEl];
+	this->value_[iEl + entry_offset] = this->value_[iEl];
+      }
+      to_original_el = from_original_el;
+      this->start_[iRow] = entry_offset + from_original_el;
+    }
+    // Now insert the indices and values for the new columns
+    for (HighsInt iCol = 0; iCol < num_new_col; iCol++) {
+      for (HighsInt iEl = new_matrix_start[iCol]; iEl < new_matrix_start[iCol+1]; iEl++) {
+	HighsInt iRow = new_matrix_index[iEl];
+	this->index_[new_row_length[iRow]] = num_col + iCol;
+	this->value_[new_row_length[iRow]] = new_matrix_value[iEl];
+	new_row_length[iRow]++;
+      }
+    }
+    this->num_col_ += num_new_col;
   }
 }
 
