@@ -5,7 +5,7 @@
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
@@ -47,76 +47,372 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt* index, const double* value);
 
 // No commas in test case name.
-TEST_CASE("LP-build-staircase", "[highs_data]") {
-  HighsInt col_block_num_col = 4;
-  HighsInt col_block_num_row = 2;
-  HighsInt row_block_num_col = col_block_num_col+2;
-  HighsInt row_block_num_row = 2;
-  HighsInt lp_block_num_col = col_block_num_col;
-  HighsInt lp_block_num_row = col_block_num_row;
-  // Column block
-  std::vector<double> col_block_cost{1, 2, -1, -2};
-  std::vector<double> col_block_col_lower{0, 0, 0, 0};
-  std::vector<double> col_block_col_upper{inf, inf, inf, inf};
-  std::vector<double> col_block_row_lower{-inf, -inf};
-  std::vector<double> col_block_row_upper{5, 8};
-  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
-  HighsInt col_block_num_nz = 6;
-  std::vector<HighsInt> col_block_start = {0, 2, 4, 5};
-  std::vector<HighsInt> col_block_index = {0, 1, 0, 1, 0, 1};
-  std::vector<double> col_block_value{1, 2, 2, 3, 1, 1};
-  // Row block
-  std::vector<double> row_block_row_lower{-inf, -inf};
-  std::vector<double> row_block_row_upper{5, 8};
-  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
-  HighsInt row_block_num_nz = 8;
-  std::vector<HighsInt> row_block_start = {0, 4};
-  std::vector<HighsInt> row_block_index = {0, 1, 2, 4, 0, 1, 3, 5};
-  std::vector<double> row_block_value = {1, 1, 1, 1, -1, 1, 1, 1};
-  // LP block matrix
-  HighsInt lp_block_format = (HighsInt)MatrixFormat::kRowwise;
-  HighsInt lp_block_num_nz = col_block_num_nz;
-  std::vector<HighsInt> lp_block_start = {0, 3};
-  std::vector<HighsInt> lp_block_index = {0, 1, 2, 0, 1, 3};
-  std::vector<double> lp_block_value{1, 2, 1, 2, 3, 1};
-  HighsInt sense = 1;
-  double offset = 0;
+TEST_CASE("LP-717-od", "[highs_data]") {
   Highs highs;
-  const HighsLp& lp = highs.getLp();
-  // Set up an LP, with a row-wise matrix
-  REQUIRE(highs.passModel(lp_block_num_col, lp_block_num_row, lp_block_num_nz,
-			  lp_block_format, sense, offset,
-			  &col_block_cost[0], &col_block_col_lower[0], &col_block_col_upper[0],
-			  &col_block_row_lower[0], &col_block_row_upper[0],
-			  &lp_block_start[0], &lp_block_index[0], &lp_block_value[0]) == HighsStatus::kOk);
-  if (dev_run) printf("Original LP matrix has format %d\n", (int)lp.a_matrix_.format_);
-  // Add further columns using a column-wise matrix
-  REQUIRE(highs.addCols(col_block_num_col, &col_block_cost[0], &col_block_col_lower[0], &col_block_col_upper[0],
-			col_block_num_nz, &col_block_start[0], &col_block_index[0], &col_block_value[0]) == HighsStatus::kOk);
-  if (dev_run) printf("After adding a column-wise matrix, LP matrix has format %d\n", (int)lp.a_matrix_.format_);
-  REQUIRE(lp.num_col_ == 2*col_block_num_col);
-  REQUIRE(lp.num_row_ == col_block_num_row);
-  // Add further rows, with a matrix offset by 2 columns
-  const HighsInt col_offset = 2;
-  for(HighsInt iEl = 0; iEl < row_block_num_nz; iEl++) 
-    row_block_index[iEl] += col_offset;
-  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0], &row_block_row_upper[0],
-			row_block_num_nz, &row_block_start[0], &row_block_index[0], &row_block_value[0]) == HighsStatus::kOk);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) ==
+          HighsStatus::kOk);
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1.0};
+  REQUIRE(highs.addRow(2.0, inf, 1, &index[0], &value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 }
 
-TEST_CASE("LP-717", "[highs_data]") {
-  bool call_change_objective_offset = true;
-  for (HighsInt k = 0; k < 2; k++) {
-    Highs highs;
-    if (call_change_objective_offset) REQUIRE(highs.changeObjectiveOffset(0.0) == HighsStatus::kOk);
-    REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) == HighsStatus::kOk);
-    std::vector<HighsInt> index = {0};
-    std::vector<double> value = {1.0};
-    REQUIRE(highs.addRow(2.0, inf, 1, &index[0], &value[0]) == HighsStatus::kOk);
-    REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) == HighsStatus::kOk);
-    REQUIRE(highs.run() == HighsStatus::kOk);
-    call_change_objective_offset = !call_change_objective_offset;
+TEST_CASE("LP-717-full0", "[highs_data]") {
+  // Add columns to an LP with a small matrix held row-wise so that
+  // the orientation is flipped
+  HighsInt row_block_num_col = 2;
+  HighsInt row_block_num_row = 3;
+  HighsInt col_block_num_col = 3;
+  HighsInt col_block_num_row = 3;
+
+  HighsLp lp;
+  lp.num_col_ = row_block_num_col + col_block_num_col;
+  lp.num_row_ = row_block_num_row;
+  lp.col_cost_ = {-2, -1, -2, -3, -3};
+  lp.col_lower_ = {0, 0, 0, 0, 0};
+  lp.col_upper_ = {1, 1, 1, 1, 1};
+  lp.row_lower_ = {-inf, -inf, -inf};
+  lp.row_upper_ = {-2, 2, 1};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 3, 8, 10};
+  lp.a_matrix_.index_ = {0, 2, 4, 0, 1, 2, 3, 4, 1, 3};
+  lp.a_matrix_.value_ = {1, -1, -3, 1, 1, 1, -2, 3, 1, 2};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  const HighsLp& highs_lp = highs.getLp();
+  highs.passModel(lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  HighsInfo info0 = highs.getInfo();
+  HighsSolution solution0 = highs.getSolution();
+  highs.clear();
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  std::vector<double> row_block_col_cost;
+  std::vector<double> row_block_col_lower;
+  std::vector<double> row_block_col_upper;
+  std::vector<double> row_block_row_lower;
+  std::vector<double> row_block_row_upper;
+
+  std::vector<double> col_block_col_cost;
+  std::vector<double> col_block_col_lower;
+  std::vector<double> col_block_col_upper;
+  std::vector<double> col_block_row_lower;
+  std::vector<double> col_block_row_upper;
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (iCol < row_block_num_col) {
+      row_block_col_cost.push_back(lp.col_cost_[iCol]);
+      row_block_col_lower.push_back(lp.col_lower_[iCol]);
+      row_block_col_upper.push_back(lp.col_upper_[iCol]);
+    } else {
+      col_block_col_cost.push_back(lp.col_cost_[iCol]);
+      col_block_col_lower.push_back(lp.col_lower_[iCol]);
+      col_block_col_upper.push_back(lp.col_upper_[iCol]);
+    }
   }
+  row_block_row_lower = lp.row_lower_;
+  row_block_row_upper = lp.row_upper_;
+
+  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
+  HighsInt row_block_num_nz;
+  std::vector<HighsInt> row_block_start;
+  std::vector<HighsInt> row_block_index;
+  std::vector<double> row_block_value;
+
+  for (HighsInt iRow = 0; iRow < row_block_num_row; iRow++) {
+    row_block_start.push_back(row_block_index.size());
+    for (HighsInt iEl = lp.a_matrix_.start_[iRow];
+         iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+      HighsInt iCol = lp.a_matrix_.index_[iEl];
+      if (iCol < row_block_num_col) {
+        row_block_index.push_back(iCol);
+        row_block_value.push_back(lp.a_matrix_.value_[iEl]);
+      }
+    }
+  }
+  row_block_num_nz = row_block_index.size();
+
+  REQUIRE(highs.addCols(row_block_num_col, &row_block_col_cost[0],
+                        &row_block_col_lower[0], &row_block_col_upper[0], 0,
+                        nullptr, nullptr, nullptr) == HighsStatus::kOk);
+
+  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
+                        &row_block_row_upper[0], row_block_num_nz,
+                        &row_block_start[0], &row_block_index[0],
+                        &row_block_value[0]) == HighsStatus::kOk);
+
+  if (dev_run)
+    printf("After adding a row-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  // Column block
+  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
+  HighsInt col_block_num_nz = 6;
+  std::vector<HighsInt> col_block_start = {0, 2, 4};
+  std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
+  std::vector<double> col_block_value = {-1, 1, -2, 2, -3, 3};
+  REQUIRE(highs.addCols(col_block_num_col, &col_block_col_cost[0],
+                        &col_block_col_lower[0], &col_block_col_upper[0],
+                        col_block_num_nz, &col_block_start[0],
+                        &col_block_index[0],
+                        &col_block_value[0]) == HighsStatus::kOk);
+  if (dev_run)
+    printf("After adding a column-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  if (dev_run)
+    printf("After run() LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+}
+
+TEST_CASE("LP-717-full1", "[highs_data]") {
+  // Add columns to an LP with a larger matrix held row-wise so that
+  // the orientation is not flipped
+  HighsInt row_block_num_col = 5;
+  HighsInt row_block_num_row = 3;
+  HighsInt col_block_num_col = 3;
+  HighsInt col_block_num_row = 3;
+
+  HighsLp lp;
+  lp.num_col_ = row_block_num_col + col_block_num_col;
+  lp.num_row_ = row_block_num_row;
+  lp.col_cost_ = {-1, -1, -1, -1, -2, -2, -3, -3};
+  lp.col_lower_ = {0, 0, 0, 0, 0, 0, 0, 0};
+  lp.col_upper_ = {1, 1, 1, 1, 1, 1, 1, 1};
+  lp.row_lower_ = {-inf, -inf, -inf};
+  lp.row_upper_ = {-5, 5, 1};
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 5, 13, 16};
+  lp.a_matrix_.index_ = {0, 2, 4, 5, 7, 0, 1, 2, 3, 4, 5, 6, 7, 1, 3, 6};
+  lp.a_matrix_.value_ = {1, -1, 1, -1, -3, 1, 1, 1, 1, 1, 1, -2, 3, 1, -1, 2};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  const HighsLp& highs_lp = highs.getLp();
+  highs.passModel(lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  HighsInfo info0 = highs.getInfo();
+  HighsSolution solution0 = highs.getSolution();
+  highs.clear();
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  std::vector<double> row_block_col_cost;
+  std::vector<double> row_block_col_lower;
+  std::vector<double> row_block_col_upper;
+  std::vector<double> row_block_row_lower;
+  std::vector<double> row_block_row_upper;
+
+  std::vector<double> col_block_col_cost;
+  std::vector<double> col_block_col_lower;
+  std::vector<double> col_block_col_upper;
+  std::vector<double> col_block_row_lower;
+  std::vector<double> col_block_row_upper;
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (iCol < row_block_num_col) {
+      row_block_col_cost.push_back(lp.col_cost_[iCol]);
+      row_block_col_lower.push_back(lp.col_lower_[iCol]);
+      row_block_col_upper.push_back(lp.col_upper_[iCol]);
+    } else {
+      col_block_col_cost.push_back(lp.col_cost_[iCol]);
+      col_block_col_lower.push_back(lp.col_lower_[iCol]);
+      col_block_col_upper.push_back(lp.col_upper_[iCol]);
+    }
+  }
+  row_block_row_lower = lp.row_lower_;
+  row_block_row_upper = lp.row_upper_;
+
+  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
+  HighsInt row_block_num_nz;
+  std::vector<HighsInt> row_block_start;
+  std::vector<HighsInt> row_block_index;
+  std::vector<double> row_block_value;
+
+  for (HighsInt iRow = 0; iRow < row_block_num_row; iRow++) {
+    row_block_start.push_back(row_block_index.size());
+    for (HighsInt iEl = lp.a_matrix_.start_[iRow];
+         iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+      HighsInt iCol = lp.a_matrix_.index_[iEl];
+      if (iCol < row_block_num_col) {
+        row_block_index.push_back(iCol);
+        row_block_value.push_back(lp.a_matrix_.value_[iEl]);
+      }
+    }
+  }
+  row_block_num_nz = row_block_index.size();
+
+  REQUIRE(highs.addCols(row_block_num_col, &row_block_col_cost[0],
+                        &row_block_col_lower[0], &row_block_col_upper[0], 0,
+                        nullptr, nullptr, nullptr) == HighsStatus::kOk);
+
+  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
+                        &row_block_row_upper[0], row_block_num_nz,
+                        &row_block_start[0], &row_block_index[0],
+                        &row_block_value[0]) == HighsStatus::kOk);
+
+  if (dev_run)
+    printf("After adding a row-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  // Column block
+  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
+  HighsInt col_block_num_nz = 6;
+  std::vector<HighsInt> col_block_start = {0, 2, 4};
+  std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
+  std::vector<double> col_block_value = {-1, 1, -2, 2, -3, 3};
+  REQUIRE(highs.addCols(col_block_num_col, &col_block_col_cost[0],
+                        &col_block_col_lower[0], &col_block_col_upper[0],
+                        col_block_num_nz, &col_block_start[0],
+                        &col_block_index[0],
+                        &col_block_value[0]) == HighsStatus::kOk);
+  if (dev_run)
+    printf("After adding a column-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  const bool equal_lp = lp == highs_lp;
+  REQUIRE(equal_lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  if (dev_run)
+    printf("After run() LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+}
+
+TEST_CASE("LP-717-full2", "[highs_data]") {
+  // Add columns and then rows to an LP with a larger matrix held
+  // row-wise so that the orientation is not flipped
+  HighsInt row_block_num_col = 5;
+  HighsInt row_block_num_row = 3;
+  HighsInt col_block_num_col = 3;
+  HighsInt col_block_num_row = 3;
+
+  HighsLp lp;
+  lp.num_col_ = row_block_num_col + col_block_num_col;
+  lp.num_row_ = 2 * row_block_num_row;
+  lp.col_cost_ = {-1, -1, -1, -1, -2, -2, -3, -3};
+  lp.col_lower_ = {0, 0, 0, 0, 0, 0, 0, 0};
+  lp.col_upper_ = {1, 1, 1, 1, 1, 1, 1, 1};
+  lp.row_lower_ = {-inf, -inf, -inf};
+  lp.row_upper_ = {-1, 6, 2};
+  for (HighsInt iRow = 0; iRow < row_block_num_row; iRow++) {
+    lp.row_lower_.push_back(lp.row_lower_[iRow]);
+    lp.row_upper_.push_back(lp.row_upper_[iRow]);
+  }
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 5, 13, 16, 19, 24, 26};
+  lp.a_matrix_.index_ = {0, 2, 4, 5, 7, 0, 1, 2, 3, 4, 5, 6, 7,
+                         1, 3, 6, 0, 2, 4, 0, 1, 2, 3, 4, 1, 3};
+  lp.a_matrix_.value_ = {1, -1, 1, -1, -3, 1, 1, 1, 1, 1, 1, -2, 3,
+                         1, -1, 2, 1,  -1, 1, 1, 1, 1, 1, 1, 1,  -1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  const HighsLp& highs_lp = highs.getLp();
+  highs.passModel(lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  HighsInfo info0 = highs.getInfo();
+  HighsSolution solution0 = highs.getSolution();
+  highs.clear();
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  std::vector<double> row_block_col_cost;
+  std::vector<double> row_block_col_lower;
+  std::vector<double> row_block_col_upper;
+  std::vector<double> row_block_row_lower;
+  std::vector<double> row_block_row_upper;
+
+  std::vector<double> col_block_col_cost;
+  std::vector<double> col_block_col_lower;
+  std::vector<double> col_block_col_upper;
+  std::vector<double> col_block_row_lower;
+  std::vector<double> col_block_row_upper;
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (iCol < row_block_num_col) {
+      row_block_col_cost.push_back(lp.col_cost_[iCol]);
+      row_block_col_lower.push_back(lp.col_lower_[iCol]);
+      row_block_col_upper.push_back(lp.col_upper_[iCol]);
+    } else {
+      col_block_col_cost.push_back(lp.col_cost_[iCol]);
+      col_block_col_lower.push_back(lp.col_lower_[iCol]);
+      col_block_col_upper.push_back(lp.col_upper_[iCol]);
+    }
+  }
+  row_block_row_lower = lp.row_lower_;
+  row_block_row_upper = lp.row_upper_;
+
+  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
+  HighsInt row_block_num_nz;
+  std::vector<HighsInt> row_block_start;
+  std::vector<HighsInt> row_block_index;
+  std::vector<double> row_block_value;
+
+  for (HighsInt iRow = 0; iRow < row_block_num_row; iRow++) {
+    row_block_start.push_back(row_block_index.size());
+    for (HighsInt iEl = lp.a_matrix_.start_[iRow];
+         iEl < lp.a_matrix_.start_[iRow + 1]; iEl++) {
+      HighsInt iCol = lp.a_matrix_.index_[iEl];
+      if (iCol < row_block_num_col) {
+        row_block_index.push_back(iCol);
+        row_block_value.push_back(lp.a_matrix_.value_[iEl]);
+      }
+    }
+  }
+  row_block_num_nz = row_block_index.size();
+
+  REQUIRE(highs.addCols(row_block_num_col, &row_block_col_cost[0],
+                        &row_block_col_lower[0], &row_block_col_upper[0], 0,
+                        nullptr, nullptr, nullptr) == HighsStatus::kOk);
+
+  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
+                        &row_block_row_upper[0], row_block_num_nz,
+                        &row_block_start[0], &row_block_index[0],
+                        &row_block_value[0]) == HighsStatus::kOk);
+
+  if (dev_run)
+    printf("After adding a row-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  // Column block
+  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
+  HighsInt col_block_num_nz = 6;
+  std::vector<HighsInt> col_block_start = {0, 2, 4};
+  std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
+  std::vector<double> col_block_value = {-1, 1, -2, 2, -3, 3};
+  REQUIRE(highs.addCols(col_block_num_col, &col_block_col_cost[0],
+                        &col_block_col_lower[0], &col_block_col_upper[0],
+                        col_block_num_nz, &col_block_start[0],
+                        &col_block_index[0],
+                        &col_block_value[0]) == HighsStatus::kOk);
+  if (dev_run)
+    printf("After adding a column-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
+                        &row_block_row_upper[0], row_block_num_nz,
+                        &row_block_start[0], &row_block_index[0],
+                        &row_block_value[0]) == HighsStatus::kOk);
+
+  if (dev_run)
+    printf("After adding a row-wise matrix, LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
+
+  const bool equal_lp = lp == highs_lp;
+  REQUIRE(equal_lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  if (dev_run)
+    printf("After run() LP matrix has format %d\n",
+           (int)highs_lp.a_matrix_.format_);
 }
 
 TEST_CASE("LP-modification", "[highs_data]") {
