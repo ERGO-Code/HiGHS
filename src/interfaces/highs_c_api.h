@@ -401,10 +401,6 @@ HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
 HighsInt Highs_setStringOptionValue(void* highs, const char* option,
                                     const char* value);
 
-// TODO(odow): deprecate this method
-HighsInt Highs_setOptionValue(void* highs, const char* option,
-                              const char* value);
-
 /**
  * Get a boolean-valued option.
  *
@@ -1621,6 +1617,9 @@ double Highs_getHighsRunTime(const void* highs);
 
 // const char* Highs_highsModelStatusToChar(void* highs,
 //                                          HighsInt int_model_status);
+
+HighsInt Highs_setOptionValue(void* highs, const char* option,
+                              const char* value);
 
 #ifdef __cplusplus
 }
