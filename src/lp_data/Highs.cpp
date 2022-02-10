@@ -2485,9 +2485,24 @@ HighsStatus Highs::callSolveQp() {
 }
 
 HighsStatus Highs::callSolveMip() {
+  // Record whether there is a valid primal solution on entry
+  const bool user_solution = solution_.value_valid;
+  std::vector<double> user_solution_col_value;
+  std::vector<double> user_solution_row_value;
+  if (user_solution) {
+    // Save the col and row values
+    user_solution_col_value = std::move(solution_.col_value);
+    user_solution_row_value = std::move(solution_.row_value);
+  }
   // Ensure that any solver data for users in Highs class members are
   // cleared
   clearUserSolverData();
+  if (user_solution) {
+    // Recover the col and row values
+    solution_.col_value = std::move(user_solution_col_value);
+    solution_.row_value = std::move(user_solution_row_value);
+    solution_.value_valid = true;
+  }
   // Run the MIP solver
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
