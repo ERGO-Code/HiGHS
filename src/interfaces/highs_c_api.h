@@ -344,11 +344,6 @@ HighsInt Highs_setStringOptionValue(void* highs,
                                     const char* value  //!< new value of option
 );
 
-HighsInt Highs_setOptionValue(void* highs,
-                              const char* option,  //!< name of the option
-                              const char* value    //!< new value of option
-);
-
 HighsInt Highs_getBoolOptionValue(const void* highs,
                                   const char* option,  //!< name of the option
                                   HighsInt* value      //!< value of option
@@ -1206,6 +1201,9 @@ double Highs_getHighsRunTime(const void* highs);
 
 // const char* Highs_highsModelStatusToChar(void* highs,
 //                                          HighsInt int_model_status);
+
+HighsInt Highs_setOptionValue(void* highs, const char* option,
+                              const char* value);
 
 #ifdef __cplusplus
 }
