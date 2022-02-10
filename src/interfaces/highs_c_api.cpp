@@ -309,12 +309,6 @@ HighsInt Highs_setStringOptionValue(void* highs, const char* option,
       ->setOptionValue(std::string(option), std::string(value));
 }
 
-HighsInt Highs_setOptionValue(void* highs, const char* option,
-                              const char* value) {
-  return (HighsInt)((Highs*)highs)
-      ->setOptionValue(std::string(option), std::string(value));
-}
-
 HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
                                   HighsInt* value) {
   bool v;
@@ -1009,6 +1003,15 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
                       colcost, collower, colupper, rowlower, rowupper, astart,
                       aindex, avalue, colvalue, coldual, rowvalue, rowdual,
                       colbasisstatus, rowbasisstatus, modelstatus);
+}
+
+HighsInt Highs_setOptionValue(void* highs, const char* option,
+                              const char* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_setOptionValue",
+                           "Highs_setStringOptionValue");
+  return (HighsInt)((Highs*)highs)
+      ->setOptionValue(std::string(option), std::string(value));
 }
 
 HighsInt Highs_runQuiet(void* highs) {
