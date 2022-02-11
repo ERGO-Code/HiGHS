@@ -284,8 +284,11 @@ void minimal_api_mps() {
   // that the model file is check/instances/avgas.mps
   
   const char* filename = "../HiGHS/check/instances/avgas.mps";
+  // Create a Highs instance
+  void* highs = Highs_create();
   int run_status;
-  run_status = Highs_readModel(filename);
+  run_status = Highs_readModel(highs, filename);
+  assert(run_status == 0);
   run_status = Highs_run(highs);
   int model_status = Highs_getModelStatus(highs);
   // The run must be successful, and the model status optimal
@@ -294,10 +297,10 @@ void minimal_api_mps() {
 
   printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
 
-  double objective_value;
-  Highs_getDoubleInfoValue(highs, "objective_value", objective_value);
-  printf("Optimal objective value = %g\n", objective_value);
-  assert(abs(objective_value+7.75)<1e-5);
+  double objective_function_value;
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  printf("Optimal objective value = %g\n", objective_function_value);
+  assert(abs(objective_function_value+7.75)<1e-5);
 }
 
 void full_api() {
@@ -601,9 +604,9 @@ void full_api() {
 }
 
 int main() {
-    minimal_api();
-  //  minimal_api_qp();
-  //  minimal_api_mps();
-    full_api();
+  minimal_api();
+  minimal_api_qp();
+  minimal_api_mps();
+  full_api();
   return 0;
 }
