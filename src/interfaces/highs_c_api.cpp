@@ -168,48 +168,6 @@ HighsInt Highs_qpCall(
   return (HighsInt)status;
 }
 
-HighsInt Highs_lpDimMpsRead(
-    //			    const char* filename,
-    HighsInt* numcol, HighsInt* numrow, HighsInt* numnz) {
-  Highs highs;
-  highs.setOptionValue("output_flag", false);
-  const char* filename = "ml.mps";
-  HighsStatus status = highs.readModel(filename);
-  const HighsLp& lp = highs.getLp();
-  *numcol = lp.num_col_;
-  *numrow = lp.num_row_;
-  *numnz = lp.a_matrix_.numNz();
-  return (HighsInt)status;
-}
-
-HighsInt Highs_lpDataMpsRead(
-    //			     const char* filename,
-    const HighsInt numcol, const HighsInt numrow, HighsInt* sense,
-    double* offset, double* colcost, double* collower, double* colupper,
-    double* rowlower, double* rowupper, HighsInt* astart, HighsInt* aindex,
-    double* avalue) {
-  Highs highs;
-  highs.setOptionValue("output_flag", false);
-  const char* filename = "ml.mps";
-  HighsStatus status = highs.readModel(filename);
-  const HighsLp& lp = highs.getLp();
-  const HighsInt num_nz = lp.a_matrix_.start_[lp.num_col_];
-  assert(lp.num_col_ == numcol);
-  assert(lp.num_row_ == numrow);
-  *sense = (HighsInt)lp.sense_;
-  *offset = lp.offset_;
-  memcpy(colcost, &lp.col_cost_[0], (numcol) * sizeof(double));
-  memcpy(collower, &lp.col_lower_[0], (numcol) * sizeof(double));
-  memcpy(colupper, &lp.col_upper_[0], (numcol) * sizeof(double));
-  memcpy(rowlower, &lp.row_lower_[0], (numrow) * sizeof(double));
-  memcpy(rowupper, &lp.row_upper_[0], (numrow) * sizeof(double));
-  memcpy(astart, &lp.a_matrix_.start_[0], (numcol + 1) * sizeof(HighsInt));
-  memcpy(aindex, &lp.a_matrix_.index_[0], (num_nz) * sizeof(HighsInt));
-  memcpy(avalue, &lp.a_matrix_.value_[0], (num_nz) * sizeof(double));
-
-  return (HighsInt)status;
-}
-
 void* Highs_create() { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
