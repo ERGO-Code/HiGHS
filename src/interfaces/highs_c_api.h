@@ -123,40 +123,6 @@ HighsInt Highs_qpCall(
     double* rowdual, HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
     HighsInt* modelstatus);
 
-/*
- * TODO(odow): deprecate this method.
- *@brief reads dimensions of an LP from an MPS file using HiGHS
- */
-HighsInt Highs_lpDimMpsRead(
-    //    const char* filename,
-    HighsInt* numcol,  //!< number of columns
-    HighsInt* numrow,  //!< number of rows
-    HighsInt* numNz    //!< number of rows
-);
-
-/*
- * TODO(odow): deprecate this method.
- * @brief reads data for an LP from an MPS file using HiGHS - requires pointers
- * to allocated memory
- */
-HighsInt Highs_lpDataMpsRead(
-    //    const char* filename,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    HighsInt* sense,        //!< sense of the optimization (-1 => Maximization;
-                            //!< Otherwise minimization)
-    double* offset,         //!< objective constant
-    double* colcost,        //!< array of length [numcol] with column costs
-    double* collower,  //!< array of length [numcol] with lower column bounds
-    double* colupper,  //!< array of length [numcol] with upper column bounds
-    double* rowlower,  //!< array of length [numrow] with lower row bounds
-    double* rowupper,  //!< array of length [numrow] with upper row bounds
-    HighsInt* astart,  //!< array of length [numcol] with column start indices
-    HighsInt*
-        aindex,  //!< array of length [numnz] with row indices of matrix entries
-    double* avalue  //!< array of length [numnz] with value of matrix entries
-);
-
 /**
  * Create a HiGHS model object and return the reference.
  *
