@@ -248,9 +248,13 @@ class HighsNodeQueue {
 
   OpenNode&& popBestBoundNode();
 
-  int64_t numNodesUp(HighsInt col) const { return colLowerNodesPtr.get()[col].size(); }
+  int64_t numNodesUp(HighsInt col) const {
+    return colLowerNodesPtr.get()[col].size();
+  }
 
-  int64_t numNodesDown(HighsInt col) const { return colUpperNodesPtr.get()[col].size(); }
+  int64_t numNodesDown(HighsInt col) const {
+    return colUpperNodesPtr.get()[col].size();
+  }
 
   int64_t numNodesUp(HighsInt col, double val) const {
     assert(numCol > col);
@@ -268,9 +272,13 @@ class HighsNodeQueue {
     return std::distance(colUpperNodes[col].begin(), it);
   }
 
-  const NodeSet& getUpNodes(HighsInt col) const { return colLowerNodesPtr.get()[col]; }
+  const NodeSet& getUpNodes(HighsInt col) const {
+    return colLowerNodesPtr.get()[col];
+  }
 
-  const NodeSet& getDownNodes(HighsInt col) const { return colUpperNodesPtr.get()[col]; }
+  const NodeSet& getDownNodes(HighsInt col) const {
+    return colUpperNodesPtr.get()[col];
+  }
 
   double pruneInfeasibleNodes(HighsDomain& globaldomain, double feastol);
 
