@@ -227,7 +227,7 @@ void HighsNodeQueue::setNumCol(HighsInt numcol) {
 void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
                                        double feastol,
                                        HighsCDouble& treeweight) {
-  std::set<HighsInt> delnodes;
+  std::set<int64_t> delnodes;
   auto prunestart =
       colLowerNodes[col].lower_bound(std::make_pair(ub + feastol, -1));
   for (auto it = prunestart; it != colLowerNodes[col].end(); ++it)
@@ -238,7 +238,7 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
   for (auto it = colUpperNodes[col].begin(); it != pruneend; ++it)
     delnodes.insert(it->second);
 
-  for (HighsInt delnode : delnodes) {
+  for (int64_t delnode : delnodes) {
     if (nodes[delnode].estimate != kHighsInf)
       treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
     unlink(delnode);
