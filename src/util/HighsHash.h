@@ -812,8 +812,8 @@ class HighsHashTable {
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0)->value())>::type;
+  using ValueType = typename std::remove_reference<
+      decltype(reinterpret_cast<Entry*>(0)->value())>::type;
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
@@ -995,7 +995,12 @@ class HighsHashTable {
 
  public:
   void clear() {
-    if (numElements) makeEmptyTable(128);
+    if (numElements) {
+      u64 capacity = tableSizeMask + 1;
+      for (u64 i = 0; i < capacity; ++i)
+        if (occupied(metadata[i])) entries.get()[i].~Entry();
+      makeEmptyTable(128);
+    }
   }
 
   const ValueType* find(const KeyType& key) const {

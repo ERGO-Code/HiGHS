@@ -165,11 +165,11 @@ void HighsNodeQueue::link_domchgs(int64_t node) {
     switch (nodes[node].domchgstack[i].boundtype) {
       case HighsBoundType::kLower:
         nodes[node].domchglinks[i] =
-            colLowerNodes[col].emplace(val, node).first;
+            colLowerNodesPtr.get()[col].emplace(val, node).first;
         break;
       case HighsBoundType::kUpper:
         nodes[node].domchglinks[i] =
-            colUpperNodes[col].emplace(val, node).first;
+            colUpperNodesPtr.get()[col].emplace(val, node).first;
     }
   }
 }
@@ -182,10 +182,10 @@ void HighsNodeQueue::unlink_domchgs(int64_t node) {
     HighsInt col = nodes[node].domchgstack[i].column;
     switch (nodes[node].domchgstack[i].boundtype) {
       case HighsBoundType::kLower:
-        colLowerNodes[col].erase(nodes[node].domchglinks[i]);
+        colLowerNodesPtr.get()[col].erase(nodes[node].domchglinks[i]);
         break;
       case HighsBoundType::kUpper:
-        colUpperNodes[col].erase(nodes[node].domchglinks[i]);
+        colUpperNodesPtr.get()[col].erase(nodes[node].domchglinks[i]);
     }
   }
 
@@ -219,15 +219,32 @@ void HighsNodeQueue::unlink(int64_t node) {
   freeslots.push(node);
 }
 
-void HighsNodeQueue::setNumCol(HighsInt numcol) {
-  colLowerNodes.resize(numcol, NodeSet(allocator));
-  colUpperNodes.resize(numcol, NodeSet(allocator));
+void HighsNodeQueue::setNumCol(HighsInt numCol) {
+  if (this->numCol == numCol) return;
+  this->numCol = numCol;
+  allocatorState = std::unique_ptr<AllocatorState>(new AllocatorState());
+
+  if (numCol == 0) return;
+  colLowerNodesPtr =
+      NodeSetArray((NodeSet*)::operator new(sizeof(NodeSet) * numCol));
+  colUpperNodesPtr =
+      NodeSetArray((NodeSet*)::operator new(sizeof(NodeSet) * numCol));
+
+  NodesetAllocator<std::pair<double, int64_t>> allocator(allocatorState.get());
+  for (HighsInt i = 0; i < numCol; ++i) {
+    new (colLowerNodesPtr.get() + i) NodeSet(allocator);
+    new (colUpperNodesPtr.get() + i) NodeSet(allocator);
+  }
 }
 
 void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
                                        double feastol,
                                        HighsCDouble& treeweight) {
   std::set<int64_t> delnodes;
+
+  auto colLowerNodes = colLowerNodesPtr.get();
+  auto colUpperNodes = colUpperNodesPtr.get();
+
   auto prunestart =
       colLowerNodes[col].lower_bound(std::make_pair(ub + feastol, -1));
   for (auto it = prunestart; it != colLowerNodes[col].end(); ++it)
@@ -256,9 +273,9 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 
     numchgs = globaldomain.getDomainChangeStack().size();
 
-    assert(colLowerNodes.size() == globaldomain.col_lower_.size());
-    HighsInt numcol = colLowerNodes.size();
-    for (HighsInt i = 0; i != numcol; ++i) {
+    assert(numCol == globaldomain.col_lower_.size());
+
+    for (HighsInt i = 0; i < numCol; ++i) {
       checkGlobalBounds(i, globaldomain.col_lower_[i],
                         globaldomain.col_upper_[i], feastol, treeweight);
     }
@@ -266,7 +283,10 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
     size_t numopennodes = numNodes();
     if (numopennodes == 0) break;
 
-    for (HighsInt i = 0; i != numcol; ++i) {
+    auto colLowerNodes = colLowerNodesPtr.get();
+    auto colUpperNodes = colUpperNodesPtr.get();
+
+    for (HighsInt i = 0; i < numCol; ++i) {
       if (colLowerNodes[i].size() == numopennodes) {
         double globallb = colLowerNodes[i].begin()->first;
         if (globallb > globaldomain.col_lower_[i]) {
