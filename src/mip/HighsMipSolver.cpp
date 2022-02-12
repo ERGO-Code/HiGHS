@@ -468,7 +468,8 @@ void HighsMipSolver::cleanupSolve() {
   node_count_ = mipdata_->num_nodes;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
 
-  if (modelstatus_ == HighsModelStatus::kNotset) {
+  if (modelstatus_ == HighsModelStatus::kNotset ||
+      modelstatus_ == HighsModelStatus::kInfeasible) {
     if (havesolution)
       modelstatus_ = HighsModelStatus::kOptimal;
     else
