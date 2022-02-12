@@ -220,8 +220,8 @@ void HighsNodeQueue::unlink(int64_t node) {
 }
 
 void HighsNodeQueue::setNumCol(HighsInt numcol) {
-  colLowerNodes.resize(numcol);
-  colUpperNodes.resize(numcol);
+  colLowerNodes.resize(numcol, NodeSet(allocator));
+  colUpperNodes.resize(numcol, NodeSet(allocator));
 }
 
 void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,

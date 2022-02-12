@@ -29,10 +29,120 @@ class HighsLpRelaxation;
 
 class HighsNodeQueue {
  public:
+  template <typename T>
+  class NodesetAllocator {
+    template <int S>
+    struct ChunkWithSize {
+      ChunkWithSize* next;
+      typename std::aligned_storage<S, alignof(T)>::type storage;
+    };
+
+    using Chunk =
+        ChunkWithSize<4096 - offsetof(ChunkWithSize<sizeof(T)>, storage)>;
+
+    union FreelistNode {
+      FreelistNode* next;
+      typename std::aligned_storage<sizeof(T), alignof(T)>::type storage;
+    };
+
+    FreelistNode* freeListHead = nullptr;
+    char* currChunkStart = nullptr;
+    char* currChunkEnd = nullptr;
+    Chunk* chunkListHead = nullptr;
+
+    void clear() noexcept {
+      freeListHead = nullptr;
+      currChunkStart = nullptr;
+      currChunkEnd = nullptr;
+      while (chunkListHead) {
+        Chunk* delChunk = chunkListHead;
+        chunkListHead = delChunk->next;
+        delete delChunk;
+      }
+    }
+
+   public:
+    using value_type = T;
+    using size_type = std::size_t;
+    using propagate_on_container_move_assignment = std::true_type;
+
+    NodesetAllocator() noexcept = default;
+    NodesetAllocator(const NodesetAllocator&) noexcept {}
+    template <typename U>
+    NodesetAllocator(const NodesetAllocator<U>&) noexcept {}
+    NodesetAllocator(NodesetAllocator&& other) noexcept
+        : freeListHead(other.freeListHead),
+          currChunkStart(other.currChunkStart),
+          currChunkEnd(other.currChunkEnd),
+          chunkListHead(other.chunkListHead) {
+      other.currChunkStart = nullptr;
+      other.currChunkEnd = nullptr;
+      other.chunkListHead = nullptr;
+      other.freeListHead = nullptr;
+    }
+
+    NodesetAllocator& operator=(const NodesetAllocator&) noexcept {
+      return *this;
+    }
+
+    NodesetAllocator& operator=(NodesetAllocator&& other) noexcept {
+      clear();
+      freeListHead = other.freeListHead;
+      currChunkStart = other.currChunkStart;
+      currChunkEnd = other.currChunkEnd;
+      chunkListHead = other.chunkListHead;
+      other.chunkListHead = nullptr;
+      other.freeListHead = nullptr;
+      other.currChunkStart = nullptr;
+      other.currChunkEnd = nullptr;
+      return *this;
+    }
+
+    ~NodesetAllocator() noexcept { clear(); }
+
+    T* allocate(size_type n) {
+      if (n == 1) {
+        T* ptr = reinterpret_cast<T*>(freeListHead);
+        if (ptr) {
+          freeListHead = freeListHead->next;
+        } else {
+          ptr = reinterpret_cast<T*>(currChunkStart);
+          currChunkStart += sizeof(FreelistNode);
+          if (currChunkStart > currChunkEnd) {
+            auto newChunk = new Chunk;
+            newChunk->next = chunkListHead;
+            chunkListHead = newChunk;
+            currChunkStart = reinterpret_cast<char*>(&newChunk->storage);
+            currChunkEnd = currChunkStart + sizeof(newChunk->storage);
+            ptr = reinterpret_cast<T*>(currChunkStart);
+            currChunkStart += sizeof(FreelistNode);
+          }
+        }
+        return ptr;
+      }
+
+      return static_cast<T*>(::operator new(n * sizeof(T)));
+    }
+
+    void deallocate(T* ptr, size_type n) noexcept {
+      if (n == 1) {
+        FreelistNode* node = reinterpret_cast<FreelistNode*>(ptr);
+        node->next = freeListHead;
+        freeListHead = node;
+      } else {
+        ::operator delete(ptr);
+      }
+    }
+  };
+
+  using NodeSet = std::set<std::pair<double, int64_t>,
+                           std::less<std::pair<double, int64_t>>,
+                           NodesetAllocator<std::pair<double, int64_t>>>;
+
   struct OpenNode {
     std::vector<HighsDomainChange> domchgstack;
     std::vector<HighsInt> branchings;
-    std::vector<std::set<std::pair<double, HighsInt>>::iterator> domchglinks;
+    std::vector<NodeSet::iterator> domchglinks;
     double lower_bound;
     double estimate;
     HighsInt depth;
@@ -75,10 +185,11 @@ class HighsNodeQueue {
   class NodeHybridEstimRbTree;
   class SuboptimalNodeRbTree;
 
+  NodesetAllocator<std::pair<double, int64_t>> allocator;
   std::vector<OpenNode> nodes;
-  std::vector<std::set<std::pair<double, HighsInt>>> colLowerNodes;
-  std::vector<std::set<std::pair<double, HighsInt>>> colUpperNodes;
-  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
+  std::vector<NodeSet> colLowerNodes;
+  std::vector<NodeSet> colUpperNodes;
+  std::priority_queue<int64_t, std::vector<int64_t>, std::greater<int64_t>>
       freeslots;
   int64_t lowerRoot = -1;
   int64_t lowerMin = -1;
@@ -144,14 +255,9 @@ class HighsNodeQueue {
     return std::distance(colUpperNodes[col].begin(), it);
   }
 
-  const std::set<std::pair<double, HighsInt>>& getUpNodes(HighsInt col) const {
-    return colLowerNodes[col];
-  }
+  const NodeSet& getUpNodes(HighsInt col) const { return colLowerNodes[col]; }
 
-  const std::set<std::pair<double, HighsInt>>& getDownNodes(
-      HighsInt col) const {
-    return colUpperNodes[col];
-  }
+  const NodeSet& getDownNodes(HighsInt col) const { return colUpperNodes[col]; }
 
   double pruneInfeasibleNodes(HighsDomain& globaldomain, double feastol);
 
@@ -175,5 +281,17 @@ class HighsNodeQueue {
 
   bool empty() const { return numActiveNodes() == 0; }
 };
+
+template <typename T, typename U>
+bool operator==(const HighsNodeQueue::NodesetAllocator<T>&,
+                const HighsNodeQueue::NodesetAllocator<U>&) {
+  return true;
+}
+
+template <typename T, typename U>
+bool operator!=(const HighsNodeQueue::NodesetAllocator<T>&,
+                const HighsNodeQueue::NodesetAllocator<U>&) {
+  return false;
+}
 
 #endif
