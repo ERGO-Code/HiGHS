@@ -307,10 +307,10 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 
   HighsCDouble treeweight = 0.0;
 
-  HighsInt maxLbNode = lowerTree.last();
+  int64_t maxLbNode = lowerTree.last();
   while (maxLbNode != -1) {
     if (nodes[maxLbNode].lower_bound < upper_limit) break;
-    HighsInt next = lowerTree.predecessor(maxLbNode);
+    int64_t next = lowerTree.predecessor(maxLbNode);
     treeweight += pruneNode(maxLbNode);
     maxLbNode = next;
   }
@@ -318,7 +318,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
   if (optimality_limit < upper_limit) {
     while (maxLbNode != -1) {
       if (nodes[maxLbNode].lower_bound < optimality_limit) break;
-      HighsInt next = lowerTree.predecessor(maxLbNode);
+      int64_t next = lowerTree.predecessor(maxLbNode);
       assert(nodes[maxLbNode].estimate != kHighsInf);
       unlink_estim(maxLbNode);
       unlink_lower(maxLbNode);
@@ -334,7 +334,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
     maxLbNode = suboptimalTree.last();
     while (maxLbNode != -1) {
       if (nodes[maxLbNode].lower_bound < upper_limit) break;
-      HighsInt next = suboptimalTree.predecessor(maxLbNode);
+      int64_t next = suboptimalTree.predecessor(maxLbNode);
       unlink(maxLbNode);
       maxLbNode = next;
     }
@@ -347,7 +347,7 @@ double HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
                                    std::vector<HighsInt>&& branchPositions,
                                    double lower_bound, double estimate,
                                    HighsInt depth) {
-  HighsInt pos;
+  int64_t pos;
 
   assert(estimate != kHighsInf);
 
@@ -370,7 +370,7 @@ double HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
 }
 
 HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestNode() {
-  HighsInt bestNode = hybridEstimMin;
+  int64_t bestNode = hybridEstimMin;
 
   unlink(bestNode);
 
@@ -378,7 +378,7 @@ HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestNode() {
 }
 
 HighsNodeQueue::OpenNode&& HighsNodeQueue::popBestBoundNode() {
-  HighsInt bestBoundNode = lowerMin;
+  int64_t bestBoundNode = lowerMin;
 
   unlink(bestBoundNode);
 

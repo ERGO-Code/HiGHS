@@ -718,9 +718,6 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
   double lb = numInfObjLower == 0
                   ? double(objectiveLower) + domain->mipsolver->model_->offset_
                   : -kHighsInf;
-  if (!domain->mipsolver->submip)
-    printf("Initial obj lower bound of domain: %g, num clique partitions: %d\n",
-           lb, numPartitions);
 
   recomputeCapacityThreshold();
   debugCheckObjectiveLower();
