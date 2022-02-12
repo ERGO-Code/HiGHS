@@ -647,6 +647,14 @@ HighsStatus Highs::run() {
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   model_.lp_.ensureColwise();
+  // Ensure that the matrix has no large values
+  if (model_.lp_.a_matrix_.hasLargeValue(options_.large_matrix_value)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Canot solve a model with a |value| exceeding %g in "
+                 "constraint matrix\n",
+                 options_.large_matrix_value);
+    return returnFromRun(HighsStatus::kError);
+  }
   if (options_.highs_debug_level > min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified

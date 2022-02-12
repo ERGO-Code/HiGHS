@@ -458,7 +458,7 @@ void mpsGas11(Highs& highs) {
   std::string model = "gas11";
   std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kWarning);
 
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);

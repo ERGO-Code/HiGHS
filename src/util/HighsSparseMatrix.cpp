@@ -694,6 +694,12 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                       small_matrix_value, large_matrix_value);
 }
 
+bool HighsSparseMatrix::hasLargeValue(const double large_matrix_value) {
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++)
+    if (std::abs(this->value_[iEl]) > large_matrix_value) return true;
+  return false;
+}
+
 void HighsSparseMatrix::considerColScaling(
     const HighsInt max_scale_factor_exponent, double* col_scale) {
   const double log2 = log(2.0);
