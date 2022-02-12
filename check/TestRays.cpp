@@ -256,6 +256,7 @@ void testUnboundedMps(const std::string model,
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
+  HighsStatus require_status;
   bool has_dual_ray;
   bool has_primal_ray;
   vector<double> dual_ray_value;
@@ -265,7 +266,8 @@ void testUnboundedMps(const std::string model,
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kUnbounded;
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  require_status = model == "gas11" ? HighsStatus::kWarning : HighsStatus::kOk;
+  REQUIRE(highs.readModel(model_file) == require_status);
   REQUIRE(highs.changeObjectiveSense(sense) == HighsStatus::kOk);
   lp = highs.getLp();
   lp.model_name_ = model;
