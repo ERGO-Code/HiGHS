@@ -100,10 +100,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
     lp.a_matrix_.value_.resize(lp_num_nz);
 
-  if (return_status == HighsStatus::kError)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
+  //  if (return_status == HighsStatus::kError)
+  //    return_status = HighsStatus::kError;
+  //  else
+  //    return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
