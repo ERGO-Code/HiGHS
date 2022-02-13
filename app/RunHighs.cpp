@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
   if (!loadOptions(log_options, argc, argv, loaded_options, model_file))
-    return 0;
+    return (int)HighsStatus::kError;
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
   if (loaded_options.output_flag) highs.openLogFile(loaded_options.log_file);
@@ -48,17 +48,16 @@ int main(int argc, char** argv) {
   highs.passOptions(loaded_options);
 
   printHighsVersionCopyright(log_options);
-  //
+
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError)
-    return 1;  // todo: change to read error
-  //
+    return (int)read_status;
+
   // Solve the model
   HighsStatus run_status = highs.run();
-  if (run_status == HighsStatus::kError) return 1;  // todo: change to run error
-  //
+  if (run_status == HighsStatus::kError) return (int)run_status;
 
   // Possibly compute the ranging information
   if (options.ranging == kHighsOnString) highs.getRanging();
@@ -71,9 +70,8 @@ int main(int argc, char** argv) {
   if (options.write_model_to_file) {
     HighsStatus write_model_status = highs.writeModel(options.write_model_file);
     if (write_model_status == HighsStatus::kError)
-      return 1;  // todo: change to write model error
+      return (int)write_model_status;  // todo: change to write model error
   }
-
   return (int)run_status;
 }
 
