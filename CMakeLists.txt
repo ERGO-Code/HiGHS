@@ -13,12 +13,13 @@ include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
 set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
-project(HIGHS VERSION 1.2 LANGUAGES CXX C)
-set(HIGHS_VERSION_PATCH 0)
-
+# set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
+
+project(HIGHS VERSION 1.2 LANGUAGES CXX C)
+set(HIGHS_VERSION_PATCH 0)
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
