@@ -52,8 +52,7 @@ int main(int argc, char** argv) {
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(log_options, read_status, highs.getModel());
-  if (read_status == HighsStatus::kError)
-    return (int)read_status;
+  if (read_status == HighsStatus::kError) return (int)read_status;
 
   // Solve the model
   HighsStatus run_status = highs.run();
