@@ -3836,8 +3836,10 @@ void HighsDomain::ConflictSet::conflictAnalysis(
     }
 
     numConflicts += numNewConflicts;
-    // if no conflict was found for a non-empty depth level we stop here
+    // if no conflict was found in the first non-empty depth level we stop here
     if (numConflicts == 0) break;
+    // if no conflict was found in this depth level and all conflicts of the
+    // first 5 non-empty depth levels are generated we stop here
     if (lastDepth - currDepth >= 4 && numNewConflicts == 0) break;
   }
 
@@ -3909,8 +3911,10 @@ void HighsDomain::ConflictSet::conflictAnalysis(
     }
 
     numConflicts += numNewConflicts;
-    // if no conflict was found for a non-empty depth level we stop here
+    // if no conflict was found in the first non-empty depth level we stop here
     if (numConflicts == 0) break;
+    // if no conflict was found in this depth level and all conflicts of the
+    // first 5 non-empty depth levels are generated we stop here
     if (lastDepth - currDepth >= 4 && numNewConflicts == 0) break;
   }
 
