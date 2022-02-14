@@ -541,7 +541,7 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
   assert(!domain->infeasible_);
 
   if (newbound > oldbound) {
-    cutpool->getMatrix().forEachNegativeColumnEntry(
+    cutpool->getMatrix().forEachPositiveColumnEntry(
         col, [&](HighsInt row, double val) {
           domain->updateThresholdUbChange(col, newbound, val,
                                           capacityThreshold_[row]);
@@ -1660,7 +1660,11 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (deltamax >= 0) continue;
+      if (deltamax >= 0) {
+        updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
+                                capacityThreshold_[mip->a_matrix_.index_[i]]);
+        continue;
+      }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
@@ -1829,7 +1833,11 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (deltamin <= 0) continue;
+      if (deltamin <= 0) {
+        updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
+                                capacityThreshold_[mip->a_matrix_.index_[i]]);
+        continue;
+      }
 
       if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
           activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
