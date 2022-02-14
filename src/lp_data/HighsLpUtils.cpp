@@ -581,6 +581,29 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
+bool activeModifiedUpperBounds(const HighsOptions& options,
+			       const HighsLp& lp,
+			       const std::vector<double>col_value) {
+  const std::vector<HighsInt>& upper_bound_index =
+      lp.mods_.save_semi_variable_upper_bound_index;
+  const HighsInt num_modified_upper = upper_bound_index.size();
+  HighsInt num_active_modified_upper = 0;
+  for (HighsInt k = 0; k < num_modified_upper; k++)
+    if (col_value[upper_bound_index[k]] >
+	lp.col_upper_[upper_bound_index[k]] - options.primal_feasibility_tolerance)
+      num_active_modified_upper++;
+  if (num_active_modified_upper) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                   "%" HIGHSINT_FORMAT
+                   " semi-variables are active at modified upper bounds\n",
+		 num_active_modified_upper);
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+		 "No semi-variables are active at modified upper bounds\n");
+  }
+  return num_active_modified_upper;
+}
+
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   double max_residual = 0;
   HighsInt num_change = 0;

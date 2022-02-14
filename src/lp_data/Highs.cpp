@@ -2554,6 +2554,14 @@ HighsStatus Highs::callSolveMip() {
     // There is no primal solution: should be so by default
     assert(!solution_.value_valid);
   }
+  // Check that no modified upper bounds for semi-variables are active
+  if (solution_.value_valid &&
+      activeModifiedUpperBounds(options_, model_.lp_, solution_.col_value)) {
+    solution_.value_valid = false;
+    model_status_ = HighsModelStatus::kSolveError;
+    scaled_model_status_ = model_status_;
+    return_status = HighsStatus::kError;
+  }
   // There is no dual solution: should be so by default
   assert(!solution_.dual_valid);
   // There is no basis: should be so by default
