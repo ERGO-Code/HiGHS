@@ -3816,25 +3816,38 @@ void HighsDomain::ConflictSet::conflictAnalysis(
   HighsInt numConflicts = 0;
   HighsInt lastDepth = localdom.branchPos_.size();
   // printf("start conflict analysis\n");
-  for (HighsInt currDepth = lastDepth; currDepth >= 0; --currDepth) {
+  HighsInt currDepth;
+  for (currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {
       // skip redundant branching changes which are just added for symmetry
       // handling
       HighsInt branchpos = localdom.branchPos_[currDepth - 1];
       if (localdom.domchgstack_[branchpos].boundval ==
           localdom.prevboundval_[branchpos].first) {
-        if (currDepth == lastDepth) --lastDepth;
+        --lastDepth;
         continue;
       }
     }
     HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
     // if the depth level was empty, do not consider it
-    if (numNewConflicts == -1) continue;
-    // if we are at the highest depth level and now conflict was found or we do
-    // not try to find further conflicts
-    if (currDepth == lastDepth && numNewConflicts == 0) break;
+    if (numNewConflicts == -1) {
+      --lastDepth;
+      continue;
+    }
+
     numConflicts += numNewConflicts;
+    // if no conflict was found for a non-empty depth level we stop here
+    if (numConflicts == 0) break;
+    if (lastDepth - currDepth >= 4 && numNewConflicts == 0) break;
   }
+
+  // if we stopped in the highest non-empty depth it means no conflicts where
+  // added yet. We want to at least add the current conflict frontier as it
+  // means the bound change leading to infeasibility was the last branching
+  // itself and hence should have been propagated in the previous depth but was
+  // not, e.g. because the threshold for an integral variable was not reached.
+  if (currDepth == lastDepth)
+    conflictPool.addConflictCut(localdom, reasonSideFrontier);
 }
 
 void HighsDomain::ConflictSet::conflictAnalysis(
@@ -3876,23 +3889,36 @@ void HighsDomain::ConflictSet::conflictAnalysis(
 
   HighsInt numConflicts = 0;
   HighsInt lastDepth = localdom.branchPos_.size();
-  for (HighsInt currDepth = lastDepth; currDepth >= 0; --currDepth) {
+  HighsInt currDepth;
+  for (currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {
       // skip redundant branching changes which are just added for symmetry
       // handling
       HighsInt branchpos = localdom.branchPos_[currDepth - 1];
       if (localdom.domchgstack_[branchpos].boundval ==
           localdom.prevboundval_[branchpos].first) {
-        if (currDepth == lastDepth) --lastDepth;
+        --lastDepth;
         continue;
       }
     }
     HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
     // if the depth level was empty, do not consider it
-    if (numNewConflicts == -1) continue;
-    // if we are at the highest depth level and now conflict was found or the
-    // depth level was empty we do not try to find further conflicts
-    if (currDepth == lastDepth && numNewConflicts == 0) break;
+    if (numNewConflicts == -1) {
+      --lastDepth;
+      continue;
+    }
+
     numConflicts += numNewConflicts;
+    // if no conflict was found for a non-empty depth level we stop here
+    if (numConflicts == 0) break;
+    if (lastDepth - currDepth >= 4 && numNewConflicts == 0) break;
   }
+
+  // if we stopped in the highest non-empty depth it means no conflicts where
+  // added yet. We want to at least add the current conflict frontier as it
+  // means the bound change leading to infeasibility was the last branching
+  // itself and hence should have been propagated in the previous depth but was
+  // not, e.g. because the threshold for an integral variable was not reached.
+  if (currDepth == lastDepth)
+    conflictPool.addConflictCut(localdom, reasonSideFrontier);
 }
