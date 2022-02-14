@@ -24,9 +24,10 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const HighsInt semi_col = 2;
   const double save_semi_col_lower = lp.col_lower_[semi_col];
   const double save_semi_col_upper = lp.col_upper_[semi_col];
+  // Legal to have infinte upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
   return_status = highs.passModel(model);
-  REQUIRE(return_status == HighsStatus::kError);
+  REQUIRE(return_status == HighsStatus::kOk);
   lp.col_upper_[semi_col] = save_semi_col_upper;
 
   return_status = highs.passModel(model);

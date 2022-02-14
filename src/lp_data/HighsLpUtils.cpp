@@ -479,6 +479,12 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   HighsInt num_modified_upper = 0;
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
+  const double kLowerBoundMu = 10.0;
+  std::vector<HighsInt>& upper_bound_index =
+      lp.mods_.save_semi_variable_upper_bound_index;
+  std::vector<double>& upper_bound_value =
+      lp.mods_.save_semi_variable_upper_bound_value;
+
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -496,29 +502,26 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
         continue;
       }
       if (lp.col_lower_[iCol] < 0) {
-	// Semi-variables must have a positive lower bound
-	num_illegal_lower++;
+        // Semi-variables must have a positive lower bound
+        num_illegal_lower++;
       } else if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) {
-	// Semi-variables must have upper bound that's not too large
-	const double use_upper_bound = std::max(2*lp.col_lower_[iCol],
-						options.default_semi_variable_upper_bound);
-	if (use_upper_bound > kMaxSemiVariableUpper) {
-	  num_illegal_upper++;
-	} else {
-	  lp.col_upper_[iCol] = use_upper_bound;
-	  num_modified_upper++;
-	}
+        // Semi-variables must have upper bound that's not too large
+        const double use_upper_bound =
+            std::max(kLowerBoundMu * lp.col_lower_[iCol],
+                     options.default_semi_variable_upper_bound);
+        if (use_upper_bound > kMaxSemiVariableUpper) {
+          num_illegal_upper++;
+        } else {
+          // Record the upper bound change
+          upper_bound_index.push_back(iCol);
+          upper_bound_value.push_back(use_upper_bound);
+          num_modified_upper++;
+        }
       }
       num_non_continuous_variables++;
     } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
       num_non_continuous_variables++;
     }
-  }
-  if (!num_non_continuous_variables) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "No semi-integer/integer variables in model with non-empty "
-                 "integrality\n");
-    return_status = HighsStatus::kWarning;
   }
   if (num_non_semi) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -528,27 +531,50 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
                  num_non_semi);
     return_status = HighsStatus::kWarning;
   }
-  if (num_illegal_lower) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) have negative lower bounds\n",
-                 num_illegal_lower);
-    return_status = HighsStatus::kError;
+  if (!num_non_continuous_variables) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-integer/integer variables in model with non-empty "
+                 "integrality\n");
+    return_status = HighsStatus::kWarning;
   }
+  const bool has_illegal_bounds = num_illegal_lower || num_illegal_upper;
   if (num_modified_upper) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
                  " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %12g that can be modified to max(2*lower, %g)\n",
-                 num_modified_upper, kMaxSemiVariableUpper,
-		 options.default_semi_variable_upper_bound);
+                 "exceeding %g that can be modified to max(%g*lower, %g)\n",
+                 num_modified_upper, kMaxSemiVariableUpper, kLowerBoundMu,
+                 options.default_semi_variable_upper_bound);
     return_status = HighsStatus::kWarning;
+    if (has_illegal_bounds) {
+      // Don't apply upper bound modifications if there are illegal bounds
+      assert(num_illegal_lower || num_illegal_upper);
+      upper_bound_index.clear();
+      upper_bound_value.clear();
+    } else {
+      // Apply the upper bound modifications, saving the over-written
+      // values
+      for (HighsInt k = 0; k < num_modified_upper; k++) {
+        const double use_upper_bound = upper_bound_value[k];
+        const HighsInt iCol = upper_bound_index[k];
+        upper_bound_value[k] = lp.col_upper_[iCol];
+        lp.col_upper_[iCol] = use_upper_bound;
+      }
+    }
+  }
+  if (num_illegal_lower) {
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "%" HIGHSINT_FORMAT
+        " semi-continuous/integer variable(s) have negative lower bounds\n",
+        num_illegal_lower);
+    return_status = HighsStatus::kError;
   }
   if (num_illegal_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
                  " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %12g\n",
+                 "exceeding %g\n",
                  num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
   }

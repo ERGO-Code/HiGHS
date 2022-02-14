@@ -860,8 +860,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "default_semi_variable_upper_bound",
-        "Default upper bound for semi-variables with excessive upper bound", advanced,
-        &default_semi_variable_upper_bound, 0.0, 1e3, 1e6);
+        "Default upper bound for semi-variables with excessive upper bound",
+        advanced, &default_semi_variable_upper_bound, 0.0, 1e3, 1e6);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
