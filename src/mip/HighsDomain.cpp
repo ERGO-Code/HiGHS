@@ -374,7 +374,7 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
   HighsInt end = cutpool->getMatrix().getRowEnd(cut);
   const HighsInt* arindex = cutpool->getMatrix().getARindex();
   const double* arvalue = cutpool->getMatrix().getARvalue();
-  capacityThreshold_[cut] = 0.0;
+  capacityThreshold_[cut] = -domain->feastol();
   for (HighsInt i = start; i < end; ++i) {
     if (domain->col_upper_[arindex[i]] == domain->col_lower_[arindex[i]])
       continue;
@@ -383,14 +383,13 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
         domain->col_upper_[arindex[i]] - domain->col_lower_[arindex[i]];
 
     boundRange -= domain->variableType(arindex[i]) == HighsVarType::kContinuous
-                      ? std::max(0.3 * boundRange,
-                                 1000.0 * domain->mipsolver->mipdata_->feastol)
-                      : domain->mipsolver->mipdata_->feastol;
+                      ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                      : domain->feastol();
 
-    double threshold = std::abs(arvalue[i]) * boundRange;
+    double threshold = std::fabs(arvalue[i]) * boundRange;
 
-    capacityThreshold_[cut] = std::max({capacityThreshold_[cut], threshold,
-                                        domain->mipsolver->mipdata_->feastol});
+    capacityThreshold_[cut] =
+        std::max({capacityThreshold_[cut], threshold, domain->feastol()});
   }
 }
 
@@ -1464,7 +1463,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rupper - minresact) / Rvalue[i];
-    if (std::abs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
+    if (std::fabs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
       continue;
 
     if (Rvalue[i] > 0) {
@@ -1508,7 +1507,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rlower - maxresact) / Rvalue[i];
-    if (std::abs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
+    if (std::fabs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
       continue;
 
     if (Rvalue[i] < 0) {
@@ -1539,7 +1538,7 @@ void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
             ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
             : mipsolver->mipdata_->feastol;
 
-    double thresholdNew = std::abs(val) * boundRange;
+    double thresholdNew = std::fabs(val) * boundRange;
 
     // the new threshold is now the maximum of the new threshold and the current
     // one
@@ -1558,7 +1557,7 @@ void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
             ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
             : mipsolver->mipdata_->feastol;
 
-    double thresholdNew = std::abs(val) * boundRange;
+    double thresholdNew = std::fabs(val) * boundRange;
 
     // the new threshold is now the maximum of the new threshold and the current
     // one
@@ -1603,8 +1602,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
-                               tmpminact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                                tmpminact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1654,8 +1653,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
-                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                                tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1772,8 +1771,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
-                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                                tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1827,8 +1826,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
-                               tmpminact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                                tmpminact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1917,7 +1916,7 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
   HighsInt start = mipsolver->mipdata_->ARstart_[row];
   HighsInt end = mipsolver->mipdata_->ARstart_[row + 1];
 
-  capacityThreshold_[row] = 0.0;
+  capacityThreshold_[row] = -feastol();
   for (HighsInt i = start; i < end; ++i) {
     HighsInt col = mipsolver->mipdata_->ARindex_[i];
 
@@ -1925,15 +1924,14 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 
     double boundRange = col_upper_[col] - col_lower_[col];
 
-    boundRange -=
-        variableType(col) == HighsVarType::kContinuous
-            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
-            : mipsolver->mipdata_->feastol;
+    boundRange -= variableType(col) == HighsVarType::kContinuous
+                      ? std::max(0.3 * boundRange, 1000.0 * feastol())
+                      : feastol();
 
-    double threshold = std::abs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
+    double threshold = std::fabs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
 
-    capacityThreshold_[row] = std::max(
-        {capacityThreshold_[row], threshold, mipsolver->mipdata_->feastol});
+    capacityThreshold_[row] =
+        std::max({capacityThreshold_[row], threshold, feastol()});
   }
 }
 
@@ -2707,7 +2705,8 @@ bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {
   double otherbound = domchg.boundtype == HighsBoundType::kUpper
                           ? col_lower_[domchg.column]
                           : col_upper_[domchg.column];
-  return std::abs(domchg.boundval - otherbound) <= mipsolver->mipdata_->epsilon;
+  return std::fabs(domchg.boundval - otherbound) <=
+         mipsolver->mipdata_->epsilon;
 }
 
 HighsDomainChange HighsDomain::flip(const HighsDomainChange& domchg) const {
@@ -3384,7 +3383,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
   pdqsort(resolveBuffer.begin(), resolveBuffer.end());
 
   // compute the lower bound of M that is necessary
-  double Mupper = rhs - std::max(10.0, std::abs(rhs)) *
+  double Mupper = rhs - std::max(10.0, std::fabs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
 
   assert(reasonSideFrontier.empty());
@@ -3431,7 +3430,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
   pdqsort(resolveBuffer.begin(), resolveBuffer.end());
 
   // compute the lower bound of M that is necessary
-  double Mlower = rhs + std::max(10.0, std::abs(rhs)) *
+  double Mlower = rhs + std::max(10.0, std::fabs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
 
   return resolveLinearLeq(minAct, Mlower, vals);
