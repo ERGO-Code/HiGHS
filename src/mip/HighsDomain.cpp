@@ -3814,20 +3814,25 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
+  HighsInt lastDepth = localdom.branchPos_.size();
   // printf("start conflict analysis\n");
-  for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
-       --currDepth) {
+  for (HighsInt currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {
       // skip redundant branching changes which are just added for symmetry
       // handling
       HighsInt branchpos = localdom.branchPos_[currDepth - 1];
       if (localdom.domchgstack_[branchpos].boundval ==
-          localdom.prevboundval_[branchpos].first)
+          localdom.prevboundval_[branchpos].first) {
+        if (currDepth == lastDepth) --lastDepth;
         continue;
+      }
     }
     HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) continue;
+    // if we are at the highest depth level and now conflict was found or we do
+    // not try to find further conflicts
+    if (currDepth == lastDepth && numNewConflicts == 0) break;
     numConflicts += numNewConflicts;
   }
 }
@@ -3870,19 +3875,24 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
-  for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
-       --currDepth) {
+  HighsInt lastDepth = localdom.branchPos_.size();
+  for (HighsInt currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {
       // skip redundant branching changes which are just added for symmetry
       // handling
       HighsInt branchpos = localdom.branchPos_[currDepth - 1];
       if (localdom.domchgstack_[branchpos].boundval ==
-          localdom.prevboundval_[branchpos].first)
+          localdom.prevboundval_[branchpos].first) {
+        if (currDepth == lastDepth) --lastDepth;
         continue;
+      }
     }
     HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
     // if the depth level was empty, do not consider it
     if (numNewConflicts == -1) continue;
+    // if we are at the highest depth level and now conflict was found or the
+    // depth level was empty we do not try to find further conflicts
+    if (currDepth == lastDepth && numNewConflicts == 0) break;
     numConflicts += numNewConflicts;
   }
 }
