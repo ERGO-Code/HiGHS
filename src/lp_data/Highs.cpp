@@ -267,9 +267,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   if (return_status == HighsStatus::kError) return return_status;
 
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, lp.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -412,9 +412,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, model_.lp_.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -2415,8 +2415,12 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  if (lp.sense_ != ObjSense::kMinimize) {
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Negate the vector and Hessian
     for (double& i : instance.c.value) {
+      i *= -1.0;
+    }
+    for (double& i : instance.Q.mat.value) {
       i *= -1.0;
     }
   }
@@ -2445,14 +2449,11 @@ HighsStatus Highs::callSolveQp() {
   Solver solver(runtime);
   solver.solve();
 
-  //
-  // Cheating now, but need to set this honestly!
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  // Cheating now, but need to set this honestly!
   scaled_model_status_ =
       runtime.status == ProblemStatus::OPTIMAL
           ? HighsModelStatus::kOptimal
@@ -2468,15 +2469,19 @@ HighsStatus Highs::callSolveQp() {
   model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
+  const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     solution_.col_value[iCol] = runtime.primal.value[iCol];
-    solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
+    solution_.col_dual[iCol] =
+        objective_multiplier * runtime.dualvar.value[iCol];
   }
   solution_.row_value.resize(lp.num_row_);
   solution_.row_dual.resize(lp.num_row_);
+  // Negate the vector and Hessian
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
-    solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
+    solution_.row_dual[iRow] =
+        objective_multiplier * runtime.dualcon.value[iRow];
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
