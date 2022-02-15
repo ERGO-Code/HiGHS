@@ -70,7 +70,9 @@ class HighsPostsolveStack {
     double constant;
     HighsInt col;
 
-    void undo(const HighsOptions& options, HighsSolution& solution);
+    void undo(const HighsOptions& options, HighsSolution& solution) const;
+
+    void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
   struct FreeColSubstitution {
@@ -101,7 +103,7 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct EqualityRowAddition {
@@ -111,7 +113,7 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& eqRowValues, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct EqualityRowAdditions {
@@ -120,7 +122,7 @@ class HighsPostsolveStack {
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& eqRowValues,
               const std::vector<Nonzero>& targetRows, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
   struct SingletonRow {
     double coef;
@@ -130,7 +132,7 @@ class HighsPostsolveStack {
     bool colUpperTightened;
 
     void undo(const HighsOptions& options, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   // column fixed to lower or upper bound
@@ -142,14 +144,14 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct RedundantRow {
     HighsInt row;
 
     void undo(const HighsOptions& options, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct ForcingRow {
@@ -159,7 +161,7 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& rowValues, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct ForcingColumn {
@@ -170,7 +172,7 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct ForcingColumnRemovedRow {
@@ -178,7 +180,7 @@ class HighsPostsolveStack {
     HighsInt row;
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& rowValues, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct DuplicateRow {
@@ -189,7 +191,7 @@ class HighsPostsolveStack {
     bool rowUpperTightened;
 
     void undo(const HighsOptions& options, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
   };
 
   struct DuplicateColumn {
@@ -204,7 +206,9 @@ class HighsPostsolveStack {
     bool duplicateColIntegral;
 
     void undo(const HighsOptions& options, HighsSolution& solution,
-              HighsBasis& basis);
+              HighsBasis& basis) const;
+
+    void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
   /// tags for reduction
@@ -228,6 +232,8 @@ class HighsPostsolveStack {
   std::vector<ReductionType> reductions;
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
+  std::vector<std::pair<ReductionType, HighsInt>> primalColTransformations;
+  std::vector<uint8_t> linearlyTransformable;
 
   std::vector<Nonzero> rowValues;
   std::vector<Nonzero> colValues;
@@ -279,6 +285,9 @@ class HighsPostsolveStack {
   void linearTransform(HighsInt col, double scale, double constant) {
     reductionValues.push(LinearTransform{scale, constant, origColIndex[col]});
     reductions.push_back(ReductionType::kLinearTransform);
+    HighsInt position = reductionValues.getCurrentDataSize();
+    primalColTransformations.emplace_back(ReductionType::kLinearTransform,
+                                          position);
   }
 
   template <typename RowStorageFormat, typename ColStorageFormat>
@@ -468,11 +477,56 @@ class HighsPostsolveStack {
                        double duplicateColLower, double duplicateColUpper,
                        HighsInt col, HighsInt duplicateCol, bool colIntegral,
                        bool duplicateColIntegral) {
+    const HighsInt origCol = origColIndex[col];
+    const HighsInt origDuplicateCol = origColIndex[duplicateCol];
     reductionValues.push(DuplicateColumn{
         colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
-        origColIndex[col], origColIndex[duplicateCol], colIntegral,
-        duplicateColIntegral});
+        origCol, origDuplicateCol, colIntegral, duplicateColIntegral});
     reductions.push_back(ReductionType::kDuplicateColumn);
+    HighsInt position = reductionValues.getCurrentDataSize();
+    primalColTransformations.emplace_back(ReductionType::kDuplicateColumn,
+                                          position);
+    // mark columns as not linearly transformable
+    linearlyTransformable[origCol] = false;
+    linearlyTransformable[origDuplicateCol] = false;
+  }
+
+  std::vector<double> getReducedPrimalSolution(
+      const std::vector<double>& origPrimalSolution) {
+    std::vector<double> reducedSolution = origPrimalSolution;
+
+    for (const std::pair<ReductionType, HighsInt>& primalColTransformation :
+         primalColTransformations) {
+      switch (primalColTransformation.first) {
+        case ReductionType::kDuplicateColumn: {
+          DuplicateColumn duplicateColReduction;
+          reductionValues.setPosition(primalColTransformation.second);
+          reductionValues.pop(duplicateColReduction);
+          duplicateColReduction.transformToPresolvedSpace(reducedSolution);
+          break;
+        }
+        case ReductionType::kLinearTransform: {
+          reductionValues.setPosition(primalColTransformation.second);
+          LinearTransform linearTransform;
+          reductionValues.pop(linearTransform);
+          linearTransform.transformToPresolvedSpace(reducedSolution);
+          break;
+        }
+        default:
+          assert(false);
+      }
+    }
+
+    HighsInt reducedNumCol = origColIndex.size();
+    for (HighsInt i = 0; i < reducedNumCol; ++i)
+      reducedSolution[i] = reducedSolution[origColIndex[i]];
+
+    reducedSolution.resize(reducedNumCol);
+    return reducedSolution;
+  }
+
+  bool isColLinearlyTransformable(HighsInt col) const {
+    return linearlyTransformable[col];
   }
 
   /// undo presolve steps for primal dual solution and basis

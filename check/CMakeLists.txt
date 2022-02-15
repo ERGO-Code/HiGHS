@@ -11,12 +11,17 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/s
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/include)
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/include)
 
+FILE(WRITE ${CMAKE_BINARY_DIR}/testoptions.txt
+"mip_rel_gap=0.0
+mip_abs_gap=0.0")
+
 # Make test executable
 set(TEST_SOURCES
     TestAlienBasis.cpp
     TestDualise.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
+    TestFactor.cpp
     TestFreezeBasis.cpp
     TestHotStart.cpp
     TestMain.cpp
@@ -146,10 +151,6 @@ PROPERTIES
 DEPENDS osi-unit-test-build)
 
 endif()
-
-if (GAMS_FOUND)
-add_test(NAME rungams COMMAND ${HIGHS_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
-endif (GAMS_FOUND)
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all
@@ -282,7 +283,7 @@ foreach(instance ${mipInstances})
     set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
     foreach(setting ${settings})
-        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} --options_file ${CMAKE_BINARY_DIR}/testoptions.txt
               ${inst})
 
         set_tests_properties (${name}${setting} PROPERTIES

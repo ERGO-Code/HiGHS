@@ -130,13 +130,13 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     ncuts += cutset.numCuts();
     lp->addCuts(cutset);
     status = lp->resolveLp(&propdomain);
+    lp->performAging(true);
     if (&propdomain == &mipdata.domain && lp->unscaledDualFeasible(status)) {
       mipdata.redcostfixing.addRootRedcost(
           mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
       if (mipdata.upper_limit != kHighsInf)
         mipdata.redcostfixing.propagateRootRedcost(mipdata.mipsolver);
     }
-    lp->performAging();
   }
 
   return ncuts;
@@ -150,7 +150,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // double firstobj = lp->getObjective();
     double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
-    while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
+    while (lp->getObjective() < mipsolver.mipdata_->optimality_limit) {
       double lastobj = lp->getObjective();
 
       size_t nlpiters = -lp->getNumLpIterations();
@@ -178,8 +178,8 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // printf("done separating\n");
   } else {
     // printf("no separation, just aging. status: %" HIGHSINT_FORMAT "\n",
-    // (HighsInt)status);
-    lp->performAging(false);
+    //        (HighsInt)status);
+    lp->performAging(true);
     mipsolver.mipdata_->cutpool.performAging();
   }
 }

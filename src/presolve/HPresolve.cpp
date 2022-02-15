@@ -834,8 +834,9 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->rowMatrixSet = false;
     mipsolver->mipdata_->domain = HighsDomain(*mipsolver);
-    mipsolver->mipdata_->cliquetable.rebuild(
-        model->num_col_, mipsolver->mipdata_->domain, newColIndex, newRowIndex);
+    mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postSolveStack,
+                                             mipsolver->mipdata_->domain,
+                                             newColIndex, newRowIndex);
     mipsolver->mipdata_->implications.rebuild(model->num_col_, newColIndex,
                                               newRowIndex);
     mipsolver->mipdata_->cutpool =
@@ -1260,6 +1261,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
           model->a_matrix_.start_);
 
+  mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
+
   // first tighten all bounds if they have an implied bound that is tighter
   // thatn their column bound before probing this is not done for continuous
   // columns since it may allow stronger dual presolve and more aggregations
@@ -1321,17 +1324,20 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   // store binary variables in vector with their number of implications on
   // other binaries
   std::vector<std::tuple<int64_t, HighsInt, HighsInt, HighsInt>> binaries;
-  binaries.reserve(model->num_col_);
-  HighsRandom random(options->random_seed);
-  for (HighsInt i = 0; i != model->num_col_; ++i) {
-    if (domain.isBinary(i)) {
-      HighsInt implicsUp = cliquetable.getNumImplications(i, 1);
-      HighsInt implicsDown = cliquetable.getNumImplications(i, 0);
-      binaries.emplace_back(
-          -std::min(int64_t{5000}, int64_t(implicsUp) * implicsDown) /
-              (1.0 + numProbes[i]),
-          -std::min(HighsInt{100}, implicsUp + implicsDown), random.integer(),
-          i);
+
+  if (!mipsolver->mipdata_->cliquetable.isFull()) {
+    binaries.reserve(model->num_col_);
+    HighsRandom random(options->random_seed);
+    for (HighsInt i = 0; i != model->num_col_; ++i) {
+      if (domain.isBinary(i)) {
+        HighsInt implicsUp = cliquetable.getNumImplications(i, 1);
+        HighsInt implicsDown = cliquetable.getNumImplications(i, 0);
+        binaries.emplace_back(
+            -std::min(int64_t{5000}, int64_t(implicsUp) * implicsDown) /
+                (1.0 + numProbes[i]),
+            -std::min(HighsInt{100}, implicsUp + implicsDown), random.integer(),
+            i);
+      }
     }
   }
   if (!binaries.empty()) {
@@ -1345,6 +1351,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     }
 
     HighsInt numCliquesStart = cliquetable.numCliques();
+    HighsInt numImplicsStart = implications.getNumImplications();
     HighsInt numDelStart = probingNumDelCol;
 
     HighsInt numDel = probingNumDelCol - numDelStart +
@@ -1373,8 +1380,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
 
         // break in case of too many new implications to not spent ages in
         // probing
-        if (cliquetable.numCliques() - numCliquesStart >
-            std::max(HighsInt{1000000}, 2 * numNonzeros()))
+        if (cliquetable.isFull() ||
+            cliquetable.numCliques() - numCliquesStart >
+                std::max(HighsInt{1000000}, 2 * numNonzeros()) ||
+            implications.getNumImplications() - numImplicsStart >
+                std::max(HighsInt{1000000}, 2 * numNonzeros()))
           break;
 
         // if (numProbed % 10 == 0)
@@ -3884,7 +3894,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "\nPresolving model\n");
+                   "Presolving model\n");
 
     auto report = [&]() {
       if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
@@ -4084,6 +4094,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
 
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->cliquetable.setPresolveFlag(false);
+    mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
     mipsolver->mipdata_->domain.addConflictPool(
         mipsolver->mipdata_->conflictPool);

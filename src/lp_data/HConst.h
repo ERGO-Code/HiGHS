@@ -122,10 +122,13 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
-const HighsInt kSolutionStyleRaw = 0;
-const HighsInt kSolutionStylePretty = 1;
-const HighsInt kSolutionStyleMin = kSolutionStyleRaw;
-const HighsInt kSolutionStyleMax = kSolutionStylePretty;
+enum SolutionStyle {
+  kSolutionStyleRaw = 0,
+  kSolutionStylePretty,  // 1;
+  kSolutionStyleOldRaw,  // 2;
+  kSolutionStyleMin = kSolutionStyleRaw,
+  kSolutionStyleMax = kSolutionStyleOldRaw
+};
 
 const std::string kHighsFilenameDefault = "";
 
@@ -169,7 +172,7 @@ enum class HighsModelStatus {
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
-enum class HighsBasisStatus {
+enum class HighsBasisStatus : uint8_t {
   kLower =
       0,   // (slack) variable is at its lower bound [including fixed variables]
   kBasic,  // (slack) variable is basic
@@ -178,6 +181,10 @@ enum class HighsBasisStatus {
   kNonbasic  // nonbasic with no specific bound information - useful for users
              // and postsolve
 };
+
+// Default and max allowed power-of-two matrix scale factor
+const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
+const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known

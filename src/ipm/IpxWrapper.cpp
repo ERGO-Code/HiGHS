@@ -564,7 +564,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     // default setting debug = 0
     parameters.debug = 0;
   } else if (options.log_dev_level == kHighsLogDevLevelInfo) {
-    parameters.debug = 3;
+    parameters.debug = 2;
   } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
     parameters.debug = 4;
   }

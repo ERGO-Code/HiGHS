@@ -100,10 +100,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
     lp.a_matrix_.value_.resize(lp_num_nz);
 
-  if (return_status == HighsStatus::kError)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
+  //  if (return_status == HighsStatus::kError)
+  //    return_status = HighsStatus::kError;
+  //  else
+  //    return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
@@ -581,6 +581,12 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   const bool allow_scaling =
       lp.num_col_ > 0 &&
       options.simplex_scale_strategy != kSimplexScaleStrategyOff;
+  if (lp.scale_.has_scaling && !allow_scaling) {
+    // LP had scaling before, but now it is not permitted, clear any
+    // scaling. Return true as scaling position has changed
+    lp.clearScale();
+    return true;
+  }
   const bool scaling_not_tried = lp.scale_.strategy == kSimplexScaleStrategyOff;
   const bool new_scaling_strategy =
       options.simplex_scale_strategy != lp.scale_.strategy &&
@@ -1374,30 +1380,50 @@ void deleteScale(vector<double>& scale,
 }
 
 void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value) {
+                               const HighsInt col, const double new_value,
+                               const bool zero_new_value) {
   assert(0 <= row && row < lp.num_row_);
   assert(0 <= col && col < lp.num_col_);
-  HighsInt changeElement = -1;
+
+  // Determine whether the coefficient corresponds to an existing
+  // nonzero
+  HighsInt change_el = -1;
   for (HighsInt el = lp.a_matrix_.start_[col];
        el < lp.a_matrix_.start_[col + 1]; el++) {
     if (lp.a_matrix_.index_[el] == row) {
-      changeElement = el;
+      change_el = el;
       break;
     }
   }
-  if (changeElement < 0) {
-    changeElement = lp.a_matrix_.start_[col + 1];
+  if (change_el < 0) {
+    // Coefficient doesn't correspond to an existing nonzero
+    //
+    // If coefficient is small, then just ignore it
+    if (zero_new_value) return;
+    // New nonzero goes at the end of column "col", so have to shift
+    // all index and value entries forward by 1 to accommodate it
+    change_el = lp.a_matrix_.start_[col + 1];
     HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] + 1;
     lp.a_matrix_.index_.resize(new_num_nz);
     lp.a_matrix_.value_.resize(new_num_nz);
     for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]++;
-    for (HighsInt el = new_num_nz - 1; el > changeElement; el--) {
+    for (HighsInt el = new_num_nz - 1; el > change_el; el--) {
       lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el - 1];
       lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el - 1];
     }
+  } else if (zero_new_value) {
+    // Coefficient zeroes an existing nonzero, so shift all index and
+    // value entries backward by 1 to eliminate it
+    HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] - 1;
+    for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]--;
+    for (HighsInt el = change_el; el < new_num_nz; el++) {
+      lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el + 1];
+      lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el + 1];
+    }
+    return;
   }
-  lp.a_matrix_.index_[changeElement] = row;
-  lp.a_matrix_.value_[changeElement] = new_value;
+  lp.a_matrix_.index_[change_el] = row;
+  lp.a_matrix_.value_[change_el] = new_value;
 }
 
 void changeLpIntegrality(HighsLp& lp,
@@ -1855,6 +1881,8 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
                             have_basis, basis.row_status);
+  } else if (style == kSolutionStyleOldRaw) {
+    writeOldRawSolution(file, lp, basis, solution);
   } else {
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
@@ -2210,6 +2238,34 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
           solution.col_value[col] * lp.a_matrix_.value_[i];
     }
   }
+
+  return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
+  // assert(solution.col_value.size() > 0);
+  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+
+  std::vector<HighsCDouble> row_value;
+  row_value.assign(lp.num_row_, HighsCDouble{0.0});
+
+  solution.row_value.assign(lp.num_row_, 0);
+
+  for (HighsInt col = 0; col < lp.num_col_; col++) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; i++) {
+      const HighsInt row = lp.a_matrix_.index_[i];
+      assert(row >= 0);
+      assert(row < lp.num_row_);
+
+      row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+    }
+  }
+
+  // assign quad values to double vector
+  solution.row_value.resize(lp.num_row_);
+  std::transform(row_value.begin(), row_value.end(), solution.row_value.begin(),
+                 [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
 }
@@ -2588,4 +2644,69 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
                "Removed %d rows of count 1\n", (int)num_row_count_1);
+}
+
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution) {
+  const bool have_value = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  vector<double> use_col_value;
+  vector<double> use_row_value;
+  vector<double> use_col_dual;
+  vector<double> use_row_dual;
+  vector<HighsBasisStatus> use_col_status;
+  vector<HighsBasisStatus> use_row_status;
+  if (have_value) {
+    use_col_value = solution.col_value;
+    use_row_value = solution.row_value;
+  }
+  if (have_dual) {
+    use_col_dual = solution.col_dual;
+    use_row_dual = solution.row_dual;
+  }
+  if (have_basis) {
+    use_col_status = basis.col_status;
+    use_row_status = basis.row_status;
+  }
+  if (!have_value && !have_dual && !have_basis) return;
+  fprintf(file,
+          "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
+          " : Number of columns and rows for primal or dual solution "
+          "or basis\n",
+          lp.num_col_, lp.num_row_);
+  if (have_value) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Primal solution\n");
+  if (have_dual) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Dual solution\n");
+  if (have_basis) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Basis\n");
+  fprintf(file, "Columns\n");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
+    if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
+    fprintf(file, "\n");
+  }
+  fprintf(file, "Rows\n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
+    if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
+    fprintf(file, "\n");
+  }
 }

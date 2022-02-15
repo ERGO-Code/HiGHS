@@ -118,6 +118,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
+  lastAgeCall = 0;
   objective = -kHighsInf;
   currentbasisstored = false;
   adjustSymBranchingCol = true;
@@ -143,6 +144,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
+  lastAgeCall = 0;
   objective = -kHighsInf;
 }
 
@@ -161,6 +163,12 @@ void HighsLpRelaxation::loadModel() {
   lpsolver.passModel(std::move(lpmodel));
   colLbBuffer.resize(lpmodel.num_col_);
   colUbBuffer.resize(lpmodel.num_col_);
+}
+
+void HighsLpRelaxation::resetToGlobalDomain() {
+  lpsolver.changeColsBounds(0, mipsolver.numCol() - 1,
+                            mipsolver.mipdata_->domain.col_lower_.data(),
+                            mipsolver.mipdata_->domain.col_upper_.data());
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
@@ -334,36 +342,40 @@ void HighsLpRelaxation::removeCuts() {
          (HighsInt)lpsolver.getLp().row_lower_.size());
 }
 
-void HighsLpRelaxation::performAging(bool useBasis) {
+void HighsLpRelaxation::performAging(bool deleteRows) {
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
+  HighsInt agelimit;
 
-  size_t agelimit = mipsolver.options_mip_->mip_lp_age_limit;
+  if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid ||
+      lpsolver.getInfo().max_dual_infeasibility > mipsolver.mipdata_->feastol ||
+      !lpsolver.getSolution().dual_valid)
+    return;
 
-  ++epochs;
-  if (epochs % std::max(size_t(agelimit) / 2u, size_t(2)) != 0)
+  if (deleteRows) {
+    agelimit = mipsolver.options_mip_->mip_lp_age_limit;
+
+    ++epochs;
+    if (epochs % std::max(agelimit >> 1, HighsInt{2}) != 0)
+      agelimit = kHighsIInf;
+    else if (epochs < agelimit)
+      agelimit = epochs;
+  } else {
+    if (lastAgeCall == numlpiters) return;
     agelimit = kHighsIInf;
-  else if (epochs < agelimit)
-    agelimit = epochs;
+  }
+
+  lastAgeCall = numlpiters;
 
   HighsInt nlprows = numRows();
   HighsInt nummodelrows = getNumModelRows();
   std::vector<HighsInt> deletemask;
 
-  if (!useBasis && agelimit != kHighsIInf) {
-    HighsBasis b = mipsolver.mipdata_->firstrootbasis;
-    b.row_status.resize(nlprows, HighsBasisStatus::kBasic);
-    b.debug_origin_name = "HighsLpRelaxation::removeCuts";
-    HighsStatus st = lpsolver.setBasis(b);
-    assert(st != HighsStatus::kError);
-  }
-
   HighsInt ndelcuts = 0;
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
-    if (!useBasis ||
-        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
-      lprows[i].age += 1;
+    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
+      lprows[i].age += (deleteRows || lprows[i].age != 0);
       if (lprows[i].age > agelimit) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
@@ -382,6 +394,11 @@ void HighsLpRelaxation::performAging(bool useBasis) {
 void HighsLpRelaxation::resetAges() {
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
+
+  if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid ||
+      lpsolver.getInfo().max_dual_infeasibility > mipsolver.mipdata_->feastol ||
+      !lpsolver.getSolution().dual_valid)
+    return;
 
   HighsInt nlprows = numRows();
   HighsInt nummodelrows = getNumModelRows();
@@ -923,6 +940,40 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             auto& pair = fracints[col];
             pair.first += val;
             pair.second += 1;
+          } else {
+            if (lpsolver.getBasis().col_status[i] == HighsBasisStatus::kBasic)
+              continue;
+
+            const double glb = mipsolver.mipdata_->domain.col_lower_[i];
+            const double gub = mipsolver.mipdata_->domain.col_upper_[i];
+
+            if (std::min(gub - sol.col_value[i], sol.col_value[i] - glb) <=
+                mipsolver.mipdata_->feastol)
+              continue;
+
+            const auto& matrix = lpsolver.getLp().a_matrix_;
+            const HighsInt colStart =
+                matrix.start_[i] + (mipsolver.model_->a_matrix_.start_[i + 1] -
+                                    mipsolver.model_->a_matrix_.start_[i]);
+            const HighsInt colEnd = matrix.start_[i + 1];
+
+            // skip further checks if the column has no entry in any cut
+            if (colStart == colEnd) continue;
+
+            for (HighsInt j = colStart; j < colEnd; ++j) {
+              HighsInt row = matrix.index_[j];
+              assert(row >= mipsolver.numRow());
+
+              // age is already zero, so irrelevant whether we reset it
+              if (lprows[row].age == 0) continue;
+
+              // check that row has no slack in the current solution
+              if (sol.row_value[row] <
+                  getLp().row_upper_[row] - mipsolver.mipdata_->feastol)
+                continue;
+
+              lprows[row].age = 0;
+            }
           }
         }
 

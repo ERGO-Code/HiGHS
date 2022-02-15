@@ -44,6 +44,7 @@ class HighsSparseMatrix {
 
   bool operator==(const HighsSparseMatrix& matrix) const;
   void clear();
+  void exactResize();
   bool formatOk() const { return (this->isColwise() || this->isRowwise()); };
   bool isRowwise() const;
   bool isColwise() const;
@@ -68,6 +69,7 @@ class HighsSparseMatrix {
                      const std::string matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value);
+  bool hasLargeValue(const double large_matrix_value);
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);
   void considerRowScaling(const HighsInt max_scale_factor_exponent,
@@ -106,7 +108,12 @@ class HighsSparseMatrix {
       const HighsInt debug_report = kDebugReportOff) const;
   void update(const HighsInt var_in, const HighsInt var_out,
               const HighsSparseMatrix& matrix);
-  double computeDot(const HVector& column, const HighsInt use_col) const;
+  double computeDot(const HVector& column, const HighsInt use_col) const {
+    return computeDot(column.array, use_col);
+  }
+
+  double computeDot(const std::vector<double>& array,
+                    const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
 
