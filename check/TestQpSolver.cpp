@@ -347,7 +347,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   }
 }
 
-TEST_CASE("test-semi-definite", "[qpsolver]") {
+TEST_CASE("test-semi-definite0", "[qpsolver]") {
   HighsStatus return_status;
   HighsModelStatus model_status;
   double required_objective_function_value;
@@ -389,4 +389,47 @@ TEST_CASE("test-semi-definite", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+}
+
+TEST_CASE("test-semi-definite1", "[qpsolver]") {
+  HighsStatus return_status;
+  HighsModelStatus model_status;
+  double required_objective_function_value;
+
+  HighsLp lp;
+  HighsHessian hessian;
+  const double inf = kHighsInf;
+
+  lp.model_name_ = "semi-definite";
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-2.0, 0.0};
+  lp.col_lower_ = {-inf, -inf};
+  lp.col_upper_ = {inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 2, 3};
+  hessian.index_ = {0, 1, 1};
+  hessian.value_ = {1.0, -1.0, 1.0};
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  const HighsSolution& solution = highs.getSolution();
+  const double objective_function_value = highs.getObjectiveValue();
+  REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - 1) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
 }
