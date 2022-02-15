@@ -31,9 +31,14 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   highs.passModel(lp);
 
   HighsBasis basis;
-  basis.alien = true;
+  basis.alien = true; // Set true when basis is instantiated
+  HighsInt num_basic_col = 0;
+  HighsInt num_nonbasic_col = 0;
+  HighsInt num_basic_row = 0;
+  HighsInt num_nonbasic_row = 0;
   for (HighsInt i=0; i<runtime.instance.num_con; i++) {
     basis.row_status.push_back(HighsBasisStatus::kNonbasic);
+    num_nonbasic_row++;
   } 
 
   for (HighsInt i=0; i<runtime.instance.num_var; i++) {
@@ -41,18 +46,82 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
     if (runtime.instance.var_lo[i] == -std::numeric_limits<double>::infinity() && runtime.instance.var_up[i] == std::numeric_limits<double>::infinity()) {
       // free variable
       basis.col_status.push_back(HighsBasisStatus::kBasic);
+      num_basic_col++;
     } else {
       basis.col_status.push_back(HighsBasisStatus::kNonbasic);
+      num_nonbasic_col++;
     }
   }
 
-  // highs.setBasis(basis, "qp phase 1");
+  highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("log_dev_level", 2);
+  highs.setOptionValue("highs_analysis_level", 4);
+  const HighsBasis& internal_basis = highs.getBasis();
+  const HighsInfo& info = highs.getInfo();
+  HighsInt simplex_iteration_count0 = std::max(0, info.simplex_iteration_count);
+  printf("Before setBasis: QP (%5d, %5d) has %5d basic columns; %5d basic rows; %5d nonbasic columns;  %5d nonbasic rows\n",
+	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
+	 (int)num_basic_col, (int)num_basic_row,
+	 (int)num_nonbasic_col, (int)num_nonbasic_row);
+  highs.setBasis(basis, "qp phase 1");
+
+  num_basic_col = 0;
+  num_nonbasic_col = 0;
+  num_basic_row = 0;
+  num_nonbasic_row = 0;
+  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+    if (internal_basis.row_status[i] == HighsBasisStatus::kBasic) {
+      num_basic_row++;
+    } else {
+      num_nonbasic_row++;
+    }
+  } 
+
+  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+    if (internal_basis.col_status[i] == HighsBasisStatus::kBasic) {
+      num_basic_col++;
+    } else {
+      num_nonbasic_col++;
+    }
+  }
+  
+  printf("After  setBasis: QP (%5d, %5d) has %5d basic columns; %5d basic rows; %5d nonbasic columns;  %5d nonbasic rows\n",
+	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
+	 (int)num_basic_col, (int)num_basic_row,
+	 (int)num_nonbasic_col, (int)num_nonbasic_row);
+ 
+  
   highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   highs.run();
 
+  num_basic_col = 0;
+  num_nonbasic_col = 0;
+  num_basic_row = 0;
+  num_nonbasic_row = 0;
+  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+    if (internal_basis.row_status[i] == HighsBasisStatus::kBasic) {
+      num_basic_row++;
+    } else {
+      num_nonbasic_row++;
+    }
+  } 
 
-  const HighsInfo& info = highs.getInfo();
-  runtime.statistics.phase1_iterations = info.simplex_iteration_count;
+  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+    if (internal_basis.col_status[i] == HighsBasisStatus::kBasic) {
+      num_basic_col++;
+    } else {
+      num_nonbasic_col++;
+    }
+  }
+  
+  printf("After       run: QP (%5d, %5d) has %5d basic columns; %5d basic rows; %5d nonbasic columns;  %5d nonbasic rows\n",
+	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
+	 (int)num_basic_col, (int)num_basic_row,
+	 (int)num_nonbasic_col, (int)num_nonbasic_row);
+  printf("Performed %d simplex iterations\n", (int)(info.simplex_iteration_count-simplex_iteration_count0));
+ 
+  
+  runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
 
   HighsModelStatus phase1stat = highs.getModelStatus();
   if (phase1stat == HighsModelStatus::kInfeasible) {
