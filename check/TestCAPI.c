@@ -813,10 +813,10 @@ void test_passHessian() {
   void* highs = Highs_create();
   Highs_addCol(highs, 0.0, 0.0, 2.0, 0, NULL, NULL);
   Highs_changeObjectiveSense(highs, -1);
-  int start[1] = {0};
-  int indices[1] = {0};
+  HighsInt start[1] = {0};
+  HighsInt indices[1] = {0};
   double values[1] = {-2.0};
-  int ret;
+  HighsInt ret;
   ret = Highs_passHessian(highs, 1, 1, 1, start, indices, values);
   assertIntValuesEqual("Return of passHessian", ret, 0);
   Highs_run(highs);
