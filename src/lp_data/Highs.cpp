@@ -2390,9 +2390,10 @@ HighsStatus Highs::callSolveQp() {
   runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
   runtime.settings.ratiotest =
-      new RatiotestTwopass(instance, 0.000000001, 0.000001);
+      new RatiotestTwopass(instance, 1E-9, 1E-8);
   Solver solver(runtime);
   solver.solve();
+  delete runtime.settings.ratiotest;
 
   //
   // Cheating now, but need to set this honestly!

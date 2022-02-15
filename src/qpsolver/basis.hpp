@@ -69,8 +69,7 @@ class Basis {
   std::vector<HighsInt> nonactiveconstraintsidx;
 
   // ids of constraints that are in the basis
-  // std::vector<HighsInt> baseindex;
-  HighsInt* baseindex;
+  std::vector<HighsInt> baseindex;
 
   std::map<int, BasisStatus> basisstatus;
 

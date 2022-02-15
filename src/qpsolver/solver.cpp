@@ -20,13 +20,13 @@
 #include "steepestedgepricing.hpp"
 
 void Solver::solve() {
-  CrashSolution* crash;
+  CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
   computestartingpoint(runtime, crash);
   if (runtime.status == ProblemStatus::INFEASIBLE) {
     return;
   }
-  Basis basis(runtime, crash->active, crash->rowstatus, crash->inactive);
-  solve(crash->primal, crash->rowact, basis);
+  Basis basis(runtime, crash.active, crash.rowstatus, crash.inactive);
+  solve(crash.primal, crash.rowact, basis);
   printf("%lf %lf %d %d\n", 
     runtime.statistics.time[runtime.statistics.time.size()-1],
     runtime.instance.objval(runtime.primal),

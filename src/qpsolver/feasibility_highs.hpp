@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "feasibility.hpp"
 
-void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
+void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   // compute initial feasible point
   Highs highs;
 
@@ -63,7 +63,7 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
 	 (int)num_basic_col, (int)num_basic_row,
 	 (int)num_nonbasic_col, (int)num_nonbasic_row);
-  highs.setBasis(basis, "qp phase 1");
+  //highs.setBasis(basis, "qp phase 1");
 
   num_basic_col = 0;
   num_nonbasic_col = 0;
@@ -200,13 +200,11 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
     }
   }
 
-  result =
-      new CrashSolution(runtime.instance.num_var, runtime.instance.num_con);
-  result->rowstatus = atlower;
-  result->active = initialactive;
-  result->inactive = initialinactive;
-  result->primal = x0;
-  result->rowact = ra;
+  result.rowstatus = atlower;
+  result.active = initialactive;
+  result.inactive = initialinactive;
+  result.primal = x0;
+  result.rowact = ra;
 }
 
 #endif

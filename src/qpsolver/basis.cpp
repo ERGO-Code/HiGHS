@@ -28,8 +28,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
 void Basis::build() {
   updatessinceinvert = 0;
 
-  baseindex =
-      new HighsInt[activeconstraintidx.size() + nonactiveconstraintsidx.size()];
+  baseindex.resize(activeconstraintidx.size() + nonactiveconstraintsidx.size());
   constraintindexinbasisfactor.clear();
 
   basisfactor = HFactor();
@@ -58,7 +57,7 @@ void Basis::build() {
   }
   basisfactor.setup(Atran.num_col, Atran.num_row, (HighsInt*)&Atran.start[0],
                     (HighsInt*)&Atran.index[0], (const double*)&Atran.value[0],
-                    baseindex);
+                    (HighsInt*)&baseindex[0]);
   basisfactor.build();
 
   for (size_t i = 0;
