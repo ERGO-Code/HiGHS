@@ -1274,7 +1274,7 @@ restart:
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-    // make sure first line after solving root LP is printed
+  // make sure first line after solving root LP is printed
   last_disptime = -kHighsInf;
 
   heuristics.randomizedRounding(firstlpsol);
