@@ -1274,6 +1274,9 @@ restart:
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
+    // make sure first line after solving root LP is printed
+  last_disptime = -kHighsInf;
+
   heuristics.randomizedRounding(firstlpsol);
   heuristics.flushStatistics();
 
@@ -1293,9 +1296,6 @@ restart:
   HighsInt nseparounds = 0;
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
-
-  // make sure first line after solving root LP is printed
-  last_disptime = -kHighsInf;
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
