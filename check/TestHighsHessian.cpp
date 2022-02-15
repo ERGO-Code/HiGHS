@@ -34,12 +34,16 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   }
 
   REQUIRE(assessHessian(square_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(square_hessian, options, ObjSense::kMaximize) ==
+          HighsStatus::kError);
   if (dev_run) {
     printf("\nReturned square Hessian\n");
     square_hessian.print();
   }
 
   REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options, ObjSense::kMaximize) ==
+          HighsStatus::kError);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
@@ -75,6 +79,8 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   negative_diagonal_hessian.value_[9] = -negative_diagonal_hessian.value_[9];
   REQUIRE(assessHessian(negative_diagonal_hessian, options,
                         ObjSense::kMaximize) == HighsStatus::kOk);
+  REQUIRE(assessHessian(negative_diagonal_hessian, options,
+                        ObjSense::kMinimize) == HighsStatus::kError);
 
   // Square Hessian with only triangular entries - doubled strictly triangular
   // entries.

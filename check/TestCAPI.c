@@ -809,6 +809,25 @@ void test_getColsByRange() {
   Highs_destroy(highs);
 }
 
+void test_passHessian() {
+  void* highs = Highs_create();
+  Highs_addCol(highs, 0.0, 0.0, 2.0, 0, NULL, NULL);
+  Highs_changeObjectiveSense(highs, -1);
+  int start[1] = {0};
+  int indices[1] = {0};
+  double values[1] = {-2.0};
+  int ret;
+  ret = Highs_passHessian(highs, 1, 1, 1, start, indices, values);
+  assertIntValuesEqual("Return of passHessian", ret, 0);
+  Highs_run(highs);
+  assertIntValuesEqual("Status", Highs_getModelStatus(highs), 7);  // kOptimal
+  double colvalue[1] = {-123.0};
+  double coldual[1] = {0.0};
+  Highs_getSolution(highs, colvalue, coldual, NULL, NULL);
+  assertDoubleValuesEqual("Objective", colvalue[0], 0.0);
+  Highs_destroy(highs);
+}
+
 int main() {
   minimal_api();
   full_api();
@@ -820,5 +839,6 @@ int main() {
   full_api_qp();
   options();
   test_getColsByRange();
+  test_passHessian();
   return 0;
 }

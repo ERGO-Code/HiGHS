@@ -267,9 +267,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   if (return_status == HighsStatus::kError) return return_status;
 
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, lp.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -412,9 +412,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, model_.lp_.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
