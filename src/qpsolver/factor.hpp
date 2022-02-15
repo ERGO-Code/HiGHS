@@ -6,6 +6,7 @@
 
 #include "matrix.hpp"
 #include "runtime.hpp"
+#include "qpconst.hpp"
 
 using std::min;
 
@@ -90,9 +91,9 @@ class CholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
-  void expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
+  QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
     if (!uptodate) {
-      return;
+      return QpSolverStatus::OK;
     }
     double mu = gyp * yp;
     l.resparsify();
@@ -110,9 +111,7 @@ class CholeskyFactor {
 
       current_k++;
     } else {
-      printf("new negative lambda in M_kk: %lf\n", lambda);
-      assert(lambda > 0.0);
-      exit(1);
+      return QpSolverStatus::NOTPOSITIVDEFINITE;
 
       //     |LL' 0|
       // M = |0'  0| + bb' -aa'
@@ -162,8 +161,8 @@ class CholeskyFactor {
       }
 
       current_k = current_k + 1;
-      exit(1);
     } 
+    return QpSolverStatus::OK;
   }
 
   void solveL(Vector& rhs) {

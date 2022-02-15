@@ -104,7 +104,7 @@ void Basis::deactivate(HighsInt conid) {
   nonactiveconstraintsidx.push_back(conid);
 }
 
-void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
+QpSolverStatus Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
                      HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(activeconstraintidx, (HighsInt)conid)) {
@@ -113,7 +113,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
   } else {
     printf("Degeneracy? constraint %" HIGHSINT_FORMAT " already in basis\n",
            conid);
-    exit(1);
+    return QpSolverStatus::DEGENERATE;
   }
 
   // printf("drop %d\n", nonactivetoremove);
@@ -128,6 +128,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
     constraintindexinbasisfactor[nonactivetoremove] = -1;
     constraintindexinbasisfactor[conid] = rowtoremove;
   }
+  return QpSolverStatus::OK;
 }
 
 void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,

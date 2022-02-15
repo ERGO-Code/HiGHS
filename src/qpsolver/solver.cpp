@@ -148,14 +148,14 @@ double computemaxsteplength(Runtime& runtime, const Vector& p,
   }
 }
 
-void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
+QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
             Vector& buffer_d, HighsInt& maxabsd, HighsInt& constrainttodrop) {
   HighsInt idx = indexof(basis.getinactive(), newactivecon);
   if (idx != -1) {
     maxabsd = idx;
     constrainttodrop = newactivecon;
     Vector::unit(basis.getinactive().size(), idx, buffer_d);
-    return;
+    return QpSolverStatus::OK;
     // return NullspaceReductionResult(true);
   }
 
@@ -176,9 +176,9 @@ void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
         "degeneracy? not possible to find non-active constraint to "
         "leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n",
         maxabsd, log10(fabs(buffer_d.value[maxabsd])));
-    exit(1);
+    return QpSolverStatus::DEGENERATE;
   }
-  return;
+  return QpSolverStatus::OK;
   // return NullspaceReductionResult(idx != -1);
 }
 
@@ -235,6 +235,8 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
     runtime.statistics.num_iterations++;
 
+    QpSolverStatus status;
+
     bool zero_curvature_direction = false;
     double maxsteplength = 1.0;
     if (atfsep) {
@@ -262,7 +264,11 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction)
-        factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
+        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
+        if (status != QpSolverStatus::OK) {
+          runtime.status = ProblemStatus::INDETERMINED;
+          return;
+        }
       // }
       redgrad.expand(buffer_yp);
     } else {
@@ -282,8 +288,12 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       if (stepres.limitingconstraint != -1) {
         HighsInt constrainttodrop;
         HighsInt maxabsd;
-        reduce(runtime, basis, stepres.limitingconstraint, buffer_d, maxabsd,
+        status = reduce(runtime, basis, stepres.limitingconstraint, buffer_d, maxabsd,
                constrainttodrop);
+        if (status != QpSolverStatus::OK) {
+          runtime.status = ProblemStatus::INDETERMINED;
+          return;
+        }
         if (!zero_curvature_direction) {
           factor.reduce(
               buffer_d, maxabsd,
@@ -292,10 +302,14 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);
 
-        basis.activate(runtime, stepres.limitingconstraint,
+        status = basis.activate(runtime, stepres.limitingconstraint,
                        stepres.nowactiveatlower ? BasisStatus::ActiveAtLower
                                                 : BasisStatus::ActiveAtUpper,
                        constrainttodrop, pricing.get());
+        if (status != QpSolverStatus::OK) {
+          runtime.status = ProblemStatus::INDETERMINED;
+          return;
+        }
         if (basis.getnumactive() != runtime.instance.num_var) {
           atfsep = false;
         }

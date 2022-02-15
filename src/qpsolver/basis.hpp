@@ -12,6 +12,7 @@
 #include "util/HFactor.h"
 #include "util/HVector.h"
 #include "util/HVectorBase.h"
+#include "qpconst.hpp"
 
 enum class BasisStatus {
   Default,
@@ -120,7 +121,7 @@ class Basis {
   // Nullspace from now on)
   void deactivate(HighsInt conid);
 
-  void activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
+  QpSolverStatus activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
                 HighsInt nonactivetoremove, Pricing* pricing);
 
   void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
