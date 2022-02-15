@@ -811,7 +811,7 @@ void test_getColsByRange() {
 
 void test_passHessian() {
   void* highs = Highs_create();
-  Highs_addCol(highs, 0.0, 0.0, 2.0, 0, NULL, NULL);
+  Highs_addCol(highs, 2.0, 0.0, 2.0, 0, NULL, NULL);
   Highs_changeObjectiveSense(highs, -1);
   HighsInt start[1] = {0};
   HighsInt indices[1] = {0};
@@ -820,11 +820,18 @@ void test_passHessian() {
   ret = Highs_passHessian(highs, 1, 1, 1, start, indices, values);
   assertIntValuesEqual("Return of passHessian", ret, 0);
   Highs_run(highs);
+  // Solving max -x^2 + 2x
+  const double optimal_objective_value = 1;
+  const double primal = 1;
+  const double dual = 0;
   assertIntValuesEqual("Status", Highs_getModelStatus(highs), 7);  // kOptimal
   double colvalue[1] = {-123.0};
   double coldual[1] = {0.0};
   Highs_getSolution(highs, colvalue, coldual, NULL, NULL);
-  assertDoubleValuesEqual("Objective", colvalue[0], 0.0);
+  double objective_value = Highs_getObjectiveValue(highs);
+  assertDoubleValuesEqual("Objective", objective_value, optimal_objective_value);
+  assertDoubleValuesEqual("Primal", colvalue[0], primal);
+  assertDoubleValuesEqual("Dual", coldual[0], dual);
   Highs_destroy(highs);
 }
 
