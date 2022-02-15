@@ -4422,14 +4422,15 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       continue;
     }
 
-    if (rowsize[row] < colsize[col]) {
-      double maxVal = getMaxAbsRowVal(row);
-      if (std::abs(Avalue[nzPos]) <
+    double maxVal = rowsize[row] < colsize[col] ? getMaxAbsRowVal(row)
+                                                : getMaxAbsColVal(col);
+    if (std::fabs(Avalue[nzPos]) < maxVal * options->presolve_pivot_threshold) {
+      maxVal = rowsize[row] < colsize[col] ? getMaxAbsColVal(col)
+                                           : getMaxAbsRowVal(row);
+      if (std::fabs(Avalue[nzPos]) <
           maxVal * options->presolve_pivot_threshold) {
-        maxVal = getMaxAbsColVal(col);
-        if (std::abs(Avalue[nzPos]) <
-            maxVal * options->presolve_pivot_threshold)
-          substitutionOpportunities[i].first = -1;
+        substitutionOpportunities[i].first = -1;
+        continue;
       }
     }
 
