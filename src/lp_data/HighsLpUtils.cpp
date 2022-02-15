@@ -571,11 +571,12 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
     return_status = HighsStatus::kError;
   }
   if (num_illegal_upper) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "%" HIGHSINT_FORMAT
-                 " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %g\n",
-                 num_illegal_upper, kMaxSemiVariableUpper);
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "%" HIGHSINT_FORMAT
+        " semi-continuous/integer variables have upper bounds "
+        "exceeding %g that cannot be modified due to large lower bounds\n",
+        num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
   }
   return return_status;
@@ -595,7 +596,8 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
   if (num_active_modified_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
-                 " semi-variables are active at modified upper bounds\n",
+                 " semi-variables are active at modified upper bounds, "
+                 "consider increasing default_semi_variable_upper_bound\n",
                  num_active_modified_upper);
   } else {
     highsLogUser(options.log_options, HighsLogType::kInfo,

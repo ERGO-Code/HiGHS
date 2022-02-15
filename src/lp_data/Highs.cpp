@@ -676,8 +676,10 @@ HighsStatus Highs::run() {
   // Check validity of any integrality, keeping a record of any upper
   // bound modifications for semi-variables
   call_status = assessIntegrality(model_.lp_, options_);
-  if (call_status == HighsStatus::kError)
+  if (call_status == HighsStatus::kError) {
+    setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kSolveError);
     return returnFromRun(HighsStatus::kError);
+  }
 
   if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
     // Choosing method according to model class, and model is a QP
