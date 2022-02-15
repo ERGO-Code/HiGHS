@@ -46,12 +46,13 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
     }
   }
 
-  highs.setBasis(basis, "qp phase 1");
-  
+  // highs.setBasis(basis, "qp phase 1");
   highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   highs.run();
 
-  runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
+
+  const HighsInfo& info = highs.getInfo();
+  runtime.statistics.phase1_iterations = info.simplex_iteration_count;
 
   HighsModelStatus phase1stat = highs.getModelStatus();
   if (phase1stat == HighsModelStatus::kInfeasible) {
