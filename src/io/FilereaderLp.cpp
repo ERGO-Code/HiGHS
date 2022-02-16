@@ -150,6 +150,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // parser error
     FILE* file = fopen(filename.c_str(), "r");
     if (file == nullptr) return FilereaderRetcode::kFileNotFound;
+    fclose(file);
     return FilereaderRetcode::kParserError;
   }
   lp.ensureColwise();
