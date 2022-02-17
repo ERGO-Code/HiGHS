@@ -33,20 +33,31 @@ The rest of this file gives brief documentation for HiGHS. Comprehensive documen
 Download
 --------
 
-Precompiled static executables will soon be available, and precompiled executables using shared libraries are available for a variety of platforms at https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases
+Precompiled static executables are available for a variety of platforms at:
+https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
-**Notes**
+**Installation instructions**
 
- * For Windows users: if in doubt, choose the file `x86_64-w64-mingw32-cxx11.tar.gz`
- * For M1 macOS users: choose the file `aarch64-apple-darwin.tar.gz`
+To install, download the appropriate file and extract the executable located at `/bin/highs`.
 
-**Missing files**
+ * For Windows users: if in doubt, choose the file ending in `x86_64-w64-mingw32.tar.gz`
+ * For M1 macOS users: choose the file ending in `aarch64-apple-darwin.tar.gz`
+ * For Intel macOS users: choose the file ending in `x86_64-apple-darwin.tar.gz`
 
-If you encounter an error about a missing `libstdc++-6.dll` (or similar named file), download the platform-specific libraries from: 
-https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/tag/CompilerSupportLibraries-v0.5.1%2B0
-and copy all the libraries into the same folder as the `highs` executable. Note that, unless using the FORTRAN interface, any of versions 3-5 should work. If in doubt, Windows users should choose the `x86_64-w64-mingw32-libgfortran5.tar.gz`.
+**Shared libaries**
+
+For advanced users, precompiled executables using shared libraries are available for a variety of platforms at:
+https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases.
+
+Similar download instructions apply.
+
+ * These files link against `libstdc++`. If you do not have one installed, download the platform-specific libraries from: 
+   https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/tag/CompilerSupportLibraries-v0.5.1%2B0
+   and copy all the libraries into the same folder as the `highs` executable.
+ * Unless using the FORTRAN interface, any of versions libgfortran3-libgfortran5 should work.
+   If in doubt, Windows users should choose the `x86_64-w64-mingw32-libgfortran5.tar.gz`.
 
 Compilation
 -----------
