@@ -525,9 +525,6 @@ endif()
 
 endif()
 
-include(GenerateExportHeader)
-generate_export_header(libhighs)
-
 # # Comment out for scaffold/ tests
 # add_subdirectory(scaffold)
 

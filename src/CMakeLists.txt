@@ -303,6 +303,7 @@ set(headers
     util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
+    libhighs_export.h
 )
 
 if (IPX_ON)
@@ -423,7 +424,6 @@ foreach ( file ${headers} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
-install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
@@ -762,6 +762,7 @@ set(headers_fast_build_
     util/HVectorBase.h
     util/stringutil.h
     Highs.h
+    libhighs_export.h
     interfaces/highs_c_api.h
 )
 
@@ -784,7 +785,6 @@ foreach ( file ${headers_fast_build_} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
-install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
@@ -792,6 +792,9 @@ install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 target_include_directories(libhighs PUBLIC ipm/ipx/src
     ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+
+# to tell the api export macro we are building the library
+target_compile_definitions(libhighs PRIVATE BUILDING_LIBHIGHS)
 
 if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
