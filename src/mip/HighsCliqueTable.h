@@ -73,7 +73,7 @@ class HighsCliqueTable {
  private:
   struct CliqueSetNode {
     HighsInt cliqueid;
-    highs::RbTreeLinks links;
+    highs::RbTreeLinks<HighsInt> links;
 
     CliqueSetNode(HighsInt cliqueid) : cliqueid(cliqueid) {}
 
@@ -246,6 +246,10 @@ class HighsCliqueTable {
   HighsInt getNumFixings() const { return nfixings; }
 
   void cliquePartition(std::vector<CliqueVar>& clqVars,
+                       std::vector<HighsInt>& partitionStart);
+
+  void cliquePartition(const std::vector<double>& objective,
+                       std::vector<CliqueVar>& clqVars,
                        std::vector<HighsInt>& partitionStart);
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);

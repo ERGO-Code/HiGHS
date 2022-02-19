@@ -26,6 +26,7 @@
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsObjectiveFunction.h"
 #include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "test/DevKkt.h"
@@ -833,6 +834,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
 
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->rowMatrixSet = false;
+    mipsolver->mipdata_->objectiveFunction = HighsObjectiveFunction(*mipsolver);
     mipsolver->mipdata_->domain = HighsDomain(*mipsolver);
     mipsolver->mipdata_->cliquetable.rebuild(model->num_col_, postSolveStack,
                                              mipsolver->mipdata_->domain,
@@ -4420,14 +4422,15 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       continue;
     }
 
-    if (rowsize[row] < colsize[col]) {
-      double maxVal = getMaxAbsRowVal(row);
-      if (std::abs(Avalue[nzPos]) <
+    double maxVal = rowsize[row] < colsize[col] ? getMaxAbsRowVal(row)
+                                                : getMaxAbsColVal(col);
+    if (std::fabs(Avalue[nzPos]) < maxVal * options->presolve_pivot_threshold) {
+      maxVal = rowsize[row] < colsize[col] ? getMaxAbsColVal(col)
+                                           : getMaxAbsRowVal(row);
+      if (std::fabs(Avalue[nzPos]) <
           maxVal * options->presolve_pivot_threshold) {
-        maxVal = getMaxAbsColVal(col);
-        if (std::abs(Avalue[nzPos]) <
-            maxVal * options->presolve_pivot_threshold)
-          substitutionOpportunities[i].first = -1;
+        substitutionOpportunities[i].first = -1;
+        continue;
       }
     }
 
