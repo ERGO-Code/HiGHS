@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void solve(Highs& highs, std::string presolve,
@@ -70,6 +70,13 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   double optimal_objective = info.objective_function_value;
   if (dev_run) printf("Objective = %g\n", optimal_objective);
+
+  printf("kHighsIInf = %" HIGHSINT_FORMAT "\n", kHighsIInf);
+  HighsInt mip_node_count;
+  REQUIRE(highs.getInfoValue("mip_node_count", mip_node_count) ==
+          HighsStatus::kOk);
+  printf("mip_node_count = %d\n", (int)mip_node_count);
+  assert(1 == 0);
 
   highs.clearModel();
   if (!dev_run) highs.setOptionValue("output_flag", false);

@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <math.h>
 
-const HighsInt dev_run = 0;
+const HighsInt dev_run = 1;
 const double double_equal_tolerance = 1e-5;
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
@@ -591,6 +591,56 @@ void full_api_lp() {
   Highs_destroy(highs);
 }
 
+void full_api_mip() {
+  // The use of the full HiGHS API is illustrated for the MIP
+  //
+  // Min    f  = -3x_0 - 2x_1 - x_2
+  // s.t.          x_0 +  x_1 + x_2 <=  7
+  //              4x_0 + 2x_1 + x_2  = 12
+  //              x_0 >=0; x_1 >= 0; x_2 binary
+
+  const HighsInt numcol = 3;
+  const HighsInt numrow = 2;
+  const HighsInt numnz = 6;
+  HighsInt a_format = 1;
+  HighsInt sense = 1;
+  double offset = 0;
+
+  // Define the column costs, lower bounds and upper bounds
+  double colcost[3] = {-3.0, -2.0, -1.0};
+  double collower[3] = {0.0, 0.0, 0.0};
+  double colupper[3] = {1.0e30, 1.0e30, 1.0};
+  // Define the row lower bounds and upper bounds
+  double rowlower[2] = {-1.0e30, 12.0};
+  double rowupper[2] = { 7.0,    12.0};
+  // Define the constraint matrix column-wise
+  HighsInt astart[3] = {0, 2, 4};
+  HighsInt aindex[6] = {0, 1, 0, 1, 0, 1};
+  double avalue[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
+
+  HighsInt integrality[3] = {1, 1, 1};
+
+  double* colvalue = (double*)malloc(sizeof(double) * numcol);
+  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
+
+  HighsInt modelstatus;
+  HighsInt return_status;
+
+  void* highs = Highs_create();
+  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  return_status = Highs_passMip(highs, numcol, numrow, numnz, a_format,
+				sense, offset, colcost, collower, colupper, rowlower, rowupper,
+				astart, aindex, avalue,
+				integrality);
+  assert(return_status == 0);
+  Highs_setStringOptionValue(highs, "presolve", "off");
+  return_status = Highs_run(highs);
+  HighsInt mip_node_count;
+  return_status = Highs_getIntInfoValue(highs, "mip_node_count", &mip_node_count);
+  assert( return_status == 0 );
+
+}
+
 void full_api_qp() {
   double required_objective_function_value;
   double required_x0;
@@ -836,16 +886,16 @@ void test_passHessian() {
 }
 
 int main() {
-  minimal_api();
-  full_api();
-  minimal_api_lp();
-  minimal_api_mip();
-  minimal_api_qp();
-  full_api_lp();
-  //  full_api_mip();
-  full_api_qp();
-  options();
-  test_getColsByRange();
-  test_passHessian();
+  //  minimal_api();
+  //  full_api();
+  //  minimal_api_lp();
+  //  minimal_api_mip();
+  //  minimal_api_qp();
+  //  full_api_lp();
+    full_api_mip();
+  //  full_api_qp();
+  //  options();
+  //  test_getColsByRange();
+  //  test_passHessian();
   return 0;
 }
