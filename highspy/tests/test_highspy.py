@@ -4,7 +4,7 @@ import numpy as np
 
 
 class TestHighsPy(unittest.TestCase):
-    def test_basics(self):
+    def get_basic_model(self):
         """
         min y
         s.t.
@@ -24,6 +24,11 @@ class TestHighsPy(unittest.TestCase):
         values = np.array([-1, 1, 1, 1], dtype=np.double)
         h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
         h.setOptionValue('log_to_console', False)
+        return h
+    
+    def test_basics(self):
+        inf = highspy.kHighsInf
+        h = self.get_basic_model()
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
@@ -82,7 +87,9 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[1], -5)
 
         h.changeColCost(1, 1)
+        self.assertEqual(h.getObjectiveSense(), highspy.ObjSense.kMinimize)
         h.changeObjectiveSense(highspy.ObjSense.kMaximize)
+        self.assertEqual(h.getObjectiveSense(), highspy.ObjSense.kMaximize)
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -5)
@@ -90,5 +97,85 @@ class TestHighsPy(unittest.TestCase):
 
         self.assertAlmostEqual(h.getObjectiveValue(), -5)
         h.changeObjectiveOffset(1)
+        self.assertAlmostEqual(h.getObjectiveOffset(), 1)
         h.run()
         self.assertAlmostEqual(h.getObjectiveValue(), -4)
+
+    def test_options(self):
+        # test bool option
+        h = highspy.Highs()
+        h.setOptionValue('log_to_console', True)
+        self.assertTrue(h.getOptionValue('log_to_console'))
+        h.setOptionValue('log_to_console', False)
+        self.assertFalse(h.getOptionValue('log_to_console'))
+
+        # test string option
+        h.setOptionValue('presolve', 'off')
+        self.assertEqual(h.getOptionValue('presolve'), 'off')
+        h.setOptionValue('presolve', 'on')
+        self.assertEqual(h.getOptionValue('presolve'), 'on')
+
+        # test int option
+        h.setOptionValue('threads', 1)
+        self.assertEqual(h.getOptionValue('threads'), 1)
+        h.setOptionValue('threads', 2)
+        self.assertEqual(h.getOptionValue('threads'), 2)
+
+        # test double option
+        h.setOptionValue('time_limit', 1.7)
+        self.assertAlmostEqual(h.getOptionValue('time_limit'), 1.7)
+        h.setOptionValue('time_limit', 2.7)
+        self.assertAlmostEqual(h.getOptionValue('time_limit'), 2.7)
+
+    def test_clear(self):
+        h = self.get_basic_model()
+        self.assertEqual(h.getNumCol(), 2)
+        self.assertEqual(h.getNumRow(), 2)
+        self.assertEqual(h.getNumNz(), 4)
+
+        orig_feas_tol = h.getOptionValue('primal_feasibility_tolerance')
+        new_feas_tol = orig_feas_tol + 1
+        h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
+        self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), new_feas_tol)
+        h.clear()
+        self.assertEqual(h.getNumCol(), 0)
+        self.assertEqual(h.getNumRow(), 0)
+        self.assertEqual(h.getNumNz(), 0)
+        self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), orig_feas_tol)
+
+        h = self.get_basic_model()
+        h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
+        self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), new_feas_tol)
+        h.clearModel()
+        self.assertEqual(h.getNumCol(), 0)
+        self.assertEqual(h.getNumRow(), 0)
+        self.assertEqual(h.getNumNz(), 0)
+        self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), new_feas_tol)
+
+        h = self.get_basic_model()
+        h.run()
+        sol = h.getSolution()
+        self.assertAlmostEqual(sol.col_value[0], -1)
+        self.assertAlmostEqual(sol.col_value[1], 1)
+        h.clearSolver()
+        self.assertEqual(h.getNumCol(), 2)
+        self.assertEqual(h.getNumRow(), 2)
+        self.assertEqual(h.getNumNz(), 4)
+        sol = h.getSolution()
+        self.assertAlmostEqual(sol.col_value[0], 0)
+        self.assertAlmostEqual(sol.col_value[1], 0)
+
+        h = self.get_basic_model()
+        orig_feas_tol = h.getOptionValue('primal_feasibility_tolerance')
+        new_feas_tol = orig_feas_tol + 1
+        h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
+        self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), new_feas_tol)
+        h.resetOptions()
+        self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), orig_feas_tol)
+
+    def test_check_solution_feasibility(self):
+        h = self.get_basic_model()
+        h.setOptionValue('log_to_console', True)
+        h.checkSolutionFeasibility()
+        h.run()
+        h.checkSolutionFeasibility()
