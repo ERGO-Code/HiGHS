@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/SimplexConst.h
@@ -18,7 +18,7 @@
 
 #include "util/HighsInt.h"
 
-enum class SimplexAlgorithm { kPrimal = 0, kDual };
+enum class SimplexAlgorithm { kNone = 0, kPrimal, kDual };
 
 enum SimplexStrategy {
   kSimplexStrategyMin = 0,
@@ -72,21 +72,13 @@ enum SimplexCrashStrategy {
   kSimplexCrashStrategyMax = kSimplexCrashStrategyTestSing
 };
 
-enum SimplexDualEdgeWeightStrategy {
-  kSimplexDualEdgeWeightStrategyMin = -1,
-  kSimplexDualEdgeWeightStrategyChoose = kSimplexDualEdgeWeightStrategyMin,
-  kSimplexDualEdgeWeightStrategyDantzig,
-  kSimplexDualEdgeWeightStrategyDevex,
-  kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
-};
-
-enum SimplexPrimalEdgeWeightStrategy {
-  kSimplexPrimalEdgeWeightStrategyMin = -1,
-  kSimplexPrimalEdgeWeightStrategyChoose = kSimplexPrimalEdgeWeightStrategyMin,
-  kSimplexPrimalEdgeWeightStrategyDantzig,
-  kSimplexPrimalEdgeWeightStrategyDevex,
-  kSimplexPrimalEdgeWeightStrategyMax = kSimplexPrimalEdgeWeightStrategyDevex
+enum SimplexEdgeWeightStrategy {
+  kSimplexEdgeWeightStrategyMin = -1,
+  kSimplexEdgeWeightStrategyChoose = kSimplexEdgeWeightStrategyMin,
+  kSimplexEdgeWeightStrategyDantzig,
+  kSimplexEdgeWeightStrategyDevex,
+  kSimplexEdgeWeightStrategySteepestEdge,
+  kSimplexEdgeWeightStrategyMax = kSimplexEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPriceStrategy {
@@ -128,6 +120,7 @@ enum RebuildReason {
   kRebuildReasonPossiblySingularBasis,            // 7
   kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
   kRebuildReasonChooseColumnFail,                 // 9
+  kRebuildReasonForceRefactor,                    // 10
   kRebuildReasonCount
 };
 
@@ -142,10 +135,11 @@ enum SimplexNlaOperation {
   kSimplexNlaFtran,
   kSimplexNlaFtranBfrt,
   kSimplexNlaFtranDse,
+  kSimplexNlaBtranPse,
   kNumSimplexNlaOperation
 };
 
-enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
+enum class EdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
 const HighsInt kDualTasksMinConcurrency = 3;
 const HighsInt kDualMultiMinConcurrency = 1;  // 2;
@@ -169,6 +163,8 @@ const HighsInt kIllegalMoveValue =
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
 
+const double kMinDualSteepestEdgeWeight = 1e-4;
+
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 
@@ -191,7 +187,15 @@ enum class LpAction {
   kBacktracking
 };
 
-enum class BadBasisChangeReason { kSingular = 0, kCycling };
+enum class BadBasisChangeReason {
+  kAll = 0,
+  kSingular,
+  kCycling,
+  kFailedInfeasibilityProof
+};
+
+const HighsInt kAllowedNumBadDevexWeight = 3;
+const double kBadDevexWeightFactor = 3;
 
 //
 // Relation between HiGHS basis and Simplex basis

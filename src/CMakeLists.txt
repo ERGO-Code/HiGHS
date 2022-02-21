@@ -125,6 +125,7 @@ set(sources
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsObjectiveFunction.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
@@ -224,6 +225,7 @@ set(headers
     mip/HighsMipSolver.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsObjectiveFunction.h
     mip/HighsPathSeparator.h
     mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h
@@ -238,6 +240,7 @@ set(headers
     model/HighsModel.h
     parallel/HighsBinarySemaphore.h
     parallel/HighsCacheAlign.h
+    parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
     parallel/HighsSpinMutex.h
@@ -304,13 +307,6 @@ set(headers
     interfaces/highs_c_api.h
 )
 
-if (GAMS_FOUND)
-    set(sources ${sources} interfaces/GAMS.cpp)
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gmomcc.c")
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gevmcc.c")
-    include_directories(${GAMS_ROOT}/apifiles/C/api)
-endif()
-
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
@@ -334,10 +330,14 @@ if(${BUILD_SHARED_LIBS})
         VERSION 
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
+    if(MINGW)
+        target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+    endif()
 else()
     # create static highs library with pic
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 # on UNIX system the 'lib' prefix is automatically added
@@ -429,37 +429,51 @@ install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
-    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
-    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+        #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
-    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+        #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
-    #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
-    #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
-    target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
+        #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+        #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    target_compile_options(libipx PRIVATE "-Wno-unused-variable")
-    target_compile_options(libipx PRIVATE "-Wno-sign-compare")
-    #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
+        target_compile_options(libipx PRIVATE "-Wno-unused-variable")
+        target_compile_options(libipx PRIVATE "-Wno-sign-compare")
+        #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
     endif()
 
-    install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
+    if (WIN32)
+        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
+            LIBRARY DESTINATION bin
+            ARCHIVE DESTINATION lib
+            INCLUDES DESTINATION include)
+    else()
+        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
             INCLUDES DESTINATION include)
+    endif()
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs libipx libbasiclu
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 else()
-    install(TARGETS libhighs EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
+    if (WIN32)
+        install(TARGETS libhighs EXPORT highs-targets
+                LIBRARY DESTINATION bin
+                ARCHIVE DESTINATION lib
+                INCLUDES DESTINATION include)
+    else()
+        install(TARGETS libhighs EXPORT highs-targets
+                LIBRARY DESTINATION lib
+                ARCHIVE DESTINATION lib
+                INCLUDES DESTINATION include)
+    endif()
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs 
@@ -505,6 +519,9 @@ add_library(libhighs)
 
 if (NOT ${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+elseif(MINGW)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 target_sources(libhighs PRIVATE
@@ -555,6 +572,7 @@ target_sources(libhighs PRIVATE
     mip/HighsPrimalHeuristics.cpp
     mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsObjectiveFunction.cpp
     mip/HighsRedcostFixing.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
@@ -669,6 +687,7 @@ set(headers_fast_build_
     mip/HighsMipSolver.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsObjectiveFunction.h
     mip/HighsPathSeparator.h
     mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h
@@ -683,6 +702,7 @@ set(headers_fast_build_
     model/HighsModel.h
     parallel/HighsBinarySemaphore.h
     parallel/HighsCacheAlign.h
+    parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
     parallel/HighsSpinMutex.h

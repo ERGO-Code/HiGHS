@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_UTIL_INTEGERS_H_
@@ -33,6 +33,15 @@ class HighsIntegers {
   static double mod(double a, double m) {
     int64_t r = std::fmod(a, m);
     return r + (a < 0) * m;
+  }
+
+  static int64_t nearestInteger(double x) {
+    return (int64_t)(x + std::copysign(0.5, x));
+  }
+
+  static bool isIntegral(double x, double eps) {
+    double y = std::fabs(x - (int64_t)x);
+    return std::min(y, 1.0 - y) <= eps;
   }
 
   static int64_t modularInverse(int64_t a, int64_t m) {
@@ -125,9 +134,11 @@ class HighsIntegers {
                               double deltadown, double deltaup) {
     if (numVals == 0) return 0.0;
 
-    double minval = *std::min_element(
+    auto minmax = std::minmax_element(
         vals, vals + numVals,
         [](double a, double b) { return std::abs(a) < std::abs(b); });
+    const double minval = *minmax.first;
+    const double maxval = *minmax.second;
 
     int expshift = 0;
 
@@ -136,6 +147,13 @@ class HighsIntegers {
     // but ignore tiny values bew deltadown/deltaup.
     if (minval < -deltadown || minval > deltaup) std::frexp(minval, &expshift);
     expshift = std::max(-expshift, 0) + 3;
+
+    // guard against making the largest value too big which may cause overflows
+    // with intermdediate gcd values
+    int expMaxVal;
+    std::frexp(maxval, &expMaxVal);
+    expMaxVal = std::min(expMaxVal, 32);
+    if (expMaxVal + expshift > 32) expshift = 32 - expMaxVal;
 
     uint64_t denom = uint64_t{75} << expshift;
     HighsCDouble startdenom = denom;

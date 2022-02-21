@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HSimplexNla.cpp
@@ -102,17 +102,29 @@ HighsInt HSimplexNla::invert() {
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   applyBasisMatrixColScale(rhs);
-  frozenBtran(rhs);
-  factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
+  btranInScaledSpace(rhs, expected_density, factor_timer_clock_pointer);
   applyBasisMatrixRowScale(rhs);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   applyBasisMatrixRowScale(rhs);
+  ftranInScaledSpace(rhs, expected_density, factor_timer_clock_pointer);
+  applyBasisMatrixColScale(rhs);
+}
+
+void HSimplexNla::btranInScaledSpace(
+    HVector& rhs, const double expected_density,
+    HighsTimerClock* factor_timer_clock_pointer) const {
+  frozenBtran(rhs);
+  factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
+}
+
+void HSimplexNla::ftranInScaledSpace(
+    HVector& rhs, const double expected_density,
+    HighsTimerClock* factor_timer_clock_pointer) const {
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
   frozenFtran(rhs);
-  applyBasisMatrixColScale(rhs);
 }
 
 void HSimplexNla::frozenBtran(HVector& rhs) const {
@@ -152,11 +164,65 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
   reportPackValue("  pack: aq Bf ", aq);
   reportPackValue("  pack: ep Bf ", ep);
   factor_.refactor_info_.clear();
-  if (last_frozen_basis_id_ == kNoLink) {
+  if (update_.valid_) assert(last_frozen_basis_id_ != kNoLink);
+  if (!update_.valid_) {  // last_frozen_basis_id_ == kNoLink) {
     factor_.update(aq, ep, iRow, hint);
   } else {
     *hint = update_.update(aq, iRow);
   }
+}
+
+double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow,
+                                            const HVector& row_ep) const {
+  if (scale_ == NULL) {
+    return row_ep.norm2();
+  }
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
+  // Get the 2-norm of row_ep in the scaled space otherwise for
+  // checking
+  const bool DSE_check = false;
+  double alt_row_ep_2norm = 0;
+  if (DSE_check) {
+    HVector alt_row_ep;
+    alt_row_ep.setup(lp_->num_row_);
+    alt_row_ep.clear();
+    alt_row_ep.count = 1;
+    alt_row_ep.index[0] = iRow;
+    alt_row_ep.array[iRow] = 1;
+    alt_row_ep.packFlag = false;
+    factor_.btranCall(alt_row_ep, 0);
+    alt_row_ep_2norm = alt_row_ep.norm2();
+  }
+  // Get the 2-norm of row_ep in the scaled space
+  //
+  // Determine the scaling that was applied to the unit RHS before
+  // scaled BTRAN. This must be unapplied to all components of the
+  // result.
+  double col_scale_value = basicColScaleFactor(iRow);
+  // Now compute the 2-norm of row_ep in the scaled space, unapplying
+  // the scaling that was applied after BTRAN
+  double row_ep_2norm = 0;
+  HighsInt to_entry;
+  const bool use_row_indices =
+      sparseLoopStyle(row_ep.count, lp_->num_row_, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    const HighsInt iRow = use_row_indices ? row_ep.index[iEntry] : iEntry;
+    const double value_in_scaled_space =
+        row_ep.array[iRow] / (row_scale[iRow] * col_scale_value);
+    row_ep_2norm += value_in_scaled_space * value_in_scaled_space;
+  }
+  if (DSE_check) {
+    const double error = std::fabs(row_ep_2norm - alt_row_ep_2norm) /
+                         std::max(1.0, row_ep_2norm);
+    if (error > 1e-4)
+      printf(
+          "rowEp2NormInScaledSpace: iRow = %2d has deduced norm = %10.4g and "
+          "alt "
+          "norm = %10.4g, giving error %10.4g\n",
+          (int)iRow, row_ep_2norm, alt_row_ep_2norm, error);
+  }
+  return row_ep_2norm;
 }
 
 void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
@@ -173,35 +239,45 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   // CB
   //
   reportPackValue("pack aq Bf ", aq);
-  double scale_factor;
-  if (variable_in < lp_->num_col_) {
-    scale_factor = scale_->col[variable_in];
-  } else {
-    scale_factor = 1.0 / scale_->row[variable_in - lp_->num_col_];
-  }
+  double cq_scale_factor = variableScaleFactor(variable_in);
+
   for (HighsInt ix = 0; ix < aq->packCount; ix++)
-    aq->packValue[ix] *= scale_factor;
+    aq->packValue[ix] *= cq_scale_factor;
   reportPackValue("pack aq Af ", aq);
   //
   // Now focus on the pivot value, aq->array[row_out]
-  //
+  double pivot_in_scaled_space = pivotInScaledSpace(aq, variable_in, row_out);
   // First scale by cq
-  aq->array[row_out] *= scale_factor;
+  aq->array[row_out] *= cq_scale_factor;
   //
   // Also have to unscale by cp
-  HighsInt variable_out = basic_index_[row_out];
-  if (variable_out < lp_->num_col_) {
-    scale_factor = scale_->col[variable_out];
-  } else {
-    scale_factor = 1.0 / scale_->row[variable_out - lp_->num_col_];
-  }
-  aq->array[row_out] /= scale_factor;
+  double cp_scale_factor = basicColScaleFactor(row_out);
+  aq->array[row_out] /= cp_scale_factor;
+  assert(pivot_in_scaled_space == aq->array[row_out]);
   // For (\hat)ep, UPDATE needs packValue to correspond to
   // \bar{B}^{-T}ep, but R.\bar{B}^{-T}(CB.ep) has been computed.
   //
   // Hence packValue needs to be unscaled by cp
   for (HighsInt ix = 0; ix < ep->packCount; ix++)
-    ep->packValue[ix] /= scale_factor;
+    ep->packValue[ix] /= cp_scale_factor;
+}
+
+double HSimplexNla::variableScaleFactor(const HighsInt iVar) const {
+  if (scale_ == NULL) return 1.0;
+  return iVar < lp_->num_col_ ? scale_->col[iVar]
+                              : 1.0 / scale_->row[iVar - lp_->num_col_];
+}
+
+double HSimplexNla::basicColScaleFactor(const HighsInt iCol) const {
+  if (scale_ == NULL) return 1.0;
+  return variableScaleFactor(basic_index_[iCol]);
+}
+
+double HSimplexNla::pivotInScaledSpace(const HVector* aq,
+                                       const HighsInt variable_in,
+                                       const HighsInt row_out) const {
+  return aq->array[row_out] * variableScaleFactor(variable_in) /
+         variableScaleFactor(basic_index_[row_out]);
 }
 
 void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
@@ -216,12 +292,7 @@ void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
   const bool use_row_indices =
       sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    HighsInt iRow;
-    if (use_row_indices) {
-      iRow = rhs.index[iEntry];
-    } else {
-      iRow = iEntry;
-    }
+    const HighsInt iRow = use_row_indices ? rhs.index[iEntry] : iEntry;
     rhs.array[iRow] *= row_scale[iRow];
   }
 }
@@ -234,18 +305,26 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
   const bool use_row_indices =
       sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
   for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
-    HighsInt iCol;
-    if (use_row_indices) {
-      iCol = rhs.index[iEntry];
-    } else {
-      iCol = iEntry;
-    }
+    const HighsInt iCol = use_row_indices ? rhs.index[iEntry] : iEntry;
     HighsInt iVar = basic_index_[iCol];
     if (iVar < lp_->num_col_) {
       rhs.array[iCol] *= col_scale[iVar];
     } else {
       rhs.array[iCol] /= row_scale[iVar - lp_->num_col_];
     }
+  }
+}
+
+void HSimplexNla::unapplyBasisMatrixRowScale(HVector& rhs) const {
+  if (scale_ == NULL) return;
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
+  HighsInt to_entry;
+  const bool use_row_indices =
+      sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    const HighsInt iRow = use_row_indices ? rhs.index[iEntry] : iEntry;
+    rhs.array[iRow] /= row_scale[iRow];
   }
 }
 
@@ -275,8 +354,7 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
                                   HighsInt& to_entry) const {
   // Parameter to decide whether to use just the values in a HVector, or
   // use the indices of their nonzeros
-  const double density_for_indexing = 0.4;
-  const bool use_indices = count >= 0 && count < density_for_indexing * dim;
+  const bool use_indices = count >= 0 && count < kDensityForIndexing * dim;
   if (use_indices) {
     to_entry = count;
   } else {
@@ -294,7 +372,7 @@ void HSimplexNla::reportArray(const std::string message, const HighsInt offset,
                               const HVector* vector, const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
-  if (num_row > 25) {
+  if (num_row > kReportItemLimit) {
     reportArraySparse(message, offset, vector, force);
   } else {
     printf("%s", message.c_str());
@@ -316,12 +394,16 @@ void HSimplexNla::reportVector(const std::string message,
   assert((int)vector_value.size() >= num_index);
   if (num_index <= 0) return;
   const HighsInt num_row = lp_->num_row_;
-  printf("%s", message.c_str());
-  for (HighsInt iX = 0; iX < num_index; iX++) {
-    if (iX % 5 == 0) printf("\n");
-    printf("[%4d %11.4g] ", (int)vector_index[iX], vector_value[iX]);
+  if (num_index > kReportItemLimit) {
+    analyseVectorValues(nullptr, message, num_row, vector_value, true);
+  } else {
+    printf("%s", message.c_str());
+    for (HighsInt iX = 0; iX < num_index; iX++) {
+      if (iX % 5 == 0) printf("\n");
+      printf("[%4d %11.4g] ", (int)vector_index[iX], vector_value[iX]);
+    }
+    printf("\n");
   }
-  printf("\n");
 }
 
 void HSimplexNla::reportArraySparse(const std::string message,
@@ -336,8 +418,9 @@ void HSimplexNla::reportArraySparse(const std::string message,
                                     const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
-  if (vector->count > 25) return;
-  if (vector->count < num_row) {
+  if (vector->count > kReportItemLimit) {
+    analyseVectorValues(nullptr, message, num_row, vector->array, true);
+  } else if (vector->count < num_row) {
     std::vector<HighsInt> sorted_index = vector->index;
     pdqsort(sorted_index.begin(), sorted_index.begin() + vector->count);
     printf("%s", message.c_str());
@@ -349,7 +432,10 @@ void HSimplexNla::reportArraySparse(const std::string message,
       printf("%11.4g] ", vector->array[iRow]);
     }
   } else {
-    if (num_row > 25) return;
+    if (num_row > kReportItemLimit) {
+      analyseVectorValues(nullptr, message, num_row, vector->array, true);
+      return;
+    }
     printf("%s", message.c_str());
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       if (iRow % 5 == 0) printf("\n");
@@ -364,7 +450,11 @@ void HSimplexNla::reportPackValue(const std::string message,
                                   const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
-  if (vector->packCount > 25) return;
+  if (vector->packCount > kReportItemLimit) {
+    analyseVectorValues(nullptr, message, vector->packCount, vector->packValue,
+                        true);
+    return;
+  }
   printf("%s", message.c_str());
   std::vector<HighsInt> sorted_index = vector->packIndex;
   pdqsort(sorted_index.begin(), sorted_index.begin() + vector->packCount);

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HSimplexNlaFreeze.cpp
@@ -19,12 +19,20 @@
 
 #include "simplex/HSimplexNla.h"
 
+void SimplexIterate::clear() {
+  this->valid_ = false;
+  this->basis_.clear();
+  this->invert_.clear();
+  this->dual_edge_weight_.clear();
+}
+
 void FrozenBasis::clear() {
   this->valid_ = false;
   this->prev_ = kNoLink;
   this->next_ = kNoLink;
   this->update_.clear();
   this->basis_.clear();
+  this->dual_edge_weight_.clear();
 }
 
 bool HSimplexNla::frozenBasisAllDataClear() {
@@ -57,9 +65,15 @@ bool HSimplexNla::frozenBasisIdValid(const HighsInt frozen_basis_id) const {
 }
 
 bool HSimplexNla::frozenBasisHasInvert(const HighsInt frozen_basis_id) const {
+  // Determine whether there will be an invertible representation to
+  // use after unfreezing this basis
+  //
+  // If there is no last frozen basis, then there can be no invertible
+  // representation
   if (this->last_frozen_basis_id_ == kNoLink) return false;
-  assert(frozenBasisIdValid(this->last_frozen_basis_id_));
-  return this->frozen_basis_[this->last_frozen_basis_id_].update_.valid_;
+  // Existence of the invertible representation depends on the
+  // validity of the current PF updates
+  return this->update_.valid_;
 }
 
 HighsInt HSimplexNla::freeze(const SimplexBasis& basis,
@@ -73,7 +87,8 @@ HighsInt HSimplexNla::freeze(const SimplexBasis& basis,
   frozen_basis.update_.clear();
   frozen_basis.basis_ = basis;
   if (this->last_frozen_basis_id_ == kNoLink) {
-    // There is thisly no frozen basis, so record this as the first
+    // There is previously no frozen basis, so record this as the
+    // first
     this->first_frozen_basis_id_ = this_frozen_basis_id;
   } else {
     // Update the forward link from the previous last frozen basis
@@ -131,3 +146,9 @@ void HSimplexNla::unfreeze(const HighsInt unfreeze_basis_id,
   // immediately after a factorization for a later basis
   this->factor_.refactor_info_.clear();
 }
+
+void HSimplexNla::putInvert() {
+  simplex_iterate_.valid_ = true;
+  simplex_iterate_.invert_ = factor_.getInvert();
+}
+void HSimplexNla::getInvert() { factor_.setInvert(simplex_iterate_.invert_); }

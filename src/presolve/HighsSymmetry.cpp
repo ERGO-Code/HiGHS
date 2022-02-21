@@ -2,9 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsSymmetry.cpp
@@ -1367,19 +1370,30 @@ void HighsSymmetryDetection::switchToNextNode(HighsInt backtrackDepth) {
 }
 
 bool HighsSymmetryDetection::compareCurrentGraph(
-    const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>&
-        otherGraph) {
+    const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>& otherGraph,
+    HighsInt& wrongCell) {
   for (HighsInt i = 0; i < numCol; ++i) {
     HighsInt colCell = vertexToCell[i];
 
     for (HighsInt j = Gstart[i]; j != Gend[i]; ++j)
       if (!otherGraph.find(std::make_tuple(vertexToCell[Gedge[j].first],
-                                           colCell, Gedge[j].second)))
+                                           colCell, Gedge[j].second))) {
+        // return which cell does not match in its neighborhood as this should
+        // have been detected with the hashing it can very rarely happen due to
+        // a hash collision. In such a case we want to backtrack to the last
+        // time where we targeted this particular cell. Otherwise we could spent
+        // a long time searching for a matching leave value until every
+        // combination is exhausted and for each leave in this subtree the graph
+        // comparison will fail on this edge.
+        wrongCell = colCell;
         return false;
+      }
     for (HighsInt j = Gend[i]; j != Gstart[i + 1]; ++j)
       if (!otherGraph.find(
-              std::make_tuple(Gedge[j].first, colCell, Gedge[j].second)))
+              std::make_tuple(Gedge[j].first, colCell, Gedge[j].second))) {
+        wrongCell = colCell;
         return false;
+      }
   }
 
   return true;
@@ -1698,12 +1712,13 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
           --backtrackDepth;
         switchToNextNode(backtrackDepth);
       } else {
+        HighsInt wrongCell = -1;
         HighsInt backtrackDepth = nodeStack.size() - 1;
         assert(currNodeCertificate.size() == firstLeaveCertificate.size());
         if (firstLeavePrefixLen == currNodeCertificate.size() ||
             bestLeavePrefixLen == currNodeCertificate.size()) {
           if (firstLeavePrefixLen == currNodeCertificate.size() &&
-              compareCurrentGraph(firstLeaveGraph)) {
+              compareCurrentGraph(firstLeaveGraph, wrongCell)) {
             HighsInt k = (numAutomorphisms++) & 63;
             HighsInt* permutation = automorphisms.data() + k * numVertices;
             for (HighsInt i = 0; i < numVertices; ++i) {
@@ -1730,7 +1745,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
             backtrackDepth = std::min(backtrackDepth, firstPathDepth);
           } else if (!bestLeavePartition.empty() &&
                      bestLeavePrefixLen == currNodeCertificate.size() &&
-                     compareCurrentGraph(bestLeaveGraph)) {
+                     compareCurrentGraph(bestLeaveGraph, wrongCell)) {
             HighsInt k = (numAutomorphisms++) & 63;
             HighsInt* permutation = automorphisms.data() + k * numVertices;
             for (HighsInt i = 0; i < numVertices; ++i) {
@@ -1767,6 +1782,21 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
               ++possibleBacktrackDepth;
 
             backtrackDepth = std::min(possibleBacktrackDepth, backtrackDepth);
+          } else {
+            // This case can be caused by a hash collision which was now
+            // detected in the graph comparison call. The graph comparison call
+            // will return the cell where the vertex neighborhood caused a
+            // mismatch on the edges. This would have been detected by
+            // an exact partition refinement when we targeted that cell the last
+            // time, so that is where we can backtrack to.
+            HighsInt possibleBacktrackDepth;
+            for (possibleBacktrackDepth = backtrackDepth;
+                 possibleBacktrackDepth >= 0; --possibleBacktrackDepth) {
+              if (nodeStack[possibleBacktrackDepth].targetCell == wrongCell) {
+                backtrackDepth = possibleBacktrackDepth;
+                break;
+              }
+            }
           }
         } else {
           // leave must have a lexicographically smaller certificate value

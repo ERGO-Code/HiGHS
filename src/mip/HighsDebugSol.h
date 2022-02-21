@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsDebugSol.h
@@ -19,12 +19,13 @@
 
 class HighsDomain;
 class HighsMipSolver;
+class HighsLp;
 
 #include <set>
 #include <vector>
 
 #include "mip/HighsCliqueTable.h"
-#include "mip/HighsDomainChange.h"
+#include "mip/HighsDomain.h"
 
 #ifdef HIGHS_DEBUGSOL
 
@@ -65,6 +66,9 @@ struct HighsDebugSol {
   void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double Rlower, double Rupper);
 
+  void checkRowAggregation(const HighsLp& lp, const HighsInt* Rindex,
+                           const double* Rvalue, HighsInt Rlen);
+
   void checkClique(const HighsCliqueTable::CliqueVar* clq, HighsInt clqlen);
 
   void checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
@@ -74,11 +78,13 @@ struct HighsDebugSol {
                 double vlbconstant) const;
 
   void checkConflictReasonFrontier(
-      const std::set<HighsInt>& reasonSideFrontier,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>& reasonSideFrontier,
       const std::vector<HighsDomainChange>& domchgstack) const;
 
   void checkConflictReconvergenceFrontier(
-      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+          reconvergenceFrontier,
+      const HighsDomain::ConflictSet::LocalDomChg& reconvDomchgPos,
       const std::vector<HighsDomainChange>& domchgstack) const;
 };
 
@@ -111,6 +117,9 @@ struct HighsDebugSol {
   void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double Rlower, double Rupper) const {}
 
+  void checkRowAggregation(const HighsLp& lp, const HighsInt* Rindex,
+                           const double* Rvalue, HighsInt Rlen) const {}
+
   void checkClique(const HighsCliqueTable::CliqueVar* clq,
                    HighsInt clqlen) const {}
 
@@ -121,11 +130,13 @@ struct HighsDebugSol {
                 double vlbconstant) const {}
 
   void checkConflictReasonFrontier(
-      const std::set<HighsInt>& reasonSideFrontier,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>& reasonSideFrontier,
       const std::vector<HighsDomainChange>& domchgstack) const {}
 
   void checkConflictReconvergenceFrontier(
-      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+          reconvergenceFrontier,
+      const HighsDomain::ConflictSet::LocalDomChg& reconvDomchgPos,
       const std::vector<HighsDomainChange>& domchgstack) const {}
 };
 #endif

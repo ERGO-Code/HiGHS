@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -134,9 +134,9 @@ void HighsCutPool::performAging() {
   HighsInt cutIndexEnd = matrix_.getNumRows();
 
   HighsInt agelim = agelim_;
-  HighsInt numActiveCuts = getNumCuts() - numLpCuts;
-  while (agelim > 5 && numActiveCuts > softlimit_) {
-    numActiveCuts -= ageDistribution[agelim];
+  HighsInt numAvailableCuts = getNumAvailableCuts();
+  while (agelim > 5 && numAvailableCuts > softlimit_) {
+    numAvailableCuts -= ageDistribution[agelim];
     --agelim;
   }
 

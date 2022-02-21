@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file
@@ -320,7 +320,7 @@ void checkStationarityOfLagrangian(const State& state,
         const int row = state.Aindex[k];
         assert(row >= 0 && row < state.numRow);
         if (state.flagRow[row])
-          lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
+          lagrV = lagrV - state.rowDual[row] * state.Avalue[k];
       }
 
       if (fabs(double(lagrV)) > tol) {

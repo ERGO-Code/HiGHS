@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsGFkLU.h
@@ -132,7 +132,7 @@ class HighsGFkSolve {
   HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
   HighsInt findNonzero(HighsInt row, HighsInt col);
 
-  template <unsigned int k, typename T>
+  template <unsigned int k, int kNumRhs = 1, typename T>
   void fromCSC(const std::vector<T>& Aval, const std::vector<HighsInt>& Aindex,
                const std::vector<HighsInt>& Astart, HighsInt numRow) {
     Avalue.clear();
@@ -147,7 +147,7 @@ class HighsGFkSolve {
     colhead.assign(numCol, -1);
     colsize.assign(numCol, 0);
 
-    rhs.assign(numRow, 0);
+    rhs.assign(kNumRhs * numRow, 0);
     rowroot.assign(numRow, -1);
     rowsize.assign(numRow, 0);
 
@@ -178,12 +178,12 @@ class HighsGFkSolve {
     for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
   }
 
-  template <unsigned int k, typename T>
-  void setRhs(HighsInt row, T val) {
-    rhs[row] = ((unsigned int)std::abs(val)) % k;
+  template <unsigned int k, int kNumRhs = 1, typename T>
+  void setRhs(HighsInt row, T val, int rhsIndex = 0) {
+    rhs[kNumRhs * row + rhsIndex] = ((unsigned int)std::abs(val)) % k;
   }
 
-  template <unsigned int k, typename ReportSolution>
+  template <unsigned int k, int kNumRhs = 1, typename ReportSolution>
   void solve(ReportSolution&& reportSolution) {
     auto cmpPrio = [](const std::pair<HighsInt, HighsInt>& a,
                       const std::pair<HighsInt, HighsInt>& b) {
@@ -263,7 +263,11 @@ class HighsGFkSolve {
 
         unsigned int pivotRowScale = pivotInverse * (k - Avalue[coliter]);
 
-        rhs[row] = (rhs[row] + pivotRowScale * rhs[pivotRow]) % k;
+        for (HighsInt i = 0; i < kNumRhs; ++i)
+          rhs[kNumRhs * row + i] =
+              (rhs[kNumRhs * row + i] +
+               pivotRowScale * rhs[kNumRhs * pivotRow + i]) %
+              k;
 
         for (HighsInt pivotRowPos : rowpositions) {
           HighsInt nonzeroPos = findNonzero(Arow[coliter], Acol[pivotRowPos]);
@@ -315,21 +319,34 @@ class HighsGFkSolve {
 
     // check if a solution exists by scanning the linearly dependent rows for
     // nonzero right hand sides
-    for (HighsInt i = 0; i != numRow; ++i) {
-      // if the row was used it is linearly independent
-      if (rowUsed[i] == 1) continue;
+    bool hasSolution[kNumRhs];
+    HighsInt numRhsWithSolution = 0;
+    for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex) {
+      hasSolution[rhsIndex] = true;
+      for (HighsInt i = 0; i != numRow; ++i) {
+        // if the row was used it is linearly independent
+        if (rowUsed[i] == 1) continue;
 
-      // if the row is linearly dependent, the right hand side must be zero,
-      // otherwise no solution exists
-      if (rhs[i] != 0) return;
+        // if the row is linearly dependent, the right hand side must be zero,
+        // otherwise no solution exists
+        if (rhs[kNumRhs * i + rhsIndex] != 0) {
+          hasSolution[rhsIndex] = false;
+          break;
+        }
+      }
+
+      numRhsWithSolution += hasSolution[rhsIndex];
     }
+
+    if (numRhsWithSolution == 0) return;
 
     // now iterate a subset of the basic solutions.
     // When a column leaves the basis we do not allow it to enter again so that
     // we iterate at most one solution for each nonbasic column
+    std::vector<SolutionEntry> solution[kNumRhs];
+    for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex)
+      if (hasSolution[rhsIndex]) solution[rhsIndex].reserve(numCol);
 
-    std::vector<SolutionEntry> solution;
-    solution.reserve(numCol);
     HighsInt numFactorRows = factorRowPerm.size();
 
     // create vector for swapping different columns into the basis
@@ -362,37 +379,51 @@ class HighsGFkSolve {
     bool performedBasisSwap;
     do {
       performedBasisSwap = false;
-      solution.clear();
+
+      for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex)
+        solution[rhsIndex].clear();
 
       for (HighsInt i = numFactorRows - 1; i >= 0; --i) {
         HighsInt row = factorRowPerm[i];
 
-        unsigned int solval = 0;
+        unsigned int solval[kNumRhs];
 
-        for (const SolutionEntry& solentry : solution) {
-          HighsInt pos = findNonzero(row, solentry.index);
-          if (pos != -1) solval += Avalue[pos] * solentry.weight;
+        for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex) {
+          if (!hasSolution[rhsIndex]) continue;
+          solval[rhsIndex] = 0;
+
+          for (const SolutionEntry& solentry : solution[rhsIndex]) {
+            HighsInt pos = findNonzero(row, solentry.index);
+            if (pos != -1) solval[rhsIndex] += Avalue[pos] * solentry.weight;
+          }
+
+          solval[rhsIndex] =
+              rhs[kNumRhs * row + rhsIndex] + k - (solval[rhsIndex] % k);
         }
-
-        solval = rhs[row] + k - (solval % k);
 
         HighsInt col = factorColPerm[i];
         HighsInt pos = findNonzero(row, col);
         assert(pos != -1);
         unsigned int colValInverse = HighsGFk<k>::inverse(Avalue[pos]);
 
-        assert(solval >= 0);
-        assert(colValInverse != 0);
+        for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex) {
+          if (!hasSolution[rhsIndex]) continue;
+          assert(solval[rhsIndex] >= 0);
+          assert(colValInverse != 0);
 
-        solval = (solval * colValInverse) % k;
+          solval[rhsIndex] = (solval[rhsIndex] * colValInverse) % k;
 
-        assert(solval >= 0 && solval < k);
+          assert(solval[rhsIndex] >= 0 && solval[rhsIndex] < k);
 
-        // only record nonzero solution values
-        if (solval != 0) solution.emplace_back(SolutionEntry{col, solval});
+          // only record nonzero solution values
+          if (solval[rhsIndex] != 0)
+            solution[rhsIndex].emplace_back(
+                SolutionEntry{col, solval[rhsIndex]});
+        }
       }
 
-      reportSolution(solution);
+      for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex)
+        if (hasSolution[rhsIndex]) reportSolution(solution[rhsIndex], rhsIndex);
 
       if (basisSwapPos < (HighsInt)basisSwaps.size()) {
         HighsInt basisIndex = basisSwaps[basisSwapPos].first;

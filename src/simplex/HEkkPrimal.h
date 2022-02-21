@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkPrimal.h
@@ -35,7 +35,7 @@ class HEkkPrimal {
   /**
    * @brief Solve a model instance
    */
-  HighsStatus solve();
+  HighsStatus solve(const bool force_phase2 = false);
 
  private:
   /**
@@ -83,8 +83,16 @@ class HEkkPrimal {
 
   void considerInfeasibleValueIn();
 
-  void resetDevex();
+  void initialiseDevexFramework();
   void updateDevex();
+  void computePrimalSteepestEdgeWeights();
+  double computePrimalSteepestEdgeWeight(const HighsInt iVar,
+                                         HVector& local_col_aq);
+  void updatePrimalSteepestEdgeWeights();
+  void updateDualSteepestEdgeWeights();
+  void updateFtranDSE(HVector& col_steepest_edge);
+  void updateBtranPSE(HVector& col_steepest_edge);
+
   void updateVerify();
 
   void iterationAnalysisData();
@@ -103,7 +111,11 @@ class HEkkPrimal {
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);
-  bool badBasisChange();
+  HighsDebugStatus debugPrimalSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus debugPrimalSteepestEdgeWeights(
+      const HighsInt alt_debug_level = -1);
+
+  bool isBadBasisChange();
 
   // References:
   HEkk& ekk_instance_;
@@ -116,6 +128,7 @@ class HEkkPrimal {
   HighsInt num_row;
   HighsInt num_tot;
   HighsInt solve_phase;
+  EdgeWeightMode edge_weight_mode;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double objective_target;
@@ -132,17 +145,17 @@ class HEkkPrimal {
   double alpha_col;
   double alpha_row;
   double numericalTrouble;
+
   HighsInt num_flip_since_rebuild;
   // Primal phase 1 tools
   vector<pair<double, int> > ph1SorterR;
   vector<pair<double, int> > ph1SorterT;
-  // Devex weight
-  HighsInt num_devex_iterations;
-  HighsInt num_bad_devex_weight;
-  vector<double> devex_weight;
-  vector<HighsInt> devex_index;
-  const HighsInt allowed_num_bad_devex_weight = 3;
-  const double bad_devex_weight_factor = 3;
+  // Edge weights
+  // Edge weight
+  vector<double> edge_weight_;
+  HighsInt num_devex_iterations_;
+  HighsInt num_bad_devex_weight_;
+  vector<HighsInt> devex_index_;
   // Nonbasic free column data.
   HighsInt num_free_col;
   HSet nonbasic_free_col_set;
@@ -165,9 +178,12 @@ class HEkkPrimal {
   HVector col_aq;
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
+  HVector col_steepest_edge;
+  HighsRandom random_;  // Just for checking PSE weights
 
   const HighsInt primal_correction_strategy =
       kSimplexPrimalCorrectionStrategyAlways;
+  double debug_max_relative_primal_steepest_edge_weight_error = 0;
 
   const HighsInt check_iter = 9999999;
   const HighsInt check_column = -2133;

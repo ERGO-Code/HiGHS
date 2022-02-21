@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/SimplexStruct.h
@@ -32,6 +32,7 @@ struct SimplexBasis {
   std::vector<HighsInt> basicIndex_;
   std::vector<int8_t> nonbasicFlag_;
   std::vector<int8_t> nonbasicMove_;
+  //  std::vector<double> debug_dual;
   uint64_t hash;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
@@ -136,7 +137,7 @@ struct HighsSimplexInfo {
   std::vector<double> backtracking_basis_workShift_;
   std::vector<double> backtracking_basis_workLowerShift_;
   std::vector<double> backtracking_basis_workUpperShift_;
-  std::vector<double> backtracking_basis_edge_weights_;
+  std::vector<double> backtracking_basis_edge_weight_;
 
   // Dual and primal ray vectors
   HighsInt dual_ray_row_;
@@ -162,6 +163,7 @@ struct HighsSimplexInfo {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_steepest_edge_density;
   double col_basic_feasibility_change_density;
   double row_basic_feasibility_change_density;
   double col_BFRT_density;

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -37,8 +37,16 @@ void HighsLpAggregator::getCurrentAggregation(std::vector<HighsInt>& inds,
                                               bool negate) {
   const double droptol =
       lprelaxation.getMipSolver().options_mip_->small_matrix_value;
-  vectorsum.cleanup(
-      [droptol](HighsInt col, double val) { return std::abs(val) <= droptol; });
+  const HighsInt numCol = lprelaxation.numCols();
+  vectorsum.cleanup([droptol, numCol](HighsInt col, double val) {
+    // only drop values for columns and not for slack variables of rows as the
+    // former are the only ones which might be subject to numerical error. The
+    // values for row slack variables are exact copies of the weights used
+    // (assuming that separators only add each row once). Also all the
+    // separators will only allow rows that do have meaningful coefficient
+    // contributions with the used weight
+    return col < numCol && std::fabs(val) <= droptol;
+  });
 
   inds = vectorsum.getNonzeros();
   HighsInt len = inds.size();

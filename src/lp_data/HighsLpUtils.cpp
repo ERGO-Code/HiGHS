@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsUtils.cpp
@@ -26,6 +26,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
 
@@ -35,8 +36,9 @@ using std::min;
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status =
-      lp.dimensionsOk("assessLp") ? HighsStatus::kOk : HighsStatus::kError;
+  HighsStatus call_status = lpDimensionsOk("assessLp", lp, options.log_options)
+                                ? HighsStatus::kOk
+                                : HighsStatus::kError;
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
@@ -98,15 +100,179 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
     lp.a_matrix_.value_.resize(lp_num_nz);
 
-  if (return_status == HighsStatus::kError)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
+  //  if (return_status == HighsStatus::kError)
+  //    return_status = HighsStatus::kError;
+  //  else
+  //    return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
                 HighsStatusToString(return_status).c_str());
   return return_status;
+}
+
+bool lpDimensionsOk(std::string message, const HighsLp& lp,
+                    const HighsLogOptions& log_options) {
+  bool ok = true;
+  const HighsInt num_col = lp.num_col_;
+  const HighsInt num_row = lp.num_row_;
+  if (!(num_col >= 0))
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on num_col = %d >= 0\n",
+                 message.c_str(), (int)num_col);
+  ok = num_col >= 0 && ok;
+  if (!(num_row >= 0))
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on num_row = %d >= 0\n",
+                 message.c_str(), (int)num_row);
+  ok = num_row >= 0 && ok;
+  if (!ok) return ok;
+
+  HighsInt col_cost_size = lp.col_cost_.size();
+  HighsInt col_lower_size = lp.col_lower_.size();
+  HighsInt col_upper_size = lp.col_upper_.size();
+  HighsInt matrix_start_size = lp.a_matrix_.start_.size();
+  bool legal_col_cost_size = col_cost_size >= num_col;
+  bool legal_col_lower_size = col_lower_size >= num_col;
+  bool legal_col_upper_size = col_lower_size >= num_col;
+  if (!legal_col_cost_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_cost.size() = %d < "
+                 "%d = num_col\n",
+                 message.c_str(), (int)col_cost_size, (int)num_col);
+  ok = legal_col_cost_size && ok;
+  if (!legal_col_lower_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_lower.size() = %d "
+                 "< %d = num_col\n",
+                 message.c_str(), (int)col_lower_size, (int)num_col);
+  ok = legal_col_lower_size && ok;
+  if (!legal_col_upper_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_upper.size() = %d "
+                 "< %d = num_col\n",
+                 message.c_str(), (int)col_upper_size, (int)num_col);
+  ok = legal_col_upper_size && ok;
+
+  bool legal_format = lp.a_matrix_.format_ == MatrixFormat::kColwise ||
+                      lp.a_matrix_.format_ == MatrixFormat::kRowwise;
+  if (!legal_format)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix_.format\n",
+                 message.c_str());
+  ok = legal_format && ok;
+  HighsInt num_vec;
+  if (lp.a_matrix_.isColwise()) {
+    num_vec = num_col;
+  } else {
+    num_vec = num_row;
+  }
+  const bool partitioned = false;
+  vector<HighsInt> a_matrix_p_end;
+  bool legal_matrix_dimensions =
+      assessMatrixDimensions(log_options, num_vec, partitioned,
+                             lp.a_matrix_.start_, a_matrix_p_end,
+                             lp.a_matrix_.index_,
+                             lp.a_matrix_.value_) == HighsStatus::kOk;
+  if (!legal_matrix_dimensions)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix dimensions\n",
+                 message.c_str());
+  ok = legal_matrix_dimensions && ok;
+
+  HighsInt row_lower_size = lp.row_lower_.size();
+  HighsInt row_upper_size = lp.row_upper_.size();
+  bool legal_row_lower_size = row_lower_size >= num_row;
+  bool legal_row_upper_size = row_upper_size >= num_row;
+  if (!legal_row_lower_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on row_lower.size() = %d "
+                 "< %d = num_row\n",
+                 message.c_str(), (int)row_lower_size, (int)num_row);
+  ok = legal_row_lower_size && ok;
+  if (!legal_row_upper_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on row_upper.size() = %d "
+                 "< %d = num_row\n",
+                 message.c_str(), (int)row_upper_size, (int)num_row);
+  ok = legal_row_upper_size && ok;
+
+  bool legal_a_matrix_num_col = lp.a_matrix_.num_col_ == num_col;
+  bool legal_a_matrix_num_row = lp.a_matrix_.num_row_ == num_row;
+  if (!legal_a_matrix_num_col)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix.num_col_ = %d "
+                 "!= %d = num_col\n",
+                 message.c_str(), (int)lp.a_matrix_.num_col_, (int)num_col);
+  ok = legal_a_matrix_num_col && ok;
+  if (!legal_a_matrix_num_row)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix.num_row_ = %d "
+                 "!= %d = num_row\n",
+                 message.c_str(), (int)lp.a_matrix_.num_row_, (int)num_row);
+  ok = legal_a_matrix_num_row && ok;
+
+  HighsInt scale_strategy = (HighsInt)lp.scale_.strategy;
+  bool legal_scale_strategy = scale_strategy >= 0;
+  if (!legal_scale_strategy)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.scale_strategy\n",
+        message.c_str());
+  ok = legal_scale_strategy && ok;
+  HighsInt scale_row_size = (HighsInt)lp.scale_.row.size();
+  HighsInt scale_col_size = (HighsInt)lp.scale_.col.size();
+  bool legal_scale_num_col = false;
+  bool legal_scale_num_row = false;
+  bool legal_scale_row_size = false;
+  bool legal_scale_col_size = false;
+  if (lp.scale_.has_scaling) {
+    legal_scale_num_col = lp.scale_.num_col == num_col;
+    legal_scale_num_row = lp.scale_.num_row == num_row;
+    legal_scale_row_size = scale_row_size >= num_row;
+    legal_scale_col_size = scale_col_size >= num_col;
+  } else {
+    legal_scale_num_col = lp.scale_.num_col == 0;
+    legal_scale_num_row = lp.scale_.num_row == 0;
+    legal_scale_row_size = scale_row_size == 0;
+    legal_scale_col_size = scale_col_size == 0;
+  }
+  if (!legal_scale_num_col)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.num_col = %d != %d\n",
+        message.c_str(), (int)lp.scale_.num_col,
+        (int)(lp.scale_.has_scaling ? num_col : 0));
+  ok = legal_scale_num_col && ok;
+  if (!legal_scale_num_row)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.num_row = %d != %d\n",
+        message.c_str(), (int)lp.scale_.num_row,
+        (int)(lp.scale_.has_scaling ? num_row : 0));
+  ok = legal_scale_num_row && ok;
+  if (!legal_scale_col_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.col.size() = %d %s %d\n",
+        message.c_str(), (int)scale_col_size,
+        lp.scale_.has_scaling ? ">=" : "==",
+        (int)(lp.scale_.has_scaling ? num_col : 0));
+  ok = legal_scale_col_size && ok;
+  if (!legal_scale_row_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.row.size() = %d %s %d\n",
+        message.c_str(), (int)scale_row_size,
+        lp.scale_.has_scaling ? ">=" : "==",
+        (int)(lp.scale_.has_scaling ? num_row : 0));
+  ok = legal_scale_row_size && ok;
+  if (!ok) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails\n", message.c_str());
+  }
+
+  return ok;
 }
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
@@ -415,6 +581,12 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   const bool allow_scaling =
       lp.num_col_ > 0 &&
       options.simplex_scale_strategy != kSimplexScaleStrategyOff;
+  if (lp.scale_.has_scaling && !allow_scaling) {
+    // LP had scaling before, but now it is not permitted, clear any
+    // scaling. Return true as scaling position has changed
+    lp.clearScale();
+    return true;
+  }
   const bool scaling_not_tried = lp.scale_.strategy == kSimplexScaleStrategyOff;
   const bool new_scaling_strategy =
       options.simplex_scale_strategy != lp.scale_.strategy &&
@@ -1208,30 +1380,50 @@ void deleteScale(vector<double>& scale,
 }
 
 void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value) {
+                               const HighsInt col, const double new_value,
+                               const bool zero_new_value) {
   assert(0 <= row && row < lp.num_row_);
   assert(0 <= col && col < lp.num_col_);
-  HighsInt changeElement = -1;
+
+  // Determine whether the coefficient corresponds to an existing
+  // nonzero
+  HighsInt change_el = -1;
   for (HighsInt el = lp.a_matrix_.start_[col];
        el < lp.a_matrix_.start_[col + 1]; el++) {
     if (lp.a_matrix_.index_[el] == row) {
-      changeElement = el;
+      change_el = el;
       break;
     }
   }
-  if (changeElement < 0) {
-    changeElement = lp.a_matrix_.start_[col + 1];
+  if (change_el < 0) {
+    // Coefficient doesn't correspond to an existing nonzero
+    //
+    // If coefficient is small, then just ignore it
+    if (zero_new_value) return;
+    // New nonzero goes at the end of column "col", so have to shift
+    // all index and value entries forward by 1 to accommodate it
+    change_el = lp.a_matrix_.start_[col + 1];
     HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] + 1;
     lp.a_matrix_.index_.resize(new_num_nz);
     lp.a_matrix_.value_.resize(new_num_nz);
     for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]++;
-    for (HighsInt el = new_num_nz - 1; el > changeElement; el--) {
+    for (HighsInt el = new_num_nz - 1; el > change_el; el--) {
       lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el - 1];
       lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el - 1];
     }
+  } else if (zero_new_value) {
+    // Coefficient zeroes an existing nonzero, so shift all index and
+    // value entries backward by 1 to eliminate it
+    HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] - 1;
+    for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]--;
+    for (HighsInt el = change_el; el < new_num_nz; el++) {
+      lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el + 1];
+      lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el + 1];
+    }
+    return;
   }
-  lp.a_matrix_.index_[changeElement] = row;
-  lp.a_matrix_.value_[changeElement] = new_value;
+  lp.a_matrix_.index_[change_el] = row;
+  lp.a_matrix_.value_[change_el] = new_value;
 }
 
 void changeLpIntegrality(HighsLp& lp,
@@ -1637,30 +1829,30 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
               message.c_str());
   if (lp.is_scaled_) {
     const HighsScale& scale = lp.scale_;
-    analyseVectorValues(log_options, "Column scaling factors", lp.num_col_,
+    analyseVectorValues(&log_options, "Column scaling factors", lp.num_col_,
                         scale.col, true, lp.model_name_);
-    analyseVectorValues(log_options, "Row    scaling factors", lp.num_row_,
+    analyseVectorValues(&log_options, "Row    scaling factors", lp.num_row_,
                         scale.row, true, lp.model_name_);
   }
-  analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_,
+  analyseVectorValues(&log_options, "Column costs", lp.num_col_, lp.col_cost_,
                       true, lp.model_name_);
-  analyseVectorValues(log_options, "Column lower bounds", lp.num_col_,
+  analyseVectorValues(&log_options, "Column lower bounds", lp.num_col_,
                       lp.col_lower_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Column upper bounds", lp.num_col_,
+  analyseVectorValues(&log_options, "Column upper bounds", lp.num_col_,
                       lp.col_upper_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Column min abs bound", lp.num_col_,
+  analyseVectorValues(&log_options, "Column min abs bound", lp.num_col_,
                       min_colBound, true, lp.model_name_);
-  analyseVectorValues(log_options, "Column range", lp.num_col_, colRange, true,
+  analyseVectorValues(&log_options, "Column range", lp.num_col_, colRange, true,
                       lp.model_name_);
-  analyseVectorValues(log_options, "Row lower bounds", lp.num_row_,
+  analyseVectorValues(&log_options, "Row lower bounds", lp.num_row_,
                       lp.row_lower_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Row upper bounds", lp.num_row_,
+  analyseVectorValues(&log_options, "Row upper bounds", lp.num_row_,
                       lp.row_upper_, true, lp.model_name_);
-  analyseVectorValues(log_options, "Row min abs bound", lp.num_row_,
+  analyseVectorValues(&log_options, "Row min abs bound", lp.num_row_,
                       min_rowBound, true, lp.model_name_);
-  analyseVectorValues(log_options, "Row range", lp.num_row_, rowRange, true,
+  analyseVectorValues(&log_options, "Row range", lp.num_row_, rowRange, true,
                       lp.model_name_);
-  analyseVectorValues(log_options, "Matrix sparsity",
+  analyseVectorValues(&log_options, "Matrix sparsity",
                       lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.value_,
                       true, lp.model_name_);
   analyseMatrixSparsity(log_options, "Constraint matrix", lp.num_col_,
@@ -1689,6 +1881,8 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
                             have_basis, basis.row_status);
+  } else if (style == kSolutionStyleOldRaw) {
+    writeOldRawSolution(file, lp, basis, solution);
   } else {
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
@@ -2044,6 +2238,34 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
           solution.col_value[col] * lp.a_matrix_.value_[i];
     }
   }
+
+  return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
+  // assert(solution.col_value.size() > 0);
+  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+
+  std::vector<HighsCDouble> row_value;
+  row_value.assign(lp.num_row_, HighsCDouble{0.0});
+
+  solution.row_value.assign(lp.num_row_, 0);
+
+  for (HighsInt col = 0; col < lp.num_col_; col++) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; i++) {
+      const HighsInt row = lp.a_matrix_.index_[i];
+      assert(row >= 0);
+      assert(row < lp.num_row_);
+
+      row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+    }
+  }
+
+  // assign quad values to double vector
+  solution.row_value.resize(lp.num_row_);
+  std::transform(row_value.begin(), row_value.end(), solution.row_value.begin(),
+                 [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
 }
@@ -2422,4 +2644,69 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
                "Removed %d rows of count 1\n", (int)num_row_count_1);
+}
+
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution) {
+  const bool have_value = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  vector<double> use_col_value;
+  vector<double> use_row_value;
+  vector<double> use_col_dual;
+  vector<double> use_row_dual;
+  vector<HighsBasisStatus> use_col_status;
+  vector<HighsBasisStatus> use_row_status;
+  if (have_value) {
+    use_col_value = solution.col_value;
+    use_row_value = solution.row_value;
+  }
+  if (have_dual) {
+    use_col_dual = solution.col_dual;
+    use_row_dual = solution.row_dual;
+  }
+  if (have_basis) {
+    use_col_status = basis.col_status;
+    use_row_status = basis.row_status;
+  }
+  if (!have_value && !have_dual && !have_basis) return;
+  fprintf(file,
+          "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
+          " : Number of columns and rows for primal or dual solution "
+          "or basis\n",
+          lp.num_col_, lp.num_row_);
+  if (have_value) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Primal solution\n");
+  if (have_dual) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Dual solution\n");
+  if (have_basis) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Basis\n");
+  fprintf(file, "Columns\n");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
+    if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
+    fprintf(file, "\n");
+  }
+  fprintf(file, "Rows\n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
+    if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
+    fprintf(file, "\n");
+  }
 }

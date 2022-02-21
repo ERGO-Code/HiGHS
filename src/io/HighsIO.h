@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HighsIO.h
@@ -22,6 +22,8 @@
 #include "util/HighsInt.h"
 
 class HighsOptions;
+
+const HighsInt kIoBufferSize = 1024;  // 65536;
 
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
@@ -44,6 +46,8 @@ struct HighsLogOptions {
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;
+  void (*log_callback)(HighsLogType, const char*, void*) = nullptr;
+  void* log_callback_data = nullptr;
 };
 
 /**
@@ -64,22 +68,12 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
 void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
 
-/*
- * @brief sets the callbacks used to print output and and log
- *
- * Set to NULL to reset to default, which is to print to logfile and output file
+/**
+ * @brief For development logging when true log_options may not be available -
+ * indicated by null pointer
  */
-void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
-                                             void* msgcb_data),
-                         void (*logmsgcb_)(HighsLogType type, const char* msg,
-                                           void* msgcb_data),
-                         void* msgcb_data_);
-
-/*
- * @brief sets callbacks from options
- */
-void highsSetLogCallback(HighsOptions& options  //!< the options
-);
+void highsReportDevInfo(const HighsLogOptions* log_options,
+                        const std::string line);
 
 void highsOpenLogFile(HighsOptions& options, const std::string log_file);
 

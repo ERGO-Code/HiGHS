@@ -240,7 +240,8 @@ TEST_CASE("FibonacciTasksHighs", "[parallel]") {
 
 #if 0
 TEST_CASE("MatrixMultOmp", "[parallel]") {
-  if (dev_run) std::cout << "\nomp for loop:" << std::endl;
+  if (dev_run)
+    std::cout << "\nomp for loop:" << std::endl;
   matrix_multiplication("omp", numThreads, 1);
 }
 TEST_CASE("FibonacciTasksOmp", "[parallel]") {
@@ -253,11 +254,11 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
   }
   auto end = std::chrono::high_resolution_clock::now();
 
-  if (dev_run) std::cout << "time elapsed for fib(41) with omp tasks: "
-            << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
-                    .count() /
-                1e3)
-            << "ms" << std::endl;
+  if (dev_run)
+    std::cout << "time elapsed for fib(41) with omp tasks: "
+	      << (std::chrono::duration_cast<std::chrono::microseconds>(end - beg)
+		  .count() / 1e3)
+	      << "ms" << std::endl;
 
   // fib 41
   REQUIRE(result == 267914296);

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsDataStack.h
@@ -71,10 +71,18 @@ class HighsDataStack {
     std::size_t numData;
     std::memcpy(&numData, &data[position], sizeof(std::size_t));
     // pop the data
-    position -= numData * sizeof(T);
-    r.resize(numData);
-    std::memcpy(r.data(), data.data() + position, numData * sizeof(T));
+    if (numData == 0) {
+      r.clear();
+    } else {
+      r.resize(numData);
+      position -= numData * sizeof(T);
+      std::memcpy(r.data(), data.data() + position, numData * sizeof(T));
+    }
   }
+
+  void setPosition(HighsInt position) { this->position = position; }
+
+  HighsInt getCurrentDataSize() const { return data.size(); }
 };
 
 #endif

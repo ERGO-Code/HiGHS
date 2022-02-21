@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_LP_RELAXATION_H_
@@ -69,18 +69,21 @@ class HighsLpRelaxation {
   std::vector<double> dualproofvals;
   std::vector<HighsInt> dualproofinds;
   std::vector<double> dualproofbuffer;
-  std::vector<HighsInt> mask;
+  std::vector<double> colLbBuffer;
+  std::vector<double> colUbBuffer;
   double dualproofrhs;
   bool hasdualproof;
   double objective;
   std::shared_ptr<const HighsBasis> basischeckpoint;
   bool currentbasisstored;
   int64_t numlpiters;
+  int64_t lastAgeCall;
   double avgSolveIters;
   int64_t numSolved;
   size_t epochs;
   HighsInt maxNumFractional;
   Status status;
+  bool adjustSymBranchingCol;
 
   void storeDualInfProof();
 
@@ -92,6 +95,141 @@ class HighsLpRelaxation {
   HighsLpRelaxation(const HighsMipSolver& mip);
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
+
+  class Playground {
+    friend class HighsLpRelaxation;
+    HighsLpRelaxation* lp;
+    bool iterateStored;
+
+    Playground(HighsLpRelaxation* lp) : lp(lp), iterateStored(false) {}
+
+   public:
+    Playground(Playground&& other)
+        : lp(other.lp), iterateStored(other.iterateStored) {
+      other.iterateStored = false;
+    }
+
+    Playground& operator=(Playground&& other) {
+      std::swap(lp, other.lp);
+      std::swap(iterateStored, other.iterateStored);
+      return *this;
+    }
+
+    HighsLpRelaxation::Status solveLp(HighsDomain& localdom) {
+      if (iterateStored) {
+        lp->flushDomain(localdom);
+        lp->getLpSolver().getIterate();
+      } else {
+        assert(lp->getLpSolver().getInfo().valid);
+        lp->getLpSolver().putIterate();
+        lp->flushDomain(localdom);
+        iterateStored = true;
+      }
+
+      return lp->run(false);
+    }
+
+    Playground(const Playground& other) = delete;
+    Playground& operator=(const Playground& other) = delete;
+
+    ~Playground() {
+      if (iterateStored) {
+        lp->getLpSolver().getIterate();
+        lp->run();
+        // If desired, here is the place to clear the stored iterate
+      }
+    }
+  };
+
+  // todo: class can be removed
+  class ResolveGuard {
+    friend class HighsLpRelaxation;
+    HighsLpRelaxation* lp;
+
+    ResolveGuard(HighsLpRelaxation* lp) : lp(lp) {}
+
+   public:
+    ResolveGuard() : lp(nullptr) {}
+
+    ResolveGuard(ResolveGuard&& other) : lp(other.lp) { other.lp = nullptr; }
+
+    ResolveGuard& operator=(ResolveGuard&& other) {
+      std::swap(lp, other.lp);
+      return *this;
+    }
+
+    ResolveGuard(const ResolveGuard& other) = delete;
+    ResolveGuard& operator=(const ResolveGuard& other) = delete;
+
+    ~ResolveGuard() {
+      if (lp && !lp->getLpSolver().getInfo().valid) lp->run();
+    }
+  };
+
+  // todo: class can be removed
+  class BasisGuard {
+    friend class HighsLpRelaxation;
+    HighsInt frozenBasisId;
+    Highs* lpsolver;
+
+    BasisGuard(Highs& lpsolver) : frozenBasisId(-1), lpsolver(&lpsolver) {
+      if (lpsolver.freezeBasis(frozenBasisId) != HighsStatus::kOk) {
+        lpsolver.run();
+        if (lpsolver.freezeBasis(frozenBasisId) != HighsStatus::kOk) {
+          printf(
+              "freezing basis failed, and failed again after calling run()\n");
+          assert(false);
+        } else {
+          // todo@Julian: it would be good if these situations could be avoided.
+          // It happens when the invertible representation from before calling
+          // freeze is not available after calling unfreeze. If I understood
+          // correctly this can happen when the basis needed refactoring during
+          // the call so run() while the basis was frozen. In that case it would
+          // be nice if the basis is automatically refactored when it is not
+          // available anymore during the call to unfreeze.
+          const bool printDevInformation = false;
+          if (printDevInformation)
+            printf(
+                "freezing basis failed, but succeeded after calling run()\n");
+        }
+      }
+    }
+
+   public:
+    BasisGuard() : frozenBasisId(-1), lpsolver(nullptr) {}
+
+    BasisGuard(BasisGuard&& other)
+        : frozenBasisId(other.frozenBasisId), lpsolver(other.lpsolver) {
+      other.frozenBasisId = -1;
+    }
+
+    BasisGuard& operator=(BasisGuard&& other) {
+      recover();
+      lpsolver = other.lpsolver;
+      frozenBasisId = other.frozenBasisId;
+      other.frozenBasisId = -1;
+      return *this;
+    }
+
+    BasisGuard(const BasisGuard& other) = delete;
+    BasisGuard& operator=(const BasisGuard& other) = delete;
+
+    void recover() {
+      if (frozenBasisId != -1) {
+        lpsolver->unfreezeBasis(frozenBasisId);
+        frozenBasisId = -1;
+      }
+    }
+
+    ~BasisGuard() { recover(); }
+  };
+
+  Playground playground() { return Playground(this); }
+
+  // todo: following two functions can be removed
+  BasisGuard basisGuard() { return BasisGuard(lpsolver); }
+
+  ResolveGuard resolveGuard() { return ResolveGuard(this); }
 
   void loadModel();
 
@@ -108,6 +246,12 @@ class HighsLpRelaxation {
     assert(row < (HighsInt)lprows.size());
     return lprows[row].isIntegral(mipsolver);
   }
+
+  void setAdjustSymmetricBranchingCol(bool adjustSymBranchingCol) {
+    this->adjustSymBranchingCol = adjustSymBranchingCol;
+  }
+
+  void resetToGlobalDomain();
 
   double getAvgSolveIters() { return avgSolveIters; }
 
@@ -160,6 +304,8 @@ class HighsLpRelaxation {
   }
 
   Status getStatus() const { return status; }
+
+  const HighsInfo& getSolverInfo() const { return lpsolver.getInfo(); }
 
   int64_t getNumLpIterations() const { return numlpiters; }
 
@@ -240,7 +386,7 @@ class HighsLpRelaxation {
 
   void addCuts(HighsCutSet& cutset);
 
-  void performAging(bool useBasis = true);
+  void performAging(bool deleteRows = false);
 
   void resetAges();
 

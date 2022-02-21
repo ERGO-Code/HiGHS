@@ -2,9 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsSymmetry.h
@@ -207,7 +210,8 @@ class HighsSymmetryDetection {
 
   bool compareCurrentGraph(
       const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>&
-          otherGraph);
+          otherGraph,
+      HighsInt& wrongCell);
 
   void removeFixPoints();
   void initializeGroundSet();

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HSimplexNla.h
@@ -22,6 +22,9 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 #include "util/HFactor.h"
+
+const HighsInt kReportItemLimit = 25;
+const double kDensityForIndexing = 0.4;
 
 struct ProductFormUpdate {
   bool valid_ = false;
@@ -45,6 +48,15 @@ struct FrozenBasis {
   HighsInt next_;
   ProductFormUpdate update_;
   SimplexBasis basis_;
+  std::vector<double> dual_edge_weight_;
+  void clear();
+};
+
+struct SimplexIterate {
+  bool valid_ = false;
+  SimplexBasis basis_;
+  InvertibleRepresentation invert_;
+  std::vector<double> dual_edge_weight_;
   void clear();
 };
 
@@ -69,6 +81,12 @@ class HSimplexNla {
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void ftran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void btranInScaledSpace(
+      HVector& rhs, const double expected_density,
+      HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void ftranInScaledSpace(
+      HVector& rhs, const double expected_density,
+      HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void frozenBtran(HVector& rhs) const;
   void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
@@ -80,16 +98,24 @@ class HSimplexNla {
   bool frozenBasisHasInvert(const HighsInt frozen_basis_id) const;
   HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
   void unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis);
+  void putInvert();
+  void getInvert();
 
   void transformForUpdate(HVector* column, HVector* row_ep,
                           const HighsInt variable_in, const HighsInt row_out);
-
+  double variableScaleFactor(const HighsInt iVar) const;
+  double basicColScaleFactor(const HighsInt iCol) const;
+  double pivotInScaledSpace(const HVector* aq, const HighsInt variable_in,
+                            const HighsInt row_out) const;
   void setPivotThreshold(const double new_pivot_threshold);
 
   void passLpPointer(const HighsLp* lp);
   void passScalePointer(const HighsScale* scale);
   void applyBasisMatrixColScale(HVector& rhs) const;
   void applyBasisMatrixRowScale(HVector& rhs) const;
+  void unapplyBasisMatrixRowScale(HVector& rhs) const;
+  double rowEp2NormInScaledSpace(const HighsInt iRow,
+                                 const HVector& row_ep) const;
   void addCols(const HighsLp* updated_lp);
   void addRows(const HighsLp* updated_lp, HighsInt* basic_index,
                const HighsSparseMatrix* scaled_ar_matrix);
@@ -148,6 +174,9 @@ class HSimplexNla {
   HighsInt last_frozen_basis_id_ = kNoLink;
   vector<FrozenBasis> frozen_basis_;
   ProductFormUpdate update_;
+
+  // Simplex iterate data
+  SimplexIterate simplex_iterate_;
 
   friend class HEkk;
   friend class HEkkPrimal;

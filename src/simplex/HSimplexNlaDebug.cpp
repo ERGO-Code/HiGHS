@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HSimplexNlaDebug.cpp
@@ -34,8 +34,9 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   // alt_debug_level, either to force debugging, or to limit
   // debugging. If no value is passed, then alt_debug_level = -1, and
   // highs_debug_level is used
-  HighsInt use_debug_level = alt_debug_level;
-  if (use_debug_level < 0) use_debug_level = this->options_->highs_debug_level;
+  const HighsInt use_debug_level = alt_debug_level >= 0
+                                       ? alt_debug_level
+                                       : this->options_->highs_debug_level;
   if (use_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   // If highs_debug_level isn't being used, then indicate that it's

@@ -4,8 +4,125 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
+const double inf = kHighsInf;
 
 // No commas in test case name.
+TEST_CASE("LP-dimension-validation", "[highs_data]") {
+  // Create an LP with lots of illegal values
+  const HighsInt true_num_col = 2;
+  const HighsInt true_num_row = 3;
+  HighsLp lp;
+  lp.num_col_ = -1;
+  lp.num_row_ = -1;
+  lp.col_cost_.resize(1);
+  lp.col_lower_.resize(1);
+  lp.col_upper_.resize(1);
+  lp.a_matrix_.format_ = MatrixFormat::kRowwisePartitioned;
+  lp.a_matrix_.num_col_ = 1;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_.resize(2);
+  lp.a_matrix_.start_[0] = -1;
+  lp.a_matrix_.start_[1] = 2;
+  lp.a_matrix_.index_.resize(2);
+  lp.a_matrix_.index_[0] = -1;
+  lp.a_matrix_.index_[1] = 0;
+  lp.a_matrix_.value_.resize(2);
+  lp.row_lower_.resize(1);
+  lp.row_upper_.resize(1);
+
+  // Set up invalid scale data once scaling can be imported
+  //  lp.scale_.strategy = -1;
+  //  lp.scale_.num_col = 1;
+  //  lp.scale_.num_row = 1;
+  //  lp.scale_.has_scaling = false;
+  //  lp.scale_.row.resize(1);
+  //  lp.scale_.col.resize(1);
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+
+  HighsStatus return_status;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid number of columns\n");
+  lp.num_col_ = true_num_col;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid number of rows\n");
+  lp.num_row_ = true_num_row;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid col_cost.size()\n");
+  lp.col_cost_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid col_lower.size()\n");
+  lp.col_lower_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid col_upper.size()\n");
+  lp.col_upper_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.format_\n");
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.start.size()\n");
+  lp.a_matrix_.start_.resize(true_num_row + 1);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid row_lower.size()\n");
+  lp.row_lower_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid row_upper.size()\n");
+  lp.row_upper_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  /*
+  if (dev_run) printf("Give valid scale_.strategy\n");
+  lp.scale_.strategy = kSimplexScaleStrategyOff;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_col\n");
+  lp.scale_.num_col = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_row\n");
+  lp.scale_.num_row = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.col.size()\n");
+  lp.scale_.col.resize(0);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.row.size()\n");
+  lp.scale_.row.resize(0);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  if (dev_run) printf("Set scale_.strategy =
+  kSimplexScaleStrategyMaxValue015\n"); lp.scale_.strategy =
+  kSimplexScaleStrategyMaxValue015; REQUIRE(highs.passModel(lp) ==
+  HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_col\n");
+  lp.scale_.num_col = true_num_col;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.num_row\n");
+  lp.scale_.num_row = true_num_row;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.col.size()\n");
+  lp.scale_.col.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid scale_.row.size()\n");
+  lp.scale_.row.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  */
+}
+
 TEST_CASE("LP-validation", "[highs_data]") {
   // Create an empty LP
   HighsLp lp;
@@ -243,4 +360,89 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
+}
+
+TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
+  HighsStatus return_status;
+  std::string filename;
+  Highs highs;
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 1;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1e300};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {inf};
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  // Reading a model with a large value results in HighsStatus::kError
+  return_status = highs.passModel(lp);
+  if (dev_run)
+    printf("highs.passModel(filename); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kError);
+  // Solving a model with a large value results in HighsStatus::kError
+  return_status = highs.run();
+  if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kError);
+  lp.a_matrix_.value_[0] = 1e-300;
+  return_status = highs.passModel(lp);
+  if (dev_run)
+    printf("highs.passModel(filename); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kWarning);
+  // Solving a model with a small value results in HighsStatus::kOk
+  return_status = highs.run();
+  if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
+TEST_CASE("LP-change-coefficient", "[highs_data]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+  const HighsInt change_coefficient_col = 4;
+  const HighsInt zero_coefficient_row = 4;
+  const HighsInt add_coefficient_row = 5;
+  const double zero_coefficient_value = 1e-10;
+  const double add_coefficient_value = -3;
+  double required_objective_value;
+  double delta_objective_value;
+  double original_value;
+  REQUIRE(highs.getCoeff(zero_coefficient_row, change_coefficient_col,
+                         original_value) == HighsStatus::kOk);
+  REQUIRE(original_value == -1);
+  // Change coefficient (4, 4) from -1 to a small value - zeroing it
+  REQUIRE(highs.changeCoeff(zero_coefficient_row, change_coefficient_col,
+                            zero_coefficient_value) == HighsStatus::kOk);
+  required_objective_value = -8.6666666667;
+  highs.run();
+  delta_objective_value = std::fabs(required_objective_value -
+                                    highs.getInfo().objective_function_value);
+  REQUIRE(delta_objective_value < 1e-8);
+
+  // Restore coefficient (4, 4)
+  REQUIRE(highs.changeCoeff(zero_coefficient_row, change_coefficient_col,
+                            original_value) == HighsStatus::kOk);
+  required_objective_value = -7.75;
+  highs.run();
+  delta_objective_value = std::fabs(required_objective_value -
+                                    highs.getInfo().objective_function_value);
+  REQUIRE(delta_objective_value < 1e-8);
+
+  // Change coefficient (5, 4) to -3
+  REQUIRE(highs.changeCoeff(add_coefficient_row, change_coefficient_col,
+                            add_coefficient_value) == HighsStatus::kOk);
+  required_objective_value = -7.5;
+  highs.run();
+  delta_objective_value = std::fabs(required_objective_value -
+                                    highs.getInfo().objective_function_value);
+  REQUIRE(delta_objective_value < 1e-8);
 }

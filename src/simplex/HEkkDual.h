@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDual.h
@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-//#include "HConfig.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"
@@ -51,7 +50,7 @@ class HEkkDual {
   /**
    * @brief Solve a model instance
    */
-  HighsStatus solve();
+  HighsStatus solve(const bool force_phase2 = false);
 
   const SimplexAlgorithm algorithm = SimplexAlgorithm::kDual;
 
@@ -256,7 +255,7 @@ class HEkkDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void initialiseDevexFramework(const bool parallel = false);
+  void initialiseDevexFramework();
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
@@ -357,6 +356,10 @@ class HEkkDual {
   void majorRollback();
 
   // private:
+  void possiblyUseLiDualSteepestEdge();
+  void computeDualInfeasibilitiesWithFixedVariableFlips();
+  void correctDualInfeasibilities(HighsInt& free_infeasibility_count);
+
   bool proofOfPrimalInfeasibility();
   void saveDualRay();
   void assessPhase1Optimality();
@@ -369,10 +372,9 @@ class HEkkDual {
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);
-  double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
-  double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
-  bool badBasisChange();
+  bool isBadBasisChange();
+  void assessPossiblyDualUnbounded();
 
   // Devex scalars
   HighsInt num_devex_iterations =
@@ -410,11 +412,8 @@ class HEkkDual {
   bool initial_basis_is_logical_;
 
   // Options
-  DualEdgeWeightMode dual_edge_weight_mode;
-  bool initialise_dual_steepest_edge_weights;
+  EdgeWeightMode edge_weight_mode;
   bool allow_dual_steepest_edge_to_devex_switch;
-
-  const double min_dual_steepest_edge_weight = 1e-4;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;
@@ -423,6 +422,7 @@ class HEkkDual {
   double dual_feasibility_tolerance;
   double objective_bound;
 
+  bool force_phase2;
   HighsInt solve_phase;
   HighsInt rebuild_reason;
 
@@ -431,6 +431,9 @@ class HEkkDual {
   HVector col_aq;
   HVector col_BFRT;
   HVector col_DSE;
+
+  HVector dev_row_ep;
+  HVector dev_col_DSE;
 
   HEkkDualRow dualRow;
 
@@ -509,9 +512,6 @@ class HEkkDual {
   HighsInt multi_chooseAgain;
   MChoice multi_choice[kSimplexConcurrencyLimit];
   MFinish multi_finish[kSimplexConcurrencyLimit];
-
-  //  double build_synthetic_tick;
-  //  double total_synthetic_tick;
 };
 
 #endif /* SIMPLEX_HEKKDUAL_H_ */

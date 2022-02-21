@@ -25,31 +25,31 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   triangular_hessian.index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4};
   triangular_hessian.value_ = {5, 1, -1, 2, 4, 1, 3, -1, 4, 5};
 
-  const bool square_internal_hessian = false;
-  HighsHessian use_hessian;
-  if (square_internal_hessian) {
-    use_hessian = square_hessian;
-  } else {
-    use_hessian = triangular_hessian;
-  }
+  HighsHessian triangular_hessian0 = triangular_hessian;
 
+  // Check that the positive diagonal entries are recognised as being
+  // OK for default assessHessian (minimization) but not for
+  // maximization.
   REQUIRE(assessHessian(square_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(square_hessian, options, ObjSense::kMaximize) ==
+          HighsStatus::kError);
   if (dev_run) {
     printf("\nReturned square Hessian\n");
     square_hessian.print();
   }
 
+  // Check that the positive diagonal entries are recognised as being
+  // OK for default assessHessian (minimization) but not for
+  // maximization.
   REQUIRE(assessHessian(triangular_hessian, options) == HighsStatus::kOk);
+  REQUIRE(assessHessian(triangular_hessian, options, ObjSense::kMaximize) ==
+          HighsStatus::kError);
   if (dev_run) {
     printf("\nReturned triangular Hessian\n");
     triangular_hessian.print();
   }
 
-  if (square_internal_hessian) {
-    REQUIRE((square_hessian == use_hessian));
-  } else {
-    REQUIRE((triangular_hessian == use_hessian));
-  }
+  REQUIRE((triangular_hessian == triangular_hessian0));
 
   // Extract the triangluar Hessian from the square Hessian
   REQUIRE(extractTriangularHessian(options, square_hessian) ==
@@ -75,6 +75,8 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   negative_diagonal_hessian.value_[9] = -negative_diagonal_hessian.value_[9];
   REQUIRE(assessHessian(negative_diagonal_hessian, options,
                         ObjSense::kMaximize) == HighsStatus::kOk);
+  REQUIRE(assessHessian(negative_diagonal_hessian, options,
+                        ObjSense::kMinimize) == HighsStatus::kError);
 
   // Square Hessian with only triangular entries - doubled strictly triangular
   // entries.
@@ -90,7 +92,7 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nReturned\n");
     hessian0.print();
   }
-  REQUIRE((hessian0 == use_hessian));
+  REQUIRE((hessian0 == triangular_hessian0));
 
   // Nonsymmetric Hessian - with entries resulting in cancellation
   HighsHessian hessian1;
@@ -105,5 +107,28 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
     printf("\nReturned\n");
     hessian1.print();
   }
-  REQUIRE((hessian1 == use_hessian));
+  REQUIRE((hessian1 == triangular_hessian0));
+
+  HighsHessian indefinite;
+  indefinite.dim_ = 3;
+  indefinite.format_ = HessianFormat::kTriangular;
+  indefinite.start_ = {0, 2, 2, 3};
+  indefinite.index_ = {0, 2, 2};
+  indefinite.value_ = {2, 1, 4};
+  HighsInt indefinite_num_nz0 = indefinite.numNz();
+  REQUIRE(assessHessian(indefinite, options) == HighsStatus::kOk);
+  // Check that there is one more entry due to the explicit zero
+  REQUIRE(indefinite.numNz() == indefinite_num_nz0 + 1);
+  // Check that all first indices are for the diagonal
+  for (HighsInt iCol = 0; iCol < indefinite.dim_; iCol++) {
+    const HighsInt iEl = indefinite.start_[iCol];
+    REQUIRE(indefinite.index_[iEl] == iCol);
+  }
+  // Negate the diagonal entries
+  for (HighsInt iCol = 0; iCol < indefinite.dim_; iCol++) {
+    const HighsInt iEl = indefinite.start_[iCol];
+    indefinite.value_[iEl] = -indefinite.value_[iEl];
+  }
+  REQUIRE(assessHessian(indefinite, options, ObjSense::kMaximize) ==
+          HighsStatus::kOk);
 }

@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ../app/RunHighs.cpp
@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
   if (!loadOptions(log_options, argc, argv, loaded_options, model_file))
-    return 0;
+    return (int)HighsStatus::kError;
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
   if (loaded_options.output_flag) highs.openLogFile(loaded_options.log_file);
@@ -48,15 +48,15 @@ int main(int argc, char** argv) {
   highs.passOptions(loaded_options);
 
   printHighsVersionCopyright(log_options);
-  //
+
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(log_options, read_status, highs.getModel());
-  if (read_status == HighsStatus::kError)
-    return 1;  // todo: change to read error
-  //
+  if (read_status == HighsStatus::kError) return (int)read_status;
+
   // Solve the model
   HighsStatus run_status = highs.run();
+  if (run_status == HighsStatus::kError) return (int)run_status;
 
   // Possibly compute the ranging information
   if (options.ranging == kHighsOnString) highs.getRanging();
@@ -65,6 +65,12 @@ int main(int argc, char** argv) {
   if (options.write_solution_to_file)
     highs.writeSolution(options.solution_file, options.write_solution_style);
 
+  // Possibly write the model to a file
+  if (options.write_model_to_file) {
+    HighsStatus write_model_status = highs.writeModel(options.write_model_file);
+    if (write_model_status == HighsStatus::kError)
+      return (int)write_model_status;  // todo: change to write model error
+  }
   return (int)run_status;
 }
 
@@ -74,7 +80,7 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options) {
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
                (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Copyright (c) 2021 ERGO-Code under MIT licence terms\n");
+               "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
 }
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,

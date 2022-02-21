@@ -11,12 +11,17 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/s
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/include)
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/include)
 
+FILE(WRITE ${CMAKE_BINARY_DIR}/testoptions.txt
+"mip_rel_gap=0.0
+mip_abs_gap=0.0")
+
 # Make test executable
 set(TEST_SOURCES
     TestAlienBasis.cpp
     TestDualise.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
+    TestFactor.cpp
     TestFreezeBasis.cpp
     TestHotStart.cpp
     TestMain.cpp
@@ -147,10 +152,6 @@ DEPENDS osi-unit-test-build)
 
 endif()
 
-if (GAMS_FOUND)
-add_test(NAME rungams COMMAND ${HIGHS_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
-endif (GAMS_FOUND)
-
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all
 # TEST_CASEs in the source files specified in TEST_SOURCES. Do not define any
@@ -171,8 +172,8 @@ set(successInstances
     "80bau3b\;3686\; 9.8722419241\;"
     "adlittle\;74\; 2.2549496316\;"
     "afiro\;22\;-4.6475314286\;"
-    "etamacro\;540\;-7.5571523330\;"
-    "greenbea\;4907\;-7.2555248130\;"
+    "etamacro\;532\;-7.5571523330\;"
+    "greenbea\;5273\;-7.2555248130\;"
     "shell\;623\; 1.2088253460\;"
     "stair\;529\;-2.5126695119\;"
     "standata\;72\; 1.2576995000\;"
@@ -187,8 +188,8 @@ set(infeasibleInstances
     "forest6\;       infeasible"
     "galenet\;       infeasible"
     "gams10am\;      infeasible"
-    "klein1\;        infeasible"
-#    "refinery\;      infeasible"
+#    "klein1\;        infeasible"
+    "refinery\;      infeasible"
     "woodinfe\;      infeasible"
     )
 
@@ -282,7 +283,7 @@ foreach(instance ${mipInstances})
     set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
     foreach(setting ${settings})
-        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} --options_file ${CMAKE_BINARY_DIR}/testoptions.txt
               ${inst})
 
         set_tests_properties (${name}${setting} PROPERTIES

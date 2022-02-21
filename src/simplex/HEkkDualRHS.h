@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualRHS.h
@@ -86,27 +86,12 @@ class HEkkDualRHS {
   );
 
   /**
-   * @brief Update the DSE weights
-   */
-  void updateWeightDualSteepestEdge(
-      HVector* column,             //!< Pivotal column
-      const double row_outWeight,  //!< (Edge weight of leaving row)/alpha^2
-      double Kai,                  //!< -2/alpha
-      double* dse                  //!< DSE std::vector
-  );
-  /**
-   * @brief Update the Devex weights
-   */
-  void updateWeightDevex(HVector* column,            //!< Pivotal column
-                         const double row_outWeight  //!< max(1, (Edge weight of
-                                                     //!< leaving row)/alpha^2)
-  );
-  /**
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void updatePivots(HighsInt iRow,  //!< row where the basis change has occurred
-                    double value    //!< New primal value in this row
+  void updatePivots(
+      const HighsInt iRow,  //!< row where the basis change has occurred
+      const double value    //!< New primal value in this row
   );
 
   /**
@@ -127,6 +112,8 @@ class HEkkDualRHS {
    */
   void createArrayOfPrimalInfeasibilities();
 
+  void assessOptimality();
+
   // References:
   HEkk& ekk_instance_;
 
@@ -138,11 +125,7 @@ class HEkkDualRHS {
                                //!< greatest primal infeasibilities
   std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
-  std::vector<double>
-      work_infeasibility;            //!< Vector of all primal infeasiblities
-  std::vector<double> workEdWt;      //!< DSE or Dvx weight
-  std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
-                                     //!< are scattered during INVERT
+  std::vector<double> work_infeasibility;
 
   HighsInt partNum;
   HighsInt partNumRow;
@@ -150,7 +133,6 @@ class HEkkDualRHS {
   HighsInt partNumCut;
   HighsInt partSwitch;
   std::vector<HighsInt> workPartition;
-  const double min_dual_steepest_edge_weight = 1e-4;
   HighsSimplexAnalysis* analysis;
 };
 

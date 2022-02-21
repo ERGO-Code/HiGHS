@@ -2,12 +2,12 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2022 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
-/*    and Michael Feldmeier                                              */
+/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
+/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_CONFLICTPOOL_H_
@@ -55,11 +55,14 @@ class HighsConflictPool {
   }
 
   void addConflictCut(const HighsDomain& domain,
-                      const std::set<HighsInt>& reasonSideFrontier);
+                      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+                          reasonSideFrontier);
 
-  void addReconvergenceCut(const HighsDomain& domain,
-                           const std::set<HighsInt>& reconvergenceFrontier,
-                           const HighsDomainChange& reconvergenceDomchg);
+  void addReconvergenceCut(
+      const HighsDomain& domain,
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
+          reconvergenceFrontier,
+      const HighsDomainChange& reconvergenceDomchg);
 
   void removeConflict(HighsInt conflict);
 

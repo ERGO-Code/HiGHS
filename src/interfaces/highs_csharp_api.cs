@@ -6,15 +6,14 @@ using System.Runtime.InteropServices;
 
 public enum HighsStatus
 {
+   kError = -1,
    kOk,
-   kWarning,
-   kError
+   kWarning
 }
 
 public enum HighsMatrixFormat 
 { 
-   kNone = 0, 
-   kColwise, 
+   kColwise = 1, 
    kRowwise 
 }
 
