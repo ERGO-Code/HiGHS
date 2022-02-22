@@ -151,6 +151,7 @@ InfoStatus checkInfo(const HighsOptions& options,
   return InfoStatus::kOk;
 }
 
+#ifndef HIGHSINT64
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
@@ -171,6 +172,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   value = *info.value;
   return InfoStatus::kOk;
 }
+#endif
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name, const bool valid,

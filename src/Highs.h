@@ -228,9 +228,11 @@ class Highs {
                            HighsInt& value           //!< The info value
   );
 
+#ifndef HIGHSINT64
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            int64_t& value            //!< The info value
   );
+#endif
 
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            double& value) const;     //!< The info value
