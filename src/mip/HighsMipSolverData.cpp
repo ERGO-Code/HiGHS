@@ -17,6 +17,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
+#include "parallel/HighsParallel.h"
 #include "pdqsort/pdqsort.h"
 #include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
@@ -79,25 +80,95 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   return addIncumbent(solution, double(obj), source);
 }
 
+void HighsMipSolverData::startAnalyticCenterComputation(
+    const highs::parallel::TaskGroup& taskGroup) {
+  taskGroup.spawn([&]() {
+    // first check if the analytic center computation should be cancelled, e.g.
+    // due to early return in the root node evaluation
+    if (taskGroup.isCancelled()) return;
+    Highs ipm;
+    ipm.setOptionValue("solver", "ipm");
+    ipm.setOptionValue("run_crossover", false);
+    ipm.setOptionValue("presolve", "off");
+    ipm.setOptionValue("output_flag", false);
+    ipm.setOptionValue("ipm_iteration_limit", 200);
+    HighsLp lpmodel(*mipsolver.model_);
+    lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
+    ipm.passModel(std::move(lpmodel));
+
+    ipm.run();
+    const std::vector<double>& sol = ipm.getSolution().col_value;
+    if (HighsInt(sol.size()) != mipsolver.numCol()) return;
+    analyticCenterStatus = ipm.getModelStatus();
+    analyticCenter = sol;
+  });
+}
+
+void HighsMipSolverData::finishAnalyticCenterComputation(
+    const highs::parallel::TaskGroup& taskGroup) {
+  taskGroup.sync();
+  analyticCenterComputed = true;
+  if (analyticCenterStatus == HighsModelStatus::kOptimal) {
+    HighsInt nfixed = 0;
+    HighsInt nintfixed = 0;
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+      double boundRange = mipsolver.mipdata_->domain.col_upper_[i] -
+                          mipsolver.mipdata_->domain.col_lower_[i];
+      if (boundRange == 0.0) continue;
+
+      double tolerance =
+          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+
+      if (analyticCenter[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
+        mipsolver.mipdata_->domain.changeBound(
+            HighsBoundType::kUpper, i, mipsolver.model_->col_lower_[i],
+            HighsDomain::Reason::unspecified());
+        if (mipsolver.mipdata_->domain.infeasible()) return;
+        ++nfixed;
+        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
+      } else if (analyticCenter[i] >=
+                 mipsolver.model_->col_upper_[i] - tolerance) {
+        mipsolver.mipdata_->domain.changeBound(
+            HighsBoundType::kLower, i, mipsolver.model_->col_upper_[i],
+            HighsDomain::Reason::unspecified());
+        if (mipsolver.mipdata_->domain.infeasible()) return;
+        ++nfixed;
+        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
+      }
+    }
+    if (nfixed > 0)
+      highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                  "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
+                  " integers) sitting at bound at "
+                  "analytic center\n",
+                  nfixed, nintfixed);
+    mipsolver.mipdata_->domain.propagate();
+    if (mipsolver.mipdata_->domain.infeasible()) return;
+  }
+}
+
 double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
                                                 double mip_rel_gap) const {
   double new_upper_limit;
-  if (objintscale != 0.0) {
-    new_upper_limit = (std::floor(objintscale * ub - 0.5) / objintscale);
+  if (objectiveFunction.isIntegral()) {
+    new_upper_limit =
+        (std::floor(objectiveFunction.integralScale() * ub - 0.5) /
+         objectiveFunction.integralScale());
 
     if (mip_rel_gap != 0.0)
       new_upper_limit = std::min(
           new_upper_limit,
           ub - std::ceil(mip_rel_gap * fabs(ub + mipsolver.model_->offset_) *
-                             objintscale -
+                             objectiveFunction.integralScale() -
                          mipsolver.mipdata_->epsilon) /
-                   objintscale);
+                   objectiveFunction.integralScale());
 
     if (mip_abs_gap != 0.0)
-      new_upper_limit = std::min(new_upper_limit,
-                                 ub - std::ceil(mip_abs_gap * objintscale -
-                                                mipsolver.mipdata_->epsilon) /
-                                          objintscale);
+      new_upper_limit = std::min(
+          new_upper_limit,
+          ub - std::ceil(mip_abs_gap * objectiveFunction.integralScale() -
+                         mipsolver.mipdata_->epsilon) /
+                   objectiveFunction.integralScale());
 
     // add feasibility tolerance so that the next best integer feasible solution
     // is definitely included in the remaining search
@@ -129,7 +200,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
   if (mipsolver.submip) {
     return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
   } else if (pruned_treeweight < 1e-3 &&
-             num_leaves - num_leaves_before_run < 10) {
+             num_leaves - num_leaves_before_run < 10 &&
+             num_nodes - num_nodes_before_run < 1000) {
     // in the main MIP solver allow an initial offset of 10000 heuristic LP
     // iterations
     if (heuristic_lp_iterations <
@@ -205,6 +277,10 @@ void HighsMipSolverData::init() {
   mipsolver.orig_model_ = mipsolver.model_;
   if (mipsolver.clqtableinit)
     cliquetable.buildFrom(mipsolver.orig_model_, *mipsolver.clqtableinit);
+  cliquetable.setMinEntriesForParallelism(
+      highs::parallel::num_threads() > 1
+          ? mipsolver.options_mip_->mip_min_cliquetable_entries_for_parallelism
+          : kHighsIInf);
   if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->small_matrix_value;
@@ -214,6 +290,7 @@ void HighsMipSolverData::init() {
   firstlpsolobj = -kHighsInf;
   rootlpsolobj = -kHighsInf;
   analyticCenterComputed = false;
+  analyticCenterStatus = HighsModelStatus::kNotset;
   numRestarts = 0;
   numRestartsRoot = 0;
   numImprovingSols = 0;
@@ -240,7 +317,6 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
-  objintscale = 0.0;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -280,6 +356,34 @@ void HighsMipSolverData::runSetup() {
   optimality_limit -= mipsolver.model_->offset_;
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
+
+  if (mipsolver.solution_objective_ != kHighsInf) {
+    incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
+    double solobj = mipsolver.solution_objective_ - mipsolver.model_->offset_;
+    bool feasible = mipsolver.bound_violation_ <=
+                        mipsolver.options_mip_->mip_feasibility_tolerance &&
+                    mipsolver.integrality_violation_ <=
+                        mipsolver.options_mip_->mip_feasibility_tolerance &&
+                    mipsolver.row_violation_ <=
+                        mipsolver.options_mip_->mip_feasibility_tolerance;
+    if (numRestarts == 0) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "\nMIP start solution is %s, objective value is %.12g\n",
+                   feasible ? "feasible" : "infeasible",
+                   mipsolver.solution_objective_);
+    }
+    if (feasible && solobj < upper_bound) {
+      upper_bound = solobj;
+      double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+      if (new_upper_limit < upper_limit) {
+        upper_limit = new_upper_limit;
+        optimality_limit =
+            computeNewUpperLimit(solobj, mipsolver.options_mip_->mip_abs_gap,
+                                 mipsolver.options_mip_->mip_rel_gap);
+        nodequeue.setOptimalityLimit(optimality_limit);
+      }
+    }
+  }
 
   if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
 
@@ -361,6 +465,8 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
+  objectiveFunction.setupCliquePartition(domain, cliquetable);
+  domain.setupObjectivePropagation();
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {
@@ -449,6 +555,10 @@ void HighsMipSolverData::runSetup() {
   }
 #endif
 
+  if (upper_limit == kHighsInf) analyticCenterComputed = false;
+  analyticCenterStatus = HighsModelStatus::kNotset;
+  analyticCenter.clear();
+
   symmetries.clear();
 
   if (detectSymmetries) {
@@ -518,11 +628,11 @@ double HighsMipSolverData::transformNewIncumbent(
     const std::vector<double>& sol) {
   HighsSolution solution;
   solution.col_value = sol;
-  calculateRowValues(*mipsolver.model_, solution);
+  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   solution.value_valid = true;
 
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
-  calculateRowValues(*mipsolver.orig_model_, solution);
+  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   bool allow_try_again = true;
 try_again:
 
@@ -535,37 +645,50 @@ try_again:
   assert((HighsInt)solution.col_value.size() ==
          mipsolver.orig_model_->num_col_);
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
-    obj += mipsolver.orig_model_->col_cost_[i] * solution.col_value[i];
-
-    bound_violation_ =
-        std::max(bound_violation_,
-                 mipsolver.orig_model_->col_lower_[i] - solution.col_value[i]);
-    bound_violation_ =
-        std::max(bound_violation_,
-                 solution.col_value[i] - mipsolver.orig_model_->col_upper_[i]);
+    const double value = solution.col_value[i];
+    obj += mipsolver.orig_model_->col_cost_[i] * value;
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
-      double intval = std::floor(solution.col_value[i] + 0.5);
-      integrality_violation_ = std::max(
-          std::abs(intval - solution.col_value[i]), integrality_violation_);
+      double intval = std::floor(value + 0.5);
+      integrality_violation_ =
+          std::max(std::fabs(intval - value), integrality_violation_);
     }
+
+    const double lower = mipsolver.orig_model_->col_lower_[i];
+    const double upper = mipsolver.orig_model_->col_upper_[i];
+    double primal_infeasibility = 0;
+    if (value < lower - mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value >
+               upper + mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else
+      continue;
+
+    bound_violation_ = std::max(bound_violation_, primal_infeasibility);
   }
 
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_row_; ++i) {
-    row_violation_ =
-        std::max(row_violation_,
-                 mipsolver.orig_model_->row_lower_[i] - solution.row_value[i]);
-    row_violation_ =
-        std::max(row_violation_,
-                 solution.row_value[i] - mipsolver.orig_model_->row_upper_[i]);
+    const double value = solution.row_value[i];
+    const double lower = mipsolver.orig_model_->row_lower_[i];
+    const double upper = mipsolver.orig_model_->row_upper_[i];
+    double primal_infeasibility;
+    if (value < lower - mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value >
+               upper + mipsolver.options_mip_->mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else
+      continue;
+
+    row_violation_ = std::max(row_violation_, primal_infeasibility);
   }
 
   bool feasible =
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
-      row_violation_ <=
-          mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
 
   if (!feasible && allow_try_again) {
     // printf(
@@ -615,7 +738,7 @@ try_again:
         mipsolver.integrality_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+            mipsolver.options_mip_->mip_feasibility_tolerance;
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kWarning,
         "Untransformed solution with objective %g is violated by %.12g for the "
@@ -1068,22 +1191,26 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
+  highs::parallel::TaskGroup tg;
 restart:
+  // subMIP problems have a much higher chance of being infeasible so we only
+  // start solving the analytic center problem once the first LP is feasible,
+  // for the main problem we start the analytic center computation before
+  // starting to solve the root LP
+  if (!mipsolver.submip && !analyticCenterComputed)
+    startAnalyticCenterComputation(tg);
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
   lp.loadModel();
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
+  lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
 
   if (symmetries.numPerms != 0)
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
-  if (numRestarts == 0) {
-    // solve the first root lp
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nSolving root node LP relaxation\n");
-  }
+  printDisplayLine();
 
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
@@ -1106,6 +1233,9 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
     return;
+
+  if (mipsolver.submip && !analyticCenterComputed)
+    startAnalyticCenterComputation(tg);
 
   firstlpsol = lp.getSolution().col_value;
   firstlpsolobj = lp.getObjective();
@@ -1143,6 +1273,9 @@ restart:
   }
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+
+  // make sure first line after solving root LP is printed
+  last_disptime = -kHighsInf;
 
   heuristics.randomizedRounding(firstlpsol);
   heuristics.flushStatistics();
@@ -1189,7 +1322,7 @@ restart:
     if (rootSeparationRound(sepa, ncuts, status)) return;
     if (nseparounds >= 5 && !mipsolver.submip && !analyticCenterComputed) {
       if (checkLimits()) return;
-      analyticCenterComputed = true;
+      finishAnalyticCenterComputation(tg);
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
@@ -1254,9 +1387,9 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-  if (!analyticCenterComputed || upper_limit == kHighsInf) {
+  if (!analyticCenterComputed) {
     if (checkLimits()) return;
-    analyticCenterComputed = true;
+    finishAnalyticCenterComputation(tg);
     heuristics.centralRounding();
     heuristics.flushStatistics();
 
@@ -1362,6 +1495,7 @@ restart:
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
+      if (!analyticCenterComputed) finishAnalyticCenterComputation(tg);
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
@@ -1404,6 +1538,17 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     }
     return true;
   }
+
+  if (options.mip_max_improving_sols != kHighsIInf &&
+      numImprovingSols >= options.mip_max_improving_sols) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "reached improving solution limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+    }
+    return true;
+  }
+
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
@@ -1418,43 +1563,11 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
 }
 
 void HighsMipSolverData::checkObjIntegrality() {
-  objintscale = 600.0;
-
-  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.colCost(i) == 0.0) continue;
-
-    if (mipsolver.variableType(i) == HighsVarType::kContinuous) {
-      objintscale = 0.0;
-      break;
-    }
-
-    double cost = mipsolver.colCost(i);
-    double intcost = std::floor(objintscale * cost + 0.5) / objintscale;
-    if (std::abs(cost - intcost) > epsilon) {
-      objintscale = 0.0;
-      break;
-    }
-  }
-
-  if (objintscale != 0.0) {
-    int64_t currgcd = 0;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.colCost(i) == 0.0) continue;
-      int64_t intval = std::floor(mipsolver.colCost(i) * objintscale + 0.5);
-      if (currgcd == 0) {
-        currgcd = intval < 0 ? -intval : intval;
-        continue;
-      }
-      currgcd = HighsIntegers::gcd(intval, currgcd);
-      if (currgcd == 1) break;
-    }
-
-    if (currgcd != 0) objintscale /= currgcd;
-
-    if (numRestarts == 0)
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Objective function is integral with scale %g\n",
-                   objintscale);
+  objectiveFunction.checkIntegrality(epsilon);
+  if (objectiveFunction.isIntegral() && numRestarts == 0) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "Objective function is integral with scale %g\n",
+                 objectiveFunction.integralScale());
   }
 }
 

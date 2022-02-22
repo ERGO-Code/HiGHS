@@ -9,7 +9,7 @@ using namespace highs;
 
 struct Node {
   HighsInt key;
-  RbTreeLinks links;
+  RbTreeLinks<HighsInt> links;
 };
 
 class MyRbTree;
@@ -18,6 +18,7 @@ namespace highs {
 template <>
 struct RbTreeTraits<MyRbTree> {
   using KeyType = HighsInt;
+  using LinkType = HighsInt;
 };
 }  // namespace highs
 
@@ -28,8 +29,10 @@ class MyRbTree : public RbTree<MyRbTree> {
 
   MyRbTree() : RbTree<MyRbTree>(root) {}
 
-  RbTreeLinks& getRbTreeLinks(HighsInt node) { return nodes[node].links; }
-  const RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) {
+    return nodes[node].links;
+  }
+  const RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) const {
     return nodes[node].links;
   }
   HighsInt getKey(HighsInt node) const { return nodes[node].key; }

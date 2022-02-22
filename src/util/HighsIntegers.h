@@ -134,9 +134,11 @@ class HighsIntegers {
                               double deltadown, double deltaup) {
     if (numVals == 0) return 0.0;
 
-    double minval = *std::min_element(
+    auto minmax = std::minmax_element(
         vals, vals + numVals,
         [](double a, double b) { return std::abs(a) < std::abs(b); });
+    const double minval = *minmax.first;
+    const double maxval = *minmax.second;
 
     int expshift = 0;
 
@@ -145,6 +147,13 @@ class HighsIntegers {
     // but ignore tiny values bew deltadown/deltaup.
     if (minval < -deltadown || minval > deltaup) std::frexp(minval, &expshift);
     expshift = std::max(-expshift, 0) + 3;
+
+    // guard against making the largest value too big which may cause overflows
+    // with intermdediate gcd values
+    int expMaxVal;
+    std::frexp(maxval, &expMaxVal);
+    expMaxVal = std::min(expMaxVal, 32);
+    if (expMaxVal + expshift > 32) expshift = 32 - expMaxVal;
 
     uint64_t denom = uint64_t{75} << expshift;
     HighsCDouble startdenom = denom;

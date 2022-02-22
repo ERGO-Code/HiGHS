@@ -16,6 +16,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinPragma.hpp"
 #include "HCheckConfig.h"
+#include "HighsInt.h"
 #include "OsiHiGHSSolverInterface.hpp"
 #include "OsiUnitTests.hpp"
 

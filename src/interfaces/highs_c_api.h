@@ -137,38 +137,6 @@ HighsInt Highs_qpCall(
 );
 
 /*
- * @brief reads dimensions of an LP from an MPS file using HiGHS
- */
-HighsInt Highs_lpDimMpsRead(
-    //    const char* filename,
-    HighsInt* numcol,  //!< number of columns
-    HighsInt* numrow,  //!< number of rows
-    HighsInt* numNz    //!< number of rows
-);
-
-/*
- * @brief reads data for an LP from an MPS file using HiGHS - requires pointers
- * to allocated memory
- */
-HighsInt Highs_lpDataMpsRead(
-    //    const char* filename,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    HighsInt* sense,        //!< sense of the optimization (-1 => Maximization;
-                            //!< Otherwise minimization)
-    double* offset,         //!< objective constant
-    double* colcost,        //!< array of length [numcol] with column costs
-    double* collower,  //!< array of length [numcol] with lower column bounds
-    double* colupper,  //!< array of length [numcol] with upper column bounds
-    double* rowlower,  //!< array of length [numrow] with lower row bounds
-    double* rowupper,  //!< array of length [numrow] with upper row bounds
-    HighsInt* astart,  //!< array of length [numcol] with column start indices
-    HighsInt*
-        aindex,  //!< array of length [numnz] with row indices of matrix entries
-    double* avalue  //!< array of length [numnz] with value of matrix entries
-);
-
-/*
  * @brief creates a HiGHS object and returns the reference
  */
 void* Highs_create(void);
@@ -344,11 +312,6 @@ HighsInt Highs_setStringOptionValue(void* highs,
                                     const char* value  //!< new value of option
 );
 
-HighsInt Highs_setOptionValue(void* highs,
-                              const char* option,  //!< name of the option
-                              const char* value    //!< new value of option
-);
-
 HighsInt Highs_getBoolOptionValue(const void* highs,
                                   const char* option,  //!< name of the option
                                   HighsInt* value      //!< value of option
@@ -402,6 +365,19 @@ HighsInt Highs_getDoubleInfoValue(const void* highs,
                                   const char* info,  //!< The info name
                                   double* value      //!< The info value
 );
+
+/*
+ * Get an int64-valued info value.
+ *
+ * @param highs a pointer to the HiGHS model object
+ * @param info  the name of the info
+ * @param value a reference to a int64 that the result will be stored in
+ *
+ * @returns A non-zero return value indicates that a problem occured
+ */
+HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
+                                 int64_t* value);
+
 /*
  * @brief
  */
@@ -1206,6 +1182,9 @@ double Highs_getHighsRunTime(const void* highs);
 
 // const char* Highs_highsModelStatusToChar(void* highs,
 //                                          HighsInt int_model_status);
+
+HighsInt Highs_setOptionValue(void* highs, const char* option,
+                              const char* value);
 
 #ifdef __cplusplus
 }

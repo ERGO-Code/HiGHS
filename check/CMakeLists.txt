@@ -21,6 +21,7 @@ set(TEST_SOURCES
     TestDualise.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
+    TestFactor.cpp
     TestFreezeBasis.cpp
     TestHotStart.cpp
     TestMain.cpp
@@ -150,10 +151,6 @@ PROPERTIES
 DEPENDS osi-unit-test-build)
 
 endif()
-
-if (GAMS_FOUND)
-add_test(NAME rungams COMMAND ${HIGHS_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
-endif (GAMS_FOUND)
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all

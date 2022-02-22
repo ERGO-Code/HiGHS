@@ -27,17 +27,71 @@
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveComponent.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsIntegers.h"
+
+using std::fabs;
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
     : options_mip_(&options),
       model_(&lp),
+      orig_model_(&lp),
       solution_objective_(kHighsInf),
       submip(submip),
       rootbasis(nullptr),
       pscostinit(nullptr),
       clqtableinit(nullptr),
-      implicinit(nullptr) {}
+      implicinit(nullptr) {
+  if (solution.value_valid) {
+    bound_violation_ = 0;
+    row_violation_ = 0;
+    integrality_violation_ = 0;
+
+    HighsCDouble obj = orig_model_->offset_;
+    assert((HighsInt)solution.col_value.size() == orig_model_->num_col_);
+    for (HighsInt i = 0; i != orig_model_->num_col_; ++i) {
+      const double value = solution.col_value[i];
+      obj += orig_model_->col_cost_[i] * value;
+
+      if (orig_model_->integrality_[i] == HighsVarType::kInteger) {
+        double intval = std::floor(value + 0.5);
+        integrality_violation_ =
+            std::max(fabs(intval - value), integrality_violation_);
+      }
+
+      const double lower = orig_model_->col_lower_[i];
+      const double upper = orig_model_->col_upper_[i];
+      double primal_infeasibility;
+      if (value < lower - options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      } else
+        continue;
+
+      bound_violation_ = std::max(bound_violation_, primal_infeasibility);
+    }
+
+    for (HighsInt i = 0; i != orig_model_->num_row_; ++i) {
+      const double value = solution.row_value[i];
+      const double lower = orig_model_->row_lower_[i];
+      const double upper = orig_model_->row_upper_[i];
+
+      double primal_infeasibility;
+      if (value < lower - options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      } else
+        continue;
+
+      row_violation_ = std::max(row_violation_, primal_infeasibility);
+    }
+
+    solution_objective_ = double(obj);
+    solution_ = solution.col_value;
+  }
+}
 
 HighsMipSolver::~HighsMipSolver() = default;
 
@@ -244,15 +298,9 @@ restart:
 
       bool doRestart = false;
 
-      double percentageInactive = mipdata_->percentageInactiveIntegers();
-      if (percentageInactive >= 2.5 && numHugeTreeEstim > 0 &&
-          mipdata_->num_nodes - mipdata_->num_nodes_before_run <= 1000) {
-        doRestart =
-            currNodeEstim >=
-                (100.0 / mipdata_->percentageInactiveIntegers()) *
-                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run) &&
-            options_mip_->presolve != "off";
-      }
+      double activeIntegerRatio =
+          1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
+      activeIntegerRatio *= activeIntegerRatio;
 
       if (!doRestart) {
         double gapReduction = 1.0;
@@ -262,9 +310,10 @@ restart:
           gapReduction = oldGap / newGap;
         }
 
-        if (gapReduction < 1.05 &&
+        if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
             currNodeEstim >=
-                20 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+                activeIntegerRatio * 20 *
+                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
           nextCheck = mipdata_->num_nodes + 100;
           ++numHugeTreeEstim;
         } else {
@@ -277,8 +326,9 @@ restart:
 
         int64_t minHugeTreeOffset =
             (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
-        int64_t minHugeTreeEstim =
-            (10 + minHugeTreeOffset) * std::pow(1.5, nTreeRestarts);
+        int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+            activeIntegerRatio * (10 + minHugeTreeOffset) *
+            std::pow(1.5, nTreeRestarts));
 
         doRestart = numHugeTreeEstim >= minHugeTreeEstim;
       } else {
@@ -371,6 +421,7 @@ restart:
 
       if (mipdata_->domain.infeasible()) {
         search.cutoffNode();
+        search.openNodesToQueue(mipdata_->nodequeue);
         mipdata_->nodequeue.clear();
         mipdata_->pruned_treeweight = 1.0;
         mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
@@ -404,11 +455,12 @@ void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   dual_bound_ = mipdata_->lower_bound;
-  if (mipdata_->objintscale != 0.0) {
+  if (mipdata_->objectiveFunction.isIntegral()) {
     double rounded_lower_bound =
-        std::ceil(mipdata_->lower_bound * mipdata_->objintscale -
+        std::ceil(mipdata_->lower_bound *
+                      mipdata_->objectiveFunction.integralScale() -
                   mipdata_->feastol) /
-        mipdata_->objintscale;
+        mipdata_->objectiveFunction.integralScale();
     dual_bound_ = std::max(dual_bound_, rounded_lower_bound);
   }
   dual_bound_ += model_->offset_;
@@ -416,7 +468,8 @@ void HighsMipSolver::cleanupSolve() {
   node_count_ = mipdata_->num_nodes;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
 
-  if (modelstatus_ == HighsModelStatus::kNotset) {
+  if (modelstatus_ == HighsModelStatus::kNotset ||
+      modelstatus_ == HighsModelStatus::kInfeasible) {
     if (havesolution)
       modelstatus_ = HighsModelStatus::kOptimal;
     else
@@ -447,6 +500,9 @@ void HighsMipSolver::cleanupSolve() {
   if (gap == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
+    double printTol = std::max(std::min(1e-2, 1e-1 * gap), 1e-6);
+    std::array<char, 32> gapValString =
+        highsDoubleToString(100.0 * gap, printTol);
     double gapTol = options_mip_->mip_rel_gap;
 
     if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
@@ -457,13 +513,18 @@ void HighsMipSolver::cleanupSolve() {
     }
 
     if (gapTol == 0.0)
-      std::snprintf(gapString.data(), gapString.size(), "%.2f%%", 100. * gap);
-    else if (gapTol != kHighsInf)
+      std::snprintf(gapString.data(), gapString.size(), "%s%%",
+                    gapValString.data());
+    else if (gapTol != kHighsInf) {
+      printTol = std::max(std::min(1e-2, 1e-1 * gapTol), 1e-6);
+      std::array<char, 32> gapTolString =
+          highsDoubleToString(100.0 * gapTol, printTol);
       std::snprintf(gapString.data(), gapString.size(),
-                    "%.2f%% (tolerance: %.2f%%)", 100. * gap, 100. * gapTol);
-    else
-      std::snprintf(gapString.data(), gapString.size(),
-                    "%.2f%% (tolerance: inf)", 100. * gap);
+                    "%s%% (tolerance: %s%%)", gapValString.data(),
+                    gapTolString.data());
+    } else
+      std::snprintf(gapString.data(), gapString.size(), "%s%% (tolerance: inf)",
+                    gapValString.data());
   }
 
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,

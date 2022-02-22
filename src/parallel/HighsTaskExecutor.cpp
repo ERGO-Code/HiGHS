@@ -2,7 +2,7 @@
 
 using namespace highs;
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 static thread_local HighsSplitDeque* threadLocalWorkerDequePtr{nullptr};
 HighsSplitDeque*& HighsTaskExecutor::threadLocalWorkerDeque() {
   return threadLocalWorkerDequePtr;
@@ -14,3 +14,5 @@ thread_local HighsSplitDeque* HighsTaskExecutor::threadLocalWorkerDequePtr{
 
 cache_aligned::shared_ptr<HighsTaskExecutor> HighsTaskExecutor::globalExecutor{
     nullptr};
+
+HighsSpinMutex HighsTaskExecutor::initMutex;

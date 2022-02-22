@@ -71,6 +71,21 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   double optimal_objective = info.objective_function_value;
   if (dev_run) printf("Objective = %g\n", optimal_objective);
 
+  // mip_node_count is always int64_t, so the following should be an
+  // error depending on whether HIGHSINT64 is set
+  HighsInt mip_node_count_int;
+  HighsStatus required_return_status = HighsStatus::kError;
+#ifdef HIGHSINT64
+  required_return_status = HighsStatus::kOk;
+#endif
+  REQUIRE(highs.getInfoValue("mip_node_count", mip_node_count_int) ==
+          required_return_status);
+  int64_t mip_node_count;
+  REQUIRE(highs.getInfoValue("mip_gap", mip_node_count) == HighsStatus::kError);
+  REQUIRE(highs.getInfoValue("mip_node_count", mip_node_count) ==
+          HighsStatus::kOk);
+  REQUIRE(mip_node_count == 1);
+
   highs.clearModel();
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);

@@ -132,7 +132,7 @@ void HVectorBase<Real>::copy(const HVectorBase<FromReal>* from) {
   }
 }
 template <typename Real>
-Real HVectorBase<Real>::norm2() {
+Real HVectorBase<Real>::norm2() const {
   /*
    * Compute the squared 2-norm of the vector
    */

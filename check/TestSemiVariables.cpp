@@ -6,8 +6,6 @@ const double inf = kHighsInf;
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
-HighsLp baseLp();
-
 TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
@@ -16,7 +14,19 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsModel model;
   HighsLp& lp = model.lp_;
-  lp = baseLp();
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 2, -4, -3};
+  lp.col_lower_ = {0, 0, 1.1, 0};
+  lp.col_upper_ = {inf, inf, inf, inf};
+  lp.row_lower_ = {-inf, 0, 0, 0.5};
+  lp.row_upper_ = {5, inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3, 6, 7, 8};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 3};
+  lp.a_matrix_.value_ = {1, 2, -1, 1, -1, 3, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMaximize;
+
   const HighsVarType continuous = HighsVarType::kContinuous;
   const HighsVarType semi_continuous = HighsVarType::kSemiContinuous;
   const HighsVarType semi_integer = HighsVarType::kSemiInteger;
@@ -24,18 +34,17 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const HighsInt semi_col = 2;
   const double save_semi_col_lower = lp.col_lower_[semi_col];
   const double save_semi_col_upper = lp.col_upper_[semi_col];
+  optimal_objective_function_value = 6.83333;
+  // Legal to have infinte upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
-  return_status = highs.passModel(model);
-  REQUIRE(return_status == HighsStatus::kError);
-  lp.col_upper_[semi_col] = save_semi_col_upper;
-
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
-  optimal_objective_function_value = 6.83333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+
   // Remove the semi-condition and resolve
   highs.changeColIntegrality(semi_col, continuous);
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -71,6 +80,52 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
                optimal_objective_function_value) < double_equal_tolerance);
 }
 
+TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {1, 0};
+  lp.col_upper_ = {inf, 1};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.integrality_ = {HighsVarType::kSemiContinuous, HighsVarType::kContinuous};
+
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  // Problem is unbounded due to infinite upper bound on x0, so
+  // modified upper bound is active in solution, and run returns error
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+
+  REQUIRE(highs.changeColBounds(0, 2e5, inf) == HighsStatus::kOk);
+  // Problem is still unbounded due to infinite upper bound on x0, but
+  // lower bound is too large to set modified upper bound, so run
+  // returns error
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+
+  REQUIRE(highs.changeColBounds(0, 1, inf) == HighsStatus::kOk);
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {-1, 1e4};
+  REQUIRE(highs.addRow(0, 0, 2, &index[0], &value[0]) == HighsStatus::kOk);
+  // Problem is no longer unbounded due to equation linking the
+  // semi-variable to the continuous variable. However, optimal value
+  // of semi-variable is 1e4, so it is active at the modified upper
+  // bound.
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+
+  highs.setOptionValue("default_semi_variable_upper_bound", 2e4);
+  // Problem is no longer unbounded due to equation linking the
+  // semi-variable to the continuous variable. However, modified upper
+  // bound now exceeds the optimal value of semi-variable is 1e4, so
+  // problem is solved OK
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}
+
 TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
@@ -104,21 +159,4 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
-}
-
-HighsLp baseLp() {
-  HighsLp lp;
-  lp.num_col_ = 4;
-  lp.num_row_ = 4;
-  lp.col_cost_ = {1, 2, -4, -3};
-  lp.col_lower_ = {0, 0, 1.1, 0};
-  lp.col_upper_ = {inf, inf, 10, inf};
-  lp.row_lower_ = {-inf, 0, 0, 0.5};
-  lp.row_upper_ = {5, inf, inf, inf};
-  lp.a_matrix_.start_ = {0, 3, 6, 7, 8};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 3};
-  lp.a_matrix_.value_ = {1, 2, -1, 1, -1, 3, 1, 1};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  lp.sense_ = ObjSense::kMaximize;
-  return lp;
 }

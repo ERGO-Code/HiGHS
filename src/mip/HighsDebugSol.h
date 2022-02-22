@@ -19,6 +19,7 @@
 
 class HighsDomain;
 class HighsMipSolver;
+class HighsLp;
 
 #include <set>
 #include <vector>
@@ -64,6 +65,9 @@ struct HighsDebugSol {
 
   void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double Rlower, double Rupper);
+
+  void checkRowAggregation(const HighsLp& lp, const HighsInt* Rindex,
+                           const double* Rvalue, HighsInt Rlen);
 
   void checkClique(const HighsCliqueTable::CliqueVar* clq, HighsInt clqlen);
 
@@ -112,6 +116,9 @@ struct HighsDebugSol {
 
   void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double Rlower, double Rupper) const {}
+
+  void checkRowAggregation(const HighsLp& lp, const HighsInt* Rindex,
+                           const double* Rvalue, HighsInt Rlen) const {}
 
   void checkClique(const HighsCliqueTable::CliqueVar* clq,
                    HighsInt clqlen) const {}

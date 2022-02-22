@@ -39,6 +39,7 @@ void HEkk::clear() {
   this->clearEkkLp();
   this->clearEkkDualise();
   this->clearEkkData();
+  this->clearEkkDualEdgeWeightData();
   this->clearEkkPointers();
   this->basis_.clear();
   this->simplex_nla_.clear();
@@ -104,6 +105,11 @@ void HEkk::clearEkkDualise() {
   this->upper_bound_row_.clear();
 }
 
+void HEkk::clearEkkDualEdgeWeightData() {
+  this->dual_edge_weight_.clear();
+  this->scattered_dual_edge_weight_.clear();
+}
+
 void HEkk::clearEkkData() {
   // Clears Ekk-specific data scalars and vectors. Doesn't clear
   // status, as this is done elsewhere
@@ -120,8 +126,6 @@ void HEkk::clearEkkData() {
   this->clearEkkDataInfo();
   model_status_ = HighsModelStatus::kNotset;
   // random_; Has no data
-  this->workEdWt_ = NULL;
-  this->workEdWtFull_ = NULL;
 
   this->simplex_in_scaled_space_ = false;
   this->ar_matrix_.clear();
@@ -136,7 +140,7 @@ void HEkk::clearEkkData() {
 
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
-  this->exit_algorithm_ = SimplexAlgorithm::kPrimal;
+  this->exit_algorithm_ = SimplexAlgorithm::kNone;
   this->return_primal_solution_status_ = 0;
   this->return_dual_solution_status_ = 0;
 
@@ -145,6 +149,17 @@ void HEkk::clearEkkData() {
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
+
+  // Clear values used for debugging
+  this->debug_solve_call_num_ = 0;
+  this->debug_basis_id_ = 0;
+  this->time_report_ = false;
+  this->debug_initial_build_synthetic_tick_ = 0;
+  this->debug_solve_report_ = false;
+  this->debug_iteration_report_ = false;
+  this->debug_basis_report_ = false;
+  this->debug_dual_feasible = false;
+  this->debug_max_relative_dual_steepest_edge_weight_error = 0;
 
   clearBadBasisChange();
 }
@@ -180,7 +195,7 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_basis_workShift_.clear();
   info.backtracking_basis_workLowerShift_.clear();
   info.backtracking_basis_workUpperShift_.clear();
-  info.backtracking_basis_edge_weights_.clear();
+  info.backtracking_basis_edge_weight_.clear();
   info.dual_ray_row_ = -1;
   info.dual_ray_sign_ = 0;
   info.primal_ray_col_ = -1;
@@ -241,6 +256,7 @@ void HEkk::clearEkkControlInfo() {
   info.row_ep_density = 0.0;
   info.row_ap_density = 0.0;
   info.row_DSE_density = 0.0;
+  info.col_steepest_edge_density = 0.0;
   info.col_basic_feasibility_change_density = 0.0;
   info.row_basic_feasibility_change_density = 0.0;
   info.col_BFRT_density = 0.0;
@@ -1014,10 +1030,18 @@ HighsStatus HEkk::unpermute() {
 HighsStatus HEkk::solve(const bool force_phase2) {
   debug_solve_call_num_++;
   debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = -7;
-  const HighsInt debug_build_synthetic_tick = -809680;
-  debug_solve_report_ = debug_solve_call_num_ == debug_from_solve_call_num &&
-                        build_synthetic_tick_ == debug_build_synthetic_tick;
+  const HighsInt debug_from_solve_call_num = -12;
+  const HighsInt debug_num_solve = 3;
+  const HighsInt debug_to_solve_call_num =
+      debug_from_solve_call_num + debug_num_solve - 1;
+  const HighsInt debug_build_synthetic_tick = 445560;
+  if (debug_solve_call_num_ < debug_from_solve_call_num) {
+    debug_solve_report_ = false;
+  } else if (debug_solve_call_num_ == debug_from_solve_call_num) {
+    debug_solve_report_ = build_synthetic_tick_ == debug_build_synthetic_tick;
+  } else if (debug_solve_call_num_ > debug_to_solve_call_num) {
+    debug_solve_report_ = false;
+  }
   const HighsInt time_from_solve_call_num = -1;
   const HighsInt time_to_solve_call_num = time_from_solve_call_num;
   time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
@@ -1027,7 +1051,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (debug_solve_report_) {
     printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
     debugReporting(-1);
-    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed); //
   }
   if (time_report_) {
     timeReporting(-1);
@@ -1036,6 +1060,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (debug_basis_report_) {
     printf("HEkk::solve basis %d\n", (int)debug_basis_id);
   }
+
   initialiseAnalysis();
   initialiseControl();
 
@@ -1089,8 +1114,6 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     highsLogUser(options_->log_options, HighsLogType::kInfo,
                  "Using EKK primal simplex solver\n");
     HEkkPrimal primal_solver(*this);
-    workEdWt_ = NULL;
-    workEdWtFull_ = NULL;
     call_status = primal_solver.solve(force_phase2);
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
@@ -1115,8 +1138,6 @@ HighsStatus HEkk::solve(const bool force_phase2) {
                    "Using EKK dual simplex solver - serial\n");
     }
     HEkkDual dual_solver(*this);
-    workEdWt_ = dual_solver.getWorkEdWt();
-    workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve(force_phase2);
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
@@ -1153,46 +1174,6 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
   if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
   return returnFromEkkSolve(return_status);
-}
-
-HighsStatus HEkk::cleanup() {
-  // Clean up from a point with either primal or dual
-  // infeasiblilities, but not both
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  if (info_.num_primal_infeasibilities) {
-    // Primal infeasibilities, so should be just dual phase 2
-    assert(!info_.num_dual_infeasibilities);
-    // Use dual simplex (phase 2) with Devex pricing and no perturbation
-    info_.simplex_strategy = kSimplexStrategyDual;
-    info_.dual_simplex_cost_perturbation_multiplier = 0;
-    info_.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
-    HEkkDual dual_solver(*this);
-    workEdWt_ = dual_solver.getWorkEdWt();
-    workEdWtFull_ = dual_solver.getWorkEdWtFull();
-    call_status = dual_solver.solve();
-    assert(called_return_from_solve_);
-    return_status =
-        interpretCallStatus(this->options_->log_options, call_status,
-                            return_status, "HEkkDual::solve");
-    if (return_status == HighsStatus::kError) return return_status;
-  } else {
-    // Dual infeasibilities, so should be just primal phase 2
-    assert(!info_.num_primal_infeasibilities);
-    // Use primal simplex (phase 2) with no perturbation
-    info_.simplex_strategy = kSimplexStrategyPrimal;
-    info_.primal_simplex_bound_perturbation_multiplier = 0;
-    HEkkPrimal primal_solver(*this);
-    workEdWt_ = NULL;
-    workEdWtFull_ = NULL;
-    call_status = primal_solver.solve();
-    assert(called_return_from_solve_);
-    return_status =
-        interpretCallStatus(this->options_->log_options, call_status,
-                            return_status, "HEkkPrimal::solve");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
-  return return_status;
 }
 
 HighsStatus HEkk::setBasis() {
@@ -1863,17 +1844,13 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   // a limit
   const HighsInt simplex_update_count = info_.update_count;
   // Dual simplex edge weights are identified with rows, so must be
-  // permuted according to INVERT. This must be done if workEdWt_ is
-  // not NULL.
-  const bool handle_edge_weights = workEdWt_ != NULL;
-  // Scatter the edge weights so that, after INVERT, they can be
-  // gathered according to the new permutation of basicIndex
-  if (handle_edge_weights) {
-    analysis_.simplexTimerStart(PermWtClock);
-    for (HighsInt i = 0; i < lp_.num_row_; i++)
-      workEdWtFull_[basicIndex[i]] = workEdWt_[i];
-    analysis_.simplexTimerStop(PermWtClock);
-  }
+  // permuted according to INVERT. Scatter the edge weights so that,
+  // after INVERT, they can be gathered according to the new
+  // permutation of basicIndex
+  analysis_.simplexTimerStart(PermWtClock);
+  for (HighsInt i = 0; i < lp_.num_row_; i++)
+    scattered_dual_edge_weight_[basicIndex[i]] = dual_edge_weight_[i];
+  analysis_.simplexTimerStop(PermWtClock);
 
   // Call computeFactor to perform INVERT
   HighsInt rank_deficiency = computeFactor();
@@ -1883,7 +1860,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
         "HEkk::getNonsingularInverse Rank_deficiency: solve %d (Iteration "
         "%d)\n",
         (int)debug_solve_call_num_, (int)iteration_count_);
-  fflush(stdout);
+
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
@@ -1908,7 +1885,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     //
     // Get the last nonsingular basis - so long as there is one
     uint64_t deficient_hash = basis_.hash;
-    if (!getBacktrackingBasis(workEdWtFull_)) return false;
+    if (!getBacktrackingBasis()) return false;
     // Record that backtracking is taking place
     info_.backtracking_ = true;
     visited_basis_.clear();
@@ -1935,55 +1912,46 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
                 new_simplex_update_limit);
   } else {
     // Current basis is full rank so save it
-    putBacktrackingBasis(basicIndex_before_compute_factor, workEdWtFull_);
+    putBacktrackingBasis(basicIndex_before_compute_factor);
     // Indicate that backtracking is not taking place
     info_.backtracking_ = false;
     // Reset the update limit in case this is the first successful
     // inversion after backtracking
     info_.update_limit = options_->simplex_update_limit;
   }
-  if (handle_edge_weights) {
-    // Gather the edge weights according to the permutation of
-    // basicIndex after INVERT
-    analysis_.simplexTimerStart(PermWtClock);
-    for (HighsInt i = 0; i < lp_.num_row_; i++)
-      workEdWt_[i] = workEdWtFull_[basicIndex[i]];
-    analysis_.simplexTimerStop(PermWtClock);
-  }
+  // Gather the edge weights according to the permutation of
+  // basicIndex after INVERT
+  analysis_.simplexTimerStart(PermWtClock);
+  for (HighsInt i = 0; i < lp_.num_row_; i++)
+    dual_edge_weight_[i] = scattered_dual_edge_weight_[basicIndex[i]];
+  analysis_.simplexTimerStop(PermWtClock);
   return true;
 }
 
-bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
+bool HEkk::getBacktrackingBasis() {
   if (!info_.valid_backtracking_basis_) return false;
   basis_ = info_.backtracking_basis_;
   info_.costs_shifted = info_.backtracking_basis_costs_shifted_;
   info_.costs_perturbed = info_.backtracking_basis_costs_perturbed_;
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
-  const bool handle_edge_weights = scattered_edge_weights != NULL;
-  if (handle_edge_weights) {
-    for (HighsInt iVar = 0; iVar < num_tot; iVar++)
-      scattered_edge_weights[iVar] =
-          info_.backtracking_basis_edge_weights_[iVar];
-  }
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++)
+    scattered_dual_edge_weight_[iVar] =
+        info_.backtracking_basis_edge_weight_[iVar];
   return true;
 }
 
 void HEkk::putBacktrackingBasis() {
   const vector<HighsInt>& basicIndex = basis_.basicIndex_;
-  const bool handle_edge_weights = workEdWt_ != NULL;
-  if (handle_edge_weights) {
-    analysis_.simplexTimerStart(PermWtClock);
-    for (HighsInt i = 0; i < lp_.num_row_; i++)
-      workEdWtFull_[basicIndex[i]] = workEdWt_[i];
-    analysis_.simplexTimerStop(PermWtClock);
-  }
-  putBacktrackingBasis(basicIndex, workEdWtFull_);
+  analysis_.simplexTimerStart(PermWtClock);
+  for (HighsInt i = 0; i < lp_.num_row_; i++)
+    scattered_dual_edge_weight_[basicIndex[i]] = dual_edge_weight_[i];
+  analysis_.simplexTimerStop(PermWtClock);
+  putBacktrackingBasis(basicIndex);
 }
 
 void HEkk::putBacktrackingBasis(
-    const vector<HighsInt>& basicIndex_before_compute_factor,
-    double* scattered_edge_weights) {
+    const vector<HighsInt>& basicIndex_before_compute_factor) {
   info_.valid_backtracking_basis_ = true;
   info_.backtracking_basis_ = basis_;
   info_.backtracking_basis_.basicIndex_ = basicIndex_before_compute_factor;
@@ -1992,12 +1960,9 @@ void HEkk::putBacktrackingBasis(
   info_.backtracking_basis_bounds_perturbed_ = info_.bounds_perturbed;
   info_.backtracking_basis_workShift_ = info_.workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
-  const bool handle_edge_weights = scattered_edge_weights != NULL;
-  if (handle_edge_weights) {
-    for (HighsInt iVar = 0; iVar < num_tot; iVar++)
-      info_.backtracking_basis_edge_weights_[iVar] =
-          scattered_edge_weights[iVar];
-  }
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++)
+    info_.backtracking_basis_edge_weight_[iVar] =
+        scattered_dual_edge_weight_[iVar];
 }
 
 void HEkk::computePrimalObjectiveValue() {
@@ -2135,6 +2100,220 @@ HighsInt HEkk::computeFactor() {
   info_.update_count = 0;
 
   return rank_deficiency;
+}
+
+void HEkk::computeDualSteepestEdgeWeights(const bool initial) {
+  if (analysis_.analyse_simplex_time) {
+    analysis_.simplexTimerStart(SimplexIzDseWtClock);
+    analysis_.simplexTimerStart(DseIzClock);
+  }
+  const HighsInt num_row = lp_.num_row_;
+  HVector row_ep;
+  row_ep.setup(num_row);
+  assert(dual_edge_weight_.size() >= num_row);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    dual_edge_weight_[iRow] = computeDualSteepestEdgeWeight(iRow, row_ep);
+  if (analysis_.analyse_simplex_time) {
+    analysis_.simplexTimerStop(SimplexIzDseWtClock);
+    analysis_.simplexTimerStop(DseIzClock);
+    if (initial) {
+      double IzDseWtTT = analysis_.simplexTimerRead(SimplexIzDseWtClock);
+      highsLogDev(options_->log_options, HighsLogType::kDetailed,
+                  "Computed %" HIGHSINT_FORMAT " initial DSE weights in %gs\n",
+                  num_row, IzDseWtTT);
+    }
+  }
+}
+
+double HEkk::computeDualSteepestEdgeWeight(const HighsInt iRow,
+                                           HVector& row_ep) {
+  row_ep.clear();
+  row_ep.count = 1;
+  row_ep.index[0] = iRow;
+  row_ep.array[iRow] = 1;
+  row_ep.packFlag = false;
+  simplex_nla_.btranInScaledSpace(row_ep, info_.row_ep_density,
+                                  analysis_.pointer_serial_factor_clocks);
+  const double local_row_ep_density = (1.0 * row_ep.count) / lp_.num_row_;
+  updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
+  return row_ep.norm2();
+}
+
+// Update the DSE weights
+void HEkk::updateDualSteepestEdgeWeights(
+    const HighsInt row_out, const HighsInt variable_in, const HVector* column,
+    const double new_pivotal_edge_weight, const double Kai,
+    const double* dual_steepest_edge_array) {
+  analysis_.simplexTimerStart(DseUpdateWeightClock);
+
+  const HighsInt num_row = lp_.num_row_;
+  const HighsInt column_count = column->count;
+  const HighsInt* variable_index = &column->index[0];
+  const double* column_array = &column->array[0];
+
+  const double col_aq_scale = simplex_nla_.variableScaleFactor(variable_in);
+  const double col_ap_scale = simplex_nla_.basicColScaleFactor(row_out);
+
+  const bool DSE_check = false;
+  HVector alt_dual_steepest_edge_column;
+  HVector alt_pivotal_column;
+  if (DSE_check) {
+    // Compute the DSE column otherwise to check
+    alt_dual_steepest_edge_column.setup(num_row);
+    alt_dual_steepest_edge_column.clear();
+    alt_dual_steepest_edge_column.count = 1;
+    alt_dual_steepest_edge_column.index[0] = row_out;
+    alt_dual_steepest_edge_column.array[row_out] = 1;
+    alt_dual_steepest_edge_column.packFlag = false;
+    simplex_nla_.btranInScaledSpace(alt_dual_steepest_edge_column,
+                                    info_.row_ep_density,
+                                    analysis_.pointer_serial_factor_clocks);
+    simplex_nla_.ftranInScaledSpace(alt_dual_steepest_edge_column,
+                                    info_.row_DSE_density,
+                                    analysis_.pointer_serial_factor_clocks);
+    // Compute the pivotal column in the scaled space otherwise to check
+    //
+    // Need \bar{B}^{-1}(R.aq.cq) = \bar{B}^{-1}R.(cq.aq)
+    //
+    alt_pivotal_column.setup(num_row);
+    alt_pivotal_column.clear();
+    //
+    // Determine cq, and apply it in forming RHS
+    //
+    lp_.a_matrix_.collectAj(alt_pivotal_column, variable_in, col_aq_scale);
+    simplex_nla_.applyBasisMatrixRowScale(alt_pivotal_column);
+    simplex_nla_.ftranInScaledSpace(alt_pivotal_column, info_.col_aq_density,
+                                    analysis_.pointer_serial_factor_clocks);
+    double max_dse_column_error = 0;
+    double sum_dse_column_error = 0;
+    HighsInt num_dse_column_error = 0;
+    const double dse_column_value_tolerance = 1e-2;
+    const double dse_column_error_tolerance = 1e-4;
+    HighsInt DSE_array_count = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      const double dual_steepest_edge_array_value =
+          dual_steepest_edge_array[iRow] / col_ap_scale;
+      if (dual_steepest_edge_array_value) DSE_array_count++;
+      if (std::abs(dual_steepest_edge_array_value) >
+              dse_column_value_tolerance ||
+          std::abs(alt_dual_steepest_edge_column.array[iRow]) >
+              dse_column_value_tolerance) {
+        const double dse_column_error =
+            std::abs(alt_dual_steepest_edge_column.array[iRow] -
+                     dual_steepest_edge_array_value) /
+            std::max(1.0, std::abs(dual_steepest_edge_array_value));
+        sum_dse_column_error += dse_column_error;
+        if (dse_column_error > dse_column_error_tolerance) {
+          max_dse_column_error =
+              std::max(dse_column_error, max_dse_column_error);
+          num_dse_column_error++;
+        }
+      }
+    }
+    if (max_dse_column_error > dse_column_error_tolerance) {
+      printf(
+          "HEkk::updateDualSteepestEdgeWeights: Iter %2d has num / max / sum = "
+          "%d / %g / %g DSE column errors exceeding = %g\n",
+          (int)iteration_count_, (int)num_dse_column_error,
+          max_dse_column_error, sum_dse_column_error,
+          dse_column_error_tolerance);
+      printf("DSE column count alt = %d; og = %d)\n",
+             (int)alt_dual_steepest_edge_column.count, (int)DSE_array_count);
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+        const double dual_steepest_edge_array_value =
+            dual_steepest_edge_array[iRow] / col_ap_scale;
+        if (alt_dual_steepest_edge_column.array[iRow] != 0 &&
+            dual_steepest_edge_array_value != 0) {
+          const double dse_column_error =
+              std::abs(alt_dual_steepest_edge_column.array[iRow] -
+                       dual_steepest_edge_array_value) /
+              std::max(1.0, std::abs(dual_steepest_edge_array_value));
+          if (dse_column_error > 1e-10)
+            printf(
+                "Row %4d: DSE column (alt = %11.4g; og = %11.4g) difference "
+                "%10.4g\n",
+                (int)iRow, alt_dual_steepest_edge_column.array[iRow],
+                dual_steepest_edge_array_value, dse_column_error);
+        }
+      }
+      fflush(stdout);
+      assert(max_dse_column_error < dse_column_error_tolerance);
+    }
+  }
+
+  if ((HighsInt)dual_edge_weight_.size() < num_row) {
+    printf(
+        "HEkk::updateDualSteepestEdgeWeights solve %d: "
+        "dual_edge_weight_.size() = %d < %d\n",
+        (int)debug_solve_call_num_, (int)dual_edge_weight_.size(),
+        (int)num_row);
+    fflush(stdout);
+  }
+  assert(dual_edge_weight_.size() >= num_row);
+  HighsInt to_entry;
+  const bool use_row_indices =
+      simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
+  const bool convert_to_scaled_space = !simplex_in_scaled_space_;
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
+    double aa_iRow = column_array[iRow];
+    if (!aa_iRow) continue;
+    double dual_steepest_edge_array_value = dual_steepest_edge_array[iRow];
+    if (convert_to_scaled_space) {
+      double basic_col_scale = simplex_nla_.basicColScaleFactor(iRow);
+      aa_iRow /= basic_col_scale;
+      aa_iRow *= col_aq_scale;
+      dual_steepest_edge_array_value /= col_ap_scale;
+    }
+    if (DSE_check) {
+      const double pivotal_column_error =
+          std::abs(aa_iRow - alt_pivotal_column.array[iRow]);
+      if (pivotal_column_error > 1e-4) {
+        printf(
+            "HEkk::updateDualSteepestEdgeWeights Row %2d of pivotal column has "
+            "error %10.4g\n",
+            (int)iRow, pivotal_column_error);
+        fflush(stdout);
+      }
+      assert(pivotal_column_error < 1e-4);
+    }
+    dual_edge_weight_[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
+                                          Kai * dual_steepest_edge_array_value);
+    dual_edge_weight_[iRow] =
+        std::max(kMinDualSteepestEdgeWeight, dual_edge_weight_[iRow]);
+  }
+  analysis_.simplexTimerStop(DseUpdateWeightClock);
+}
+
+// Update the Devex weights
+void HEkk::updateDualDevexWeights(const HVector* column,
+                                  const double new_pivotal_edge_weight) {
+  analysis_.simplexTimerStart(DevexUpdateWeightClock);
+
+  const HighsInt num_row = lp_.num_row_;
+  const HighsInt column_count = column->count;
+  const HighsInt* variable_index = &column->index[0];
+  const double* column_array = &column->array[0];
+
+  if ((HighsInt)dual_edge_weight_.size() < num_row) {
+    printf(
+        "HEkk::updateDualDevexWeights solve %d: "
+        "dual_edge_weight_.size() = %d < %d\n",
+        (int)debug_solve_call_num_, (int)dual_edge_weight_.size(),
+        (int)num_row);
+    fflush(stdout);
+  }
+  assert(dual_edge_weight_.size() >= num_row);
+  HighsInt to_entry;
+  const bool use_row_indices =
+      simplex_nla_.sparseLoopStyle(column_count, num_row, to_entry);
+  for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+    const HighsInt iRow = use_row_indices ? variable_index[iEntry] : iEntry;
+    const double aa_iRow = column_array[iRow];
+    dual_edge_weight_[iRow] = max(dual_edge_weight_[iRow],
+                                  new_pivotal_edge_weight * aa_iRow * aa_iRow);
+  }
+  analysis_.simplexTimerStop(DevexUpdateWeightClock);
 }
 
 void HEkk::resetSyntheticClock() {
@@ -3270,20 +3449,6 @@ void HEkk::computeSimplexLpDualInfeasible() {
   }
 }
 
-bool HEkk::sparseLoopStyle(const HighsInt count, const HighsInt dim,
-                           HighsInt& to_entry) {
-  // Parameter to decide whether to use just the values in a HVector, or
-  // use the indices of their nonzeros
-  const double density_for_indexing = 0.4;
-  const bool use_indices = count >= 0 && count < density_for_indexing * dim;
-  if (use_indices) {
-    to_entry = count;
-  } else {
-    to_entry = dim;
-  }
-  return use_indices;
-}
-
 void HEkk::invalidatePrimalMaxSumInfeasibilityRecord() {
   info_.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
@@ -3331,10 +3496,7 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
   if (time_report_) timeReporting(1);
   // Note that in timeReporting(1), analysis_.analyse_simplex_time
   // reverts to its value given by options_
-  if (analysis_.analyse_simplex_time) {
-    analysis_.reportSimplexTimer();
-    assert(!analysis_.analyse_simplex_time);
-  }
+  if (analysis_.analyse_simplex_time) analysis_.reportSimplexTimer();
 
   return return_status;
 }
@@ -3372,6 +3534,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     invalidatePrimalInfeasibilityRecord();
     invalidateDualInfeasibilityRecord();
   }
+  // The simplex algorithm used on exit should be set
+  assert(exit_algorithm_ != SimplexAlgorithm::kNone);
   switch (model_status_) {
     case HighsModelStatus::kOptimal: {
       if (info_.num_primal_infeasibilities) {
@@ -3448,12 +3612,11 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       break;
     }
     default: {
-      std::string algorithm_name = "primal";
-      if (exit_algorithm_ == SimplexAlgorithm::kDual) algorithm_name = "dual";
-      highsLogDev(options_->log_options, HighsLogType::kError,
-                  "EKK %s simplex solver returns status %s\n",
-                  algorithm_name.c_str(),
-                  utilModelStatusToString(model_status_).c_str());
+      highsLogDev(
+          options_->log_options, HighsLogType::kError,
+          "EKK %s simplex solver returns status %s\n",
+          exit_algorithm_ == SimplexAlgorithm::kPrimal ? "primal" : "dual",
+          utilModelStatusToString(model_status_).c_str());
       return HighsStatus::kError;
       break;
     }
@@ -3614,12 +3777,31 @@ void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
   assert(this->status_.has_invert);
   frozen_basis_id =
       this->simplex_nla_.freeze(this->basis_, info_.col_aq_density);
+  FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
+  if (this->status_.has_dual_steepest_edge_weights) {
+    // Copy the dual edge weights
+    frozen_basis.dual_edge_weight_ = this->dual_edge_weight_;
+  } else {
+    // Clear to indicate no weights
+    frozen_basis.dual_edge_weight_.clear();
+  }
 }
 
 HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   // Check that the ID passed is valid
   const bool valid_id = this->simplex_nla_.frozenBasisIdValid(frozen_basis_id);
   if (!valid_id) return HighsStatus::kError;
+  // Copy any dual edge weights now - because the frozen basis is
+  // cleared in simplex_nla_.unfreeze
+  FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
+  if (frozen_basis.dual_edge_weight_.size()) {
+    this->dual_edge_weight_ = frozen_basis.dual_edge_weight_;
+  } else {
+    this->status_.has_dual_steepest_edge_weights = false;
+  }
+  // Need to identify now whether there will be an invertible
+  // representation to use after unfreezing this basis, as the
+  // evidence is destroyed by the call to unfreeze()
   const bool will_have_invert =
       this->simplex_nla_.frozenBasisHasInvert(frozen_basis_id);
   this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
@@ -3632,14 +3814,40 @@ HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
   this->status_.has_invert = will_have_invert;
   // If there's no valid factorization, then there cannot be a fresh one
   if (!this->status_.has_invert) this->status_.has_fresh_invert = false;
-  // Check for consistency
-  if (!this->simplex_nla_.update_.valid_) assert(!this->status_.has_invert);
   return HighsStatus::kOk;
 }
 
 HighsStatus HEkk::frozenBasisAllDataClear() {
   return simplex_nla_.frozenBasisAllDataClear() ? HighsStatus::kOk
                                                 : HighsStatus::kError;
+}
+
+void HEkk::putIterate() {
+  assert(this->status_.has_invert);
+  SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
+  this->simplex_nla_.putInvert();
+  iterate.basis_ = this->basis_;
+  if (this->status_.has_dual_steepest_edge_weights) {
+    // Copy the dual edge weights
+    iterate.dual_edge_weight_ = this->dual_edge_weight_;
+  } else {
+    // Clear to indicate no weights
+    iterate.dual_edge_weight_.clear();
+  }
+}
+
+HighsStatus HEkk::getIterate() {
+  SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
+  if (!iterate.valid_) return HighsStatus::kError;
+  this->simplex_nla_.getInvert();
+  this->basis_ = iterate.basis_;
+  if (iterate.dual_edge_weight_.size()) {
+    this->dual_edge_weight_ = iterate.dual_edge_weight_;
+  } else {
+    this->status_.has_dual_steepest_edge_weights = false;
+  }
+  this->status_.has_invert = true;
+  return HighsStatus::kOk;
 }
 
 double HEkk::factorSolveError() {
@@ -3841,6 +4049,13 @@ void HEkk::unapplyTabooVariableIn(vector<double>& values) {
       values[bad_basis_change_[iX].variable_in] =
           bad_basis_change_[iX].save_value;
   }
+}
+
+bool HEkk::logicalBasis() const {
+  for (HighsInt iRow = 0; iRow < this->lp_.num_row_; iRow++) {
+    if (basis_.basicIndex_[iRow] < this->lp_.num_col_) return false;
+  }
+  return true;
 }
 
 bool HEkk::proofOfPrimalInfeasibility() {

@@ -13,12 +13,13 @@ include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
 set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
-project(HIGHS VERSION 1.1 LANGUAGES CXX C)
-set(HIGHS_VERSION_PATCH 1)
-
+# set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
+
+project(HIGHS VERSION 1.2 LANGUAGES CXX C)
+set(HIGHS_VERSION_PATCH 0)
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -296,14 +297,6 @@ if(NOT MSVC)
 endif()
 
 set(IPX_ON ON)
-
-option(GAMS_ROOT "GAMS root folder." "OFF")
-if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
-    message(STATUS "GAMS root folder set: " ${GAMS_ROOT})
-    set(GAMS_FOUND ON)
-else ()
-    set(GAMS_FOUND OFF)
-endif ()
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
