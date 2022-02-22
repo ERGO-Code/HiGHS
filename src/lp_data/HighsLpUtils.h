@@ -58,6 +58,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options);
+bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
+                               const std::vector<double> col_value);
+
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
 void scaleLp(const HighsOptions& options, HighsLp& lp);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,

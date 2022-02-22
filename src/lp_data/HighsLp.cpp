@@ -136,6 +136,8 @@ void HighsLp::clear() {
   this->clearScale();
   this->is_scaled_ = false;
   this->is_moved_ = false;
+
+  this->mods_.clear();
 }
 
 void HighsLp::clearScale() {
@@ -209,4 +211,32 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp lp) {
   *this = std::move(lp);
   this->unapplyScale();
   assert(this->is_moved_ == false);
+}
+
+void HighsLp::unapplyMods() {
+  std::vector<HighsInt>& upper_bound_index =
+      this->mods_.save_semi_variable_upper_bound_index;
+  std::vector<double>& upper_bound_value =
+      this->mods_.save_semi_variable_upper_bound_value;
+  const HighsInt num_upper_bound = upper_bound_index.size();
+  if (!num_upper_bound) {
+    assert(!upper_bound_value.size());
+    return;
+  }
+  for (HighsInt k = 0; k < num_upper_bound; k++) {
+    HighsInt iCol = upper_bound_index[k];
+    this->col_upper_[iCol] = upper_bound_value[k];
+  }
+  this->mods_.clear();
+}
+
+void HighsLpMods::clear() {
+  this->save_semi_variable_upper_bound_index.clear();
+  this->save_semi_variable_upper_bound_value.clear();
+}
+
+bool HighsLpMods::isClear() {
+  if (this->save_semi_variable_upper_bound_index.size()) return false;
+  if (this->save_semi_variable_upper_bound_value.size()) return false;
+  return true;
 }

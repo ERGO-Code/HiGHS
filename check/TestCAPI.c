@@ -245,24 +245,10 @@ void minimal_api_mip() {
 					 integrality,
 					 colvalue, rowvalue,
 					 &modelstatus);
-
   // Should return error
   assert( return_status == -1 );
 
-  // Non-empty integrality for a continuous problem yields a warning
-  integrality[numcol-1] = 0;
-
-  return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
-					 sense, offset, colcost, collower, colupper, rowlower, rowupper,
-					 astart, aindex, avalue,
-					 integrality,
-					 colvalue, rowvalue,
-					 &modelstatus);
-
-  // Should return warning
-  assert( return_status == 1 );
-
-  // Genuine integrality is fine
+  // Correct integrality
   integrality[numcol-1] = 1;
 
   return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
@@ -271,7 +257,6 @@ void minimal_api_mip() {
 					 integrality,
 					 colvalue, rowvalue,
 					 &modelstatus);
-
   // Should return OK
   assert( return_status == 0 );
 
