@@ -163,7 +163,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   if (type != HighsInfoType::kInt64) {
     highsLogUser(
         options.log_options, HighsLogType::kError,
-        "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
+        "getInfoValue: Info \"%s\" requires value of type %s, not int64_t\n",
         name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;
   }
@@ -184,7 +184,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   if (type != HighsInfoType::kInt) {
     highsLogUser(
         options.log_options, HighsLogType::kError,
-        "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
+        "getInfoValue: Info \"%s\" requires value of type %s, not HighsInt\n",
         name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;
   }
