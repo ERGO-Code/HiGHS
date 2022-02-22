@@ -309,11 +309,11 @@ HighsInt Highs_resetOptions(void* highs) {
   return (HighsInt)((Highs*)highs)->resetOptions();
 }
 
-HighsInt Highs_writeOptions(void* highs, const char* filename) {
+HighsInt Highs_writeOptions(const void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->writeOptions(filename);
 }
 
-HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename) {
+HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->writeOptions(filename, true);
 }
 
@@ -324,6 +324,11 @@ HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
 
 HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
                                   double* value) {
+  return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
+}
+
+HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
+                                 int64_t* value) {
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 

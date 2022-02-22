@@ -4,6 +4,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
+const double inf = kHighsInf;
 
 // No commas in test case name.
 TEST_CASE("LP-dimension-validation", "[highs_data]") {
@@ -361,12 +362,52 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(check_value == to_value);
 }
 
+TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
+  HighsStatus return_status;
+  std::string filename;
+  Highs highs;
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 1;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1e300};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {inf};
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  // Reading a model with a large value results in HighsStatus::kError
+  return_status = highs.passModel(lp);
+  if (dev_run)
+    printf("highs.passModel(filename); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kError);
+  // Solving a model with a large value results in HighsStatus::kError
+  return_status = highs.run();
+  if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kError);
+  lp.a_matrix_.value_[0] = 1e-300;
+  return_status = highs.passModel(lp);
+  if (dev_run)
+    printf("highs.passModel(filename); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kWarning);
+  // Solving a model with a small value results in HighsStatus::kOk
+  return_status = highs.run();
+  if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
+  REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
-  highs.readModel(filename);
   if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
   const HighsInt change_coefficient_col = 4;
   const HighsInt zero_coefficient_row = 4;
   const HighsInt add_coefficient_row = 5;

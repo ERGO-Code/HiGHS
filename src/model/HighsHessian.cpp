@@ -49,7 +49,7 @@ HighsInt HighsHessian::numNz() const {
 void HighsHessian::print() const {
   HighsInt num_nz = this->numNz();
   printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
-         " nonzeros\n",
+         " entries\n",
          dim_, num_nz);
   printf("Start; Index; Value of sizes %d; %d; %d\n", (int)this->start_.size(),
          (int)this->index_.size(), (int)this->value_.size());

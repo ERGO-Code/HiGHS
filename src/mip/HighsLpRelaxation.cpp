@@ -483,7 +483,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;
+    bool removeValue = std::fabs(val) <= mipsolver.mipdata_->feastol;
 
     if (!removeValue &&
         (globaldomain.col_lower_[i] == globaldomain.col_upper_[i] ||
@@ -548,6 +548,7 @@ void HighsLpRelaxation::storeDualInfProof() {
   dualproofbuffer.resize(numrow);
 
   lpsolver.getDualRay(hasdualproof, dualproofbuffer.data());
+  assert(hasdualproof);
   std::vector<double>& dualray = dualproofbuffer;
 
   HighsCDouble upper = 0.0;
@@ -617,10 +618,16 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (removeValue) {
       if (val < 0) {
-        if (globaldomain.col_upper_[i] == kHighsInf) return;
+        if (globaldomain.col_upper_[i] == kHighsInf) {
+          hasdualproof = false;
+          return;
+        }
         upper -= val * globaldomain.col_upper_[i];
       } else {
-        if (globaldomain.col_lower_[i] == -kHighsInf) return;
+        if (globaldomain.col_lower_[i] == -kHighsInf) {
+          hasdualproof = false;
+          return;
+        }
         upper -= val * globaldomain.col_lower_[i];
       }
 
@@ -692,7 +699,7 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
                                             double& rhs) {
   if (!hasdualproof) return false;
 
-  // assert(checkDualProof());
+  assert(std::isfinite(dualproofrhs));
 
   inds = dualproofinds;
   vals = dualproofvals;
@@ -709,8 +716,8 @@ void HighsLpRelaxation::recoverBasis() {
 
 void HighsLpRelaxation::setObjectiveLimit(double objlim) {
   double offset;
-  if (mipsolver.mipdata_->objintscale != 0.0)
-    offset = 0.5 / mipsolver.mipdata_->objintscale;
+  if (mipsolver.mipdata_->objectiveFunction.isIntegral())
+    offset = 0.5 / mipsolver.mipdata_->objectiveFunction.integralScale();
   else
     offset = std::max(1000.0 * mipsolver.mipdata_->feastol,
                       std::abs(objlim) * kHighsTiny);

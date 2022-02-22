@@ -5,6 +5,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
+const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -105,7 +106,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
   HighsModel local_model;
   HighsLp& lp = local_model.lp_;
   HighsHessian& hessian = local_model.hessian_;
-  const double inf = kHighsInf;
 
   // Oscar's edge case
   //
@@ -251,7 +251,6 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   HighsModel local_model;
   HighsLp& lp = local_model.lp_;
   HighsHessian& hessian = local_model.hessian_;
-  const double inf = kHighsInf;
   // Start with an unconstrained QP
   lp.model_name_ = "qjh";
   lp.num_col_ = 3;
@@ -347,7 +346,56 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   }
 }
 
-TEST_CASE("test-semi-definite", "[qpsolver]") {
+TEST_CASE("test-max-negative-definite", "[qpsolver]") {
+  HighsLp lp;
+  HighsHessian hessian;
+  // Construct a QP with negative definite Hessian
+  const double col_lower = 0;
+  const double col_upper = inf;  // 10.0;
+
+  lp.model_name_ = "max-negative-definite";
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.offset_ = -1.0;
+  lp.col_cost_ = {1.0, 1.0, 2.0};
+  lp.col_lower_ = {col_lower, col_lower, col_lower};
+  lp.col_upper_ = {col_upper, col_upper, col_upper};
+  lp.row_lower_ = {4};
+  lp.row_upper_ = {inf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 3};
+  lp.a_matrix_.index_ = {0, 1, 2};
+  lp.a_matrix_.value_ = {1.0, 1.0, 1.0};
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 2, 3, 4};
+  hessian.index_ = {0, 2, 1, 2};
+  hessian.value_ = {-2.0, -1, -1.0, -1};
+  if (dev_run) {
+    printf("\nNegative definite Hessian\n");
+    hessian.print();
+  }
+  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  const double required_objective_function_value = 1.25;
+  REQUIRE(fabs(highs.getObjectiveValue() - required_objective_function_value) <
+          double_equal_tolerance);
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(fabs(solution.col_value[0] - 0.0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - 1.5) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[2] - 2.5) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_dual[0] + 1.0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.row_dual[0] + 0.5) < double_equal_tolerance);
+}
+
+TEST_CASE("test-semi-definite0", "[qpsolver]") {
   HighsStatus return_status;
   HighsModelStatus model_status;
   double required_objective_function_value;
@@ -355,7 +403,6 @@ TEST_CASE("test-semi-definite", "[qpsolver]") {
   HighsModel local_model;
   HighsLp& lp = local_model.lp_;
   HighsHessian& hessian = local_model.hessian_;
-  const double inf = kHighsInf;
   // Construct a QP with positive semi-definite Hessian
   const double col_lower = 0;
   const double col_upper = inf;  // 10.0;
@@ -366,8 +413,6 @@ TEST_CASE("test-semi-definite", "[qpsolver]") {
   lp.col_cost_ = {1.0, 1.0, 2.0};
   lp.col_lower_ = {col_lower, col_lower, col_lower};
   lp.col_upper_ = {col_upper, col_upper, col_upper};
-  lp.sense_ = ObjSense::kMinimize;
-  lp.offset_ = 0;
   lp.row_lower_ = {2};
   lp.row_upper_ = {inf};
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
@@ -389,4 +434,46 @@ TEST_CASE("test-semi-definite", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+}
+
+TEST_CASE("test-semi-definite1", "[qpsolver]") {
+  HighsStatus return_status;
+  HighsModelStatus model_status;
+  double required_objective_function_value;
+
+  HighsLp lp;
+  HighsHessian hessian;
+
+  lp.model_name_ = "semi-definite";
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-2.0, 0.0};
+  lp.col_lower_ = {-inf, -inf};
+  lp.col_upper_ = {inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 2, 3};
+  hessian.index_ = {0, 1, 1};
+  hessian.value_ = {1.0, -1.0, 1.0};
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  const HighsSolution& solution = highs.getSolution();
+  const double objective_function_value = highs.getObjectiveValue();
+  REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - 1) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
 }

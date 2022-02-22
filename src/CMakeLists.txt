@@ -125,6 +125,7 @@ set(sources
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsObjectiveFunction.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
@@ -224,6 +225,7 @@ set(headers
     mip/HighsMipSolver.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsObjectiveFunction.h
     mip/HighsPathSeparator.h
     mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h
@@ -427,37 +429,51 @@ install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
-    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
-    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+        #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
-    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+        #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
-    #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
-    #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
-    target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
+        #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+        #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    target_compile_options(libipx PRIVATE "-Wno-unused-variable")
-    target_compile_options(libipx PRIVATE "-Wno-sign-compare")
-    #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
+        target_compile_options(libipx PRIVATE "-Wno-unused-variable")
+        target_compile_options(libipx PRIVATE "-Wno-sign-compare")
+        #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
     endif()
 
-    install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
+    if (WIN32)
+        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
+            LIBRARY DESTINATION bin
+            ARCHIVE DESTINATION lib
+            INCLUDES DESTINATION include)
+    else()
+        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
             INCLUDES DESTINATION include)
+    endif()
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs libipx libbasiclu
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 else()
-    install(TARGETS libhighs EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
+    if (WIN32)
+        install(TARGETS libhighs EXPORT highs-targets
+                LIBRARY DESTINATION bin
+                ARCHIVE DESTINATION lib
+                INCLUDES DESTINATION include)
+    else()
+        install(TARGETS libhighs EXPORT highs-targets
+                LIBRARY DESTINATION lib
+                ARCHIVE DESTINATION lib
+                INCLUDES DESTINATION include)
+    endif()
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs 
@@ -556,6 +572,7 @@ target_sources(libhighs PRIVATE
     mip/HighsPrimalHeuristics.cpp
     mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsObjectiveFunction.cpp
     mip/HighsRedcostFixing.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
@@ -670,6 +687,7 @@ set(headers_fast_build_
     mip/HighsMipSolver.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsObjectiveFunction.h
     mip/HighsPathSeparator.h
     mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h

@@ -326,6 +326,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
+  double default_semi_variable_upper_bound;
   double simplex_initial_condition_tolerance;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
@@ -856,6 +857,12 @@ class HighsOptions : public HighsOptionsStruct {
         "No unnecessary refactorization on simplex rebuild", advanced,
         &no_unnecessary_rebuild_refactor, true);
     records.push_back(record_bool);
+
+    record_double = new OptionRecordDouble(
+        "default_semi_variable_upper_bound",
+        "Default upper bound for semi-variables with excessive upper bound",
+        advanced, &default_semi_variable_upper_bound, 0.0, 1e3, 1e6);
+    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "simplex_initial_condition_tolerance",

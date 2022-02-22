@@ -485,6 +485,18 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
                                   double* value);
 
 /**
+ * Get an int64-valued info value.
+ *
+ * @param highs a pointer to the HiGHS model object
+ * @param info  the name of the info
+ * @param value a reference to a int64 that the result will be stored in
+ *
+ * @returns A non-zero return value indicates that a problem occured
+ */
+HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
+                                 int64_t* value);
+
+/**
  * Get the primal and dual solution from an optimized model.
  *
  * @param highs     a pointer to the HiGHS model object

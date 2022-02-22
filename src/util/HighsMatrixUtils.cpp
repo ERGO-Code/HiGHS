@@ -232,7 +232,7 @@ HighsStatus assessMatrix(
     }
   }
   if (num_large_values) {
-    highsLogUser(log_options, HighsLogType::kWarning,
+    highsLogUser(log_options, HighsLogType::kError,
                  "%s matrix packed vector contains %" HIGHSINT_FORMAT
                  " |values| in [%g, %g] greater than %g\n",
                  matrix_name.c_str(), num_large_values, min_large_value,

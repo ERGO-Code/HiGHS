@@ -3,13 +3,13 @@
 [![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
-linear programming (LP) problems of the form
+linear optimization problems of the form
 
-    Minimize c^Tx subject to L <= Ax <= U; l <= x <= u
+    Minimize (1/2) x^TQx + c^Tx subject to L <= Ax <= U; l <= x <= u
 
-and mixed integer programming (MIP) problems of the same form, for whch some of the variables must take integer values. It is mainly written in C++ with OpenMP directives, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. Note that HiGHS requires (at least) version 4.9 of the GNU compiler. It has no third-party dependencies.
+where Q must be positive semi-definite and, if Q is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. Note that HiGHS requires (at least) version 4.9 of the GNU compiler. It has no third-party dependencies.
 
-HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier. The MIP solver has been written by Leona Gottwald.
+HiGHS has primal and dual revised simplex solvers, originally written by Qi Huangfu and further developed by Julian Hall. It also has an interior point solver for LP written by Lukas Schork, an active set solver for QP written by Michael Feldmeier, and a MIP solver written by Leona Gottwald. Other features have been added by Julian Hall and Ivet Galabova, who manages the software engineering of HiGHS and interfaces to C, C#, FORTRAN, Julia and Python.
 
 Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
@@ -33,20 +33,31 @@ The rest of this file gives brief documentation for HiGHS. Comprehensive documen
 Download
 --------
 
-Precompiled executables and libraries are available for a variety of platforms at https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases
+Precompiled static executables are available for a variety of platforms at:
+https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
-**Notes**
+**Installation instructions**
 
- * For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` file
- * For M1 macOS users: choose the `aarch64-apple-darwin.tar.gz` file.
+To install, download the appropriate file and extract the executable located at `/bin/highs`.
 
-**Missing files**
+ * For Windows users: if in doubt, choose the file ending in `x86_64-w64-mingw32.tar.gz`
+ * For M1 macOS users: choose the file ending in `aarch64-apple-darwin.tar.gz`
+ * For Intel macOS users: choose the file ending in `x86_64-apple-darwin.tar.gz`
 
-If you encounter an error about a missing `libstdc++-6.dll` (or similar named file), download the platform-specific libraries from: 
-https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/tag/CompilerSupportLibraries-v0.5.1%2B0
-and copy the missing libraries into the same folder as the `highs` executable.
+**Shared libaries**
+
+For advanced users, precompiled executables using shared libraries are available for a variety of platforms at:
+https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases.
+
+Similar download instructions apply.
+
+ * These files link against `libstdc++`. If you do not have one installed, download the platform-specific libraries from: 
+   https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/tag/CompilerSupportLibraries-v0.5.1%2B0
+   and copy all the libraries into the same folder as the `highs` executable.
+ * Unless using the FORTRAN interface, any of versions libgfortran3-libgfortran5 should work.
+   If in doubt, Windows users should choose the `x86_64-w64-mingw32-libgfortran5.tar.gz`.
 
 Compilation
 -----------
@@ -100,46 +111,29 @@ Usage:
 Language interfaces and further documentation
 ---------------------------------------------
 
-There are HiGHS interfaces for C, C#, FORTRAN, and Python in
-HiGHS/src/interfaces, with example driver files in
-HiGHS/examples. Documentation is availble via https://www.highs.dev/, and we are happy to give a reasonable level of support via
+There are HiGHS interfaces for C, C#, FORTRAN, and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. 
+Documentation is availble via https://www.highs.dev/, and we are happy to give a reasonable level of support via
 email sent to highsopt@gmail.com.
 
 Parallel code
 -------------
 
-Parallel dual simplex is available in HiGHS under Linux, but not on
-Windows or MacOS due to issues relating to OpenMP. This situation
-should improve when parallelism in HiGHS is handled via the native C++
-instructions. However, performance gain with the simplex solver is
-unlikely to be significant. At best, speed-up is limited to the number
-of memory channels, rather than the number of cores.
+Parallel computation within HiGHS is limited to the dual simplex solver and the MIP solver.
+However, performance gain is unlikely to be significant at present. 
+For the simplex solver, at best, speed-up is limited to the number of memory channels, rather than the number of cores. 
+For the MIP solver, the ability of HiGHS to exploit multicore architectures is expected to increase significantly.
 
-If OpenMP is found by CMake, the parallel code may be used. The number of threads used at run
-time is the value of the environment variable `OMP_NUM_THREADS`. For example,
-to use HiGHS with eight threads to solve `ml.mps` execute
+HiGHS will identify the number of available threads at run time, and restrict their use to the value of the HiGHS option `threads`.
 
-    export OMP_NUM_THREADS=8
-    highs --parallel ml.mps
-
-If `OMP_NUM_THREADS` is not set, either because it has not been set or due to
-executing the command
-
-    unset OMP_NUM_THREADS
-
-then all available threads will be used.
-
-If run with `OMP_NUM_THREADS=1`, HiGHS is serial. The `--parallel` run-time
+If run with `threads=1`, HiGHS is serial. The `--parallel` run-time
 option will cause the HiGHS parallel dual simplex solver to run in serial. Although this
 could lead to better performance on some problems, performance will typically be
 diminished.
 
-When compiled with the parallel option and `OMP_NUM_THREADS>1` or unset, HiGHS
-will use multiple threads. If `OMP_NUM_THREADS` is unset, HiGHS will try to use
-all available threads, so performance may be very slow. Although the best value
-will be problem and architecture dependent, `OMP_NUM_THREADS=8` is typically a
-good choice. Although HiGHS is slower when run in parallel than in serial for
-some problems, it is typically faster in parallel.
+If multiple threads are available, and run with `threads>1`, HiGHS will use multiple threads. 
+Although the best value will be problem and architecture dependent, for the simplex solver `threads=8` is typically a
+good choice. 
+Although HiGHS is slower when run in parallel than in serial for some problems, it is typically faster in parallel.
 
 HiGHS Library
 -------------

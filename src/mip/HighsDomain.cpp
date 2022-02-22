@@ -374,7 +374,7 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
   HighsInt end = cutpool->getMatrix().getRowEnd(cut);
   const HighsInt* arindex = cutpool->getMatrix().getARindex();
   const double* arvalue = cutpool->getMatrix().getARvalue();
-  capacityThreshold_[cut] = 0.0;
+  capacityThreshold_[cut] = -domain->feastol();
   for (HighsInt i = start; i < end; ++i) {
     if (domain->col_upper_[arindex[i]] == domain->col_lower_[arindex[i]])
       continue;
@@ -383,14 +383,13 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
         domain->col_upper_[arindex[i]] - domain->col_lower_[arindex[i]];
 
     boundRange -= domain->variableType(arindex[i]) == HighsVarType::kContinuous
-                      ? std::max(0.3 * boundRange,
-                                 1000.0 * domain->mipsolver->mipdata_->feastol)
-                      : domain->mipsolver->mipdata_->feastol;
+                      ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                      : domain->feastol();
 
-    double threshold = std::abs(arvalue[i]) * boundRange;
+    double threshold = std::fabs(arvalue[i]) * boundRange;
 
-    capacityThreshold_[cut] = std::max({capacityThreshold_[cut], threshold,
-                                        domain->mipsolver->mipdata_->feastol});
+    capacityThreshold_[cut] =
+        std::max({capacityThreshold_[cut], threshold, domain->feastol()});
   }
 }
 
@@ -541,7 +540,7 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
   assert(!domain->infeasible_);
 
   if (newbound > oldbound) {
-    cutpool->getMatrix().forEachNegativeColumnEntry(
+    cutpool->getMatrix().forEachPositiveColumnEntry(
         col, [&](HighsInt row, double val) {
           domain->updateThresholdUbChange(col, newbound, val,
                                           capacityThreshold_[row]);
@@ -611,6 +610,671 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
           return true;
         });
   }
+}
+
+namespace highs {
+template <>
+struct RbTreeTraits<
+    HighsDomain::ObjectivePropagation::ObjectiveContributionTree> {
+  using KeyType = std::pair<double, HighsInt>;
+  using LinkType = HighsInt;
+};
+}  // namespace highs
+
+class HighsDomain::ObjectivePropagation::ObjectiveContributionTree
+    : public highs::CacheMinRbTree<ObjectiveContributionTree> {
+  std::vector<ObjectiveContribution>& nodes;
+
+ public:
+  ObjectiveContributionTree(ObjectivePropagation* objProp, HighsInt partition)
+      : highs::CacheMinRbTree<ObjectiveContributionTree>(
+            objProp->contributionPartitionSets[partition].first,
+            objProp->contributionPartitionSets[partition].second),
+        nodes(objProp->objectiveLowerContributions) {}
+
+  highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) {
+    return nodes[node].links;
+  }
+
+  const highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) const {
+    return nodes[node].links;
+  }
+
+  std::pair<double, HighsInt> getKey(HighsInt node) const {
+    return std::make_pair(-nodes[node].contribution, nodes[node].col);
+  }
+};
+
+HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
+    : domain(domain),
+      objFunc(&domain->mipsolver->mipdata_->objectiveFunction),
+      cost(domain->mipsolver->model_->col_cost_.data()) {
+  const auto& objNonzeros = objFunc->getObjectiveNonzeros();
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+
+  HighsInt numPartitions = objFunc->getNumCliquePartitions();
+
+  if (numPartitions != 0) {
+    propagationConsBuffer = objFunc->getObjectiveValuesPacked();
+    partitionCliqueData.resize(objFunc->getNumCliquePartitions());
+  }
+
+  isPropagated = false;
+  capacityThreshold = kHighsInf;
+  objectiveLower = 0.0;
+  numInfObjLower = 0;
+  objectiveLowerContributions.resize(partitionStarts[numPartitions]);
+  contributionPartitionSets.resize(numPartitions,
+                                   std::make_pair(HighsInt{-1}, HighsInt{-1}));
+
+  // for each clique partition first set up all columns as contributing with
+  // their largest possible value and then remove the largest contribution of
+  // each clique partition. For these columns we do not need to check for finite
+  // bounds as they must be binary. We do not assume, however, that they must be
+  // unfixed but could be fixed to 0 or 1. We maintain a heap that fulfills the
+  // invariant that the largest column may be not fixed to its value with the
+  // larger contribution.
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    ObjectiveContributionTree contributionTree(this, i);
+    partitionCliqueData[i].rhs = 1;
+    for (HighsInt j = partitionStarts[i]; j < partitionStarts[i + 1]; ++j) {
+      HighsInt col = objNonzeros[j];
+      objectiveLowerContributions[j].col = col;
+      objectiveLowerContributions[j].partition = i;
+      if (cost[col] > 0.0) {
+        objectiveLower += cost[col];
+        objectiveLowerContributions[j].contribution = cost[col];
+        partitionCliqueData[i].rhs -= 1;
+        if (domain->col_lower_[col] == 0.0) contributionTree.link(j);
+      } else {
+        objectiveLowerContributions[j].contribution = -cost[col];
+        if (domain->col_upper_[col] == 1.0) contributionTree.link(j);
+      }
+    }
+
+    HighsInt worstPos = contributionTree.first();
+    if (worstPos != -1)
+      objectiveLower -= objectiveLowerContributions[worstPos].contribution;
+  }
+
+  // add contribution of remaining objective nonzeros
+  const HighsInt numObjNz = objNonzeros.size();
+  for (HighsInt i = partitionStarts[numPartitions]; i < numObjNz; ++i) {
+    HighsInt col = objNonzeros[i];
+    if (cost[col] > 0.0) {
+      if (domain->col_lower_[col] == -kHighsInf)
+        ++numInfObjLower;
+      else
+        objectiveLower += domain->col_lower_[col] * cost[col];
+    } else {
+      if (domain->col_upper_[col] == kHighsInf)
+        ++numInfObjLower;
+      else
+        objectiveLower += domain->col_upper_[col] * cost[col];
+    }
+  }
+
+  double lb = numInfObjLower == 0
+                  ? double(objectiveLower) + domain->mipsolver->model_->offset_
+                  : -kHighsInf;
+
+  recomputeCapacityThreshold();
+  debugCheckObjectiveLower();
+}
+
+void HighsDomain::ObjectivePropagation::getPropagationConstraint(
+    HighsInt domchgStackSize, const double*& vals, const HighsInt*& inds,
+    HighsInt& len, double& rhs, HighsInt domchgCol) {
+  const HighsInt numPartitions = objFunc->getNumCliquePartitions();
+  inds = objFunc->getObjectiveNonzeros().data();
+  len = objFunc->getObjectiveNonzeros().size();
+  if (numPartitions == 0) {
+    vals = objFunc->getObjectiveValuesPacked().data();
+    rhs = domain->mipsolver->mipdata_->upper_limit;
+    return;
+  }
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+
+  HighsCDouble tmpRhs = domain->mipsolver->mipdata_->upper_limit;
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    HighsInt start = partitionStarts[i];
+    HighsInt end = partitionStarts[i + 1];
+    double largest = 0.0;
+    for (HighsInt j = start; j < end; ++j) {
+      HighsInt c = inds[j];
+      HighsInt pos;
+      // skip the column we might want to explain a bound change for and take
+      // the second largest column instead.
+      if (c == domchgCol) continue;
+      if (cost[c] > 0) {
+        double lb = domain->getColLowerPos(c, domchgStackSize, pos);
+        if (lb < 1) largest = std::max(largest, cost[c]);
+      } else {
+        double ub = domain->getColUpperPos(c, domchgStackSize, pos);
+        if (ub > 0) largest = std::max(largest, -cost[c]);
+      }
+    }
+
+    tmpRhs += largest * partitionCliqueData[i].rhs;
+    if (partitionCliqueData[i].multiplier != largest) {
+      partitionCliqueData[i].multiplier = largest;
+      const auto& packedObjVals = objFunc->getObjectiveValuesPacked();
+      for (HighsInt j = start; j < end; ++j)
+        propagationConsBuffer[j] =
+            packedObjVals[j] - std::copysign(largest, packedObjVals[j]);
+    }
+  }
+
+  vals = propagationConsBuffer.data();
+  rhs = double(tmpRhs);
+}
+
+void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+  HighsInt numPartitions = objFunc->getNumCliquePartitions();
+
+  capacityThreshold = -domain->feastol();
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    ObjectiveContributionTree contributionTree(this, i);
+    HighsInt worstPos = contributionTree.first();
+    if (worstPos == -1) continue;
+    if (domain->isFixed(objectiveLowerContributions[worstPos].col)) continue;
+
+    double contribution = objectiveLowerContributions[worstPos].contribution;
+    HighsInt bestPos = contributionTree.last();
+    if (bestPos != worstPos)
+      contribution -= objectiveLowerContributions[bestPos].contribution;
+
+    capacityThreshold =
+        std::max(capacityThreshold, contribution * (1.0 - domain->feastol()));
+  }
+
+  const auto& objNonzeros = objFunc->getObjectiveNonzeros();
+  const HighsInt numObjNzs = objNonzeros.size();
+  for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
+    HighsInt col = objNonzeros[i];
+
+    double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
+    boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                      ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                      : domain->feastol();
+    capacityThreshold =
+        std::max(capacityThreshold, std::fabs(cost[col]) * boundRange);
+  }
+}
+
+void HighsDomain::ObjectivePropagation::updateActivityLbChange(
+    HighsInt col, double oldbound, double newbound) {
+  if (cost[col] <= 0.0) {
+    if (cost[col] != 0.0 && newbound < oldbound) {
+      double boundRange = domain->col_upper_[col] - newbound;
+      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                        : domain->feastol();
+      capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+      isPropagated = false;
+    }
+    debugCheckObjectiveLower();
+    return;
+  }
+
+  isPropagated = false;
+
+  HighsInt partitionPos = objFunc->getColCliquePartition(col);
+  if (partitionPos == -1) {
+    if (oldbound == -kHighsInf)
+      --numInfObjLower;
+    else
+      objectiveLower -= oldbound * cost[col];
+
+    if (newbound == -kHighsInf)
+      ++numInfObjLower;
+    else
+      objectiveLower += newbound * cost[col];
+
+    debugCheckObjectiveLower();
+
+    if (newbound < oldbound) {
+      double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
+      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                        : domain->feastol();
+      capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+    } else if (numInfObjLower == 0 &&
+               objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+      domain->infeasible_ = true;
+      domain->infeasible_pos = domain->domchgstack_.size();
+      domain->infeasible_reason = Reason::objective();
+      updateActivityLbChange(col, newbound, oldbound);
+    }
+  } else {
+    if (newbound == 0.0) {
+      assert(oldbound == 1.0);
+      // binary lower bound of variable in clique partition is relaxed to 0
+      HighsInt partition = objectiveLowerContributions[partitionPos].partition;
+      ObjectiveContributionTree contributionTree(this, partition);
+      HighsInt currFirst = contributionTree.first();
+
+      contributionTree.link(partitionPos);
+
+      double oldContribution = 0.0;
+      if (currFirst != -1)
+        oldContribution = objectiveLowerContributions[currFirst].contribution;
+
+      if (partitionPos == contributionTree.first() &&
+          objectiveLowerContributions[partitionPos].contribution !=
+              oldContribution) {
+        objectiveLower += oldContribution;
+        objectiveLower -=
+            objectiveLowerContributions[partitionPos].contribution;
+
+        // update the capacity threshold with the difference of the new highest
+        // contribution position to the lowest consitribution as the column with
+        // the lowest contribution can be fixed to its bound that yields the
+        // highest objective value.
+        HighsInt bestPos = contributionTree.last();
+        double delta = objectiveLowerContributions[partitionPos].contribution;
+        if (bestPos != partitionPos)
+          delta -= objectiveLowerContributions[bestPos].contribution;
+        capacityThreshold =
+            std::max(delta * (1.0 - domain->feastol()), capacityThreshold);
+      } else {
+        // the new linked column could be the one with the new lowest
+        // contribution so update the capacity threshold to ensure propagation
+        // runs when it can be fixed to the bound that yields the highest
+        // objective value
+        capacityThreshold =
+            std::max((oldContribution -
+                      objectiveLowerContributions[partitionPos].contribution) *
+                         (1.0 - domain->feastol()),
+                     capacityThreshold);
+      }
+
+      debugCheckObjectiveLower();
+    } else {
+      // binary lower bound of variable in clique partition is tightened to 1
+      assert(oldbound == 0.0);
+      assert(newbound == 1.0);
+
+      HighsInt partition = objectiveLowerContributions[partitionPos].partition;
+      ObjectiveContributionTree contributionTree(this, partition);
+      bool wasFirst = contributionTree.first() == partitionPos;
+      if (wasFirst)
+        objectiveLower +=
+            objectiveLowerContributions[partitionPos].contribution;
+
+      contributionTree.unlink(partitionPos);
+
+      if (wasFirst) {
+        HighsInt newWorst = contributionTree.first();
+        if (newWorst != -1)
+          objectiveLower -= objectiveLowerContributions[newWorst].contribution;
+      }
+
+      debugCheckObjectiveLower();
+
+      if (numInfObjLower == 0 &&
+          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+        domain->infeasible_ = true;
+        domain->infeasible_pos = domain->domchgstack_.size();
+        domain->infeasible_reason = Reason::objective();
+        updateActivityLbChange(col, newbound, oldbound);
+      }
+    }
+  }
+}
+
+void HighsDomain::ObjectivePropagation::updateActivityUbChange(
+    HighsInt col, double oldbound, double newbound) {
+  if (cost[col] >= 0.0) {
+    if (cost[col] != 0.0 && newbound > oldbound) {
+      double boundRange = newbound - domain->col_lower_[col];
+      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                        : domain->feastol();
+      capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+      isPropagated = false;
+    }
+    debugCheckObjectiveLower();
+    return;
+  }
+
+  isPropagated = false;
+
+  HighsInt partitionPos = objFunc->getColCliquePartition(col);
+  if (partitionPos == -1) {
+    if (oldbound == kHighsInf)
+      --numInfObjLower;
+    else
+      objectiveLower -= oldbound * cost[col];
+
+    if (newbound == kHighsInf)
+      ++numInfObjLower;
+    else
+      objectiveLower += newbound * cost[col];
+
+    debugCheckObjectiveLower();
+
+    if (newbound > oldbound) {
+      double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
+      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
+                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
+                        : domain->feastol();
+      capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+    } else if (numInfObjLower == 0 &&
+               objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+      domain->infeasible_ = true;
+      domain->infeasible_pos = domain->domchgstack_.size();
+      domain->infeasible_reason = Reason::objective();
+      updateActivityUbChange(col, newbound, oldbound);
+    }
+  } else {
+    if (newbound == 1.0) {
+      assert(oldbound == 0.0);
+      // binary upper bound of variable in clique partition is relaxed to 1
+      HighsInt partition = objectiveLowerContributions[partitionPos].partition;
+      ObjectiveContributionTree contributionTree(this, partition);
+      HighsInt currFirst = contributionTree.first();
+
+      contributionTree.link(partitionPos);
+
+      double oldContribution = 0.0;
+      if (currFirst != -1)
+        oldContribution = objectiveLowerContributions[currFirst].contribution;
+
+      if (partitionPos == contributionTree.first() &&
+          objectiveLowerContributions[partitionPos].contribution !=
+              oldContribution) {
+        objectiveLower += oldContribution;
+        objectiveLower -=
+            objectiveLowerContributions[partitionPos].contribution;
+
+        // update the capacity threshold with the difference of the new highest
+        // contribution position to the lowest consitribution as the column with
+        // the lowest contribution can be fixed to its bound that yields the
+        // highest objective value.
+        HighsInt bestPos = contributionTree.last();
+        double delta = objectiveLowerContributions[partitionPos].contribution;
+        if (bestPos != partitionPos)
+          delta -= objectiveLowerContributions[bestPos].contribution;
+        capacityThreshold =
+            std::max(delta * (1.0 - domain->feastol()), capacityThreshold);
+      } else {
+        // the new linked column could be the one with the new lowest
+        // contribution so update the capacity threshold to ensure propagation
+        // runs when it can be fixed to the bound that yields the highest
+        // objective valueu
+        capacityThreshold =
+            std::max((oldContribution -
+                      objectiveLowerContributions[partitionPos].contribution) *
+                         (1.0 - domain->feastol()),
+                     capacityThreshold);
+      }
+
+      debugCheckObjectiveLower();
+    } else {
+      // binary upper bound of variable in clique partition is tightened to 0
+      assert(oldbound == 1.0);
+      assert(newbound == 0.0);
+      HighsInt partition = objectiveLowerContributions[partitionPos].partition;
+      ObjectiveContributionTree contributionTree(this, partition);
+      bool wasFirst = contributionTree.first() == partitionPos;
+      if (wasFirst)
+        objectiveLower +=
+            objectiveLowerContributions[partitionPos].contribution;
+
+      contributionTree.unlink(partitionPos);
+
+      if (wasFirst) {
+        HighsInt newWorst = contributionTree.first();
+        if (newWorst != -1)
+          objectiveLower -= objectiveLowerContributions[newWorst].contribution;
+      }
+
+      debugCheckObjectiveLower();
+
+      if (numInfObjLower == 0 &&
+          objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
+        domain->infeasible_ = true;
+        domain->infeasible_pos = domain->domchgstack_.size();
+        domain->infeasible_reason = Reason::objective();
+        updateActivityUbChange(col, newbound, oldbound);
+      }
+    }
+  }
+}
+
+bool HighsDomain::ObjectivePropagation::shouldBePropagated() const {
+  if (isPropagated) return false;
+  if (numInfObjLower > 1) return false;
+  if (domain->infeasible_) return false;
+  double upperLimit = domain->mipsolver->mipdata_->upper_limit;
+  if (upperLimit == kHighsInf) return false;
+  if (upperLimit - double(objectiveLower) > capacityThreshold) return false;
+
+  return true;
+}
+
+void HighsDomain::ObjectivePropagation::debugCheckObjectiveLower() const {
+#ifndef NDEBUG
+  if (domain->infeasible_) return;
+  HighsCDouble lowerFromScratch = 0.0;
+  HighsInt numInf = 0;
+  const HighsInt numPartitions = objFunc->getNumCliquePartitions();
+  const auto& partitionStarts = objFunc->getCliquePartitionStarts();
+  const auto& objNonzeros = objFunc->getObjectiveNonzeros();
+
+  const HighsInt numObjNzs = objNonzeros.size();
+  for (HighsInt i = 0; i < numPartitions; ++i) {
+    HighsInt start = partitionStarts[i];
+    HighsInt end = partitionStarts[i + 1];
+    double largest = 0.0;
+    for (HighsInt j = start; j < end; ++j) {
+      HighsInt c = objNonzeros[j];
+      if (cost[c] > 0) {
+        lowerFromScratch += cost[c];
+
+        if (domain->col_lower_[c] < 1) largest = std::max(largest, cost[c]);
+      } else {
+        if (domain->col_upper_[c] > 0) largest = std::max(largest, -cost[c]);
+      }
+    }
+    lowerFromScratch -= largest;
+  }
+
+  for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
+    HighsInt col = objNonzeros[i];
+    if (cost[col] > 0) {
+      if (domain->col_lower_[col] > -kHighsInf)
+        lowerFromScratch += domain->col_lower_[col] * cost[col];
+      else
+        ++numInf;
+    } else {
+      if (domain->col_upper_[col] < kHighsInf)
+        lowerFromScratch += domain->col_upper_[col] * cost[col];
+      else
+        ++numInf;
+    }
+  }
+  assert(std::fabs(double(lowerFromScratch - objectiveLower)) <=
+         domain->feastol());
+  assert(numInf == numInfObjLower);
+#endif
+}
+
+void HighsDomain::ObjectivePropagation::propagate() {
+  if (!shouldBePropagated()) return;
+
+  debugCheckObjectiveLower();
+
+  const double upperLimit = domain->mipsolver->mipdata_->upper_limit;
+  if (objectiveLower > upperLimit) {
+    domain->infeasible_ = true;
+    domain->infeasible_pos = domain->domchgstack_.size();
+    domain->infeasible_reason = Reason::objective();
+    return;
+  }
+
+  const auto& objNonzeros = objFunc->getObjectiveNonzeros();
+
+  HighsCDouble capacity = upperLimit - objectiveLower;
+  if (numInfObjLower == 1) {
+    // Scan non-binary columns for infinite bound contribution until the one
+    // column that contributes with an infinite bound is found which is the only
+    // column that can be propagated
+    HighsInt numCol = objNonzeros.size();
+    for (HighsInt i = objFunc->getNumBinariesInObjective(); i < numCol; ++i) {
+      HighsInt col = objNonzeros[i];
+      if (cost[col] > 0) {
+        if (domain->col_lower_[col] > -kHighsInf) continue;
+
+        HighsCDouble boundVal = capacity / cost[col];
+        if (std::fabs(double(boundVal) * kHighsTiny) > domain->feastol())
+          continue;
+
+        bool accept;
+        double bound = domain->adjustedUb(col, boundVal, accept);
+        if (accept) {
+          domain->changeBound(HighsBoundType::kUpper, col, bound,
+                              Reason::objective());
+          if (domain->infeasible_) break;
+        }
+
+        break;
+      } else {
+        if (domain->col_upper_[col] < kHighsInf) continue;
+
+        HighsCDouble boundVal = capacity / cost[col];
+        if (std::fabs(double(boundVal) * kHighsTiny) > domain->feastol())
+          continue;
+
+        bool accept;
+        double bound = domain->adjustedLb(col, boundVal, accept);
+        if (accept) {
+          domain->changeBound(HighsBoundType::kLower, col, bound,
+                              Reason::objective());
+          if (domain->infeasible_) break;
+        }
+
+        break;
+      }
+    }
+  } else {
+    HighsInt numPartitions = objFunc->getNumCliquePartitions();
+    double currLb = double(objectiveLower);
+    while (true) {
+      for (HighsInt i = 0; i < numPartitions; ++i) {
+        ObjectiveContributionTree contributionTree(this, i);
+        HighsInt worst = contributionTree.first();
+        if (worst == -1) continue;
+
+        double contribution = objectiveLowerContributions[worst].contribution;
+
+        HighsInt secondWorst = contributionTree.successor(worst);
+        if (secondWorst != -1)
+          contribution -= objectiveLowerContributions[secondWorst].contribution;
+
+        // the upper limit already uses a tolerance, so we can do a hard cutoff
+        if (contribution > capacity) {
+          HighsInt col = objectiveLowerContributions[worst].col;
+          if (cost[col] > 0) {
+            if (domain->col_upper_[col] > 0.0) {
+              domain->changeBound(HighsBoundType::kUpper, col, 0.0,
+                                  Reason::objective());
+              if (domain->infeasible_) break;
+            }
+          } else {
+            if (domain->col_lower_[col] < 1.0) {
+              domain->changeBound(HighsBoundType::kLower, col, 1.0,
+                                  Reason::objective());
+              if (domain->infeasible_) break;
+            }
+          }
+        } else if (secondWorst != -1) {
+          // it might be that we can the column with the lowest possible
+          // contribution to its bound value that yields the highest objective
+          // contribution.
+          HighsInt best = contributionTree.last();
+          while (best != contributionTree.first()) {
+            // difference to the column with the highest contribution is the
+            // objective increase when fixing the column to its bound with the
+            // lowest objective contribution. Due to the clique information that
+            // means the current column with the highest contribution will
+            // contribute with its worst bound.
+            if (objectiveLowerContributions[contributionTree.first()]
+                        .contribution -
+                    objectiveLowerContributions[best].contribution >
+                capacity) {
+              HighsInt col = objectiveLowerContributions[best].col;
+              if (cost[col] > 0) {
+                assert(domain->col_lower_[col] < 1.0);
+                domain->changeBound(HighsBoundType::kLower, col, 1.0,
+                                    Reason::objective());
+                if (domain->infeasible_) break;
+              } else {
+                assert(domain->col_upper_[col] > 0.0);
+                domain->changeBound(HighsBoundType::kUpper, col, 0.0,
+                                    Reason::objective());
+                if (domain->infeasible_) break;
+              }
+            } else
+              break;
+
+            best = contributionTree.last();
+          }
+
+          if (domain->infeasible_) break;
+        }
+      }
+
+      if (domain->infeasible_) break;
+
+      const HighsInt numObjNzs = objNonzeros.size();
+      for (HighsInt i = objFunc->getCliquePartitionStarts()[numPartitions];
+           i < numObjNzs; ++i) {
+        HighsInt col = objNonzeros[i];
+
+        if (cost[col] > 0) {
+          bool accept;
+
+          HighsCDouble boundVal =
+              (capacity + domain->col_lower_[col] * cost[col]) / cost[col];
+          if (std::fabs(double(boundVal) * kHighsTiny) > domain->feastol())
+            continue;
+
+          double bound = domain->adjustedUb(col, boundVal, accept);
+          if (accept) {
+            domain->changeBound(HighsBoundType::kUpper, col, bound,
+                                Reason::objective());
+            if (domain->infeasible_) break;
+          }
+        } else {
+          bool accept;
+
+          HighsCDouble boundVal =
+              (capacity + domain->col_upper_[col] * cost[col]) / cost[col];
+          if (std::fabs(double(boundVal) * kHighsTiny) > domain->feastol())
+            continue;
+
+          double bound = domain->adjustedLb(col, boundVal, accept);
+          if (accept) {
+            domain->changeBound(HighsBoundType::kLower, col, bound,
+                                Reason::objective());
+            if (domain->infeasible_) break;
+          }
+        }
+      }
+      if (domain->infeasible_) break;
+
+      double newLb = double(objectiveLower);
+      if (newLb == currLb) break;
+      currLb = newLb;
+      capacity = upperLimit - objectiveLower;
+    }
+  }
+
+  recomputeCapacityThreshold();
+  isPropagated = true;
 }
 
 void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
@@ -707,6 +1371,76 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
   }
 }
 
+double HighsDomain::adjustedUb(HighsInt col, HighsCDouble boundVal,
+                               bool& accept) const {
+  double bound;
+
+  if (mipsolver->variableType(col) != HighsVarType::kContinuous) {
+    bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
+    if (bound < col_upper_[col] &&
+        col_upper_[col] - bound >
+            1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound))
+      accept = true;
+    else
+      accept = false;
+  } else {
+    if (std::fabs(double(boundVal) - col_lower_[col]) <=
+        mipsolver->mipdata_->epsilon)
+      bound = col_lower_[col];
+    else
+      bound = double(boundVal);
+    if (col_upper_[col] == kHighsInf)
+      accept = true;
+    else if (bound + 1000.0 * mipsolver->mipdata_->feastol < col_upper_[col]) {
+      double relativeImprove = col_upper_[col] - bound;
+      if (col_lower_[col] != -kHighsInf)
+        relativeImprove /= col_upper_[col] - col_lower_[col];
+      else
+        relativeImprove /=
+            std::max(std::fabs(col_upper_[col]), std::fabs(bound));
+      accept = relativeImprove >= 0.3;
+    } else
+      accept = false;
+  }
+
+  return bound;
+}
+
+double HighsDomain::adjustedLb(HighsInt col, HighsCDouble boundVal,
+                               bool& accept) const {
+  double bound;
+
+  if (mipsolver->variableType(col) != HighsVarType::kContinuous) {
+    bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
+    if (bound > col_lower_[col] &&
+        bound - col_lower_[col] >
+            1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound))
+      accept = true;
+    else
+      accept = false;
+  } else {
+    if (std::fabs(col_upper_[col] - double(boundVal)) <=
+        mipsolver->mipdata_->epsilon)
+      bound = col_upper_[col];
+    else
+      bound = double(boundVal);
+    if (col_lower_[col] == -kHighsInf)
+      accept = true;
+    else if (bound - 1000.0 * mipsolver->mipdata_->feastol > col_lower_[col]) {
+      double relativeImprove = bound - col_lower_[col];
+      if (col_upper_[col] != kHighsInf)
+        relativeImprove /= col_upper_[col] - col_lower_[col];
+      else
+        relativeImprove /=
+            std::max(std::fabs(col_lower_[col]), std::fabs(bound));
+      accept = relativeImprove >= 0.3;
+    } else
+      accept = false;
+  }
+
+  return bound;
+}
+
 HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
                                         const double* Rvalue, HighsInt Rlen,
                                         double Rupper,
@@ -729,78 +1463,20 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rupper - minresact) / Rvalue[i];
-    if (std::abs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
+    if (std::fabs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
       continue;
 
     if (Rvalue[i] > 0) {
       bool accept;
 
-      double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
-        bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
-        if (bound < col_upper_[Rindex[i]] &&
-            col_upper_[Rindex[i]] - bound >
-                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
-          accept = true;
-        else
-          accept = false;
-      } else {
-        if (std::abs(double(boundVal) - col_lower_[Rindex[i]]) <=
-            mipsolver->mipdata_->epsilon)
-          bound = col_lower_[Rindex[i]];
-        else
-          bound = double(boundVal);
-        if (col_upper_[Rindex[i]] == kHighsInf)
-          accept = true;
-        else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
-                 col_upper_[Rindex[i]]) {
-          double relativeImprove = col_upper_[Rindex[i]] - bound;
-          if (col_lower_[Rindex[i]] != -kHighsInf)
-            relativeImprove /= col_upper_[Rindex[i]] - col_lower_[Rindex[i]];
-          else
-            relativeImprove /=
-                std::max(std::abs(col_upper_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.3;
-        } else
-          accept = false;
-      }
-
+      double bound = adjustedUb(Rindex[i], boundVal, accept);
       if (accept)
         boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kUpper};
 
     } else {
       bool accept;
 
-      double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
-        bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
-        if (bound > col_lower_[Rindex[i]] &&
-            bound - col_lower_[Rindex[i]] >
-                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
-          accept = true;
-        else
-          accept = false;
-      } else {
-        if (std::abs(col_upper_[Rindex[i]] - double(boundVal)) <=
-            mipsolver->mipdata_->epsilon)
-          bound = col_upper_[Rindex[i]];
-        else
-          bound = double(boundVal);
-        if (col_lower_[Rindex[i]] == -kHighsInf)
-          accept = true;
-        else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
-                 col_lower_[Rindex[i]]) {
-          double relativeImprove = bound - col_lower_[Rindex[i]];
-          if (col_upper_[Rindex[i]] != kHighsInf)
-            relativeImprove /= col_upper_[Rindex[i]] - col_lower_[Rindex[i]];
-          else
-            relativeImprove /=
-                std::max(std::abs(col_lower_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.3;
-        } else
-          accept = false;
-      }
-
+      double bound = adjustedLb(Rindex[i], boundVal, accept);
       if (accept)
         boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kLower};
     }
@@ -831,77 +1507,19 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rlower - maxresact) / Rvalue[i];
-    if (std::abs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
+    if (std::fabs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
       continue;
 
     if (Rvalue[i] < 0) {
       bool accept;
 
-      double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
-        bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
-        if (bound < col_upper_[Rindex[i]] &&
-            col_upper_[Rindex[i]] - bound >
-                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
-          accept = true;
-        else
-          accept = false;
-      } else {
-        if (std::abs(double(boundVal) - col_lower_[Rindex[i]]) <=
-            mipsolver->mipdata_->epsilon)
-          bound = col_lower_[Rindex[i]];
-        else
-          bound = double(boundVal);
-        if (col_upper_[Rindex[i]] == kHighsInf)
-          accept = true;
-        else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
-                 col_upper_[Rindex[i]]) {
-          double relativeImprove = col_upper_[Rindex[i]] - bound;
-          if (col_lower_[Rindex[i]] != -kHighsInf)
-            relativeImprove /= col_upper_[Rindex[i]] - col_lower_[Rindex[i]];
-          else
-            relativeImprove /=
-                std::max(std::abs(col_upper_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.3;
-        } else
-          accept = false;
-      }
-
+      double bound = adjustedUb(Rindex[i], boundVal, accept);
       if (accept)
         boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kUpper};
     } else {
       bool accept;
 
-      double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
-        bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
-        if (bound > col_lower_[Rindex[i]] &&
-            bound - col_lower_[Rindex[i]] >
-                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
-          accept = true;
-        else
-          accept = false;
-      } else {
-        if (std::abs(col_upper_[Rindex[i]] - double(boundVal)) <=
-            mipsolver->mipdata_->epsilon)
-          bound = col_upper_[Rindex[i]];
-        else
-          bound = double(boundVal);
-        if (col_lower_[Rindex[i]] == -kHighsInf)
-          accept = true;
-        else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
-                 col_lower_[Rindex[i]]) {
-          double relativeImprove = bound - col_lower_[Rindex[i]];
-          if (col_upper_[Rindex[i]] != kHighsInf)
-            relativeImprove /= col_upper_[Rindex[i]] - col_lower_[Rindex[i]];
-          else
-            relativeImprove /=
-                std::max(std::abs(col_lower_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.3;
-        } else
-          accept = false;
-      }
-
+      double bound = adjustedLb(Rindex[i], boundVal, accept);
       if (accept)
         boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kLower};
     }
@@ -920,7 +1538,7 @@ void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
             ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
             : mipsolver->mipdata_->feastol;
 
-    double thresholdNew = std::abs(val) * boundRange;
+    double thresholdNew = std::fabs(val) * boundRange;
 
     // the new threshold is now the maximum of the new threshold and the current
     // one
@@ -939,7 +1557,7 @@ void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
             ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
             : mipsolver->mipdata_->feastol;
 
-    double thresholdNew = std::abs(val) * boundRange;
+    double thresholdNew = std::fabs(val) * boundRange;
 
     // the new threshold is now the maximum of the new threshold and the current
     // one
@@ -955,6 +1573,11 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
+
+  if (objProp_.isActive()) {
+    objProp_.updateActivityLbChange(col, oldbound, newbound);
+    if (infeasible_) return;
+  }
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
@@ -979,8 +1602,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
-                               tmpminact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                                tmpminact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1030,13 +1653,17 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
-                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                                tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
 
-      if (deltamax >= 0) continue;
+      if (deltamax >= 0) {
+        updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
+                                capacityThreshold_[mip->a_matrix_.index_[i]]);
+        continue;
+      }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
@@ -1097,6 +1724,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
     }
 
+    if (objProp_.isActive()) {
+      objProp_.updateActivityLbChange(col, oldbound, newbound);
+    }
+
     return;
   } else {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -1111,6 +1742,11 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
+
+  if (objProp_.isActive()) {
+    objProp_.updateActivityUbChange(col, oldbound, newbound);
+    if (infeasible_) return;
+  }
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
@@ -1135,8 +1771,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
-                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                                tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1190,13 +1826,17 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
-                               tmpminact)) <= mipsolver->mipdata_->feastol);
+        assert(std::fabs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                                tmpminact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
 
-      if (deltamin <= 0) continue;
+      if (deltamin <= 0) {
+        updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
+                                capacityThreshold_[mip->a_matrix_.index_[i]]);
+        continue;
+      }
 
       if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
           activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
@@ -1261,6 +1901,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
     }
 
+    if (objProp_.isActive()) {
+      objProp_.updateActivityUbChange(col, oldbound, newbound);
+    }
+
     return;
   } else {
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -1272,7 +1916,7 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
   HighsInt start = mipsolver->mipdata_->ARstart_[row];
   HighsInt end = mipsolver->mipdata_->ARstart_[row + 1];
 
-  capacityThreshold_[row] = 0.0;
+  capacityThreshold_[row] = -feastol();
   for (HighsInt i = start; i < end; ++i) {
     HighsInt col = mipsolver->mipdata_->ARindex_[i];
 
@@ -1280,15 +1924,14 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 
     double boundRange = col_upper_[col] - col_lower_[col];
 
-    boundRange -=
-        variableType(col) == HighsVarType::kContinuous
-            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
-            : mipsolver->mipdata_->feastol;
+    boundRange -= variableType(col) == HighsVarType::kContinuous
+                      ? std::max(0.3 * boundRange, 1000.0 * feastol())
+                      : feastol();
 
-    double threshold = std::abs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
+    double threshold = std::fabs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
 
-    capacityThreshold_[row] = std::max(
-        {capacityThreshold_[row], threshold, mipsolver->mipdata_->feastol});
+    capacityThreshold_[row] =
+        std::max({capacityThreshold_[row], threshold, feastol()});
   }
 }
 
@@ -1300,6 +1943,7 @@ void HighsDomain::markPropagateCut(Reason reason) {
     case Reason::kModelRowLower:
     case Reason::kModelRowUpper:
     case Reason::kConflictingBounds:
+    case Reason::kObjective:
       break;
     default:
       assert(reason.type >= 0 &&
@@ -1404,6 +2048,13 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   assert(boundchg.column >= 0);
   assert(boundchg.column < (HighsInt)col_upper_.size());
   // assert(infeasible_ == 0);
+  // if (reason.type == Reason::kObjective) {
+  //   if (!mipsolver->submip)
+  //     printf("objective propagator changed %s bound of column %d to %g\n",
+  //            boundchg.boundtype == HighsBoundType::kLower ? "lower" :
+  //            "upper", boundchg.column, boundchg.boundval);
+  // }
+
   HighsInt prevPos;
   if (boundchg.boundtype == HighsBoundType::kLower) {
     if (boundchg.boundval <= col_lower_[boundchg.column]) {
@@ -1703,24 +2354,19 @@ bool HighsDomain::propagate() {
   std::vector<HighsInt> propagateinds;
 
   auto havePropagationRows = [&]() {
-    bool haverows = true;
-    if (propagateinds_.empty()) {
-      haverows = false;
-      for (const auto& cutpoolprop : cutpoolpropagation) {
-        if (!cutpoolprop.propagatecutinds_.empty()) {
-          haverows = true;
-          break;
-        }
-      }
+    if (!propagateinds_.empty()) return true;
 
-      for (const auto& conflictprop : conflictPoolPropagation) {
-        if (!conflictprop.propagateConflictInds_.empty()) {
-          haverows = true;
-          break;
-        }
-      }
+    if (objProp_.isActive() && objProp_.shouldBePropagated()) return true;
+
+    for (const auto& cutpoolprop : cutpoolpropagation) {
+      if (!cutpoolprop.propagatecutinds_.empty()) return true;
     }
-    return haverows;
+
+    for (const auto& conflictprop : conflictPoolPropagation) {
+      if (!conflictprop.propagateConflictInds_.empty()) return true;
+    }
+
+    return false;
   };
 
   if (!havePropagationRows()) return false;
@@ -1735,6 +2381,8 @@ bool HighsDomain::propagate() {
       new HighsDomainChange[changedboundsize]);
 
   while (havePropagationRows()) {
+    if (objProp_.isActive()) objProp_.propagate();
+
     const HighsInt numConflictPools = conflictPoolPropagation.size();
     for (HighsInt conflictPool = 0; conflictPool < numConflictPools;
          ++conflictPool) {
@@ -1748,6 +2396,7 @@ bool HighsDomain::propagate() {
         propagateinds.clear();
       }
     }
+
     if (!propagateinds_.empty()) {
       propagateinds.swap(propagateinds_);
 
@@ -1772,6 +2421,7 @@ bool HighsDomain::propagate() {
           HighsInt Rlen = end - start;
           const HighsInt* Rindex = mipsolver->mipdata_->ARindex_.data() + start;
           const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
+          bool recomputeCapThreshold = false;
 
           if (mipsolver->rowUpper(i) != kHighsInf &&
               (activitymaxinf_[i] != 0 ||
@@ -1784,6 +2434,8 @@ bool HighsDomain::propagate() {
             propRowNumChangedBounds_[k].first = propagateRowUpper(
                 Rindex, Rvalue, Rlen, mipsolver->rowUpper(i), activitymin_[i],
                 activitymininf_[i], &changedbounds[2 * start]);
+
+            recomputeCapThreshold = true;
           }
 
           if (mipsolver->rowLower(i) != -kHighsInf &&
@@ -1798,7 +2450,11 @@ bool HighsDomain::propagate() {
                 Rindex, Rvalue, Rlen, mipsolver->rowLower(i), activitymax_[i],
                 activitymaxinf_[i],
                 &changedbounds[2 * start + propRowNumChangedBounds_[k].first]);
+
+            recomputeCapThreshold = true;
           }
+
+          if (recomputeCapThreshold) recomputeCapacityThreshold(i);
         };
 
         // printf("numproprows (model): %" HIGHSINT_FORMAT "\n", numproprows);
@@ -1825,8 +2481,6 @@ bool HighsDomain::propagate() {
 
             if (infeasible_) break;
           }
-
-          recomputeCapacityThreshold(i);
         }
       }
 
@@ -1869,6 +2523,8 @@ bool HighsDomain::propagate() {
                 cutpoolprop.activitycuts_[i], cutpoolprop.activitycutsinf_[i],
                 &changedbounds[cutpoolprop.cutpool->getMatrix().getRowStart(
                     i)]);
+
+            cutpoolprop.recomputeCapacityThreshold(i);
           };
 
           // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n", numproprows);
@@ -1884,8 +2540,6 @@ bool HighsDomain::propagate() {
               for (HighsInt j = start; j != end && !infeasible_; ++j)
                 changeBound(changedbounds[j], Reason::cut(cutpool, i));
             }
-
-            cutpoolprop.recomputeCapacityThreshold(i);
 
             if (infeasible_) break;
           }
@@ -1969,8 +2623,18 @@ void HighsDomain::conflictAnalyzeReconvergence(
   conflictSet.reconvergenceFrontier.insert(
       conflictSet.resolvedDomainChanges.begin(),
       conflictSet.resolvedDomainChanges.end());
-  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, branchPos_.size(),
-                           0);
+
+  HighsInt depth = branchPos_.size();
+
+  while (depth > 0) {
+    HighsInt branchPos = branchPos_[depth - 1];
+    if (domchgstack_[branchPos].boundval != prevboundval_[branchPos].first)
+      break;
+
+    --depth;
+  }
+
+  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, depth, 0);
   conflictPool.addReconvergenceCut(*this, conflictSet.reconvergenceFrontier,
                                    domchg);
 }
@@ -2041,7 +2705,8 @@ bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {
   double otherbound = domchg.boundtype == HighsBoundType::kUpper
                           ? col_lower_[domchg.column]
                           : col_upper_[domchg.column];
-  return std::abs(domchg.boundval - otherbound) <= mipsolver->mipdata_->epsilon;
+  return std::fabs(domchg.boundval - otherbound) <=
+         mipsolver->mipdata_->epsilon;
 }
 
 HighsDomainChange HighsDomain::flip(const HighsDomainChange& domchg) const {
@@ -2390,7 +3055,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered <= localdom.mipsolver->mipdata_->epsilon);
+      assert(covered <= localdom.mipsolver->mipdata_->feastol);
     }
   }
 
@@ -2504,7 +3169,7 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
       //          (int)numRelaxed, (int)numDropped,
       //          (int)resolvedDomainChanges.size());
 
-      assert(covered >= -localdom.mipsolver->mipdata_->epsilon);
+      assert(covered >= -localdom.mipsolver->mipdata_->feastol);
     }
   }
   return true;
@@ -2571,6 +3236,22 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
 
       return explainInfeasibilityLeq(
           inds, vals, len, localdom.mipsolver->rowUpper(rowIndex), minAct);
+    }
+    case Reason::kObjective: {
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      double rhs;
+
+      localdom.objProp_.getPropagationConstraint(localdom.infeasible_pos, vals,
+                                                 inds, len, rhs);
+
+      HighsInt ninfmin;
+      HighsCDouble minAct;
+      globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
+      assert(ninfmin == 0);
+
+      return explainInfeasibilityLeq(inds, vals, len, rhs, double(minAct));
     }
     default:
       assert(localdom.infeasible_reason.type >= 0);
@@ -2702,7 +3383,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
   pdqsort(resolveBuffer.begin(), resolveBuffer.end());
 
   // compute the lower bound of M that is necessary
-  double Mupper = rhs - std::max(10.0, std::abs(rhs)) *
+  double Mupper = rhs - std::max(10.0, std::fabs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
 
   assert(reasonSideFrontier.empty());
@@ -2749,7 +3430,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
   pdqsort(resolveBuffer.begin(), resolveBuffer.end());
 
   // compute the lower bound of M that is necessary
-  double Mlower = rhs + std::max(10.0, std::abs(rhs)) *
+  double Mlower = rhs + std::max(10.0, std::fabs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
 
   return resolveLinearLeq(minAct, Mlower, vals);
@@ -2814,6 +3495,26 @@ bool HighsDomain::ConflictSet::explainBoundChange(
       return explainBoundChangeLeq(currentFrontier, domchg, inds, vals, len,
                                    localdom.mipsolver->rowUpper(rowIndex),
                                    minAct);
+    }
+    case Reason::kObjective: {
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      double rhs;
+
+      localdom.objProp_.getPropagationConstraint(domchg.pos, vals, inds, len,
+                                                 rhs, domchg.domchg.column);
+
+      HighsInt ninfmin;
+      HighsCDouble minAct;
+      globaldom.computeMinActivity(0, len, inds, vals, ninfmin, minAct);
+      assert(ninfmin <= 1);
+      // todo: treat case with a single infinite contribution that propagated a
+      // bound
+      if (ninfmin == 1) return false;
+
+      return explainBoundChangeLeq(currentFrontier, domchg, inds, vals, len,
+                                   rhs, double(minAct));
     }
     default:
       assert(localdom.domchgreason_[domchg.pos].type >= 0);
@@ -2973,15 +3674,28 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
   LocalDomChg startPos =
       LocalDomChg{depthLevel == 0 ? 0 : localdom.branchPos_[depthLevel - 1] + 1,
                   HighsDomainChange()};
+  while (depthLevel < localdom.branchPos_.size()) {
+    HighsInt branchPos = localdom.branchPos_[depthLevel];
+    if (localdom.domchgstack_[branchPos].boundval !=
+        localdom.prevboundval_[branchPos].first)
+      break;
+    // printf("skipping redundant depth\n");
+    ++depthLevel;
+  }
+
   auto iterEnd =
       depthLevel == localdom.branchPos_.size()
           ? frontier.end()
           : frontier.upper_bound(LocalDomChg{localdom.branchPos_[depthLevel],
                                              HighsDomainChange()});
+  bool empty = true;
   for (auto it = frontier.lower_bound(startPos); it != iterEnd; ++it) {
     assert(it != frontier.end());
+    empty = false;
     if (resolvable(it->pos)) pushQueue(it);
   }
+
+  if (empty) return -1;
 
   HighsInt numResolved = 0;
 
@@ -3038,9 +3752,9 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
   HighsInt numResolved =
       resolveDepth(reasonSideFrontier, depthLevel, 1,
                    depthLevel == localdom.branchPos_.size() ? 1 : 0, true);
-
+  if (numResolved == -1) return -1;
   HighsInt numConflicts = 0;
-  if (numResolved != 0) {
+  if (numResolved > 0) {
     // add conflict cut
     localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
         reasonSideFrontier, localdom.domchgstack_);
@@ -3060,7 +3774,7 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
     reconvergenceFrontier.insert(uip);
     HighsInt numResolved = resolveDepth(reconvergenceFrontier, depthLevel, 0);
 
-    if (numResolved != 0 && reconvergenceFrontier.count(uip) == 0) {
+    if (numResolved > 0 && reconvergenceFrontier.count(uip) == 0) {
       localdom.mipsolver->mipdata_->debugSolution
           .checkConflictReconvergenceFrontier(reconvergenceFrontier, uip,
                                               localdom.domchgstack_);
@@ -3100,20 +3814,42 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
-  for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
-       --currDepth) {
+  HighsInt lastDepth = localdom.branchPos_.size();
+  // printf("start conflict analysis\n");
+  HighsInt currDepth;
+  for (currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {
       // skip redundant branching changes which are just added for symmetry
       // handling
       HighsInt branchpos = localdom.branchPos_[currDepth - 1];
       if (localdom.domchgstack_[branchpos].boundval ==
-          localdom.prevboundval_[branchpos].first)
+          localdom.prevboundval_[branchpos].first) {
+        --lastDepth;
         continue;
+      }
     }
-    numConflicts += computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    // if the depth level was empty, do not consider it
+    if (numNewConflicts == -1) {
+      --lastDepth;
+      continue;
+    }
 
+    numConflicts += numNewConflicts;
+    // if no conflict was found in the first non-empty depth level we stop here
     if (numConflicts == 0) break;
+    // if no conflict was found in this depth level and all conflicts of the
+    // first 5 non-empty depth levels are generated we stop here
+    if (lastDepth - currDepth >= 4 && numNewConflicts == 0) break;
   }
+
+  // if we stopped in the highest non-empty depth it means no conflicts where
+  // added yet. We want to at least add the current conflict frontier as it
+  // means the bound change leading to infeasibility was the last branching
+  // itself and hence should have been propagated in the previous depth but was
+  // not, e.g. because the threshold for an integral variable was not reached.
+  if (currDepth == lastDepth)
+    conflictPool.addConflictCut(localdom, reasonSideFrontier);
 }
 
 void HighsDomain::ConflictSet::conflictAnalysis(
@@ -3154,20 +3890,39 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       reasonSideFrontier, localdom.domchgstack_);
 
   HighsInt numConflicts = 0;
-  for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
-       --currDepth) {
+  HighsInt lastDepth = localdom.branchPos_.size();
+  HighsInt currDepth;
+  for (currDepth = lastDepth; currDepth >= 0; --currDepth) {
     if (currDepth > 0) {
       // skip redundant branching changes which are just added for symmetry
       // handling
       HighsInt branchpos = localdom.branchPos_[currDepth - 1];
       if (localdom.domchgstack_[branchpos].boundval ==
-          localdom.prevboundval_[branchpos].first)
+          localdom.prevboundval_[branchpos].first) {
+        --lastDepth;
         continue;
+      }
     }
-    numConflicts += computeCuts(currDepth, conflictPool);
+    HighsInt numNewConflicts = computeCuts(currDepth, conflictPool);
+    // if the depth level was empty, do not consider it
+    if (numNewConflicts == -1) {
+      --lastDepth;
+      continue;
+    }
 
-    // at least in the highest depth level conflicts must be found, otherwise
-    // we can immediately stop
+    numConflicts += numNewConflicts;
+    // if no conflict was found in the first non-empty depth level we stop here
     if (numConflicts == 0) break;
+    // if no conflict was found in this depth level and all conflicts of the
+    // first 5 non-empty depth levels are generated we stop here
+    if (lastDepth - currDepth >= 4 && numNewConflicts == 0) break;
   }
+
+  // if we stopped in the highest non-empty depth it means no conflicts where
+  // added yet. We want to at least add the current conflict frontier as it
+  // means the bound change leading to infeasibility was the last branching
+  // itself and hence should have been propagated in the previous depth but was
+  // not, e.g. because the threshold for an integral variable was not reached.
+  if (currDepth == lastDepth)
+    conflictPool.addConflictCut(localdom, reasonSideFrontier);
 }

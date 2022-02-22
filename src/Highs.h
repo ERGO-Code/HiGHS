@@ -228,6 +228,12 @@ class Highs {
                            HighsInt& value           //!< The info value
   );
 
+#ifndef HIGHSINT64
+  HighsStatus getInfoValue(const std::string& info,  //!< The info name
+                           int64_t& value            //!< The info value
+  );
+#endif
+
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            double& value) const;     //!< The info value
 
@@ -1111,7 +1117,6 @@ class Highs {
   HighsBasis basis_;
   HighsModel model_;
   HighsModel presolved_model_;
-  //  HighsModel presolve_;
   HighsTimer timer_;
 
   HighsOptions options_;
@@ -1126,7 +1131,6 @@ class Highs {
   HEkk ekk_instance_;
 
   HighsInt max_threads = 0;
-
   // This is strictly for debugging. It's used to check whether
   // returnFromRun() was called after the previous call to
   // Highs::run() and, assuming that this is always done, it checks

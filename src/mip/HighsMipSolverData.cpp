@@ -150,22 +150,25 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
 double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
                                                 double mip_rel_gap) const {
   double new_upper_limit;
-  if (objintscale != 0.0) {
-    new_upper_limit = (std::floor(objintscale * ub - 0.5) / objintscale);
+  if (objectiveFunction.isIntegral()) {
+    new_upper_limit =
+        (std::floor(objectiveFunction.integralScale() * ub - 0.5) /
+         objectiveFunction.integralScale());
 
     if (mip_rel_gap != 0.0)
       new_upper_limit = std::min(
           new_upper_limit,
           ub - std::ceil(mip_rel_gap * fabs(ub + mipsolver.model_->offset_) *
-                             objintscale -
+                             objectiveFunction.integralScale() -
                          mipsolver.mipdata_->epsilon) /
-                   objintscale);
+                   objectiveFunction.integralScale());
 
     if (mip_abs_gap != 0.0)
-      new_upper_limit = std::min(new_upper_limit,
-                                 ub - std::ceil(mip_abs_gap * objintscale -
-                                                mipsolver.mipdata_->epsilon) /
-                                          objintscale);
+      new_upper_limit = std::min(
+          new_upper_limit,
+          ub - std::ceil(mip_abs_gap * objectiveFunction.integralScale() -
+                         mipsolver.mipdata_->epsilon) /
+                   objectiveFunction.integralScale());
 
     // add feasibility tolerance so that the next best integer feasible solution
     // is definitely included in the remaining search
@@ -314,7 +317,6 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
-  objintscale = 0.0;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -463,6 +465,8 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
+  objectiveFunction.setupCliquePartition(domain, cliquetable);
+  domain.setupObjectivePropagation();
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {
@@ -1201,15 +1205,12 @@ restart:
   lp.loadModel();
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
+  lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
 
   if (symmetries.numPerms != 0)
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
-  if (numRestarts == 0) {
-    // solve the first root lp
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nSolving root node LP relaxation\n");
-  }
+  printDisplayLine();
 
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
@@ -1272,6 +1273,9 @@ restart:
   }
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+
+  // make sure first line after solving root LP is printed
+  last_disptime = -kHighsInf;
 
   heuristics.randomizedRounding(firstlpsol);
   heuristics.flushStatistics();
@@ -1559,43 +1563,11 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
 }
 
 void HighsMipSolverData::checkObjIntegrality() {
-  objintscale = 600.0;
-
-  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.colCost(i) == 0.0) continue;
-
-    if (mipsolver.variableType(i) == HighsVarType::kContinuous) {
-      objintscale = 0.0;
-      break;
-    }
-
-    double cost = mipsolver.colCost(i);
-    double intcost = std::floor(objintscale * cost + 0.5) / objintscale;
-    if (std::abs(cost - intcost) > epsilon) {
-      objintscale = 0.0;
-      break;
-    }
-  }
-
-  if (objintscale != 0.0) {
-    int64_t currgcd = 0;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.colCost(i) == 0.0) continue;
-      int64_t intval = std::floor(mipsolver.colCost(i) * objintscale + 0.5);
-      if (currgcd == 0) {
-        currgcd = intval < 0 ? -intval : intval;
-        continue;
-      }
-      currgcd = HighsIntegers::gcd(intval, currgcd);
-      if (currgcd == 1) break;
-    }
-
-    if (currgcd != 0) objintscale /= currgcd;
-
-    if (numRestarts == 0)
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Objective function is integral with scale %g\n",
-                   objintscale);
+  objectiveFunction.checkIntegrality(epsilon);
+  if (objectiveFunction.isIntegral() && numRestarts == 0) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "Objective function is integral with scale %g\n",
+                 objectiveFunction.integralScale());
   }
 }
 

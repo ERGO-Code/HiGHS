@@ -187,6 +187,20 @@ HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
   }
 }
 
+#ifndef HIGHSINT64
+HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) {
+  InfoStatus status =
+      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  if (status == InfoStatus::kOk) {
+    return HighsStatus::kOk;
+  } else if (status == InfoStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
+}
+#endif
+
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);
@@ -260,16 +274,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
-  // Check validity of any integrality
-  return_status =
-      interpretCallStatus(options_.log_options, assessIntegrality(lp, options_),
-                          return_status, "assessIntegrality");
-  if (return_status == HighsStatus::kError) return return_status;
-
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, lp.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -412,9 +420,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, model_.lp_.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -647,6 +655,14 @@ HighsStatus Highs::run() {
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   model_.lp_.ensureColwise();
+  // Ensure that the matrix has no large values
+  if (model_.lp_.a_matrix_.hasLargeValue(options_.large_matrix_value)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Canot solve a model with a |value| exceeding %g in "
+                 "constraint matrix\n",
+                 options_.large_matrix_value);
+    return returnFromRun(HighsStatus::kError);
+  }
   if (options_.highs_debug_level > min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
@@ -671,8 +687,23 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
 
+  // Check validity of any integrality, keeping a record of any upper
+  // bound modifications for semi-variables
+  call_status = assessIntegrality(model_.lp_, options_);
+  if (call_status == HighsStatus::kError) {
+    setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kSolveError);
+    return returnFromRun(HighsStatus::kError);
+  }
+
   if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
-    // Solve the model as a QP
+    // Choosing method according to model class, and model is a QP
+    //
+    // Ensure that it's not MIQP!
+    if (model_.isMip()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Canot solve MIQP problems with HiGHS\n");
+      return returnFromRun(HighsStatus::kError);
+    }
     call_status = callSolveQp();
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveQp");
@@ -680,7 +711,7 @@ HighsStatus Highs::run() {
   }
 
   if (!options_.solver.compare(kHighsChooseString) && model_.isMip()) {
-    // Solve the model as a MIP
+    // Choosing method according to model class, and model is a MIP
     call_status = callSolveMip();
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveMip");
@@ -2407,8 +2438,12 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  if (lp.sense_ != ObjSense::kMinimize) {
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Negate the vector and Hessian
     for (double& i : instance.c.value) {
+      i *= -1.0;
+    }
+    for (double& i : instance.Q.mat.value) {
       i *= -1.0;
     }
   }
@@ -2437,14 +2472,11 @@ HighsStatus Highs::callSolveQp() {
   Solver solver(runtime);
   solver.solve();
 
-  //
-  // Cheating now, but need to set this honestly!
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  // Cheating now, but need to set this honestly!
   scaled_model_status_ =
       runtime.status == ProblemStatus::OPTIMAL
           ? HighsModelStatus::kOptimal
@@ -2460,15 +2492,19 @@ HighsStatus Highs::callSolveQp() {
   model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
+  const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     solution_.col_value[iCol] = runtime.primal.value[iCol];
-    solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
+    solution_.col_dual[iCol] =
+        objective_multiplier * runtime.dualvar.value[iCol];
   }
   solution_.row_value.resize(lp.num_row_);
   solution_.row_dual.resize(lp.num_row_);
+  // Negate the vector and Hessian
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
-    solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
+    solution_.row_dual[iRow] =
+        objective_multiplier * runtime.dualcon.value[iRow];
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
@@ -2538,6 +2574,14 @@ HighsStatus Highs::callSolveMip() {
   } else {
     // There is no primal solution: should be so by default
     assert(!solution_.value_valid);
+  }
+  // Check that no modified upper bounds for semi-variables are active
+  if (solution_.value_valid &&
+      activeModifiedUpperBounds(options_, model_.lp_, solution_.col_value)) {
+    solution_.value_valid = false;
+    model_status_ = HighsModelStatus::kSolveError;
+    scaled_model_status_ = model_status_;
+    return_status = HighsStatus::kError;
   }
   // There is no dual solution: should be so by default
   assert(!solution_.dual_valid);
@@ -2877,6 +2921,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
   // Record that returnFromRun() has been called
   called_return_from_run = true;
+  // Unapply any modifications that have not yet been unapplied
+  this->model_.lp_.unapplyMods();
+
   // Unless solved as a MIP, report on the solution
   const bool solved_as_mip =
       !options_.solver.compare(kHighsChooseString) && model_.isMip();

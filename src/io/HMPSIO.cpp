@@ -900,7 +900,7 @@ HighsStatus writeMps(
         // May have explicit zeroes on the diagonal
         if (q_value[el])
           fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
-                  col_names[row].c_str(), q_value[el]);
+                  col_names[row].c_str(), (HighsInt)sense * q_value[el]);
       }
     }
   }

@@ -995,7 +995,12 @@ class HighsHashTable {
 
  public:
   void clear() {
-    if (numElements) makeEmptyTable(128);
+    if (numElements) {
+      u64 capacity = tableSizeMask + 1;
+      for (u64 i = 0; i < capacity; ++i)
+        if (occupied(metadata[i])) entries.get()[i].~Entry();
+      makeEmptyTable(128);
+    }
   }
 
   const ValueType* find(const KeyType& key) const {
