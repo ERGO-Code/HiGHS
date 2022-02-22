@@ -32,7 +32,7 @@ class Highs {
   Highs();
   virtual ~Highs() {
     FILE* log_file_stream = options_.log_options.log_file_stream;
-    if (log_file_stream != NULL) {
+    if (log_file_stream != nullptr) {
       assert(log_file_stream != stdout);
       fclose(log_file_stream);
     }
@@ -76,7 +76,7 @@ class Highs {
       const double* col_lower, const double* col_upper, const double* row_lower,
       const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
       const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
-      const double* q_value, const HighsInt* integrality = NULL);
+      const double* q_value, const HighsInt* integrality = nullptr);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const HighsInt a_format,
@@ -85,7 +85,7 @@ class Highs {
                         const double* col_upper, const double* row_lower,
                         const double* row_upper, const HighsInt* astart,
                         const HighsInt* aindex, const double* avalue,
-                        const HighsInt* integrality = NULL);
+                        const HighsInt* integrality = nullptr);
 
   /**
    * @brief Pass the Hessian of the model
@@ -283,16 +283,16 @@ class Highs {
 
   /**
    * @brief Indicates whether a dual unbounded ray exdists, and gets
-   * it if it does and dual_ray is not NULL
+   * it if it does and dual_ray is not nullptr
    */
-  HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = NULL);
+  HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
    * @brief Indicates whether a primal unbounded ray exdists, and gets
-   * it if it does and primal_ray is not NULL
+   * it if it does and primal_ray is not nullptr
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
-                           double* primal_ray_value = NULL);
+                           double* primal_ray_value = nullptr);
 
   /**
    * @brief Gets the ranging information for the current LP, possibly
@@ -324,20 +324,20 @@ class Highs {
    * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseRow(
-      const HighsInt row,           //!< Index of row required
-      double* row_vector,           //!< Row required
-      HighsInt* row_num_nz = NULL,  //!< Number of nonzeros
-      HighsInt* row_indices = NULL  //!< Indices of nonzeros
+      const HighsInt row,              //!< Index of row required
+      double* row_vector,              //!< Row required
+      HighsInt* row_num_nz = nullptr,  //!< Number of nonzeros
+      HighsInt* row_indices = nullptr  //!< Indices of nonzeros
   );
 
   /**
    * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseCol(
-      const HighsInt col,           //!< Index of column required
-      double* col_vector,           //!< Column required
-      HighsInt* col_num_nz = NULL,  //!< Number of nonzeros
-      HighsInt* col_indices = NULL  //!< Indices of nonzeros
+      const HighsInt col,              //!< Index of column required
+      double* col_vector,              //!< Column required
+      HighsInt* col_num_nz = nullptr,  //!< Number of nonzeros
+      HighsInt* col_indices = nullptr  //!< Indices of nonzeros
   );
 
   /**
@@ -345,10 +345,10 @@ class Highs {
    * \f$\mathbf{b}\f$
    */
   HighsStatus getBasisSolve(
-      const double* rhs,                 //!< RHS \f$\mathbf{b}\f$
-      double* solution_vector,           //!< Solution  \f$\mathbf{x}\f$
-      HighsInt* solution_num_nz = NULL,  //!< Number of nonzeros
-      HighsInt* solution_indices = NULL  //!< Indices of nonzeros
+      const double* rhs,                    //!< RHS \f$\mathbf{b}\f$
+      double* solution_vector,              //!< Solution  \f$\mathbf{x}\f$
+      HighsInt* solution_num_nz = nullptr,  //!< Number of nonzeros
+      HighsInt* solution_indices = nullptr  //!< Indices of nonzeros
   );
 
   /**
@@ -356,32 +356,32 @@ class Highs {
    * \f$\mathbf{b}\f$
    */
   HighsStatus getBasisTransposeSolve(
-      const double* rhs,                 //!< RHS \f$\mathbf{b}\f$
-      double* solution_vector,           //!< Solution  \f$\mathbf{x}\f$
-      HighsInt* solution_nz = NULL,      //!< Number of nonzeros
-      HighsInt* solution_indices = NULL  //!< Indices of nonzeros
+      const double* rhs,                    //!< RHS \f$\mathbf{b}\f$
+      double* solution_vector,              //!< Solution  \f$\mathbf{x}\f$
+      HighsInt* solution_nz = nullptr,      //!< Number of nonzeros
+      HighsInt* solution_indices = nullptr  //!< Indices of nonzeros
   );
 
   /**
    * @brief Forms a row of \f$B^{-1}A\f$
    */
   HighsStatus getReducedRow(
-      const HighsInt row,            //!< Index of row required
-      double* row_vector,            //!< Row required
-      HighsInt* row_num_nz = NULL,   //!< Number of nonzeros
-      HighsInt* row_indices = NULL,  //!< Indices of nonzeros
+      const HighsInt row,               //!< Index of row required
+      double* row_vector,               //!< Row required
+      HighsInt* row_num_nz = nullptr,   //!< Number of nonzeros
+      HighsInt* row_indices = nullptr,  //!< Indices of nonzeros
       const double* pass_basis_inverse_row_vector =
-          NULL  //!< Necessary row of \f$B^{-1}\f$
+          nullptr  //!< Necessary row of \f$B^{-1}\f$
   );
 
   /**
    * @brief Forms a column of \f$B^{-1}A\f$
    */
   HighsStatus getReducedColumn(
-      const HighsInt col,           //!< Index of column required
-      double* col_vector,           //!< Column required
-      HighsInt* col_num_nz = NULL,  //!< Number of nonzeros
-      HighsInt* col_indices = NULL  //!< Indices of nonzeros
+      const HighsInt col,              //!< Index of column required
+      double* col_vector,              //!< Column required
+      HighsInt* col_num_nz = nullptr,  //!< Number of nonzeros
+      HighsInt* col_indices = nullptr  //!< Indices of nonzeros
   );
 
   /**
@@ -881,6 +881,13 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
+   * @brief Sets the callback method and user data to use for logging
+   */
+  HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
+                                                  void*),
+                             void* log_callback_data = nullptr);
+
+  /**
    * @brief Uses the HighsBasis passed to set basis_
    */
   HighsStatus setBasis(const HighsBasis& basis, const std::string origin = "");
@@ -918,6 +925,20 @@ class Highs {
   }
 
   /**
+   * @Brief Put a copy of the current iterate - basis; invertible
+   * representation and dual edge weights - into storage within
+   * HSimplexNla. Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus putIterate();
+
+  /**
+   * @Brief Get a copy of the iterate stored within HSimplexNla and
+   * overwrite the current iterate. Advanced method: for HiGHS MIP
+   * solver
+   */
+  HighsStatus getIterate();
+
+  /**
    * @brief Gets the value of infinity used by HiGHS
    */
   double getInfinity() { return kHighsInf; }
@@ -926,6 +947,16 @@ class Highs {
    * @brief Gets the run time of HiGHS
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
+
+  /**
+   * @brief Gets the dual edge weights (steepest/devex) in the order of the
+   * basic indices or nullptr when they are not available.
+   */
+  const double* getDualEdgeWeights() const {
+    return ekk_instance_.dual_edge_weight_.empty()
+               ? nullptr
+               : ekk_instance_.dual_edge_weight_.data();
+  }
 
   /**
    * @brief Runs ipx crossover and if successful loads basis into Highs::basis_
@@ -1048,9 +1079,9 @@ class Highs {
     return info_.simplex_iteration_count;
   }
 
-  HighsStatus setHighsLogfile(FILE* logfile = NULL);
+  HighsStatus setHighsLogfile(FILE* logfile = nullptr);
 
-  HighsStatus setHighsOutput(FILE* output = NULL);
+  HighsStatus setHighsOutput(FILE* output = nullptr);
 
   const HighsInfo& getHighsInfo() const;
 
@@ -1102,6 +1133,11 @@ class Highs {
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
+
+  void exactResizeModel() {
+    this->model_.lp_.exactResize();
+    this->model_.hessian_.exactResize();
+  }
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();

@@ -34,6 +34,7 @@ class HEkk {
   void clearEkkLp();
   void clearEkkData();
   void clearEkkDualise();
+  void clearEkkDualEdgeWeightData();
   void clearEkkPointers();
   void clearEkkDataInfo();
   void clearEkkControlInfo();
@@ -67,13 +68,15 @@ class HEkk {
   HighsStatus permute();
   HighsStatus unpermute();
   HighsStatus solve(const bool force_phase2 = false);
-  HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
 
   void freezeBasis(HighsInt& frozen_basis_id);
   HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
   HighsStatus frozenBasisAllDataClear();
+
+  void putIterate();
+  HighsStatus getIterate();
 
   void addCols(const HighsLp& lp, const HighsSparseMatrix& scaled_a_matrix);
   void addRows(const HighsLp& lp, const HighsSparseMatrix& scaled_ar_matrix);
@@ -140,9 +143,8 @@ class HEkk {
   SimplexBasis basis_;
   HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
-
-  double* workEdWt_ = NULL;      //!< DSE or Dvx weight
-  double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
+  std::vector<double> dual_edge_weight_;
+  std::vector<double> scattered_dual_edge_weight_;
 
   bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
@@ -190,9 +192,10 @@ class HEkk {
   vector<HighsInt> upper_bound_col_;
   vector<HighsInt> upper_bound_row_;
 
+  double edge_weight_error_;
+
   double build_synthetic_tick_ = 0;
   double total_synthetic_tick_ = 0;
-
   HighsInt debug_solve_call_num_ = 0;
   HighsInt debug_basis_id_ = 0;
   bool time_report_ = false;
@@ -201,6 +204,7 @@ class HEkk {
   bool debug_iteration_report_ = false;
   bool debug_basis_report_ = false;
   bool debug_dual_feasible = false;
+  double debug_max_relative_dual_steepest_edge_weight_error = 0;
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
@@ -212,15 +216,24 @@ class HEkk {
   void initialiseSimplexLpRandomVectors();
   void setNonbasicMove();
   bool getNonsingularInverse(const HighsInt solve_phase = 0);
-  bool getBacktrackingBasis(double* scattered_edge_weights);
+  bool getBacktrackingBasis();
   void putBacktrackingBasis();
   void putBacktrackingBasis(
-      const vector<HighsInt>& basicIndex_before_compute_factor,
-      double* scattered_edge_weights);
+      const vector<HighsInt>& basicIndex_before_compute_factor);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
   bool rebuildRefactor(HighsInt rebuild_reason);
   HighsInt computeFactor();
+  void computeDualSteepestEdgeWeights(const bool initial = false);
+  double computeDualSteepestEdgeWeight(const HighsInt iRow, HVector& row_ep);
+  void updateDualSteepestEdgeWeights(const HighsInt row_out,
+                                     const HighsInt variable_in,
+                                     const HVector* column,
+                                     const double new_pivotal_edge_weight,
+                                     const double Kai,
+                                     const double* dual_steepest_edge_array);
+  void updateDualDevexWeights(const HVector* column,
+                              const double new_pivotal_edge_weight);
   void resetSyntheticClock();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
@@ -274,8 +287,6 @@ class HEkk {
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
-  bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
-                       HighsInt& to_entry);
   void invalidatePrimalInfeasibilityRecord();
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();
@@ -303,7 +314,7 @@ class HEkk {
   void applyTabooVariableIn(vector<double>& values,
                             const double overwrite_with);
   void unapplyTabooVariableIn(vector<double>& values);
-
+  bool logicalBasis() const;
   // Methods in HEkkControl
   void initialiseControl();
   void assessDSEWeightError(const double computed_edge_weight,
@@ -338,10 +349,13 @@ class HEkk {
   HighsDebugStatus debugNonbasicFreeColumnSet(
       const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
-
+  HighsDebugStatus devDebugDualSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus debugDualSteepestEdgeWeights(
+      const HighsInt alt_debug_level = -1);
   HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
+
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

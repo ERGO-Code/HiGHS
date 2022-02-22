@@ -24,11 +24,13 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsNodeQueue.h"
+#include "mip/HighsObjectiveFunction.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "parallel/HighsParallel.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
@@ -44,15 +46,18 @@ struct HighsMipSolverData {
   HighsImplications implications;
   HighsPrimalHeuristics heuristics;
   HighsRedcostFixing redcostfixing;
+  HighsObjectiveFunction objectiveFunction;
   presolve::HighsPostsolveStack postSolveStack;
   HighsLp presolvedModel;
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
+  HighsModelStatus analyticCenterStatus;
   bool detectSymmetries;
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
   HighsInt numCliqueEntriesAfterPresolve;
+  HighsInt numCliqueEntriesAfterFirstPresolve;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
@@ -69,12 +74,11 @@ struct HighsMipSolverData {
   HighsSymmetries symmetries;
   std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
-  double objintscale;
-
   double feastol;
   double epsilon;
   double heuristic_effort;
   int64_t dispfreq;
+  std::vector<double> analyticCenter;
   std::vector<double> firstlpsol;
   std::vector<double> rootlpsol;
   double firstlpsolobj;
@@ -104,6 +108,7 @@ struct HighsMipSolverData {
   double lower_bound;
   double upper_bound;
   double upper_limit;
+  double optimality_limit;
   std::vector<double> incumbent;
 
   HighsNodeQueue nodequeue;
@@ -122,11 +127,18 @@ struct HighsMipSolverData {
         cliquetable(mipsolver.numCol()),
         implications(mipsolver),
         heuristics(mipsolver),
+        objectiveFunction(mipsolver),
         debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
     domain.addConflictPool(conflictPool);
   }
 
+  void startAnalyticCenterComputation(
+      const highs::parallel::TaskGroup& taskGroup);
+  void finishAnalyticCenterComputation(
+      const highs::parallel::TaskGroup& taskGroup);
+  double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
+                              double mip_rel_gap) const;
   bool moreHeuristicsAllowed();
   void removeFixedIndices();
   void init();

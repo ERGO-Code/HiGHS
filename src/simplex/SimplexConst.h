@@ -18,7 +18,7 @@
 
 #include "util/HighsInt.h"
 
-enum class SimplexAlgorithm { kPrimal = 0, kDual };
+enum class SimplexAlgorithm { kNone = 0, kPrimal, kDual };
 
 enum SimplexStrategy {
   kSimplexStrategyMin = 0,
@@ -72,21 +72,13 @@ enum SimplexCrashStrategy {
   kSimplexCrashStrategyMax = kSimplexCrashStrategyTestSing
 };
 
-enum SimplexDualEdgeWeightStrategy {
-  kSimplexDualEdgeWeightStrategyMin = -1,
-  kSimplexDualEdgeWeightStrategyChoose = kSimplexDualEdgeWeightStrategyMin,
-  kSimplexDualEdgeWeightStrategyDantzig,
-  kSimplexDualEdgeWeightStrategyDevex,
-  kSimplexDualEdgeWeightStrategySteepestEdge,
-  kSimplexDualEdgeWeightStrategyMax = kSimplexDualEdgeWeightStrategySteepestEdge
-};
-
-enum SimplexPrimalEdgeWeightStrategy {
-  kSimplexPrimalEdgeWeightStrategyMin = -1,
-  kSimplexPrimalEdgeWeightStrategyChoose = kSimplexPrimalEdgeWeightStrategyMin,
-  kSimplexPrimalEdgeWeightStrategyDantzig,
-  kSimplexPrimalEdgeWeightStrategyDevex,
-  kSimplexPrimalEdgeWeightStrategyMax = kSimplexPrimalEdgeWeightStrategyDevex
+enum SimplexEdgeWeightStrategy {
+  kSimplexEdgeWeightStrategyMin = -1,
+  kSimplexEdgeWeightStrategyChoose = kSimplexEdgeWeightStrategyMin,
+  kSimplexEdgeWeightStrategyDantzig,
+  kSimplexEdgeWeightStrategyDevex,
+  kSimplexEdgeWeightStrategySteepestEdge,
+  kSimplexEdgeWeightStrategyMax = kSimplexEdgeWeightStrategySteepestEdge
 };
 
 enum SimplexPriceStrategy {
@@ -143,10 +135,11 @@ enum SimplexNlaOperation {
   kSimplexNlaFtran,
   kSimplexNlaFtranBfrt,
   kSimplexNlaFtranDse,
+  kSimplexNlaBtranPse,
   kNumSimplexNlaOperation
 };
 
-enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
+enum class EdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
 const HighsInt kDualTasksMinConcurrency = 3;
 const HighsInt kDualMultiMinConcurrency = 1;  // 2;
@@ -169,6 +162,8 @@ const HighsInt kIllegalMoveValue =
 
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
+
+const double kMinDualSteepestEdgeWeight = 1e-4;
 
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
@@ -198,6 +193,9 @@ enum class BadBasisChangeReason {
   kCycling,
   kFailedInfeasibilityProof
 };
+
+const HighsInt kAllowedNumBadDevexWeight = 3;
+const double kBadDevexWeightFactor = 3;
 
 //
 // Relation between HiGHS basis and Simplex basis

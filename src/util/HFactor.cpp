@@ -504,7 +504,7 @@ void HFactor::buildSimple() {
    */
   luClear();
 
-  const bool progress_report = num_basic != num_row;
+  const bool progress_report = false;
   const HighsInt progress_frequency = 100000;
 
   // Set all values of permute to -1 so that unpermuted (rank
@@ -517,7 +517,6 @@ void HFactor::buildSimple() {
   /**
    * 1. Prepare basis matrix and deal with unit columns
    */
-
   const bool report_unit = false;
   const bool report_singletons = false;
   const bool report_markowitz = false;
@@ -543,21 +542,25 @@ void HFactor::buildSimple() {
     HighsInt iMat = basic_index[iCol];
     HighsInt iRow = -1;
     int8_t pivot_type = kPivotIllegal;
+    // Look for unit columns as pivots. If there is already a pivot
+    // corresponding to the nonzero in a unit column - evidenced by
+    // mr_count_before[iRow] being negative - then, obviously, it
+    // can't be used. However, it doesn't imply an error, or even rank
+    // deficiency now that build() is being used to determine
+    // rank. Treat it as a column to be handled in the kernel, so that
+    // any rank deficiency or singularity is detected as late as
+    // possible.
     if (iMat >= num_col) {
-      if (report_unit) printf("Stage %d: Logical\n", (int)(l_start.size() - 1));
       // 1.1 Logical column
-      pivot_type = kPivotLogical;
+      //
       // Check for double pivot
       HighsInt lc_iRow = iMat - num_col;
       if (mr_count_before[lc_iRow] >= 0) {
+        if (report_unit)
+          printf("Stage %d: Logical\n", (int)(l_start.size() - 1));
+        pivot_type = kPivotLogical;
         iRow = lc_iRow;
       } else {
-        highsLogDev(log_options, HighsLogType::kError,
-                    "INVERT Error: Found a logical column with pivot "
-                    "already in row %" HIGHSINT_FORMAT "\n",
-                    lc_iRow);
-        // Treat this as a column to be handled in the kernel, so that
-        // the rank deficiency is detected as late as possible.
         mr_count_before[lc_iRow]++;
         b_index[BcountX] = lc_iRow;
         b_value[BcountX++] = 1.0;
@@ -578,11 +581,6 @@ void HFactor::buildSimple() {
         pivot_type = kPivotColSingleton;  //;kPivotUnit;//
         iRow = lc_iRow;
       } else {
-        if (unit_col)
-          highsLogDev(log_options, HighsLogType::kError,
-                      "INVERT Error: Found a second unit column with pivot in "
-                      "row %" HIGHSINT_FORMAT "\n",
-                      lc_iRow);
         for (HighsInt k = start; k < start + count; k++) {
           mr_count_before[a_index[k]]++;
           assert(BcountX < b_index.size());
@@ -600,7 +598,10 @@ void HFactor::buildSimple() {
       u_pivot_index.push_back(iRow);
       u_pivot_value.push_back(1);
       u_start.push_back(u_index.size());
-      mr_count_before[iRow] = -num_row;
+      // Was -num_row, but this is incorrect since the negation needs
+      // to be great enough so that, starting from it, the accumulated
+      // count can never reach zero
+      mr_count_before[iRow] = -num_basic;
       assert(pivot_type != kPivotIllegal);
       this->refactor_info_.pivot_row.push_back(iRow);
       this->refactor_info_.pivot_var.push_back(iMat);
@@ -807,7 +808,7 @@ HighsInt HFactor::buildKernel() {
   double fake_fill = 0;
   double fake_eliminate = 0;
 
-  const bool progress_report = num_basic != num_row;
+  const bool progress_report = false;  // num_basic != num_row;
   const HighsInt progress_frequency = 10000;
   HighsInt search_k = 0;
 
@@ -1518,6 +1519,8 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
           rhs_array[lr_index[k]] -= pivot_multiplier * lr_value[k];
       } else
         rhs_array[pivotRow] = 0;
+      if (this->debug_report_)
+        printf("BTRAN_L Sps %d rhs.count = %d\n", (int)i, (int)rhs_count);
     }
 
     // Save the count
@@ -2419,4 +2422,96 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
 
   // Store pivot
   pf_pivot_value.push_back(aq->array[iRow]);
+}
+
+InvertibleRepresentation HFactor::getInvert() const {
+  InvertibleRepresentation invert;
+  invert.l_pivot_index = this->l_pivot_index;
+  invert.l_pivot_lookup = this->l_pivot_lookup;
+  invert.l_start = this->l_start;
+  invert.l_index = this->l_index;
+  invert.l_value = this->l_value;
+  invert.lr_start = this->lr_start;
+  invert.lr_index = this->lr_index;
+  invert.lr_value = this->lr_value;
+
+  invert.u_pivot_lookup = this->u_pivot_lookup;
+  invert.u_pivot_index = this->u_pivot_index;
+  invert.u_pivot_value = this->u_pivot_value;
+  invert.u_start = this->u_start;
+  invert.u_last_p = this->u_last_p;
+  invert.u_index = this->u_index;
+  invert.u_value = this->u_value;
+
+  invert.ur_start = this->ur_start;
+  invert.ur_lastp = this->ur_lastp;
+  invert.ur_space = this->ur_space;
+  invert.ur_index = this->ur_index;
+  invert.ur_value = this->ur_value;
+  invert.pf_start = this->pf_start;
+  invert.pf_index = this->pf_index;
+  invert.pf_value = this->pf_value;
+  invert.pf_pivot_index = this->pf_pivot_index;
+  invert.pf_pivot_value = this->pf_pivot_value;
+  return invert;
+}
+
+void HFactor::setInvert(const InvertibleRepresentation& invert) {
+  this->l_pivot_index = invert.l_pivot_index;
+  this->l_pivot_lookup = invert.l_pivot_lookup;
+  this->l_start = invert.l_start;
+  this->l_index = invert.l_index;
+  this->l_value = invert.l_value;
+  this->lr_start = invert.lr_start;
+  this->lr_index = invert.lr_index;
+  this->lr_value = invert.lr_value;
+
+  this->u_pivot_lookup = invert.u_pivot_lookup;
+  this->u_pivot_index = invert.u_pivot_index;
+  this->u_pivot_value = invert.u_pivot_value;
+  this->u_start = invert.u_start;
+  this->u_last_p = invert.u_last_p;
+  this->u_index = invert.u_index;
+  this->u_value = invert.u_value;
+
+  this->ur_start = invert.ur_start;
+  this->ur_lastp = invert.ur_lastp;
+  this->ur_space = invert.ur_space;
+  this->ur_index = invert.ur_index;
+  this->ur_value = invert.ur_value;
+  this->pf_start = invert.pf_start;
+  this->pf_index = invert.pf_index;
+  this->pf_value = invert.pf_value;
+  this->pf_pivot_index = invert.pf_pivot_index;
+  this->pf_pivot_value = invert.pf_pivot_value;
+}
+
+void InvertibleRepresentation::clear() {
+  this->l_pivot_index.clear();
+  this->l_pivot_lookup.clear();
+  this->l_start.clear();
+  this->l_index.clear();
+  this->l_value.clear();
+  this->lr_start.clear();
+  this->lr_index.clear();
+  this->lr_value.clear();
+
+  this->u_pivot_lookup.clear();
+  this->u_pivot_index.clear();
+  this->u_pivot_value.clear();
+  this->u_start.clear();
+  this->u_last_p.clear();
+  this->u_index.clear();
+  this->u_value.clear();
+
+  this->ur_start.clear();
+  this->ur_lastp.clear();
+  this->ur_space.clear();
+  this->ur_index.clear();
+  this->ur_value.clear();
+  this->pf_start.clear();
+  this->pf_index.clear();
+  this->pf_value.clear();
+  this->pf_pivot_index.clear();
+  this->pf_pivot_value.clear();
 }

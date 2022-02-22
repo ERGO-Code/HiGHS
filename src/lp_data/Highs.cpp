@@ -267,9 +267,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   if (return_status == HighsStatus::kError) return return_status;
 
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, lp.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -412,9 +412,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(options_.log_options,
-                                      assessHessian(hessian, options_),
-                                      return_status, "assessHessian");
+  return_status = interpretCallStatus(
+      options_.log_options, assessHessian(hessian, options_, model_.lp_.sense_),
+      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -597,6 +597,15 @@ HighsStatus Highs::run() {
   highs::parallel::initialize_scheduler(options_.threads);
 
   max_threads = highs::parallel::num_threads();
+  if (options_.threads != 0 && max_threads != options_.threads) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Option 'threads' is set to %d but global scheduler has already been "
+        "initialized to use %d threads. The previous scheduler instance can be "
+        "destroyed by calling HighsTaskExecutor::shutdown().\n",
+        (int)options_.threads, max_threads);
+    return HighsStatus::kError;
+  }
   assert(max_threads > 0);
   if (max_threads <= 0)
     highsLogDev(options_.log_options, HighsLogType::kWarning,
@@ -610,6 +619,8 @@ HighsStatus Highs::run() {
                 "Highs::run() called with called_return_from_run false\n");
     return HighsStatus::kError;
   }
+  // Ensure that all vectors in the model have exactly the right size
+  exactResizeModel();
   // Set this so that calls to returnFromRun() can be checked
   called_return_from_run = false;
   // From here all return statements execute returnFromRun()
@@ -636,6 +647,14 @@ HighsStatus Highs::run() {
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   model_.lp_.ensureColwise();
+  // Ensure that the matrix has no large values
+  if (model_.lp_.a_matrix_.hasLargeValue(options_.large_matrix_value)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Canot solve a model with a |value| exceeding %g in "
+                 "constraint matrix\n",
+                 options_.large_matrix_value);
+    return returnFromRun(HighsStatus::kError);
+  }
   if (options_.highs_debug_level > min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
@@ -655,7 +674,6 @@ HighsStatus Highs::run() {
       return returnFromRun(return_status);
     }
   }
-  highsSetLogCallback(options_);
 
   if (model_.lp_.model_name_.compare(""))
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -1429,6 +1447,14 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
+                                                       const char*, void*),
+                                  void* log_callback_data) {
+  options_.log_options.log_callback = log_callback;
+  options_.log_options.log_callback_data = log_callback_data;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
@@ -1440,7 +1466,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
     if (return_status != HighsStatus::kOk) return HighsStatus::kError;
     // Update the HiGHS basis
-    basis_ = modifiable_basis;
+    basis_ = std::move(modifiable_basis);
   } else {
     // Check the user-supplied basis
     if (!isBasisConsistent(model_.lp_, basis)) {
@@ -1516,6 +1542,33 @@ HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
   if (call_status != HighsStatus::kOk) return call_status;
   // Reset simplex NLA pointers
   ekk_instance_.setNlaPointersForTrans(model_.lp_);
+  // Get the corresponding HiGHS basis
+  basis_ = ekk_instance_.getHighsBasis(model_.lp_);
+  // Clear everything else
+  clearModelStatusSolutionAndInfo();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsStatus Highs::putIterate() {
+  // Check that there is a simplex iterate to put
+  if (!ekk_instance_.status_.has_invert) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "putIterate: no simplex iterate to put\n");
+    return HighsStatus::kError;
+  }
+  ekk_instance_.putIterate();
+  return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsStatus Highs::getIterate() {
+  // Check that there is a simplex iterate to get
+  if (!ekk_instance_.status_.initialised_for_new_lp) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "getIterate: no simplex iterate to get\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = ekk_instance_.getIterate();
+  if (call_status != HighsStatus::kOk) return call_status;
   // Get the corresponding HiGHS basis
   basis_ = ekk_instance_.getHighsBasis(model_.lp_);
   // Clear everything else
@@ -1875,6 +1928,13 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
                  "%" HIGHSINT_FORMAT "]\n",
                  col, model_.lp_.num_col_);
     return HighsStatus::kError;
+  }
+  const double abs_value = std::fabs(value);
+  if (0 < abs_value && abs_value <= options_.small_matrix_value) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "|Value| of %g supplied to Highs::changeCoeff is in (0, %g]: "
+                 "zeroes any existing coefficient, otherwise ignored\n",
+                 abs_value, options_.small_matrix_value);
   }
   changeCoefficientInterface(row, col, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2355,8 +2415,12 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  if (lp.sense_ != ObjSense::kMinimize) {
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Negate the vector and Hessian
     for (double& i : instance.c.value) {
+      i *= -1.0;
+    }
+    for (double& i : instance.Q.mat.value) {
       i *= -1.0;
     }
   }
@@ -2385,14 +2449,11 @@ HighsStatus Highs::callSolveQp() {
   Solver solver(runtime);
   solver.solve();
 
-  //
-  // Cheating now, but need to set this honestly!
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  // Cheating now, but need to set this honestly!
   scaled_model_status_ =
       runtime.status == ProblemStatus::OPTIMAL
           ? HighsModelStatus::kOptimal
@@ -2408,15 +2469,19 @@ HighsStatus Highs::callSolveQp() {
   model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
+  const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     solution_.col_value[iCol] = runtime.primal.value[iCol];
-    solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
+    solution_.col_dual[iCol] =
+        objective_multiplier * runtime.dualvar.value[iCol];
   }
   solution_.row_value.resize(lp.num_row_);
   solution_.row_dual.resize(lp.num_row_);
+  // Negate the vector and Hessian
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
-    solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
+    solution_.row_dual[iRow] =
+        objective_multiplier * runtime.dualcon.value[iRow];
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
@@ -2433,9 +2498,24 @@ HighsStatus Highs::callSolveQp() {
 }
 
 HighsStatus Highs::callSolveMip() {
+  // Record whether there is a valid primal solution on entry
+  const bool user_solution = solution_.value_valid;
+  std::vector<double> user_solution_col_value;
+  std::vector<double> user_solution_row_value;
+  if (user_solution) {
+    // Save the col and row values
+    user_solution_col_value = std::move(solution_.col_value);
+    user_solution_row_value = std::move(solution_.row_value);
+  }
   // Ensure that any solver data for users in Highs class members are
   // cleared
   clearUserSolverData();
+  if (user_solution) {
+    // Recover the col and row values
+    solution_.col_value = std::move(user_solution_col_value);
+    solution_.row_value = std::move(user_solution_row_value);
+    solution_.value_valid = true;
+  }
   // Run the MIP solver
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;

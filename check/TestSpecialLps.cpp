@@ -1,7 +1,6 @@
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
-//#include "lp_data/HConst.h"
 
 const bool dev_run = false;
 
@@ -218,6 +217,163 @@ void issue425(Highs& highs) {
 #endif
 }
 
+void issue669(Highs& highs) {
+  SpecialLps special_lps;
+  special_lps.reportIssue(669, dev_run);
+  // This is issue669 from chrhansk for which presolve gets into a
+  // mess with zero coefficients
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  special_lps.issue669Lp(lp, require_model_status);
+
+  const bool issue669a = false;
+  if (issue669a) {
+    // Expose issue 669a.
+    //
+    // Forgetting that lp.a_matrix_.start_ has initial size of 1, I pushed
+    // lp.num_col_+1 zeros onto it, giving it size lp.num_col_+2. This
+    // triggers an assert in HPresolve.cpp:1946
+    //
+    // Push the additional 0 now
+    lp.a_matrix_.start_.push_back(0);
+  }
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  if (!issue669a) {
+    // Complete the LP as in issue 669
+    highs.changeColBounds(0, -0.266667, 0.266667);
+    highs.changeColBounds(1, -0.266667, 0.266667);
+    highs.changeColBounds(2, -0.266667, 0.266667);
+    highs.changeColBounds(3, -0.266667, 0.266667);
+    highs.changeColBounds(4, -0.266667, 0.266667);
+    highs.changeColBounds(5, -0.266667, 0.266667);
+    highs.changeColBounds(6, -0.266667, 0.266667);
+    highs.changeColBounds(7, -0.266667, 0.266667);
+    highs.changeColBounds(8, -0.266667, 0.266667);
+    highs.changeColBounds(9, 0.000000, inf);
+    highs.changeColBounds(10, 0.000000, inf);
+    highs.changeColBounds(11, 0.000000, inf);
+    highs.changeColBounds(12, 0.000000, inf);
+    highs.changeColBounds(13, 0.000000, inf);
+    highs.changeColBounds(14, 0.000000, inf);
+    highs.changeColBounds(15, 0.000000, inf);
+    highs.changeColBounds(16, 0.000000, inf);
+    highs.changeColBounds(17, 0.000000, inf);
+    highs.changeColBounds(18, 0.000000, inf);
+    highs.changeColBounds(19, 0.000000, inf);
+    highs.changeColBounds(20, 0.000000, inf);
+    highs.changeColBounds(21, 0.000000, inf);
+    highs.changeColBounds(22, 0.000000, inf);
+    highs.changeColBounds(23, 0.000000, inf);
+    highs.changeColBounds(24, 0.000000, inf);
+    highs.changeColBounds(25, 0.000000, inf);
+    highs.changeColBounds(26, 0.000000, inf);
+    highs.changeRowBounds(0, 0.000000, 0.000000);
+    highs.changeRowBounds(1, -948.210000, -948.210000);
+    highs.changeRowBounds(2, 0.000000, 0.000000);
+    highs.changeRowBounds(3, 0.000000, 0.000000);
+    highs.changeRowBounds(4, 44.792000, 44.792000);
+    highs.changeRowBounds(5, 0.000000, 0.000000);
+    highs.changeRowBounds(6, 0.000000, 0.000000);
+    highs.changeRowBounds(7, -42.684000, -42.684000);
+    highs.changeRowBounds(8, 0.000000, 0.000000);
+
+    highs.changeCoeff(0, 0, 0.000000);
+    highs.changeCoeff(1, 0, 0.000000);
+    highs.changeCoeff(2, 0, 0.000000);
+    highs.changeCoeff(3, 0, -0.006089);
+    highs.changeCoeff(6, 0, 0.000000);
+    highs.changeCoeff(0, 1, 0.000000);
+    highs.changeCoeff(1, 1, 0.000000);
+    highs.changeCoeff(2, 1, 0.000000);
+    highs.changeCoeff(4, 1, -0.006089);
+    highs.changeCoeff(7, 1, 0.000000);
+    highs.changeCoeff(0, 2, 0.000000);
+    highs.changeCoeff(1, 2, 0.000000);
+    highs.changeCoeff(2, 2, 0.000000);
+    highs.changeCoeff(5, 2, -0.006089);
+    highs.changeCoeff(8, 2, 0.000000);
+    highs.changeCoeff(0, 3, -1886.000000);
+    highs.changeCoeff(1, 3, 0.000000);
+    highs.changeCoeff(2, 3, 0.000000);
+    highs.changeCoeff(3, 3, 44.292000);
+    highs.changeCoeff(6, 3, -42.362000);
+    highs.changeCoeff(0, 4, 0.000000);
+    highs.changeCoeff(1, 4, -1886.000000);
+    highs.changeCoeff(2, 4, 0.000000);
+    highs.changeCoeff(4, 4, 44.292000);
+    highs.changeCoeff(7, 4, -42.362000);
+    highs.changeCoeff(0, 5, 0.000000);
+    highs.changeCoeff(1, 5, 0.000000);
+    highs.changeCoeff(2, 5, -1886.000000);
+    highs.changeCoeff(5, 5, 44.292000);
+    highs.changeCoeff(8, 5, -42.362000);
+    highs.changeCoeff(0, 6, 42.362000);
+    highs.changeCoeff(1, 6, 0.000000);
+    highs.changeCoeff(2, 6, 0.000000);
+    highs.changeCoeff(3, 6, -2.001100);
+    highs.changeCoeff(6, 6, 2.070500);
+    highs.changeCoeff(0, 7, 0.000000);
+    highs.changeCoeff(1, 7, 42.362000);
+    highs.changeCoeff(2, 7, 0.000000);
+    highs.changeCoeff(4, 7, -2.001100);
+    highs.changeCoeff(7, 7, 2.070500);
+    highs.changeCoeff(0, 8, 0.000000);
+    highs.changeCoeff(1, 8, 0.000000);
+    highs.changeCoeff(2, 8, 42.362000);
+    highs.changeCoeff(5, 8, -2.001100);
+    highs.changeCoeff(8, 8, 2.070500);
+    highs.changeCoeff(0, 9, 1.000000);
+    highs.changeCoeff(1, 10, 1.000000);
+    highs.changeCoeff(2, 11, 1.000000);
+    highs.changeCoeff(3, 12, 1.000000);
+    highs.changeCoeff(4, 13, 1.000000);
+    highs.changeCoeff(5, 14, 1.000000);
+    highs.changeCoeff(6, 15, 1.000000);
+    highs.changeCoeff(7, 16, 1.000000);
+    highs.changeCoeff(8, 17, 1.000000);
+    highs.changeCoeff(0, 18, -1.000000);
+    highs.changeCoeff(1, 19, -1.000000);
+    highs.changeCoeff(2, 20, -1.000000);
+    highs.changeCoeff(3, 21, -1.000000);
+    highs.changeCoeff(4, 22, -1.000000);
+    highs.changeCoeff(5, 23, -1.000000);
+    highs.changeCoeff(6, 24, -1.000000);
+    highs.changeCoeff(7, 25, -1.000000);
+    highs.changeCoeff(8, 26, -1.000000);
+
+    highs.changeColCost(0, 0.000000);
+    highs.changeColCost(1, 0.000000);
+    highs.changeColCost(2, 0.000000);
+    highs.changeColCost(3, 0.000000);
+    highs.changeColCost(4, 0.000000);
+    highs.changeColCost(5, 0.000000);
+    highs.changeColCost(6, 0.000000);
+    highs.changeColCost(7, 0.000000);
+    highs.changeColCost(8, 0.000000);
+    highs.changeColCost(9, 10.000000);
+    highs.changeColCost(10, 10.000000);
+    highs.changeColCost(11, 10.000000);
+    highs.changeColCost(12, 10.000000);
+    highs.changeColCost(13, 10.000000);
+    highs.changeColCost(14, 10.000000);
+    highs.changeColCost(15, 10.000000);
+    highs.changeColCost(16, 10.000000);
+    highs.changeColCost(17, 10.000000);
+    highs.changeColCost(18, 10.000000);
+    highs.changeColCost(19, 10.000000);
+    highs.changeColCost(20, 10.000000);
+    highs.changeColCost(21, 10.000000);
+    highs.changeColCost(22, 10.000000);
+    highs.changeColCost(23, 10.000000);
+    highs.changeColCost(24, 10.000000);
+    highs.changeColCost(25, 10.000000);
+    highs.changeColCost(26, 10.000000);
+  }
+  const double require_optimal_objective = 4.9726034324e+03;
+  solve(highs, "on", "simplex", require_model_status,
+        require_optimal_objective);
+}
+
 void mpsGalenet(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportLpName("mpsGalenet", dev_run);
@@ -302,7 +458,7 @@ void mpsGas11(Highs& highs) {
   std::string model = "gas11";
   std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kWarning);
 
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
@@ -528,6 +684,11 @@ TEST_CASE("LP-425", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   issue425(highs);
+}
+TEST_CASE("LP-669", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  issue669(highs);
 }
 TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
   Highs highs;

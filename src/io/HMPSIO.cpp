@@ -366,7 +366,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     Qdim = numCol;
     HighsInt hessian_nz = 0;
     HighsInt previous_col = -1;
-    bool has_diagonal;
+    bool has_diagonal = false;
     Qstart.clear();
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
       HighsInt iCol0 = colIndex[data[1]] - 1;
@@ -900,7 +900,7 @@ HighsStatus writeMps(
         // May have explicit zeroes on the diagonal
         if (q_value[el])
           fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
-                  col_names[row].c_str(), q_value[el]);
+                  col_names[row].c_str(), (HighsInt)sense * q_value[el]);
       }
     }
   }

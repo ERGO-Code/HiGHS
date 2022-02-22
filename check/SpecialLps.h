@@ -162,6 +162,28 @@ class SpecialLps {
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
+  void issue669Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.model_name_ = "issue669";
+    lp.num_col_ = 27;
+    lp.num_row_ = 9;
+    vector<double> zero_vector_col;
+    vector<double> zero_vector_row;
+    vector<HighsInt> zero_vector_start;
+    for (int iCol = 0; iCol < lp.num_col_; iCol++) zero_vector_col.push_back(0);
+    for (int iRow = 0; iRow < lp.num_row_; iRow++) zero_vector_row.push_back(0);
+    lp.col_cost_ = zero_vector_col;
+    lp.col_lower_ = zero_vector_col;
+    lp.col_upper_ = zero_vector_col;
+    lp.row_lower_ = zero_vector_row;
+    lp.row_upper_ = zero_vector_row;
+    for (int iCol = 0; iCol < lp.num_col_; iCol++)
+      lp.a_matrix_.start_.push_back(0);
+    lp.sense_ = ObjSense::kMinimize;
+    lp.offset_ = 0;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
+  }
+
   void primalDualInfeasible1Lp(HighsLp& lp,
                                HighsModelStatus& require_model_status) {
     lp.model_name_ = "primalDualInfeasible1";
