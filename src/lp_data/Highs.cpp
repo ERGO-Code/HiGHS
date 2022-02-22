@@ -187,6 +187,20 @@ HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
   }
 }
 
+#ifndef HIGHSINT64
+HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) {
+  InfoStatus status =
+      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  if (status == InfoStatus::kOk) {
+    return HighsStatus::kOk;
+  } else if (status == InfoStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
+}
+#endif
+
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);

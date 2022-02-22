@@ -327,6 +327,11 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
+HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
+                                 int64_t* value) {
+  return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
+}
+
 HighsInt Highs_getSolution(const void* highs, double* colvalue, double* coldual,
                            double* rowvalue, double* rowdual) {
   HighsSolution solution = ((Highs*)highs)->getSolution();
