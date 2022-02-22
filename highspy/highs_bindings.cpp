@@ -167,6 +167,99 @@ void highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> indices)
 }
 
 
+bool highs_getBoolOption(Highs* h, const std::string& option)
+{
+  bool res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+int highs_getIntOption(Highs* h, const std::string& option)
+{
+  int res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+double highs_getDoubleOption(Highs* h, const std::string& option)
+{
+  double res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+std::string highs_getStringOption(Highs* h, const std::string& option)
+{
+  std::string res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+py::object highs_getOptionValue(Highs* h, const std::string& option)
+{
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  if (option_type == HighsOptionType::kBool)
+    return py::cast(highs_getBoolOption(h, option));
+  else if (option_type == HighsOptionType::kInt)
+    return py::cast(highs_getIntOption(h, option));
+  else if (option_type == HighsOptionType::kDouble)
+    return py::cast(highs_getDoubleOption(h, option));
+  else if (option_type == HighsOptionType::kString)
+    return py::cast(highs_getStringOption(h, option));
+  else
+    throw py::value_error("Unrecognized option type");
+}
+
+
+ObjSense highs_getObjectiveSense(Highs* h)
+{
+  ObjSense obj_sense;
+  HighsStatus status = h->getObjectiveSense(obj_sense);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting objective sense");
+
+  return obj_sense;
+}
+
+
+double highs_getObjectiveOffset(Highs* h)
+{
+  double obj_offset;
+  HighsStatus status = h->getObjectiveOffset(obj_offset);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting objective offset");
+
+  return obj_offset;
+}
+
+
 PYBIND11_MODULE(highs_bindings, m)
 {
   py::enum_<ObjSense>(m, "ObjSense")
@@ -215,6 +308,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeRowBounds", &Highs::changeRowBounds)
     .def("changeCoeff", &Highs::changeCoeff)
     .def("getObjectiveValue", &Highs::getObjectiveValue)
+    .def("getObjectiveSense", &highs_getObjectiveSense)
+    .def("getObjectiveOffset", &highs_getObjectiveOffset)
     .def("getRunTime", &Highs::getRunTime)
     .def("getModelStatus", &Highs::getModelStatus)
     .def("addRows", &highs_addRows)
@@ -227,6 +322,15 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
+    .def("clear", &Highs::clear)
+    .def("clearModel", &Highs::clearModel)
+    .def("clearSolver", &Highs::clearSolver)
+    .def("checkSolutionFeasibility", &Highs::checkSolutionFeasibility)
+    .def("getNumCol", &Highs::getNumCol)
+    .def("getNumRow", &Highs::getNumRow)
+    .def("getNumNz", &Highs::getNumNz)
+    .def("resetOptions", &Highs::resetOptions)
+    .def("getOptionValue", &highs_getOptionValue)
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
