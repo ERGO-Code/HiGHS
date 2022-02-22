@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <math.h>
 
-const HighsInt dev_run = 1;
+const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
@@ -635,9 +635,19 @@ void full_api_mip() {
   assert(return_status == 0);
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_run(highs);
+  // mip_node_count is always int64_t, so the following should be an
+  // error depending on whether HIGHSINT64 is set
+  HighsInt mip_node_count_int;
+  HighsInt required_return_status = -1;
+#ifdef HIGHSINT64
+  required_return_status = 0;
+#endif
+  return_status = Highs_getIntInfoValue(highs, "mip_node_count", &mip_node_count_int);
+  assert(return_status == required_return_status);
   int64_t mip_node_count;
   return_status = Highs_getInt64InfoValue(highs, "mip_node_count", &mip_node_count);
   assert( return_status == 0 );
+  assert( mip_node_count == 1 );
 
 }
 
@@ -886,16 +896,16 @@ void test_passHessian() {
 }
 
 int main() {
-  //  minimal_api();
-  //  full_api();
-  //  minimal_api_lp();
-  //  minimal_api_mip();
-  //  minimal_api_qp();
-  //  full_api_lp();
-    full_api_mip();
-  //  full_api_qp();
-  //  options();
-  //  test_getColsByRange();
-  //  test_passHessian();
+  minimal_api();
+  full_api();
+  minimal_api_lp();
+  minimal_api_mip();
+  minimal_api_qp();
+  full_api_lp();
+  full_api_mip();
+  full_api_qp();
+  options();
+  test_getColsByRange();
+  test_passHessian();
   return 0;
 }

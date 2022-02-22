@@ -15,6 +15,8 @@
  */
 #include "lp_data/HighsInfo.h"
 
+#include <cassert>
+
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
@@ -168,7 +170,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
         name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;
   }
-  InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
+  InfoRecordInt64 info = ((InfoRecordInt64*)info_records[index])[0];
   value = *info.value;
   return InfoStatus::kOk;
 }
@@ -183,15 +185,32 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
-  if (type != HighsInfoType::kInt) {
+  bool type_ok = type == HighsInfoType::kInt;
+  // When HIGHSINT64 is "on", value is int64_t and this method is used
+  // get HighsInfo values of type HighsInfoType::kInt64
+#ifdef HIGHSINT64
+  type_ok = type_ok || type == HighsInfoType::kInt64;
+#endif
+  if (!type_ok) {
+    std::string illegal_type = "HighsInt";
+#ifdef HIGHSINT64
+    illegal_type += " or int64_t";
+#endif
     highsLogUser(
         options.log_options, HighsLogType::kError,
-        "getInfoValue: Info \"%s\" requires value of type %s, not HighsInt\n",
-        name.c_str(), infoEntryTypeToString(type).c_str());
+        "getInfoValue: Info \"%s\" requires value of type %s, not %s\n",
+        name.c_str(), infoEntryTypeToString(type).c_str(),
+        illegal_type.c_str());
     return InfoStatus::kIllegalValue;
   }
-  InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
-  value = *info.value;
+  if (type == HighsInfoType::kInt) {
+    InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
+    value = *info.value;
+  } else {
+    assert(type == HighsInfoType::kInt64);
+    InfoRecordInt64 info = ((InfoRecordInt64*)info_records[index])[0];
+    value = *info.value;
+  }
   return InfoStatus::kOk;
 }
 
