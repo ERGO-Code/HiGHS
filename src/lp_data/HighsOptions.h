@@ -347,8 +347,8 @@ struct HighsOptionsStruct {
   bool icrash_dualize;
   std::string icrash_strategy;
   double icrash_starting_weight;
-  int icrash_iterations;
-  int icrash_approx_iter;
+  HighsInt icrash_iterations;
+  HighsInt icrash_approx_iter;
   bool icrash_exact;
   bool icrash_breakpoints;
 
