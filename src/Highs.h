@@ -229,6 +229,10 @@ class Highs {
   );
 
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
+                           int64_t& value            //!< The info value
+  );
+
+  HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            double& value) const;     //!< The info value
 
   HighsStatus writeInfo(const std::string filename  //!< The filename

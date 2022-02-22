@@ -154,6 +154,27 @@ InfoStatus checkInfo(const HighsOptions& options,
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
+                             int64_t& value) {
+  HighsInt index;
+  InfoStatus status = getInfoIndex(options, name, info_records, index);
+  if (status != InfoStatus::kOk) return status;
+  if (!valid) return InfoStatus::kUnavailable;
+  HighsInfoType type = info_records[index]->type;
+  if (type != HighsInfoType::kInt64) {
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
+        name.c_str(), infoEntryTypeToString(type).c_str());
+    return InfoStatus::kIllegalValue;
+  }
+  InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
+  value = *info.value;
+  return InfoStatus::kOk;
+}
+
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
                              HighsInt& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);

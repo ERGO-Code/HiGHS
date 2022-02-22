@@ -635,8 +635,8 @@ void full_api_mip() {
   assert(return_status == 0);
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_run(highs);
-  HighsInt mip_node_count;
-  return_status = Highs_getIntInfoValue(highs, "mip_node_count", &mip_node_count);
+  int64_t mip_node_count;
+  return_status = Highs_getInt64InfoValue(highs, "mip_node_count", &mip_node_count);
   assert( return_status == 0 );
 
 }

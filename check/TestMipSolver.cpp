@@ -72,7 +72,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (dev_run) printf("Objective = %g\n", optimal_objective);
 
   printf("kHighsIInf = %" HIGHSINT_FORMAT "\n", kHighsIInf);
-  HighsInt mip_node_count;
+  int64_t mip_node_count;
   REQUIRE(highs.getInfoValue("mip_node_count", mip_node_count) ==
           HighsStatus::kOk);
   printf("mip_node_count = %d\n", (int)mip_node_count);
