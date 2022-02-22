@@ -737,22 +737,18 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      std::cout << 
-                        "ICrash error: unknown strategy." << std::endl;
+      std::cout << "ICrash error: unknown strategy." << std::endl;
       return HighsStatus::kError;
     }
     ICrashOptions icrash_options{
-        options_.icrash_dualize,
-        strategy,
-        options_.icrash_starting_weight,
-        options_.icrash_iterations,
-        options_.icrash_approx_iter,
-        options_.icrash_exact,
-        options_.icrash_breakpoints,
-        options_.log_options};
+        options_.icrash_dualize,         strategy,
+        options_.icrash_starting_weight, options_.icrash_iterations,
+        options_.icrash_approx_iter,     options_.icrash_exact,
+        options_.icrash_breakpoints,     options_.log_options};
 
     // todo: timing. some strange compile issue.
-    HighsStatus icrash_status = callICrash(model_.lp_, icrash_options, icrash_info_);
+    HighsStatus icrash_status =
+        callICrash(model_.lp_, icrash_options, icrash_info_);
 
     if (icrash_status != HighsStatus::kOk) return icrash_status;
 
@@ -762,7 +758,7 @@ HighsStatus Highs::run() {
     // loops:
     called_return_from_run = true;
 
-    options_.icrash = false; // to avoid loop
+    options_.icrash = false;  // to avoid loop
     timer_.stopRunHighsClock();
     run();
 
@@ -2514,18 +2510,17 @@ HighsStatus Highs::callSolveQp() {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  scaled_model_status_ =
-      runtime.status == ProblemStatus::OPTIMAL
-          ? HighsModelStatus::kOptimal
-          : runtime.status == ProblemStatus::UNBOUNDED
-                ? HighsModelStatus::kUnbounded
-                : runtime.status == ProblemStatus::INFEASIBLE
-                      ? HighsModelStatus::kInfeasible
-                      : runtime.status == ProblemStatus::ITERATIONLIMIT
-                            ? HighsModelStatus::kIterationLimit
-                            : runtime.status == ProblemStatus::TIMELIMIT
-                                  ? HighsModelStatus::kTimeLimit
-                                  : HighsModelStatus::kNotset;
+  scaled_model_status_ = runtime.status == ProblemStatus::OPTIMAL
+                             ? HighsModelStatus::kOptimal
+                         : runtime.status == ProblemStatus::UNBOUNDED
+                             ? HighsModelStatus::kUnbounded
+                         : runtime.status == ProblemStatus::INFEASIBLE
+                             ? HighsModelStatus::kInfeasible
+                         : runtime.status == ProblemStatus::ITERATIONLIMIT
+                             ? HighsModelStatus::kIterationLimit
+                         : runtime.status == ProblemStatus::TIMELIMIT
+                             ? HighsModelStatus::kTimeLimit
+                             : HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);

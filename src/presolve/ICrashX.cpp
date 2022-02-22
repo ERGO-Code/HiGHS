@@ -31,8 +31,8 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
 bool callCrossover(const HighsLp& lp, const HighsOptions& options,
                    HighsSolution& solution, HighsBasis& basis) {
   // std::cout << "Calling ipx crossover\n";
-    highsLogUser(options.log_options, HighsLogType::kInfo, "Calling ipx crossover\n");
-
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Calling ipx crossover\n");
 
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
@@ -55,7 +55,8 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
                     &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
   if (errflag != 0) {
     // std::cout << "Error loading ipx model: " << errflag << std::endl;
-      highsLogUser(options.log_options, HighsLogType::kInfo,"Error loading ipx model: %d", errflag);
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Error loading ipx model: %d", errflag);
     return false;
   }
 
@@ -88,18 +89,21 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   if (solution.dual_valid && solution.col_dual.size() == num_col &&
       solution.row_dual.size() == num_row) {
     // std::cout << "Calling ipx crossover with dual values" << std::endl;
-      highsLogUser(options.log_options, HighsLogType::kInfo,"Calling ipx crossover with dual values"  );
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Calling ipx crossover with dual values");
     errflag = lps.CrossoverFromStartingPoint(
         &x[0], &slack[0], &solution.row_dual[0], &solution.col_dual[0]);
   } else {
     // std::cout << "Calling ipx crossover" << std::endl;
-      highsLogUser(options.log_options, HighsLogType::kInfo, "Calling ipx crossover" );
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Calling ipx crossover");
     errflag = lps.CrossoverFromStartingPoint(&x[0], &slack[0], NULL, NULL);
   }
 
   if (errflag != 0) {
     // std::cout << "Error calling ipx crossover: " << errflag << std::endl;
-      highsLogUser(options.log_options, HighsLogType::kInfo,"Error calling ipx crossover: %d", errflag );
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Error calling ipx crossover: %d", errflag);
     return false;
   }
   ipx::Info info = lps.GetInfo();
@@ -107,7 +111,8 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
       info.status_crossover != IPX_STATUS_imprecise) {
     // std::cout << "IPX crossover failed: status = " << info.status_crossover
     //           << std::endl;
-                    highsLogUser(options.log_options, HighsLogType::kInfo,"IPX crossover failed: status = %d", info.status_crossover);
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "IPX crossover failed: status = %d", info.status_crossover);
     return false;
   }
 
@@ -128,7 +133,8 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   if (errflag != 0) {
     // std::cout << "Error getting basic solution from ipx: " << errflag
     //           << std::endl;
-                    highsLogUser(options.log_options, HighsLogType::kInfo,"Error getting basic solution from ipx: %d", errflag );
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Error getting basic solution from ipx: %d", errflag);
     return false;
   }
 
@@ -140,7 +146,8 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   if (status != HighsStatus::kOk) return false;
 
   std::cout << "Crossover basic solution >>>" << std::endl;
-                    highsLogUser(options.log_options, HighsLogType::kInfo,"Crossover basic solution >>>");
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Crossover basic solution >>>");
 
   return true;
 }

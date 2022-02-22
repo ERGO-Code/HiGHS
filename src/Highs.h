@@ -21,8 +21,8 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
-#include "presolve/ICrash.h"
 #include "model/HighsModel.h"
+#include "presolve/ICrash.h"
 #include "presolve/PresolveComponent.h"
 
 /**
