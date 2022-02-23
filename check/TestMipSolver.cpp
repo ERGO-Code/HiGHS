@@ -202,6 +202,7 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   lp.sense_ = ObjSense::kMaximize;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("mip_rel_gap", 0.0);
 
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) {
