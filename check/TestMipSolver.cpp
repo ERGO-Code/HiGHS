@@ -152,17 +152,33 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   HighsModelStatus require_model_status;
   double optimal_objective;
   special_lps.distillationMip(lp, require_model_status, optimal_objective);
-  // Turn the problem into a maximization
-  for (HighsInt iCol=0; iCol < lp.num_col_; iCol++)
-    lp.col_cost_[iCol] *= -1;
-  optimal_objective *= -1;
-  lp.sense_ = ObjSense::kMaximize;
+  // Add an offset to make sure this is handled correctly
+  const double offset = -20;
+  lp.offset_ = offset;
+  optimal_objective += offset;
   Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  const HighsInfo& info = highs.getInfo();
-  REQUIRE(std::abs(info.objective_function_value-optimal_objective) < double_equal_tolerance);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+  REQUIRE(std::abs(info.objective_function_value - info.mip_dual_bound) <=
+          options.mip_abs_gap);
+  REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
 
+  // Turn the problem into a maximization
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) lp.col_cost_[iCol] *= -1;
+  lp.offset_ *= -1;
+  optimal_objective *= -1;
+  lp.sense_ = ObjSense::kMaximize;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+  REQUIRE(std::abs(info.objective_function_value - info.mip_dual_bound) <=
+          options.mip_abs_gap);
+  REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
 }
 
 TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
