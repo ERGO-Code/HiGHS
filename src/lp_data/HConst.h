@@ -191,6 +191,9 @@ const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
 const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
 
+// Maximum upper bound on semi-variables
+const double kMaxSemiVariableUpper = 1e5;
+
 // Termination link in linked lists
 const HighsInt kNoLink = -1;
 
