@@ -271,73 +271,73 @@ class Highs {
    */
 
   /**
-   * @brief Returns the presolved HighsModel instance in HiGHS
+   * @brief Return a const reference to the presolved HighsLp instance in HiGHS
    */
   const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
 
   /**
-   * @brief Returns the presolved HighsModel instance in HiGHS
+   * @brief Return a const reference to the presolved HighsModel instance in HiGHS
    */
   const HighsModel& getPresolvedModel() const { return presolved_model_; }
 
   /**
-   * @brief Returns the HighsLp instance in the HiGHS model
+   * @brief Return a const reference to the incumbent LP
    */
   const HighsLp& getLp() const { return model_.lp_; }
 
   /**
-   * @brief Returns the model in HiGHS
+   * @brief Return a const reference to the incumbent model
    */
   const HighsModel& getModel() const { return model_; }
 
   /**
-   * @brief Returns the HighsSolution
+   * @brief Return a const reference to the internal HighsSolution instance
    */
   const HighsSolution& getSolution() const { return solution_; }
 
   /**
-   * @brief Returns the HighsBasis
+   * @brief Return a const reference to the internal HighsBasis instance
    */
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
-   * @brief Gets the hot start basis data from the most recent simplex
+   * @brief Get the hot start basis data from the most recent simplex
    * solve. Advanced method: for HiGHS MIP solver
    */
   const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
 
   /**
-   * @brief Returns the current model status
+   * @brief Return the status for the incumbent model. Returning the
+   * scaled model status is deprecated
    */
-  const HighsModelStatus& getModelStatus(
-      const bool scaled_model = false) const {
+  const HighsModelStatus& getModelStatus(const bool scaled_model = false) const {
     return scaled_model ? scaled_model_status_ : model_status_;
   }
 
   /**
-   * @brief Indicates whether a dual unbounded ray exdists, and gets
+   * @brief Indicate whether a dual unbounded ray exists, and gets
    * it if it does and dual_ray is not nullptr
    */
   HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
-   * @brief Indicates whether a primal unbounded ray exdists, and gets
+   * @brief Indicate whether a primal unbounded ray exists, and gets
    * it if it does and primal_ray is not nullptr
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = nullptr);
 
   /**
-   * @brief Gets the ranging information for the current LP, possibly
+   * @brief Get the ranging information for the current LP, possibly
    * returning it, as well as holding it internally
    */
   HighsStatus getRanging();
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
-   * @brief Gets the current model objective value
+   * @brief Get the current model objective value
    */
-  double getObjectiveValue() { return info_.objective_function_value; }
+  double getObjectiveValue() const { return info_.objective_function_value; }
 
   /**
    * Methods for operations with the invertible representation of the
@@ -347,75 +347,71 @@ class Highs {
   /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
-   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
-   * required by SCIP, non-negative entries are indices of columns,
+   * getBasisTransposeSolve, getReducedRow and
+   * getReducedColumn. Non-negative entries are indices of columns,
    * and negative entries are -(row_index+1).
    */
-  HighsStatus getBasicVariables(HighsInt* basic_variables  //!< Basic variables
-  );
-  /**
-   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
-   */
-  HighsStatus getBasisInverseRow(
-      const HighsInt row,              //!< Index of row required
-      double* row_vector,              //!< Row required
-      HighsInt* row_num_nz = nullptr,  //!< Number of nonzeros
-      HighsInt* row_indices = nullptr  //!< Indices of nonzeros
-  );
+  HighsStatus getBasicVariables(HighsInt* basic_variables);
 
   /**
-   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the indices of the nonzeros unless row_num_nz is
+   * nullptr
    */
-  HighsStatus getBasisInverseCol(
-      const HighsInt col,              //!< Index of column required
-      double* col_vector,              //!< Column required
-      HighsInt* col_num_nz = nullptr,  //!< Number of nonzeros
-      HighsInt* col_indices = nullptr  //!< Indices of nonzeros
-  );
+  HighsStatus getBasisInverseRow(const HighsInt row,
+				 double* row_vector,
+				 HighsInt* row_num_nz = nullptr,
+				 HighsInt* row_indices = nullptr);
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
-   * \f$\mathbf{b}\f$
+   * @brief Form a column of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the indices of the nonzeros unless col_num_nz is
+   * nullptr
    */
-  HighsStatus getBasisSolve(
-      const double* rhs,                    //!< RHS \f$\mathbf{b}\f$
-      double* solution_vector,              //!< Solution  \f$\mathbf{x}\f$
-      HighsInt* solution_num_nz = nullptr,  //!< Number of nonzeros
-      HighsInt* solution_indices = nullptr  //!< Indices of nonzeros
-  );
+  HighsStatus getBasisInverseCol(const HighsInt col,
+				 double* col_vector,
+				 HighsInt* col_num_nz = nullptr,
+				 HighsInt* col_indices = nullptr);
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
-   * \f$\mathbf{b}\f$
+   * @brief Form \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
+   * \f$\mathbf{b}\f$, returning the indices of the nonzeros unless
+   * solution_num_nz is nullptr
    */
-  HighsStatus getBasisTransposeSolve(
-      const double* rhs,                    //!< RHS \f$\mathbf{b}\f$
-      double* solution_vector,              //!< Solution  \f$\mathbf{x}\f$
-      HighsInt* solution_nz = nullptr,      //!< Number of nonzeros
-      HighsInt* solution_indices = nullptr  //!< Indices of nonzeros
-  );
+  HighsStatus getBasisSolve(const double* rhs,
+			    double* solution_vector,
+			    HighsInt* solution_num_nz = nullptr,
+			    HighsInt* solution_indices = nullptr);
 
   /**
-   * @brief Forms a row of \f$B^{-1}A\f$
+   * @brief Form \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
+   * \f$\mathbf{b}\f$, returning the indices of the nonzeros unless
+   * solution_num_nz is nullptr
    */
-  HighsStatus getReducedRow(
-      const HighsInt row,               //!< Index of row required
-      double* row_vector,               //!< Row required
-      HighsInt* row_num_nz = nullptr,   //!< Number of nonzeros
-      HighsInt* row_indices = nullptr,  //!< Indices of nonzeros
-      const double* pass_basis_inverse_row_vector =
-          nullptr  //!< Necessary row of \f$B^{-1}\f$
-  );
+  HighsStatus getBasisTransposeSolve(const double* rhs,
+				     double* solution_vector,
+				     HighsInt* solution_num_nz = nullptr,
+				     HighsInt* solution_indices = nullptr);
 
   /**
-   * @brief Forms a column of \f$B^{-1}A\f$
+   * @brief Form a row of \f$B^{-1}A\f$, returning the indices of the
+   * nonzeros unless row_num_nz is nullptr, computing the row using
+   * pass_basis_inverse_row_vector unless it is nullptr
    */
-  HighsStatus getReducedColumn(
-      const HighsInt col,              //!< Index of column required
-      double* col_vector,              //!< Column required
-      HighsInt* col_num_nz = nullptr,  //!< Number of nonzeros
-      HighsInt* col_indices = nullptr  //!< Indices of nonzeros
-  );
+  HighsStatus getReducedRow(const HighsInt row,
+			    double* row_vector, 
+			    HighsInt* row_num_nz = nullptr,
+			    HighsInt* row_indices = nullptr,
+			    const double* pass_basis_inverse_row_vector = nullptr);
+
+  /**
+   * @brief Form a column of \f$B^{-1}A\f$, returning the indices of
+   * the nonzeros unless col_num_nz is nullptr
+   */
+  HighsStatus getReducedColumn(const HighsInt col,
+			       double* col_vector,
+			       HighsInt* col_num_nz = nullptr,
+			       HighsInt* col_indices = nullptr);
 
   /**
    * @brief Get the number of columns in the incumbent model
@@ -436,17 +432,17 @@ class Highs {
   /**
    * @brief Get the number of Hessian matrix nonzeros in the incumbent model
    */
-  HighsInt getHessianNumNz() { return model_.hessian_.numNz(); }
+  HighsInt getHessianNumNz() const { return model_.hessian_.numNz(); }
 
   /**
-   * @brief Get the objective sense of the model
+   * @brief Get the objective sense of the incumbent model
    */
-  HighsStatus getObjectiveSense(ObjSense& sense);
+  HighsStatus getObjectiveSense(ObjSense& sense) const;
 
   /**
-   * @brief Get the objective offset of the model
+   * @brief Get the objective offset of the incumbent model
    */
-  HighsStatus getObjectiveOffset(double& offset);
+  HighsStatus getObjectiveOffset(double& offset) const;
 
   /**
    * @brief Get multiple columns from the model given by an interval
@@ -496,7 +492,7 @@ class Highs {
    * @brief Get multiple rows from the model given by an interval
    */
   HighsStatus getRows(const HighsInt from_row, //!< The index of the first row to get from the model
-		      const HighsInt to_row,   //!< The index of the last row get from the model
+		      const HighsInt to_row,   //!< The index of the last row to get from the model
 		      HighsInt& num_row,       //!< Number of rows got from the model
 		      double* lower,           //!< Array of size num_row with lower bounds
 		      double* upper,           //!< Array of size num_row with upper bounds
@@ -536,10 +532,9 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  HighsStatus getCoeff(const HighsInt row,  //!< Row of coefficient to be got
-                       const HighsInt col,  //!< Column of coefficient to be got
-                       double& value        //!< Coefficient
-  );
+  HighsStatus getCoeff(const HighsInt row,
+                       const HighsInt col,
+                       double& value);
 
   /**
    * @brief writes out current model

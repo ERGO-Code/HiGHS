@@ -1963,12 +1963,12 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::getObjectiveSense(ObjSense& sense) {
+HighsStatus Highs::getObjectiveSense(ObjSense& sense) const {
   sense = model_.lp_.sense_;
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getObjectiveOffset(double& offset) {
+HighsStatus Highs::getObjectiveOffset(double& offset) const {
   offset = model_.lp_.offset_;
   return HighsStatus::kOk;
 }
