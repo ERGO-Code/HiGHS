@@ -14,9 +14,58 @@
 #define HIGHS_C_API
 
 #include "util/HighsInt.h"
+
 const HighsInt HighsStatuskError = -1;
 const HighsInt HighsStatuskOk = 0;
 const HighsInt HighsStatuskWarning = 1;
+
+const HighsInt HighsVarTypekContinuous = 0;
+const HighsInt HighsVarTypekInteger = 1;
+const HighsInt HighsVarTypekSemiContinuous = 2;
+const HighsInt HighsVarTypekSemiInteger = 3;
+const HighsInt HighsVarTypekImplicitInteger = 4;
+
+const HighsInt HighsOptionTypekBool = 0;
+const HighsInt HighsOptionTypekInt = 1;
+const HighsInt HighsOptionTypekDouble = 2;
+const HighsInt HighsOptionTypekString = 3;
+
+const HighsInt HighsInfoTypekInt64 = -1;
+const HighsInt HighsInfoTypekInt = 1;
+const HighsInt HighsInfoTypekDouble = 2;
+
+const HighsInt HighsObjSensekMinimize = 1;
+const HighsInt HighsObjSensekMaximize = -1;
+
+const HighsInt HighsMatrixFormatkColwise = 1;
+const HighsInt HighsMatrixFormatkRowwise = 2;
+const HighsInt HighsMatrixFormatkRowwisePartitioned = 3;
+
+const HighsInt HighsHessianFormatkTriangular = 1;
+const HighsInt HighsHessianFormatkSquare = 2;
+
+const HighsInt HighsModelStatuskNotset = 0;
+const HighsInt HighsModelStatuskLoadError = 1;
+const HighsInt HighsModelStatuskModelError = 2;
+const HighsInt HighsModelStatuskPresolveError = 3;
+const HighsInt HighsModelStatuskSolveError = 4;
+const HighsInt HighsModelStatuskPostsolveError = 5;
+const HighsInt HighsModelStatuskModelEmpty = 6;
+const HighsInt HighsModelStatuskOptimal = 7;
+const HighsInt HighsModelStatuskInfeasible = 8;
+const HighsInt HighsModelStatuskUnboundedOrInfeasible = 9;
+const HighsInt HighsModelStatuskUnbounded = 10;
+const HighsInt HighsModelStatuskObjectiveBound = 11;
+const HighsInt HighsModelStatuskObjectiveTarget = 12;
+const HighsInt HighsModelStatuskTimeLimit = 13;
+const HighsInt HighsModelStatuskIterationLimit = 14;
+const HighsInt HighsModelStatuskUnknown = 15;
+
+const HighsInt HighsBasisStatuskLower = 0;
+const HighsInt HighsBasisStatuskBasic = 1;
+const HighsInt HighsBasisStatuskUpper = 2;
+const HighsInt HighsBasisStatuskZero = 3;
+const HighsInt HighsBasisStatuskNonbasic = 4;
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,8 +77,9 @@ extern "C" {
  * @param numcol    the number of columns
  * @param numrow    the number of rows
  * @param numnz     the number of nonzeros in the constraint matrix
- * @param a_format  the format of the constraint matrix
- * @param sense     the optimization sense. Use -1 for maximization, 1 otherwise
+ * @param a_format  the format of the constraint matrix as a `HighsMatrixFormat`
+ *                  enum
+ * @param sense     the optimization sense as a `HighsObjSense` enum
  * @param offset    the objective constant
  * @param colcost   array of length [numcol] with the column costs
  * @param collower  array of length [numcol] with the column lower bounds
@@ -55,12 +105,13 @@ extern "C" {
  * @param rowdual        array of length [numrow], filled with the dual row
  *                       solution
  * @param colbasisstatus array of length [numcol], filled with the basis status
- *                       of the columns
+ *                       of the columns in the form of a `HighsBasisStatus` enum
  * @param rowbasisstatus array of length [numrow], filled with the basis status
- *                       of the rows
- * @param modelstatus    termination status of the model after the solve
+ *                       of the rows in the form of a `HighsBasisStatus` enum
+ * @param modelstatus    termination status of the model after the solve in the
+ *                       form of a `HighsModelStatus` enum
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       const HighsInt numnz, const HighsInt a_format,
@@ -80,10 +131,10 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
  * has an additional `integrality` argument, and that it is missing the
  * `coldual`, `rowdual`, `colbasisstatus` and `rowbasisstatus` arguments.
  *
- * @param integrality   array of length [numcol] indicating whether the columns
- *                      are continuous (0) or integer (1)
+ * @param integrality   array of length [numcol] containing a `HighsVarType`
+ *                      enum for each column
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
                        const HighsInt numnz, const HighsInt a_format,
@@ -102,15 +153,16 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
  * has additional arguments for specifying the Hessian matrix.
 
  * @param q_numnz   the number of nonzeros in the Hessian matrix
- * @param q_format  the format of the Hessian matrix. If q_numnz > 0, this
-                    must be 1
+ * @param q_format  the format of the Hessian matrix in the form of a
+ *                  `HighsHessianStatus` enum. If q_numnz > 0, this must be
+                    `HighsHessianFormatkTriangular`
  * @param qstart    the Hessian matrix is provided in the same format as the
  *                  constraint matrix, using `qstart`, `qindex`, and `qvalue` in
  *                  the place of `astart`, `aindex`, and `avalue`
  * @param qindex    array of length [q_numnz] with indices of matrix entries
  * @param qvalue    array of length [q_numnz] with values of matrix entries
   *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_qpCall(
     const HighsInt numcol, const HighsInt numrow, const HighsInt numnz,
@@ -148,7 +200,7 @@ void Highs_destroy(void* highs);
  * @param highs     a pointer to the HiGHS model object
  * @param filename  the filename to read.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_readModel(void* highs, const char* filename);
 
@@ -158,7 +210,7 @@ HighsInt Highs_readModel(void* highs, const char* filename);
  * @param highs     a pointer to the HiGHS model object
  * @param filename  the filename to write.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_writeModel(void* highs, const char* filename);
 
@@ -171,7 +223,7 @@ HighsInt Highs_writeModel(void* highs, const char* filename);
  *
  * @param highs a pointer to the HiGHS model object
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_clearModel(void* highs);
 
@@ -181,7 +233,7 @@ HighsInt Highs_clearModel(void* highs);
  *
  * @param highs a pointer to the HiGHS model object
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_run(void* highs);
 
@@ -194,7 +246,7 @@ HighsInt Highs_run(void* highs);
  * @param highs     a pointer to the HiGHS model object
  * @param filename  the name of the file to write the results to
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_writeSolution(const void* highs, const char* filename);
 
@@ -208,7 +260,7 @@ HighsInt Highs_writeSolution(const void* highs, const char* filename);
  * @param highs     a pointer to the HiGHS model object
  * @param filename  the name of the file to write the results to
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_writeSolutionPretty(const void* highs, const char* filename);
 
@@ -219,7 +271,7 @@ HighsInt Highs_writeSolutionPretty(const void* highs, const char* filename);
  * arguments for passing the Hessian matrix of a quadratic program and the
  * integrality vector.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
                       const HighsInt numnz, const HighsInt a_format,
@@ -236,7 +288,7 @@ HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
  * The signature of function is identical to `Highs_passModel`, without the
  * arguments for passing the Hessian matrix of a quadratic program.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                        const HighsInt numrow, const HighsInt numnz,
@@ -256,12 +308,11 @@ HighsInt Highs_passMip(void* highs, const HighsInt numcol,
  * @param numrow    the number of rows
  * @param numnz     the number of elements in the constraint matrix
  * @param q_num_nz  the number of elements in the Hessian matrix
- * @param a_format  the format of the constraint matrix to use. See
- *                  HighsMatrixFormat for more details.
- * @param q_format  the format of the Hessian matrix to use. See
- *                  HighsMatrixFormat for more details.
- * @param sense     the optimization sense (-1 for maximization, 1 for
- *                  minimization)
+ * @param a_format  the format of the constraint matrix to use in th form of a
+ *                  `HighsMatrixFormat` enum
+ * @param q_format  the format of the Hessian matrix to use in the form of a
+ *                  `HighsHessianFormat` enum
+ * @param sense     the optimization sense in the form of a `HighsObjSense` enum
  * @param offset    the constant term in the objective function
  * @param colcost   array of length [numcol] with the objective coefficients
  * @param collower  array of length [numcol] with the lower column bounds
@@ -285,11 +336,10 @@ HighsInt Highs_passMip(void* highs, const HighsInt numcol,
  *                  the model is linear, pass NULL.
  * @param qvalue    array of length [q_numnz] with values of matrix entries. If
  *                  the model is linear, pass NULL.
- * @param integrality an array of length [numcol] indicating whether the column
- *                    is continuous (0) or integer (1). If the model is linear,
- *                    pass NULL.
+ * @param integrality an array of length [numcol] containing a `HighsVarType`
+ *                    enum for each column
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_passModel(
     void* highs, const HighsInt numcol, const HighsInt numrow,
@@ -312,7 +362,7 @@ HighsInt Highs_passModel(
  * @param index
  * @param value
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const HighsInt num_nz, const HighsInt format,
@@ -326,7 +376,7 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
  * @param option    the name of the option
  * @param value     the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
                                   const HighsInt value);
@@ -338,7 +388,7 @@ HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
  * @param option    the name of the option
  * @param value     the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_setIntOptionValue(void* highs, const char* option,
                                  const HighsInt value);
@@ -350,7 +400,7 @@ HighsInt Highs_setIntOptionValue(void* highs, const char* option,
  * @param option    the name of the option
  * @param value     the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
                                     const double value);
@@ -362,7 +412,7 @@ HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
  * @param option    the name of the option
  * @param value     the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_setStringOptionValue(void* highs, const char* option,
                                     const char* value);
@@ -374,7 +424,7 @@ HighsInt Highs_setStringOptionValue(void* highs, const char* option,
  * @param option    the name of the option
  * @param value     storage for the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
                                   HighsInt* value);
@@ -386,7 +436,7 @@ HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
  * @param option    the name of the option
  * @param value     storage for the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
                                  HighsInt* value);
@@ -398,7 +448,7 @@ HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
  * @param option    the name of the option
  * @param value     storage for the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
                                     double* value);
@@ -410,7 +460,7 @@ HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
  * @param option    the name of the option
  * @param value     pointer to allocated memory to store the value of the option
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
                                     char* value);
@@ -420,10 +470,10 @@ HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
  *
  * @param highs     a pointer to the HiGHS model object
  * @param option    the name of the option
- * @param type      int in which to store the option type. See `HighsOptionType`
- *                  for more details.
+ * @param type      int in which the corresponding `HighsOptionType` enum is
+ *                  stored
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getOptionType(const void* highs, const char* option,
                              HighsInt* type);
@@ -433,7 +483,7 @@ HighsInt Highs_getOptionType(const void* highs, const char* option,
  *
  * @param highs a pointer to the HiGHS model object
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_resetOptions(void* highs);
 
@@ -443,7 +493,7 @@ HighsInt Highs_resetOptions(void* highs);
  * @param highs     a pointer to the HiGHS model object
  * @param filename  the filename to write the options to
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_writeOptions(const void* highs, const char* filename);
 
@@ -456,7 +506,7 @@ HighsInt Highs_writeOptions(const void* highs, const char* filename);
  * @param highs     a pointer to the HiGHS model object
  * @param filename  the filename to write the options to
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
 
@@ -467,7 +517,7 @@ HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
  * @param info  the name of the info
  * @param value a reference to an integer that the result will be stored in
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
                                HighsInt* value);
@@ -479,7 +529,7 @@ HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
  * @param info  the name of the info
  * @param value a reference to an double that the result will be stored in
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
                                   double* value);
@@ -491,7 +541,7 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
  * @param info  the name of the info
  * @param value a reference to a int64 that the result will be stored in
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
                                  int64_t* value);
@@ -505,7 +555,7 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
  * @param rowvalue  array of length [numrow], filled with primal row values
  * @param rowdual   array of length [numrow], filled with dual row values
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getSolution(const void* highs, double* colvalue, double* coldual,
                            double* rowvalue, double* rowdual);
@@ -516,19 +566,18 @@ HighsInt Highs_getSolution(const void* highs, double* colvalue, double* coldual,
  *
  * @param highs     a pointer to the HiGHS model object
  * @param colstatus array of length [numcol], to be filled with the column basis
- *                  statuses
+ *                  statuses in the form of a `HighsBasisStatus` enum
  * @param rowstatus array of length [numrow], to be filled with the row basis
- *                  statuses
+ *                  statuses in the form of a `HighsBasisStatus` enum
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
                         HighsInt* rowstatus);
 
 /**
- * Return the optimization status of the model.
- *
- * See `HighsModelStatus` for a list of possible returns.
+ * Return the optimization status of the model in the form of a
+ * `HighsModelStatus` enum.
  *
  * @param highs a pointer to the HiGHS model object
  *
@@ -537,9 +586,8 @@ HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
 HighsInt Highs_getModelStatus(const void* highs);
 
 /**
- * Return the optimization status of the scaled model.
- *
- * See `HighsModelStatus` for a list of possible returns.
+ * Return the optimization status of the scaled model in the form of a
+ * `HighsModelStatus` enum.
  *
  * Note that the status of the scaled model may not match the status of the
  * unscaled model as returned by `Highs_getModelStatus`.
@@ -559,7 +607,7 @@ HighsInt Highs_getScaledModelStatus(const void* highs);
  * @param dual_ray_value    an array of length [numrow] filled with the
  *                          unbounded ray
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
                           double* dual_ray_value);
@@ -573,7 +621,7 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
  * @param primal_ray_value  an array of length [numcol] filled with the
  *                          unbounded ray
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
                             double* primal_ray_value);
@@ -607,7 +655,7 @@ double Highs_getObjectiveValue(const void* highs);
  * @param basic_variables   array of size [num_rows], filled with the indices of
  *                          the basic variables
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
 
@@ -626,7 +674,7 @@ HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
  * @param row_num_nz    the number of non-zeros in the row
  * @param row_indices   indices of the non-zero elements
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
                                   double* row_vector, HighsInt* row_num_nz,
@@ -647,7 +695,7 @@ HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
  * @param col_num_nz    the number of non-zeros in the column
  * @param col_indices   indices of the non-zero elements
 
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
                                   double* col_vector, HighsInt* col_num_nz,
@@ -669,7 +717,7 @@ HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
  * @param solution_num_nz   the number of non-zeros in the solution
  * @param solution_indices  indices of the non-zero elements
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
                              double* solution_vector, HighsInt* solution_num_nz,
@@ -691,7 +739,7 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  * @param solution_num_nz   the number of non-zeros in the solution
  * @param solution_indices  indices of the non-zero elements
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
                                       double* solution_vector,
@@ -713,7 +761,7 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
  * @param row_num_nz    the number of non-zeros in the row
  * @param row_indices   indices of the non-zero elements
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
                              double* row_vector, HighsInt* row_num_nz,
@@ -734,7 +782,7 @@ HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
  * @param col_num_nz    the number of non-zeros in the column
  * @param col_indices   indices of the non-zero elements
 
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
                                 double* col_vector, HighsInt* col_num_nz,
@@ -746,9 +794,11 @@ HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
  *
  * @param highs     a pointer to the HiGHS model object
  * @param colstatus an array of length [numcol] with the column basis status
+ *                  in the form of `HighsBasisStatus` enums
  * @param rowstatus an array of length [numrow] with the row basis status
+ *                  in the form of `HighsBasisStatus` enums
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
                         const HighsInt* rowstatus);
@@ -758,7 +808,7 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
  *
  * @param highs a pointer to the HiGHS model object
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_setLogicalBasis(void* highs);
 
@@ -781,7 +831,7 @@ double Highs_getRunTime(const void* highs);
  * @param indices       array of size [num_new_nz] with column indices
  * @param values        array of size [num_new_nz] with column values
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addRow(void* highs, const double lower, const double upper,
                       const HighsInt num_new_nz, const HighsInt* indices,
@@ -805,7 +855,7 @@ HighsInt Highs_addRow(void* highs, const double lower, const double upper,
  * @param indices       array of size [num_new_nz] with column indices
  * @param values        array of size [num_new_nz] with column values
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const double* lower, const double* upper,
@@ -823,7 +873,7 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
  * @param indices       array of size [num_new_nz] with the row indices
  * @param values        array of size [num_new_nz] with row values
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
@@ -846,7 +896,7 @@ HighsInt Highs_addCol(void* highs, const double cost, const double lower,
  * @param indices       array of size [num_new_nz] with row indices
  * @param values        array of size [num_new_nz] with row values
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
                        const double* costs, const double* lower,
@@ -858,10 +908,9 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
  * Change the objective sense of the model.
  *
  * @param highs a pointer to the HiGHS model object
- * @param sense the new optimization sense. Use -1 for maximization and 1 for
- *              minimization.
+ * @param sense the new optimization sense in the form of a `HighsObjSense` enum
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense);
 
@@ -871,7 +920,7 @@ HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense);
  * @param highs     a pointer to the HiGHS model object
  * @param offset    the new objective offset
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeObjectiveOffset(void* highs, const double offset);
 
@@ -880,10 +929,10 @@ HighsInt Highs_changeObjectiveOffset(void* highs, const double offset);
  *
  * @param highs         a pointer to the HiGHS model object
  * @param col           the column index to change
- * @param integrality   the new integrality of the column. Use 0 for continuous
- *                      and 1 for integer.
+ * @param integrality   the new integrality of the column in the form of a
+ *                      `HighsVarType` enum
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
                                     const HighsInt integrality);
@@ -896,9 +945,10 @@ HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
  * @param to_col        the index of the last column whose integrality
  *                      changes
  * @param integrality   an array of length [to_col - from_col + 1] with the new
- *                      integralities of the columns
+ *                      integralities of the columns in the form of
+ *                      `HighsVarType` enums
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsIntegralityByRange(void* highs,
                                             const HighsInt from_col,
@@ -913,9 +963,10 @@ HighsInt Highs_changeColsIntegralityByRange(void* highs,
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the columns to change
  * @param integrality       an array of length [num_set_entries] with the new
- *                          integralities of the columns.
+ *                          integralities of the columns in the form of
+ *                          `HighsVarType` enums
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsIntegralityBySet(void* highs,
                                           const HighsInt num_set_entries,
@@ -929,9 +980,10 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
  * @param mask          an array of length [numcol] with 1 if the column
  *                      integrality should be changed and 0 otherwise
  * @param integrality   an array of length [numcol] with the new
- *                      integralities of the columns.
+ *                      integralities of the columns in the form of
+ *                      `HighsVarType` enums
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
                                            const HighsInt* integrality);
@@ -943,7 +995,7 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
  * @param col   the index of the column fo change
  * @param cost  the new objective coefficient
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColCost(void* highs, const HighsInt col,
                              const double cost);
@@ -957,7 +1009,7 @@ HighsInt Highs_changeColCost(void* highs, const HighsInt col,
  * @param cost      an array of length [to_col - from_col + 1] with the new
  *                  objective coefficients
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsCostByRange(void* highs, const HighsInt from_col,
                                      const HighsInt to_col, const double* cost);
@@ -972,7 +1024,7 @@ HighsInt Highs_changeColsCostByRange(void* highs, const HighsInt from_col,
  * @param cost              an array of length [num_set_entries] with the new
  *                          costs of the columns.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsCostBySet(void* highs, const HighsInt num_set_entries,
                                    const HighsInt* set, const double* cost);
@@ -985,7 +1037,7 @@ HighsInt Highs_changeColsCostBySet(void* highs, const HighsInt num_set_entries,
  *              cost should be changed and 0 otherwise
  * @param cost  an array of length [numcol] with the new costs
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsCostByMask(void* highs, const HighsInt* mask,
                                     const double* cost);
@@ -998,7 +1050,7 @@ HighsInt Highs_changeColsCostByMask(void* highs, const HighsInt* mask,
  * @param lower the new lower bound
  * @param upper the new upper bound
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColBounds(void* highs, const HighsInt col,
                                const double lower, const double upper);
@@ -1014,7 +1066,7 @@ HighsInt Highs_changeColBounds(void* highs, const HighsInt col,
  * @param upper     an array of length [to_col - from_col + 1] with the new
  *                  upper bounds
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsBoundsByRange(void* highs, const HighsInt from_col,
                                        const HighsInt to_col,
@@ -1033,7 +1085,7 @@ HighsInt Highs_changeColsBoundsByRange(void* highs, const HighsInt from_col,
  * @param upper             an array of length [num_set_entries] with the new
  *                          upper bounds
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsBoundsBySet(void* highs,
                                      const HighsInt num_set_entries,
@@ -1049,7 +1101,7 @@ HighsInt Highs_changeColsBoundsBySet(void* highs,
  * @param lower an array of length [numcol] with the new lower bounds
  * @param upper an array of length [numcol] with the new upper bounds
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeColsBoundsByMask(void* highs, const HighsInt* mask,
                                       const double* lower, const double* upper);
@@ -1062,7 +1114,7 @@ HighsInt Highs_changeColsBoundsByMask(void* highs, const HighsInt* mask,
  * @param lower the new lower bound
  * @param upper the new upper bound
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
                                const double lower, const double upper);
@@ -1079,7 +1131,7 @@ HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
  * @param upper             an array of length [num_set_entries] with the new
  *                          upper bounds
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeRowsBoundsBySet(void* highs,
                                      const HighsInt num_set_entries,
@@ -1095,7 +1147,7 @@ HighsInt Highs_changeRowsBoundsBySet(void* highs,
  * @param lower an array of length [numrow] with the new lower bounds
  * @param upper an array of length [numrow] with the new upper bounds
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeRowsBoundsByMask(void* highs, const HighsInt* mask,
                                       const double* lower, const double* upper);
@@ -1108,7 +1160,7 @@ HighsInt Highs_changeRowsBoundsByMask(void* highs, const HighsInt* mask,
  * @param col the index of the col to change
  * @param value the new constraint coefficient
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_changeCoeff(void* highs, const HighsInt row, const HighsInt col,
                            const double value);
@@ -1117,9 +1169,9 @@ HighsInt Highs_changeCoeff(void* highs, const HighsInt row, const HighsInt col,
  * Get the objective sense.
  *
  * @param highs a pointer to the HiGHS model object
- * @param sense stores the current objective sense
+ * @param sense stores the current objective sense as a `HighsObjSense` enum
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getObjectiveSense(const void* highs, HighsInt* sense);
 
@@ -1129,7 +1181,7 @@ HighsInt Highs_getObjectiveSense(const void* highs, HighsInt* sense);
  * @param highs a pointer to the HiGHS model object
  * @param offset stores the current objective offset
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getObjectiveOffset(const void* highs, double* offset);
 
@@ -1166,7 +1218,7 @@ HighsInt Highs_getObjectiveOffset(const void* highs, double* offset);
  * @param matrix_value  array of size [num_nz] with the non-zero elements of the
  *                      constraint matrix.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getColsByRange(const void* highs, const HighsInt from_col,
                               const HighsInt to_col, HighsInt* num_col,
@@ -1184,7 +1236,7 @@ HighsInt Highs_getColsByRange(const void* highs, const HighsInt from_col,
  * @param set               array of size [num_set_entries] with the column
  *                          indices to get
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getColsBySet(const void* highs, const HighsInt num_set_entries,
                             const HighsInt* set, HighsInt* num_col,
@@ -1201,7 +1253,7 @@ HighsInt Highs_getColsBySet(const void* highs, const HighsInt num_set_entries,
  * @param mask  array of length [num_col] containing a 1 to get the column and 0
  *              otherwise
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_col, double* costs, double* lower,
@@ -1239,7 +1291,7 @@ HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
  * @param matrix_value  array of size [num_nz] with the non-zero elements of the
  *                      constraint matrix.
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getRowsByRange(const void* highs, const HighsInt from_row,
                               const HighsInt to_row, HighsInt* num_row,
@@ -1257,7 +1309,7 @@ HighsInt Highs_getRowsByRange(const void* highs, const HighsInt from_row,
  * @param set               array of size [num_set_entries] with the row indices
  *                          to get
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getRowsBySet(const void* highs, const HighsInt num_set_entries,
                             const HighsInt* set, HighsInt* num_row,
@@ -1274,7 +1326,7 @@ HighsInt Highs_getRowsBySet(const void* highs, const HighsInt num_set_entries,
  * @param mask  array of length [num_row] containing a 1 to get the row and 0
  *              otherwise
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_row, double* lower, double* upper,
@@ -1288,7 +1340,7 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
  * @param from_col  the index of the first column to delete
  * @param to_col    the index of the last column to delete
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_deleteColsByRange(void* highs, const HighsInt from_col,
                                  const HighsInt to_col);
@@ -1301,7 +1353,7 @@ HighsInt Highs_deleteColsByRange(void* highs, const HighsInt from_col,
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the columns to delete
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_deleteColsBySet(void* highs, const HighsInt num_set_entries,
                                const HighsInt* set);
@@ -1313,7 +1365,7 @@ HighsInt Highs_deleteColsBySet(void* highs, const HighsInt num_set_entries,
  * @param mask  an array of length [numcol] with 1 if the column
  *              should be deleted and 0 otherwise
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_deleteColsByMask(void* highs, HighsInt* mask);
 
@@ -1324,7 +1376,7 @@ HighsInt Highs_deleteColsByMask(void* highs, HighsInt* mask);
  * @param from_row  the index of the first row to delete
  * @param to_row    the index of the last row to delete
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_deleteRowsByRange(void* highs, const int from_row,
                                  const HighsInt to_row);
@@ -1337,7 +1389,7 @@ HighsInt Highs_deleteRowsByRange(void* highs, const int from_row,
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the rows to delete
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_deleteRowsBySet(void* highs, const HighsInt num_set_entries,
                                const HighsInt* set);
@@ -1349,7 +1401,7 @@ HighsInt Highs_deleteRowsBySet(void* highs, const HighsInt num_set_entries,
  * @param mask  an array of length [numrow] with 1 if the row should be deleted
  *              and 0 otherwise
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask);
 
@@ -1365,7 +1417,7 @@ HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask);
  * @param col       the index of the column to scale
  * @param scaleval  the value by which to scale the column
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_scaleCol(void* highs, const HighsInt col, const double scaleval);
 
@@ -1378,7 +1430,7 @@ HighsInt Highs_scaleCol(void* highs, const HighsInt col, const double scaleval);
  * @param row       the index of the row to scale
  * @param scaleval  the value by which to scale the row
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_scaleRow(void* highs, const HighsInt row, const double scaleval);
 
@@ -1441,7 +1493,7 @@ HighsInt Highs_getHessianNumNz(const void* highs);
  *  - `Highs_getNumNz`
  *  - `Highs_getHessianNumNz`
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         const HighsInt q_format, HighsInt* numcol,
@@ -1485,7 +1537,7 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
  *
  * @param highs a pointer to the HiGHS model object
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_crossover(void* highs);
 
@@ -1502,7 +1554,7 @@ HighsInt Highs_crossover(void* highs);
  *                  column
  * @param row_dual  array of length [m] with optimal dual solution for each row
  *
- * @returns A non-zero return value indicates that a problem occured
+ * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_crossover_set(void* highs, const int n, const int m,
                              double* col_value, double* col_dual,
