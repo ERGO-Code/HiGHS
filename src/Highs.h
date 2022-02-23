@@ -39,18 +39,17 @@ class Highs {
   }
 
   /**
-   * @brief Resets options and then calls clearModel()
+   * @brief Reset the options and then call clearModel()
    */
   HighsStatus clear();
 
   /**
-   * @brief Clears model and then calls clearSolver()
+   * @brief Clear the incumbent model and then call clearSolver()
    */
   HighsStatus clearModel();
 
   /**
-   * @brief Clears solver, and creates an empty model
-   * in HiGHS
+   * @brief Clear all solution data associated with the model
    */
   HighsStatus clearSolver();
 
@@ -59,15 +58,23 @@ class Highs {
    */
 
   /**
-   * @brief Every model loading module eventually uses
+   * Every model loading module eventually uses
    * passModel(HighsModel model) to communicate the model to HiGHS.
    */
-  HighsStatus passModel(HighsModel model  //!< The HighsModel instance for this model
-  );
 
-  HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
-  );
+  /**
+   * @brief Pass a HighsModel instance to Highs
+   */
+  HighsStatus passModel(HighsModel model);
 
+  /**
+   * @brief Pass a HighsLp instance to Highs
+   */
+  HighsStatus passModel(HighsLp lp);
+
+  /**
+   * @brief Pass a QP (possibly with integrality data) via pointers to vectors of data
+   */
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
 			const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
 			const HighsInt sense, const double offset, const double* costs,
@@ -76,6 +83,9 @@ class Highs {
 			const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
 			const double* q_value, const HighsInt* integrality = nullptr);
 
+  /**
+   * @brief Pass an LP (possibly with integrality data) via pointers to vectors of data
+   */
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const HighsInt a_format,
                         const HighsInt sense, const double offset,
@@ -86,55 +96,57 @@ class Highs {
                         const HighsInt* integrality = nullptr);
 
   /**
-   * @brief Pass the Hessian of the model
+   * @brief Pass a HighsHessian instance for the incumbent model
    */
   HighsStatus passHessian(HighsHessian hessian_);
 
+  /**
+   * @brief Pass the Hessian for the incumbent model via pointers to vectors of data
+   */
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
 
   /**
-   * @brief reads in a model as the incumbent model
+   * @brief Read in a model
    */
-  HighsStatus readModel(const std::string filename  //!< the filename
-  );
+  HighsStatus readModel(const std::string filename);
 
   /**
-   * @brief reads in a basis
+   * @brief Read in a basis
    */
-  HighsStatus readBasis(const std::string filename  //!< the filename
-  );
+  HighsStatus readBasis(const std::string filename);
 
   /**
-   * @brief Presolve the model
+   * @brief Presolve the incumbent model
    */
   HighsStatus presolve();
 
   /**
-   * @brief Solves the model according to the specified options
+   * @brief Solve the incumbent model according to the specified options
    */
   HighsStatus run();
 
   /**
-   * @brief Postsolve the model
+   * @brief Postsolve the incumbent model
    */
   HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis);
 
   /**
-   * @brief writes the current solution to a file
+   * @brief Write the current solution to a file in a given style
    */
-  HighsStatus writeSolution(const std::string filename,  //!< the filename
-                            const HighsInt style);  //!< Style of solution file
+  HighsStatus writeSolution(const std::string filename,
+                            const HighsInt style);
 
   /**
-   * @brief reads a HiGHS solution file
+   * @brief Read a HiGHS solution file in a given style
    */
-  HighsStatus readSolution(const std::string filename,  //!< the filename
-                           const HighsInt style);  //!< Style of solution file
+  HighsStatus readSolution(const std::string filename,
+                           const HighsInt style);
 
   /**
-   * @brief checks feasibility of the current solution
+   * @brief Check the feasibility of the current solution. Of value
+   * after calling Highs::readSolution
    */
   HighsStatus checkSolutionFeasibility();
 
@@ -143,100 +155,117 @@ class Highs {
    */
 
   /**
-   * @brief Sets an option to the bool/int/double/string  value if it's
-   * legal and, for bool/int/double, only if it's of the correct type
+   * @brief Set an option to the bool/HighsInt/double/string value if it's
+   * legal and, for bool/HighsInt/double, only if it's of the correct type
    */
 
-  HighsStatus setOptionValue(const std::string& option,  //!< The option name
-                             const bool value            //!< The option value
+  HighsStatus setOptionValue(const std::string& option,
+                             const bool value          
   );
 
-  HighsStatus setOptionValue(const std::string& option,  //!< The option name
-                             const HighsInt value        //!< The option value
+  HighsStatus setOptionValue(const std::string& option,
+                             const HighsInt value      
   );
 
 #ifdef HIGHSINT64
-  HighsStatus setOptionValue(const std::string& option,  //!< The option name
-                             const int value             //!< The option value
+  HighsStatus setOptionValue(const std::string& option,
+                             const int value           
   ) {
     return setOptionValue(option, HighsInt{value});
   }
 #endif
 
-  HighsStatus setOptionValue(const std::string& option,  //!< The option name
-                             const double value          //!< The option value
+  HighsStatus setOptionValue(const std::string& option,
+                             const double value        
   );
 
-  HighsStatus setOptionValue(const std::string& option,  //!< The option name
-                             const std::string value     //!< The option value
+  HighsStatus setOptionValue(const std::string& option,
+                             const std::string value   
   );
 
-  HighsStatus setOptionValue(const std::string& option,  //!< The option name
-                             const char* value           //!< The option value
+  HighsStatus setOptionValue(const std::string& option,
+                             const char* value         
   );
 
-  HighsStatus readOptions(const std::string filename  //!< The filename
-  );
+  /**
+   * @brief Read option values from a file
+   */
+  HighsStatus readOptions(const std::string filename);
 
-  HighsStatus passOptions(const HighsOptions& options  //!< The options
-  );
+  /**
+   * @brief Pass a HighsOptions instance to Highs
+   */
+  HighsStatus passOptions(const HighsOptions& options);
 
+  /**
+   * @brief Get a const reference to the internal option values
+   */
   const HighsOptions& getOptions() const { return options_; }
 
   /**
-   * @brief Gets an option value as bool/int/double/string and, for
+   * @brief Gets an option value as bool/HighsInt/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
-  HighsStatus getOptionValue(const std::string& option,  //!< The option name
-                             bool& value                 //!< The option value
-  );
+  HighsStatus getOptionValue(const std::string& option,
+                             bool& value) const;
 
-  HighsStatus getOptionValue(const std::string& option,  //!< The option name
-                             HighsInt& value             //!< The option value
-  );
+  HighsStatus getOptionValue(const std::string& option,
+                             HighsInt& value) const;
 
-  HighsStatus getOptionValue(const std::string& option,  //!< The option name
-                             double& value               //!< The option value
-  );
+  HighsStatus getOptionValue(const std::string& option,
+                             double& value) const;
 
-  HighsStatus getOptionValue(const std::string& option,  //!< The option name
-                             std::string& value          //!< The option value
-  );
+  HighsStatus getOptionValue(const std::string& option,
+                             std::string& value) const;
 
   /**
    * @brief Get the type expected by an option
    */
-  HighsStatus getOptionType(const std::string& option,  //!< The option name
-                            HighsOptionType& type       //!< The option type
-  );
-
-  HighsStatus resetOptions();
-
-  HighsStatus writeOptions(const std::string filename,  //!< The filename
-                           const bool report_only_deviations = false);
+  HighsStatus getOptionType(const std::string& option,
+                            HighsOptionType& type) const;
 
   /**
-   * @brief Gets an option value as int/double, and only if it's of the correct
+   * @brief Reset the options to the default values
+   */
+  HighsStatus resetOptions();
+
+  /**
+   * @brief Write (deviations from default values of) the options to a
+   * file, with the extension ".html" producing HTML, otherwise using
+   * the standard format used to read options from a file.
+   */
+  HighsStatus writeOptions(const std::string filename,  //!< The filename
+                           const bool report_only_deviations = false) const;
+
+  /**
+   * @brief Get a const reference to the internal info values
    * type.
    */
-
   const HighsInfo& getInfo() const { return info_; }
 
-  HighsStatus getInfoValue(const std::string& info,  //!< The info name
-                           HighsInt& value           //!< The info value
-  );
+  /**
+   * @brief Get an info value as HighsInt/int64_t/double, and only if
+   * it's of the correct type.
+   */
+
+  HighsStatus getInfoValue(const std::string& info,
+                           HighsInt& value) const;
 
 #ifndef HIGHSINT64
-  HighsStatus getInfoValue(const std::string& info,  //!< The info name
-                           int64_t& value            //!< The info value
-  );
+  HighsStatus getInfoValue(const std::string& info,
+                           int64_t& value) const;
 #endif
 
-  HighsStatus getInfoValue(const std::string& info,  //!< The info name
-                           double& value) const;     //!< The info value
+  HighsStatus getInfoValue(const std::string& info,
+                           double& value) const;
 
-  HighsStatus writeInfo(const std::string filename  //!< The filename
-  );
+  /**
+   * @brief Write info values to a file, with the extension ".html"
+   * producing HTML, otherwise using the standard format used to read
+   * options from a file.
+   */
+  HighsStatus writeInfo(const std::string filename) const;
+
   /**
    * Methods for model output
    */
@@ -550,8 +579,7 @@ class Highs {
   /**
    * @brief Change the integrality of multiple columns given by an interval
    */
-  HighsStatus changeColsIntegrality(
-				    const HighsInt from_col, //!< The index of the first column whose integrality changes
+  HighsStatus changeColsIntegrality(const HighsInt from_col, //!< The index of the first column whose integrality changes
 				    const HighsInt to_col,   //!< The index of the last column whose integrality changes
 				    const HighsVarType* integrality //!< Array of size num_set_entries with new integrality
   );
@@ -661,140 +689,127 @@ class Highs {
   /**
    * @brief Change the bounds of multiple rows given by a set of indices
    */
-  HighsStatus changeRowsBounds(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set,  //!< Array of size num_set_entries with indices of
-                            //!< rows whose bounds change
-      const double*
-          lower,  //!< Array of size num_set_entries with new lower bounds
-      const double*
-          upper  //!< Array of size num_set_entries with new upper bounds
+  HighsStatus changeRowsBounds(const HighsInt num_set_entries,  //!< The number of indides in the set
+			       const HighsInt* set,  //!< Array of size num_set_entries with indices of
+			       //!< rows whose bounds change
+			       const double*
+			       lower,  //!< Array of size num_set_entries with new lower bounds
+			       const double*
+			       upper  //!< Array of size num_set_entries with new upper bounds
   );
 
   /**
    * @brief Change the cost of multiple rows given by a mask
    */
-  HighsStatus changeRowsBounds(
-      const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-      const double* lower,   //!< Full length array of new lower bounds
-      const double* upper    //!< Full length array of new upper bounds
-  );
+  HighsStatus changeRowsBounds(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+			       const double* lower,   //!< Full length array of new lower bounds
+			       const double* upper    //!< Full length array of new upper bounds
+			       );
 
   /**
    * @brief Change a matrix coefficient
    */
-  HighsStatus changeCoeff(
-      const HighsInt row,  //!< Row of coefficient to be changed
-      const HighsInt col,  //!< Column of coefficient to be changed
-      const double value   //!< Coefficient
+  HighsStatus changeCoeff(const HighsInt row,  //!< Row of coefficient to be changed
+			  const HighsInt col,  //!< Column of coefficient to be changed
+			  const double value   //!< Coefficient
   );
   /**
    * @brief Adds a row to the model
    */
-  HighsStatus addRow(
-      const double lower,         //!< Lower bound of the row
-      const double upper,         //!< Upper bound of the row
-      const HighsInt num_new_nz,  //!< Number of nonzeros in the row
-      const HighsInt*
-          indices,          //!< Array of size num_new_nz with column indices
-      const double* values  //!< Array of size num_new_nz with column values
+  HighsStatus addRow(const double lower,         //!< Lower bound of the row
+		     const double upper,         //!< Upper bound of the row
+		     const HighsInt num_new_nz,  //!< Number of nonzeros in the row
+		     const HighsInt*
+		     indices,          //!< Array of size num_new_nz with column indices
+		     const double* values  //!< Array of size num_new_nz with column values
   );
 
   /**
    * @brief Adds multiple rows to the model
    */
-  HighsStatus addRows(
-      const HighsInt num_new_row,  //!< Number of new rows
-      const double* lower,  //!< Array of size num_new_row with lower bounds
-      const double* upper,  //!< Array of size num_new_row with upper bounds
-      const HighsInt num_new_nz,  //!< Number of new nonzeros
-      const HighsInt*
-          starts,  //!< Array of size num_new_row with start indices of the rows
-      const HighsInt* indices,  //!< Array of size num_new_nz with column
-                                //!< indices for all rows
-      const double*
-          values  //!< Array of size num_new_nz with column values for all rows
+  HighsStatus addRows(const HighsInt num_new_row,  //!< Number of new rows
+		      const double* lower,  //!< Array of size num_new_row with lower bounds
+		      const double* upper,  //!< Array of size num_new_row with upper bounds
+		      const HighsInt num_new_nz,  //!< Number of new nonzeros
+		      const HighsInt*
+		      starts,  //!< Array of size num_new_row with start indices of the rows
+		      const HighsInt* indices,  //!< Array of size num_new_nz with column
+		      //!< indices for all rows
+		      const double*
+		      values  //!< Array of size num_new_nz with column values for all rows
   );
 
   /**
    * @brief Adds a column to the model
    */
-  HighsStatus addCol(
-      const double cost,          //!< Cost of the column
-      const double lower,         //!< Lower bound of the column
-      const double upper,         //!< Upper bound of the column
-      const HighsInt num_new_nz,  //!< Number of nonzeros in the column
-      const HighsInt* indices,    //!< Array of size num_new_nz with row indices
-      const double* values        //!< Array of size num_new_nz with row values
+  HighsStatus addCol(const double cost,          //!< Cost of the column
+		     const double lower,         //!< Lower bound of the column
+		     const double upper,         //!< Upper bound of the column
+		     const HighsInt num_new_nz,  //!< Number of nonzeros in the column
+		     const HighsInt* indices,    //!< Array of size num_new_nz with row indices
+		     const double* values        //!< Array of size num_new_nz with row values
   );
 
   /**
    * @brief Adds multiple columns to the model
    */
-  HighsStatus addCols(
-      const HighsInt num_new_col,  //!< Number of new columns
-      const double* costs,         //!< Array of size num_new_col with costs
-      const double* lower,  //!< Array of size num_new_col with lower bounds
-      const double* upper,  //!< Array of size num_new_col with upper bounds
-      const HighsInt num_new_nz,  //!< Number of new nonzeros
-      const HighsInt* starts,  //!< Array of size num_new_row with start indices
-                               //!< of the columns
-      const HighsInt* indices,  //!< Array of size num_new_nz with row indices
-                                //!< for all columns
-      const double*
-          values  //!< Array of size num_new_nz with row values for all columns
+  HighsStatus addCols(const HighsInt num_new_col,  //!< Number of new columns
+		      const double* costs,         //!< Array of size num_new_col with costs
+		      const double* lower,  //!< Array of size num_new_col with lower bounds
+		      const double* upper,  //!< Array of size num_new_col with upper bounds
+		      const HighsInt num_new_nz,  //!< Number of new nonzeros
+		      const HighsInt* starts,  //!< Array of size num_new_row with start indices
+		      //!< of the columns
+		      const HighsInt* indices,  //!< Array of size num_new_nz with row indices
+		      //!< for all columns
+		      const double*
+		      values  //!< Array of size num_new_nz with row values for all columns
   );
 
   /**
    * @brief Delete multiple columns from the model given by an interval
    */
-  HighsStatus deleteCols(
-      const HighsInt from_col,  //!< The index of the first column to delete from the model
-      const HighsInt to_col     //!< The index of the last column to delete from the model
+  HighsStatus deleteCols(const HighsInt from_col,  //!< The index of the first column to delete from the model
+			 const HighsInt to_col     //!< The index of the last column to delete from the model
   );
 
   /**
    * @brief Delete multiple columns from the model given by a set
    */
-  HighsStatus deleteCols(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set  //!< Array of size num_set_entries with indices of
-                           //!< columns to delete
+  HighsStatus deleteCols(const HighsInt num_set_entries,  //!< The number of indides in the set
+			 const HighsInt* set  //!< Array of size num_set_entries with indices of
+			 //!< columns to delete
   );
 
   /**
    * @brief Delete multiple columns from the model given by a mask
    */
-  HighsStatus deleteCols(
-      HighsInt* mask  //!< Full length array with 1 => delete; !0 => not. The
-                      //!< new index of any column
-                      //! not deleted is returned in place of the value 0.
+  HighsStatus deleteCols(HighsInt* mask  //!< Full length array with 1 => delete; !0 => not. The
+			 //!< new index of any column
+			 //! not deleted is returned in place of the value 0.
   );
 
   /**
    * @brief Delete multiple rows from the model given by an interval
    */
-  HighsStatus deleteRows(
-      const HighsInt from_row,  //!< The index of the first row to delete from the model
-      const HighsInt to_row     //!< The index of the last row to delete from the model
+  HighsStatus deleteRows(const HighsInt from_row,  //!< The index of the first row to delete from the model
+			 const HighsInt to_row     //!< The index of the last row to delete from the model
   );
 
   /**
    * @brief Delete multiple rows from the model given by a set
    */
-  HighsStatus deleteRows(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set  //!< Array of size num_set_entries with indices of
-                           //!< columns to delete
+  HighsStatus deleteRows(const HighsInt num_set_entries,  //!< The number of indides in the set
+			 const HighsInt* set  //!< Array of size num_set_entries with indices of
+			 //!< columns to delete
   );
 
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
-  HighsStatus deleteRows(
-      HighsInt* mask  //!< Full length array with 1 => delete; 0 =>
-                      //!< not. The new index of any row not deleted
-                      //!< is returned in place of the value 0.
+  HighsStatus deleteRows(HighsInt* mask  //!< Full length array with 1 => delete; 0 =>
+			 //!< not. The new index of any row not deleted
+			 //!< is returned in place of the value 0.
   );
 
   /**
@@ -950,18 +965,16 @@ class Highs {
   }
 
   HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
-      const bool value            //!< The option value
-  );
+      const std::string& option,
+      const bool value    );
 
   HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
-      const HighsInt value        //!< The option value
-  );
+      const std::string& option,
+      const HighsInt value);
 
 #ifdef HIGHSINT64
   HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
+      const std::string& option,
       const int value             //!< The option value
   ) {
     deprecationMessage("setHighsOptionValue", "setOptionValue");
@@ -970,19 +983,17 @@ class Highs {
 #endif
 
   HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
-      const double value          //!< The option value
-  );
+      const std::string& option,
+      const double value  );
 
   HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
+      const std::string& option,
       const std::string value     //!< The option value
   );
 
   HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
-      const char* value           //!< The option value
-  );
+      const std::string& option,
+      const char* value   );
 
   HighsStatus readHighsOptions(const std::string filename  //!< The filename
   );
@@ -991,27 +1002,23 @@ class Highs {
   );
 
   HighsStatus getHighsOptionValue(
-      const std::string& option,  //!< The option name
-      bool& value                 //!< The option value
-  );
+      const std::string& option,
+      bool& value         );
 
   HighsStatus getHighsOptionValue(
-      const std::string& option,  //!< The option name
-      HighsInt& value             //!< The option value
-  );
+      const std::string& option,
+      HighsInt& value     );
 
   HighsStatus getHighsOptionValue(
-      const std::string& option,  //!< The option name
-      double& value               //!< The option value
-  );
+      const std::string& option,
+      double& value       );
 
   HighsStatus getHighsOptionValue(
-      const std::string& option,  //!< The option name
-      std::string& value          //!< The option value
-  );
+      const std::string& option,
+      std::string& value  );
 
   HighsStatus getHighsOptionType(
-      const std::string& option,  //!< The option name
+      const std::string& option,
       HighsOptionType& type       //!< The option type
   );
 
@@ -1034,11 +1041,10 @@ class Highs {
 
   const HighsInfo& getHighsInfo() const;
 
-  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
-                                HighsInt& value           //!< The info value
-  );
+  HighsStatus getHighsInfoValue(const std::string& info,
+                                HighsInt& value      );
 
-  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+  HighsStatus getHighsInfoValue(const std::string& info,
                                 double& value) const;     //!< The info value
 
   HighsStatus writeHighsInfo(const std::string filename  //!< The filename
