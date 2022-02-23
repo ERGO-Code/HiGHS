@@ -35,6 +35,7 @@ class HighsMipSolver {
   double row_violation_;
   double dual_bound_;
   double primal_bound_;
+  double gap_;
   int64_t node_count_;
 
   bool submip;
