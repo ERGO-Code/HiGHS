@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void solve(Highs& highs, std::string presolve,
@@ -144,6 +144,25 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   REQUIRE(info.num_primal_infeasibilities == 0);
   REQUIRE(info.max_primal_infeasibility == 0);
   REQUIRE(info.sum_primal_infeasibilities == 0);
+}
+
+TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
+  SpecialLps special_lps;
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  special_lps.distillationMip(lp, require_model_status, optimal_objective);
+  // Turn the problem into a maximization
+  for (HighsInt iCol=0; iCol < lp.num_col_; iCol++)
+    lp.col_cost_[iCol] *= -1;
+  optimal_objective *= -1;
+  lp.sense_ = ObjSense::kMaximize;
+  Highs highs;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  const HighsInfo& info = highs.getInfo();
+  REQUIRE(std::abs(info.objective_function_value-optimal_objective) < double_equal_tolerance);
+
 }
 
 TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
