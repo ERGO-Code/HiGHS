@@ -604,7 +604,7 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                  "%" HIGHSINT_FORMAT
                  " semi-variables are active at modified upper bounds\n",
                  num_active_modified_upper);
-  } else {
+  } else if (num_modified_upper) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "No semi-variables are active at modified upper bounds:"
                  " a large minimum margin (%g) suggests optimality,"
