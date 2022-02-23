@@ -445,7 +445,7 @@ class Highs {
   HighsStatus getObjectiveOffset(double& offset) const;
 
   /**
-   * @brief Get multiple columns from the model given by an interval
+   * @brief Get multiple columns from the model given by an interval [from_col, to_col]
    */
   HighsStatus getCols(const HighsInt from_col, //!< The index of the first column to get from the model
 		      const HighsInt to_col,   //!< The index of the last column to get from the model
@@ -489,7 +489,7 @@ class Highs {
   );
 
   /**
-   * @brief Get multiple rows from the model given by an interval
+   * @brief Get multiple rows from the model given by an interval [from_row, to_row]
    */
   HighsStatus getRows(const HighsInt from_row, //!< The index of the first row to get from the model
 		      const HighsInt to_row,   //!< The index of the last row to get from the model
@@ -537,291 +537,245 @@ class Highs {
                        double& value);
 
   /**
-   * @brief writes out current model
+   * @brief Write out the incumbent model to a file
    */
-  HighsStatus writeModel(const std::string filename  //!< the filename
-  );
+  HighsStatus writeModel(const std::string filename);
 
   /**
-   * @brief writes out current basis
+   * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string filename  //!< the filename
-  );
+  HighsStatus writeBasis(const std::string filename);
 
   /**
-   * Methods for model modification
+   * Methods for incumbent model modification
    */
 
   /**
-   * @brief Change the objective sense of the model
+   * @brief Change the objective sense of the incumbent model
    */
-  HighsStatus changeObjectiveSense(const ObjSense sense  //!< New objective sense
-  );
+  HighsStatus changeObjectiveSense(const ObjSense sense);
 
   /**
-   * @brief Change the objective offset of the model
+   * @brief Change the objective offset of the incumbent model
    */
-  HighsStatus changeObjectiveOffset(const double offset  //!< New objective offset
-  );
+  HighsStatus changeObjectiveOffset(const double offset);
 
   /**
    * @brief Change the integrality of a column
    */
-  HighsStatus changeColIntegrality(const HighsInt col,            //!< The index of the column whose integrality is to change
-				   const HighsVarType integrality //!< The new integrality
-  );
+  HighsStatus changeColIntegrality(const HighsInt col, const HighsVarType integrality);
 
   /**
-   * @brief Change the integrality of multiple columns given by an interval
+   * @brief Change the integrality of multiple columns given by an
+   * interval [from_col, to_col]
    */
-  HighsStatus changeColsIntegrality(const HighsInt from_col, //!< The index of the first column whose integrality changes
-				    const HighsInt to_col,   //!< The index of the last column whose integrality changes
-				    const HighsVarType* integrality //!< Array of size num_set_entries with new integrality
-  );
+  HighsStatus changeColsIntegrality(const HighsInt from_col,
+				    const HighsInt to_col,
+				    const HighsVarType* integrality);
 
   /**
    * @brief Change the integrality of multiple columns given by a set of indices
    */
-  HighsStatus changeColsIntegrality(const HighsInt num_set_entries,  //!< The number of indides in the set
-				    const HighsInt* set,  //!< Array of size num_set_entries with indices of
-				    //!< columns whose integralitys change
-				    const HighsVarType*
-				    integrality  //!< Array of size num_set_entries with new integrality
-  );
+  HighsStatus changeColsIntegrality(const HighsInt num_set_entries,
+				    const HighsInt* set,
+				    const HighsVarType* integrality);
 
   /**
    * @brief Change the integrality of multiple columns given by a mask
+   * (full length array with 1 => change; 0 => not)
    */
-  HighsStatus changeColsIntegrality(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-				    const HighsVarType* integrality  //!< Full length array of new integrality
-  );
+  HighsStatus changeColsIntegrality(const HighsInt* mask, const HighsVarType* integrality);
 
   /**
    * @brief Change the cost of a column
    */
-  HighsStatus changeColCost(const HighsInt col,  //!< The index of the column whose cost is to change
-			    const double cost    //!< The new cost
-  );
+  HighsStatus changeColCost(const HighsInt col, const double cost);
 
   /**
-   * @brief Change the cost of multiple columns given by an interval
+   * @brief Change the cost of multiple columns given by an interval [from_col, to_col]
    */
-  HighsStatus changeColsCost(const HighsInt from_col,  //!< The index of the first column whose cost changes
-			     const HighsInt to_col,  //!< The index of the last column whose cost changes
-			     const double* cost      //!< Array of size num_set_entries with new costs
-  );
+  HighsStatus changeColsCost(const HighsInt from_col,
+			     const HighsInt to_col,  
+			     const double* cost);
 
   /**
    * @brief Change the cost of multiple columns given by a set of indices
    */
-  HighsStatus changeColsCost(const HighsInt num_set_entries,  //!< The number of indides in the set
-			     const HighsInt* set,  //!< Array of size num_set_entries with indices of
-			     //!< columns whose costs change
-			     const double* cost    //!< Array of size num_set_entries with new costs
-  );
+  HighsStatus changeColsCost(const HighsInt num_set_entries,
+			     const HighsInt* set,
+      			     const double* cost);
 
   /**
    * @brief Change the cost of multiple columns given by a mask
+   * (full length array with 1 => change; 0 => not)
    */
-  HighsStatus changeColsCost(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-			     const double* cost     //!< Full length array of new costs
-  );
+  HighsStatus changeColsCost(const HighsInt* mask, const double* cost);
 
   /**
    * @brief Change the bounds of a column
    */
-  HighsStatus changeColBounds(const HighsInt col,  //!< The index of the column whose bounds are to change
-			      const double lower,  //!< The new lower bound
-			      const double upper   //!< The new upper bound
-  );
+  HighsStatus changeColBounds(const HighsInt col,
+			      const double lower,
+			      const double upper);
 
   /**
-   * @brief Change the bounds of multiple columns given by an interval
+   * @brief Change the bounds of multiple columns given by an interval [from_col, to_col]
    */
-  HighsStatus changeColsBounds(const HighsInt from_col,  //!< The index of the first column whose bounds change
-			       const HighsInt to_col,  //!< The index of the last column whose bounds change
-			       const double* lower,  //!< Array of size to_col-from_col with new lower bounds
-			       const double* upper  //!< Array of size to_col-from_col with new upper bounds
-  );
+  HighsStatus changeColsBounds(const HighsInt from_col, 
+			       const HighsInt to_col,
+			       const double* lower,  
+			       const double* upper);
 
   /**
    * @brief Change the bounds of multiple columns given by a set of indices
    */
-  HighsStatus changeColsBounds(const HighsInt num_set_entries,  //!< The number of indides in the set
-			       const HighsInt* set,  //!< Array of size num_set_entries with indices of
-			       //!< columns whose bounds change
-			       const double*
-			       lower,  //!< Array of size num_set_entries with new lower bounds
-			       const double*
-			       upper  //!< Array of size num_set_entries with new upper bounds
-  );
+  HighsStatus changeColsBounds(const HighsInt num_set_entries,
+			       const HighsInt* set,
+			       const double* lower,
+			       const double* upper);
 
   /**
-   * @brief Change the cost of multiple columns given by a mask
+   * @brief Change the cost of multiple columns given by a mask (full
+   * length array with 1 => change; 0 => not)
    */
-  HighsStatus changeColsBounds(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-			       const double* lower,   //!< Full length array of new lower bounds
-			       const double* upper    //!< Full length array of new upper bounds
-  );
+  HighsStatus changeColsBounds(const HighsInt* mask,
+			       const double* lower,
+			       const double* upper);
 
   /**
    * @brief Change the bounds of a row
    */
-  HighsStatus changeRowBounds(const HighsInt row,  //!< The index of the row whose bounds are to change
-			      const double lower,  //!< The new lower bound
-			      const double upper   //!< The new upper bound
-  );
+  HighsStatus changeRowBounds(const HighsInt row,
+			      const double lower,
+			      const double upper);
 
   /**
-   * @brief Change the bounds of multiple rows given by an interval
+   * @brief Change the bounds of multiple rows given by an interval [from_row, to_row]
    */
-  HighsStatus changeRowsBounds(const HighsInt from_row,  //!< The index of the first column whose bounds change
-			       const HighsInt to_row,  //!< The index of the last column whose bounds change
-                               const double* lower,//!< Array of size to_col-from_col with new lower bounds
-			       const double* upper //!< Array of size to_col-from_col with new upper bounds
-  );
+  HighsStatus changeRowsBounds(const HighsInt from_row, 
+			       const HighsInt to_row,
+                               const double* lower, 
+			       const double* upper);
 
   /**
    * @brief Change the bounds of multiple rows given by a set of indices
    */
-  HighsStatus changeRowsBounds(const HighsInt num_set_entries,  //!< The number of indides in the set
-			       const HighsInt* set,  //!< Array of size num_set_entries with indices of
-			       //!< rows whose bounds change
-			       const double*
-			       lower,  //!< Array of size num_set_entries with new lower bounds
-			       const double*
-			       upper  //!< Array of size num_set_entries with new upper bounds
-  );
+  HighsStatus changeRowsBounds(const HighsInt num_set_entries,
+			       const HighsInt* set,
+			       const double* lower,
+			       const double* upper);
 
   /**
-   * @brief Change the cost of multiple rows given by a mask
+   * @brief Change the cost of multiple rows given by a mask (full
+   * length array with 1 => change; 0 => not)
    */
-  HighsStatus changeRowsBounds(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-			       const double* lower,   //!< Full length array of new lower bounds
-			       const double* upper    //!< Full length array of new upper bounds
-			       );
+  HighsStatus changeRowsBounds(const HighsInt* mask,
+			       const double* lower, 
+			       const double* upper);
 
   /**
    * @brief Change a matrix coefficient
    */
-  HighsStatus changeCoeff(const HighsInt row,  //!< Row of coefficient to be changed
-			  const HighsInt col,  //!< Column of coefficient to be changed
-			  const double value   //!< Coefficient
-  );
+  HighsStatus changeCoeff(const HighsInt row,
+			  const HighsInt col,
+			  const double value);
   /**
-   * @brief Adds a row to the model
+   * @brief Add a row to the incumbent model, without the matrix coefficients if
+   * num_new_nz = 0, in which case indices and values arrays can be
+   * nullptr
    */
-  HighsStatus addRow(const double lower,         //!< Lower bound of the row
-		     const double upper,         //!< Upper bound of the row
-		     const HighsInt num_new_nz,  //!< Number of nonzeros in the row
-		     const HighsInt*
-		     indices,          //!< Array of size num_new_nz with column indices
-		     const double* values  //!< Array of size num_new_nz with column values
-  );
+  HighsStatus addRow(const double lower, 
+		     const double upper, 
+		     const HighsInt num_new_nz,
+		     const HighsInt* indices,
+		     const double* values);
 
   /**
-   * @brief Adds multiple rows to the model
+   * @brief Adds multiple rows to the incumbent model, without the matrix
+   * coefficients if num_new_nz = 0, in which case row-wise starts,
+   * indices and values arrays can be nullptr
    */
-  HighsStatus addRows(const HighsInt num_new_row,  //!< Number of new rows
-		      const double* lower,  //!< Array of size num_new_row with lower bounds
-		      const double* upper,  //!< Array of size num_new_row with upper bounds
-		      const HighsInt num_new_nz,  //!< Number of new nonzeros
-		      const HighsInt*
-		      starts,  //!< Array of size num_new_row with start indices of the rows
-		      const HighsInt* indices,  //!< Array of size num_new_nz with column
-		      //!< indices for all rows
-		      const double*
-		      values  //!< Array of size num_new_nz with column values for all rows
-  );
+  HighsStatus addRows(const HighsInt num_new_row,
+		      const double* lower,
+		      const double* upper,
+		      const HighsInt num_new_nz,
+		      const HighsInt* starts,
+		      const HighsInt* indices,
+		      const double* values);
 
   /**
-   * @brief Adds a column to the model
+   * @brief Adds a column to the incumbent model, without the matrix
+   * coefficients if num_new_nz = 0, in which case indices and values
+   * arrays can be nullptr
    */
-  HighsStatus addCol(const double cost,          //!< Cost of the column
-		     const double lower,         //!< Lower bound of the column
-		     const double upper,         //!< Upper bound of the column
-		     const HighsInt num_new_nz,  //!< Number of nonzeros in the column
-		     const HighsInt* indices,    //!< Array of size num_new_nz with row indices
-		     const double* values        //!< Array of size num_new_nz with row values
-  );
+  HighsStatus addCol(const double cost,
+		     const double lower,
+		     const double upper,
+		     const HighsInt num_new_nz,
+		     const HighsInt* indices,
+		     const double* values);
 
   /**
-   * @brief Adds multiple columns to the model
+   * @brief Adds multiple columns to the incumbent model, without the matrix
+   * coefficients if num_new_nz = 0, in which case column-wise starts,
+   * indices and values arrays can be nullptr
    */
-  HighsStatus addCols(const HighsInt num_new_col,  //!< Number of new columns
-		      const double* costs,         //!< Array of size num_new_col with costs
-		      const double* lower,  //!< Array of size num_new_col with lower bounds
-		      const double* upper,  //!< Array of size num_new_col with upper bounds
-		      const HighsInt num_new_nz,  //!< Number of new nonzeros
-		      const HighsInt* starts,  //!< Array of size num_new_row with start indices
-		      //!< of the columns
-		      const HighsInt* indices,  //!< Array of size num_new_nz with row indices
-		      //!< for all columns
-		      const double*
-		      values  //!< Array of size num_new_nz with row values for all columns
-  );
+  HighsStatus addCols(const HighsInt num_new_col,
+		      const double* costs,
+		      const double* lower,
+		      const double* upper,
+		      const HighsInt num_new_nz,
+		      const HighsInt* starts,
+		      const HighsInt* indices,
+		      const double* values);
 
   /**
-   * @brief Delete multiple columns from the model given by an interval
+   * @brief Delete multiple columns from the incumbent model given by an interval [from_col, to_col]
    */
-  HighsStatus deleteCols(const HighsInt from_col,  //!< The index of the first column to delete from the model
-			 const HighsInt to_col     //!< The index of the last column to delete from the model
-  );
+  HighsStatus deleteCols(const HighsInt from_col, const HighsInt to_col);
 
   /**
-   * @brief Delete multiple columns from the model given by a set
+   * @brief Delete multiple columns from the incumbent model given by a set
    */
-  HighsStatus deleteCols(const HighsInt num_set_entries,  //!< The number of indides in the set
-			 const HighsInt* set  //!< Array of size num_set_entries with indices of
-			 //!< columns to delete
-  );
+  HighsStatus deleteCols(const HighsInt num_set_entries,
+			 const HighsInt* set);
 
   /**
-   * @brief Delete multiple columns from the model given by a mask
+   * @brief Delete multiple columns from the incumbent model given by
+   * a mask (full length array with 1 => change; 0 => not). New index
+   * of any column not deleted is returned in place of the value 0.
    */
-  HighsStatus deleteCols(HighsInt* mask  //!< Full length array with 1 => delete; !0 => not. The
-			 //!< new index of any column
-			 //! not deleted is returned in place of the value 0.
-  );
+  HighsStatus deleteCols(HighsInt* mask);
 
   /**
-   * @brief Delete multiple rows from the model given by an interval
+   * @brief Delete multiple rows from the incumbent model given by an interval [from_row, to_row]
    */
-  HighsStatus deleteRows(const HighsInt from_row,  //!< The index of the first row to delete from the model
-			 const HighsInt to_row     //!< The index of the last row to delete from the model
-  );
+  HighsStatus deleteRows(const HighsInt from_row, const HighsInt to_row);
 
   /**
-   * @brief Delete multiple rows from the model given by a set
+   * @brief Delete multiple rows from the incumbent model given by a set
    */
-  HighsStatus deleteRows(const HighsInt num_set_entries,  //!< The number of indides in the set
-			 const HighsInt* set  //!< Array of size num_set_entries with indices of
-			 //!< columns to delete
-  );
+  HighsStatus deleteRows(const HighsInt num_set_entries,
+			 const HighsInt* set);
 
   /**
-   * @brief Delete multiple rows from the model given by a mask
+   * @brief Delete multiple rows from the incumbent model given by a
+   * mask (full length array with 1 => change; 0 => not). New index of
+   * any row not deleted is returned in place of the value 0.
    */
-  HighsStatus deleteRows(HighsInt* mask  //!< Full length array with 1 => delete; 0 =>
-			 //!< not. The new index of any row not deleted
-			 //!< is returned in place of the value 0.
-  );
+  HighsStatus deleteRows(HighsInt* mask);
 
   /**
    * @brief Scale a matrix column (and cost) by a constant - flipping bounds if
    * the constant is negative
    */
-  HighsStatus scaleCol(const HighsInt col,    //!< Column to change
-                       const double scale_value  //!< Scaling value
-  );
+  HighsStatus scaleCol(const HighsInt col, const double scale_value);
 
   /**
    * @brief Scale a matrix row by a constant - flipping bounds if the constant
    * is negative
    */
-  HighsStatus scaleRow(const HighsInt row,    //!< Row to change
-                       const double scale_value  //!< Scaling value
-  );
+  HighsStatus scaleRow(const HighsInt row, const double scale_value);
 
   /**
    * Other methods for specialist applications
@@ -832,51 +786,54 @@ class Highs {
    */
 
   /**
-   * @brief Uses the HighsSolution passed to set solution_
+   * @brief Pass a HighsSolution instance to set the internal
+   * HighsSolution instance. If any of col_value, col_dual and
+   * row_dual is not set, the internal HighsSolution instance is not
+   * updated
    */
-  // In the solution passed as a parameter below can have one or many of
-  // col_value, col_dual and row_dual set. If any of them are not set the
-  // solution in Highs does not get updated.
-  HighsStatus setSolution(const HighsSolution& solution);
+   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Sets the callback method and user data to use for logging
+   * @brief Set the callback method and user data to use for logging
    */
   HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
                                                   void*),
                              void* log_callback_data = nullptr);
 
   /**
-   * @brief Uses the HighsBasis passed to set basis_
+   * @brief Use the HighsBasis passed to set the internal HighsBasis
+   * instance. The origin string is used to identify the source of the
+   * HighsBasis instance.
    */
   HighsStatus setBasis(const HighsBasis& basis, const std::string origin = "");
 
   /**
-   * @brief Clears basis_
+   * @brief Clear the internal HighsBasis instance
    */
   HighsStatus setBasis();
 
   /**
-   * @brief Sets up for simpelx using the supplied hot start
+   * @brief Set up for simplex using the supplied hot start
    * data. Advanced method: for HiGHS MIP solver
    */
   HighsStatus setHotStart(const HotStart& hot_start);
 
   /**
-   * @brief Freezes the current basis and standard NLA, returning a
-   * value to be used to recover this basis and standard NLA at
-   * minimal cost. Advanced method: for HiGHS MIP solver
+   * @brief Freeze the current internal HighsBasis instance and
+   * standard NLA, returning a value to be used to recover this basis
+   * and standard NLA at minimal cost. Advanced method: for HiGHS MIP
+   * solver
    */
   HighsStatus freezeBasis(HighsInt& frozen_basis_id);
 
   /**
-   * @brief Unfreeze a frozen basis and standard NLA (if
+   * @brief Unfreeze a frozen HighsBasis instance and standard NLA (if
    * possible). Advanced method: for HiGHS MIP solver
    */
   HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
 
   /**
-   * @brief Checks that all frozen basis data has been
+   * @brief Check that all frozen basis data has been
    * cleared. Advanced method: for HiGHS MIP solver
    */
   HighsStatus frozenBasisAllDataClear() {
@@ -898,18 +855,18 @@ class Highs {
   HighsStatus getIterate();
 
   /**
-   * @brief Gets the value of infinity used by HiGHS
+   * @brief Get the value of infinity used by HiGHS
    */
   double getInfinity() { return kHighsInf; }
 
   /**
-   * @brief Gets the run time of HiGHS
+   * @brief Get the run time of HiGHS
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
 
   /**
-   * @brief Gets the dual edge weights (steepest/devex) in the order of the
-   * basic indices or nullptr when they are not available.
+   * @brief Get the dual edge weights (steepest/devex) in the order of
+   * the basic indices or nullptr when they are not available.
    */
   const double* getDualEdgeWeights() const {
     return ekk_instance_.dual_edge_weight_.empty()
@@ -918,24 +875,29 @@ class Highs {
   }
 
   /**
-   * @brief Runs ipx crossover and if successful loads basis into Highs::basis_
+   * @brief Run IPX crossover (possibly from a given HighsSolution
+   * instance) and, if successful, set the internal HighsBasis
+   * instance
    */
   HighsStatus crossover();
   HighsStatus crossover(HighsSolution& solution);
 
   /**
-   * @brief Opens a named log file
+   * @brief Open a named log file
    */
   HighsStatus openLogFile(const std::string log_file = "");
 
+  /**
+   * @brief Interpret common qualifiers to string values
+   */
   std::string modelStatusToString(const HighsModelStatus model_status) const;
-
   std::string solutionStatusToString(const HighsInt solution_status) const;
-
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
-
   std::string basisValidityToString(const HighsInt basis_validity) const;
 
+  /**
+   * @brief Sets the constraint matrix format of the incumbent model
+   */
   HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
     this->model_.lp_.setFormat(desired_format);
     return HighsStatus::kOk;
