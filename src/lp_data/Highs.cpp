@@ -2599,9 +2599,7 @@ HighsStatus Highs::callSolveMip() {
   // Set the MIP-specific values of info_
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;
-  info_.mip_gap =
-      100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
-      std::max(1.0, std::abs(info_.objective_function_value));
+  info_.mip_gap = solver.gap_;
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("MIP", return_status);
