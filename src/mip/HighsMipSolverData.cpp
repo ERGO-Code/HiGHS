@@ -1220,19 +1220,40 @@ restart:
     lp.getLpSolver().setBasis(firstrootbasis,
                               "HighsMipSolverData::evaluateRootNode");
   else
-    lp.getLpSolver().setOptionValue("presolve", "on");
+    lp.getLpSolver().setOptionValue(kPresolveString, kHighsOnString);
   if (mipsolver.options_mip_->highs_debug_level)
     lp.getLpSolver().setOptionValue("output_flag",
                                     mipsolver.options_mip_->output_flag);
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
+
+  switch (mipsolver.options_mip_->mip_root_lp_strategy) {
+    case 0:
+    case 1:
+      // strategy is to use serial simplex
+      lp.getLpSolver().setOptionValue(kParallelString, kHighsOffString);
+      lp.getLpSolver().setOptionValue(kSolverString, kSimplexString);
+      break;
+    case 2:
+      // strategy is to use parallel simplex
+      lp.getLpSolver().setOptionValue(kParallelString, kHighsOnString);
+      lp.getLpSolver().setOptionValue(kSolverString, kSimplexString);
+      break;
+    case 3:
+      // strategy is to use ipm
+      lp.getLpSolver().setOptionValue(kSolverString, kIpmString);
+      break;
+    default:
+      assert(false);
+  }
   HighsLpRelaxation::Status status = evaluateRootLp();
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
-  lp.getLpSolver().setOptionValue("presolve", "off");
-  lp.getLpSolver().setOptionValue("parallel", "off");
+  lp.getLpSolver().setOptionValue(kPresolveString, kHighsOffString);
+  lp.getLpSolver().setOptionValue(kParallelString, kHighsOffString);
+  lp.getLpSolver().setOptionValue(kSolverString, kSimplexString);
 
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
