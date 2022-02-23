@@ -586,16 +586,31 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
       lp.mods_.save_semi_variable_upper_bound_index;
   const HighsInt num_modified_upper = upper_bound_index.size();
   HighsInt num_active_modified_upper = 0;
-  for (HighsInt k = 0; k < num_modified_upper; k++)
-    if (col_value[upper_bound_index[k]] >
-        lp.col_upper_[upper_bound_index[k]] -
-            options.primal_feasibility_tolerance)
+  double min_semi_variable_margin = kHighsInf;
+  for (HighsInt k = 0; k < num_modified_upper; k++) {
+    const double value = col_value[upper_bound_index[k]];
+    const double upper = lp.col_upper_[upper_bound_index[k]];
+    double semi_variable_margin = upper - value;
+    if (value > upper - options.primal_feasibility_tolerance) {
+      min_semi_variable_margin = 0;
       num_active_modified_upper++;
-  if (num_active_modified_upper)
+    } else {
+      min_semi_variable_margin =
+          std::min(semi_variable_margin, min_semi_variable_margin);
+    }
+  }
+  if (num_active_modified_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
                  " semi-variables are active at modified upper bounds\n",
                  num_active_modified_upper);
+  } else {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-variables are active at modified upper bounds:"
+                 " a large minimum margin (%g) suggests optimality,"
+                 " but there is no guarantee\n",
+                 min_semi_variable_margin);
+  }
   return num_active_modified_upper;
 }
 
