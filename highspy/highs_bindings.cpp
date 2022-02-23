@@ -260,6 +260,32 @@ double highs_getObjectiveOffset(Highs* h)
 }
 
 
+class CallbackTuple {
+public:
+  CallbackTuple() = default;
+  CallbackTuple(py::object _callback, py::object _cb_data) : callback(_callback), callback_data(_cb_data) {}
+  ~CallbackTuple() = default;
+  py::object callback;
+  py::object callback_data;
+};
+
+
+void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* callback_data)
+{
+  CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(callback_data);
+  std::string msg(msgbuffer);
+  callback_tuple->callback(log_type, msg, callback_tuple->callback_data);
+}
+
+
+HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
+{
+  void (*_log_callback)(HighsLogType, const char*, void*) = &py_log_callback;
+  HighsStatus status = h->setLogCallback(_log_callback, callback_tuple);
+  return status;
+}
+
+
 PYBIND11_MODULE(highs_bindings, m)
 {
   py::enum_<ObjSense>(m, "ObjSense")
@@ -289,6 +315,17 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kError", HighsStatus::kError)
     .value("kOk", HighsStatus::kOk)
     .value("kWarning", HighsStatus::kWarning);
+  py::enum_<HighsLogType>(m, "HighsLogType")
+    .value("kInfo", HighsLogType::kInfo)
+    .value("kDetailed", HighsLogType::kDetailed)
+    .value("kVerbose", HighsLogType::kVerbose)
+    .value("kWarning", HighsLogType::kWarning)
+    .value("kError", HighsLogType::kError);
+  py::class_<CallbackTuple>(m, "CallbackTuple")
+    .def(py::init<>())
+    .def(py::init<py::object, py::object>())
+    .def_readwrite("callback", &CallbackTuple::callback)
+    .def_readwrite("callback_data", &CallbackTuple::callback_data);
   py::class_<HighsSolution>(m, "HighsSolution")
     .def_readwrite("value_valid", &HighsSolution::value_valid)
     .def_readwrite("dual_valid", &HighsSolution::dual_valid)
@@ -296,7 +333,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("col_dual", &HighsSolution::col_dual)
     .def_readwrite("row_value", &HighsSolution::row_value)
     .def_readwrite("row_dual", &HighsSolution::row_dual);
-  py::class_<Highs>(m, "Highs")
+  py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
     .def("run", &Highs::run)
     .def("getSolution", &Highs::getSolution)
@@ -320,6 +357,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsCost", &highs_changeColsCost)
     .def("changeColsBounds", &highs_changeColsBounds)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
+    .def("setLogCallback", &highs_setLogCallback)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
     .def("clear", &Highs::clear)
