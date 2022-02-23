@@ -470,7 +470,6 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 }
 
 HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
-  const double kMaxSemiVariableUpper = 1e6;
   HighsStatus return_status = HighsStatus::kOk;
   if (!lp.integrality_.size()) return return_status;
   assert(lp.integrality_.size() == lp.num_col_);
@@ -505,16 +504,15 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
         // Semi-variables must have a positive lower bound
         num_illegal_lower++;
       } else if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) {
-        // Semi-variables must have upper bound that's not too large
-        const double use_upper_bound =
-            std::max(kLowerBoundMu * lp.col_lower_[iCol],
-                     options.default_semi_variable_upper_bound);
-        if (use_upper_bound > kMaxSemiVariableUpper) {
+        // Semi-variables must have upper bound that's not too large,
+        // so see whether the limiting value is sufficiently larger than the
+        // lower bound
+        if (kLowerBoundMu * lp.col_lower_[iCol] > kMaxSemiVariableUpper) {
           num_illegal_upper++;
         } else {
           // Record the upper bound change
           upper_bound_index.push_back(iCol);
-          upper_bound_value.push_back(use_upper_bound);
+          upper_bound_value.push_back(kMaxSemiVariableUpper);
           num_modified_upper++;
         }
       }
@@ -542,9 +540,9 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
                  " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %g that can be modified to max(%g*lower, %g)\n",
-                 num_modified_upper, kMaxSemiVariableUpper, kLowerBoundMu,
-                 options.default_semi_variable_upper_bound);
+                 "exceeding %g that can be modified to %g > %g*lower)\n",
+                 num_modified_upper, kMaxSemiVariableUpper,
+                 kMaxSemiVariableUpper, kLowerBoundMu);
     return_status = HighsStatus::kWarning;
     if (has_illegal_bounds) {
       // Don't apply upper bound modifications if there are illegal bounds
@@ -588,20 +586,30 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
       lp.mods_.save_semi_variable_upper_bound_index;
   const HighsInt num_modified_upper = upper_bound_index.size();
   HighsInt num_active_modified_upper = 0;
-  for (HighsInt k = 0; k < num_modified_upper; k++)
-    if (col_value[upper_bound_index[k]] >
-        lp.col_upper_[upper_bound_index[k]] -
-            options.primal_feasibility_tolerance)
+  double min_semi_variable_margin = kHighsInf;
+  for (HighsInt k = 0; k < num_modified_upper; k++) {
+    const double value = col_value[upper_bound_index[k]];
+    const double upper = lp.col_upper_[upper_bound_index[k]];
+    double semi_variable_margin = upper - value;
+    if (value > upper - options.primal_feasibility_tolerance) {
+      min_semi_variable_margin = 0;
       num_active_modified_upper++;
+    } else {
+      min_semi_variable_margin =
+          std::min(semi_variable_margin, min_semi_variable_margin);
+    }
+  }
   if (num_active_modified_upper) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "%" HIGHSINT_FORMAT
-                 " semi-variables are active at modified upper bounds, "
-                 "consider increasing default_semi_variable_upper_bound\n",
+                 " semi-variables are active at modified upper bounds\n",
                  num_active_modified_upper);
-  } else {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "No semi-variables are active at modified upper bounds\n");
+  } else if (num_modified_upper) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-variables are active at modified upper bounds:"
+                 " a large minimum margin (%g) suggests optimality,"
+                 " but there is no guarantee\n",
+                 min_semi_variable_margin);
   }
   return num_active_modified_upper;
 }

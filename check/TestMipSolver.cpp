@@ -153,10 +153,11 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   double optimal_objective;
   special_lps.distillationMip(lp, require_model_status, optimal_objective);
   // Add an offset to make sure this is handled correctly
-  const double offset = -20;
+  double offset = -20;
   lp.offset_ = offset;
   optimal_objective += offset;
   Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
   const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
@@ -174,6 +175,43 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   lp.sense_ = ObjSense::kMaximize;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+  REQUIRE(std::abs(info.objective_function_value - info.mip_dual_bound) <=
+          options.mip_abs_gap);
+  REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
+
+  // Now test with a larger problem
+  const bool use_avgas = false;
+  const std::string model = use_avgas ? "avgas" : "dcmulti";
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  highs.readModel(filename);
+  optimal_objective = use_avgas ? -6.0 : 188182;
+  offset = 0;  // 5;
+  optimal_objective += offset;
+  lp = highs.getLp();
+  lp.offset_ = offset;
+  // Turn the model into a maximization MIP
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    lp.col_cost_[iCol] *= -1;
+    if (use_avgas) lp.integrality_.push_back(HighsVarType::kInteger);
+  }
+  lp.offset_ *= -1;
+  optimal_objective *= -1;
+  lp.sense_ = ObjSense::kMaximize;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("mip_rel_gap", 0.0);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) {
+    printf("optimal_objective =             %11.4g\n", optimal_objective);
+    printf("info.objective_function_value = %11.4g\n",
+           info.objective_function_value);
+    printf("info.mip_dual_bound =           %11.4g\n", info.mip_dual_bound);
+    printf("info.mip_gap =                  %11.4g\n", info.mip_gap);
+  }
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
   REQUIRE(std::abs(info.objective_function_value - info.mip_dual_bound) <=
