@@ -308,8 +308,8 @@ HighsStatus Highs::passModel(
     const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
     const HighsInt sense, const double offset, const double* costs,
     const double* col_lower, const double* col_upper, const double* row_lower,
-    const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
-    const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
+    const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
+    const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
     const double* q_value, const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
@@ -340,16 +340,16 @@ HighsStatus Highs::passModel(
   if (a_num_nz > 0) {
     assert(num_col > 0);
     assert(num_row > 0);
-    assert(astart != NULL);
-    assert(aindex != NULL);
-    assert(avalue != NULL);
+    assert(a_start != NULL);
+    assert(a_index != NULL);
+    assert(a_value != NULL);
     if (a_rowwise) {
-      lp.a_matrix_.start_.assign(astart, astart + num_row);
+      lp.a_matrix_.start_.assign(a_start, a_start + num_row);
     } else {
-      lp.a_matrix_.start_.assign(astart, astart + num_col);
+      lp.a_matrix_.start_.assign(a_start, a_start + num_col);
     }
-    lp.a_matrix_.index_.assign(aindex, aindex + a_num_nz);
-    lp.a_matrix_.value_.assign(avalue, avalue + a_num_nz);
+    lp.a_matrix_.index_.assign(a_index, a_index + a_num_nz);
+    lp.a_matrix_.value_.assign(a_value, a_value + a_num_nz);
   }
   if (a_rowwise) {
     lp.a_matrix_.start_.resize(num_row + 1);
@@ -407,12 +407,12 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const HighsInt sense, const double offset,
                              const double* costs, const double* col_lower,
                              const double* col_upper, const double* row_lower,
-                             const double* row_upper, const HighsInt* astart,
-                             const HighsInt* aindex, const double* avalue,
+                             const double* row_upper, const HighsInt* a_start,
+                             const HighsInt* a_index, const double* a_value,
                              const HighsInt* integrality) {
   return passModel(num_col, num_row, num_nz, 0, a_format, 0, sense, offset,
-                   costs, col_lower, col_upper, row_lower, row_upper, astart,
-                   aindex, avalue, NULL, NULL, NULL, integrality);
+                   costs, col_lower, col_upper, row_lower, row_upper, a_start,
+                   a_index, a_value, NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
@@ -2154,20 +2154,20 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
+HighsStatus Highs::scaleCol(const HighsInt col, const double scale_value) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status = scaleColInterface(col, scaleval);
+  HighsStatus call_status = scaleColInterface(col, scale_value);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "scaleCol");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
+HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status = scaleRowInterface(row, scaleval);
+  HighsStatus call_status = scaleRowInterface(row, scale_value);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "scaleRow");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;

@@ -62,29 +62,27 @@ class Highs {
    * @brief Every model loading module eventually uses
    * passModel(HighsModel model) to communicate the model to HiGHS.
    */
-  HighsStatus passModel(
-      HighsModel model  //!< The HighsModel instance for this model
+  HighsStatus passModel(HighsModel model  //!< The HighsModel instance for this model
   );
 
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
 
-  HighsStatus passModel(
-      const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
-      const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
-      const HighsInt sense, const double offset, const double* costs,
-      const double* col_lower, const double* col_upper, const double* row_lower,
-      const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
-      const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
-      const double* q_value, const HighsInt* integrality = nullptr);
+  HighsStatus passModel(const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
+			const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
+			const HighsInt sense, const double offset, const double* costs,
+			const double* col_lower, const double* col_upper, const double* row_lower,
+			const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
+			const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
+			const double* q_value, const HighsInt* integrality = nullptr);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const HighsInt a_format,
                         const HighsInt sense, const double offset,
                         const double* costs, const double* col_lower,
                         const double* col_upper, const double* row_lower,
-                        const double* row_upper, const HighsInt* astart,
-                        const HighsInt* aindex, const double* avalue,
+                        const double* row_upper, const HighsInt* a_start,
+                        const HighsInt* a_index, const double* a_value,
                         const HighsInt* integrality = nullptr);
 
   /**
@@ -859,7 +857,7 @@ class Highs {
    * the constant is negative
    */
   HighsStatus scaleCol(const HighsInt col,    //!< Column to change
-                       const double scaleval  //!< Scaling value
+                       const double scale_value  //!< Scaling value
   );
 
   /**
@@ -867,7 +865,7 @@ class Highs {
    * is negative
    */
   HighsStatus scaleRow(const HighsInt row,    //!< Row to change
-                       const double scaleval  //!< Scaling value
+                       const double scale_value  //!< Scaling value
   );
 
   /**
@@ -1209,16 +1207,16 @@ class Highs {
   void underDevelopmentLogMessage(const std::string method_name);
 
   // Interface methods
-  HighsStatus addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
-                               const double* XcolLower, const double* XcolUpper,
-                               HighsInt XnumNewNZ, const HighsInt* XAstart,
-                               const HighsInt* XAindex, const double* XAvalue);
+  HighsStatus addColsInterface(HighsInt ext_num_new_col, const double* ext_col_cost,
+                               const double* ext_col_lower, const double* ext_col_upper,
+                               HighsInt ext_num_new_nz, const HighsInt* ext_a_start,
+                               const HighsInt* ext_a_index, const double* ext_a_value);
 
-  HighsStatus addRowsInterface(HighsInt XnumNewRow, const double* XrowLower,
-                               const double* XrowUpper, HighsInt XnumNewNZ,
-                               const HighsInt* XARstart,
-                               const HighsInt* XARindex,
-                               const double* XARvalue);
+  HighsStatus addRowsInterface(HighsInt ext_num_new_row, const double* ext_row_lower,
+                               const double* ext_row_upper, HighsInt ext_num_new_nz,
+                               const HighsInt* ext_ar_start,
+                               const HighsInt* ext_ar_index,
+                               const double* ext_ar_value);
 
   void deleteColsInterface(HighsIndexCollection& index_collection);
 
@@ -1235,11 +1233,11 @@ class Highs {
                         HighsInt& num_nz, HighsInt* row_matrix_start,
                         HighsInt* row_matrix_index, double* row_matrix_value);
 
-  void getCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
+  void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
                                double& value);
 
-  HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
-  HighsStatus changeObjectiveOffsetInterface(const double Xoffset);
+  HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
+  HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
@@ -1250,15 +1248,15 @@ class Highs {
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
-  void changeCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
-                                  const double XnewValue);
-  HighsStatus scaleColInterface(const HighsInt col, const double scaleval);
-  HighsStatus scaleRowInterface(const HighsInt row, const double scaleval);
+  void changeCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
+                                  const double ext_new_value);
+  HighsStatus scaleColInterface(const HighsInt col, const double scale_value);
+  HighsStatus scaleRowInterface(const HighsInt row, const double scale_value);
 
   void setNonbasicStatusInterface(const HighsIndexCollection& index_collection,
                                   const bool columns);
-  void appendNonbasicColsToBasisInterface(const HighsInt XnumNewCol);
-  void appendBasicRowsToBasisInterface(const HighsInt XnumNewRow);
+  void appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col);
+  void appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row);
 
   HighsStatus getBasicVariablesInterface(HighsInt* basic_variables);
   HighsStatus basisSolveInterface(const vector<double>& rhs,
