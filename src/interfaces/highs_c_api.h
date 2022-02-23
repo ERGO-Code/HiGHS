@@ -350,17 +350,21 @@ HighsInt Highs_passModel(
     const HighsInt* aindex, const double* avalue, const HighsInt* qstart,
     const HighsInt* qindex, const double* qvalue, const HighsInt* integrality);
 
-// TODO(odow): document this function
 /**
  * Set the Hessian matrix for a quadratic objective.
  *
  * @param highs     a pointer to the HiGHS model object
- * @param dim
+ * @param dim       the dimension of the Hessian matrix. Should be [numcol].
  * @param num_nz    the number of non-zero elements in the Hessian matrix
- * @param format
- * @param start
- * @param index
- * @param value
+ * @param format    the format of the Hessian matrix as a `HighsHessianFormat`
+ *                  enum. This must be `HighsHessianFormatkTriangular`.
+ * @param start     the Hessian matrix is provided to HiGHS as the upper
+ *                  triangular component in compressed sparse column form. The
+ *                  sparse matrix consists of three arrays, `start`, `index`,
+ *                  and `value`. `start` is an array of length [numcol]
+ *                  containing the starting index of each column in `index`.
+ * @param index     array of length [num_nz] with indices of matrix entries
+ * @param value     array of length [num_nz] with values of matrix entries
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
