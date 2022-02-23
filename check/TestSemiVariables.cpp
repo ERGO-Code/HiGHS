@@ -99,30 +99,48 @@ TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
 
-  REQUIRE(highs.changeColBounds(0, 2e5, inf) == HighsStatus::kOk);
+  double lower = kMaxSemiVariableUpper;
+  double upper = inf;
+  if (dev_run)
+    printf("\nModifying the bounds on semi-continuous variable to [%g, %g]\n",
+           lower, upper);
+  REQUIRE(highs.changeColBounds(0, lower, upper) == HighsStatus::kOk);
   // Problem is still unbounded due to infinite upper bound on x0, but
   // lower bound is too large to set modified upper bound, so run
   // returns error
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
 
-  REQUIRE(highs.changeColBounds(0, 1, inf) == HighsStatus::kOk);
+  lower = 1;
+  upper = inf;
+  if (dev_run)
+    printf("\nModifying the bounds on semi-continuous variable to [%g, %g]\n",
+           lower, upper);
+  REQUIRE(highs.changeColBounds(0, lower, upper) == HighsStatus::kOk);
+  double coeff = 1e6;
   std::vector<HighsInt> index = {0, 1};
-  std::vector<double> value = {-1, 1e4};
+  std::vector<double> value = {-1, coeff};
   REQUIRE(highs.addRow(0, 0, 2, &index[0], &value[0]) == HighsStatus::kOk);
   // Problem is no longer unbounded due to equation linking the
   // semi-variable to the continuous variable. However, optimal value
-  // of semi-variable is 1e4, so it is active at the modified upper
+  // of semi-variable should be 1e6, so it is active at the modified upper
   // bound.
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
 
-  highs.setOptionValue("default_semi_variable_upper_bound", 2e4);
+  HighsInt iRow = 0;
+  HighsInt iCol = 1;
+  coeff /= 20;
+  if (dev_run)
+    printf("\nModifying coefficient [%d, %d] to %g\n", (int)iRow, (int)iCol,
+           coeff);
+  highs.changeCoeff(iRow, iCol, coeff);
   // Problem is no longer unbounded due to equation linking the
-  // semi-variable to the continuous variable. However, modified upper
-  // bound now exceeds the optimal value of semi-variable is 1e4, so
+  // semi-variable to the continuous variable. However, modified coefficient
+  // means that the optimal value of semi-variable is 1e4, so
   // problem is solved OK
   REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 }
 
