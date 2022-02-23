@@ -422,115 +422,86 @@ class Highs {
   /**
    * @brief Get multiple columns from the model given by an interval
    */
-  HighsStatus getCols(
-      const HighsInt from_col,  //!< The index of the first column to
-                                //!< get from the model
-      const HighsInt to_col,    //!< One more than the last column to get
-                                //!< from the model
-      HighsInt& num_col,        //!< Number of columns got from the model
-      double* costs,            //!< Array of size num_col with costs
-      double* lower,            //!< Array of size num_col with lower bounds
-      double* upper,            //!< Array of size num_col with upper bounds
-      HighsInt& num_nz,         //!< Number of nonzeros got from the model
-      HighsInt* matrix_start,   //!< Array of size num_col with start
-                                //!< indices of the columns
-      HighsInt* matrix_index,   //!< Array of size num_nz with row
-                                //!< indices for the columns
-      double* matrix_value      //!< Array of size num_nz with row values
-                                //!< for the columns
+  HighsStatus getCols(const HighsInt from_col, //!< The index of the first column to get from the model
+		      const HighsInt to_col,   //!< The index of the last column to get from the model
+		      HighsInt& num_col,       //!< Number of columns got from the model
+		      double* costs,           //!< Array of size num_col with costs
+		      double* lower,           //!< Array of size num_col with lower bounds
+		      double* upper,           //!< Array of size num_col with upper bounds
+		      HighsInt& num_nz,        //!< Number of nonzeros got from the model
+		      HighsInt* start,         //!< Array of size num_col with start indices of the columns
+		      HighsInt* index,         //!< Array of size num_nz with row indices for the columns
+		      double* value            //!< Array of size num_nz with row values for the columns
   );
 
   /**
    * @brief Get multiple columns from the model given by a set
    */
-  HighsStatus getCols(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set,     //!< Array of size num_set_entries with indices
-                               //!< of columns to get
-      HighsInt& num_col,       //!< Number of columns got from the model
-      double* costs,           //!< Array of size num_col with costs
-      double* lower,           //!< Array of size num_col with lower bounds
-      double* upper,           //!< Array of size num_col with upper bounds
-      HighsInt& num_nz,        //!< Number of nonzeros got from the model
-      HighsInt* matrix_start,  //!< Array of size num_col with start indices
-                               //!< of the columns
-      HighsInt* matrix_index,  //!< Array of size num_nz with row indices
-                               //!< for the columns
-      double* matrix_value     //!< Array of size num_nz with row values
-                               //!< for the columns
+  HighsStatus getCols(const HighsInt num_set_entries, //!< The number of indides in the set
+		      const HighsInt* set,            //!< Array of size num_set_entries with indices of columns to get
+		      HighsInt& num_col,              //!< Number of columns got from the model
+		      double* costs,                  //!< Array of size num_col with costs
+		      double* lower,                  //!< Array of size num_col with lower bounds
+		      double* upper,                  //!< Array of size num_col with upper bounds
+		      HighsInt& num_nz,               //!< Number of nonzeros got from the model
+		      HighsInt* start,                //!< Array of size num_col with start indices of the columns
+		      HighsInt* index,                //!< Array of size num_nz with row indices for the columns
+		      double* value                   //!< Array of size num_nz with row values for the columns
   );
 
   /**
    * @brief Get multiple columns from the model given by a mask
    */
-  HighsStatus getCols(
-      const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
-      HighsInt& num_col,       //!< Number of columns got from the model
-      double* costs,           //!< Array of size num_col with costs
-      double* lower,           //!< Array of size num_col with lower bounds
-      double* upper,           //!< Array of size num_col with upper bounds
-      HighsInt& num_nz,        //!< Number of nonzeros got from the model
-      HighsInt* matrix_start,  //!<  Array of size num_col with start
-                               //!<  indices of the columns
-      HighsInt* matrix_index,  //!<  Array of size num_nz with row indices
-                               //!<  for the columns
-      double* matrix_value     //!<  Array of size num_nz with row values
-                               //!<  for the columns
+  HighsStatus getCols(const HighsInt* mask, //!< Full length array with 1 => get; 0 => not
+		      HighsInt& num_col,    //!< Number of columns got from the model
+		      double* costs,        //!< Array of size num_col with costs
+		      double* lower,        //!< Array of size num_col with lower bounds
+		      double* upper,        //!< Array of size num_col with upper bounds
+		      HighsInt& num_nz,     //!< Number of nonzeros got from the model
+		      HighsInt* start,      //!<  Array of size num_col with start indices of the columns
+		      HighsInt* index,      //!<  Array of size num_nz with row indices for the columns
+		      double* value         //!<  Array of size num_nz with row values for the columns
   );
 
   /**
    * @brief Get multiple rows from the model given by an interval
    */
-  HighsStatus getRows(
-      const HighsInt
-          from_row,  //!< The index of the first row to get from the model
-      const HighsInt to_row,  //!< One more than the last row get from the model
-      HighsInt& num_row,      //!< Number of rows got from the model
-      double* lower,          //!< Array of size num_row with lower bounds
-      double* upper,          //!< Array of size num_row with upper bounds
-      HighsInt& num_nz,       //!< Number of nonzeros got from the model
-      HighsInt* matrix_start,  //!< Array of size num_row with start indices of
-                               //!< the rows
-      HighsInt* matrix_index,  //!< Array of size num_nz with column indices for
-                               //!< the rows
-      double* matrix_value  //!< Array of size num_nz with column values for the
-                            //!< rows
+  HighsStatus getRows(const HighsInt from_row, //!< The index of the first row to get from the model
+		      const HighsInt to_row,   //!< The index of the last row get from the model
+		      HighsInt& num_row,       //!< Number of rows got from the model
+		      double* lower,           //!< Array of size num_row with lower bounds
+		      double* upper,           //!< Array of size num_row with upper bounds
+		      HighsInt& num_nz,        //!< Number of nonzeros got from the model
+		      HighsInt* start,         //!< Array of size num_row with start indices of the rows
+		      HighsInt* index,         //!< Array of size num_nz with column indices for the rows
+		      double* value            //!< Array of size num_nz with column values for the rows
   );
 
   /**
    * @brief Get multiple rows from the model given by a set
    */
-  HighsStatus getRows(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set,     //!< Array of size num_set_entries with indices
-                               //!< of rows to get
-      HighsInt& num_row,       //!< Number of rows got from the model
-      double* lower,           //!< Array of size num_row with lower bounds
-      double* upper,           //!< Array of size num_row with upper bounds
-      HighsInt& num_nz,        //!< Number of nonzeros got from the model
-      HighsInt* matrix_start,  //!< Array of size num_row with start indices
-                               //!< of the rows
-      HighsInt* matrix_index,  //!< Array of size num_nz with column indices
-                               //!< for the rows
-      double* matrix_value     //!< Array of size num_nz with column
-                               //!< values for the rows
+  HighsStatus getRows(const HighsInt num_set_entries, //!< The number of indides in the set
+		      const HighsInt* set,            //!< Array of size num_set_entries with indices of rows to get
+		      HighsInt& num_row,              //!< Number of rows got from the model
+		      double* lower,                  //!< Array of size num_row with lower bounds
+		      double* upper,                  //!< Array of size num_row with upper bounds
+		      HighsInt& num_nz,               //!< Number of nonzeros got from the model
+		      HighsInt* start,                //!< Array of size num_row with start indices of the rows
+		      HighsInt* index,                //!< Array of size num_nz with column indices for the rows
+		      double* value                   //!< Array of size num_nz with column values for the rows
   );
 
   /**
    * @brief Get multiple rows from the model given by a mask
    */
-  HighsStatus getRows(
-      const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
-      HighsInt& num_row,       //!< Number of rows got from the model
-      double* lower,           //!< Array of size num_row with lower bounds
-      double* upper,           //!< Array of size num_row with upper bounds
-      HighsInt& num_nz,        //!< Number of nonzeros got from the model
-      HighsInt* matrix_start,  //!< Array of size num_row with start indices
-                               //!< of the rows
-      HighsInt* matrix_index,  //!< Array of size num_nz with column indices
-                               //!< for the rows
-      double* matrix_value     //!< Array of size num_nz with column
-                               //!< values for the rows
+  HighsStatus getRows(const HighsInt* mask, //!< Full length array with 1 => get; 0 => not
+		      HighsInt& num_row,    //!< Number of rows got from the model
+		      double* lower,        //!< Array of size num_row with lower bounds
+		      double* upper,        //!< Array of size num_row with upper bounds
+		      HighsInt& num_nz,     //!< Number of nonzeros got from the model
+		      HighsInt* start,      //!< Array of size num_row with start indices of the rows
+		      HighsInt* index,      //!< Array of size num_nz with column indices for the rows
+		      double* value         //!< Array of size num_nz with column values for the rows
   );
 
   /**
@@ -560,154 +531,132 @@ class Highs {
   /**
    * @brief Change the objective sense of the model
    */
-  HighsStatus changeObjectiveSense(
-      const ObjSense sense  //!< New objective sense
+  HighsStatus changeObjectiveSense(const ObjSense sense  //!< New objective sense
   );
 
   /**
    * @brief Change the objective offset of the model
    */
-  HighsStatus changeObjectiveOffset(
-      const double offset  //!< New objective offset
+  HighsStatus changeObjectiveOffset(const double offset  //!< New objective offset
   );
 
   /**
    * @brief Change the integrality of a column
    */
-  HighsStatus changeColIntegrality(
-      const HighsInt
-          col,  //!< The index of the column whose integrality is to change
-      const HighsVarType integrality  //!< The new integrality
+  HighsStatus changeColIntegrality(const HighsInt col,            //!< The index of the column whose integrality is to change
+				   const HighsVarType integrality //!< The new integrality
   );
 
   /**
    * @brief Change the integrality of multiple columns given by an interval
    */
   HighsStatus changeColsIntegrality(
-      const HighsInt from_col,  //!< The index of the first column whose
-                                //!< integrality changes
-      const HighsInt to_col,    //!< One more than the index of the last column
-                                //!< whose integrality changes
-      const HighsVarType*
-          integrality  //!< Array of size num_set_entries with new integrality
+				    const HighsInt from_col, //!< The index of the first column whose integrality changes
+				    const HighsInt to_col,   //!< The index of the last column whose integrality changes
+				    const HighsVarType* integrality //!< Array of size num_set_entries with new integrality
   );
 
   /**
    * @brief Change the integrality of multiple columns given by a set of indices
    */
-  HighsStatus changeColsIntegrality(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set,  //!< Array of size num_set_entries with indices of
-                            //!< columns whose integralitys change
-      const HighsVarType*
-          integrality  //!< Array of size num_set_entries with new integrality
+  HighsStatus changeColsIntegrality(const HighsInt num_set_entries,  //!< The number of indides in the set
+				    const HighsInt* set,  //!< Array of size num_set_entries with indices of
+				    //!< columns whose integralitys change
+				    const HighsVarType*
+				    integrality  //!< Array of size num_set_entries with new integrality
   );
 
   /**
    * @brief Change the integrality of multiple columns given by a mask
    */
-  HighsStatus changeColsIntegrality(
-      const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-      const HighsVarType* integrality  //!< Full length array of new integrality
+  HighsStatus changeColsIntegrality(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+				    const HighsVarType* integrality  //!< Full length array of new integrality
   );
 
   /**
    * @brief Change the cost of a column
    */
-  HighsStatus changeColCost(
-      const HighsInt col,  //!< The index of the column whose cost is to change
-      const double cost    //!< The new cost
+  HighsStatus changeColCost(const HighsInt col,  //!< The index of the column whose cost is to change
+			    const double cost    //!< The new cost
   );
 
   /**
    * @brief Change the cost of multiple columns given by an interval
    */
-  HighsStatus changeColsCost(
-      const HighsInt
-          from_col,  //!< The index of the first column whose cost changes
-      const HighsInt to_col,  //!< One more than the index of the last column
-                              //!< whose cost changes
-      const double* cost      //!< Array of size num_set_entries with new costs
+  HighsStatus changeColsCost(const HighsInt from_col,  //!< The index of the first column whose cost changes
+			     const HighsInt to_col,  //!< The index of the last column whose cost changes
+			     const double* cost      //!< Array of size num_set_entries with new costs
   );
 
   /**
    * @brief Change the cost of multiple columns given by a set of indices
    */
-  HighsStatus changeColsCost(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set,  //!< Array of size num_set_entries with indices of
-                            //!< columns whose costs change
-      const double* cost    //!< Array of size num_set_entries with new costs
+  HighsStatus changeColsCost(const HighsInt num_set_entries,  //!< The number of indides in the set
+			     const HighsInt* set,  //!< Array of size num_set_entries with indices of
+			     //!< columns whose costs change
+			     const double* cost    //!< Array of size num_set_entries with new costs
   );
 
   /**
    * @brief Change the cost of multiple columns given by a mask
    */
-  HighsStatus changeColsCost(
-      const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-      const double* cost     //!< Full length array of new costs
+  HighsStatus changeColsCost(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+			     const double* cost     //!< Full length array of new costs
   );
 
   /**
    * @brief Change the bounds of a column
    */
-  HighsStatus changeColBounds(
-      const HighsInt col,  //!< The index of the column whose
-                           //!< bounds are to change
-      const double lower,  //!< The new lower bound
-      const double upper   //!< The new upper bound
+  HighsStatus changeColBounds(const HighsInt col,  //!< The index of the column whose bounds are to change
+			      const double lower,  //!< The new lower bound
+			      const double upper   //!< The new upper bound
   );
 
   /**
    * @brief Change the bounds of multiple columns given by an interval
    */
-  HighsStatus changeColsBounds(
-      const HighsInt
-          from_col,  //!< The index of the first column whose bounds change
-      const HighsInt to_col,  //!< One more than the index of the last column
-                              //!< whose bounds change
-      const double*
-          lower,  //!< Array of size to_col-from_col with new lower bounds
-      const double*
-          upper  //!< Array of size to_col-from_col with new upper bounds
+  HighsStatus changeColsBounds(const HighsInt from_col,  //!< The index of the first column whose bounds change
+			       const HighsInt to_col,  //!< The index of the last column whose bounds change
+			       const double* lower,  //!< Array of size to_col-from_col with new lower bounds
+			       const double* upper  //!< Array of size to_col-from_col with new upper bounds
   );
 
   /**
    * @brief Change the bounds of multiple columns given by a set of indices
    */
-  HighsStatus changeColsBounds(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
-      const HighsInt* set,  //!< Array of size num_set_entries with indices of
-                            //!< columns whose bounds change
-      const double*
-          lower,  //!< Array of size num_set_entries with new lower bounds
-      const double*
-          upper  //!< Array of size num_set_entries with new upper bounds
+  HighsStatus changeColsBounds(const HighsInt num_set_entries,  //!< The number of indides in the set
+			       const HighsInt* set,  //!< Array of size num_set_entries with indices of
+			       //!< columns whose bounds change
+			       const double*
+			       lower,  //!< Array of size num_set_entries with new lower bounds
+			       const double*
+			       upper  //!< Array of size num_set_entries with new upper bounds
   );
 
   /**
    * @brief Change the cost of multiple columns given by a mask
    */
-  HighsStatus changeColsBounds(
-      const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
-      const double* lower,   //!< Full length array of new lower bounds
-      const double* upper    //!< Full length array of new upper bounds
+  HighsStatus changeColsBounds(const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+			       const double* lower,   //!< Full length array of new lower bounds
+			       const double* upper    //!< Full length array of new upper bounds
   );
 
   /**
    * @brief Change the bounds of a row
    */
-  HighsStatus changeRowBounds(
-      const HighsInt row,  //!< The index of the row whose bounds are to change
-      const double lower,  //!< The new lower bound
-      const double upper   //!< The new upper bound
+  HighsStatus changeRowBounds(const HighsInt row,  //!< The index of the row whose bounds are to change
+			      const double lower,  //!< The new lower bound
+			      const double upper   //!< The new upper bound
   );
 
   /**
    * @brief Change the bounds of multiple rows given by an interval
    */
-  HighsStatus changeRowsBounds(const HighsInt from_row, const HighsInt to_row,
-                               const double* lower, const double* upper);
+  HighsStatus changeRowsBounds(const HighsInt from_row,  //!< The index of the first column whose bounds change
+			       const HighsInt to_row,  //!< The index of the last column whose bounds change
+                               const double* lower,//!< Array of size to_col-from_col with new lower bounds
+			       const double* upper //!< Array of size to_col-from_col with new upper bounds
+  );
 
   /**
    * @brief Change the bounds of multiple rows given by a set of indices
@@ -800,10 +749,8 @@ class Highs {
    * @brief Delete multiple columns from the model given by an interval
    */
   HighsStatus deleteCols(
-      const HighsInt from_col,  //!< The index of the first column
-                                //!< to delete from the model
-      const HighsInt to_col     //!< One more than the last column to
-                                //!< delete from the model
+      const HighsInt from_col,  //!< The index of the first column to delete from the model
+      const HighsInt to_col     //!< The index of the last column to delete from the model
   );
 
   /**
@@ -828,10 +775,8 @@ class Highs {
    * @brief Delete multiple rows from the model given by an interval
    */
   HighsStatus deleteRows(
-      const HighsInt from_row,  //!< The index of the first row to
-                                //!< delete from the model
-      const HighsInt to_row     //!< One more than the last row delete
-                                //!< from the model
+      const HighsInt from_row,  //!< The index of the first row to delete from the model
+      const HighsInt to_row     //!< The index of the last row to delete from the model
   );
 
   /**
