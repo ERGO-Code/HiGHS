@@ -115,21 +115,24 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option, bool& value) const {
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  bool& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option, HighsInt& value) const {
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  HighsInt& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option, double& value) const {
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  double& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -175,7 +178,8 @@ HighsStatus Highs::writeOptions(const std::string filename,
   return return_status;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) const {
+HighsStatus Highs::getInfoValue(const std::string& info,
+                                HighsInt& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {

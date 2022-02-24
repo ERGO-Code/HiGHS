@@ -98,13 +98,15 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
 
     if (copy_col_value) {
-      for (HighsInt i = 0; i < num_col; i++) col_value[i] = solution.col_value[i];
+      for (HighsInt i = 0; i < num_col; i++)
+        col_value[i] = solution.col_value[i];
     }
     const bool copy_row_value =
         row_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     if (copy_row_value) {
-      for (HighsInt i = 0; i < num_row; i++) row_value[i] = solution.row_value[i];
+      for (HighsInt i = 0; i < num_row; i++)
+        row_value[i] = solution.row_value[i];
     }
   }
 
@@ -118,15 +120,15 @@ HighsInt Highs_qpCall(
     const double* col_lower, const double* col_upper, const double* row_lower,
     const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
     const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
-    const double* q_value, double* col_value, double* col_dual, double* row_value,
-    double* row_dual, HighsInt* col_basis_status, HighsInt* row_basis_status,
-    HighsInt* model_status) {
+    const double* q_value, double* col_value, double* col_dual,
+    double* row_value, double* row_dual, HighsInt* col_basis_status,
+    HighsInt* row_basis_status, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
-  HighsStatus status =
-      highs.passModel(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense,
-                      offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-                      a_start, a_index, a_value, q_start, q_index, q_value);
+  HighsStatus status = highs.passModel(
+      num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
+      col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+      a_value, q_start, q_index, q_value);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
   status = highs.run();
@@ -192,13 +194,14 @@ HighsInt Highs_writeSolutionPretty(const void* highs, const char* filename) {
       ->writeSolution(std::string(filename), kSolutionStylePretty);
 }
 
-HighsInt Highs_passLp(void* highs, const HighsInt num_col, const HighsInt num_row,
-                      const HighsInt num_nz, const HighsInt a_format,
-                      const HighsInt sense, const double offset,
-                      const double* col_cost, const double* col_lower,
-                      const double* col_upper, const double* row_lower,
-                      const double* row_upper, const HighsInt* a_start,
-                      const HighsInt* a_index, const double* a_value) {
+HighsInt Highs_passLp(void* highs, const HighsInt num_col,
+                      const HighsInt num_row, const HighsInt num_nz,
+                      const HighsInt a_format, const HighsInt sense,
+                      const double offset, const double* col_cost,
+                      const double* col_lower, const double* col_upper,
+                      const double* row_lower, const double* row_upper,
+                      const HighsInt* a_start, const HighsInt* a_index,
+                      const double* a_value) {
   return (HighsInt)((Highs*)highs)
       ->passModel(num_col, num_row, num_nz, a_format, sense, offset, col_cost,
                   col_lower, col_upper, row_lower, row_upper, a_start, a_index,
@@ -219,18 +222,22 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
                   a_value, integrality);
 }
 
-HighsInt Highs_passModel(
-    void* highs, const HighsInt num_col, const HighsInt num_row,
-    const HighsInt num_nz, const HighsInt q_num_nz, const HighsInt a_format,
-    const HighsInt q_format, const HighsInt sense, const double offset,
-    const double* col_cost, const double* col_lower, const double* col_upper,
-    const double* row_lower, const double* row_upper, const HighsInt* a_start,
-    const HighsInt* a_index, const double* a_value, const HighsInt* q_start,
-    const HighsInt* q_index, const double* q_value, const HighsInt* integrality) {
+HighsInt Highs_passModel(void* highs, const HighsInt num_col,
+                         const HighsInt num_row, const HighsInt num_nz,
+                         const HighsInt q_num_nz, const HighsInt a_format,
+                         const HighsInt q_format, const HighsInt sense,
+                         const double offset, const double* col_cost,
+                         const double* col_lower, const double* col_upper,
+                         const double* row_lower, const double* row_upper,
+                         const HighsInt* a_start, const HighsInt* a_index,
+                         const double* a_value, const HighsInt* q_start,
+                         const HighsInt* q_index, const double* q_value,
+                         const HighsInt* integrality) {
   return (HighsInt)((Highs*)highs)
       ->passModel(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense,
                   offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-                  a_start, a_index, a_value, q_start, q_index, q_value, integrality);
+                  a_start, a_index, a_value, q_start, q_index, q_value,
+                  integrality);
 }
 
 HighsInt Highs_passHessian(void* highs, const HighsInt dim,
@@ -332,8 +339,9 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
-HighsInt Highs_getSolution(const void* highs, double* col_value, double* col_dual,
-                           double* row_value, double* row_dual) {
+HighsInt Highs_getSolution(const void* highs, double* col_value,
+                           double* col_dual, double* row_value,
+                           double* row_dual) {
   HighsSolution solution = ((Highs*)highs)->getSolution();
 
   if (col_value != NULL) {
@@ -688,8 +696,8 @@ HighsInt Highs_getColsByRange(const void* highs, const HighsInt from_col,
   HighsInt local_num_col, local_num_nz;
   HighsStatus status =
       ((Highs*)highs)
-          ->getCols(from_col, to_col, local_num_col, costs, lower, upper, local_num_nz,
-                    matrix_start, matrix_index, matrix_value);
+          ->getCols(from_col, to_col, local_num_col, costs, lower, upper,
+                    local_num_nz, matrix_start, matrix_index, matrix_value);
   *num_col = local_num_col;
   *num_nz = local_num_nz;
   return (HighsInt)status;
@@ -703,8 +711,8 @@ HighsInt Highs_getColsBySet(const void* highs, const HighsInt num_set_entries,
   HighsInt local_num_col, local_num_nz;
   HighsStatus status =
       ((Highs*)highs)
-          ->getCols(num_set_entries, set, local_num_col, costs, lower, upper, local_num_nz,
-                    matrix_start, matrix_index, matrix_value);
+          ->getCols(num_set_entries, set, local_num_col, costs, lower, upper,
+                    local_num_nz, matrix_start, matrix_index, matrix_value);
   *num_col = local_num_col;
   *num_nz = local_num_nz;
   return (HighsInt)status;
@@ -716,9 +724,10 @@ HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* matrix_start, HighsInt* matrix_index,
                              double* matrix_value) {
   HighsInt local_num_col, local_num_nz;
-  HighsStatus status = ((Highs*)highs)
-                           ->getCols(mask, local_num_col, costs, lower, upper, local_num_nz,
-                                     matrix_start, matrix_index, matrix_value);
+  HighsStatus status =
+      ((Highs*)highs)
+          ->getCols(mask, local_num_col, costs, lower, upper, local_num_nz,
+                    matrix_start, matrix_index, matrix_value);
   *num_col = local_num_col;
   *num_nz = local_num_nz;
   return (HighsInt)status;
@@ -732,8 +741,8 @@ HighsInt Highs_getRowsByRange(const void* highs, const HighsInt from_row,
   HighsInt local_num_row, local_num_nz;
   HighsStatus status =
       ((Highs*)highs)
-          ->getRows(from_row, to_row, local_num_row, lower, upper, local_num_nz, matrix_start,
-                    matrix_index, matrix_value);
+          ->getRows(from_row, to_row, local_num_row, lower, upper, local_num_nz,
+                    matrix_start, matrix_index, matrix_value);
   *num_row = local_num_row;
   *num_nz = local_num_nz;
   return (HighsInt)status;
@@ -747,8 +756,8 @@ HighsInt Highs_getRowsBySet(const void* highs, const HighsInt num_set_entries,
   HighsInt local_num_row, local_num_nz;
   HighsStatus status =
       ((Highs*)highs)
-          ->getRows(num_set_entries, set, local_num_row, lower, upper, local_num_nz,
-                    matrix_start, matrix_index, matrix_value);
+          ->getRows(num_set_entries, set, local_num_row, lower, upper,
+                    local_num_nz, matrix_start, matrix_index, matrix_value);
   *num_row = local_num_row;
   *num_nz = local_num_nz;
   return (HighsInt)status;
@@ -759,9 +768,10 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_nz, HighsInt* matrix_start,
                              HighsInt* matrix_index, double* matrix_value) {
   HighsInt local_num_row, local_num_nz;
-  HighsStatus status = ((Highs*)highs)
-                           ->getRows(mask, local_num_row, lower, upper, local_num_nz,
-                                     matrix_start, matrix_index, matrix_value);
+  HighsStatus status =
+      ((Highs*)highs)
+          ->getRows(mask, local_num_row, lower, upper, local_num_nz,
+                    matrix_start, matrix_index, matrix_value);
   *num_row = local_num_row;
   *num_nz = local_num_nz;
   return (HighsInt)status;
@@ -889,38 +899,7 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   return kHighsStatusOk;
 }
 
-// Fails on Windows and MacOS since string_model_status is destroyed
-// after the method returns, so what's returned is a pointer to
-// something that no longer exists.
-//
-// const char* Highs_model_statusToChar(void* highs, HighsInt int_model_status) {
-//   const char* illegal_model_status = "Model status out of range";
-//   if (int_model_status < (HighsInt)HighsModel_Status::kMin ||
-//       int_model_status > (HighsInt)HighsModel_Status::kMax)
-//     return illegal_model_status;
-//   const std::string string_model_status =
-//       ((Highs*)highs)
-//           ->model_statusToString(
-//               static_cast<HighsModel_Status>(int_model_status));
-//   return string_model_status.c_str();
-// }
-
-// Fails on Windows and MacOS since string_solution_status is
-// destroyed after the method returns, so what's returned is a pointer
-// to something that no longer exists.
-//
-// const char* Highs_solutionStatusToChar(void* highs,
-//                                        HighsInt int_solution_status) {
-//   const char* illegal_solution_status = "Solution status out of range";
-//   if (int_solution_status < kSolutionStatusMin ||
-//       int_solution_status > kSolutionStatusMax)
-//     return illegal_solution_status;
-//   const std::string string_solution_status =
-//       ((Highs*)highs)->solutionStatusToString(int_solution_status);
-//   return string_solution_status.c_str();
-// }
-
-HighsInt Highs_crossover(void* highs) {  //!< HiGHS object reference
+HighsInt Highs_crossover(void* highs) {
   return (HighsInt)((Highs*)highs)->crossover();
 }
 
@@ -955,17 +934,19 @@ HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const double* row_lower, const double* row_upper,
                     const HighsInt* a_start, const HighsInt* a_index,
                     const double* a_value, double* col_value, double* col_dual,
-                    double* row_value, double* row_dual, HighsInt* col_basis_status,
-                    HighsInt* row_basis_status, HighsInt* model_status) {
+                    double* row_value, double* row_dual,
+                    HighsInt* col_basis_status, HighsInt* row_basis_status,
+                    HighsInt* model_status) {
   printf(
       "Method Highs_call is deprecated: alternative method is Highs_lpCall\n");
   const HighsInt aformat_columnwise = 1;
   const HighsInt sense = 1;
   const double offset = 0;
-  return Highs_lpCall(num_col, num_row, num_nz, aformat_columnwise, sense, offset,
-                      col_cost, col_lower, col_upper, row_lower, row_upper, a_start,
-                      a_index, a_value, col_value, col_dual, row_value, row_dual,
-                      col_basis_status, row_basis_status, model_status);
+  return Highs_lpCall(num_col, num_row, num_nz, aformat_columnwise, sense,
+                      offset, col_cost, col_lower, col_upper, row_lower,
+                      row_upper, a_start, a_index, a_value, col_value, col_dual,
+                      row_value, row_dual, col_basis_status, row_basis_status,
+                      model_status);
 }
 
 HighsInt Highs_setOptionValue(void* highs, const char* option,
@@ -1119,8 +1100,3 @@ double Highs_getHighsInfinity(const void* highs) {
       ->deprecationMessage("Highs_getHighsInfinity", "Highs_getInfinity");
   return Highs_getInfinity(highs);
 }
-
-// const char* Highs_highsModel_StatusToChar(void* highs,
-//                                          HighsInt int_model_status) {
-//   return Highs_model_statusToChar(highs, int_model_status);
-// }

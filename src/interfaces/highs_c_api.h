@@ -89,25 +89,25 @@ extern "C" {
  * @param a_start   the constraint matrix is provided to HiGHS in compressed
  *                  sparse column form (if `a_format` is `kColwise`, otherwise
  *                  compressed sparse row form). The sparse matrix consists of
- *                  three arrays, `a_start`, `a_index`, and `a_value`. `a_start` is
- *                  an array of length [num_col] containing the starting index of
- *                  each column in `a_index`. If `a_format` is `kRowwise` the
- *                  array is of length [num_row] corresponding to each row.
+ *                  three arrays, `a_start`, `a_index`, and `a_value`. `a_start`
+ * is an array of length [num_col] containing the starting index of each column
+ * in `a_index`. If `a_format` is `kRowwise` the array is of length [num_row]
+ * corresponding to each row.
  * @param a_index   array of length [num_nz] with indices of matrix entries
  * @param a_value   array of length [num_nz] with values of matrix entries
  *
- * @param col_value      array of length [num_col], filled with the primal column
- *                       solution
+ * @param col_value      array of length [num_col], filled with the primal
+ * column solution
  * @param col_dual       array of length [num_col], filled with the dual column
  *                       solution
  * @param row_value      array of length [num_row], filled with the primal row
  *                       solution
  * @param row_dual       array of length [num_row], filled with the dual row
  *                       solution
- * @param col_basis_status array of length [num_col], filled with the basis status
- *                         of the columns in the form of a `HighsBasisStatus` enum
- * @param row_basis_status array of length [num_row], filled with the basis status
- *                         of the rows in the form of a `HighsBasisStatus` enum
+ * @param col_basis_status array of length [num_col], filled with the basis
+ * status of the columns in the form of a `HighsBasisStatus` enum
+ * @param row_basis_status array of length [num_row], filled with the basis
+ * status of the rows in the form of a `HighsBasisStatus` enum
  * @param model_status    termination status of the model after the solve in the
  *                        form of a `HighsModel_Status` enum
  *
@@ -157,7 +157,8 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
  *                  `HighsHessianStatus` enum. If q_num_nz > 0, this must be
                     `kHighsHessianFormatTriangular`
  * @param q_start   the Hessian matrix is provided in the same format as the
- *                  constraint matrix, using `q_start`, `q_index`, and `q_value` in
+ *                  constraint matrix, using `q_start`, `q_index`, and `q_value`
+ in
  *                  the place of `a_start`, `a_index`, and `a_value`
  * @param q_index   array of length [q_num_nz] with indices of matrix entries
  * @param q_value   array of length [q_num_nz] with values of matrix entries
@@ -171,9 +172,9 @@ HighsInt Highs_qpCall(
     const double* col_lower, const double* col_upper, const double* row_lower,
     const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
     const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
-    const double* q_value, double* col_value, double* col_dual, double* row_value,
-    double* row_dual, HighsInt* col_basis_status, HighsInt* row_basis_status,
-    HighsInt* model_status);
+    const double* q_value, double* col_value, double* col_dual,
+    double* row_value, double* row_dual, HighsInt* col_basis_status,
+    HighsInt* row_basis_status, HighsInt* model_status);
 
 /**
  * Create a Highs instance and return the reference
@@ -273,13 +274,14 @@ HighsInt Highs_writeSolutionPretty(const void* highs, const char* filename);
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
-HighsInt Highs_passLp(void* highs, const HighsInt num_col, const HighsInt num_row,
-                      const HighsInt num_nz, const HighsInt a_format,
-                      const HighsInt sense, const double offset,
-                      const double* col_cost, const double* col_lower,
-                      const double* col_upper, const double* row_lower,
-                      const double* row_upper, const HighsInt* a_start,
-                      const HighsInt* a_index, const double* a_value);
+HighsInt Highs_passLp(void* highs, const HighsInt num_col,
+                      const HighsInt num_row, const HighsInt num_nz,
+                      const HighsInt a_format, const HighsInt sense,
+                      const double offset, const double* col_cost,
+                      const double* col_lower, const double* col_upper,
+                      const double* row_lower, const double* row_upper,
+                      const HighsInt* a_start, const HighsInt* a_index,
+                      const double* a_value);
 
 /**
  * Pass a mixed-integer linear program (MILP) to HiGHS in a single function
@@ -312,7 +314,8 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  *                    `HighsMatrixFormat` enum
  * @param q_format    the format of the Hessian matrix to use in the form of a
  *                    `HighsHessianFormat` enum
- * @param sense       the optimization sense in the form of a `HighsObjSense` enum
+ * @param sense       the optimization sense in the form of a `HighsObjSense`
+ * enum
  * @param offset      the constant term in the objective function
  * @param col_cost    array of length [num_col] with the objective coefficients
  * @param col_lower   array of length [num_col] with the lower column bounds
@@ -322,33 +325,36 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  * @param a_start     the constraint matrix is provided to HiGHS in compressed
  *                    sparse column form (if `a_format` is `kColwise`, otherwise
  *                    compressed sparse row form). The sparse matrix consists of
- *                    three arrays, `a_start`, `a_index`, and `a_value`. `a_start` is
- *                    an array of length [num_col] containing the starting index of
+ *                    three arrays, `a_start`, `a_index`, and `a_value`.
+ * `a_start` is an array of length [num_col] containing the starting index of
  *                    each column in `a_index`. If `a_format` is `kRowwise` the
  *                    array is of length [num_row] corresponding to each row.
  * @param a_index     array of length [num_nz] with indices of matrix entries
  * @param a_value     array of length [num_nz] with values of matrix entries
  * @param q_start     the Hessian matrix is provided in the same format as the
- *                    constraint matrix, using `q_start`, `q_index`, and `q_value` in
- *                    the place of `a_start`, `a_index`, and `a_value`. If the model
+ *                    constraint matrix, using `q_start`, `q_index`, and
+ * `q_value` in the place of `a_start`, `a_index`, and `a_value`. If the model
  *                    is linear, pass NULL.
- * @param q_index     array of length [q_num_nz] with indices of matrix entries. If
- *                    the model is linear, pass NULL.
- * @param q_value     array of length [q_num_nz] with values of matrix entries. If
- *                    the model is linear, pass NULL.
+ * @param q_index     array of length [q_num_nz] with indices of matrix entries.
+ * If the model is linear, pass NULL.
+ * @param q_value     array of length [q_num_nz] with values of matrix entries.
+ * If the model is linear, pass NULL.
  * @param integrality an array of length [num_col] containing a `HighsVarType`
  *                    enum for each column
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
-HighsInt Highs_passModel(
-    void* highs, const HighsInt num_col, const HighsInt num_row,
-    const HighsInt num_nz, const HighsInt q_num_nz, const HighsInt a_format,
-    const HighsInt q_format, const HighsInt sense, const double offset,
-    const double* col_cost, const double* col_lower, const double* col_upper,
-    const double* row_lower, const double* row_upper, const HighsInt* a_start,
-    const HighsInt* a_index, const double* a_value, const HighsInt* q_start,
-    const HighsInt* q_index, const double* q_value, const HighsInt* integrality);
+HighsInt Highs_passModel(void* highs, const HighsInt num_col,
+                         const HighsInt num_row, const HighsInt num_nz,
+                         const HighsInt q_num_nz, const HighsInt a_format,
+                         const HighsInt q_format, const HighsInt sense,
+                         const double offset, const double* col_cost,
+                         const double* col_lower, const double* col_upper,
+                         const double* row_lower, const double* row_upper,
+                         const HighsInt* a_start, const HighsInt* a_index,
+                         const double* a_value, const HighsInt* q_start,
+                         const HighsInt* q_index, const double* q_value,
+                         const HighsInt* integrality);
 
 /**
  * Set the Hessian matrix for a quadratic objective.
@@ -561,16 +567,17 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
-HighsInt Highs_getSolution(const void* highs, double* col_value, double* col_dual,
-                           double* row_value, double* row_dual);
+HighsInt Highs_getSolution(const void* highs, double* col_value,
+                           double* col_dual, double* row_value,
+                           double* row_dual);
 
 /**
  * Given a linear program with a basic feasible solution, get the column and row
  * basis statuses.
  *
  * @param highs     a pointer to the Highs instance
- * @param col_status array of length [num_col], to be filled with the column basis
- *                  statuses in the form of a `HighsBasisStatus` enum
+ * @param col_status array of length [num_col], to be filled with the column
+ * basis statuses in the form of a `HighsBasisStatus` enum
  * @param row_status array of length [num_row], to be filled with the row basis
  *                  statuses in the form of a `HighsBasisStatus` enum
  *
@@ -1402,8 +1409,8 @@ HighsInt Highs_deleteRowsBySet(void* highs, const HighsInt num_set_entries,
  * Delete multiple rows given by a mask.
  *
  * @param highs     a pointer to the Highs instance
- * @param mask      an array of length [num_row] with 1 if the row should be deleted
- *                  and 0 otherwise
+ * @param mask      an array of length [num_row] with 1 if the row should be
+ * deleted and 0 otherwise
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1548,8 +1555,9 @@ HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const double* row_lower, const double* row_upper,
                     const HighsInt* a_start, const HighsInt* a_index,
                     const double* a_value, double* col_value, double* col_dual,
-                    double* row_value, double* row_dual, HighsInt* col_basis_status,
-                    HighsInt* row_basis_status, HighsInt* model_status);
+                    double* row_value, double* row_dual,
+                    HighsInt* col_basis_status, HighsInt* row_basis_status,
+                    HighsInt* model_status);
 
 HighsInt Highs_runQuiet(void* highs);
 

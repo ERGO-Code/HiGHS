@@ -20,22 +20,23 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
-HighsStatus Highs::addColsInterface(HighsInt ext_num_new_col, const double* ext_col_cost,
-                                    const double* ext_col_lower,
-                                    const double* ext_col_upper, HighsInt ext_num_new_nz,
-                                    const HighsInt* ext_a_start,
-                                    const HighsInt* ext_a_index,
-                                    const double* ext_a_value) {
+HighsStatus Highs::addColsInterface(
+    HighsInt ext_num_new_col, const double* ext_col_cost,
+    const double* ext_col_lower, const double* ext_col_upper,
+    HighsInt ext_num_new_nz, const HighsInt* ext_a_start,
+    const HighsInt* ext_a_index, const double* ext_a_value) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = options_;
   if (ext_num_new_col < 0) return HighsStatus::kError;
   if (ext_num_new_nz < 0) return HighsStatus::kError;
   if (ext_num_new_col == 0) return HighsStatus::kOk;
   if (ext_num_new_col > 0)
-    if (isColDataNull(options.log_options, ext_col_cost, ext_col_lower, ext_col_upper))
+    if (isColDataNull(options.log_options, ext_col_cost, ext_col_lower,
+                      ext_col_upper))
       return HighsStatus::kError;
   if (ext_num_new_nz > 0)
-    if (isMatrixDataNull(options.log_options, ext_a_start, ext_a_index, ext_a_value))
+    if (isMatrixDataNull(options.log_options, ext_a_start, ext_a_index,
+                         ext_a_value))
       return HighsStatus::kError;
 
   HighsLp& lp = model_.lp_;
@@ -58,9 +59,12 @@ HighsStatus Highs::addColsInterface(HighsInt ext_num_new_col, const double* ext_
   index_collection.to_ = ext_num_new_col - 1;
 
   // Take a copy of the cost and bounds that can be normalised
-  std::vector<double> local_colCost{ext_col_cost, ext_col_cost + ext_num_new_col};
-  std::vector<double> local_colLower{ext_col_lower, ext_col_lower + ext_num_new_col};
-  std::vector<double> local_colUpper{ext_col_upper, ext_col_upper + ext_num_new_col};
+  std::vector<double> local_colCost{ext_col_cost,
+                                    ext_col_cost + ext_num_new_col};
+  std::vector<double> local_colLower{ext_col_lower,
+                                     ext_col_lower + ext_num_new_col};
+  std::vector<double> local_colUpper{ext_col_upper,
+                                     ext_col_upper + ext_num_new_col};
 
   return_status =
       interpretCallStatus(options_.log_options,
@@ -137,7 +141,8 @@ HighsStatus Highs::addColsInterface(HighsInt ext_num_new_col, const double* ext_
 
 HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
                                     const double* ext_row_lower,
-                                    const double* ext_row_upper, HighsInt ext_num_new_nz,
+                                    const double* ext_row_upper,
+                                    HighsInt ext_num_new_nz,
                                     const HighsInt* ext_ar_start,
                                     const HighsInt* ext_ar_index,
                                     const double* ext_ar_value) {
@@ -158,7 +163,8 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     if (isRowDataNull(options.log_options, ext_row_lower, ext_row_upper))
       return HighsStatus::kError;
   if (ext_num_new_nz > 0)
-    if (isMatrixDataNull(options.log_options, ext_ar_start, ext_ar_index, ext_ar_value))
+    if (isMatrixDataNull(options.log_options, ext_ar_start, ext_ar_index,
+                         ext_ar_value))
       return HighsStatus::kError;
 
   HighsLp& lp = model_.lp_;
@@ -180,8 +186,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   index_collection.from_ = 0;
   index_collection.to_ = ext_num_new_row - 1;
   // Take a copy of the bounds that can be normalised
-  std::vector<double> local_rowLower{ext_row_lower, ext_row_lower + ext_num_new_row};
-  std::vector<double> local_rowUpper{ext_row_upper, ext_row_upper + ext_num_new_row};
+  std::vector<double> local_rowLower{ext_row_lower,
+                                     ext_row_lower + ext_num_new_row};
+  std::vector<double> local_rowUpper{ext_row_upper,
+                                     ext_row_upper + ext_num_new_row};
 
   return_status = interpretCallStatus(
       options_.log_options,
@@ -510,8 +518,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   }
 }
 
-void Highs::getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
-                                    double& value) {
+void Highs::getCoefficientInterface(const HighsInt ext_row,
+                                    const HighsInt ext_col, double& value) {
   HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
@@ -667,7 +675,8 @@ HighsStatus Highs::changeRowBoundsInterface(
 }
 
 // Change a single coefficient in the matrix
-void Highs::changeCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
+void Highs::changeCoefficientInterface(const HighsInt ext_row,
+                                       const HighsInt ext_col,
                                        const double ext_new_value) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
@@ -676,7 +685,8 @@ void Highs::changeCoefficientInterface(const HighsInt ext_row, const HighsInt ex
   assert(0 <= ext_col && ext_col < lp.num_col_);
   const bool zero_new_value =
       std::fabs(ext_new_value) <= options_.small_matrix_value;
-  changeLpMatrixCoefficient(lp, ext_row, ext_col, ext_new_value, zero_new_value);
+  changeLpMatrixCoefficient(lp, ext_row, ext_col, ext_new_value,
+                            zero_new_value);
   // Deduce the consequences of a changed element
   //
   // ToDo: Can do something more intelligent if element is in nonbasic column.
