@@ -115,21 +115,8 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option, HighsInt& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  bool& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -137,7 +124,23 @@ HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
 }
 
 HighsStatus Highs::getOptionValue(const std::string& option,
-                                  std::string& value) {
+                                  HighsInt& value) const {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  double& value) const {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  std::string& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -145,7 +148,7 @@ HighsStatus Highs::getOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::getOptionType(const std::string& option,
-                                 HighsOptionType& type) {
+                                 HighsOptionType& type) const {
   if (getLocalOptionType(options_.log_options, option, options_.records,
                          type) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -158,7 +161,7 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string filename,
-                                const bool report_only_deviations) {
+                                const bool report_only_deviations) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -175,7 +178,8 @@ HighsStatus Highs::writeOptions(const std::string filename,
   return return_status;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
+HighsStatus Highs::getInfoValue(const std::string& info,
+                                HighsInt& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
@@ -188,7 +192,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
 }
 
 #ifndef HIGHSINT64
-HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) {
+HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
@@ -213,7 +217,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   }
 }
 
-HighsStatus Highs::writeInfo(const std::string filename) {
+HighsStatus Highs::writeInfo(const std::string filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -308,8 +312,8 @@ HighsStatus Highs::passModel(
     const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
     const HighsInt sense, const double offset, const double* costs,
     const double* col_lower, const double* col_upper, const double* row_lower,
-    const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
-    const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
+    const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
+    const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
     const double* q_value, const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
@@ -340,16 +344,16 @@ HighsStatus Highs::passModel(
   if (a_num_nz > 0) {
     assert(num_col > 0);
     assert(num_row > 0);
-    assert(astart != NULL);
-    assert(aindex != NULL);
-    assert(avalue != NULL);
+    assert(a_start != NULL);
+    assert(a_index != NULL);
+    assert(a_value != NULL);
     if (a_rowwise) {
-      lp.a_matrix_.start_.assign(astart, astart + num_row);
+      lp.a_matrix_.start_.assign(a_start, a_start + num_row);
     } else {
-      lp.a_matrix_.start_.assign(astart, astart + num_col);
+      lp.a_matrix_.start_.assign(a_start, a_start + num_col);
     }
-    lp.a_matrix_.index_.assign(aindex, aindex + a_num_nz);
-    lp.a_matrix_.value_.assign(avalue, avalue + a_num_nz);
+    lp.a_matrix_.index_.assign(a_index, a_index + a_num_nz);
+    lp.a_matrix_.value_.assign(a_value, a_value + a_num_nz);
   }
   if (a_rowwise) {
     lp.a_matrix_.start_.resize(num_row + 1);
@@ -407,12 +411,12 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const HighsInt sense, const double offset,
                              const double* costs, const double* col_lower,
                              const double* col_upper, const double* row_lower,
-                             const double* row_upper, const HighsInt* astart,
-                             const HighsInt* aindex, const double* avalue,
+                             const double* row_upper, const HighsInt* a_start,
+                             const HighsInt* a_index, const double* a_value,
                              const HighsInt* integrality) {
   return passModel(num_col, num_row, num_nz, 0, a_format, 0, sense, offset,
-                   costs, col_lower, col_upper, row_lower, row_upper, astart,
-                   aindex, avalue, NULL, NULL, NULL, integrality);
+                   costs, col_lower, col_upper, row_lower, row_upper, a_start,
+                   a_index, a_value, NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
@@ -1963,12 +1967,12 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::getObjectiveSense(ObjSense& sense) {
+HighsStatus Highs::getObjectiveSense(ObjSense& sense) const {
   sense = model_.lp_.sense_;
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getObjectiveOffset(double& offset) {
+HighsStatus Highs::getObjectiveOffset(double& offset) const {
   offset = model_.lp_.offset_;
   return HighsStatus::kOk;
 }
@@ -2154,20 +2158,20 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
+HighsStatus Highs::scaleCol(const HighsInt col, const double scale_value) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status = scaleColInterface(col, scaleval);
+  HighsStatus call_status = scaleColInterface(col, scale_value);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "scaleCol");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
+HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status = scaleRowInterface(row, scaleval);
+  HighsStatus call_status = scaleRowInterface(row, scale_value);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "scaleRow");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -2599,9 +2603,7 @@ HighsStatus Highs::callSolveMip() {
   // Set the MIP-specific values of info_
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;
-  info_.mip_gap =
-      100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
-      std::max(1.0, std::abs(info_.objective_function_value));
+  info_.mip_gap = solver.gap_;
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("MIP", return_status);

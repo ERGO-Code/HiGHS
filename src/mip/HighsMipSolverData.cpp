@@ -1023,7 +1023,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
 
-    if (std::abs(ub) <= epsilon) ub = 0;
+    if (std::fabs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
     if (ub == 0.0)
       gap = lb == 0.0 ? 0.0 : kHighsInf;
@@ -1039,11 +1039,13 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
       ub = mipsolver.options_mip_->objective_bound;
-      ub_string = convertToPrintString(ub, "*");
+      ub_string =
+          convertToPrintString((int)mipsolver.orig_model_->sense_ * ub, "*");
     } else
-      ub_string = convertToPrintString(ub);
+      ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> lb_string =
+        convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -1058,11 +1060,13 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
       ub = mipsolver.options_mip_->objective_bound;
-      ub_string = convertToPrintString(ub, "*");
+      ub_string =
+          convertToPrintString((int)mipsolver.orig_model_->sense_ * ub, "*");
     } else
-      ub_string = convertToPrintString(ub);
+      ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> lb_string =
+        convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
