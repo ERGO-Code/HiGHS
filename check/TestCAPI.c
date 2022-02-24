@@ -36,9 +36,9 @@ void assertIntValuesEqual(const char* name, const HighsInt is, const HighsInt sh
 }
 
 void minimal_api() {
-  HighsInt numcol = 2;
-  HighsInt numrow = 2;
-  HighsInt nnz = 4;
+  HighsInt num_col = 2;
+  HighsInt num_row = 2;
+  HighsInt num_nz = 4;
   HighsInt a_format = 2;
   HighsInt sense = 1;
   double offset = 0;
@@ -53,23 +53,23 @@ void minimal_api() {
   HighsInt a_index[4] = {0, 1, 0, 1};
   double a_value[4] = {1.0, 2.0, 1.0, 3.0};
 
-  double* cv = (double*)malloc(sizeof(double) * numcol);
-  double* cd = (double*)malloc(sizeof(double) * numcol);
-  double* rv = (double*)malloc(sizeof(double) * numrow);
-  double* rd = (double*)malloc(sizeof(double) * numrow);
+  double* cv = (double*)malloc(sizeof(double) * num_col);
+  double* cd = (double*)malloc(sizeof(double) * num_col);
+  double* rv = (double*)malloc(sizeof(double) * num_row);
+  double* rd = (double*)malloc(sizeof(double) * num_row);
 
-  HighsInt* cbs = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
-  HighsInt* rbs = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
+  HighsInt* cbs = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* rbs = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
 
   HighsInt model_status;
 
-  HighsInt return_status = Highs_lpCall(numcol, numrow, nnz, a_format, sense, offset,
+  HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format, sense, offset,
 					cc, cl, cu, rl, ru, a_start, a_index, a_value, cv,
 					cd, rv, rd, cbs, rbs, &model_status);
   assert( return_status == 0 );
 
   if (dev_run) {
-    for (i = 0; i < numcol; i++) 
+    for (i = 0; i < num_col; i++) 
       printf("x%"HIGHSINT_FORMAT" = %lf\n", i, cv[i]);
   }
 
@@ -89,8 +89,8 @@ void minimal_api_lp() {
   //
   // where A is a matrix with m rows and n columns
   //
-  // The scalar n is numcol
-  // The scalar m is numrow
+  // The scalar n is num_col
+  // The scalar m is num_row
   //
   // The vector c is col_cost
   // The vector l is col_lower
@@ -101,7 +101,7 @@ void minimal_api_lp() {
   // The matrix A is represented in packed column-wise form: only its
   // nonzeros are stored
   //
-  // * The number of nonzeros in A is numnz
+  // * The number of nonzeros in A is num_nz
   //
   // * The row indices of the nonnzeros in A are stored column-by-column
   // in a_index
@@ -136,9 +136,9 @@ void minimal_api_lp() {
   //        8 <= 2x_0 +  x_1
   // 0 <= x_0 <= 3; 1 <= x_1
 
-  const HighsInt numcol = 2;
-  const HighsInt numrow = 3;
-  const HighsInt numnz = 5;
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  const HighsInt num_nz = 5;
   HighsInt a_format = 1;
   HighsInt sense = 1;
   double offset = 0;
@@ -155,17 +155,17 @@ void minimal_api_lp() {
   HighsInt a_index[5] = {1, 2, 0, 1, 2};
   double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
 
-  double* col_value = (double*)malloc(sizeof(double) * numcol);
-  double* col_dual = (double*)malloc(sizeof(double) * numcol);
-  double* row_value = (double*)malloc(sizeof(double) * numrow);
-  double* row_dual = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
 
-  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
-  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
+  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
 
   HighsInt model_status;
 
-  HighsInt return_status = Highs_lpCall(numcol, numrow, numnz, a_format,
+  HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
 				    sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 				    a_start, a_index, a_value,
 				    col_value, col_dual, row_value, row_dual,
@@ -181,13 +181,13 @@ void minimal_api_lp() {
     if (model_status == 7) {
       double objective_value = 0;
       // Report the column primal and dual values, and basis status
-      for (i = 0; i < numcol; i++) {
+      for (i = 0; i < num_col; i++) {
 	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
 	       i, col_value[i], col_dual[i], col_basis_status[i]);
 	objective_value += col_value[i]*col_cost[i];
       }
       // Report the row primal and dual values, and basis status
-      for (i = 0; i < numrow; i++) {
+      for (i = 0; i < num_row; i++) {
 	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
 	       i, row_value[i], row_dual[i], row_basis_status[i]);
       }
@@ -211,9 +211,9 @@ void minimal_api_mip() {
   //              4x_0 + 2x_1 + x_2  = 12
   //              x_0 >=0; x_1 >= 0; x_2 binary
 
-  const HighsInt numcol = 3;
-  const HighsInt numrow = 2;
-  const HighsInt numnz = 6;
+  const HighsInt num_col = 3;
+  const HighsInt num_row = 2;
+  const HighsInt num_nz = 6;
   HighsInt a_format = 1;
   HighsInt sense = 1;
   double offset = 0;
@@ -233,13 +233,13 @@ void minimal_api_mip() {
   // Give an illegal value to an entry in integrality
   HighsInt integrality[3] = {0, 0, -1};
 
-  double* col_value = (double*)malloc(sizeof(double) * numcol);
-  double* row_value = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
 
   HighsInt model_status;
   HighsInt return_status;
 
-  return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
+  return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
 					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 					 a_start, a_index, a_value,
 					 integrality,
@@ -249,9 +249,9 @@ void minimal_api_mip() {
   assert( return_status == -1 );
 
   // Correct integrality
-  integrality[numcol-1] = 1;
+  integrality[num_col-1] = 1;
 
-  return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
+  return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
 					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 					 a_start, a_index, a_value,
 					 integrality,
@@ -267,12 +267,12 @@ void minimal_api_mip() {
     if (model_status == 7) {
       double objective_value = 0;
       // Report the column primal values
-      for (i = 0; i < numcol; i++) {
+      for (i = 0; i < num_col; i++) {
 	printf("Col%"HIGHSINT_FORMAT" = %lf; \n", i, col_value[i]);
 	objective_value += col_value[i]*col_cost[i];
       }
       // Report the row primal values
-      for (i = 0; i < numrow; i++) {
+      for (i = 0; i < num_row; i++) {
 	printf("Row%"HIGHSINT_FORMAT" = %lf; \n", i, row_value[i]);
       }
       printf("Optimal objective value = %g\n", objective_value);
@@ -294,7 +294,7 @@ void minimal_api_qp() {
   HighsInt num_col = 3;
   HighsInt num_row = 1;
   HighsInt num_nz = 2;
-  HighsInt q_numnz = 4;
+  HighsInt q_num_nz = 4;
   HighsInt a_format = 1; // Row-wise
   HighsInt q_format = 1; // Triangular
   HighsInt sense = 1;
@@ -313,7 +313,7 @@ void minimal_api_qp() {
   
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   HighsInt model_status;
-  HighsInt return_status = Highs_qpCall(num_col, num_row, num_nz, q_numnz, a_format, q_format, sense, offset,
+  HighsInt return_status = Highs_qpCall(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
 					col_cost, col_lower, col_upper, row_lower, row_upper,
 					a_start, a_index, a_value, q_start, q_index, q_value,
 					col_value, NULL, NULL, NULL, NULL, NULL, &model_status);
@@ -333,9 +333,9 @@ void full_api() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
-  HighsInt numcol = 2;
-  HighsInt numrow = 2;
-  HighsInt numnz = 4;
+  HighsInt num_col = 2;
+  HighsInt num_row = 2;
+  HighsInt num_nz = 4;
   HighsInt a_format = 2; //Row-wise
   HighsInt sense = 1;
   double offset = 0;
@@ -351,14 +351,14 @@ void full_api() {
   assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) == 0);
   assert( Highs_addRows(highs, 2, rl, ru,  4, a_start, a_index, a_value) == 0);
 
-  assert( Highs_getNumCols(highs) == numcol);
-  assert( Highs_getNumRows(highs) == numrow);
-  assert( Highs_getNumNz(highs) == numnz);
+  assert( Highs_getNumCols(highs) == num_col);
+  assert( Highs_getNumRows(highs) == num_row);
+  assert( Highs_getNumNz(highs) == num_nz);
   assert( Highs_getHessianNumNz(highs) == 0);
 
-  HighsInt ck_numcol;
-  HighsInt ck_numrow;
-  HighsInt ck_numnz;
+  HighsInt ck_num_col;
+  HighsInt ck_num_row;
+  HighsInt ck_num_nz;
   HighsInt ck_hessian_num_nz;
   HighsInt ck_rowwise;
   HighsInt ck_sense;
@@ -373,25 +373,25 @@ void full_api() {
   double ck_a_value[4];
   HighsInt return_status;
   return_status = Highs_getModel(highs, a_format, 0,
-				 &ck_numcol, &ck_numrow, &ck_numnz, NULL,
+				 &ck_num_col, &ck_num_row, &ck_num_nz, NULL,
 				 &ck_sense, &ck_offset,
 				 ck_cc, ck_cl, ck_cu, ck_rl, ck_ru,
 				 ck_a_start, ck_a_index, ck_a_value,
 				 NULL, NULL, NULL, NULL);
   assert( return_status == 0 );
-  assert( ck_numcol == numcol );
-  assert( ck_numrow == numrow );
-  assert( ck_numnz == numnz );
+  assert( ck_num_col == num_col );
+  assert( ck_num_row == num_row );
+  assert( ck_num_nz == num_nz );
   assert( ck_sense == sense );
   assert( ck_offset == offset );
-  assert( doubleArraysEqual(numcol, ck_cc, cc) );
-  assert( doubleArraysEqual(numcol, ck_cl, cl) );
-  assert( doubleArraysEqual(numcol, ck_cu, cu) );
-  assert( doubleArraysEqual(numrow, ck_rl, rl) );
-  assert( doubleArraysEqual(numrow, ck_ru, ru) );
-  assert( intArraysEqual(numcol, ck_a_start, a_start) );
-  assert( intArraysEqual(numnz, ck_a_index, a_index) );
-  assert( doubleArraysEqual(numnz, ck_a_value, a_value) );
+  assert( doubleArraysEqual(num_col, ck_cc, cc) );
+  assert( doubleArraysEqual(num_col, ck_cl, cl) );
+  assert( doubleArraysEqual(num_col, ck_cu, cu) );
+  assert( doubleArraysEqual(num_row, ck_rl, rl) );
+  assert( doubleArraysEqual(num_row, ck_ru, ru) );
+  assert( intArraysEqual(num_col, ck_a_start, a_start) );
+  assert( intArraysEqual(num_nz, ck_a_index, a_index) );
+  assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
   return_status = Highs_run(highs);
   assert( return_status == 0 );
 
@@ -411,9 +411,9 @@ void full_api_lp() {
   highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
-  const HighsInt numcol = 2;
-  const HighsInt numrow = 3;
-  const HighsInt numnz = 5;
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  const HighsInt num_nz = 5;
   HighsInt i;
 
   // Define the column costs, lower bounds and upper bounds
@@ -429,18 +429,18 @@ void full_api_lp() {
   HighsInt arindex[5] = {1, 0, 1, 0, 1};
   double arvalue[5] = {1.0, 1.0, 2.0, 2.0, 1.0};
 
-  double* col_value = (double*)malloc(sizeof(double) * numcol);
-  double* col_dual = (double*)malloc(sizeof(double) * numcol);
-  double* row_value = (double*)malloc(sizeof(double) * numrow);
-  double* row_dual = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
 
-  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
-  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
+  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, col_cost, col_lower, col_upper, 0, NULL, NULL, NULL) == 0);
+  assert( Highs_addCols(highs, num_col, col_cost, col_lower, col_upper, 0, NULL, NULL, NULL) == 0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, row_lower, row_upper, numnz, arstart, arindex, arvalue) == 0);
+  assert( Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, arstart, arindex, arvalue) == 0);
 
   HighsInt sense;
   HighsInt return_status;
@@ -534,11 +534,11 @@ void full_api_lp() {
       return_status = Highs_getBasis(highs, col_basis_status, row_basis_status);
       assert( return_status == 0 );
       // Report the column primal and dual values, and basis status
-      for (i = 0; i < numcol; i++) {
+      for (i = 0; i < num_col; i++) {
 	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
       }
       // Report the row primal and dual values, and basis status
-      for (i = 0; i < numrow; i++) {
+      for (i = 0; i < num_row; i++) {
 	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
       }
     }
@@ -561,7 +561,7 @@ void full_api_lp() {
   double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
-  return_status = Highs_passLp(highs, numcol, numrow, numnz, a_format, sense, offset,
+  return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense, offset,
 			   col_cost, col_lower, col_upper,
 			   row_lower, row_upper,
 			   a_start, a_index, a_value);
@@ -584,9 +584,9 @@ void full_api_mip() {
   //              4x_0 + 2x_1 + x_2  = 12
   //              x_0 >=0; x_1 >= 0; x_2 binary
 
-  const HighsInt numcol = 3;
-  const HighsInt numrow = 2;
-  const HighsInt numnz = 6;
+  const HighsInt num_col = 3;
+  const HighsInt num_row = 2;
+  const HighsInt num_nz = 6;
   HighsInt a_format = 1;
   HighsInt sense = 1;
   double offset = 0;
@@ -605,15 +605,15 @@ void full_api_mip() {
 
   HighsInt integrality[3] = {1, 1, 1};
 
-  double* col_value = (double*)malloc(sizeof(double) * numcol);
-  double* row_value = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
 
   HighsInt model_status;
   HighsInt return_status;
 
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
-  return_status = Highs_passMip(highs, numcol, numrow, numnz, a_format,
+  return_status = Highs_passMip(highs, num_col, num_row, num_nz, a_format,
 				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 				a_start, a_index, a_value,
 				integrality);
