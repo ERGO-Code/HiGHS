@@ -15,57 +15,57 @@
 
 #include "util/HighsInt.h"
 
-const HighsInt HighsStatuskError = -1;
-const HighsInt HighsStatuskOk = 0;
-const HighsInt HighsStatuskWarning = 1;
+const HighsInt kHighsStatusError = -1;
+const HighsInt kHighsStatusOk = 0;
+const HighsInt kHighsStatusWarning = 1;
 
-const HighsInt HighsVarTypekContinuous = 0;
-const HighsInt HighsVarTypekInteger = 1;
-const HighsInt HighsVarTypekSemiContinuous = 2;
-const HighsInt HighsVarTypekSemiInteger = 3;
-const HighsInt HighsVarTypekImplicitInteger = 4;
+const HighsInt kHighsVarTypeContinuous = 0;
+const HighsInt kHighsVarTypeInteger = 1;
+const HighsInt kHighsVarTypeSemiContinuous = 2;
+const HighsInt kHighsVarTypeSemiInteger = 3;
+const HighsInt kHighsVarTypeImplicitInteger = 4;
 
-const HighsInt HighsOptionTypekBool = 0;
-const HighsInt HighsOptionTypekInt = 1;
-const HighsInt HighsOptionTypekDouble = 2;
-const HighsInt HighsOptionTypekString = 3;
+const HighsInt kHighsOptionTypeBool = 0;
+const HighsInt kHighsOptionTypeInt = 1;
+const HighsInt kHighsOptionTypeDouble = 2;
+const HighsInt kHighsOptionTypeString = 3;
 
-const HighsInt HighsInfoTypekInt64 = -1;
-const HighsInt HighsInfoTypekInt = 1;
-const HighsInt HighsInfoTypekDouble = 2;
+const HighsInt kHighsInfoTypeInt64 = -1;
+const HighsInt kHighsInfoTypeInt = 1;
+const HighsInt kHighsInfoTypeDouble = 2;
 
-const HighsInt HighsObjSensekMinimize = 1;
-const HighsInt HighsObjSensekMaximize = -1;
+const HighsInt kHighsObjSenseMinimize = 1;
+const HighsInt kHighsObjSenseMaximize = -1;
 
-const HighsInt HighsMatrixFormatkColwise = 1;
-const HighsInt HighsMatrixFormatkRowwise = 2;
-const HighsInt HighsMatrixFormatkRowwisePartitioned = 3;
+const HighsInt kHighsMatrixFormatColwise = 1;
+const HighsInt kHighsMatrixFormatRowwise = 2;
+const HighsInt kHighsMatrixFormatRowwisePartitioned = 3;
 
-const HighsInt HighsHessianFormatkTriangular = 1;
-const HighsInt HighsHessianFormatkSquare = 2;
+const HighsInt kHighsHessianFormatTriangular = 1;
+const HighsInt kHighsHessianFormatSquare = 2;
 
-const HighsInt HighsModelStatuskNotset = 0;
-const HighsInt HighsModelStatuskLoadError = 1;
-const HighsInt HighsModelStatuskModelError = 2;
-const HighsInt HighsModelStatuskPresolveError = 3;
-const HighsInt HighsModelStatuskSolveError = 4;
-const HighsInt HighsModelStatuskPostsolveError = 5;
-const HighsInt HighsModelStatuskModelEmpty = 6;
-const HighsInt HighsModelStatuskOptimal = 7;
-const HighsInt HighsModelStatuskInfeasible = 8;
-const HighsInt HighsModelStatuskUnboundedOrInfeasible = 9;
-const HighsInt HighsModelStatuskUnbounded = 10;
-const HighsInt HighsModelStatuskObjectiveBound = 11;
-const HighsInt HighsModelStatuskObjectiveTarget = 12;
-const HighsInt HighsModelStatuskTimeLimit = 13;
-const HighsInt HighsModelStatuskIterationLimit = 14;
-const HighsInt HighsModelStatuskUnknown = 15;
+const HighsInt kHighsModelStatusNotset = 0;
+const HighsInt kHighsModelStatusLoadError = 1;
+const HighsInt kHighsModelStatusModelError = 2;
+const HighsInt kHighsModelStatusPresolveError = 3;
+const HighsInt kHighsModelStatusSolveError = 4;
+const HighsInt kHighsModelStatusPostsolveError = 5;
+const HighsInt kHighsModelStatusModelEmpty = 6;
+const HighsInt kHighsModelStatusOptimal = 7;
+const HighsInt kHighsModelStatusInfeasible = 8;
+const HighsInt kHighsModelStatusUnboundedOrInfeasible = 9;
+const HighsInt kHighsModelStatusUnbounded = 10;
+const HighsInt kHighsModelStatusObjectiveBound = 11;
+const HighsInt kHighsModelStatusObjectiveTarget = 12;
+const HighsInt kHighsModelStatusTimeLimit = 13;
+const HighsInt kHighsModelStatusIterationLimit = 14;
+const HighsInt kHighsModelStatusUnknown = 15;
 
-const HighsInt HighsBasisStatuskLower = 0;
-const HighsInt HighsBasisStatuskBasic = 1;
-const HighsInt HighsBasisStatuskUpper = 2;
-const HighsInt HighsBasisStatuskZero = 3;
-const HighsInt HighsBasisStatuskNonbasic = 4;
+const HighsInt kHighsBasisStatusLower = 0;
+const HighsInt kHighsBasisStatusBasic = 1;
+const HighsInt kHighsBasisStatusUpper = 2;
+const HighsInt kHighsBasisStatusZero = 3;
+const HighsInt kHighsBasisStatusNonbasic = 4;
 
 #ifdef __cplusplus
 extern "C" {
