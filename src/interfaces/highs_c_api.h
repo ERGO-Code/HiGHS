@@ -668,7 +668,7 @@ HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
  *
  * See `Highs_getBasicVariables` for a description of the `B` matrix.
  *
- * The arrays `row_vector` and `row_indices` must have an allocated length of
+ * The arrays `row_vector` and `row_index` must have an allocated length of
  * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
  * actually stored.
  *
@@ -676,20 +676,20 @@ HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
  * @param row           index of the row to compute
  * @param row_vector    values of the non-zero elements
  * @param row_num_nz    the number of non-zeros in the row
- * @param row_indices   indices of the non-zero elements
+ * @param row_index     indices of the non-zero elements
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
                                   double* row_vector, HighsInt* row_num_nz,
-                                  HighsInt* row_indices);
+                                  HighsInt* row_index);
 
 /**
  * Get a column of the inverse basis matrix \f$B^{-1}\f$.
  *
  * See `Highs_getBasicVariables` for a description of the `B` matrix.
  *
- * The arrays `col_vector` and `col_indices` must have an allocated length of
+ * The arrays `col_vector` and `col_index` must have an allocated length of
  * [num_row]. However, check `col_num_nz` to see how many non-zero elements are
  * actually stored.
  *
@@ -697,13 +697,13 @@ HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
  * @param col           index of the column to compute
  * @param col_vector    values of the non-zero elements
  * @param col_num_nz    the number of non-zeros in the column
- * @param col_indices   indices of the non-zero elements
+ * @param col_index     indices of the non-zero elements
 
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
                                   double* col_vector, HighsInt* col_num_nz,
-                                  HighsInt* col_indices);
+                                  HighsInt* col_index);
 
 /**
  * Compute \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
@@ -711,7 +711,7 @@ HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
  *
  * See `Highs_getBasicVariables` for a description of the `B` matrix.
  *
- * The arrays `solution_vector` and `solution_indices` must have an allocated
+ * The arrays `solution_vector` and `solution_index` must have an allocated
  * length of [num_row]. However, check `solution_num_nz` to see how many
  * non-zero elements are actually stored.
  *
@@ -719,13 +719,13 @@ HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
  * @param rhs               the right-hand side vector `b`
  * @param solution_vector   values of the non-zero elements
  * @param solution_num_nz   the number of non-zeros in the solution
- * @param solution_indices  indices of the non-zero elements
+ * @param solution_index    indices of the non-zero elements
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
                              double* solution_vector, HighsInt* solution_num_nz,
-                             HighsInt* solution_indices);
+                             HighsInt* solution_index);
 
 /**
  * Compute \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
@@ -733,7 +733,7 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  *
  * See `Highs_getBasicVariables` for a description of the `B` matrix.
  *
- * The arrays `solution_vector` and `solution_indices` must have an allocated
+ * The arrays `solution_vector` and `solution_index` must have an allocated
  * length of [num_row]. However, check `solution_num_nz` to see how many
  * non-zero elements are actually stored.
  *
@@ -741,21 +741,21 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  * @param rhs               the right-hand side vector `b`
  * @param solution_vector   values of the non-zero elements
  * @param solution_num_nz   the number of non-zeros in the solution
- * @param solution_indices  indices of the non-zero elements
+ * @param solution_index    indices of the non-zero elements
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
                                       double* solution_vector,
                                       HighsInt* solution_nz,
-                                      HighsInt* solution_indices);
+                                      HighsInt* solution_index);
 
 /**
  * Compute a row of \f$B^{-1}A\f$.
  *
  * See `Highs_getBasicVariables` for a description of the `B` matrix.
  *
- * The arrays `row_vector` and `row_indices` must have an allocated length of
+ * The arrays `row_vector` and `row_index` must have an allocated length of
  * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
  * actually stored.
  *
@@ -763,20 +763,20 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
  * @param row           index of the row to compute
  * @param row_vector    values of the non-zero elements
  * @param row_num_nz    the number of non-zeros in the row
- * @param row_indices   indices of the non-zero elements
+ * @param row_index     indices of the non-zero elements
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
                              double* row_vector, HighsInt* row_num_nz,
-                             HighsInt* row_indices);
+                             HighsInt* row_index);
 
 /**
  * Compute a column of \f$B^{-1}A\f$.
  *
  * See `Highs_getBasicVariables` for a description of the `B` matrix.
  *
- * The arrays `col_vector` and `col_indices` must have an allocated length of
+ * The arrays `col_vector` and `col_index` must have an allocated length of
  * [num_row]. However, check `col_num_nz` to see how many non-zero elements are
  * actually stored.
  *
@@ -784,13 +784,13 @@ HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
  * @param col           index of the column to compute
  * @param col_vector    values of the non-zero elements
  * @param col_num_nz    the number of non-zeros in the column
- * @param col_indices   indices of the non-zero elements
+ * @param col_index     indices of the non-zero elements
 
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
                                 double* col_vector, HighsInt* col_num_nz,
-                                HighsInt* col_indices);
+                                HighsInt* col_index);
 
 /**
  * Set a basic feasible solution by passing the column and row basis statuses to
@@ -832,14 +832,14 @@ double Highs_getRunTime(const void* highs);
  * @param lower         lower bound of the row
  * @param upper         upper bound of the row
  * @param num_new_nz    number of non-zeros in the row
- * @param indices       array of size [num_new_nz] with column indices
- * @param values        array of size [num_new_nz] with column values
+ * @param index         array of size [num_new_nz] with column indices
+ * @param value         array of size [num_new_nz] with column values
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addRow(void* highs, const double lower, const double upper,
-                      const HighsInt num_new_nz, const HighsInt* indices,
-                      const double* values);
+                      const HighsInt num_new_nz, const HighsInt* index,
+                      const double* value);
 
 /**
  * Add multiple rows (linear constraints) to the model.
@@ -853,18 +853,18 @@ HighsInt Highs_addRow(void* highs, const double lower, const double upper,
  * @param num_new_nz    number of non-zeros in the rows
  * @param starts        the constraint coefficients are given as a matrix in
  *                      compressed sparse row form by the arrays `starts`,
- *                      `indices`, and `values`. `starts` is an array of size
+ *                      `index`, and `value`. `starts` is an array of size
  *                      [num_new_rows] with the start index of each row in
  *                      indices and values.
- * @param indices       array of size [num_new_nz] with column indices
- * @param values        array of size [num_new_nz] with column values
+ * @param index         array of size [num_new_nz] with column indices
+ * @param value         array of size [num_new_nz] with column values
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const double* lower, const double* upper,
                        const HighsInt num_new_nz, const HighsInt* starts,
-                       const HighsInt* indices, const double* values);
+                       const HighsInt* index, const double* value);
 
 /**
  * Add a new column (variable) to the model.
@@ -874,14 +874,14 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
  * @param lower         lower bound of the column
  * @param upper         upper bound of the column
  * @param num_new_nz    number of non-zeros in the column
- * @param indices       array of size [num_new_nz] with the row indices
- * @param values        array of size [num_new_nz] with row values
+ * @param index         array of size [num_new_nz] with the row indices
+ * @param value         array of size [num_new_nz] with row values
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
-                      const HighsInt* indices, const double* values);
+                      const HighsInt* index, const double* value);
 
 /**
  * Add multiple columns (linear constraints) to the model.
@@ -894,19 +894,19 @@ HighsInt Highs_addCol(void* highs, const double cost, const double lower,
  * @param num_new_nz    number of new nonzeros in the constraint matrix
  * @param starts        the constraint coefficients are given as a matrix in
  *                      compressed sparse column form by the arrays `starts`,
- *                      `indices`, and `values`. `starts` is an array of size
+ *                      `index`, and `value`. `starts` is an array of size
  *                      [num_new_cols] with the start index of each row in
  *                      indices and values.
- * @param indices       array of size [num_new_nz] with row indices
- * @param values        array of size [num_new_nz] with row values
+ * @param index         array of size [num_new_nz] with row indices
+ * @param value         array of size [num_new_nz] with row values
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
                        const double* costs, const double* lower,
                        const double* upper, const HighsInt num_new_nz,
-                       const HighsInt* starts, const HighsInt* indices,
-                       const double* values);
+                       const HighsInt* starts, const HighsInt* index,
+                       const double* value);
 
 /**
  * Change the objective sense of the model.
@@ -996,8 +996,8 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
  * Change the objective coefficient of a column.
  *
  * @param highs     a pointer to the Highs instance
- * @param col   the index of the column fo change
- * @param cost  the new objective coefficient
+ * @param col       the index of the column fo change
+ * @param cost      the new objective coefficient
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1037,9 +1037,9 @@ HighsInt Highs_changeColsCostBySet(void* highs, const HighsInt num_set_entries,
  * Change the cost of multiple columns given by a mask.
  *
  * @param highs     a pointer to the Highs instance
- * @param mask  an array of length [num_col] with 1 if the column
- *              cost should be changed and 0 otherwise
- * @param cost  an array of length [num_col] with the new costs
+ * @param mask      an array of length [num_col] with 1 if the column
+ *                  cost should be changed and 0 otherwise
+ * @param cost      an array of length [num_col] with the new costs
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1050,9 +1050,9 @@ HighsInt Highs_changeColsCostByMask(void* highs, const HighsInt* mask,
  * Change the variable bounds of a column.
  *
  * @param highs     a pointer to the Highs instance
- * @param col   the index of the column whose bounds are to change
- * @param lower the new lower bound
- * @param upper the new upper bound
+ * @param col       the index of the column whose bounds are to change
+ * @param lower     the new lower bound
+ * @param upper     the new upper bound
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1100,10 +1100,10 @@ HighsInt Highs_changeColsBoundsBySet(void* highs,
  * Change the variable bounds of multiple columns given by a mask.
  *
  * @param highs     a pointer to the Highs instance
- * @param mask  an array of length [num_col] with 1 if the column
- *              bounds should be changed and 0 otherwise
- * @param lower an array of length [num_col] with the new lower bounds
- * @param upper an array of length [num_col] with the new upper bounds
+ * @param mask      an array of length [num_col] with 1 if the column
+ *                  bounds should be changed and 0 otherwise
+ * @param lower     an array of length [num_col] with the new lower bounds
+ * @param upper     an array of length [num_col] with the new upper bounds
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1114,9 +1114,9 @@ HighsInt Highs_changeColsBoundsByMask(void* highs, const HighsInt* mask,
  * Change the bounds of a row.
  *
  * @param highs     a pointer to the Highs instance
- * @param row   the index of the row whose bounds are to change
- * @param lower the new lower bound
- * @param upper the new upper bound
+ * @param row       the index of the row whose bounds are to change
+ * @param lower     the new lower bound
+ * @param upper     the new upper bound
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1146,10 +1146,10 @@ HighsInt Highs_changeRowsBoundsBySet(void* highs,
  * Change the bounds of multiple rows given by a mask.
  *
  * @param highs     a pointer to the Highs instance
- * @param mask  an array of length [num_row] with 1 if the row
- *              bounds should be changed and 0 otherwise
- * @param lower an array of length [num_row] with the new lower bounds
- * @param upper an array of length [num_row] with the new upper bounds
+ * @param mask      an array of length [num_row] with 1 if the row
+ *                  bounds should be changed and 0 otherwise
+ * @param lower     an array of length [num_row] with the new lower bounds
+ * @param upper     an array of length [num_row] with the new upper bounds
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1160,9 +1160,9 @@ HighsInt Highs_changeRowsBoundsByMask(void* highs, const HighsInt* mask,
  * Change a coefficient in the constraint matrix.
  *
  * @param highs     a pointer to the Highs instance
- * @param row the index of the row to change
- * @param col the index of the col to change
- * @param value the new constraint coefficient
+ * @param row       the index of the row to change
+ * @param col       the index of the col to change
+ * @param value     the new constraint coefficient
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1173,7 +1173,7 @@ HighsInt Highs_changeCoeff(void* highs, const HighsInt row, const HighsInt col,
  * Get the objective sense.
  *
  * @param highs     a pointer to the Highs instance
- * @param sense stores the current objective sense as a `HighsObjSense` enum
+ * @param sense     stores the current objective sense as a `HighsObjSense` enum
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1183,7 +1183,7 @@ HighsInt Highs_getObjectiveSense(const void* highs, HighsInt* sense);
  * Get the objective offset.
  *
  * @param highs     a pointer to the Highs instance
- * @param offset stores the current objective offset
+ * @param offset    stores the current objective offset
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1366,8 +1366,8 @@ HighsInt Highs_deleteColsBySet(void* highs, const HighsInt num_set_entries,
  * Delete multiple columns given by a mask.
  *
  * @param highs     a pointer to the Highs instance
- * @param mask  an array of length [num_col] with 1 if the column
- *              should be deleted and 0 otherwise
+ * @param mask      an array of length [num_col] with 1 if the column
+ *                  should be deleted and 0 otherwise
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1402,8 +1402,8 @@ HighsInt Highs_deleteRowsBySet(void* highs, const HighsInt num_set_entries,
  * Delete multiple rows given by a mask.
  *
  * @param highs     a pointer to the Highs instance
- * @param mask  an array of length [num_row] with 1 if the row should be deleted
- *              and 0 otherwise
+ * @param mask      an array of length [num_row] with 1 if the row should be deleted
+ *                  and 0 otherwise
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1509,32 +1509,6 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         HighsInt* q_start, HighsInt* q_index, double* q_value,
                         HighsInt* integrality);
 
-// Fails on Windows and MacOS since string_model_status is destroyed
-// after the method returns, so what's returned is a pointer to
-// something that no longer exists.
-//
-// /**
-//  * @brief Returns a pointer to a character representation of a model
-//  * status
-//  */
-// const char* Highs_model_statusToChar(
-//     void* highs,
-//     HighsInt int_model_status  //!< Status to interpret
-// );
-//
-// Fails on Windows and MacOS since string_solution_status is
-// destroyed after the method returns, so what's returned is a pointer
-// to something that no longer exists.
-//
-// /**
-//  * @brief Returns a pointer to a character representation of a
-//  * solution status
-//  */
-// const char* Highs_solutionStatusToChar(
-//     void* highs,
-//     HighsInt int_solution_status  //!< Status to interpret
-// );
-
 /**
  * Given a model solved with an interior point method, run crossover to compute
  * a basic feasible solution.
@@ -1590,22 +1564,6 @@ HighsInt Highs_getSimplexIterationCount(const void* highs);
 HighsInt Highs_setHighsBoolOptionValue(void* highs, const char* option,
                                        const HighsInt value);
 
-// void Highs_getLp(
-//     void *highs,       //!< HiGHS object reference
-//     int* num_col,        //!< number of columns
-//     int* num_row,        //!< number of rows
-//     int* num_nz,         //!< number of entries in the constraint matrix
-//     double *col_cost,   //!< array of length [num_col] with column costs
-//     double *col_lower,  //!< array of length [num_col] with lower column bounds
-//     double *col_upper,  //!< array of length [num_col] with upper column bounds
-//     double *row_lower,  //!< array of length [num_row] with lower row bounds
-//     double *row_upper,  //!< array of length [num_row] with upper row bounds
-//     int *a_start,       //!< array of length [num_col] with column start
-//     indices int *
-//         a_index,  //!< array of length [num_nz] with row indices of matrix
-//         entries
-//     double *a_value  //!< array of length [num_nz] with value of matrix entries
-// );
 HighsInt Highs_setHighsIntOptionValue(void* highs, const char* option,
                                       const HighsInt value);
 
@@ -1648,9 +1606,6 @@ HighsInt Highs_getNumRows(const void* highs);
 double Highs_getHighsInfinity(const void* highs);
 
 double Highs_getHighsRunTime(const void* highs);
-
-// const char* Highs_highsModel_StatusToChar(void* highs,
-//                                          HighsInt int_model_status);
 
 HighsInt Highs_setOptionValue(void* highs, const char* option,
                               const char* value);

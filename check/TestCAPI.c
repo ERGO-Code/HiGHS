@@ -842,15 +842,15 @@ void test_getColsByRange() {
   assert( num_nz == 2 );
   assert( matrix_start[0] == 0 );
   assert( matrix_start[1] == 1 );
-  HighsInt matrix_indices[2] = {-1, -1};
-  double matrix_values[2] = {0.0, 0.0};
+  HighsInt matrix_index[2] = {-1, -1};
+  double matrix_value[2] = {0.0, 0.0};
   return_status = Highs_getColsByRange(highs, 0, 1, &num_cols, NULL, NULL, NULL, &num_nz,
-		       matrix_start, matrix_indices, matrix_values);
+		       matrix_start, matrix_index, matrix_value);
   assert( return_status == 0 );
-  assert( matrix_indices[0] == 0 );
-  assert( matrix_indices[1] == 0 );
-  assert( matrix_values[0] == 1.0 );
-  assert( matrix_values[1] == -1.0 );
+  assert( matrix_index[0] == 0 );
+  assert( matrix_index[1] == 0 );
+  assert( matrix_value[0] == 1.0 );
+  assert( matrix_value[1] == -1.0 );
   Highs_destroy(highs);
 }
 
@@ -859,10 +859,10 @@ void test_passHessian() {
   Highs_addCol(highs, 2.0, 0.0, 2.0, 0, NULL, NULL);
   Highs_changeObjectiveSense(highs, -1);
   HighsInt start[1] = {0};
-  HighsInt indices[1] = {0};
-  double values[1] = {-2.0};
+  HighsInt index[1] = {0};
+  double value[1] = {-2.0};
   HighsInt ret;
-  ret = Highs_passHessian(highs, 1, 1, 1, start, indices, values);
+  ret = Highs_passHessian(highs, 1, 1, 1, start, index, value);
   assertIntValuesEqual("Return of passHessian", ret, 0);
   Highs_run(highs);
   // Solving max -x^2 + 2x

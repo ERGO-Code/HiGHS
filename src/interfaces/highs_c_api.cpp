@@ -410,46 +410,46 @@ HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables) {
 
 HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
                                   double* row_vector, HighsInt* row_num_nz,
-                                  HighsInt* row_indices) {
+                                  HighsInt* row_index) {
   return (HighsInt)((Highs*)highs)
-      ->getBasisInverseRow(row, row_vector, row_num_nz, row_indices);
+      ->getBasisInverseRow(row, row_vector, row_num_nz, row_index);
 }
 
 HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
                                   double* col_vector, HighsInt* col_num_nz,
-                                  HighsInt* col_indices) {
+                                  HighsInt* col_index) {
   return (HighsInt)((Highs*)highs)
-      ->getBasisInverseCol(col, col_vector, col_num_nz, col_indices);
+      ->getBasisInverseCol(col, col_vector, col_num_nz, col_index);
 }
 
 HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
                              double* solution_vector, HighsInt* solution_num_nz,
-                             HighsInt* solution_indices) {
+                             HighsInt* solution_index) {
   return (HighsInt)((Highs*)highs)
-      ->getBasisSolve(rhs, solution_vector, solution_num_nz, solution_indices);
+      ->getBasisSolve(rhs, solution_vector, solution_num_nz, solution_index);
 }
 
 HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
                                       double* solution_vector,
                                       HighsInt* solution_nz,
-                                      HighsInt* solution_indices) {
+                                      HighsInt* solution_index) {
   return (HighsInt)((Highs*)highs)
       ->getBasisTransposeSolve(rhs, solution_vector, solution_nz,
-                               solution_indices);
+                               solution_index);
 }
 
 HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
                              double* row_vector, HighsInt* row_num_nz,
-                             HighsInt* row_indices) {
+                             HighsInt* row_index) {
   return (HighsInt)((Highs*)highs)
-      ->getReducedRow(row, row_vector, row_num_nz, row_indices);
+      ->getReducedRow(row, row_vector, row_num_nz, row_index);
 }
 
 HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
                                 double* col_vector, HighsInt* col_num_nz,
-                                HighsInt* col_indices) {
+                                HighsInt* col_index) {
   return (HighsInt)((Highs*)highs)
-      ->getReducedColumn(col, col_vector, col_num_nz, col_indices);
+      ->getReducedColumn(col, col_vector, col_num_nz, col_index);
 }
 
 HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
@@ -505,35 +505,35 @@ double Highs_getRunTime(const void* highs) {
 }
 
 HighsInt Highs_addRow(void* highs, const double lower, const double upper,
-                      const HighsInt num_new_nz, const HighsInt* indices,
-                      const double* values) {
+                      const HighsInt num_new_nz, const HighsInt* index,
+                      const double* value) {
   return (HighsInt)((Highs*)highs)
-      ->addRow(lower, upper, num_new_nz, indices, values);
+      ->addRow(lower, upper, num_new_nz, index, value);
 }
 
 HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const double* lower, const double* upper,
                        const HighsInt num_new_nz, const HighsInt* starts,
-                       const HighsInt* indices, const double* values) {
+                       const HighsInt* index, const double* value) {
   return (HighsInt)((Highs*)highs)
-      ->addRows(num_new_row, lower, upper, num_new_nz, starts, indices, values);
+      ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
-                      const HighsInt* indices, const double* values) {
+                      const HighsInt* index, const double* value) {
   return (HighsInt)((Highs*)highs)
-      ->addCol(cost, lower, upper, num_new_nz, indices, values);
+      ->addCol(cost, lower, upper, num_new_nz, index, value);
 }
 
 HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
                        const double* costs, const double* lower,
                        const double* upper, const HighsInt num_new_nz,
-                       const HighsInt* starts, const HighsInt* indices,
-                       const double* values) {
+                       const HighsInt* starts, const HighsInt* index,
+                       const double* value) {
   return (HighsInt)((Highs*)highs)
-      ->addCols(num_new_col, costs, lower, upper, num_new_nz, starts, indices,
-                values);
+      ->addCols(num_new_col, costs, lower, upper, num_new_nz, starts, index,
+                value);
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
