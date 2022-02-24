@@ -256,9 +256,7 @@ class HighsLpRelaxation {
     this->countSimplexStats = countSimplexStats;
   }
 
-  int64_t getNumSolvedLps() const {
-    return numSolved;
-  }
+  int64_t getNumSolvedLps() const { return numSolved; }
 
   void resetToGlobalDomain();
 
