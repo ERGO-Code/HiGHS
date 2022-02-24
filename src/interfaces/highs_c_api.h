@@ -1564,9 +1564,11 @@ HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
 // * Deprecated methods*
 // *********************
 
-const HighsInt HighsStatuskError = kHighsStatusError;
-const HighsInt HighsStatuskOk = kHighsStatusOk;
-const HighsInt HighsStatuskWarning = kHighsStatusWarning;
+// These are deprecated because they don't follow the style guide. Constants
+// must begin with `k`.
+const HighsInt HighsStatuskError = -1;
+const HighsInt HighsStatuskOk = 0;
+const HighsInt HighsStatuskWarning = 1;
 
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,
