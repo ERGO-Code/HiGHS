@@ -182,7 +182,7 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
 
   // Now test with a larger problem
-  const bool use_avgas = false;
+  const bool use_avgas = true;
   const std::string model = use_avgas ? "avgas" : "dcmulti";
   const std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
