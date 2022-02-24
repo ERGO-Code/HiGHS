@@ -39,8 +39,8 @@ void minimal_api() {
   HighsInt num_col = 2;
   HighsInt num_row = 2;
   HighsInt num_nz = 4;
-  HighsInt a_format = 2;
-  HighsInt sense = 1;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   HighsInt i;
 
@@ -66,7 +66,7 @@ void minimal_api() {
   HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format, sense, offset,
 					cc, cl, cu, rl, ru, a_start, a_index, a_value, cv,
 					cd, rv, rd, cbs, rbs, &model_status);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   if (dev_run) {
     for (i = 0; i < num_col; i++) 
@@ -140,7 +140,7 @@ void minimal_api_lp() {
   const HighsInt num_row = 3;
   const HighsInt num_nz = 5;
   HighsInt a_format = 1;
-  HighsInt sense = 1;
+  HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
@@ -172,13 +172,13 @@ void minimal_api_lp() {
 				    col_basis_status, row_basis_status,
 				    &model_status);
 
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   if (dev_run) {
     printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
     
     HighsInt i;
-    if (model_status == 7) {
+    if (model_status == kHighsModelStatusOptimal) {
       double objective_value = 0;
       // Report the column primal and dual values, and basis status
       for (i = 0; i < num_col; i++) {
@@ -215,7 +215,7 @@ void minimal_api_mip() {
   const HighsInt num_row = 2;
   const HighsInt num_nz = 6;
   HighsInt a_format = 1;
-  HighsInt sense = 1;
+  HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
@@ -231,7 +231,7 @@ void minimal_api_mip() {
   double a_value[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
 
   // Give an illegal value to an entry in integrality
-  HighsInt integrality[3] = {0, 0, -1};
+  HighsInt integrality[3] = {kHighsVarTypeContinuous, kHighsVarTypeContinuous, -1};
 
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   double* row_value = (double*)malloc(sizeof(double) * num_row);
@@ -246,10 +246,10 @@ void minimal_api_mip() {
 					 col_value, row_value,
 					 &model_status);
   // Should return error
-  assert( return_status == -1 );
+  assert( return_status == kHighsStatusError );
 
   // Correct integrality
-  integrality[num_col-1] = 1;
+  integrality[num_col-1] = kHighsVarTypeInteger;
 
   return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
 					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
@@ -258,13 +258,13 @@ void minimal_api_mip() {
 					 col_value, row_value,
 					 &model_status);
   // Should return OK
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   if (dev_run) {
     printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
     
     HighsInt i;
-    if (model_status == 7) {
+    if (model_status == kHighsModelStatusOptimal) {
       double objective_value = 0;
       // Report the column primal values
       for (i = 0; i < num_col; i++) {
@@ -295,9 +295,9 @@ void minimal_api_qp() {
   HighsInt num_row = 1;
   HighsInt num_nz = 2;
   HighsInt q_num_nz = 4;
-  HighsInt a_format = 1; // Row-wise
-  HighsInt q_format = 1; // Triangular
-  HighsInt sense = 1;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt q_format = kHighsHessianFormatTriangular;
+  HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   double col_cost[3] = {0.0, -1.0, -3.0};
   double col_lower[3] = {-inf, -inf, -inf};
@@ -317,8 +317,8 @@ void minimal_api_qp() {
 					col_cost, col_lower, col_upper, row_lower, row_upper,
 					a_start, a_index, a_value, q_start, q_index, q_value,
 					col_value, NULL, NULL, NULL, NULL, NULL, &model_status);
-  assert( return_status == 0 );
-  assertIntValuesEqual("Model status for QP qph", model_status, 7);
+  assert( return_status == kHighsStatusOk );
+  assertIntValuesEqual("Model status for QP qph", model_status, kHighsModelStatusOptimal);
   double required_x[3] = {0.5, 5.0, 1.5};
   if (dev_run) {
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -336,8 +336,8 @@ void full_api() {
   HighsInt num_col = 2;
   HighsInt num_row = 2;
   HighsInt num_nz = 4;
-  HighsInt a_format = 2; //Row-wise
-  HighsInt sense = 1;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   double cc[2] = {1.0, -2.0};
   double cl[2] = {0.0, 0.0};
@@ -378,7 +378,8 @@ void full_api() {
 				 ck_cc, ck_cl, ck_cu, ck_rl, ck_ru,
 				 ck_a_start, ck_a_index, ck_a_value,
 				 NULL, NULL, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
+
   assert( ck_num_col == num_col );
   assert( ck_num_row == num_row );
   assert( ck_num_nz == num_nz );
@@ -392,8 +393,9 @@ void full_api() {
   assert( intArraysEqual(num_col, ck_a_start, a_start) );
   assert( intArraysEqual(num_nz, ck_a_index, a_index) );
   assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
+
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   Highs_destroy(highs);
 }
@@ -445,29 +447,29 @@ void full_api_lp() {
   HighsInt sense;
   HighsInt return_status;
   return_status = Highs_getObjectiveSense(highs, &sense);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("LP problem has objective sense = %"HIGHSINT_FORMAT"\n", sense);
-  assert( sense == 1 );
+  assert( sense == kHighsObjSenseMinimize );
 
   sense *= -1;
   return_status = Highs_changeObjectiveSense(highs, sense);
-  assert( return_status == 0 );
-  assert( sense == -1 );
+  assert( return_status == kHighsStatusOk );
+  assert( sense == kHighsObjSenseMaximize );
 
   sense *= -1;
   return_status = Highs_changeObjectiveSense(highs, sense);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   return_status = Highs_getObjectiveSense(highs, &sense);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("LP problem has old objective sense = %"HIGHSINT_FORMAT"\n", sense);
-  assert( sense == 1 );
+  assert( sense == kHighsObjSenseMinimize );
 
   HighsInt simplex_scale_strategy;
   return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("simplex_scale_strategy = %"HIGHSINT_FORMAT": setting it to 3\n", simplex_scale_strategy);
   simplex_scale_strategy = 3;
@@ -477,70 +479,68 @@ void full_api_lp() {
   // provide.
   HighsInt option_type;
   return_status = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
-  assert( return_status == 0 );
-  assert( option_type == 1 );
+  assert( return_status == kHighsStatusOk );
+  assert( option_type == kHighsOptionTypeInt );
   return_status = Highs_getOptionType(highs, "bad_option", &option_type);
-  assert( return_status != 0 );
+  assert( return_status == kHighsStatusError );
 
   double primal_feasibility_tolerance;
   return_status = Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
   primal_feasibility_tolerance = 1e-6;
   return_status = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("Running quietly...\n");
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("Running loudly...\n");
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 1);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   // Get the model status
   HighsInt model_status = Highs_getModelStatus(highs);
 
   if (dev_run)
     printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
-  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", return_status, model_status, Highs_model_statusToChar(highs, model_status));
 
   double objective_function_value;
   return_status = Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
-  assert( return_status == 0 );
-  HighsInt simplex_iteration_count = 0;
+  assert( return_status == kHighsStatusOk );
+  HighsInt simplex_iteration_count;
   return_status = Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
-  assert( return_status == 0 );
-  HighsInt primal_solution_status = 0;
+  assert( return_status == kHighsStatusOk );
+  HighsInt primal_solution_status;
   return_status = Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
-  assert( return_status == 0 );
-  HighsInt dual_solution_status = 0;
+  assert( return_status == kHighsStatusOk );
+  HighsInt dual_solution_status;
   return_status = Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   if (dev_run) {
-    printf("Objective value = %g; Iteration count = %"HIGHSINT_FORMAT"\n", objective_function_value, simplex_iteration_count);
-    if (model_status == 7) {
-      //    printf("Solution primal status = %s\n", Highs_solutionStatusToChar(highs, primal_solution_status));
-      //    printf("Solution dual status = %s\n", Highs_solutionStatusToChar(highs, dual_solution_status));
+    printf("Objective value = %g; Iteration count = %"HIGHSINT_FORMAT"\n",
+	   objective_function_value, simplex_iteration_count);
+    if (model_status == kHighsModelStatusOptimal) {
       // Get the primal and dual solution
       return_status = Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
-      assert( return_status == 0 );
+      assert( return_status == kHighsStatusOk );
       // Get the basis
       return_status = Highs_getBasis(highs, col_basis_status, row_basis_status);
-      assert( return_status == 0 );
+      assert( return_status == kHighsStatusOk );
       // Report the column primal and dual values, and basis status
-      for (i = 0; i < num_col; i++) {
-	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
-      }
+      for (i = 0; i < num_col; i++)
+	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
+	       i, col_value[i], col_dual[i], col_basis_status[i]);
       // Report the row primal and dual values, and basis status
-      for (i = 0; i < num_row; i++) {
-	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
-      }
+      for (i = 0; i < num_row; i++)
+	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
+	       i, row_value[i], row_dual[i], row_basis_status[i]);
     }
   }
   free(col_value);
@@ -552,9 +552,9 @@ void full_api_lp() {
 
   Highs_destroy(highs);
 
-  // Define the constraint matrix col-wise to pass to the LP
-  HighsInt a_format = 1;
-  sense = 1;
+  // Define the constraint matrix to pass to the LP
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  sense = kHighsObjSenseMinimize;
   double offset = 0;
   HighsInt a_start[2] = {0, 2};
   HighsInt a_index[5] = {1, 2, 0, 1, 2};
@@ -565,14 +565,13 @@ void full_api_lp() {
 			   col_cost, col_lower, col_upper,
 			   row_lower, row_upper,
 			   a_start, a_index, a_value);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
+  model_status = Highs_getModelStatus(highs);
+  assert( model_status == kHighsModelStatusOptimal );
   if (dev_run)
     printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
-  //  model_status = Highs_getModelStatus(highs);
-  //  const char* model_status_char = Highs_model_statusToChar(highs, model_status);
-  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", return_status, model_status, model_status_char);
   Highs_destroy(highs);
 }
 
@@ -587,8 +586,8 @@ void full_api_mip() {
   const HighsInt num_col = 3;
   const HighsInt num_row = 2;
   const HighsInt num_nz = 6;
-  HighsInt a_format = 1;
-  HighsInt sense = 1;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
@@ -603,7 +602,7 @@ void full_api_mip() {
   HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
   double a_value[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
 
-  HighsInt integrality[3] = {1, 1, 1};
+  HighsInt integrality[3] = {kHighsVarTypeInteger, kHighsVarTypeInteger, kHighsVarTypeInteger};
 
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   double* row_value = (double*)malloc(sizeof(double) * num_row);
@@ -617,21 +616,21 @@ void full_api_mip() {
 				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 				a_start, a_index, a_value,
 				integrality);
-  assert(return_status == 0);
+  assert(return_status == kHighsStatusOk);
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_run(highs);
   // mip_node_count is always int64_t, so the following should be an
   // error depending on whether HIGHSINT64 is set
   HighsInt mip_node_count_int;
-  HighsInt required_return_status = -1;
+  HighsInt required_return_status = kHighsStatusError;
 #ifdef HIGHSINT64
-  required_return_status = 0;
+  required_return_status = kHighsStatusOk;
 #endif
   return_status = Highs_getIntInfoValue(highs, "mip_node_count", &mip_node_count_int);
   assert(return_status == required_return_status);
   int64_t mip_node_count;
   return_status = Highs_getInt64InfoValue(highs, "mip_node_count", &mip_node_count);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assert( mip_node_count == 1 );
 
 }
@@ -653,16 +652,16 @@ void full_api_qp() {
 
   HighsInt num_col = 0;
   return_status = Highs_addCol(highs, 1.0, -inf, inf, 0, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   num_col++;
 
   double offset = 0.25;
   return_status = Highs_changeObjectiveOffset(highs, offset);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   HighsInt q_dim = 1;
   HighsInt q_num_nz = 1;
-  HighsInt q_format = 1;
+  HighsInt q_format = kHighsHessianFormatTriangular;
   HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
   HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
   double* q_value = (double*)malloc(sizeof(double) * q_num_nz);
@@ -670,12 +669,12 @@ void full_api_qp() {
   q_index[0] = 0;
   q_value[0] = 2.0;
   return_status = Highs_passHessian(highs, q_dim, q_num_nz, q_format, q_start, q_index, q_value);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run) Highs_writeModel(highs, "");
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   model_status = Highs_getModelStatus(highs);
-  assertIntValuesEqual("Model status for 1-d QP", model_status, 7);
+  assertIntValuesEqual("Model status for 1-d QP", model_status, kHighsModelStatusOptimal);
 
   required_objective_function_value = 0;
   required_x0 = -0.5;
@@ -685,7 +684,7 @@ void full_api_qp() {
   double* col_solution = (double*)malloc(sizeof(double) * num_col);
 
   return_status = Highs_getSolution(highs, col_solution, NULL, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assertDoubleValuesEqual("x0", col_solution[0], required_x0);
 
   if (dev_run) Highs_writeSolutionPretty(highs, "");
@@ -693,11 +692,11 @@ void full_api_qp() {
   //
   // Add the variable
   return_status = Highs_addCol(highs, -1.0, -inf, inf, 0, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   num_col++;
   // Cannot solve the model until the Hessian has been replaced
   return_status = Highs_run(highs);
-  assert( return_status == -1 );
+  assert( return_status == kHighsStatusError );
   assertIntValuesEqual("Run status for 2-d QP with illegal Hessian", return_status, -1);
 
   model_status = Highs_getModelStatus(highs);
@@ -717,14 +716,14 @@ void full_api_qp() {
   q_index[1] = 1;
   q_value[1] = 2.0;
   return_status = Highs_passHessian(highs, q_dim, q_num_nz, q_format, q_start, q_index, q_value);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run) Highs_writeModel(highs, "");
 
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
 
   model_status = Highs_getModelStatus(highs);
-  assertIntValuesEqual("Model status for 2-d QP", model_status, 7);
+  assertIntValuesEqual("Model status for 2-d QP", model_status, kHighsModelStatusOptimal);
   
   required_objective_function_value = -0.25;
   required_x1 = 0.5;
@@ -734,7 +733,7 @@ void full_api_qp() {
   col_solution = (double*)malloc(sizeof(double) * num_col);
 
   return_status = Highs_getSolution(highs, col_solution, NULL, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assertDoubleValuesEqual("x0", col_solution[0], required_x0);
   assertDoubleValuesEqual("x1", col_solution[1], required_x1);
 
@@ -744,14 +743,14 @@ void full_api_qp() {
 
   double check_offset;
   return_status = Highs_getObjectiveOffset(highs, &check_offset);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assertDoubleValuesEqual("Offset", check_offset, offset);
 
   double dl_offset = -objective_function_value;
   offset += dl_offset;
 
   return_status = Highs_changeObjectiveOffset(highs, offset);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   required_objective_function_value += dl_offset;
   objective_function_value = Highs_getObjectiveValue(highs);
   assertDoubleValuesEqual("Objective with new offset", objective_function_value, required_objective_function_value);
@@ -760,15 +759,15 @@ void full_api_qp() {
   HighsInt a_index[2] = {0, 1};
   double a_value[2] = {1, 1};
   return_status = Highs_addRow(highs, 0.5, inf, 2, a_index, a_value);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   if (dev_run) Highs_writeModel(highs, "");
 
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
-  assertIntValuesEqual("Run status for 2-d QP with constraint", return_status, 0);
+  assert( return_status == kHighsStatusOk );
+  assertIntValuesEqual("Run status for 2-d QP with constraint", return_status, kHighsStatusOk);
   
   model_status = Highs_getModelStatus(highs);
-  assertIntValuesEqual("Model status for 2-d QP with constraint", model_status, 7);
+  assertIntValuesEqual("Model status for 2-d QP with constraint", model_status, kHighsModelStatusOptimal);
 
   required_objective_function_value = 0.125;
   required_x0 = -0.25;
@@ -778,24 +777,25 @@ void full_api_qp() {
   assertDoubleValuesEqual("Objective", objective_function_value, required_objective_function_value);
 
   return_status = Highs_getSolution(highs, col_solution, NULL, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assertDoubleValuesEqual("x0", col_solution[0], required_x0);
   assertDoubleValuesEqual("x1", col_solution[1], required_x1);
 
   // Add bounds to make the QP infeasible
   return_status = Highs_changeColBounds(highs, 0, -inf, 0);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   return_status = Highs_changeColBounds(highs, 1, -inf, 0);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
  
   if (dev_run) Highs_writeModel(highs, "");
 
   return_status = Highs_run(highs);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assertIntValuesEqual("Run status for infeasible 2-d QP", return_status, 0);
   
   model_status = Highs_getModelStatus(highs);
   assertIntValuesEqual("Model status for infeasible 2-d QP", model_status, 8);
+  assert( model_status == kHighsModelStatusInfeasible );
 }
 
 void options() {
@@ -805,16 +805,16 @@ void options() {
   HighsInt simplex_scale_strategy;
   HighsInt return_status;
   return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", 0);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assert( simplex_scale_strategy == 0 );
 
   double primal_feasibility_tolerance;
   return_status = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", 2.0);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   return_status = Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assert( primal_feasibility_tolerance == 2.0 );
 
   Highs_destroy(highs);
@@ -825,19 +825,19 @@ void test_getColsByRange() {
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   HighsInt return_status;
   return_status = Highs_addCol(highs, -1.0, 0.0, 1.0, 0, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   return_status = Highs_addCol(highs, -1.0, 0.0, 1.0, 0, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   HighsInt a_index[2] = {0, 1};
   double a_value[2] = {1.0, -1.0};
   return_status = Highs_addRow(highs, 0.0, 0.0, 2, a_index, a_value);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   HighsInt num_cols;
   HighsInt num_nz;
   HighsInt matrix_start[2] = {-1, -1};
   return_status = Highs_getColsByRange(highs, 0, 1, &num_cols, NULL, NULL, NULL, &num_nz,
 		       matrix_start, NULL, NULL);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assert( num_cols == 2 );
   assert( num_nz == 2 );
   assert( matrix_start[0] == 0 );
@@ -846,7 +846,7 @@ void test_getColsByRange() {
   double matrix_value[2] = {0.0, 0.0};
   return_status = Highs_getColsByRange(highs, 0, 1, &num_cols, NULL, NULL, NULL, &num_nz,
 		       matrix_start, matrix_index, matrix_value);
-  assert( return_status == 0 );
+  assert( return_status == kHighsStatusOk );
   assert( matrix_index[0] == 0 );
   assert( matrix_index[1] == 0 );
   assert( matrix_value[0] == 1.0 );
@@ -856,20 +856,21 @@ void test_getColsByRange() {
 
 void test_passHessian() {
   void* highs = Highs_create();
+  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   Highs_addCol(highs, 2.0, 0.0, 2.0, 0, NULL, NULL);
-  Highs_changeObjectiveSense(highs, -1);
+  Highs_changeObjectiveSense(highs, kHighsObjSenseMaximize);
   HighsInt start[1] = {0};
   HighsInt index[1] = {0};
   double value[1] = {-2.0};
-  HighsInt ret;
-  ret = Highs_passHessian(highs, 1, 1, 1, start, index, value);
-  assertIntValuesEqual("Return of passHessian", ret, 0);
+  HighsInt return_status;
+  return_status = Highs_passHessian(highs, 1, 1, 1, start, index, value);
+  assertIntValuesEqual("Return of passHessian", return_status, kHighsStatusOk);
   Highs_run(highs);
   // Solving max -x^2 + 2x
   const double optimal_objective_value = 1;
   const double primal = 1;
   const double dual = 0;
-  assertIntValuesEqual("Status", Highs_getModelStatus(highs), 7);  // kOptimal
+  assertIntValuesEqual("Status", Highs_getModelStatus(highs), kHighsModelStatusOptimal);  // kOptimal
   double col_value[1] = {-123.0};
   double col_dual[1] = {0.0};
   Highs_getSolution(highs, col_value, col_dual, NULL, NULL);

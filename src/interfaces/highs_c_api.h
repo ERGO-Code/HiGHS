@@ -39,10 +39,26 @@ const HighsInt kHighsObjSenseMaximize = -1;
 
 const HighsInt kHighsMatrixFormatColwise = 1;
 const HighsInt kHighsMatrixFormatRowwise = 2;
-const HighsInt kHighsMatrixFormatRowwisePartitioned = 3;
 
 const HighsInt kHighsHessianFormatTriangular = 1;
 const HighsInt kHighsHessianFormatSquare = 2;
+
+const HighsInt kHighsSolutionStatusNone = 0;
+const HighsInt kHighsSolutionStatusInfeasible = 1;
+const HighsInt kHighsSolutionStatusFeasible = 2;
+
+const HighsInt kHighsBasisValidityInvalid = 0;
+const HighsInt kHighsBasisValidityValid = 1;
+
+const HighsInt kHighsPresolveStatusNotPresolved = -1;
+const HighsInt kHighsPresolveStatusNotReduced = 0;
+const HighsInt kHighsPresolveStatusInfeasible = 1;
+const HighsInt kHighsPresolveStatusUnboundedOrInfeasible = 2;
+const HighsInt kHighsPresolveStatusReduced = 3;
+const HighsInt kHighsPresolveStatusReducedToEmpty = 4;
+const HighsInt kHighsPresolveStatusTimeout = 5;
+const HighsInt kHighsPresolveStatusNullError = 6;
+const HighsInt kHighsPresolveStatusOptionsError = 7;
 
 const HighsInt kHighsModelStatusNotset = 0;
 const HighsInt kHighsModelStatusLoadError = 1;
