@@ -42,12 +42,12 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
     const HighsInfo& info = highs.getInfo();
 
     const bool copy_col_value =
-        col_value != NULL &&
+        col_value != nullptr &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_col_dual =
-        col_dual != NULL &&
+        col_dual != nullptr &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_col_basis = col_basis_status != NULL && basis.valid;
+    const bool copy_col_basis = col_basis_status != nullptr && basis.valid;
     for (HighsInt i = 0; i < num_col; i++) {
       if (copy_col_value) col_value[i] = solution.col_value[i];
       if (copy_col_dual) col_dual[i] = solution.col_dual[i];
@@ -55,12 +55,12 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
     }
 
     const bool copy_row_value =
-        row_value != NULL &&
+        row_value != nullptr &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_row_dual =
-        row_dual != NULL &&
+        row_dual != nullptr &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_row_basis = row_basis_status != NULL && basis.valid;
+    const bool copy_row_basis = row_basis_status != nullptr && basis.valid;
     for (HighsInt i = 0; i < num_row; i++) {
       if (copy_row_value) row_value[i] = solution.row_value[i];
       if (copy_row_dual) row_dual[i] = solution.row_dual[i];
@@ -94,7 +94,7 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
     const bool copy_col_value =
-        col_value != NULL &&
+        col_value != nullptr &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
 
     if (copy_col_value) {
@@ -102,7 +102,7 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
         col_value[i] = solution.col_value[i];
     }
     const bool copy_row_value =
-        row_value != NULL &&
+        row_value != nullptr &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     if (copy_row_value) {
       for (HighsInt i = 0; i < num_row; i++)
@@ -142,12 +142,12 @@ HighsInt Highs_qpCall(
     const HighsInfo& info = highs.getInfo();
 
     const bool copy_col_value =
-        col_value != NULL &&
+        col_value != nullptr &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_col_dual =
-        col_dual != NULL &&
+        col_dual != nullptr &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_col_basis = col_basis_status != NULL && basis.valid;
+    const bool copy_col_basis = col_basis_status != nullptr && basis.valid;
     for (HighsInt i = 0; i < num_col; i++) {
       if (copy_col_value) col_value[i] = solution.col_value[i];
       if (copy_col_dual) col_dual[i] = solution.col_dual[i];
@@ -155,12 +155,12 @@ HighsInt Highs_qpCall(
     }
 
     const bool copy_row_value =
-        row_value != NULL &&
+        row_value != nullptr &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_row_dual =
-        row_dual != NULL &&
+        row_dual != nullptr &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_row_basis = row_basis_status != NULL && basis.valid;
+    const bool copy_row_basis = row_basis_status != nullptr && basis.valid;
     for (HighsInt i = 0; i < num_row; i++) {
       if (copy_row_value) row_value[i] = solution.row_value[i];
       if (copy_row_dual) row_dual[i] = solution.row_dual[i];
@@ -344,25 +344,25 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* row_dual) {
   HighsSolution solution = ((Highs*)highs)->getSolution();
 
-  if (col_value != NULL) {
+  if (col_value != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
       col_value[i] = solution.col_value[i];
     }
   }
 
-  if (col_dual != NULL) {
+  if (col_dual != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_dual.size(); i++) {
       col_dual[i] = solution.col_dual[i];
     }
   }
 
-  if (row_value != NULL) {
+  if (row_value != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.row_value.size(); i++) {
       row_value[i] = solution.row_value[i];
     }
   }
 
-  if (row_dual != NULL) {
+  if (row_dual != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.row_dual.size(); i++) {
       row_dual[i] = solution.row_dual[i];
     }
@@ -910,15 +910,18 @@ HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
   if (col_value) {
     solution.value_valid = true;
     solution.col_value.resize(num_col);
-    for (int col = 0; col < num_col; col++) solution.col_value[col] = col_value[col];
+    for (int col = 0; col < num_col; col++)
+      solution.col_value[col] = col_value[col];
   }
 
   if (col_dual && row_dual) {
     solution.dual_valid = true;
     solution.col_dual.resize(num_col);
     solution.row_dual.resize(num_row);
-    for (int col = 0; col < num_col; col++) solution.col_dual[col] = col_dual[col];
-    for (int row = 0; row < num_row; row++) solution.row_dual[row] = row_dual[row];
+    for (int col = 0; col < num_col; col++)
+      solution.col_dual[col] = col_dual[col];
+    for (int row = 0; row < num_row; row++)
+      solution.row_dual[row] = row_dual[row];
   }
 
   return (HighsInt)((Highs*)highs)->crossover(solution);

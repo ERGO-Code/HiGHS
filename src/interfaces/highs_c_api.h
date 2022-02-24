@@ -106,9 +106,9 @@ extern "C" {
  *                  sparse column form (if `a_format` is `kColwise`, otherwise
  *                  compressed sparse row form). The sparse matrix consists of
  *                  three arrays, `a_start`, `a_index`, and `a_value`. `a_start`
- *                  is an array of length [num_col] containing the starting index
- *                  of each column in `a_index`. If `a_format` is `kRowwise` the
- *                  array is of length [num_row] corresponding to each row.
+ *                  is an array of length [num_col] containing the starting
+ * index of each column in `a_index`. If `a_format` is `kRowwise` the array is
+ * of length [num_row] corresponding to each row.
  * @param a_index   array of length [num_nz] with indices of matrix entries
  * @param a_value   array of length [num_nz] with values of matrix entries
  *
@@ -121,11 +121,13 @@ extern "C" {
  * @param row_dual       array of length [num_row], filled with the dual row
  *                       solution
  * @param col_basis_status  array of length [num_col], filled with the basis
- *                          status of the columns in the form of a `HighsBasisStatus` enum
+ *                          status of the columns in the form of a
+ * `HighsBasisStatus` enum
  * @param row_basis_status  array of length [num_row], filled with the basis
- *                          status of the rows in the form of a `HighsBasisStatus` enum
- * @param model_status      termination status of the model after the solve in the
- *                          form of a `HighsModel_Status` enum
+ *                          status of the rows in the form of a
+ * `HighsBasisStatus` enum
+ * @param model_status      termination status of the model after the solve in
+ * the form of a `HighsModel_Status` enum
  *
  * @returns a `HighsStatus` enum indicating whether the call succeeded
  */
@@ -343,14 +345,14 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  *                    three arrays, `a_start`, `a_index`, and `a_value`.
  *                    `a_start` is an array of length [num_col] containing the
  *                    starting index of each column in `a_index`. If `a_format`
- *                    is `kRowwise` the array is of length [num_row] corresponding
- *                    to each row.
+ *                    is `kRowwise` the array is of length [num_row]
+ * corresponding to each row.
  * @param a_index     array of length [num_nz] with indices of matrix entries
  * @param a_value     array of length [num_nz] with values of matrix entries
  * @param q_start     the Hessian matrix is provided in the same format as the
  *                    constraint matrix, using `q_start`, `q_index`, and
- *                    `q_value` in the place of `a_start`, `a_index`, and `a_value`. 
- *                    If the model is linear, pass NULL.
+ *                    `q_value` in the place of `a_start`, `a_index`, and
+ * `a_value`. If the model is linear, pass NULL.
  * @param q_index     array of length [q_num_nz] with indices of matrix entries.
  *                    If the model is linear, pass NULL.
  * @param q_value     array of length [q_num_nz] with values of matrix entries.
@@ -935,7 +937,8 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
  * Change the objective sense of the model.
  *
  * @param highs     a pointer to the Highs instance
- * @param sense     the new optimization sense in the form of a `HighsObjSense` enum
+ * @param sense     the new optimization sense in the form of a `HighsObjSense`
+ * enum
  *
  * @returns a `HighsStatus` enum indicating whether the call succeeded
  */
@@ -1544,17 +1547,19 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
 HighsInt Highs_crossover(void* highs);
 
 /**
- * Set a primal (and possibly dual) solution as a starting point, then run crossover to compute
- * a basic feasible solution. If there is no dual solution, pass col_dual and row_dual as nullptr.
+ * Set a primal (and possibly dual) solution as a starting point, then run
+ * crossover to compute a basic feasible solution. If there is no dual solution,
+ * pass col_dual and row_dual as nullptr.
  *
  * @param highs      a pointer to the Highs instance
  * @param num_col    the number of variables
  * @param num_row    the number of rows
- * @param col_value  array of length [num_col] with optimal primal solution for each
- *                   column
- * @param col_dual   array of length [num_col] with optimal dual solution for each
- *                   column
- * @param row_dual   array of length [num_row] with optimal dual solution for each row
+ * @param col_value  array of length [num_col] with optimal primal solution for
+ * each column
+ * @param col_dual   array of length [num_col] with optimal dual solution for
+ * each column
+ * @param row_dual   array of length [num_row] with optimal dual solution for
+ * each row
  *
  * @returns a `HighsStatus` enum indicating whether the call succeeded
  */
