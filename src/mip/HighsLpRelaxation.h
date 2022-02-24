@@ -84,6 +84,7 @@ class HighsLpRelaxation {
   HighsInt maxNumFractional;
   Status status;
   bool adjustSymBranchingCol;
+  bool countSimplexStats;
 
   void storeDualInfProof();
 
@@ -249,6 +250,14 @@ class HighsLpRelaxation {
 
   void setAdjustSymmetricBranchingCol(bool adjustSymBranchingCol) {
     this->adjustSymBranchingCol = adjustSymBranchingCol;
+  }
+
+  void setCountSimplexStats(bool countSimplexStats) {
+    this->countSimplexStats = countSimplexStats;
+  }
+
+  int64_t getNumSolvedLps() const {
+    return numSolved;
   }
 
   void resetToGlobalDomain();

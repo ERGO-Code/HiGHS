@@ -122,6 +122,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   objective = -kHighsInf;
   currentbasisstored = false;
   adjustSymBranchingCol = true;
+  countSimplexStats = true;
 }
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
@@ -146,6 +147,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   maxNumFractional = 0;
   lastAgeCall = 0;
   objective = -kHighsInf;
+  countSimplexStats = true;
 }
 
 void HighsLpRelaxation::loadModel() {
@@ -768,14 +770,18 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   switch (scaledmodelstatus) {
     case HighsModelStatus::kObjectiveBound:
-      ++numSolved;
-      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      if (countSimplexStats) {
+        ++numSolved;
+        avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      }
 
       storeDualUBProof();
       return Status::kInfeasible;
     case HighsModelStatus::kInfeasible: {
-      ++numSolved;
-      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      if (countSimplexStats) {
+        ++numSolved;
+        avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      }
 
       storeDualInfProof();
       if (true || checkDualProof()) return Status::kInfeasible;
@@ -826,8 +832,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
-      ++numSolved;
-      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      if (countSimplexStats) {
+        ++numSolved;
+        avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      }
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kOptimal;

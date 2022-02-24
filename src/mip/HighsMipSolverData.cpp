@@ -1243,6 +1243,7 @@ restart:
     case 3:
       // strategy is to use ipm
       lp.getLpSolver().setOptionValue(kSolverString, kIpmString);
+      lp.setCountSimplexStats(false);
       break;
     default:
       assert(false);
@@ -1254,6 +1255,7 @@ restart:
   lp.getLpSolver().setOptionValue(kPresolveString, kHighsOffString);
   lp.getLpSolver().setOptionValue(kParallelString, kHighsOffString);
   lp.getLpSolver().setOptionValue(kSolverString, kSimplexString);
+  lp.setCountSimplexStats(true);
 
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
@@ -1297,7 +1299,8 @@ restart:
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   }
 
-  lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+  if (lp.getNumSolvedLps() > 0)
+    lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
   // make sure first line after solving root LP is printed
   last_disptime = -kHighsInf;
@@ -1400,7 +1403,8 @@ restart:
     }
 
     rootlpsolobj = lp.getObjective();
-    lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+    if (lp.getNumSolvedLps() > 0)
+      lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
   }
 
@@ -1410,7 +1414,8 @@ restart:
 
   rootlpsol = lp.getLpSolver().getSolution().col_value;
   rootlpsolobj = lp.getObjective();
-  lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+  if (lp.getNumSolvedLps() > 0)
+    lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
   if (!analyticCenterComputed) {
     if (checkLimits()) return;
