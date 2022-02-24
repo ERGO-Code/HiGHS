@@ -17,18 +17,18 @@
 HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       const HighsInt numnz, const HighsInt a_format,
                       const HighsInt sense, const double offset,
-                      const double* colcost, const double* collower,
-                      const double* colupper, const double* rowlower,
-                      const double* rowupper, const HighsInt* astart,
-                      const HighsInt* aindex, const double* avalue,
-                      double* colvalue, double* coldual, double* rowvalue,
-                      double* rowdual, HighsInt* colbasisstatus,
-                      HighsInt* rowbasisstatus, HighsInt* modelstatus) {
+                      const double* col_cost, const double* col_lower,
+                      const double* col_upper, const double* row_lower,
+                      const double* row_upper, const HighsInt* a_start,
+                      const HighsInt* a_index, const double* a_value,
+                      double* col_value, double* col_dual, double* row_value,
+                      double* row_dual, HighsInt* col_basis_status,
+                      HighsInt* row_basis_status, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsStatus status = highs.passModel(
-      numcol, numrow, numnz, a_format, sense, offset, colcost, collower,
-      colupper, rowlower, rowupper, astart, aindex, avalue);
+      numcol, numrow, numnz, a_format, sense, offset, col_cost, col_lower,
+      col_upper, row_lower, row_upper, a_start, a_index, a_value);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
   status = highs.run();
@@ -38,33 +38,33 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
     HighsBasis basis;
     solution = highs.getSolution();
     basis = highs.getBasis();
-    *modelstatus = (HighsInt)highs.getModelStatus();
+    *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
     const bool copy_col_value =
-        colvalue != NULL &&
+        col_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_col_dual =
-        coldual != NULL &&
+        col_dual != NULL &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_col_basis = colbasisstatus != NULL && basis.valid;
+    const bool copy_col_basis = col_basis_status != NULL && basis.valid;
     for (HighsInt i = 0; i < numcol; i++) {
-      if (copy_col_value) colvalue[i] = solution.col_value[i];
-      if (copy_col_dual) coldual[i] = solution.col_dual[i];
-      if (copy_col_basis) colbasisstatus[i] = (HighsInt)basis.col_status[i];
+      if (copy_col_value) col_value[i] = solution.col_value[i];
+      if (copy_col_dual) col_dual[i] = solution.col_dual[i];
+      if (copy_col_basis) col_basis_status[i] = (HighsInt)basis.col_status[i];
     }
 
     const bool copy_row_value =
-        rowvalue != NULL &&
+        row_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_row_dual =
-        rowdual != NULL &&
+        row_dual != NULL &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_row_basis = rowbasisstatus != NULL && basis.valid;
+    const bool copy_row_basis = row_basis_status != NULL && basis.valid;
     for (HighsInt i = 0; i < numrow; i++) {
-      if (copy_row_value) rowvalue[i] = solution.row_value[i];
-      if (copy_row_dual) rowdual[i] = solution.row_dual[i];
-      if (copy_row_basis) rowbasisstatus[i] = (HighsInt)basis.row_status[i];
+      if (copy_row_value) row_value[i] = solution.row_value[i];
+      if (copy_row_dual) row_dual[i] = solution.row_dual[i];
+      if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
   return (HighsInt)status;
@@ -73,17 +73,17 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
 HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
                        const HighsInt numnz, const HighsInt a_format,
                        const HighsInt sense, const double offset,
-                       const double* colcost, const double* collower,
-                       const double* colupper, const double* rowlower,
-                       const double* rowupper, const HighsInt* astart,
-                       const HighsInt* aindex, const double* avalue,
-                       const HighsInt* integrality, double* colvalue,
-                       double* rowvalue, HighsInt* modelstatus) {
+                       const double* col_cost, const double* col_lower,
+                       const double* col_upper, const double* row_lower,
+                       const double* row_upper, const HighsInt* a_start,
+                       const HighsInt* a_index, const double* a_value,
+                       const HighsInt* integrality, double* col_value,
+                       double* row_value, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsStatus status = highs.passModel(
-      numcol, numrow, numnz, a_format, sense, offset, colcost, collower,
-      colupper, rowlower, rowupper, astart, aindex, avalue, integrality);
+      numcol, numrow, numnz, a_format, sense, offset, col_cost, col_lower,
+      col_upper, row_lower, row_upper, a_start, a_index, a_value, integrality);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
   status = highs.run();
@@ -91,20 +91,20 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
   if (status == HighsStatus::kOk) {
     HighsSolution solution;
     solution = highs.getSolution();
-    *modelstatus = (HighsInt)highs.getModelStatus();
+    *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
     const bool copy_col_value =
-        colvalue != NULL &&
+        col_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
 
     if (copy_col_value) {
-      for (HighsInt i = 0; i < numcol; i++) colvalue[i] = solution.col_value[i];
+      for (HighsInt i = 0; i < numcol; i++) col_value[i] = solution.col_value[i];
     }
     const bool copy_row_value =
-        rowvalue != NULL &&
+        row_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     if (copy_row_value) {
-      for (HighsInt i = 0; i < numrow; i++) rowvalue[i] = solution.row_value[i];
+      for (HighsInt i = 0; i < numrow; i++) row_value[i] = solution.row_value[i];
     }
   }
 
@@ -114,19 +114,19 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
 HighsInt Highs_qpCall(
     const HighsInt numcol, const HighsInt numrow, const HighsInt numnz,
     const HighsInt q_numnz, const HighsInt a_format, const HighsInt q_format,
-    const HighsInt sense, const double offset, const double* colcost,
-    const double* collower, const double* colupper, const double* rowlower,
-    const double* rowupper, const HighsInt* astart, const HighsInt* aindex,
-    const double* avalue, const HighsInt* qstart, const HighsInt* qindex,
-    const double* qvalue, double* colvalue, double* coldual, double* rowvalue,
-    double* rowdual, HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
-    HighsInt* modelstatus) {
+    const HighsInt sense, const double offset, const double* col_cost,
+    const double* col_lower, const double* col_upper, const double* row_lower,
+    const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
+    const double* a_value, const HighsInt* qstart, const HighsInt* qindex,
+    const double* qvalue, double* col_value, double* col_dual, double* row_value,
+    double* row_dual, HighsInt* col_basis_status, HighsInt* row_basis_status,
+    HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsStatus status =
       highs.passModel(numcol, numrow, numnz, q_numnz, a_format, q_format, sense,
-                      offset, colcost, collower, colupper, rowlower, rowupper,
-                      astart, aindex, avalue, qstart, qindex, qvalue);
+                      offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+                      a_start, a_index, a_value, qstart, qindex, qvalue);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
   status = highs.run();
@@ -136,33 +136,33 @@ HighsInt Highs_qpCall(
     HighsBasis basis;
     solution = highs.getSolution();
     basis = highs.getBasis();
-    *modelstatus = (HighsInt)highs.getModelStatus();
+    *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
     const bool copy_col_value =
-        colvalue != NULL &&
+        col_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_col_dual =
-        coldual != NULL &&
+        col_dual != NULL &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_col_basis = colbasisstatus != NULL && basis.valid;
+    const bool copy_col_basis = col_basis_status != NULL && basis.valid;
     for (HighsInt i = 0; i < numcol; i++) {
-      if (copy_col_value) colvalue[i] = solution.col_value[i];
-      if (copy_col_dual) coldual[i] = solution.col_dual[i];
-      if (copy_col_basis) colbasisstatus[i] = (HighsInt)basis.col_status[i];
+      if (copy_col_value) col_value[i] = solution.col_value[i];
+      if (copy_col_dual) col_dual[i] = solution.col_dual[i];
+      if (copy_col_basis) col_basis_status[i] = (HighsInt)basis.col_status[i];
     }
 
     const bool copy_row_value =
-        rowvalue != NULL &&
+        row_value != NULL &&
         info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
     const bool copy_row_dual =
-        rowdual != NULL &&
+        row_dual != NULL &&
         info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
-    const bool copy_row_basis = rowbasisstatus != NULL && basis.valid;
+    const bool copy_row_basis = row_basis_status != NULL && basis.valid;
     for (HighsInt i = 0; i < numrow; i++) {
-      if (copy_row_value) rowvalue[i] = solution.row_value[i];
-      if (copy_row_dual) rowdual[i] = solution.row_dual[i];
-      if (copy_row_basis) rowbasisstatus[i] = (HighsInt)basis.row_status[i];
+      if (copy_row_value) row_value[i] = solution.row_value[i];
+      if (copy_row_dual) row_dual[i] = solution.row_dual[i];
+      if (copy_row_basis) row_basis_status[i] = (HighsInt)basis.row_status[i];
     }
   }
   return (HighsInt)status;
@@ -195,42 +195,42 @@ HighsInt Highs_writeSolutionPretty(const void* highs, const char* filename) {
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
                       const HighsInt numnz, const HighsInt a_format,
                       const HighsInt sense, const double offset,
-                      const double* colcost, const double* collower,
-                      const double* colupper, const double* rowlower,
-                      const double* rowupper, const HighsInt* astart,
-                      const HighsInt* aindex, const double* avalue) {
+                      const double* col_cost, const double* col_lower,
+                      const double* col_upper, const double* row_lower,
+                      const double* row_upper, const HighsInt* a_start,
+                      const HighsInt* a_index, const double* a_value) {
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, a_format, sense, offset, colcost,
-                  collower, colupper, rowlower, rowupper, astart, aindex,
-                  avalue);
+      ->passModel(numcol, numrow, numnz, a_format, sense, offset, col_cost,
+                  col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+                  a_value);
 }
 
 HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                        const HighsInt numrow, const HighsInt numnz,
                        const HighsInt a_format, const HighsInt sense,
-                       const double offset, const double* colcost,
-                       const double* collower, const double* colupper,
-                       const double* rowlower, const double* rowupper,
-                       const HighsInt* astart, const HighsInt* aindex,
-                       const double* avalue, const HighsInt* integrality) {
+                       const double offset, const double* col_cost,
+                       const double* col_lower, const double* col_upper,
+                       const double* row_lower, const double* row_upper,
+                       const HighsInt* a_start, const HighsInt* a_index,
+                       const double* a_value, const HighsInt* integrality) {
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, a_format, sense, offset, colcost,
-                  collower, colupper, rowlower, rowupper, astart, aindex,
-                  avalue, integrality);
+      ->passModel(numcol, numrow, numnz, a_format, sense, offset, col_cost,
+                  col_lower, col_upper, row_lower, row_upper, a_start, a_index,
+                  a_value, integrality);
 }
 
 HighsInt Highs_passModel(
     void* highs, const HighsInt numcol, const HighsInt numrow,
     const HighsInt numnz, const HighsInt q_num_nz, const HighsInt a_format,
     const HighsInt q_format, const HighsInt sense, const double offset,
-    const double* colcost, const double* collower, const double* colupper,
-    const double* rowlower, const double* rowupper, const HighsInt* astart,
-    const HighsInt* aindex, const double* avalue, const HighsInt* qstart,
+    const double* col_cost, const double* col_lower, const double* col_upper,
+    const double* row_lower, const double* row_upper, const HighsInt* a_start,
+    const HighsInt* a_index, const double* a_value, const HighsInt* qstart,
     const HighsInt* qindex, const double* qvalue, const HighsInt* integrality) {
   return (HighsInt)((Highs*)highs)
       ->passModel(numcol, numrow, numnz, q_num_nz, a_format, q_format, sense,
-                  offset, colcost, collower, colupper, rowlower, rowupper,
-                  astart, aindex, avalue, qstart, qindex, qvalue, integrality);
+                  offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+                  a_start, a_index, a_value, qstart, qindex, qvalue, integrality);
 }
 
 HighsInt Highs_passHessian(void* highs, const HighsInt dim,
@@ -332,34 +332,34 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
-HighsInt Highs_getSolution(const void* highs, double* colvalue, double* coldual,
-                           double* rowvalue, double* rowdual) {
+HighsInt Highs_getSolution(const void* highs, double* col_value, double* col_dual,
+                           double* row_value, double* row_dual) {
   HighsSolution solution = ((Highs*)highs)->getSolution();
 
-  if (colvalue != NULL) {
+  if (col_value != NULL) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
-      colvalue[i] = solution.col_value[i];
+      col_value[i] = solution.col_value[i];
     }
   }
 
-  if (coldual != NULL) {
+  if (col_dual != NULL) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_dual.size(); i++) {
-      coldual[i] = solution.col_dual[i];
+      col_dual[i] = solution.col_dual[i];
     }
   }
 
-  if (rowvalue != NULL) {
+  if (row_value != NULL) {
     for (HighsInt i = 0; i < (HighsInt)solution.row_value.size(); i++) {
-      rowvalue[i] = solution.row_value[i];
+      row_value[i] = solution.row_value[i];
     }
   }
 
-  if (rowdual != NULL) {
+  if (row_dual != NULL) {
     for (HighsInt i = 0; i < (HighsInt)solution.row_dual.size(); i++) {
-      rowdual[i] = solution.row_dual[i];
+      row_dual[i] = solution.row_dual[i];
     }
   }
-  return HighsStatuskOk;
+  return kHighsStatusOk;
 }
 
 HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
@@ -372,14 +372,14 @@ HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
   for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); i++) {
     rowstatus[i] = (HighsInt)basis.row_status[i];
   }
-  return HighsStatuskOk;
+  return kHighsStatusOk;
 }
 
 HighsInt Highs_getModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus();
 }
 
-HighsInt Highs_getScaledModelStatus(const void* highs) {
+HighsInt Highs_getScaledModel_Status(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus(true);
 }
 
@@ -828,10 +828,10 @@ HighsInt Highs_getHessianNumNz(const void* highs) {
 HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         const HighsInt q_format, HighsInt* numcol,
                         HighsInt* numrow, HighsInt* numnz, HighsInt* q_num_nz,
-                        HighsInt* sense, double* offset, double* colcost,
-                        double* collower, double* colupper, double* rowlower,
-                        double* rowupper, HighsInt* astart, HighsInt* aindex,
-                        double* avalue, HighsInt* qstart, HighsInt* qindex,
+                        HighsInt* sense, double* offset, double* col_cost,
+                        double* col_lower, double* col_upper, double* row_lower,
+                        double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                        double* a_value, HighsInt* qstart, HighsInt* qindex,
                         double* qvalue, HighsInt* integrality) {
   const HighsModel& model = ((Highs*)highs)->getModel();
   const HighsLp& lp = model.lp_;
@@ -842,13 +842,13 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   *numcol = lp.num_col_;
   *numrow = lp.num_row_;
   if (*numcol > 0) {
-    memcpy(colcost, &lp.col_cost_[0], *numcol * sizeof(double));
-    memcpy(collower, &lp.col_lower_[0], *numcol * sizeof(double));
-    memcpy(colupper, &lp.col_upper_[0], *numcol * sizeof(double));
+    memcpy(col_cost, &lp.col_cost_[0], *numcol * sizeof(double));
+    memcpy(col_lower, &lp.col_lower_[0], *numcol * sizeof(double));
+    memcpy(col_upper, &lp.col_upper_[0], *numcol * sizeof(double));
   }
   if (*numrow > 0) {
-    memcpy(rowlower, &lp.row_lower_[0], *numrow * sizeof(double));
-    memcpy(rowupper, &lp.row_upper_[0], *numrow * sizeof(double));
+    memcpy(row_lower, &lp.row_lower_[0], *numrow * sizeof(double));
+    memcpy(row_upper, &lp.row_upper_[0], *numrow * sizeof(double));
   }
 
   // Save the original orientation so that it is recovered
@@ -864,14 +864,14 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   // Ensure the desired orientation
   HighsInt return_status;
   return_status = (HighsInt)((Highs*)highs)->setMatrixFormat(desired_a_format);
-  if (return_status != HighsStatuskOk) return return_status;
+  if (return_status != kHighsStatusOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
     *numnz = lp.a_matrix_.numNz();
-    memcpy(astart, &lp.a_matrix_.start_[0],
+    memcpy(a_start, &lp.a_matrix_.start_[0],
            num_start_entries * sizeof(HighsInt));
-    memcpy(aindex, &lp.a_matrix_.index_[0], *numnz * sizeof(HighsInt));
-    memcpy(avalue, &lp.a_matrix_.value_[0], *numnz * sizeof(double));
+    memcpy(a_index, &lp.a_matrix_.index_[0], *numnz * sizeof(HighsInt));
+    memcpy(a_value, &lp.a_matrix_.value_[0], *numnz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
     *q_num_nz = hessian.start_[*numcol];
@@ -885,23 +885,23 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   }
   // Restore the original orientation
   return_status = (HighsInt)((Highs*)highs)->setMatrixFormat(original_a_format);
-  if (return_status != HighsStatuskOk) return return_status;
-  return HighsStatuskOk;
+  if (return_status != kHighsStatusOk) return return_status;
+  return kHighsStatusOk;
 }
 
 // Fails on Windows and MacOS since string_model_status is destroyed
 // after the method returns, so what's returned is a pointer to
 // something that no longer exists.
 //
-// const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
+// const char* Highs_model_statusToChar(void* highs, HighsInt int_model_status) {
 //   const char* illegal_model_status = "Model status out of range";
-//   if (int_model_status < (HighsInt)HighsModelStatus::kMin ||
-//       int_model_status > (HighsInt)HighsModelStatus::kMax)
+//   if (int_model_status < (HighsInt)HighsModel_Status::kMin ||
+//       int_model_status > (HighsInt)HighsModel_Status::kMax)
 //     return illegal_model_status;
 //   const std::string string_model_status =
 //       ((Highs*)highs)
-//           ->modelStatusToString(
-//               static_cast<HighsModelStatus>(int_model_status));
+//           ->model_statusToString(
+//               static_cast<HighsModel_Status>(int_model_status));
 //   return string_model_status.c_str();
 // }
 
@@ -950,22 +950,22 @@ HighsInt Highs_crossover_set(void* highs, const int n, const int m,
 // *********************
 
 HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
-                    const HighsInt numnz, const double* colcost,
-                    const double* collower, const double* colupper,
-                    const double* rowlower, const double* rowupper,
-                    const HighsInt* astart, const HighsInt* aindex,
-                    const double* avalue, double* colvalue, double* coldual,
-                    double* rowvalue, double* rowdual, HighsInt* colbasisstatus,
-                    HighsInt* rowbasisstatus, HighsInt* modelstatus) {
+                    const HighsInt numnz, const double* col_cost,
+                    const double* col_lower, const double* col_upper,
+                    const double* row_lower, const double* row_upper,
+                    const HighsInt* a_start, const HighsInt* a_index,
+                    const double* a_value, double* col_value, double* col_dual,
+                    double* row_value, double* row_dual, HighsInt* col_basis_status,
+                    HighsInt* row_basis_status, HighsInt* model_status) {
   printf(
       "Method Highs_call is deprecated: alternative method is Highs_lpCall\n");
   const HighsInt aformat_columnwise = 1;
   const HighsInt sense = 1;
   const double offset = 0;
   return Highs_lpCall(numcol, numrow, numnz, aformat_columnwise, sense, offset,
-                      colcost, collower, colupper, rowlower, rowupper, astart,
-                      aindex, avalue, colvalue, coldual, rowvalue, rowdual,
-                      colbasisstatus, rowbasisstatus, modelstatus);
+                      col_cost, col_lower, col_upper, row_lower, row_upper, a_start,
+                      a_index, a_value, col_value, col_dual, row_value, row_dual,
+                      col_basis_status, row_basis_status, model_status);
 }
 
 HighsInt Highs_setOptionValue(void* highs, const char* option,
@@ -1120,7 +1120,7 @@ double Highs_getHighsInfinity(const void* highs) {
   return Highs_getInfinity(highs);
 }
 
-// const char* Highs_highsModelStatusToChar(void* highs,
+// const char* Highs_highsModel_StatusToChar(void* highs,
 //                                          HighsInt int_model_status) {
-//   return Highs_modelStatusToChar(highs, int_model_status);
+//   return Highs_model_statusToChar(highs, int_model_status);
 // }

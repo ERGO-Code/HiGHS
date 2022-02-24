@@ -41,14 +41,14 @@ void minimal_api() {
   // After a successful call to Highs_lpCall, the primal and dual
   // solution, and the simplex basis are returned as follows
   //
-  // The vector x is colvalue
+  // The vector x is col_value
   // The vector Ax is row_value
   // The vector of dual values for the variables x is col_dual
   // The vector of dual values for the variables Ax is row_dual
   // The basic/nonbasic status of the variables x is col_basis_status
   // The basic/nonbasic status of the variables Ax is row_basis_status
   //
-  // The status of the solution obtained is modelstatus
+  // The status of the solution obtained is model_status
   //
   // The use of Highs_lpCall is illustrated for the LP
   //

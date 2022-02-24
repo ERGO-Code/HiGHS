@@ -49,9 +49,9 @@ void minimal_api() {
   double cu[2] = {10.0, 10.0};
   double rl[2] = {0.0, 0.0};
   double ru[2] = {2.0, 1.0};
-  HighsInt astart[3] = {0, 2, 4};
-  HighsInt aindex[4] = {0, 1, 0, 1};
-  double avalue[4] = {1.0, 2.0, 1.0, 3.0};
+  HighsInt a_start[3] = {0, 2, 4};
+  HighsInt a_index[4] = {0, 1, 0, 1};
+  double a_value[4] = {1.0, 2.0, 1.0, 3.0};
 
   double* cv = (double*)malloc(sizeof(double) * numcol);
   double* cd = (double*)malloc(sizeof(double) * numcol);
@@ -61,11 +61,11 @@ void minimal_api() {
   HighsInt* cbs = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
   HighsInt* rbs = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
 
-  HighsInt modelstatus;
+  HighsInt model_status;
 
   HighsInt return_status = Highs_lpCall(numcol, numrow, nnz, a_format, sense, offset,
-					cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
-					cd, rv, rd, cbs, rbs, &modelstatus);
+					cc, cl, cu, rl, ru, a_start, a_index, a_value, cv,
+					cd, rv, rd, cbs, rbs, &model_status);
   assert( return_status == 0 );
 
   if (dev_run) {
@@ -92,11 +92,11 @@ void minimal_api_lp() {
   // The scalar n is numcol
   // The scalar m is numrow
   //
-  // The vector c is colcost
-  // The vector l is collower
-  // The vector u is colupper
-  // The vector L is rowlower
-  // The vector U is rowupper
+  // The vector c is col_cost
+  // The vector l is col_lower
+  // The vector u is col_upper
+  // The vector L is row_lower
+  // The vector U is row_upper
   //
   // The matrix A is represented in packed column-wise form: only its
   // nonzeros are stored
@@ -104,27 +104,27 @@ void minimal_api_lp() {
   // * The number of nonzeros in A is numnz
   //
   // * The row indices of the nonnzeros in A are stored column-by-column
-  // in aindex
+  // in a_index
   //
   // * The values of the nonnzeros in A are stored column-by-column in
-  // avalue
+  // a_value
   //
-  // * The position in aindex/avalue of the index/value of the first
-  // nonzero in each column is stored in astart
+  // * The position in a_index/a_value of the index/value of the first
+  // nonzero in each column is stored in a_start
   //
-  // Note that astart[0] must be zero
+  // Note that a_start[0] must be zero
   //
   // After a successful call to Highs_call, the primal and dual
   // solution, and the simplex basis are returned as follows
   //
-  // The vector x is colvalue
-  // The vector Ax is rowvalue
-  // The vector of dual values for the variables x is coldual
-  // The vector of dual values for the variables Ax is rowdual
-  // The basic/nonbasic status of the variables x is colbasisstatus
-  // The basic/nonbasic status of the variables Ax is rowbasisstatus
+  // The vector x is col_value
+  // The vector Ax is row_value
+  // The vector of dual values for the variables x is col_dual
+  // The vector of dual values for the variables Ax is row_dual
+  // The basic/nonbasic status of the variables x is col_basis_status
+  // The basic/nonbasic status of the variables Ax is row_basis_status
   //
-  // The status of the solution obtained is modelstatus
+  // The status of the solution obtained is model_status
   //
   // To solve maximization problems, the values in c must be negated
   //
@@ -144,63 +144,63 @@ void minimal_api_lp() {
   double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
-  double colcost[2] = {2.0, 3.0};
-  double collower[2] = {0.0, 1.0};
-  double colupper[2] = {3.0, 1.0e30};
+  double col_cost[2] = {2.0, 3.0};
+  double col_lower[2] = {0.0, 1.0};
+  double col_upper[2] = {3.0, 1.0e30};
   // Define the row lower bounds and upper bounds
-  double rowlower[3] = {-1.0e30, 10.0, 8.0};
-  double rowupper[3] = {6.0, 14.0, 1.0e30};
+  double row_lower[3] = {-1.0e30, 10.0, 8.0};
+  double row_upper[3] = {6.0, 14.0, 1.0e30};
   // Define the constraint matrix column-wise
-  HighsInt astart[2] = {0, 2};
-  HighsInt aindex[5] = {1, 2, 0, 1, 2};
-  double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  HighsInt a_start[2] = {0, 2};
+  HighsInt a_index[5] = {1, 2, 0, 1, 2};
+  double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
 
-  double* colvalue = (double*)malloc(sizeof(double) * numcol);
-  double* coldual = (double*)malloc(sizeof(double) * numcol);
-  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
-  double* rowdual = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * numcol);
+  double* col_dual = (double*)malloc(sizeof(double) * numcol);
+  double* row_value = (double*)malloc(sizeof(double) * numrow);
+  double* row_dual = (double*)malloc(sizeof(double) * numrow);
 
-  HighsInt* colbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
-  HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
+  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
+  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
 
-  HighsInt modelstatus;
+  HighsInt model_status;
 
   HighsInt return_status = Highs_lpCall(numcol, numrow, numnz, a_format,
-				    sense, offset, colcost, collower, colupper, rowlower, rowupper,
-				    astart, aindex, avalue,
-				    colvalue, coldual, rowvalue, rowdual,
-				    colbasisstatus, rowbasisstatus,
-				    &modelstatus);
+				    sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+				    a_start, a_index, a_value,
+				    col_value, col_dual, row_value, row_dual,
+				    col_basis_status, row_basis_status,
+				    &model_status);
 
   assert( return_status == 0 );
 
   if (dev_run) {
-    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, modelstatus);
+    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
     
     HighsInt i;
-    if (modelstatus == 7) {
+    if (model_status == 7) {
       double objective_value = 0;
       // Report the column primal and dual values, and basis status
       for (i = 0; i < numcol; i++) {
 	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, colvalue[i], coldual[i], colbasisstatus[i]);
-	objective_value += colvalue[i]*colcost[i];
+	       i, col_value[i], col_dual[i], col_basis_status[i]);
+	objective_value += col_value[i]*col_cost[i];
       }
       // Report the row primal and dual values, and basis status
       for (i = 0; i < numrow; i++) {
 	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
+	       i, row_value[i], row_dual[i], row_basis_status[i]);
       }
       printf("Optimal objective value = %g\n", objective_value);
     }
   }
 
-  free(colvalue);
-  free(coldual);
-  free(rowvalue);
-  free(rowdual);
-  free(colbasisstatus);
-  free(rowbasisstatus);
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+  free(col_basis_status);
+  free(row_basis_status);
 }
 
 void minimal_api_mip() {
@@ -219,32 +219,32 @@ void minimal_api_mip() {
   double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
-  double colcost[3] = {-3.0, -2.0, -1.0};
-  double collower[3] = {0.0, 0.0, 0.0};
-  double colupper[3] = {1.0e30, 1.0e30, 1.0};
+  double col_cost[3] = {-3.0, -2.0, -1.0};
+  double col_lower[3] = {0.0, 0.0, 0.0};
+  double col_upper[3] = {1.0e30, 1.0e30, 1.0};
   // Define the row lower bounds and upper bounds
-  double rowlower[2] = {-1.0e30, 12.0};
-  double rowupper[2] = { 7.0,    12.0};
+  double row_lower[2] = {-1.0e30, 12.0};
+  double row_upper[2] = { 7.0,    12.0};
   // Define the constraint matrix column-wise
-  HighsInt astart[3] = {0, 2, 4};
-  HighsInt aindex[6] = {0, 1, 0, 1, 0, 1};
-  double avalue[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
+  HighsInt a_start[3] = {0, 2, 4};
+  HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
+  double a_value[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
 
   // Give an illegal value to an entry in integrality
   HighsInt integrality[3] = {0, 0, -1};
 
-  double* colvalue = (double*)malloc(sizeof(double) * numcol);
-  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * numcol);
+  double* row_value = (double*)malloc(sizeof(double) * numrow);
 
-  HighsInt modelstatus;
+  HighsInt model_status;
   HighsInt return_status;
 
   return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
-					 sense, offset, colcost, collower, colupper, rowlower, rowupper,
-					 astart, aindex, avalue,
+					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+					 a_start, a_index, a_value,
 					 integrality,
-					 colvalue, rowvalue,
-					 &modelstatus);
+					 col_value, row_value,
+					 &model_status);
   // Should return error
   assert( return_status == -1 );
 
@@ -252,35 +252,35 @@ void minimal_api_mip() {
   integrality[numcol-1] = 1;
 
   return_status = Highs_mipCall(numcol, numrow, numnz, a_format,
-					 sense, offset, colcost, collower, colupper, rowlower, rowupper,
-					 astart, aindex, avalue,
+					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+					 a_start, a_index, a_value,
 					 integrality,
-					 colvalue, rowvalue,
-					 &modelstatus);
+					 col_value, row_value,
+					 &model_status);
   // Should return OK
   assert( return_status == 0 );
 
   if (dev_run) {
-    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, modelstatus);
+    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
     
     HighsInt i;
-    if (modelstatus == 7) {
+    if (model_status == 7) {
       double objective_value = 0;
       // Report the column primal values
       for (i = 0; i < numcol; i++) {
-	printf("Col%"HIGHSINT_FORMAT" = %lf; \n", i, colvalue[i]);
-	objective_value += colvalue[i]*colcost[i];
+	printf("Col%"HIGHSINT_FORMAT" = %lf; \n", i, col_value[i]);
+	objective_value += col_value[i]*col_cost[i];
       }
       // Report the row primal values
       for (i = 0; i < numrow; i++) {
-	printf("Row%"HIGHSINT_FORMAT" = %lf; \n", i, rowvalue[i]);
+	printf("Row%"HIGHSINT_FORMAT" = %lf; \n", i, row_value[i]);
       }
       printf("Optimal objective value = %g\n", objective_value);
     }
   }
 
-  free(colvalue);
-  free(rowvalue);
+  free(col_value);
+  free(row_value);
 
 }
 
@@ -344,12 +344,12 @@ void full_api() {
   double cu[2] = {10.0, 10.0};
   double rl[2] = {0.0, 0.0};
   double ru[2] = {2.0, 1.0};
-  HighsInt astart[3] = {0, 2, 4};
-  HighsInt aindex[4] = {0, 1, 0, 1};
-  double avalue[4] = {1.0, 2.0, 1.0, 3.0};
+  HighsInt a_start[3] = {0, 2, 4};
+  HighsInt a_index[4] = {0, 1, 0, 1};
+  double a_value[4] = {1.0, 2.0, 1.0, 3.0};
 
   assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) == 0);
-  assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) == 0);
+  assert( Highs_addRows(highs, 2, rl, ru,  4, a_start, a_index, a_value) == 0);
 
   assert( Highs_getNumCols(highs) == numcol);
   assert( Highs_getNumRows(highs) == numrow);
@@ -368,15 +368,15 @@ void full_api() {
   double ck_cu[2];
   double ck_rl[2];
   double ck_ru[2];
-  HighsInt ck_astart[3];
-  HighsInt ck_aindex[4];
-  double ck_avalue[4];
+  HighsInt ck_a_start[3];
+  HighsInt ck_a_index[4];
+  double ck_a_value[4];
   HighsInt return_status;
   return_status = Highs_getModel(highs, a_format, 0,
 				 &ck_numcol, &ck_numrow, &ck_numnz, NULL,
 				 &ck_sense, &ck_offset,
 				 ck_cc, ck_cl, ck_cu, ck_rl, ck_ru,
-				 ck_astart, ck_aindex, ck_avalue,
+				 ck_a_start, ck_a_index, ck_a_value,
 				 NULL, NULL, NULL, NULL);
   assert( return_status == 0 );
   assert( ck_numcol == numcol );
@@ -389,9 +389,9 @@ void full_api() {
   assert( doubleArraysEqual(numcol, ck_cu, cu) );
   assert( doubleArraysEqual(numrow, ck_rl, rl) );
   assert( doubleArraysEqual(numrow, ck_ru, ru) );
-  assert( intArraysEqual(numcol, ck_astart, astart) );
-  assert( intArraysEqual(numnz, ck_aindex, aindex) );
-  assert( doubleArraysEqual(numnz, ck_avalue, avalue) );
+  assert( intArraysEqual(numcol, ck_a_start, a_start) );
+  assert( intArraysEqual(numnz, ck_a_index, a_index) );
+  assert( doubleArraysEqual(numnz, ck_a_value, a_value) );
   return_status = Highs_run(highs);
   assert( return_status == 0 );
 
@@ -417,30 +417,30 @@ void full_api_lp() {
   HighsInt i;
 
   // Define the column costs, lower bounds and upper bounds
-  double colcost[2] = {2.0, 3.0};
-  double collower[2] = {0.0, 1.0};
-  double colupper[2] = {3.0, 1.0e30};
+  double col_cost[2] = {2.0, 3.0};
+  double col_lower[2] = {0.0, 1.0};
+  double col_upper[2] = {3.0, 1.0e30};
   // Define the row lower bounds and upper bounds
-  double rowlower[3] = {-1.0e30, 10.0, 8.0};
-  double rowupper[3] = {6.0, 14.0, 1.0e30};
+  double row_lower[3] = {-1.0e30, 10.0, 8.0};
+  double row_upper[3] = {6.0, 14.0, 1.0e30};
   // Define the constraint matrix row-wise, as it is added to the LP
   // with the rows
   HighsInt arstart[3] = {0, 1, 3};
   HighsInt arindex[5] = {1, 0, 1, 0, 1};
   double arvalue[5] = {1.0, 1.0, 2.0, 2.0, 1.0};
 
-  double* colvalue = (double*)malloc(sizeof(double) * numcol);
-  double* coldual = (double*)malloc(sizeof(double) * numcol);
-  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
-  double* rowdual = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * numcol);
+  double* col_dual = (double*)malloc(sizeof(double) * numcol);
+  double* row_value = (double*)malloc(sizeof(double) * numrow);
+  double* row_dual = (double*)malloc(sizeof(double) * numrow);
 
-  HighsInt* colbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
-  HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
+  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
+  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
+  assert( Highs_addCols(highs, numcol, col_cost, col_lower, col_upper, 0, NULL, NULL, NULL) == 0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) == 0);
+  assert( Highs_addRows(highs, numrow, row_lower, row_upper, numnz, arstart, arindex, arvalue) == 0);
 
   HighsInt sense;
   HighsInt return_status;
@@ -503,11 +503,11 @@ void full_api_lp() {
   assert( return_status == 0 );
 
   // Get the model status
-  HighsInt modelstatus = Highs_getModelStatus(highs);
+  HighsInt model_status = Highs_getModelStatus(highs);
 
   if (dev_run)
-    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, modelstatus);
-  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", return_status, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
+    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
+  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", return_status, model_status, Highs_model_statusToChar(highs, model_status));
 
   double objective_function_value;
   return_status = Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
@@ -524,31 +524,31 @@ void full_api_lp() {
 
   if (dev_run) {
     printf("Objective value = %g; Iteration count = %"HIGHSINT_FORMAT"\n", objective_function_value, simplex_iteration_count);
-    if (modelstatus == 7) {
+    if (model_status == 7) {
       //    printf("Solution primal status = %s\n", Highs_solutionStatusToChar(highs, primal_solution_status));
       //    printf("Solution dual status = %s\n", Highs_solutionStatusToChar(highs, dual_solution_status));
       // Get the primal and dual solution
-      return_status = Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
+      return_status = Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
       assert( return_status == 0 );
       // Get the basis
-      return_status = Highs_getBasis(highs, colbasisstatus, rowbasisstatus);
+      return_status = Highs_getBasis(highs, col_basis_status, row_basis_status);
       assert( return_status == 0 );
       // Report the column primal and dual values, and basis status
       for (i = 0; i < numcol; i++) {
-	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, colvalue[i], coldual[i], colbasisstatus[i]);
+	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
       }
       // Report the row primal and dual values, and basis status
       for (i = 0; i < numrow; i++) {
-	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
+	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
       }
     }
   }
-  free(colvalue);
-  free(coldual);
-  free(rowvalue);
-  free(rowdual);
-  free(colbasisstatus);
-  free(rowbasisstatus);
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+  free(col_basis_status);
+  free(row_basis_status);
 
   Highs_destroy(highs);
 
@@ -556,23 +556,23 @@ void full_api_lp() {
   HighsInt a_format = 1;
   sense = 1;
   double offset = 0;
-  HighsInt astart[2] = {0, 2};
-  HighsInt aindex[5] = {1, 2, 0, 1, 2};
-  double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  HighsInt a_start[2] = {0, 2};
+  HighsInt a_index[5] = {1, 2, 0, 1, 2};
+  double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   return_status = Highs_passLp(highs, numcol, numrow, numnz, a_format, sense, offset,
-			   colcost, collower, colupper,
-			   rowlower, rowupper,
-			   astart, aindex, avalue);
+			   col_cost, col_lower, col_upper,
+			   row_lower, row_upper,
+			   a_start, a_index, a_value);
   assert( return_status == 0 );
   return_status = Highs_run(highs);
   assert( return_status == 0 );
   if (dev_run)
-    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, modelstatus);
-  //  modelstatus = Highs_getModelStatus(highs);
-  //  const char* modelstatus_char = Highs_modelStatusToChar(highs, modelstatus);
-  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", return_status, modelstatus, modelstatus_char);
+    printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
+  //  model_status = Highs_getModelStatus(highs);
+  //  const char* model_status_char = Highs_model_statusToChar(highs, model_status);
+  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", return_status, model_status, model_status_char);
   Highs_destroy(highs);
 }
 
@@ -592,30 +592,30 @@ void full_api_mip() {
   double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
-  double colcost[3] = {-3.0, -2.0, -1.0};
-  double collower[3] = {0.0, 0.0, 0.0};
-  double colupper[3] = {1.0e30, 1.0e30, 1.0};
+  double col_cost[3] = {-3.0, -2.0, -1.0};
+  double col_lower[3] = {0.0, 0.0, 0.0};
+  double col_upper[3] = {1.0e30, 1.0e30, 1.0};
   // Define the row lower bounds and upper bounds
-  double rowlower[2] = {-1.0e30, 12.0};
-  double rowupper[2] = { 7.0,    12.0};
+  double row_lower[2] = {-1.0e30, 12.0};
+  double row_upper[2] = { 7.0,    12.0};
   // Define the constraint matrix column-wise
-  HighsInt astart[3] = {0, 2, 4};
-  HighsInt aindex[6] = {0, 1, 0, 1, 0, 1};
-  double avalue[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
+  HighsInt a_start[3] = {0, 2, 4};
+  HighsInt a_index[6] = {0, 1, 0, 1, 0, 1};
+  double a_value[6] = {1.0, 4.0, 1.0, 2.0, 1.0, 1.0};
 
   HighsInt integrality[3] = {1, 1, 1};
 
-  double* colvalue = (double*)malloc(sizeof(double) * numcol);
-  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
+  double* col_value = (double*)malloc(sizeof(double) * numcol);
+  double* row_value = (double*)malloc(sizeof(double) * numrow);
 
-  HighsInt modelstatus;
+  HighsInt model_status;
   HighsInt return_status;
 
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   return_status = Highs_passMip(highs, numcol, numrow, numnz, a_format,
-				sense, offset, colcost, collower, colupper, rowlower, rowupper,
-				astart, aindex, avalue,
+				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+				a_start, a_index, a_value,
 				integrality);
   assert(return_status == 0);
   Highs_setStringOptionValue(highs, "presolve", "off");
@@ -828,9 +828,9 @@ void test_getColsByRange() {
   assert( return_status == 0 );
   return_status = Highs_addCol(highs, -1.0, 0.0, 1.0, 0, NULL, NULL);
   assert( return_status == 0 );
-  HighsInt aindex[2] = {0, 1};
-  double avalue[2] = {1.0, -1.0};
-  return_status = Highs_addRow(highs, 0.0, 0.0, 2, aindex, avalue);
+  HighsInt a_index[2] = {0, 1};
+  double a_value[2] = {1.0, -1.0};
+  return_status = Highs_addRow(highs, 0.0, 0.0, 2, a_index, a_value);
   assert( return_status == 0 );
   HighsInt num_cols;
   HighsInt num_nz;
@@ -870,13 +870,13 @@ void test_passHessian() {
   const double primal = 1;
   const double dual = 0;
   assertIntValuesEqual("Status", Highs_getModelStatus(highs), 7);  // kOptimal
-  double colvalue[1] = {-123.0};
-  double coldual[1] = {0.0};
-  Highs_getSolution(highs, colvalue, coldual, NULL, NULL);
+  double col_value[1] = {-123.0};
+  double col_dual[1] = {0.0};
+  Highs_getSolution(highs, col_value, col_dual, NULL, NULL);
   double objective_value = Highs_getObjectiveValue(highs);
   assertDoubleValuesEqual("Objective", objective_value, optimal_objective_value);
-  assertDoubleValuesEqual("Primal", colvalue[0], primal);
-  assertDoubleValuesEqual("Dual", coldual[0], dual);
+  assertDoubleValuesEqual("Primal", col_value[0], primal);
+  assertDoubleValuesEqual("Dual", col_dual[0], dual);
   Highs_destroy(highs);
 }
 
