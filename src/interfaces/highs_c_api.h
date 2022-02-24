@@ -152,15 +152,15 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
  * The signature of this method is identical to `Highs_lpCall`, except that it
  * has additional arguments for specifying the Hessian matrix.
 
- * @param q_num_nz   the number of nonzeros in the Hessian matrix
+ * @param q_num_nz  the number of nonzeros in the Hessian matrix
  * @param q_format  the format of the Hessian matrix in the form of a
  *                  `HighsHessianStatus` enum. If q_num_nz > 0, this must be
-                    `HighsHessianFormatkTriangular`
- * @param qstart    the Hessian matrix is provided in the same format as the
- *                  constraint matrix, using `qstart`, `qindex`, and `qvalue` in
+                    `kHighsHessianFormatTriangular`
+ * @param q_start   the Hessian matrix is provided in the same format as the
+ *                  constraint matrix, using `q_start`, `q_index`, and `q_value` in
  *                  the place of `a_start`, `a_index`, and `a_value`
- * @param qindex    array of length [q_num_nz] with indices of matrix entries
- * @param qvalue    array of length [q_num_nz] with values of matrix entries
+ * @param q_index   array of length [q_num_nz] with indices of matrix entries
+ * @param q_value   array of length [q_num_nz] with values of matrix entries
   *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -170,17 +170,17 @@ HighsInt Highs_qpCall(
     const HighsInt sense, const double offset, const double* col_cost,
     const double* col_lower, const double* col_upper, const double* row_lower,
     const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
-    const double* a_value, const HighsInt* qstart, const HighsInt* qindex,
-    const double* qvalue, double* col_value, double* col_dual, double* row_value,
+    const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
+    const double* q_value, double* col_value, double* col_dual, double* row_value,
     double* row_dual, HighsInt* col_basis_status, HighsInt* row_basis_status,
     HighsInt* model_status);
 
 /**
- * Create a HiGHS model object and return the reference.
+ * Create a Highs instance and return the reference
  *
- * Call `Highs_destroy` on the returned reference to clean up allocated memory.
+ * Call `Highs_destroy` on the returned reference to clean up allocated memory
  *
- * @returns A pointer to the HiGHS model object
+ * @returns A pointer to the Highs instance
  */
 void* Highs_create(void);
 
@@ -190,24 +190,24 @@ void* Highs_create(void);
  *
  * To empty a model without invalidating `highs`, see `Highs_clearModel`.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  */
 void Highs_destroy(void* highs);
 
 /**
- * Read a model from `filename` into `highs`.
+ * Read a model from `filename` into `highs`
  *
- * @param highs     a pointer to the HiGHS model object
- * @param filename  the filename to read.
+ * @param highs     a pointer to the Highs instance
+ * @param filename  the filename to read
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_readModel(void* highs, const char* filename);
 
 /**
- * Write the model `highs` to `filename`.
+ * Write the model in `highs` to `filename`
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param filename  the filename to write.
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -219,9 +219,9 @@ HighsInt Highs_writeModel(void* highs, const char* filename);
  * invalidate the pointer `highs`. Future calls (for example, adding new
  * variables and constraints) are allowed.
  *
- * See `Highs_destroy` to clear the model and free all associated memory.
+ * See `Highs_destroy` to clear the model and free all associated memory
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -231,19 +231,19 @@ HighsInt Highs_clearModel(void* highs);
  * Optimize a model. The algorithm used by HiGHS depends on the options that
  * have been set.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
 HighsInt Highs_run(void* highs);
 
 /**
- * Write the solution information (including basis status if available) to a
- * file.
+ * Write the solution information (including dual and basis status, if
+ * available) to a file.
  *
  * See also: `Highs_writeSolutionPretty`.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param filename  the name of the file to write the results to
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -251,13 +251,13 @@ HighsInt Highs_run(void* highs);
 HighsInt Highs_writeSolution(const void* highs, const char* filename);
 
 /**
- * Write the solution information (including basis status if available) to a
- * file in a human-readable format.
+ * Write the solution information (including dual and basis status, if
+ * available) to a file in a human-readable format.
  *
- * The method identical to `Highs_writeSolution`, except that the printout is in
- * a human-readiable format.
+ * The method identical to `Highs_writeSolution`, except that the
+ * printout is in a human-readiable format.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param filename  the name of the file to write the results to
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -303,39 +303,39 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  * Pass a model to HiGHS in a single function call. This is faster than
  * constructing the model using `Highs_addRow` and `Highs_addCol`.
  *
- * @param highs     a pointer to the HiGHS model object
- * @param num_col    the number of columns
- * @param num_row    the number of rows
- * @param num_nz     the number of elements in the constraint matrix
- * @param q_num_nz  the number of elements in the Hessian matrix
- * @param a_format  the format of the constraint matrix to use in th form of a
- *                  `HighsMatrixFormat` enum
- * @param q_format  the format of the Hessian matrix to use in the form of a
- *                  `HighsHessianFormat` enum
- * @param sense     the optimization sense in the form of a `HighsObjSense` enum
- * @param offset    the constant term in the objective function
- * @param col_cost   array of length [num_col] with the objective coefficients
- * @param col_lower  array of length [num_col] with the lower column bounds
- * @param col_upper  array of length [num_col] with the upper column bounds
- * @param row_lower  array of length [num_row] with the upper row bounds
- * @param row_upper  array of length [num_row] with the upper row bounds
- * @param a_start    the constraint matrix is provided to HiGHS in compressed
- *                  sparse column form (if `a_format` is `kColwise`, otherwise
- *                  compressed sparse row form). The sparse matrix consists of
- *                  three arrays, `a_start`, `a_index`, and `a_value`. `a_start` is
- *                  an array of length [num_col] containing the starting index of
- *                  each column in `a_index`. If `a_format` is `kRowwise` the
- *                  array is of length [num_row] corresponding to each row.
- * @param a_index    array of length [num_nz] with indices of matrix entries
- * @param a_value    array of length [num_nz] with values of matrix entries
- * @param qstart    the Hessian matrix is provided in the same format as the
- *                  constraint matrix, using `qstart`, `qindex`, and `qvalue` in
- *                  the place of `a_start`, `a_index`, and `a_value`. If the model
- *                  is linear, pass NULL.
- * @param qindex    array of length [q_num_nz] with indices of matrix entries. If
- *                  the model is linear, pass NULL.
- * @param qvalue    array of length [q_num_nz] with values of matrix entries. If
- *                  the model is linear, pass NULL.
+ * @param highs       a pointer to the Highs instance
+ * @param num_col     the number of columns
+ * @param num_row     the number of rows
+ * @param num_nz      the number of elements in the constraint matrix
+ * @param q_num_nz    the number of elements in the Hessian matrix
+ * @param a_format    the format of the constraint matrix to use in th form of a
+ *                    `HighsMatrixFormat` enum
+ * @param q_format    the format of the Hessian matrix to use in the form of a
+ *                    `HighsHessianFormat` enum
+ * @param sense       the optimization sense in the form of a `HighsObjSense` enum
+ * @param offset      the constant term in the objective function
+ * @param col_cost    array of length [num_col] with the objective coefficients
+ * @param col_lower   array of length [num_col] with the lower column bounds
+ * @param col_upper   array of length [num_col] with the upper column bounds
+ * @param row_lower   array of length [num_row] with the upper row bounds
+ * @param row_upper   array of length [num_row] with the upper row bounds
+ * @param a_start     the constraint matrix is provided to HiGHS in compressed
+ *                    sparse column form (if `a_format` is `kColwise`, otherwise
+ *                    compressed sparse row form). The sparse matrix consists of
+ *                    three arrays, `a_start`, `a_index`, and `a_value`. `a_start` is
+ *                    an array of length [num_col] containing the starting index of
+ *                    each column in `a_index`. If `a_format` is `kRowwise` the
+ *                    array is of length [num_row] corresponding to each row.
+ * @param a_index     array of length [num_nz] with indices of matrix entries
+ * @param a_value     array of length [num_nz] with values of matrix entries
+ * @param q_start     the Hessian matrix is provided in the same format as the
+ *                    constraint matrix, using `q_start`, `q_index`, and `q_value` in
+ *                    the place of `a_start`, `a_index`, and `a_value`. If the model
+ *                    is linear, pass NULL.
+ * @param q_index     array of length [q_num_nz] with indices of matrix entries. If
+ *                    the model is linear, pass NULL.
+ * @param q_value     array of length [q_num_nz] with values of matrix entries. If
+ *                    the model is linear, pass NULL.
  * @param integrality an array of length [num_col] containing a `HighsVarType`
  *                    enum for each column
  *
@@ -347,17 +347,17 @@ HighsInt Highs_passModel(
     const HighsInt q_format, const HighsInt sense, const double offset,
     const double* col_cost, const double* col_lower, const double* col_upper,
     const double* row_lower, const double* row_upper, const HighsInt* a_start,
-    const HighsInt* a_index, const double* a_value, const HighsInt* qstart,
-    const HighsInt* qindex, const double* qvalue, const HighsInt* integrality);
+    const HighsInt* a_index, const double* a_value, const HighsInt* q_start,
+    const HighsInt* q_index, const double* q_value, const HighsInt* integrality);
 
 /**
  * Set the Hessian matrix for a quadratic objective.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param dim       the dimension of the Hessian matrix. Should be [num_col].
  * @param num_nz    the number of non-zero elements in the Hessian matrix
  * @param format    the format of the Hessian matrix as a `HighsHessianFormat`
- *                  enum. This must be `HighsHessianFormatkTriangular`.
+ *                  enum. This must be `kHighsHessianFormatTriangular`.
  * @param start     the Hessian matrix is provided to HiGHS as the upper
  *                  triangular component in compressed sparse column form. The
  *                  sparse matrix consists of three arrays, `start`, `index`,
@@ -376,7 +376,7 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
 /**
  * Set a boolean-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     the value of the option
  *
@@ -388,7 +388,7 @@ HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
 /**
  * Set an int-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     the value of the option
  *
@@ -400,7 +400,7 @@ HighsInt Highs_setIntOptionValue(void* highs, const char* option,
 /**
  * Set a double-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     the value of the option
  *
@@ -412,7 +412,7 @@ HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
 /**
  * Set a string-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     the value of the option
  *
@@ -424,7 +424,7 @@ HighsInt Highs_setStringOptionValue(void* highs, const char* option,
 /**
  * Get a boolean-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     storage for the value of the option
  *
@@ -436,7 +436,7 @@ HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
 /**
  * Get an int-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     storage for the value of the option
  *
@@ -448,7 +448,7 @@ HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
 /**
  * Get a double-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     storage for the value of the option
  *
@@ -460,7 +460,7 @@ HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
 /**
  * Get a string-valued option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param value     pointer to allocated memory to store the value of the option
  *
@@ -472,7 +472,7 @@ HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
 /**
  * Get the type expected by an option.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param option    the name of the option
  * @param type      int in which the corresponding `HighsOptionType` enum is
  *                  stored
@@ -485,7 +485,7 @@ HighsInt Highs_getOptionType(const void* highs, const char* option,
 /**
  * Reset all options to their default value.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -494,7 +494,7 @@ HighsInt Highs_resetOptions(void* highs);
 /**
  * Write the current options to file.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param filename  the filename to write the options to
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -504,10 +504,10 @@ HighsInt Highs_writeOptions(const void* highs, const char* filename);
 /**
  * Write the value of non-default options to file.
  *
- * This is similar to `Highs_writeOptions`, except only non-default options are
- * written to `filename`.
+ * This is similar to `Highs_writeOptions`, except only options with
+ * non-default value are written to `filename`.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param filename  the filename to write the options to
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -517,9 +517,9 @@ HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
 /**
  * Get an int-valued info value.
  *
- * @param highs a pointer to the HiGHS model object
- * @param info  the name of the info
- * @param value a reference to an integer that the result will be stored in
+ * @param highs     a pointer to the Highs instance
+ * @param info      the name of the info item
+ * @param value     a reference to an integer that the result will be stored in
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -529,9 +529,9 @@ HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
 /**
  * Get a double-valued info value.
  *
- * @param highs a pointer to the HiGHS model object
- * @param info  the name of the info
- * @param value a reference to an double that the result will be stored in
+ * @param highs     a pointer to the Highs instance
+ * @param info      the name of the info item
+ * @param value     a reference to an double that the result will be stored in
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -541,9 +541,9 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
 /**
  * Get an int64-valued info value.
  *
- * @param highs a pointer to the HiGHS model object
- * @param info  the name of the info
- * @param value a reference to a int64 that the result will be stored in
+ * @param highs     a pointer to the Highs instance
+ * @param info      the name of the info item
+ * @param value     a reference to a int64 that the result will be stored in
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -553,11 +553,11 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
 /**
  * Get the primal and dual solution from an optimized model.
  *
- * @param highs     a pointer to the HiGHS model object
- * @param col_value  array of length [num_col], filled with primal column values
- * @param col_dual   array of length [num_col], filled with dual column values
- * @param row_value  array of length [num_row], filled with primal row values
- * @param row_dual   array of length [num_row], filled with dual row values
+ * @param highs     a pointer to the Highs instance
+ * @param col_value array of length [num_col], filled with primal column values
+ * @param col_dual  array of length [num_col], filled with dual column values
+ * @param row_value array of length [num_row], filled with primal row values
+ * @param row_dual  array of length [num_row], filled with dual row values
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -568,22 +568,22 @@ HighsInt Highs_getSolution(const void* highs, double* col_value, double* col_dua
  * Given a linear program with a basic feasible solution, get the column and row
  * basis statuses.
  *
- * @param highs     a pointer to the HiGHS model object
- * @param colstatus array of length [num_col], to be filled with the column basis
+ * @param highs     a pointer to the Highs instance
+ * @param col_status array of length [num_col], to be filled with the column basis
  *                  statuses in the form of a `HighsBasisStatus` enum
- * @param rowstatus array of length [num_row], to be filled with the row basis
+ * @param row_status array of length [num_row], to be filled with the row basis
  *                  statuses in the form of a `HighsBasisStatus` enum
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
-HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
-                        HighsInt* rowstatus);
+HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
+                        HighsInt* row_status);
 
 /**
  * Return the optimization status of the model in the form of a
  * `HighsModel_Status` enum.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns an integer corresponding to the `HighsModel_Status` enum
  */
@@ -596,7 +596,7 @@ HighsInt Highs_getModelStatus(const void* highs);
  * Note that the status of the scaled model may not match the status of the
  * unscaled model as returned by `Highs_getModelStatus`.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns an integer corresponding to the `HighsModel_Status` enum
  */
@@ -605,7 +605,7 @@ HighsInt Highs_getScaledModel_Status(const void* highs);
 /**
  * Get an unbounded dual ray that is a certificate of primal infeasibility.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param has_dual_ray      a pointer to an int to store 1 if the dual ray
  *                          exists
  * @param dual_ray_value    an array of length [num_row] filled with the
@@ -619,7 +619,7 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
 /**
  * Get an unbounded primal ray that is a certificate of dual infeasibility.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param has_primal_ray    a pointer to an int to store 1 if the primal ray
  *                          exists
  * @param primal_ray_value  an array of length [num_col] filled with the
@@ -633,7 +633,7 @@ HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
 /**
  * Get the primal objective function value.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the primal objective function value
  */
@@ -655,7 +655,7 @@ double Highs_getObjectiveValue(const void* highs);
  *  - `Highs_getReducedRow`
  *  - `Highs_getReducedColumn`
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param basic_variables   array of size [num_rows], filled with the indices of
  *                          the basic variables
  *
@@ -672,7 +672,7 @@ HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
  * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
  * actually stored.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param row           index of the row to compute
  * @param row_vector    values of the non-zero elements
  * @param row_num_nz    the number of non-zeros in the row
@@ -693,7 +693,7 @@ HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
  * [num_row]. However, check `col_num_nz` to see how many non-zero elements are
  * actually stored.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param col           index of the column to compute
  * @param col_vector    values of the non-zero elements
  * @param col_num_nz    the number of non-zeros in the column
@@ -715,7 +715,7 @@ HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
  * length of [num_row]. However, check `solution_num_nz` to see how many
  * non-zero elements are actually stored.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param rhs               the right-hand side vector `b`
  * @param solution_vector   values of the non-zero elements
  * @param solution_num_nz   the number of non-zeros in the solution
@@ -737,7 +737,7 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  * length of [num_row]. However, check `solution_num_nz` to see how many
  * non-zero elements are actually stored.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param rhs               the right-hand side vector `b`
  * @param solution_vector   values of the non-zero elements
  * @param solution_num_nz   the number of non-zeros in the solution
@@ -759,7 +759,7 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
  * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
  * actually stored.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param row           index of the row to compute
  * @param row_vector    values of the non-zero elements
  * @param row_num_nz    the number of non-zeros in the row
@@ -780,7 +780,7 @@ HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
  * [num_row]. However, check `col_num_nz` to see how many non-zero elements are
  * actually stored.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param col           index of the column to compute
  * @param col_vector    values of the non-zero elements
  * @param col_num_nz    the number of non-zeros in the column
@@ -796,21 +796,21 @@ HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
  * Set a basic feasible solution by passing the column and row basis statuses to
  * the model.
  *
- * @param highs     a pointer to the HiGHS model object
- * @param colstatus an array of length [num_col] with the column basis status
- *                  in the form of `HighsBasisStatus` enums
- * @param rowstatus an array of length [num_row] with the row basis status
- *                  in the form of `HighsBasisStatus` enums
+ * @param highs      a pointer to the Highs instance
+ * @param col_status an array of length [num_col] with the column basis status
+ *                   in the form of `HighsBasisStatus` enums
+ * @param row_status an array of length [num_row] with the row basis status
+ *                   in the form of `HighsBasisStatus` enums
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
-HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
-                        const HighsInt* rowstatus);
+HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
+                        const HighsInt* row_status);
 
 /**
  * Set a logical basis in the model.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -819,7 +819,7 @@ HighsInt Highs_setLogicalBasis(void* highs);
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the cumulative wall-clock time spent in `Highs_run`
  */
@@ -828,7 +828,7 @@ double Highs_getRunTime(const void* highs);
 /**
  * Add a new row (a linear constraint) to the model.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param lower         lower bound of the row
  * @param upper         upper bound of the row
  * @param num_new_nz    number of non-zeros in the row
@@ -844,7 +844,7 @@ HighsInt Highs_addRow(void* highs, const double lower, const double upper,
 /**
  * Add multiple rows (linear constraints) to the model.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param num_new_row   the number of new rows to add
  * @param lower         array of size [num_new_row] with the lower bounds of the
  *                      rows
@@ -869,7 +869,7 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
 /**
  * Add a new column (variable) to the model.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param cost          objective coefficient of the column
  * @param lower         lower bound of the column
  * @param upper         upper bound of the column
@@ -886,7 +886,7 @@ HighsInt Highs_addCol(void* highs, const double cost, const double lower,
 /**
  * Add multiple columns (linear constraints) to the model.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param num_new_col   number of new columns to add
  * @param costs         array of size [num_new_col] with objective coefficients
  * @param lower         array of size [num_new_col] with lower bounds
@@ -911,7 +911,7 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
 /**
  * Change the objective sense of the model.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param sense the new optimization sense in the form of a `HighsObjSense` enum
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -921,7 +921,7 @@ HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense);
 /**
  * Change the objective offset of the model.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param offset    the new objective offset
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -931,7 +931,7 @@ HighsInt Highs_changeObjectiveOffset(void* highs, const double offset);
 /**
  * Change the integrality of a column.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param col           the column index to change
  * @param integrality   the new integrality of the column in the form of a
  *                      `HighsVarType` enum
@@ -944,7 +944,7 @@ HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
 /**
  * Change the integrality of multiple adjacent columns.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param from_col      the index of the first column whose integrality changes
  * @param to_col        the index of the last column whose integrality
  *                      changes
@@ -962,7 +962,7 @@ HighsInt Highs_changeColsIntegralityByRange(void* highs,
 /**
  * Change the integrality of multiple columns given by an array of indices.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param num_set_entries   the number of columns to change
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the columns to change
@@ -980,7 +980,7 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
 /**
  * Change the integrality of multiple columns given by a mask.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param mask          an array of length [num_col] with 1 if the column
  *                      integrality should be changed and 0 otherwise
  * @param integrality   an array of length [num_col] with the new
@@ -995,7 +995,7 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
 /**
  * Change the objective coefficient of a column.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param col   the index of the column fo change
  * @param cost  the new objective coefficient
  *
@@ -1007,7 +1007,7 @@ HighsInt Highs_changeColCost(void* highs, const HighsInt col,
 /**
  * Change the cost coefficients of multiple adjacent columns.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param from_col  the index of the first column whose cost changes
  * @param to_col    the index of the last column whose cost changes
  * @param cost      an array of length [to_col - from_col + 1] with the new
@@ -1021,7 +1021,7 @@ HighsInt Highs_changeColsCostByRange(void* highs, const HighsInt from_col,
 /**
  * Change the cost of multiple columns given by an array of indices.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param num_set_entries   the number of columns to change
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the columns to change
@@ -1036,7 +1036,7 @@ HighsInt Highs_changeColsCostBySet(void* highs, const HighsInt num_set_entries,
 /**
  * Change the cost of multiple columns given by a mask.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param mask  an array of length [num_col] with 1 if the column
  *              cost should be changed and 0 otherwise
  * @param cost  an array of length [num_col] with the new costs
@@ -1049,7 +1049,7 @@ HighsInt Highs_changeColsCostByMask(void* highs, const HighsInt* mask,
 /**
  * Change the variable bounds of a column.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param col   the index of the column whose bounds are to change
  * @param lower the new lower bound
  * @param upper the new upper bound
@@ -1062,7 +1062,7 @@ HighsInt Highs_changeColBounds(void* highs, const HighsInt col,
 /**
  * Change the variable bounds of multiple adjacent columns.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param from_col  the index of the first column whose bound changes
  * @param to_col    the index of the last column whose bound changes
  * @param lower     an array of length [to_col - from_col + 1] with the new
@@ -1080,7 +1080,7 @@ HighsInt Highs_changeColsBoundsByRange(void* highs, const HighsInt from_col,
 /**
  * Change the bounds of multiple columns given by an array of indices.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param num_set_entries   the number of columns to change
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the columns to change
@@ -1099,7 +1099,7 @@ HighsInt Highs_changeColsBoundsBySet(void* highs,
 /**
  * Change the variable bounds of multiple columns given by a mask.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param mask  an array of length [num_col] with 1 if the column
  *              bounds should be changed and 0 otherwise
  * @param lower an array of length [num_col] with the new lower bounds
@@ -1113,7 +1113,7 @@ HighsInt Highs_changeColsBoundsByMask(void* highs, const HighsInt* mask,
 /**
  * Change the bounds of a row.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param row   the index of the row whose bounds are to change
  * @param lower the new lower bound
  * @param upper the new upper bound
@@ -1126,7 +1126,7 @@ HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
 /**
  * Change the bounds of multiple rows given by an array of indices.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param num_set_entries   the number of rows to change
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the rows to change
@@ -1145,7 +1145,7 @@ HighsInt Highs_changeRowsBoundsBySet(void* highs,
 /**
  * Change the bounds of multiple rows given by a mask.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param mask  an array of length [num_row] with 1 if the row
  *              bounds should be changed and 0 otherwise
  * @param lower an array of length [num_row] with the new lower bounds
@@ -1159,7 +1159,7 @@ HighsInt Highs_changeRowsBoundsByMask(void* highs, const HighsInt* mask,
 /**
  * Change a coefficient in the constraint matrix.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param row the index of the row to change
  * @param col the index of the col to change
  * @param value the new constraint coefficient
@@ -1172,7 +1172,7 @@ HighsInt Highs_changeCoeff(void* highs, const HighsInt row, const HighsInt col,
 /**
  * Get the objective sense.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param sense stores the current objective sense as a `HighsObjSense` enum
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -1182,7 +1182,7 @@ HighsInt Highs_getObjectiveSense(const void* highs, HighsInt* sense);
 /**
  * Get the objective offset.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param offset stores the current objective offset
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
@@ -1201,7 +1201,7 @@ HighsInt Highs_getObjectiveOffset(const void* highs, double* offset);
  *    `num_nz` and call this function again to populate the new arrays with
  *    their contents.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param from_col      the first column for which to query data for
  * @param to_col        the last column (inclusive) for which to query data for
  * @param num_col       an integer populated with the number of columns got from
@@ -1277,7 +1277,7 @@ HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
  *    `num_nz` and call this function again to populate the new arrays with
  *    their contents.
  *
- * @param highs         a pointer to the HiGHS model object
+ * @param highs         a pointer to the Highs instance
  * @param from_row      the first row for which to query data for
  * @param to_row        the last row (inclusive) for which to query data for
  * @param num_row       an integer populated with the number of row got from the
@@ -1340,7 +1340,7 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
 /**
  * Delete multiple adjacent columns.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param from_col  the index of the first column to delete
  * @param to_col    the index of the last column to delete
  *
@@ -1352,7 +1352,7 @@ HighsInt Highs_deleteColsByRange(void* highs, const HighsInt from_col,
 /**
  * Delete multiple columns given by an array of indices.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param num_set_entries   the number of columns to delete
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the columns to delete
@@ -1365,7 +1365,7 @@ HighsInt Highs_deleteColsBySet(void* highs, const HighsInt num_set_entries,
 /**
  * Delete multiple columns given by a mask.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param mask  an array of length [num_col] with 1 if the column
  *              should be deleted and 0 otherwise
  *
@@ -1376,7 +1376,7 @@ HighsInt Highs_deleteColsByMask(void* highs, HighsInt* mask);
 /**
  * Delete multiple adjacent rows.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param from_row  the index of the first row to delete
  * @param to_row    the index of the last row to delete
  *
@@ -1388,7 +1388,7 @@ HighsInt Highs_deleteRowsByRange(void* highs, const int from_row,
 /**
  * Delete multiple rows given by an array of indices.
  *
- * @param highs             a pointer to the HiGHS model object
+ * @param highs             a pointer to the Highs instance
  * @param num_set_entries   the number of rows to delete
  * @param set               an array of size [num_set_entries] with the indices
  *                          of the rows to delete
@@ -1401,7 +1401,7 @@ HighsInt Highs_deleteRowsBySet(void* highs, const HighsInt num_set_entries,
 /**
  * Delete multiple rows given by a mask.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param mask  an array of length [num_row] with 1 if the row should be deleted
  *              and 0 otherwise
  *
@@ -1417,7 +1417,7 @@ HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask);
  *
  * If scaleval < 0, the variable bounds flipped.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param col       the index of the column to scale
  * @param scaleval  the value by which to scale the column
  *
@@ -1430,7 +1430,7 @@ HighsInt Highs_scaleCol(void* highs, const HighsInt col, const double scaleval);
  *
  * If scaleval < 0, the row bounds are flipped.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param row       the index of the row to scale
  * @param scaleval  the value by which to scale the row
  *
@@ -1441,7 +1441,7 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row, const double scaleval);
 /**
  * Return the value of infinity used by HiGHS.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the value of infinity used by HiGHS
  */
@@ -1450,7 +1450,7 @@ double Highs_getInfinity(const void* highs);
 /**
  * Return the number of columns in the model.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the number of columns in the model
  */
@@ -1459,7 +1459,7 @@ HighsInt Highs_getNumCol(const void* highs);
 /**
  * Return the number of rows in the model.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the number of rows in the model.
  */
@@ -1468,7 +1468,7 @@ HighsInt Highs_getNumRow(const void* highs);
 /**
  * Return the number of nonzeros in the constraint matrix of the model.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the number of nonzeros in the constraint matrix of the model.
  */
@@ -1477,7 +1477,7 @@ HighsInt Highs_getNumNz(const void* highs);
 /**
  * Return the number of nonzeroes in the Hessian matrix of the model.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns the number of nonzeroes in the Hessian matrix of the model.
  */
@@ -1506,7 +1506,7 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         double* offset, double* col_cost, double* col_lower,
                         double* col_upper, double* row_lower, double* row_upper,
                         HighsInt* a_start, HighsInt* a_index, double* a_value,
-                        HighsInt* qstart, HighsInt* qindex, double* qvalue,
+                        HighsInt* q_start, HighsInt* q_index, double* q_value,
                         HighsInt* integrality);
 
 // Fails on Windows and MacOS since string_model_status is destroyed
@@ -1539,7 +1539,7 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
  * Given a model solved with an interior point method, run crossover to compute
  * a basic feasible solution.
  *
- * @param highs a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  *
  * @returns a `HighsStatus` enum indicating if the call succeeded
  */
@@ -1549,7 +1549,7 @@ HighsInt Highs_crossover(void* highs);
  * Set a primal-dual solution as a starting point, then run crossover to compute
  * a basic feasible solution.
  *
- * @param highs     a pointer to the HiGHS model object
+ * @param highs     a pointer to the Highs instance
  * @param n         the number of variables
  * @param m         the number of rows
  * @param col_value array of length [m] with optimal primal solution for each

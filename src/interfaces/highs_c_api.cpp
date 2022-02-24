@@ -117,8 +117,8 @@ HighsInt Highs_qpCall(
     const HighsInt sense, const double offset, const double* col_cost,
     const double* col_lower, const double* col_upper, const double* row_lower,
     const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
-    const double* a_value, const HighsInt* qstart, const HighsInt* qindex,
-    const double* qvalue, double* col_value, double* col_dual, double* row_value,
+    const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
+    const double* q_value, double* col_value, double* col_dual, double* row_value,
     double* row_dual, HighsInt* col_basis_status, HighsInt* row_basis_status,
     HighsInt* model_status) {
   Highs highs;
@@ -126,7 +126,7 @@ HighsInt Highs_qpCall(
   HighsStatus status =
       highs.passModel(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense,
                       offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-                      a_start, a_index, a_value, qstart, qindex, qvalue);
+                      a_start, a_index, a_value, q_start, q_index, q_value);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
   status = highs.run();
@@ -225,12 +225,12 @@ HighsInt Highs_passModel(
     const HighsInt q_format, const HighsInt sense, const double offset,
     const double* col_cost, const double* col_lower, const double* col_upper,
     const double* row_lower, const double* row_upper, const HighsInt* a_start,
-    const HighsInt* a_index, const double* a_value, const HighsInt* qstart,
-    const HighsInt* qindex, const double* qvalue, const HighsInt* integrality) {
+    const HighsInt* a_index, const double* a_value, const HighsInt* q_start,
+    const HighsInt* q_index, const double* q_value, const HighsInt* integrality) {
   return (HighsInt)((Highs*)highs)
       ->passModel(num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense,
                   offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-                  a_start, a_index, a_value, qstart, qindex, qvalue, integrality);
+                  a_start, a_index, a_value, q_start, q_index, q_value, integrality);
 }
 
 HighsInt Highs_passHessian(void* highs, const HighsInt dim,
@@ -362,15 +362,15 @@ HighsInt Highs_getSolution(const void* highs, double* col_value, double* col_dua
   return kHighsStatusOk;
 }
 
-HighsInt Highs_getBasis(const void* highs, HighsInt* colstatus,
-                        HighsInt* rowstatus) {
+HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
+                        HighsInt* row_status) {
   HighsBasis basis = ((Highs*)highs)->getBasis();
   for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
-    colstatus[i] = (HighsInt)basis.col_status[i];
+    col_status[i] = (HighsInt)basis.col_status[i];
   }
 
   for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); i++) {
-    rowstatus[i] = (HighsInt)basis.row_status[i];
+    row_status[i] = (HighsInt)basis.row_status[i];
   }
   return kHighsStatusOk;
 }
@@ -452,22 +452,22 @@ HighsInt Highs_getReducedColumn(const void* highs, const HighsInt col,
       ->getReducedColumn(col, col_vector, col_num_nz, col_indices);
 }
 
-HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
-                        const HighsInt* rowstatus) {
+HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
+                        const HighsInt* row_status) {
   HighsBasis basis;
   const HighsInt num__col = Highs_getNumCol(highs);
   if (num__col > 0) {
     basis.col_status.resize(num__col);
     for (HighsInt i = 0; i < num__col; i++) {
-      if (colstatus[i] == (HighsInt)HighsBasisStatus::kLower) {
+      if (col_status[i] == (HighsInt)HighsBasisStatus::kLower) {
         basis.col_status[i] = HighsBasisStatus::kLower;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kBasic) {
+      } else if (col_status[i] == (HighsInt)HighsBasisStatus::kBasic) {
         basis.col_status[i] = HighsBasisStatus::kBasic;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kUpper) {
+      } else if (col_status[i] == (HighsInt)HighsBasisStatus::kUpper) {
         basis.col_status[i] = HighsBasisStatus::kUpper;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kZero) {
+      } else if (col_status[i] == (HighsInt)HighsBasisStatus::kZero) {
         basis.col_status[i] = HighsBasisStatus::kZero;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
+      } else if (col_status[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
         basis.col_status[i] = HighsBasisStatus::kNonbasic;
       } else {
         return (HighsInt)HighsStatus::kError;
@@ -478,15 +478,15 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
   if (num__row > 0) {
     basis.row_status.resize(num__row);
     for (HighsInt i = 0; i < num__row; i++) {
-      if (rowstatus[i] == (HighsInt)HighsBasisStatus::kLower) {
+      if (row_status[i] == (HighsInt)HighsBasisStatus::kLower) {
         basis.row_status[i] = HighsBasisStatus::kLower;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kBasic) {
+      } else if (row_status[i] == (HighsInt)HighsBasisStatus::kBasic) {
         basis.row_status[i] = HighsBasisStatus::kBasic;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kUpper) {
+      } else if (row_status[i] == (HighsInt)HighsBasisStatus::kUpper) {
         basis.row_status[i] = HighsBasisStatus::kUpper;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kZero) {
+      } else if (row_status[i] == (HighsInt)HighsBasisStatus::kZero) {
         basis.row_status[i] = HighsBasisStatus::kZero;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
+      } else if (row_status[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
         basis.row_status[i] = HighsBasisStatus::kNonbasic;
       } else {
         return (HighsInt)HighsStatus::kError;
@@ -831,8 +831,8 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         HighsInt* sense, double* offset, double* col_cost,
                         double* col_lower, double* col_upper, double* row_lower,
                         double* row_upper, HighsInt* a_start, HighsInt* a_index,
-                        double* a_value, HighsInt* qstart, HighsInt* qindex,
-                        double* qvalue, HighsInt* integrality) {
+                        double* a_value, HighsInt* q_start, HighsInt* q_index,
+                        double* q_value, HighsInt* integrality) {
   const HighsModel& model = ((Highs*)highs)->getModel();
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
@@ -875,9 +875,9 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   }
   if (hessian.dim_ > 0) {
     *q_num_nz = hessian.start_[*num_col];
-    memcpy(qstart, &hessian.start_[0], *num_col * sizeof(HighsInt));
-    memcpy(qindex, &hessian.index_[0], *q_num_nz * sizeof(HighsInt));
-    memcpy(qvalue, &hessian.value_[0], *q_num_nz * sizeof(double));
+    memcpy(q_start, &hessian.start_[0], *num_col * sizeof(HighsInt));
+    memcpy(q_index, &hessian.index_[0], *q_num_nz * sizeof(HighsInt));
+    memcpy(q_value, &hessian.value_[0], *q_num_nz * sizeof(double));
   }
   if ((HighsInt)lp.integrality_.size()) {
     for (int iCol = 0; iCol < *num_col; iCol++)
