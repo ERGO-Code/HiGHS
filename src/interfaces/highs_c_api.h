@@ -1559,9 +1559,9 @@ HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
 // * Deprecated methods*
 // *********************
 
- const HighsInt HighsStatuskError = kHighsStatusError;
- const HighsInt HighsStatuskOk = kHighsStatusOk;
- const HighsInt HighsStatuskWarning = kHighsStatusWarning;
+const HighsInt HighsStatuskError = kHighsStatusError;
+const HighsInt HighsStatuskOk = kHighsStatusOk;
+const HighsInt HighsStatuskWarning = kHighsStatusWarning;
 
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,
@@ -1633,7 +1633,6 @@ HighsInt Highs_setOptionValue(void* highs, const char* option,
                               const char* value);
 
 HighsInt Highs_getScaledModelStatus(const void* highs);
-
 
 #ifdef __cplusplus
 }
