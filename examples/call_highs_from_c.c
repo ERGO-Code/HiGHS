@@ -62,9 +62,6 @@ void minimal_api() {
   // bound on x_1, it serves to illustrate a non-trivial packed
   // column-wise matrix.
   //
-  const int kHighsObjSenseMinimize = 1;
-  const int kHighsObjSenseMaximize = -1;
-
   const int num_col = 2;
   const int num_row = 3;
   const int num_nz = 5;

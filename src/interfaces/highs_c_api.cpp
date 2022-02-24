@@ -387,10 +387,6 @@ HighsInt Highs_getModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus();
 }
 
-HighsInt Highs_getScaledModel_Status(const void* highs) {
-  return (HighsInt)((Highs*)highs)->getModelStatus(true);
-}
-
 HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
                           double* dual_ray_value) {
   bool v;
@@ -1102,4 +1098,8 @@ double Highs_getHighsInfinity(const void* highs) {
   ((Highs*)highs)
       ->deprecationMessage("Highs_getHighsInfinity", "Highs_getInfinity");
   return Highs_getInfinity(highs);
+}
+
+HighsInt Highs_getScaledModelStatus(const void* highs) {
+  return (HighsInt)((Highs*)highs)->getModelStatus(true);
 }

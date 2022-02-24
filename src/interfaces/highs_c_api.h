@@ -107,8 +107,9 @@ extern "C" {
  *                  compressed sparse row form). The sparse matrix consists of
  *                  three arrays, `a_start`, `a_index`, and `a_value`. `a_start`
  *                  is an array of length [num_col] containing the starting
- * index of each column in `a_index`. If `a_format` is `kRowwise` the array is
- * of length [num_row] corresponding to each row.
+ *                  index of each column in `a_index`. If `a_format` is
+ *                  `kRowwise` the array is of length [num_row] corresponding
+ *                  to each row.
  * @param a_index   array of length [num_nz] with indices of matrix entries
  * @param a_value   array of length [num_nz] with values of matrix entries
  *
@@ -122,12 +123,12 @@ extern "C" {
  *                       solution
  * @param col_basis_status  array of length [num_col], filled with the basis
  *                          status of the columns in the form of a
- * `HighsBasisStatus` enum
+ *                          `HighsBasisStatus` enum
  * @param row_basis_status  array of length [num_row], filled with the basis
  *                          status of the rows in the form of a
- * `HighsBasisStatus` enum
+ *                          `HighsBasisStatus` enum
  * @param model_status      termination status of the model after the solve in
- * the form of a `HighsModel_Status` enum
+ *                          the form of a `HighsModelStatus` enum
  *
  * @returns a `HighsStatus` enum indicating whether the call succeeded
  */
@@ -606,26 +607,13 @@ HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
 
 /**
  * Return the optimization status of the model in the form of a
- * `HighsModel_Status` enum.
+ * `HighsModelStatus` enum.
  *
  * @param highs     a pointer to the Highs instance
  *
- * @returns an integer corresponding to the `HighsModel_Status` enum
+ * @returns an integer corresponding to the `HighsModelStatus` enum
  */
 HighsInt Highs_getModelStatus(const void* highs);
-
-/**
- * Return the optimization status of the scaled model in the form of a
- * `HighsModel_Status` enum.
- *
- * Note that the status of the scaled model may not match the status of the
- * unscaled model as returned by `Highs_getModelStatus`.
- *
- * @param highs     a pointer to the Highs instance
- *
- * @returns an integer corresponding to the `HighsModel_Status` enum
- */
-HighsInt Highs_getScaledModel_Status(const void* highs);
 
 /**
  * Get an unbounded dual ray that is a certificate of primal infeasibility.
@@ -1571,6 +1559,10 @@ HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
 // * Deprecated methods*
 // *********************
 
+ const HighsInt HighsStatuskError = kHighsStatusError;
+ const HighsInt HighsStatuskOk = kHighsStatusOk;
+ const HighsInt HighsStatuskWarning = kHighsStatusWarning;
+
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,
                     const double* col_lower, const double* col_upper,
@@ -1639,6 +1631,9 @@ double Highs_getHighsRunTime(const void* highs);
 
 HighsInt Highs_setOptionValue(void* highs, const char* option,
                               const char* value);
+
+HighsInt Highs_getScaledModelStatus(const void* highs);
+
 
 #ifdef __cplusplus
 }
