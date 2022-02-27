@@ -141,6 +141,16 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
+    // lpassert in extern/filereaderlp/def.hpp throws
+    // std::invalid_argument whatever the error. Hence, unless
+    // something is done specially - here or elsewhere -
+    // FilereaderRetcode::kParserError will be returned.
+    //
+    // This is misleading when the file isn't found, as it's not a
+    // parser error
+    FILE* file = fopen(filename.c_str(), "r");
+    if (file == nullptr) return FilereaderRetcode::kFileNotFound;
+    fclose(file);
     return FilereaderRetcode::kParserError;
   }
   lp.ensureColwise();

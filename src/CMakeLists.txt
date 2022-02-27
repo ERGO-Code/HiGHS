@@ -125,6 +125,7 @@ set(sources
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsObjectiveFunction.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
@@ -224,6 +225,7 @@ set(headers
     mip/HighsMipSolver.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsObjectiveFunction.h
     mip/HighsPathSeparator.h
     mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h
@@ -570,6 +572,7 @@ target_sources(libhighs PRIVATE
     mip/HighsPrimalHeuristics.cpp
     mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsObjectiveFunction.cpp
     mip/HighsRedcostFixing.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
@@ -684,6 +687,7 @@ set(headers_fast_build_
     mip/HighsMipSolver.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsObjectiveFunction.h
     mip/HighsPathSeparator.h
     mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h

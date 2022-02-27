@@ -799,8 +799,9 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
     auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
     double tmpTreeWeight = nodequeue.emplaceNode(
         std::move(domchgStack), std::move(branchPositions),
-        nodestack.back().lower_bound, nodestack.back().estimate,
-        getCurrentDepth());
+        std::max(nodestack.back().lower_bound,
+                 localdom.getObjectiveLowerBound()),
+        nodestack.back().estimate, getCurrentDepth());
     if (countTreeWeight) treeweight += tmpTreeWeight;
   } else {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
@@ -837,8 +838,9 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
       double tmpTreeWeight = nodequeue.emplaceNode(
           std::move(domchgStack), std::move(branchPositions),
-          nodestack.back().lower_bound, nodestack.back().estimate,
-          getCurrentDepth());
+          std::max(nodestack.back().lower_bound,
+                   localdom.getObjectiveLowerBound()),
+          nodestack.back().estimate, getCurrentDepth());
       if (countTreeWeight) treeweight += tmpTreeWeight;
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
@@ -996,6 +998,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     int64_t oldnumiters = lp->getNumLpIterations();
     HighsLpRelaxation::Status status = lp->resolveLp(&localdom);
     lpiterations += lp->getNumLpIterations() - oldnumiters;
+
+    currnode.lower_bound =
+        std::max(localdom.getObjectiveLowerBound(), currnode.lower_bound);
 
     if (localdom.infeasible()) {
       result = NodeResult::kDomainInfeasible;
@@ -1699,6 +1704,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       continue;
     }
 
+    nodelb = std::max(nodelb, localdom.getObjectiveLowerBound());
     bool nodeToQueue = nodelb > mipsolver.mipdata_->optimality_limit;
     // we check if switching to the other branch of an anchestor yields a higher
     // additive branch score than staying in this node and if so we postpone the

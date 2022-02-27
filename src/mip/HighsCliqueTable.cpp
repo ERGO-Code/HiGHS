@@ -31,6 +31,7 @@ namespace highs {
 template <>
 struct RbTreeTraits<HighsCliqueTable::CliqueSet> {
   using KeyType = HighsInt;
+  using LinkType = HighsInt;
 };
 
 }  // namespace highs
@@ -47,10 +48,10 @@ class HighsCliqueTable::CliqueSet : public highs::CacheMinRbTree<CliqueSet> {
                     : clqtable->cliquesetTree[v.index()].first),
         clqtable(clqtable) {}
 
-  highs::RbTreeLinks& getRbTreeLinks(HighsInt node) {
+  highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) {
     return clqtable->cliquesets[node].links;
   }
-  const highs::RbTreeLinks& getRbTreeLinks(HighsInt node) const {
+  const highs::RbTreeLinks<HighsInt>& getRbTreeLinks(HighsInt node) const {
     return clqtable->cliquesets[node].links;
   }
   HighsInt getKey(HighsInt node) const {
@@ -1059,19 +1060,57 @@ void HighsCliqueTable::cliquePartition(std::vector<CliqueVar>& clqVars,
   HighsInt numClqVars = clqVars.size();
   partitionStart.clear();
   partitionStart.reserve(clqVars.size());
-  std::vector<CliqueVar>::iterator extensionEnd = clqVars.end();
+  HighsInt extensionEnd = numClqVars;
   partitionStart.push_back(0);
   for (HighsInt i = 0; i < numClqVars; ++i) {
-    if (clqVars.begin() + i == extensionEnd) {
+    if (i == extensionEnd) {
       partitionStart.push_back(i);
-      extensionEnd = clqVars.end();
+      extensionEnd = numClqVars;
     }
     CliqueVar v = clqVars[i];
-    auto extensionStart = clqVars.begin() + i + 1;
-    extensionEnd =
-        std::partition(clqVars.begin() + i + 1, extensionEnd,
-                       [&](CliqueVar z) { return haveCommonClique(v, z); });
+    HighsInt extensionStart = i + 1;
+    extensionEnd = partitionNeighborhood(v, clqVars.data() + extensionStart,
+                                         extensionEnd - extensionStart) +
+                   extensionStart;
   }
+
+  partitionStart.push_back(numClqVars);
+}
+
+void HighsCliqueTable::cliquePartition(const std::vector<double>& objective,
+                                       std::vector<CliqueVar>& clqVars,
+                                       std::vector<HighsInt>& partitionStart) {
+  randgen.shuffle(clqVars.data(), clqVars.size());
+
+  pdqsort_branchless(clqVars.begin(), clqVars.end(),
+                     [&](CliqueVar v1, CliqueVar v2) {
+                       return (2 * v1.val - 1) * objective[v1.col] >
+                              (2 * v2.val - 1) * objective[v2.col];
+                     });
+
+  HighsInt numClqVars = clqVars.size();
+  partitionStart.clear();
+  partitionStart.reserve(clqVars.size());
+  HighsInt extensionEnd = numClqVars;
+  partitionStart.push_back(0);
+  for (HighsInt i = 0; i < numClqVars; ++i) {
+    if (i == extensionEnd) {
+      partitionStart.push_back(i);
+      extensionEnd = numClqVars;
+      pdqsort_branchless(clqVars.begin() + i, clqVars.end(),
+                         [&](CliqueVar v1, CliqueVar v2) {
+                           return (2 * v1.val - 1) * objective[v1.col] >
+                                  (2 * v2.val - 1) * objective[v2.col];
+                         });
+    }
+    CliqueVar v = clqVars[i];
+    HighsInt extensionStart = i + 1;
+    extensionEnd = partitionNeighborhood(v, clqVars.data() + extensionStart,
+                                         extensionEnd - extensionStart) +
+                   extensionStart;
+  }
+
+  partitionStart.push_back(numClqVars);
 }
 
 bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
