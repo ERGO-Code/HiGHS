@@ -2480,11 +2480,8 @@ HighsStatus Highs::callSolveQp() {
 
   runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
-  runtime.settings.ratiotest =
-      new RatiotestTwopass(instance, 1E-9, 1E-8);
   Quass qpsolver(runtime);
   qpsolver.solve();
-  delete runtime.settings.ratiotest;
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;

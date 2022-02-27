@@ -263,13 +263,13 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
-      if (!zero_curvature_direction)
+      if (!zero_curvature_direction) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
         if (status != QpSolverStatus::OK) {
           runtime.status = ProblemStatus::INDETERMINED;
           return;
         }
-      // }
+      }
       redgrad.expand(buffer_yp);
     } else {
       computesearchdirection_minor(runtime, basis, factor, redgrad, p);
@@ -281,10 +281,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         maxsteplength == 0.0) {
       atfsep = true;
     } else {
-      RatiotestResult stepres = runtime.settings.ratiotest->ratiotest(
-          runtime.primal, p, runtime.rowactivity, rowmove, runtime.instance,
-          maxsteplength);
-      // printf("%u, alpha= %lf\n", stepres.limitingconstraint,stepres.alpha);
+      RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);
       if (stepres.limitingconstraint != -1) {
         HighsInt constrainttodrop;
         HighsInt maxabsd;

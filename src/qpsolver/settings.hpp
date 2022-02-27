@@ -1,13 +1,18 @@
 #ifndef __SRC_LIB_SETTINGS_HPP__
 #define __SRC_LIB_SETTINGS_HPP__
 
-#include "ratiotest.hpp"
+enum class RatiotestStrategy {
+  TwoPass,
+  Textbook
+};
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
 struct Settings {
   bool simplexsteps = false;
-  Ratiotest* ratiotest;
+  RatiotestStrategy ratiotest = RatiotestStrategy::Textbook;
+  double ratiotest_t = 1E-9;
+  double ratiotest_d = 1E-8;
   double pnorm_zero_threshold = 10E-12;
   double d_zero_threshold = 10E-13;
   double lambda_zero_threshold = 10E-10;
