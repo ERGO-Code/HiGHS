@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "quass.hpp"
 
 #include <algorithm>
 #include <map>
@@ -19,7 +19,7 @@
 #include "snippets.hpp"
 #include "steepestedgepricing.hpp"
 
-void Solver::solve() {
+void Quass::solve() {
   CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
   computestartingpoint(runtime, crash);
   if (runtime.status == ProblemStatus::INFEASIBLE) {
@@ -35,9 +35,9 @@ void Solver::solve() {
   );
 }
 
-Solver::Solver(Runtime& rt) : runtime(rt) {}
+Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-void Solver::loginformation(Runtime& rt, Basis& basis,
+void Quass::loginformation(Runtime& rt, Basis& basis,
                             CholeskyFactor& factor) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
@@ -182,7 +182,7 @@ QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
   // return NullspaceReductionResult(idx != -1);
 }
 
-void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
+void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;

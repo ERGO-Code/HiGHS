@@ -1,5 +1,5 @@
-#ifndef __SRC_LIB_SOLVER_HPP__
-#define __SRC_LIB_SOLVER_HPP__
+#ifndef __SRC_LIB_QUASS_HPP__
+#define __SRC_LIB_QUASS_HPP__
 
 #include "basis.hpp"
 #include "eventhandler.hpp"
@@ -7,8 +7,8 @@
 #include "instance.hpp"
 #include "runtime.hpp"
 
-struct Solver {
-  Solver(Runtime& rt);
+struct Quass {
+  Quass(Runtime& rt);
 
   void solve(const Vector& x0, const Vector& ra, Basis& b0);
 
