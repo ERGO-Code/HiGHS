@@ -6,16 +6,25 @@ enum class RatiotestStrategy {
   Textbook
 };
 
+
+enum class PricingStrategy {
+  DantzigWolfe,
+  Devex
+};
+
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
 struct Settings {
-  bool simplexsteps = false;
-  RatiotestStrategy ratiotest = RatiotestStrategy::Textbook;
+  RatiotestStrategy ratiotest = RatiotestStrategy::TwoPass;
   double ratiotest_t = 1E-9;
   double ratiotest_d = 1E-8;
+
+  PricingStrategy pricing = PricingStrategy::Devex;
+
   double pnorm_zero_threshold = 10E-12;
   double d_zero_threshold = 10E-13;
   double lambda_zero_threshold = 10E-10;
+
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 100;
 
@@ -31,8 +40,6 @@ struct Settings {
 
   bool rowscaling = true;
   bool varscaling = true;
-
-  // TODO output settings
 };
 
 #endif

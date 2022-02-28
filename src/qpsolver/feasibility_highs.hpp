@@ -53,9 +53,9 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
     }
   }
 
-  highs.setOptionValue("output_flag", true);
-  highs.setOptionValue("log_dev_level", 2);
-  highs.setOptionValue("highs_analysis_level", 4);
+  //highs.setOptionValue("output_flag", true);
+  //highs.setOptionValue("log_dev_level", 2);
+  //highs.setOptionValue("highs_analysis_level", 4);
   const HighsBasis& internal_basis = highs.getBasis();
   const HighsInfo& info = highs.getInfo();
   HighsInt simplex_iteration_count0 = std::max(0, info.simplex_iteration_count);

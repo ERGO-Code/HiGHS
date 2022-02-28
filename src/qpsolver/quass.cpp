@@ -182,6 +182,16 @@ QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
   // return NullspaceReductionResult(idx != -1);
 }
 
+std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis, ReducedCosts& redcosts) {
+  switch (runtime.settings.pricing) {
+    case PricingStrategy::Devex:
+      return std::unique_ptr<Pricing>(new DevexPricing(runtime, basis, redcosts));
+    case PricingStrategy::DantzigWolfe:
+      return std::unique_ptr<Pricing>(new DantzigPricing(runtime, basis, redcosts));
+  }
+  return nullptr;
+}
+
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
@@ -196,8 +206,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   ReducedGradient redgrad(runtime, basis, gradient);
   CholeskyFactor factor(runtime, basis);
   runtime.instance.A.mat_vec(runtime.primal, runtime.rowactivity);
-  std::unique_ptr<Pricing> pricing =
-      std::unique_ptr<Pricing>(new DevexPricing(runtime, basis, redcosts));
+  std::unique_ptr<Pricing> pricing = getPricing(runtime, basis, redcosts);
 
   Vector p(runtime.instance.num_var);
   Vector rowmove(runtime.instance.num_con);
