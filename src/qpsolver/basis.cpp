@@ -105,7 +105,7 @@ void Basis::deactivate(HighsInt conid) {
 }
 
 QpSolverStatus Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                     HighsInt nonactivetoremove, Pricing* pricing) {
+                               HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(activeconstraintidx, (HighsInt)conid)) {
     basisstatus[conid] = atlower;

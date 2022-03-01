@@ -31,19 +31,21 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   highs.passModel(lp);
 
   HighsBasis basis;
-  basis.alien = true; // Set true when basis is instantiated
+  basis.alien = true;  // Set true when basis is instantiated
   HighsInt num_basic_col = 0;
   HighsInt num_nonbasic_col = 0;
   HighsInt num_basic_row = 0;
   HighsInt num_nonbasic_row = 0;
-  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
     basis.row_status.push_back(HighsBasisStatus::kNonbasic);
     num_nonbasic_row++;
-  } 
+  }
 
-  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
     // make free variables basic
-    if (runtime.instance.var_lo[i] == -std::numeric_limits<double>::infinity() && runtime.instance.var_up[i] == std::numeric_limits<double>::infinity()) {
+    if (runtime.instance.var_lo[i] ==
+            -std::numeric_limits<double>::infinity() &&
+        runtime.instance.var_up[i] == std::numeric_limits<double>::infinity()) {
       // free variable
       basis.col_status.push_back(HighsBasisStatus::kBasic);
       num_basic_col++;
@@ -61,22 +63,22 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   num_nonbasic_col = 0;
   num_basic_row = 0;
   num_nonbasic_row = 0;
-  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
     if (internal_basis.row_status[i] == HighsBasisStatus::kBasic) {
       num_basic_row++;
     } else {
       num_nonbasic_row++;
     }
-  } 
+  }
 
-  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
     if (internal_basis.col_status[i] == HighsBasisStatus::kBasic) {
       num_basic_col++;
     } else {
       num_nonbasic_col++;
     }
   }
-  
+
   highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   HighsStatus status = highs.run();
   if (status != HighsStatus::kOk) {
@@ -87,22 +89,22 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   num_nonbasic_col = 0;
   num_basic_row = 0;
   num_nonbasic_row = 0;
-  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
     if (internal_basis.row_status[i] == HighsBasisStatus::kBasic) {
       num_basic_row++;
     } else {
       num_nonbasic_row++;
     }
-  } 
+  }
 
-  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
     if (internal_basis.col_status[i] == HighsBasisStatus::kBasic) {
       num_basic_col++;
     } else {
       num_nonbasic_col++;
     }
   }
-  
+
   runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
 
   HighsModelStatus phase1stat = highs.getModelStatus();
@@ -173,12 +175,16 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   for (HighsInt ia : initialinactive) {
     if (ia < runtime.instance.num_con) {
       printf("free row %d\n", ia);
-      assert(runtime.instance.con_lo[ia] == -std::numeric_limits<double>::infinity());
-      assert(runtime.instance.con_up[ia] == std::numeric_limits<double>::infinity());
+      assert(runtime.instance.con_lo[ia] ==
+             -std::numeric_limits<double>::infinity());
+      assert(runtime.instance.con_up[ia] ==
+             std::numeric_limits<double>::infinity());
     } else {
       // printf("free col %d\n", ia);
-      assert(runtime.instance.var_lo[ia-runtime.instance.num_con] == -std::numeric_limits<double>::infinity());
-      assert(runtime.instance.var_up[ia-runtime.instance.num_con] == std::numeric_limits<double>::infinity());
+      assert(runtime.instance.var_lo[ia - runtime.instance.num_con] ==
+             -std::numeric_limits<double>::infinity());
+      assert(runtime.instance.var_up[ia - runtime.instance.num_con] ==
+             std::numeric_limits<double>::infinity());
     }
   }
 

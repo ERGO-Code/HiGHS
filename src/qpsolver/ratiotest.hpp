@@ -11,6 +11,7 @@ struct RatiotestResult {
   bool nowactiveatlower;
 };
 
-RatiotestResult ratiotest(Runtime& runtime, const Vector& p, const Vector& rowmove, double alphastart); 
+RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
+                          const Vector& rowmove, double alphastart);
 
 #endif

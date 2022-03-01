@@ -7,12 +7,12 @@
 
 #include "instance.hpp"
 #include "pricing.hpp"
+#include "qpconst.hpp"
 #include "runtime.hpp"
 #include "snippets.hpp"
 #include "util/HFactor.h"
 #include "util/HVector.h"
 #include "util/HVectorBase.h"
-#include "qpconst.hpp"
 
 enum class BasisStatus {
   Default,
@@ -122,7 +122,7 @@ class Basis {
   void deactivate(HighsInt conid);
 
   QpSolverStatus activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                HighsInt nonactivetoremove, Pricing* pricing);
+                          HighsInt nonactivetoremove, Pricing* pricing);
 
   void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
                    Pricing* pricing);

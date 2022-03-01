@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "matrix.hpp"
-#include "runtime.hpp"
 #include "qpconst.hpp"
+#include "runtime.hpp"
 
 using std::min;
 
@@ -100,7 +100,7 @@ class CholeskyFactor {
     double lambda = mu - l.norm2();
 
     if (lambda > 0.0) {
-       if (current_k_max <= current_k + 1) {
+      if (current_k_max <= current_k + 1) {
         resize(current_k_max * 2);
       }
 
@@ -125,43 +125,44 @@ class CholeskyFactor {
       double k = 1 / (beta + sqrt(beta * beta - mu));
       double alpha = k * mu - beta;
 
-      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", current_k, alpha, beta, k);
+      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", current_k, alpha,
+             beta, k);
 
       a.clear();
       a.resize(current_k + 1);
-      for (HighsInt i=0; i<current_k; i++) {
+      for (HighsInt i = 0; i < current_k; i++) {
         a[i] = k * m.value[i];
       }
       a[current_k] = alpha;
 
-      std::vector<double> b(current_k+1);
-      for (HighsInt i=0; i<current_k; i++) {
+      std::vector<double> b(current_k + 1);
+      for (HighsInt i = 0; i < current_k; i++) {
         b[i] = k * m.value[i];
       }
       b[current_k] = beta;
-      
+
       if (current_k_max <= current_k + 1) {
         resize(current_k_max * 2);
       }
 
       // append b to the left of L
-      for (HighsInt row=current_k; row>0; row--) {
+      for (HighsInt row = current_k; row > 0; row--) {
         // move row one position down
         for (HighsInt i = 0; i < current_k; i++) {
-          L[row * current_k_max + i] = L[(row-1) * current_k_max + i];
+          L[row * current_k_max + i] = L[(row - 1) * current_k_max + i];
         }
       }
-      for (HighsInt i=0; i<current_k+1; i++) {
+      for (HighsInt i = 0; i < current_k + 1; i++) {
         L[i] = b[i];
       }
 
       // re-triangulize
-      for (HighsInt i=0; i<current_k+1; i++) {
-        eliminate(L, i, i+1, current_k_max, current_k+1);
+      for (HighsInt i = 0; i < current_k + 1; i++) {
+        eliminate(L, i, i + 1, current_k_max, current_k + 1);
       }
 
       current_k = current_k + 1;
-    } 
+    }
     return QpSolverStatus::OK;
   }
 
@@ -189,9 +190,10 @@ class CholeskyFactor {
       rhs.value[i] = (rhs.value[i] - sum) / L[i * current_k_max + i];
     }
   }
-  
+
   void solve(Vector& rhs) {
-    if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 && !has_negative_eigenvalue)) {
+    if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 &&
+                      !has_negative_eigenvalue)) {
       printf("reinvert Z'QZ\n");
       recompute();
     }

@@ -1,16 +1,9 @@
 #ifndef __SRC_LIB_SETTINGS_HPP__
 #define __SRC_LIB_SETTINGS_HPP__
 
-enum class RatiotestStrategy {
-  TwoPass,
-  Textbook
-};
+enum class RatiotestStrategy { TwoPass, Textbook };
 
-
-enum class PricingStrategy {
-  DantzigWolfe,
-  Devex
-};
+enum class PricingStrategy { DantzigWolfe, Devex };
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
