@@ -1,6 +1,8 @@
 #ifndef __SRC_LIB_FEASIBILITYHIGHS_HPP__
 #define __SRC_LIB_FEASIBILITYHIGHS_HPP__
 
+#include <algorithm>
+
 #include "Highs.h"
 #include "feasibility.hpp"
 
