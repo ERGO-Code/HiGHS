@@ -1,8 +1,6 @@
 #ifndef __SRC_LIB_FEASIBILITYHIGHS_HPP__
 #define __SRC_LIB_FEASIBILITYHIGHS_HPP__
 
-#include <algorithm>
-
 #include "Highs.h"
 #include "feasibility.hpp"
 
@@ -32,79 +30,36 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   lp.num_row_ = runtime.instance.num_con;
   highs.passModel(lp);
 
-  HighsBasis basis;
-  basis.alien = true;  // Set true when basis is instantiated
-  HighsInt num_basic_col = 0;
-  HighsInt num_nonbasic_col = 0;
-  HighsInt num_basic_row = 0;
-  HighsInt num_nonbasic_row = 0;
-  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
-    basis.row_status.push_back(HighsBasisStatus::kNonbasic);
-    num_nonbasic_row++;
-  }
-
-  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
-    // make free variables basic
-    if (runtime.instance.var_lo[i] ==
-            -std::numeric_limits<double>::infinity() &&
-        runtime.instance.var_up[i] == std::numeric_limits<double>::infinity()) {
-      // free variable
-      basis.col_status.push_back(HighsBasisStatus::kBasic);
-      num_basic_col++;
-    } else {
-      basis.col_status.push_back(HighsBasisStatus::kNonbasic);
-      num_nonbasic_col++;
+  if (runtime.settings.phase1movefreevarsbasic) {
+    HighsBasis basis;
+    basis.alien = true;  // Set true when basis is instantiated
+    for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
+      basis.row_status.push_back(HighsBasisStatus::kNonbasic);
     }
-  }
 
-  const HighsBasis& internal_basis = highs.getBasis();
-  const HighsInfo& info = highs.getInfo();
-  HighsInt simplex_iteration_count0 = std::max(0, info.simplex_iteration_count);
-
-  num_basic_col = 0;
-  num_nonbasic_col = 0;
-  num_basic_row = 0;
-  num_nonbasic_row = 0;
-  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
-    if (internal_basis.row_status[i] == HighsBasisStatus::kBasic) {
-      num_basic_row++;
-    } else {
-      num_nonbasic_row++;
+    for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
+      // make free variables basic
+      if (runtime.instance.var_lo[i] ==
+              -std::numeric_limits<double>::infinity() &&
+          runtime.instance.var_up[i] ==
+              std::numeric_limits<double>::infinity()) {
+        // free variable
+        basis.col_status.push_back(HighsBasisStatus::kBasic);
+      } else {
+        basis.col_status.push_back(HighsBasisStatus::kNonbasic);
+      }
     }
+
+    highs.setBasis(basis);
+    const HighsBasis& internal_basis = highs.getBasis();
+
+    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   }
 
-  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
-    if (internal_basis.col_status[i] == HighsBasisStatus::kBasic) {
-      num_basic_col++;
-    } else {
-      num_nonbasic_col++;
-    }
-  }
-
-  highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   HighsStatus status = highs.run();
   if (status != HighsStatus::kOk) {
     runtime.status = ProblemStatus::ERROR;
     return;
-  }
-  num_basic_col = 0;
-  num_nonbasic_col = 0;
-  num_basic_row = 0;
-  num_nonbasic_row = 0;
-  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
-    if (internal_basis.row_status[i] == HighsBasisStatus::kBasic) {
-      num_basic_row++;
-    } else {
-      num_nonbasic_row++;
-    }
-  }
-
-  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
-    if (internal_basis.col_status[i] == HighsBasisStatus::kBasic) {
-      num_basic_col++;
-    } else {
-      num_nonbasic_col++;
-    }
   }
 
   runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();

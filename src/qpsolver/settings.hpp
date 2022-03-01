@@ -20,6 +20,8 @@ struct Settings {
 
   double semidefiniteregularization = 0.0;
 
+  bool phase1movefreevarsbasic = false;
+
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 100;
 
