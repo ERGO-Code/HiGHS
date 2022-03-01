@@ -53,17 +53,9 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
     }
   }
 
-  //highs.setOptionValue("output_flag", true);
-  //highs.setOptionValue("log_dev_level", 2);
-  //highs.setOptionValue("highs_analysis_level", 4);
   const HighsBasis& internal_basis = highs.getBasis();
   const HighsInfo& info = highs.getInfo();
   HighsInt simplex_iteration_count0 = std::max(0, info.simplex_iteration_count);
-  printf("Before setBasis: QP (%5d, %5d) has %5d basic columns; %5d basic rows; %5d nonbasic columns;  %5d nonbasic rows\n",
-	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
-	 (int)num_basic_col, (int)num_basic_row,
-	 (int)num_nonbasic_col, (int)num_nonbasic_row);
-  //highs.setBasis(basis, "qp phase 1");
 
   num_basic_col = 0;
   num_nonbasic_col = 0;
@@ -84,16 +76,13 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
       num_nonbasic_col++;
     }
   }
-  
-  printf("After  setBasis: QP (%5d, %5d) has %5d basic columns; %5d basic rows; %5d nonbasic columns;  %5d nonbasic rows\n",
-	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
-	 (int)num_basic_col, (int)num_basic_row,
-	 (int)num_nonbasic_col, (int)num_nonbasic_row);
- 
   
   highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
-  highs.run();
-
+  HighsStatus status = highs.run();
+  if (status != HighsStatus::kOk) {
+    runtime.status = ProblemStatus::ERROR;
+    return;
+  }
   num_basic_col = 0;
   num_nonbasic_col = 0;
   num_basic_row = 0;
@@ -113,13 +102,6 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
       num_nonbasic_col++;
     }
   }
-  
-  printf("After       run: QP (%5d, %5d) has %5d basic columns; %5d basic rows; %5d nonbasic columns;  %5d nonbasic rows\n",
-	 (int)runtime.instance.num_var, (int)runtime.instance.num_con,
-	 (int)num_basic_col, (int)num_basic_row,
-	 (int)num_nonbasic_col, (int)num_nonbasic_row);
-  printf("Performed %d simplex iterations\n", (int)(info.simplex_iteration_count-simplex_iteration_count0));
- 
   
   runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
 

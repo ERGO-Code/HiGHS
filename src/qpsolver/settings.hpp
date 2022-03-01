@@ -25,6 +25,8 @@ struct Settings {
   double d_zero_threshold = 10E-13;
   double lambda_zero_threshold = 10E-10;
 
+  double semidefiniteregularization = 0.0;
+
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 100;
 

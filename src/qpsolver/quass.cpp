@@ -22,7 +22,7 @@
 void Quass::solve() {
   CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
   computestartingpoint(runtime, crash);
-  if (runtime.status == ProblemStatus::INFEASIBLE) {
+  if (runtime.status != ProblemStatus::INDETERMINED) {
     return;
   }
   Basis basis(runtime, crash.active, crash.rowstatus, crash.inactive);
@@ -191,6 +191,16 @@ std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis, ReducedCosts
   }
   return nullptr;
 }
+void regularize(Runtime& rt) {
+    // add small diagonal to hessian
+  for (HighsInt i=0; i<rt.instance.num_var; i++) {
+    for (HighsInt index=rt.instance.Q.mat.start[i]; index<rt.instance.Q.mat.start[i+1]; index++) {
+      if (rt.instance.Q.mat.index[index] == i) {
+        rt.instance.Q.mat.value[index] += rt.settings.semidefiniteregularization;
+      }
+    }
+  }
+}
 
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
@@ -220,6 +230,8 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
   // buffers for reduction
   Vector buffer_d(runtime.instance.num_var);
+
+  regularize(runtime);
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
