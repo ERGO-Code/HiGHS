@@ -43,6 +43,7 @@ class HPresolve {
   const HighsOptions* options;
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
+  double primal_feastol;
 
   // triplet storage
   std::vector<double> Avalue;
