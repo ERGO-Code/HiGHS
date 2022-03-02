@@ -1044,8 +1044,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     }
 
     if (colIsBinary) {
-      if (model->col_cost_[j] >= 0.0 &&
-          worstCaseLb <= 1 + mipsolver->mipdata_->primal_feastol) {
+      if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
           storeRow(bestRowMinus);
@@ -1088,8 +1087,7 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
 
-      if (model->col_cost_[j] <= 0.0 &&
-          worstCaseUb >= -mipsolver->mipdata_->primal_feastol) {
+      if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
           storeRow(bestRowPlus);
