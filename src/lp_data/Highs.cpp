@@ -30,7 +30,7 @@
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
-#include "qpsolver/solver.hpp"
+#include "qpsolver/quass.hpp"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
@@ -2471,10 +2471,8 @@ HighsStatus Highs::callSolveQp() {
 
   runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
-  runtime.settings.ratiotest =
-      new RatiotestTwopass(instance, 0.000000001, 0.000001);
-  Solver solver(runtime);
-  solver.solve();
+  Quass qpsolver(runtime);
+  qpsolver.solve();
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;

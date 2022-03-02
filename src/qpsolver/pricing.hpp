@@ -1,7 +1,6 @@
 #ifndef __SRC_LIB_PRICING_HPP__
 #define __SRC_LIB_PRICING_HPP__
 
-#include "matrix.hpp"
 #include "vector.hpp"
 
 class Pricing {

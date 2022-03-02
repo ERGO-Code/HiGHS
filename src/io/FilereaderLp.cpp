@@ -58,11 +58,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // Clear lp.integrality_ if problem is pure LP
     if (num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
-    if (m.objective->offset) {
-      highsLogUser(options.log_options, HighsLogType::kWarning,
-                   "Ignoring m.objective->offset = %g\n", m.objective->offset);
-      lp.offset_ = 0;  // m.objective->offset;
-    }
+    lp.offset_ = m.objective->offset;
     lp.col_cost_.resize(lp.num_col_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
@@ -81,9 +77,9 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       } else {
         mat[qt->var1].push_back(qt->var2);
         mat2[qt->var1].push_back(qt->coef);
-        hessian.dim_++;
       }
     }
+    hessian.dim_ = m.variables.size();
 
     unsigned int qnnz = 0;
     // model_.hessian_ is initialised with start_[0] for fictitious
