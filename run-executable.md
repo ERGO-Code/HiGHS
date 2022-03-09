@@ -1,4 +1,4 @@
-### Input file formats
+<!-- ### Input file formats
 
 HiGHS can parse .mps and .lp files. Models can also be loaded at runtime from another program using the library interface.
 
@@ -38,4 +38,4 @@ Usage:
       --time_limit arg    Run time limit (double).
       --options_file arg  File containing HiGHS options.
   -h, --help              Print help.
-```
+``` -->
