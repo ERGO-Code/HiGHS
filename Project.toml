@@ -1,0 +1,10 @@
+authors = ["I Galabova <galabovaa@gmail.com>",
+           "Foo Bar <foo@bar.com>"]
+name = "HighsDocs"
+
+uuid = "cd1dfa5d-53ef-48b1-bf13-1133491171e9"
+
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+version = "1.0.0"
