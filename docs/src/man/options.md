@@ -7,5 +7,3 @@ For usage and runtime option information see
 ```
 
 ## Library Options
-
-todo: add options

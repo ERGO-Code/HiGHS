@@ -16,4 +16,4 @@ Solution
 - Write to file 
 - Load directly
 
-Within an application, HiGHS can be used to modify the current model and re-solve it efficiently. todo: add link to page
+Within an application, HiGHS can be used to modify the current model and re-solve it efficiently.
