@@ -10,7 +10,7 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
 
   // set HiGHS to be silent
   highs.setOptionValue("output_flag", false);
-  highs.setOptionValue("Time limit", runtime.settings.timelimit -
+  highs.setOptionValue("time_limit", runtime.settings.timelimit -
                                          runtime.timer.readRunHighsClock());
 
   HighsLp lp;
