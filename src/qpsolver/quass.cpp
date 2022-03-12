@@ -27,13 +27,6 @@ void Quass::solve() {
   }
   Basis basis(runtime, crash.active, crash.rowstatus, crash.inactive);
   solve(crash.primal, crash.rowact, basis);
-  printf(
-      "%lf %lf %d %d\n",
-      runtime.statistics.time[runtime.statistics.time.size() - 1],
-      runtime.instance.objval(runtime.primal),
-      runtime.statistics
-          .nullspacedimension[runtime.statistics.nullspacedimension.size() - 1],
-      runtime.statistics.num_iterations);
 }
 
 Quass::Quass(Runtime& rt) : runtime(rt) {}
@@ -268,7 +261,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     double maxsteplength = 1.0;
     if (atfsep) {
       HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
-      // printf("%u -> ", minidx);
       if (minidx == -1) {
         runtime.status = ProblemStatus::OPTIMAL;
         break;

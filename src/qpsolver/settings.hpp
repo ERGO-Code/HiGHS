@@ -18,7 +18,7 @@ struct Settings {
   double d_zero_threshold = 10E-13;
   double lambda_zero_threshold = 10E-10;
 
-  double semidefiniteregularization = 0.0;
+  double semidefiniteregularization = 1E-7;
 
   bool phase1movefreevarsbasic = false;
 

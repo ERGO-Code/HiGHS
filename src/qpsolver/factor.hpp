@@ -194,7 +194,6 @@ class CholeskyFactor {
   void solve(Vector& rhs) {
     if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 &&
                       !has_negative_eigenvalue)) {
-      printf("reinvert Z'QZ\n");
       recompute();
     }
     solveL(rhs);
