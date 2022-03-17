@@ -682,7 +682,7 @@ void Reader::processtokens() {
       }
 
       // + [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) &&rawtokens[i+1]->istype(RawTokenType::PLUS)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
          i += 2;
          continue;

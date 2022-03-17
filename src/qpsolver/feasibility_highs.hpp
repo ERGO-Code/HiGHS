@@ -4,13 +4,13 @@
 #include "Highs.h"
 #include "feasibility.hpp"
 
-void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
+void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   // compute initial feasible point
   Highs highs;
 
   // set HiGHS to be silent
   highs.setOptionValue("output_flag", false);
-  highs.setOptionValue("Time limit", runtime.settings.timelimit -
+  highs.setOptionValue("time_limit", runtime.settings.timelimit -
                                          runtime.timer.readRunHighsClock());
 
   HighsLp lp;
@@ -29,7 +29,38 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   lp.num_col_ = runtime.instance.num_var;
   lp.num_row_ = runtime.instance.num_con;
   highs.passModel(lp);
-  highs.run();
+
+  if (runtime.settings.phase1movefreevarsbasic) {
+    HighsBasis basis;
+    basis.alien = true;  // Set true when basis is instantiated
+    for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
+      basis.row_status.push_back(HighsBasisStatus::kNonbasic);
+    }
+
+    for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
+      // make free variables basic
+      if (runtime.instance.var_lo[i] ==
+              -std::numeric_limits<double>::infinity() &&
+          runtime.instance.var_up[i] ==
+              std::numeric_limits<double>::infinity()) {
+        // free variable
+        basis.col_status.push_back(HighsBasisStatus::kBasic);
+      } else {
+        basis.col_status.push_back(HighsBasisStatus::kNonbasic);
+      }
+    }
+
+    highs.setBasis(basis);
+    const HighsBasis& internal_basis = highs.getBasis();
+
+    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+  }
+
+  HighsStatus status = highs.run();
+  if (status != HighsStatus::kOk) {
+    runtime.status = ProblemStatus::ERROR;
+    return;
+  }
 
   runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
 
@@ -98,13 +129,27 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   assert(initialactive.size() + initialinactive.size() ==
          runtime.instance.num_var);
 
-  result =
-      new CrashSolution(runtime.instance.num_var, runtime.instance.num_con);
-  result->rowstatus = atlower;
-  result->active = initialactive;
-  result->inactive = initialinactive;
-  result->primal = x0;
-  result->rowact = ra;
+  for (HighsInt ia : initialinactive) {
+    if (ia < runtime.instance.num_con) {
+      printf("free row %d\n", ia);
+      assert(runtime.instance.con_lo[ia] ==
+             -std::numeric_limits<double>::infinity());
+      assert(runtime.instance.con_up[ia] ==
+             std::numeric_limits<double>::infinity());
+    } else {
+      // printf("free col %d\n", ia);
+      assert(runtime.instance.var_lo[ia - runtime.instance.num_con] ==
+             -std::numeric_limits<double>::infinity());
+      assert(runtime.instance.var_up[ia - runtime.instance.num_con] ==
+             std::numeric_limits<double>::infinity());
+    }
+  }
+
+  result.rowstatus = atlower;
+  result.active = initialactive;
+  result.inactive = initialinactive;
+  result.primal = x0;
+  result.rowact = ra;
 }
 
 #endif

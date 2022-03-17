@@ -30,7 +30,7 @@
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
-#include "qpsolver/solver.hpp"
+#include "qpsolver/quass.hpp"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
@@ -115,21 +115,8 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option, HighsInt& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  bool& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -137,7 +124,23 @@ HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
 }
 
 HighsStatus Highs::getOptionValue(const std::string& option,
-                                  std::string& value) {
+                                  HighsInt& value) const {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  double& value) const {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getOptionValue(const std::string& option,
+                                  std::string& value) const {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -145,7 +148,7 @@ HighsStatus Highs::getOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::getOptionType(const std::string& option,
-                                 HighsOptionType& type) {
+                                 HighsOptionType& type) const {
   if (getLocalOptionType(options_.log_options, option, options_.records,
                          type) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -158,7 +161,7 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string filename,
-                                const bool report_only_deviations) {
+                                const bool report_only_deviations) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -175,7 +178,8 @@ HighsStatus Highs::writeOptions(const std::string filename,
   return return_status;
 }
 
-HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
+HighsStatus Highs::getInfoValue(const std::string& info,
+                                HighsInt& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
@@ -186,6 +190,20 @@ HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
     return HighsStatus::kError;
   }
 }
+
+#ifndef HIGHSINT64
+HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
+  InfoStatus status =
+      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  if (status == InfoStatus::kOk) {
+    return HighsStatus::kOk;
+  } else if (status == InfoStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
+}
+#endif
 
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   InfoStatus status =
@@ -199,7 +217,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   }
 }
 
-HighsStatus Highs::writeInfo(const std::string filename) {
+HighsStatus Highs::writeInfo(const std::string filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -260,12 +278,6 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
-  // Check validity of any integrality
-  return_status =
-      interpretCallStatus(options_.log_options, assessIntegrality(lp, options_),
-                          return_status, "assessIntegrality");
-  if (return_status == HighsStatus::kError) return return_status;
-
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(
       options_.log_options, assessHessian(hessian, options_, lp.sense_),
@@ -300,8 +312,8 @@ HighsStatus Highs::passModel(
     const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
     const HighsInt sense, const double offset, const double* costs,
     const double* col_lower, const double* col_upper, const double* row_lower,
-    const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
-    const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
+    const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
+    const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
     const double* q_value, const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
@@ -332,16 +344,16 @@ HighsStatus Highs::passModel(
   if (a_num_nz > 0) {
     assert(num_col > 0);
     assert(num_row > 0);
-    assert(astart != NULL);
-    assert(aindex != NULL);
-    assert(avalue != NULL);
+    assert(a_start != NULL);
+    assert(a_index != NULL);
+    assert(a_value != NULL);
     if (a_rowwise) {
-      lp.a_matrix_.start_.assign(astart, astart + num_row);
+      lp.a_matrix_.start_.assign(a_start, a_start + num_row);
     } else {
-      lp.a_matrix_.start_.assign(astart, astart + num_col);
+      lp.a_matrix_.start_.assign(a_start, a_start + num_col);
     }
-    lp.a_matrix_.index_.assign(aindex, aindex + a_num_nz);
-    lp.a_matrix_.value_.assign(avalue, avalue + a_num_nz);
+    lp.a_matrix_.index_.assign(a_index, a_index + a_num_nz);
+    lp.a_matrix_.value_.assign(a_value, a_value + a_num_nz);
   }
   if (a_rowwise) {
     lp.a_matrix_.start_.resize(num_row + 1);
@@ -399,12 +411,12 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const HighsInt sense, const double offset,
                              const double* costs, const double* col_lower,
                              const double* col_upper, const double* row_lower,
-                             const double* row_upper, const HighsInt* astart,
-                             const HighsInt* aindex, const double* avalue,
+                             const double* row_upper, const HighsInt* a_start,
+                             const HighsInt* a_index, const double* a_value,
                              const HighsInt* integrality) {
   return passModel(num_col, num_row, num_nz, 0, a_format, 0, sense, offset,
-                   costs, col_lower, col_upper, row_lower, row_upper, astart,
-                   aindex, avalue, NULL, NULL, NULL, integrality);
+                   costs, col_lower, col_upper, row_lower, row_upper, a_start,
+                   a_index, a_value, NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
@@ -679,8 +691,23 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
 
+  // Check validity of any integrality, keeping a record of any upper
+  // bound modifications for semi-variables
+  call_status = assessIntegrality(model_.lp_, options_);
+  if (call_status == HighsStatus::kError) {
+    setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kSolveError);
+    return returnFromRun(HighsStatus::kError);
+  }
+
   if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
-    // Solve the model as a QP
+    // Choosing method according to model class, and model is a QP
+    //
+    // Ensure that it's not MIQP!
+    if (model_.isMip()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Canot solve MIQP problems with HiGHS\n");
+      return returnFromRun(HighsStatus::kError);
+    }
     call_status = callSolveQp();
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveQp");
@@ -688,7 +715,7 @@ HighsStatus Highs::run() {
   }
 
   if (!options_.solver.compare(kHighsChooseString) && model_.isMip()) {
-    // Solve the model as a MIP
+    // Choosing method according to model class, and model is a MIP
     call_status = callSolveMip();
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveMip");
@@ -1940,12 +1967,12 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::getObjectiveSense(ObjSense& sense) {
+HighsStatus Highs::getObjectiveSense(ObjSense& sense) const {
   sense = model_.lp_.sense_;
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getObjectiveOffset(double& offset) {
+HighsStatus Highs::getObjectiveOffset(double& offset) const {
   offset = model_.lp_.offset_;
   return HighsStatus::kOk;
 }
@@ -2131,20 +2158,20 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
+HighsStatus Highs::scaleCol(const HighsInt col, const double scale_value) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status = scaleColInterface(col, scaleval);
+  HighsStatus call_status = scaleColInterface(col, scale_value);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "scaleCol");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
+HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status = scaleRowInterface(row, scaleval);
+  HighsStatus call_status = scaleRowInterface(row, scale_value);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "scaleRow");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -2444,10 +2471,8 @@ HighsStatus Highs::callSolveQp() {
 
   runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
-  runtime.settings.ratiotest =
-      new RatiotestTwopass(instance, 0.000000001, 0.000001);
-  Solver solver(runtime);
-  solver.solve();
+  Quass qpsolver(runtime);
+  qpsolver.solve();
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
@@ -2552,6 +2577,14 @@ HighsStatus Highs::callSolveMip() {
     // There is no primal solution: should be so by default
     assert(!solution_.value_valid);
   }
+  // Check that no modified upper bounds for semi-variables are active
+  if (solution_.value_valid &&
+      activeModifiedUpperBounds(options_, model_.lp_, solution_.col_value)) {
+    solution_.value_valid = false;
+    model_status_ = HighsModelStatus::kSolveError;
+    scaled_model_status_ = model_status_;
+    return_status = HighsStatus::kError;
+  }
   // There is no dual solution: should be so by default
   assert(!solution_.dual_valid);
   // There is no basis: should be so by default
@@ -2568,9 +2601,7 @@ HighsStatus Highs::callSolveMip() {
   // Set the MIP-specific values of info_
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;
-  info_.mip_gap =
-      100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
-      std::max(1.0, std::abs(info_.objective_function_value));
+  info_.mip_gap = solver.gap_;
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("MIP", return_status);
@@ -2890,6 +2921,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
   // Record that returnFromRun() has been called
   called_return_from_run = true;
+  // Unapply any modifications that have not yet been unapplied
+  this->model_.lp_.unapplyMods();
+
   // Unless solved as a MIP, report on the solution
   const bool solved_as_mip =
       !options_.solver.compare(kHighsChooseString) && model_.isMip();

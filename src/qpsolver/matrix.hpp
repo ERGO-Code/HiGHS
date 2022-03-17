@@ -294,18 +294,6 @@ struct Matrix {
     return res;
   }
 
-  Matrix mat_tran(Matrix& other) {
-    printf("not implemented\n");
-    exit(1);
-    return other;
-  }
-
-  Matrix tran_tran(Matrix& other) {
-    printf("not implemented\n");
-    exit(1);
-    return other;
-  }
-
   Vector& mat_vec(const Vector& other, Vector& target) {
     return mat.mat_vec(other, target);
   }

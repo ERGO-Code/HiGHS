@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 
 // mcs -out:highscslib.dll -t:library highs_csharp_api.cs -unsafe
 
@@ -130,11 +131,12 @@ public class HighsBasis
    }
 }
 
-public unsafe class HighsLpSolver
+public class HighsLpSolver : IDisposable
 {
-   private void* highs;
+   private IntPtr highs;
+   private bool _disposed;
 
-   private const string highslibname = "highs.dll";
+   private const string highslibname = "highs";
 
    [DllImport(highslibname)]
    private static extern int Highs_call(Int32 numcol, Int32 numrow, Int32 numnz, double[] colcost,
@@ -142,161 +144,185 @@ public unsafe class HighsLpSolver
    double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual, int[] colbasisstatus, int[] rowbasisstatus, ref int modelstatus);
 
    [DllImport(highslibname)]
-   private static extern void* Highs_create();
+   private static extern IntPtr Highs_create();
 
    [DllImport(highslibname)]
-   private static extern void Highs_destroy(void* highs);
+   private static extern void Highs_destroy(IntPtr highs);
 
    [DllImport(highslibname)]
-   private static extern int Highs_run(void* highs);
+   private static extern int Highs_run(IntPtr highs);
 
    [DllImport(highslibname)]
-   private static extern int Highs_readModel(void* highs, string filename);
+   private static extern int Highs_readModel(IntPtr highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_writeModel(void* highs, string filename);
+   private static extern int Highs_writeModel(IntPtr highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_passLp(void* highs, int numcol, int numrow, int numnz, int aformat, int sense, double offset, double[] colcost,
+   private static extern int Highs_passLp(IntPtr highs, int numcol, int numrow, int numnz, int aformat, int sense, double offset, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue);
 
    [DllImport(highslibname)]
-   private static extern int Highs_setOptionValue(void* highs, string option, string value);
+   private static extern int Highs_setOptionValue(IntPtr highs, string option, string value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getSolution(void* highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
+   private static extern int Highs_setBoolOptionValue(IntPtr highs, string option, int value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getNumCol(void* highs);
+   private static extern int Highs_setIntOptionValue(IntPtr highs, string option, int value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getNumRow(void* highs);
+   private static extern int Highs_setDoubleOptionValue(IntPtr highs, string option, double value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getNumNz(void* highs);
+   private static extern int Highs_setStringOptionValue(IntPtr highs, string option, string value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getBasis(void* highs, int[] colstatus, int[] rowstatus);
+   private static extern int Highs_getBoolOptionValue(IntPtr highs, string option, out int value);
 
    [DllImport(highslibname)]
-   private static extern double Highs_getObjectiveValue(void* highs);
+   private static extern int Highs_getIntOptionValue(IntPtr highs, string option, out int value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getIterationCount(void* highs);
+   private static extern int Highs_getDoubleOptionValue(IntPtr highs, string option, out double value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getModelStatus(void* highs);
+   private static extern int Highs_getStringOptionValue(IntPtr highs, string option, [Out] StringBuilder value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_addRow(void* highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
+   private static extern int Highs_getSolution(IntPtr highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
 
    [DllImport(highslibname)]
-   private static extern int Highs_addRows(void* highs, int num_new_row, double[] lower, double[] upper,
+   private static extern int Highs_getNumCol(IntPtr highs);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_getNumRow(IntPtr highs);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_getNumNz(IntPtr highs);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);
+
+   [DllImport(highslibname)]
+   private static extern double Highs_getObjectiveValue(IntPtr highs);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_getIterationCount(IntPtr highs);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_getModelStatus(IntPtr highs);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_addRow(IntPtr highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_addRows(IntPtr highs, int num_new_row, double[] lower, double[] upper,
    int num_new_nz, int[] starts, int[] indices, double[] values);
 
    [DllImport(highslibname)]
-   private static extern int Highs_addCol(void* highs, double cost, double lower, double upper,
+   private static extern int Highs_addCol(IntPtr highs, double cost, double lower, double upper,
    int num_new_nz, int[] indices, double[] values);
 
    [DllImport(highslibname)]
-   private static extern int Highs_addCols(void* highs, int num_new_col, double[] costs, double[] lower, double[] upper,
+   private static extern int Highs_addCols(IntPtr highs, int num_new_col, double[] costs, double[] lower, double[] upper,
    int num_new_nz, int[] starts, int[] indices, double[] values);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeObjectiveSense(void* highs, int sense);
+   private static extern int Highs_changeObjectiveSense(IntPtr highs, int sense);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColCost(void* highs, int col, double cost);
+   private static extern int Highs_changeColCost(IntPtr highs, int col, double cost);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColsCostBySet(void* highs, int num_set_entries, int[] set, double[] cost);
+   private static extern int Highs_changeColsCostBySet(IntPtr highs, int num_set_entries, int[] set, double[] cost);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColsCostByMask(void* highs, int[] mask, double[] cost);
+   private static extern int Highs_changeColsCostByMask(IntPtr highs, int[] mask, double[] cost);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColBounds(void* highs, int col, double lower, double upper);
+   private static extern int Highs_changeColBounds(IntPtr highs, int col, double lower, double upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColsBoundsByRange(void* highs, int from_col, int to_col, double[] lower, double[] upper);
+   private static extern int Highs_changeColsBoundsByRange(IntPtr highs, int from_col, int to_col, double[] lower, double[] upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColsBoundsBySet(void* highs, int num_set_entries, int[] set, double[] lower, double[] upper);
+   private static extern int Highs_changeColsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeColsBoundsByMask(void* highs, int[] mask, double[] lower, double[] upper);
+   private static extern int Highs_changeColsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeRowBounds(void* highs, int row, double lower, double upper);
+   private static extern int Highs_changeRowBounds(IntPtr highs, int row, double lower, double upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeRowsBoundsBySet(void* highs, int num_set_entries, int[] set, double[] lower, double[] upper);
+   private static extern int Highs_changeRowsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_changeRowsBoundsByMask(void* highs, int[] mask, double[] lower, double[] upper);
+   private static extern int Highs_changeRowsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
 
    [DllImport(highslibname)]
-   private static extern int Highs_deleteColsByRange(void* highs, int from_col, int to_col);
+   private static extern int Highs_deleteColsByRange(IntPtr highs, int from_col, int to_col);
 
    [DllImport(highslibname)]
-   private static extern int Highs_deleteColsBySet(void* highs, int num_set_entries, int[] set);
+   private static extern int Highs_deleteColsBySet(IntPtr highs, int num_set_entries, int[] set);
 
    [DllImport(highslibname)]
-   private static extern int Highs_deleteColsByMask(void* highs, int[] mask);
+   private static extern int Highs_deleteColsByMask(IntPtr highs, int[] mask);
 
    [DllImport(highslibname)]
-   private static extern int Highs_deleteRowsByRange(void* highs, int from_row, int to_row);
+   private static extern int Highs_deleteRowsByRange(IntPtr highs, int from_row, int to_row);
 
    [DllImport(highslibname)]
-   private static extern int Highs_deleteRowsBySet(void* highs, int num_set_entries, int[] set);
+   private static extern int Highs_deleteRowsBySet(IntPtr highs, int num_set_entries, int[] set);
 
    [DllImport(highslibname)]
-   private static extern int Highs_deleteRowsByMask(void* highs, int[] mask);
+   private static extern int Highs_deleteRowsByMask(IntPtr highs, int[] mask);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getColsByRange(void* highs, int from_col, int to_col, ref int num_col, double[] costs,
+   private static extern int Highs_getColsByRange(IntPtr highs, int from_col, int to_col, ref int num_col, double[] costs,
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getColsBySet(void* highs, int num_set_entries, int[] set, ref int num_col, double[] costs,
+   private static extern int Highs_getColsBySet(IntPtr highs, int num_set_entries, int[] set, ref int num_col, double[] costs,
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getColsByMask(void* highs, int[] mask, ref int num_col, double[] costs,
+   private static extern int Highs_getColsByMask(IntPtr highs, int[] mask, ref int num_col, double[] costs,
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getRowsByRange(void* highs, int from_row, int to_row, ref int num_row,
+   private static extern int Highs_getRowsByRange(IntPtr highs, int from_row, int to_row, ref int num_row,
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getRowsBySet(void* highs, int num_set_entries, int[] set, ref int num_row,
+   private static extern int Highs_getRowsBySet(IntPtr highs, int num_set_entries, int[] set, ref int num_row,
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getRowsByMask(void* highs, int[] mask, ref int num_row,
+   private static extern int Highs_getRowsByMask(IntPtr highs, int[] mask, ref int num_row,
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getBasicVariables(void* highs, int[] basic_variables);
+   private static extern int Highs_getBasicVariables(IntPtr highs, int[] basic_variables);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getBasisInverseRow(void* highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
+   private static extern int Highs_getBasisInverseRow(IntPtr highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getBasisInverseCol(void* highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
+   private static extern int Highs_getBasisInverseCol(IntPtr highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getBasisSolve(void* highs, double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices);
+   private static extern int Highs_getBasisSolve(IntPtr highs, double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getBasisTransposeSolve(void* highs, double[] rhs, double[] solution_vector, ref int solution_nz, int[] solution_indices);
+   private static extern int Highs_getBasisTransposeSolve(IntPtr highs, double[] rhs, double[] solution_vector, ref int solution_nz, int[] solution_indices);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getReducedRow(void* highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
+   private static extern int Highs_getReducedRow(IntPtr highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getReducedColumn(void* highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
+   private static extern int Highs_getReducedColumn(IntPtr highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
 
    public static HighsStatus call(HighsModel model, ref HighsSolution sol, ref HighsBasis bas, ref HighsModelStatus modelstatus)
    {
@@ -328,7 +354,24 @@ public unsafe class HighsLpSolver
 
    ~HighsLpSolver()
    {
+      this.Dispose(false);
+   }
+
+   public void Dispose()
+   {
+      this.Dispose(true);
+      GC.SuppressFinalize(this);
+   }
+
+   protected virtual void Dispose(bool disposing)
+   {
+      if (this._disposed)
+      {
+         return;
+      }
+
       HighsLpSolver.Highs_destroy(this.highs);
+      this._disposed = true;
    }
 
    public HighsStatus run()
@@ -355,6 +398,49 @@ public unsafe class HighsLpSolver
    public HighsStatus setOptionValue(string option, string value)
    {
       return (HighsStatus)HighsLpSolver.Highs_setOptionValue(this.highs, option, value);
+   }
+
+   public HighsStatus setStringOptionValue(string option, string value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_setStringOptionValue(this.highs, option, value);
+   }
+
+   public HighsStatus setBoolOptionValue(string option, int value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_setBoolOptionValue(this.highs, option, value);
+   }
+
+   public HighsStatus setDoubleOptionValue(string option, double value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_setDoubleOptionValue(this.highs, option, value);
+   }
+
+   public HighsStatus setIntOptionValue(string option, int value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_setIntOptionValue(this.highs, option, value);
+   }
+
+   public HighsStatus getStringOptionValue(string option, out string value)
+   {
+      var stringBuilder = new StringBuilder();
+      var result = (HighsStatus)HighsLpSolver.Highs_getStringOptionValue(this.highs, option, stringBuilder);
+      value = stringBuilder.ToString();
+      return result;
+   }
+
+   public HighsStatus getBoolOptionValue(string option, out int value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_getBoolOptionValue(this.highs, option, out value);
+   }
+
+   public HighsStatus getDoubleOptionValue(string option, out double value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_getDoubleOptionValue(this.highs, option, out value);
+   }
+
+   public HighsStatus getIntOptionValue(string option, out int value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_getIntOptionValue(this.highs, option, out value);
    }
 
    public int getNumCol()

@@ -33,7 +33,6 @@ const std::string kHighsOnString = "on";
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
 
-const HighsInt kHighsPrereleaseRowDualSign = -1;
 const bool kExtendInvertWhenAddingRows = false;
 
 enum SimplexScaleStrategy {
@@ -190,6 +189,9 @@ const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 // values aren't known
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
 const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
+
+// Maximum upper bound on semi-variables
+const double kMaxSemiVariableUpper = 1e5;
 
 // Termination link in linked lists
 const HighsInt kNoLink = -1;

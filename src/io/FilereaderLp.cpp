@@ -58,11 +58,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // Clear lp.integrality_ if problem is pure LP
     if (num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
-    if (m.objective->offset) {
-      highsLogUser(options.log_options, HighsLogType::kWarning,
-                   "Ignoring m.objective->offset = %g\n", m.objective->offset);
-      lp.offset_ = 0;  // m.objective->offset;
-    }
+    lp.offset_ = m.objective->offset;
     lp.col_cost_.resize(lp.num_col_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
@@ -81,9 +77,9 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       } else {
         mat[qt->var1].push_back(qt->var2);
         mat2[qt->var1].push_back(qt->coef);
-        hessian.dim_++;
       }
     }
+    hessian.dim_ = m.variables.size();
 
     unsigned int qnnz = 0;
     // model_.hessian_ is initialised with start_[0] for fictitious
@@ -141,6 +137,16 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
+    // lpassert in extern/filereaderlp/def.hpp throws
+    // std::invalid_argument whatever the error. Hence, unless
+    // something is done specially - here or elsewhere -
+    // FilereaderRetcode::kParserError will be returned.
+    //
+    // This is misleading when the file isn't found, as it's not a
+    // parser error
+    FILE* file = fopen(filename.c_str(), "r");
+    if (file == nullptr) return FilereaderRetcode::kFileNotFound;
+    fclose(file);
     return FilereaderRetcode::kParserError;
   }
   lp.ensureColwise();

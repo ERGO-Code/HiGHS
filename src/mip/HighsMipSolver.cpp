@@ -468,6 +468,12 @@ void HighsMipSolver::cleanupSolve() {
   node_count_ = mipdata_->num_nodes;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
 
+  // adjust objective sense in case of maximization problem
+  if (orig_model_->sense_ == ObjSense::kMaximize) {
+    dual_bound_ = -dual_bound_;
+    primal_bound_ = -primal_bound_;
+  }
+
   if (modelstatus_ == HighsModelStatus::kNotset ||
       modelstatus_ == HighsModelStatus::kInfeasible) {
     if (havesolution)
@@ -488,21 +494,22 @@ void HighsMipSolver::cleanupSolve() {
     solutionstatus = feasible ? "feasible" : "infeasible";
   }
 
-  double gap = fabs(primal_bound_ - dual_bound_);
+  gap_ = fabs(primal_bound_ - dual_bound_);
   if (primal_bound_ == 0.0)
-    gap = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
+    gap_ = dual_bound_ == 0.0 ? 0.0 : kHighsInf;
   else if (primal_bound_ != kHighsInf)
-    gap = fabs(primal_bound_ - dual_bound_) / fabs(primal_bound_);
+    gap_ = fabs(primal_bound_ - dual_bound_) / fabs(primal_bound_);
   else
-    gap = kHighsInf;
+    gap_ = kHighsInf;
+
   std::array<char, 128> gapString;
 
-  if (gap == kHighsInf)
+  if (gap_ == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
-    double printTol = std::max(std::min(1e-2, 1e-1 * gap), 1e-6);
+    double printTol = std::max(std::min(1e-2, 1e-1 * gap_), 1e-6);
     std::array<char, 32> gapValString =
-        highsDoubleToString(100.0 * gap, printTol);
+        highsDoubleToString(100.0 * gap_, printTol);
     double gapTol = options_mip_->mip_rel_gap;
 
     if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {

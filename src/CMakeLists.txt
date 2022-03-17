@@ -142,7 +142,7 @@ set(sources
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
-    qpsolver/solver.cpp
+    qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -247,7 +247,7 @@ set(headers
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
-    qpsolver/solver.hpp
+    qpsolver/quass.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
     simplex/HEkk.h
@@ -590,7 +590,7 @@ target_sources(libhighs PRIVATE
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
-    qpsolver/solver.cpp
+    qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -709,7 +709,7 @@ set(headers_fast_build_
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
-    qpsolver/solver.hpp
+    qpsolver/quass.hpp
     qpsolver/vector.hpp
     simplex/HApp.h
     simplex/HEkk.h

@@ -93,8 +93,11 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
     if (model->row_upper_[i] == kHighsInf) rowDualLower[i] = 0;
   }
 
-  if (mipsolver == nullptr)
+  if (mipsolver == nullptr) {
+    primal_feastol = options->primal_feasibility_tolerance;
     model->integrality_.assign(model->num_col_, HighsVarType::kContinuous);
+  } else
+    primal_feastol = options->mip_feasibility_tolerance;
 
   if (model_.a_matrix_.isRowwise())
     fromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
@@ -153,23 +156,19 @@ bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
 
 bool HPresolve::isLowerImplied(HighsInt col) const {
   return (model->col_lower_[col] == -kHighsInf ||
-          implColLower[col] >=
-              model->col_lower_[col] - options->primal_feasibility_tolerance);
+          implColLower[col] >= model->col_lower_[col] - primal_feastol);
 }
 
 bool HPresolve::isUpperImplied(HighsInt col) const {
   return (model->col_upper_[col] == kHighsInf ||
-          implColUpper[col] <=
-              model->col_upper_[col] + options->primal_feasibility_tolerance);
+          implColUpper[col] <= model->col_upper_[col] + primal_feastol);
 }
 
 bool HPresolve::isImpliedFree(HighsInt col) const {
   return (model->col_lower_[col] == -kHighsInf ||
-          implColLower[col] >=
-              model->col_lower_[col] - options->primal_feasibility_tolerance) &&
+          implColLower[col] >= model->col_lower_[col] - primal_feastol) &&
          (model->col_upper_[col] == kHighsInf ||
-          implColUpper[col] <=
-              model->col_upper_[col] + options->primal_feasibility_tolerance);
+          implColUpper[col] <= model->col_upper_[col] + primal_feastol);
 }
 
 bool HPresolve::isDualImpliedFree(HighsInt row) const {
@@ -211,8 +210,7 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 
       double rhs = model->row_lower_[nz.index()] * scale;
 
-      if (std::abs(rhs - std::round(rhs)) >
-          options->mip_feasibility_tolerance) {
+      if (std::abs(rhs - std::round(rhs)) > primal_feastol) {
         // todo infeasible
       }
 
@@ -229,7 +227,7 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
       double rUpper =
           std::abs(nz.value()) *
           std::floor(model->row_upper_[nz.index()] * std::abs(scale) +
-                     options->mip_feasibility_tolerance);
+                     primal_feastol);
       if (std::abs(model->row_upper_[nz.index()] - rUpper) >
           options->small_matrix_value) {
         model->row_upper_[nz.index()] = rUpper;
@@ -240,7 +238,7 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
       double rLower =
           std::abs(nz.value()) *
           std::ceil(model->row_upper_[nz.index()] * std::abs(scale) -
-                    options->mip_feasibility_tolerance);
+                    primal_feastol);
       if (std::abs(model->row_lower_[nz.index()] - rLower) >
           options->small_matrix_value) {
         model->row_upper_[nz.index()] = rLower;
@@ -282,8 +280,7 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
       double scale = 1.0 / nz.value();
       double rhs = model->row_lower_[nz.index()] * scale;
 
-      if (std::abs(rhs - std::round(rhs)) >
-          options->mip_feasibility_tolerance) {
+      if (std::abs(rhs - std::round(rhs)) > primal_feastol) {
         continue;
       }
 
@@ -307,14 +304,12 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
     double scale = 1.0 / nz.value();
     if (model->row_upper_[nz.index()] != kHighsInf) {
       double rhs = model->row_upper_[nz.index()];
-      if (std::abs(rhs - std::round(rhs)) > options->mip_feasibility_tolerance)
-        return false;
+      if (std::abs(rhs - std::round(rhs)) > primal_feastol) return false;
     }
 
     if (model->row_lower_[nz.index()] != -kHighsInf) {
       double rhs = model->row_lower_[nz.index()];
-      if (std::abs(rhs - std::round(rhs)) > options->mip_feasibility_tolerance)
-        return false;
+      if (std::abs(rhs - std::round(rhs)) > primal_feastol) return false;
     }
 
     if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
@@ -446,15 +441,13 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
   // column bounds and treat them as if they are infinite
   double dualRowLower =
       (model->col_lower_[col] == -kHighsInf) ||
-              (implColLower[col] >
-               model->col_lower_[col] + options->primal_feasibility_tolerance)
+              (implColLower[col] > model->col_lower_[col] + primal_feastol)
           ? model->col_cost_[col]
           : -kHighsInf;
 
   double dualRowUpper =
       (model->col_upper_[col] == kHighsInf) ||
-              (implColUpper[col] <
-               model->col_upper_[col] - options->primal_feasibility_tolerance)
+              (implColUpper[col] < model->col_upper_[col] - primal_feastol)
           ? model->col_cost_[col]
           : kHighsInf;
 
@@ -474,8 +467,7 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
                                  1000 * options->dual_feasibility_tolerance)
             changeImplRowDualUpper(row, impliedBound, col);
         } else {
-          if (impliedBound > implRowDualLower[row] +
-                                 1000 * options->primal_feasibility_tolerance)
+          if (impliedBound > implRowDualLower[row] + 1000 * primal_feastol)
             changeImplRowDualLower(row, impliedBound, col);
         }
       }
@@ -494,8 +486,7 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
           options->dual_feasibility_tolerance) {
         if (val > 0) {
           // only tighten bound if it is tighter by a wide enough margin
-          if (impliedBound > implRowDualLower[row] +
-                                 1000 * options->primal_feasibility_tolerance)
+          if (impliedBound > implRowDualLower[row] + 1000 * primal_feastol)
             changeImplRowDualLower(row, impliedBound, col);
         } else {
           if (impliedBound < implRowDualUpper[row] -
@@ -527,15 +518,13 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
       double impliedBound =
           double((HighsCDouble(rowUpper) - residualMinAct) / val);
 
-      if (std::abs(impliedBound) * kHighsTiny <=
-          options->primal_feasibility_tolerance) {
+      if (std::abs(impliedBound) * kHighsTiny <= primal_feastol) {
         if (val > 0) {
           // bound is an upper bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
             if (model->integrality_[col] != HighsVarType::kContinuous) {
-              double roundedBound =
-                  std::floor(impliedBound + options->mip_feasibility_tolerance);
+              double roundedBound = std::floor(impliedBound + primal_feastol);
 
               if (roundedBound < model->col_upper_[col])
                 changeColUpper(col, roundedBound);
@@ -543,9 +532,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
             if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
                 mipsolver->orig_model_->num_row_) {
-              if (impliedBound <
-                  model->col_upper_[col] -
-                      1000 * options->primal_feasibility_tolerance)
+              if (impliedBound < model->col_upper_[col] - 1000 * primal_feastol)
                 changeColUpper(col, impliedBound);
 
               impliedBound = kHighsInf;
@@ -553,16 +540,14 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           }
 
           // only tighten bound if it is tighter by a wide enough margin
-          if (impliedBound <
-              implColUpper[col] - 1000 * options->primal_feasibility_tolerance)
+          if (impliedBound < implColUpper[col] - 1000 * primal_feastol)
             changeImplColUpper(col, impliedBound, row);
         } else {
           // bound is a lower bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
             if (model->integrality_[col] != HighsVarType::kContinuous) {
-              double roundedBound =
-                  std::ceil(impliedBound - options->mip_feasibility_tolerance);
+              double roundedBound = std::ceil(impliedBound - primal_feastol);
 
               if (roundedBound > model->col_lower_[col])
                 changeColLower(col, roundedBound);
@@ -573,9 +558,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
             // column as implied free
             if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
                 mipsolver->orig_model_->num_row_) {
-              if (impliedBound >
-                  model->col_lower_[col] +
-                      1000 * options->primal_feasibility_tolerance)
+              if (impliedBound > model->col_lower_[col] + 1000 * primal_feastol)
                 changeColLower(col, impliedBound);
 
               impliedBound = -kHighsInf;
@@ -583,8 +566,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           }
 
           // only tighten bound if it is tighter by a wide enough margin
-          if (impliedBound >
-              implColLower[col] + 1000 * options->primal_feasibility_tolerance)
+          if (impliedBound > implColLower[col] + 1000 * primal_feastol)
             changeImplColLower(col, impliedBound, row);
         }
       }
@@ -599,15 +581,13 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
       double impliedBound =
           double((HighsCDouble(rowLower) - residualMaxAct) / val);
 
-      if (std::abs(impliedBound) * kHighsTiny <=
-          options->primal_feasibility_tolerance) {
+      if (std::abs(impliedBound) * kHighsTiny <= primal_feastol) {
         if (val > 0) {
           // bound is a lower bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
             if (model->integrality_[col] != HighsVarType::kContinuous) {
-              double roundedBound =
-                  std::ceil(impliedBound - options->mip_feasibility_tolerance);
+              double roundedBound = std::ceil(impliedBound - primal_feastol);
 
               // change bounds of integers immediately
               if (roundedBound > model->col_lower_[col])
@@ -616,9 +596,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
             if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
                 mipsolver->orig_model_->num_row_) {
-              if (impliedBound >
-                  model->col_lower_[col] +
-                      1000 * options->primal_feasibility_tolerance)
+              if (impliedBound > model->col_lower_[col] + 1000 * primal_feastol)
                 changeColLower(col, impliedBound);
 
               impliedBound = -kHighsInf;
@@ -626,16 +604,14 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           }
 
           // only tighten bound if it is tighter by a wide enough margin
-          if (impliedBound >
-              implColLower[col] + 1000 * options->primal_feasibility_tolerance)
+          if (impliedBound > implColLower[col] + 1000 * primal_feastol)
             changeImplColLower(col, impliedBound, row);
         } else {
           // bound is an upper bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
             if (model->integrality_[col] != HighsVarType::kContinuous) {
-              double roundedBound =
-                  std::floor(impliedBound + options->mip_feasibility_tolerance);
+              double roundedBound = std::floor(impliedBound + primal_feastol);
 
               // change bounds of integers immediately
               if (roundedBound < model->col_upper_[col])
@@ -644,9 +620,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
             if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
                 mipsolver->orig_model_->num_row_) {
-              if (impliedBound <
-                  model->col_upper_[col] -
-                      1000 * options->primal_feasibility_tolerance)
+              if (impliedBound < model->col_upper_[col] - 1000 * primal_feastol)
                 changeColUpper(col, impliedBound);
 
               impliedBound = kHighsInf;
@@ -654,8 +628,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           }
 
           // only tighten bound if it is tighter by a wide enough margin
-          if (impliedBound <
-              implColUpper[col] - 1000 * options->primal_feasibility_tolerance)
+          if (impliedBound < implColUpper[col] - 1000 * primal_feastol)
             changeImplColUpper(col, impliedBound, row);
         }
       }
@@ -1071,8 +1044,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     }
 
     if (colIsBinary) {
-      if (model->col_cost_[j] >= 0.0 &&
-          worstCaseLb <= 1 + mipsolver->mipdata_->feastol) {
+      if (model->col_cost_[j] >= 0.0 && worstCaseLb <= 1 + primal_feastol) {
         upperImplied = true;
         if (!lowerImplied && bestRowMinus != -1) {
           storeRow(bestRowMinus);
@@ -1115,8 +1087,7 @@ HPresolve::Result HPresolve::dominatedColumns(
         }
       }
 
-      if (model->col_cost_[j] <= 0.0 &&
-          worstCaseUb >= -mipsolver->mipdata_->feastol) {
+      if (model->col_cost_[j] <= 0.0 && worstCaseUb >= -primal_feastol) {
         lowerImplied = true;
         if (!upperImplied && bestRowPlus != -1) {
           storeRow(bestRowPlus);
@@ -1268,7 +1239,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   // first tighten all bounds if they have an implied bound that is tighter
   // thatn their column bound before probing this is not done for continuous
   // columns since it may allow stronger dual presolve and more aggregations
-  double hugeBound = options->primal_feasibility_tolerance / kHighsTiny;
+  double hugeBound = primal_feastol / kHighsTiny;
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (model->col_lower_[i] >= implColLower[i] &&
         model->col_upper_[i] <= implColUpper[i])
@@ -1602,7 +1573,7 @@ void HPresolve::markColDeleted(HighsInt col) {
 
 void HPresolve::changeColUpper(HighsInt col, double newUpper) {
   if (model->integrality_[col] != HighsVarType::kContinuous) {
-    newUpper = std::floor(newUpper + options->mip_feasibility_tolerance);
+    newUpper = std::floor(newUpper + primal_feastol);
     if (newUpper == model->col_upper_[col]) return;
   }
 
@@ -1618,7 +1589,7 @@ void HPresolve::changeColUpper(HighsInt col, double newUpper) {
 
 void HPresolve::changeColLower(HighsInt col, double newLower) {
   if (model->integrality_[col] != HighsVarType::kContinuous) {
-    newLower = std::ceil(newLower - options->mip_feasibility_tolerance);
+    newLower = std::ceil(newLower - primal_feastol);
     if (newLower == model->col_lower_[col]) return;
   }
 
@@ -1667,20 +1638,16 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
                                    HighsInt originRow) {
   double oldImplUpper = implColUpper[col];
   HighsInt oldUpperSource = colUpperSource[col];
-  if (oldImplUpper >=
-          model->col_upper_[col] - options->primal_feasibility_tolerance &&
-      newUpper <
-          model->col_upper_[col] - options->primal_feasibility_tolerance) {
+  if (oldImplUpper >= model->col_upper_[col] - primal_feastol &&
+      newUpper < model->col_upper_[col] - primal_feastol) {
     // the dual constraint can be considered a >= constraint and was free, or a
     // <= constraint before
     markChangedCol(col);
   }
   bool newImpliedFree =
       isLowerImplied(col) &&
-      oldImplUpper >
-          model->col_upper_[col] + options->primal_feasibility_tolerance &&
-      newUpper <=
-          model->col_upper_[col] + options->primal_feasibility_tolerance;
+      oldImplUpper > model->col_upper_[col] + primal_feastol &&
+      newUpper <= model->col_upper_[col] + primal_feastol;
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
@@ -1708,10 +1675,8 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
                                    HighsInt originRow) {
   double oldImplLower = implColLower[col];
   HighsInt oldLowerSource = colLowerSource[col];
-  if (oldImplLower <=
-          model->col_lower_[col] + options->primal_feasibility_tolerance &&
-      newLower >
-          model->col_lower_[col] + options->primal_feasibility_tolerance) {
+  if (oldImplLower <= model->col_lower_[col] + primal_feastol &&
+      newLower > model->col_lower_[col] + primal_feastol) {
     // the dual constraint can additionally be considered a <= constraint and
     // was free, or a
     // >= constraint before
@@ -1719,10 +1684,8 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
   }
   bool newImpliedFree =
       isUpperImplied(col) &&
-      oldImplLower <
-          model->col_lower_[col] - options->primal_feasibility_tolerance &&
-      newLower >=
-          model->col_lower_[col] - options->primal_feasibility_tolerance;
+      oldImplLower < model->col_lower_[col] - primal_feastol &&
+      newLower >= model->col_lower_[col] - primal_feastol;
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
@@ -2175,9 +2138,8 @@ void HPresolve::transformColumn(HighsPostsolveStack& postSolveStack,
     // we rely on the integrality status being already updated to the newly
     // scaled column by the caller, if necessary
     model->col_upper_[col] =
-        std::floor(model->col_upper_[col] + options->mip_feasibility_tolerance);
-    model->col_lower_[col] =
-        std::ceil(model->col_lower_[col] - options->mip_feasibility_tolerance);
+        std::floor(model->col_upper_[col] + primal_feastol);
+    model->col_lower_[col] = std::ceil(model->col_lower_[col] - primal_feastol);
   }
 
   if (scale < 0) {
@@ -2449,7 +2411,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
         return Result::kOk;
       staycoef = roundCoef;
       double roundRhs = std::round(rhs / substcoef) * substcoef;
-      if (std::abs(rhs - roundRhs) > options->mip_feasibility_tolerance)
+      if (std::abs(rhs - roundRhs) > primal_feastol)
         return Result::kPrimalInfeasible;
       rhs = roundRhs;
     } else {
@@ -2539,12 +2501,12 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
   // possibly tighten bounds of the column that stays
   bool lowerTightened = false;
   bool upperTightened = false;
-  if (stayImplLower > oldStayLower + options->primal_feasibility_tolerance) {
+  if (stayImplLower > oldStayLower + primal_feastol) {
     lowerTightened = true;
     changeColLower(staycol, stayImplLower);
   }
 
-  if (stayImplUpper < oldStayUpper - options->primal_feasibility_tolerance) {
+  if (stayImplUpper < oldStayUpper - primal_feastol) {
     upperTightened = true;
     changeColUpper(staycol, stayImplUpper);
   }
@@ -2593,17 +2555,17 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
   // check for simple
   if (val > 0) {
     if (model->col_upper_[col] * val <=
-            model->row_upper_[row] + options->primal_feasibility_tolerance &&
+            model->row_upper_[row] + primal_feastol &&
         model->col_lower_[col] * val >=
-            model->row_lower_[row] - options->primal_feasibility_tolerance) {
+            model->row_lower_[row] - primal_feastol) {
       postSolveStack.redundantRow(row);
       return checkLimits(postSolveStack);
     }
   } else {
     if (model->col_lower_[col] * val <=
-            model->row_upper_[row] + options->primal_feasibility_tolerance &&
+            model->row_upper_[row] + primal_feastol &&
         model->col_upper_[col] * val >=
-            model->row_lower_[row] - options->primal_feasibility_tolerance) {
+            model->row_lower_[row] - primal_feastol) {
       postSolveStack.redundantRow(row);
       return checkLimits(postSolveStack);
     }
@@ -2626,20 +2588,17 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
       newColUpper = model->row_lower_[row] / val;
   }
 
-  bool lowerTightened = newColLower > model->col_lower_[col] +
-                                          options->primal_feasibility_tolerance;
-  bool upperTightened = newColUpper < model->col_upper_[col] -
-                                          options->primal_feasibility_tolerance;
+  bool lowerTightened = newColLower > model->col_lower_[col] + primal_feastol;
+  bool upperTightened = newColUpper < model->col_upper_[col] - primal_feastol;
   double lb = lowerTightened ? newColLower : model->col_lower_[col];
   double ub = upperTightened ? newColUpper : model->col_upper_[col];
 
   // printf("old bounds [%.15g,%.15g], new bounds [%.15g,%.15g] ... ",
   //        model->col_lower_[col], model->col_upper_[col], lb, ub);
   // check whether the bounds are equal in tolerances
-  if (ub <= lb + options->primal_feasibility_tolerance) {
+  if (ub <= lb + primal_feastol) {
     // bounds could be infeasible or equal in tolerances, first check infeasible
-    if (ub < lb - options->primal_feasibility_tolerance)
-      return Result::kPrimalInfeasible;
+    if (ub < lb - primal_feastol) return Result::kPrimalInfeasible;
 
     // bounds are equal in tolerances, if they have a slight infeasibility below
     // those tolerances or they have a slight numerical distance which changes
@@ -2647,8 +2606,8 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
     // set the bound to one of the values. To heuristically get rid of numerical
     // errors we choose the bound that was not tightened, or the midpoint if
     // both where tightened.
-    if (ub < lb || (ub > lb && (ub - lb) * getMaxAbsColVal(col) <=
-                                   options->primal_feasibility_tolerance)) {
+    if (ub < lb ||
+        (ub > lb && (ub - lb) * getMaxAbsColVal(col) <= primal_feastol)) {
       if (lowerTightened && upperTightened) {
         ub = 0.5 * (ub + lb);
         lb = ub;
@@ -2777,10 +2736,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
       isImpliedInteger(col)) {
     model->integrality_[col] = HighsVarType::kImplicitInteger;
     ++rowsizeImplInt[row];
-    double ceilLower =
-        std::ceil(model->col_lower_[col] - options->mip_feasibility_tolerance);
-    double floorUpper =
-        std::floor(model->col_upper_[col] + options->mip_feasibility_tolerance);
+    double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
+    double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
 
     if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
     if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
@@ -2837,8 +2794,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
     default:
       break;
     case 0:
-      if (model->row_upper_[row] < -options->primal_feasibility_tolerance ||
-          model->row_lower_[row] > options->primal_feasibility_tolerance)
+      if (model->row_upper_[row] < -primal_feastol ||
+          model->row_lower_[row] > primal_feastol)
         // model infeasible
         return Result::kPrimalInfeasible;
       postSolveStack.redundantRow(row);
@@ -2853,18 +2810,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
   double impliedRowUpper = impliedRowBounds.getSumUpper(row);
   double impliedRowLower = impliedRowBounds.getSumLower(row);
 
-  if (impliedRowLower >
-          model->row_upper_[row] + options->primal_feasibility_tolerance ||
-      impliedRowUpper <
-          model->row_lower_[row] - options->primal_feasibility_tolerance) {
+  if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
+      impliedRowUpper < model->row_lower_[row] - primal_feastol) {
     // model infeasible
     return Result::kPrimalInfeasible;
   }
 
-  if (impliedRowLower >=
-          model->row_lower_[row] - options->primal_feasibility_tolerance &&
-      impliedRowUpper <=
-          model->row_upper_[row] + options->primal_feasibility_tolerance) {
+  if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
+      impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
     // row is redundant
     postSolveStack.redundantRow(row);
     removeRow(row);
@@ -2902,7 +2855,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
               model->integrality_[nonz.index()] == HighsVarType::kInteger &&
               std::abs(model->col_upper_[nonz.index()] -
                        model->col_lower_[nonz.index()] - 1.0) <=
-                  options->mip_feasibility_tolerance) {
+                  primal_feastol) {
             // found a binary variable that implies all other variables to be
             // fixed when it sits at one of its bounds therefore we can
             // substitute all other variables in the row
@@ -3020,11 +2973,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
               for (const HighsSliceNonzero& nonzero :
                    getColumnVector(continuousCol))
                 ++rowsizeImplInt[nonzero.index()];
-              double ceilLower = std::ceil(model->col_lower_[continuousCol] -
-                                           options->mip_feasibility_tolerance);
+              double ceilLower =
+                  std::ceil(model->col_lower_[continuousCol] - primal_feastol);
               double floorUpper =
-                  std::floor(model->col_upper_[continuousCol] +
-                             options->mip_feasibility_tolerance);
+                  std::floor(model->col_upper_[continuousCol] + primal_feastol);
 
               if (ceilLower > model->col_lower_[continuousCol])
                 changeColLower(continuousCol, ceilLower);
@@ -3041,8 +2993,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
 
           if (intScale != 0.0 && intScale <= 1e3) {
             double rhs = rowUpper * intScale;
-            if (std::abs(rhs - std::round(rhs)) >
-                options->mip_feasibility_tolerance)
+            if (std::abs(rhs - std::round(rhs)) > primal_feastol)
               return Result::kPrimalInfeasible;
 
             rhs = std::round(rhs);
@@ -3107,17 +3058,17 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                 // z is fixed after rounding its new bounds. If that is the case
                 // we directly fix x1 instead of first substituting with d * z +
                 // b.
-                double zLower = std::ceil((model->col_lower_[x1] - b) / d -
-                                          options->mip_feasibility_tolerance);
+                double zLower =
+                    std::ceil((model->col_lower_[x1] - b) / d - primal_feastol);
                 double zUpper = std::floor((model->col_upper_[x1] - b) / d +
-                                           options->mip_feasibility_tolerance);
+                                           primal_feastol);
 
                 if (zLower == zUpper) {
                   // rounded bounds are equal, so fix x1 to the corresponding
                   // bound
                   double fixVal = zLower * d + b;
                   if (std::abs(model->col_lower_[x1] - fixVal) <=
-                      options->mip_feasibility_tolerance)
+                      primal_feastol)
                     fixColToLower(postSolveStack, x1);
                   else
                     fixColToUpper(postSolveStack, x1);
@@ -3146,10 +3097,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         rowIndex.reserve(rowsize[row]);
 
         double deltaDown = model->row_lower_[row] == -kHighsInf
-                               ? options->mip_feasibility_tolerance
+                               ? primal_feastol
                                : options->small_matrix_value;
         double deltaUp = model->row_upper_[row] == kHighsInf
-                             ? options->mip_feasibility_tolerance
+                             ? primal_feastol
                              : options->small_matrix_value;
 
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
@@ -3190,8 +3141,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             }
 
             if (success) {
-              HighsCDouble roundRhs =
-                  floor(rhs + options->mip_feasibility_tolerance);
+              HighsCDouble roundRhs = floor(rhs + primal_feastol);
               if (rhs - roundRhs >=
                   minRhsTightening - options->small_matrix_value) {
                 // scaled and rounded is not weaker than the original constraint
@@ -3207,9 +3157,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                     addToMatrix(row, rowIndex[i],
                                 rowCoefs[i] - Avalue[rowpositions[i]]);
                   }
-                } else if (rhs - roundRhs <
-                           minRhsTightening -
-                               options->mip_feasibility_tolerance) {
+                } else if (rhs - roundRhs < minRhsTightening - primal_feastol) {
                   // printf(
                   //     "tightening right hand side from %g to %g due to "
                   //     "rounding with integral scale %g\n",
@@ -3256,8 +3204,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             }
 
             if (success) {
-              HighsCDouble roundRhs =
-                  ceil(rhs - options->mip_feasibility_tolerance);
+              HighsCDouble roundRhs = ceil(rhs - primal_feastol);
               if (rhs - roundRhs <=
                   minRhsTightening + options->small_matrix_value) {
                 // scaled and rounded is not weaker than the original constraint
@@ -3272,9 +3219,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   for (HighsInt i = 0; i < numRowCoefs; ++i)
                     addToMatrix(row, rowIndex[i],
                                 rowCoefs[i] - Avalue[rowpositions[i]]);
-                } else if (rhs - roundRhs >
-                           minRhsTightening +
-                               options->mip_feasibility_tolerance) {
+                } else if (rhs - roundRhs > minRhsTightening + primal_feastol) {
                   // scale value is large, so we scale back the altered
                   // constraint the scaled back constraint must be stronger than
                   // the original constraint for this to make sense with is
@@ -3339,10 +3284,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             }
 
             if (success) {
-              HighsCDouble roundLhs =
-                  ceil(lhs - options->mip_feasibility_tolerance);
-              HighsCDouble roundRhs =
-                  floor(rhs + options->mip_feasibility_tolerance);
+              HighsCDouble roundLhs = ceil(lhs - primal_feastol);
+              HighsCDouble roundRhs = floor(rhs + primal_feastol);
 
               // rounded row proves infeasibility regardless of coefficient
               // values
@@ -3373,11 +3316,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   // scale value is large, just tighten the sides
                   roundLhs /= intScale;
                   roundRhs /= intScale;
-                  if (roundRhs < model->row_upper_[row] -
-                                     options->mip_feasibility_tolerance)
+                  if (roundRhs < model->row_upper_[row] - primal_feastol)
                     model->row_upper_[row] = double(roundRhs);
-                  if (roundLhs > model->row_lower_[row] +
-                                     options->mip_feasibility_tolerance)
+                  if (roundLhs > model->row_lower_[row] + primal_feastol)
                     model->row_lower_[row] = double(roundLhs);
                 }
               }
@@ -3398,16 +3339,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
           if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
-          if (nonz.value() >
-              maxCoefValue + options->mip_feasibility_tolerance) {
+          if (nonz.value() > maxCoefValue + primal_feastol) {
             // <= contraint, we decrease the coefficient value and the right
             // hand side
             double delta = maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_upper_[nonz.index()];
             ++numTightened;
-          } else if (nonz.value() <
-                     -maxCoefValue - options->mip_feasibility_tolerance) {
+          } else if (nonz.value() < -maxCoefValue - primal_feastol) {
             double delta = -maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_lower_[nonz.index()];
@@ -3427,14 +3366,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
           if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
-          if (nonz.value() >
-              maxCoefValue + options->mip_feasibility_tolerance) {
+          if (nonz.value() > maxCoefValue + primal_feastol) {
             double delta = maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_lower_[nonz.index()];
             ++numTightened;
-          } else if (nonz.value() <
-                     -maxCoefValue - options->mip_feasibility_tolerance) {
+          } else if (nonz.value() < -maxCoefValue - primal_feastol) {
             double delta = -maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_upper_[nonz.index()];
@@ -3454,7 +3391,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
   //        baseiRUpper);
 
   if (impliedRowUpper <=  // check for forcing row on the row lower bound
-      model->row_lower_[row] + options->primal_feasibility_tolerance) {
+      model->row_lower_[row] + primal_feastol) {
     // the row upper bound that is implied by the column bounds is equal to
     // the row lower bound there for we can fix all columns at their bound
     // as this is the only feasible assignment for this row and then find a
@@ -3521,8 +3458,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
       return checkLimits(postSolveStack);
     }
     // if there are any new row singletons, also remove them immediately
-  } else if (impliedRowLower >=
-             model->row_upper_[row] - options->primal_feasibility_tolerance) {
+  } else if (impliedRowLower >= model->row_upper_[row] - primal_feastol) {
     // forcing row in the other direction
     storeRow(row);
     auto rowVector = getStoredRow();
@@ -3616,12 +3552,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
   assert(!colDeleted[col]);
 
   double boundDiff = model->col_upper_[col] - model->col_lower_[col];
-  if (boundDiff <= options->primal_feasibility_tolerance) {
+  if (boundDiff <= primal_feastol) {
     if (boundDiff <= options->small_matrix_value ||
-        getMaxAbsColVal(col) * boundDiff <=
-            options->primal_feasibility_tolerance) {
-      if (boundDiff < -options->primal_feasibility_tolerance)
-        return Result::kPrimalInfeasible;
+        getMaxAbsColVal(col) * boundDiff <= primal_feastol) {
+      if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
       postSolveStack.removedFixedCol(col, model->col_lower_[col],
                                      model->col_cost_[col],
                                      getColumnVector(col));
@@ -3766,10 +3700,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       model->integrality_[col] = HighsVarType::kImplicitInteger;
       for (const HighsSliceNonzero& nonzero : getColumnVector(col))
         ++rowsizeImplInt[nonzero.index()];
-      double ceilLower = std::ceil(model->col_lower_[col] -
-                                   options->mip_feasibility_tolerance);
-      double floorUpper = std::floor(model->col_upper_[col] +
-                                     options->mip_feasibility_tolerance);
+      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
+      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
 
       if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
       if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
@@ -3821,10 +3753,8 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
     if (model->integrality_[col] != HighsVarType::kContinuous) {
-      double ceilLower = std::ceil(model->col_lower_[col] -
-                                   options->mip_feasibility_tolerance);
-      double floorUpper = std::floor(model->col_upper_[col] +
-                                     options->mip_feasibility_tolerance);
+      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
+      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
 
       if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
       if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
@@ -4872,9 +4802,7 @@ HighsInt HPresolve::strengthenInequalities() {
         weight = -weight;
       }
 
-      if (ub <= options->mip_feasibility_tolerance ||
-          weight <= options->mip_feasibility_tolerance)
-        continue;
+      if (ub <= primal_feastol || weight <= primal_feastol) continue;
 
       if (model->integrality_[col] == HighsVarType::kContinuous) {
         continuouscontribution += weight * ub;
@@ -4894,8 +4822,7 @@ HighsInt HPresolve::strengthenInequalities() {
     }
 
     const double smallVal =
-        std::max(100 * options->mip_feasibility_tolerance,
-                 options->mip_feasibility_tolerance * double(maxviolation));
+        std::max(100 * primal_feastol, primal_feastol * double(maxviolation));
     while (true) {
       if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
@@ -4933,9 +4860,8 @@ HighsInt HPresolve::strengthenInequalities() {
 
       double al = reducedcost[alpos];
       coefs.resize(coverend);
-      double coverrhs = std::max(
-          std::ceil(double(lambda / al - options->mip_feasibility_tolerance)),
-          1.0);
+      double coverrhs =
+          std::max(std::ceil(double(lambda / al - primal_feastol)), 1.0);
       HighsCDouble slackupper = -coverrhs;
 
       double step = kHighsInf;
@@ -4958,15 +4884,13 @@ HighsInt HPresolve::strengthenInequalities() {
 
       indices.erase(std::remove_if(indices.begin(), indices.end(),
                                    [&](HighsInt i) {
-                                     return reducedcost[i] <=
-                                            options->mip_feasibility_tolerance;
+                                     return reducedcost[i] <= primal_feastol;
                                    }),
                     indices.end());
       indices.push_back(slackind);
     }
 
-    double threshold =
-        double(maxviolation + options->mip_feasibility_tolerance);
+    double threshold = double(maxviolation + primal_feastol);
 
     indices.erase(std::remove_if(indices.begin(), indices.end(),
                                  [&](HighsInt i) {
@@ -5029,10 +4953,8 @@ HighsInt HPresolve::detectImpliedIntegers() {
       for (const HighsSliceNonzero& nonzero : getColumnVector(col))
         ++rowsizeImplInt[nonzero.index()];
 
-      double ceilLower = std::ceil(model->col_lower_[col] -
-                                   options->mip_feasibility_tolerance);
-      double floorUpper = std::floor(model->col_upper_[col] +
-                                     options->mip_feasibility_tolerance);
+      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
+      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
 
       if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
       if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
@@ -5177,50 +5099,40 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         if (mipsolver == nullptr) {
           // for LP we check strict reduncancy of the bounds as otherwise dual
           // postsolve might fail when the bound is used in the optimal solution
-          return colScale > 0
-                     ? model->col_upper_[col] == kHighsInf ||
-                           implColUpper[col] <
-                               model->col_upper_[col] -
-                                   options->primal_feasibility_tolerance
-                     : model->col_lower_[col] == -kHighsInf ||
-                           implColLower[col] >
-                               model->col_lower_[col] +
-                                   options->primal_feasibility_tolerance;
+          return colScale > 0 ? model->col_upper_[col] == kHighsInf ||
+                                    implColUpper[col] <
+                                        model->col_upper_[col] - primal_feastol
+                              : model->col_lower_[col] == -kHighsInf ||
+                                    implColLower[col] >
+                                        model->col_lower_[col] + primal_feastol;
         } else {
           // for MIP we do not need dual postsolve so the reduction is valid if
           // the bound is weakly redundant
           return colScale > 0 ? model->col_upper_[col] == kHighsInf ||
                                     implColUpper[col] <=
-                                        model->col_upper_[col] +
-                                            options->mip_feasibility_tolerance
+                                        model->col_upper_[col] + primal_feastol
                               : model->col_lower_[col] == -kHighsInf ||
                                     implColLower[col] >=
-                                        model->col_lower_[col] -
-                                            options->mip_feasibility_tolerance;
+                                        model->col_lower_[col] - primal_feastol;
         }
       };
 
       auto colLowerInf = [&]() {
         if (!checkColImplBounds) return false;
         if (mipsolver == nullptr) {
-          return colScale > 0
-                     ? model->col_lower_[col] == -kHighsInf ||
-                           implColLower[col] >
-                               model->col_lower_[col] +
-                                   options->primal_feasibility_tolerance
-                     : model->col_upper_[col] == kHighsInf ||
-                           implColUpper[col] <
-                               model->col_upper_[col] -
-                                   options->primal_feasibility_tolerance;
+          return colScale > 0 ? model->col_lower_[col] == -kHighsInf ||
+                                    implColLower[col] >
+                                        model->col_lower_[col] + primal_feastol
+                              : model->col_upper_[col] == kHighsInf ||
+                                    implColUpper[col] <
+                                        model->col_upper_[col] - primal_feastol;
         } else {
           return colScale > 0 ? model->col_lower_[col] == -kHighsInf ||
                                     implColLower[col] >=
-                                        model->col_lower_[col] -
-                                            options->mip_feasibility_tolerance
+                                        model->col_lower_[col] - primal_feastol
                               : model->col_upper_[col] == kHighsInf ||
                                     implColUpper[col] <=
-                                        model->col_upper_[col] +
-                                            options->mip_feasibility_tolerance;
+                                        model->col_upper_[col] + primal_feastol;
         }
       };
 
@@ -5229,13 +5141,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         if (mipsolver == nullptr) {
           return model->col_upper_[duplicateCol] == kHighsInf ||
                  implColUpper[duplicateCol] <
-                     model->col_upper_[duplicateCol] -
-                         options->primal_feasibility_tolerance;
+                     model->col_upper_[duplicateCol] - primal_feastol;
         } else {
           return model->col_upper_[duplicateCol] == kHighsInf ||
                  implColUpper[duplicateCol] <=
-                     model->col_upper_[duplicateCol] +
-                         options->mip_feasibility_tolerance;
+                     model->col_upper_[duplicateCol] + primal_feastol;
         }
       };
 
@@ -5244,13 +5154,11 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         if (mipsolver == nullptr) {
           return model->col_lower_[duplicateCol] == -kHighsInf ||
                  implColLower[duplicateCol] >
-                     model->col_lower_[duplicateCol] +
-                         options->primal_feasibility_tolerance;
+                     model->col_lower_[duplicateCol] + primal_feastol;
         } else {
           return model->col_lower_[duplicateCol] == -kHighsInf ||
                  implColLower[duplicateCol] >=
-                     model->col_lower_[duplicateCol] -
-                         options->mip_feasibility_tolerance;
+                     model->col_lower_[duplicateCol] - primal_feastol;
         }
       };
 
@@ -5377,7 +5285,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             // the way we assign the columns above
             if (std::abs(colScale * (model->col_upper_[duplicateCol] -
                                      model->col_lower_[duplicateCol])) <
-                1.0 - options->primal_feasibility_tolerance)
+                1.0 - primal_feastol)
               continue;
           } else if (colScale > 1.0) {
             // round bounds to exact integer values to make sure they are not
@@ -5407,10 +5315,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               for (HighsInt k2 = model->col_lower_[duplicateCol]; k2 <= k2Max;
                    ++k2) {
                 double colVal = mergeVal - colScale * k2;
-                if (colVal >= model->col_lower_[col] -
-                                  options->primal_feasibility_tolerance &&
-                    colVal <= model->col_upper_[col] +
-                                  options->primal_feasibility_tolerance) {
+                if (colVal >= model->col_lower_[col] - primal_feastol &&
+                    colVal <= model->col_upper_[col] + primal_feastol) {
                   representable = true;
                   break;
                 }
@@ -5706,12 +5612,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         }
 
         if (newUpper < model->row_upper_[parallelRowCand]) {
-          if (newUpper < model->row_lower_[parallelRowCand] -
-                             options->primal_feasibility_tolerance)
+          if (newUpper < model->row_lower_[parallelRowCand] - primal_feastol)
             return Result::kPrimalInfeasible;
 
-          if (newUpper <= model->row_lower_[parallelRowCand] +
-                              options->primal_feasibility_tolerance)
+          if (newUpper <= model->row_lower_[parallelRowCand] + primal_feastol)
             newUpper = model->row_lower_[parallelRowCand];
 
           if (newUpper < model->row_upper_[parallelRowCand]) {
@@ -5731,12 +5635,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         }
 
         if (newLower > model->row_lower_[parallelRowCand]) {
-          if (newLower > model->row_upper_[parallelRowCand] +
-                             options->primal_feasibility_tolerance)
+          if (newLower > model->row_upper_[parallelRowCand] + primal_feastol)
             return Result::kPrimalInfeasible;
 
-          if (newLower >= model->row_upper_[parallelRowCand] -
-                              options->primal_feasibility_tolerance)
+          if (newLower >= model->row_upper_[parallelRowCand] - primal_feastol)
             newLower = model->row_upper_[parallelRowCand];
 
           if (newLower > model->row_lower_[parallelRowCand]) {
@@ -5880,7 +5782,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 }
 
 void HPresolve::setRelaxedImpliedBounds() {
-  double hugeBound = options->primal_feasibility_tolerance / kHighsTiny;
+  double hugeBound = primal_feastol / kHighsTiny;
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (model->col_lower_[i] >= implColLower[i] &&
         model->col_upper_[i] <= implColUpper[i])
@@ -5894,7 +5796,7 @@ void HPresolve::setRelaxedImpliedBounds() {
       HighsInt nzPos = findNonzero(colLowerSource[i], i);
 
       double boundRelax = std::max(1000.0, std::abs(implColLower[i])) *
-                          options->primal_feasibility_tolerance /
+                          primal_feastol /
                           std::min(1.0, std::abs(Avalue[nzPos]));
 
       double newLb = implColLower[i] - boundRelax;
@@ -5906,7 +5808,7 @@ void HPresolve::setRelaxedImpliedBounds() {
       HighsInt nzPos = findNonzero(colUpperSource[i], i);
 
       double boundRelax = std::max(1000.0, std::abs(implColUpper[i])) *
-                          options->primal_feasibility_tolerance /
+                          primal_feastol /
                           std::min(1.0, std::abs(Avalue[nzPos]));
 
       double newUb = implColUpper[i] + boundRelax;
@@ -6085,7 +5987,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
   std::vector<HighsInt> tmpEquations;
   tmpEquations.reserve(equations.size());
 
-  const double minNonzeroVal = std::sqrt(options->primal_feasibility_tolerance);
+  const double minNonzeroVal = std::sqrt(primal_feastol);
 
   for (const auto& eq : equations) tmpEquations.emplace_back(eq.second);
   for (HighsInt eqrow : tmpEquations) {
