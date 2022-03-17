@@ -75,13 +75,11 @@ jobs:
       fail-fast: false
 
       matrix:
-        msystem: [MINGW64, MINGW32, UCRT64, CLANG64]
+        msystem: [MINGW64, UCRT64, CLANG64]
         build-type: [Release, Debug]
         include:
           - msystem: MINGW64
             target-prefix: mingw-w64-x86_64
-          - msystem: MINGW32
-            target-prefix: mingw-w64-i686
           - msystem: UCRT64
             target-prefix: mingw-w64-ucrt-x86_64
           - msystem: CLANG64
