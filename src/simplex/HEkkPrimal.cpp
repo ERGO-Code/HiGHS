@@ -1140,8 +1140,9 @@ void HEkkPrimal::phase1ChooseRow() {
   // Collect phase 1 theta lists
   //
 
-  const double dPivotTol =
-      info.update_count < 10 ? 1e-9 : info.update_count < 20 ? 1e-8 : 1e-7;
+  const double dPivotTol = info.update_count < 10   ? 1e-9
+                           : info.update_count < 20 ? 1e-8
+                                                    : 1e-7;
   ph1SorterR.clear();
   ph1SorterT.clear();
   for (HighsInt i = 0; i < col_aq.count; i++) {
@@ -1270,8 +1271,9 @@ void HEkkPrimal::chooseRow() {
   row_out = kNoRowChosen;
 
   // Choose row pass 1
-  double alphaTol =
-      info.update_count < 10 ? 1e-9 : info.update_count < 20 ? 1e-8 : 1e-7;
+  double alphaTol = info.update_count < 10   ? 1e-9
+                    : info.update_count < 20 ? 1e-8
+                                             : 1e-7;
 
   double relaxTheta = 1e100;
   double relaxSpace;

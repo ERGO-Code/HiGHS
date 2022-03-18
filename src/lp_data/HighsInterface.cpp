@@ -1442,14 +1442,20 @@ HighsStatus Highs::checkOptimality(const std::string solver_type,
     log_type = HighsLogType::kError;
     return_status = HighsStatus::kError;
   }
-  highsLogUser(options_.log_options, log_type,
-               "%s solver claims optimality, but with num/sum/max "
-               "primal(%" HIGHSINT_FORMAT "/%g/%g) and dual(%" HIGHSINT_FORMAT
-               "/%g/%g) infeasibilities\n",
-               solver_type.c_str(), info_.num_primal_infeasibilities,
-               info_.sum_primal_infeasibilities, info_.max_primal_infeasibility,
-               info_.num_dual_infeasibilities, info_.sum_dual_infeasibilities,
-               info_.max_dual_infeasibility);
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << highsFormatToString(
+      "%s solver claims optimality, but with num/sum/max "
+      "primal(%" HIGHSINT_FORMAT "/%g/%g)",
+      solver_type.c_str(), info_.num_primal_infeasibilities,
+      info_.sum_primal_infeasibilities, info_.max_primal_infeasibility);
+  if (info_.num_dual_infeasibilities > 0)
+    ss << highsFormatToString(
+        "and dual(%" HIGHSINT_FORMAT "/%g/%g)", info_.num_dual_infeasibilities,
+        info_.sum_dual_infeasibilities, info_.max_dual_infeasibility);
+  ss << " infeasibilities\n";
+  const std::string report_string = ss.str();
+  highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());
   return return_status;
 }
 
