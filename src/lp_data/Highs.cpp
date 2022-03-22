@@ -2479,17 +2479,18 @@ HighsStatus Highs::callSolveQp() {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  scaled_model_status_ = runtime.status == ProblemStatus::OPTIMAL
-                             ? HighsModelStatus::kOptimal
-                         : runtime.status == ProblemStatus::UNBOUNDED
-                             ? HighsModelStatus::kUnbounded
-                         : runtime.status == ProblemStatus::INFEASIBLE
-                             ? HighsModelStatus::kInfeasible
-                         : runtime.status == ProblemStatus::ITERATIONLIMIT
-                             ? HighsModelStatus::kIterationLimit
-                         : runtime.status == ProblemStatus::TIMELIMIT
-                             ? HighsModelStatus::kTimeLimit
-                             : HighsModelStatus::kNotset;
+  scaled_model_status_ =
+      runtime.status == ProblemStatus::OPTIMAL
+          ? HighsModelStatus::kOptimal
+          : runtime.status == ProblemStatus::UNBOUNDED
+                ? HighsModelStatus::kUnbounded
+                : runtime.status == ProblemStatus::INFEASIBLE
+                      ? HighsModelStatus::kInfeasible
+                      : runtime.status == ProblemStatus::ITERATIONLIMIT
+                            ? HighsModelStatus::kIterationLimit
+                            : runtime.status == ProblemStatus::TIMELIMIT
+                                  ? HighsModelStatus::kTimeLimit
+                                  : HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
