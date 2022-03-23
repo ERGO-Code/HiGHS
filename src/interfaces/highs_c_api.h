@@ -843,7 +843,7 @@ HighsInt Highs_setLogicalBasis(void* highs);
  * @param row_value   an array of length [num_row] with the rowumn solution
  *                    values
  * @param col_dual    an array of length [num_col] with the column dual values
- * @param row_dual    an array of length [num_row] with the rowumn dual values
+ * @param row_dual    an array of length [num_row] with the row dual values
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
