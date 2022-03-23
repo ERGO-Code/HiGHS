@@ -834,6 +834,24 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
 HighsInt Highs_setLogicalBasis(void* highs);
 
 /**
+ * Set a solution by passing the column and row primal and dual
+ * solution values. For any values that are unavailable pass NULL.
+ *
+ * @param highs       a pointer to the Highs instance
+ * @param col_value   an array of length [num_col] with the column solution
+ *                    values
+ * @param row_value   an array of length [num_row] with the rowumn solution
+ *                    values
+ * @param col_dual    an array of length [num_col] with the column dual values
+ * @param row_dual    an array of length [num_row] with the rowumn dual values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_setSolution(void* highs, const double* col_value,
+                           const double* row_value, const double* col_dual,
+                           const double* row_dual);
+
+/**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
  * @param highs     a pointer to the Highs instance
