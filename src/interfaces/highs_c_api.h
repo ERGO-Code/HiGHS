@@ -840,7 +840,7 @@ HighsInt Highs_setLogicalBasis(void* highs);
  * @param highs       a pointer to the Highs instance
  * @param col_value   an array of length [num_col] with the column solution
  *                    values
- * @param row_value   an array of length [num_row] with the rowumn solution
+ * @param row_value   an array of length [num_row] with the row solution
  *                    values
  * @param col_dual    an array of length [num_col] with the column dual values
  * @param row_dual    an array of length [num_row] with the row dual values
