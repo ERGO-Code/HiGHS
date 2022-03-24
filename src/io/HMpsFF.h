@@ -68,25 +68,25 @@ class HMpsFF {
  private:
   double start_time;
 
-  HighsInt numRow;
-  HighsInt numCol;
-  HighsInt nnz;
-  std::string mpsName;
+  HighsInt num_row;
+  HighsInt num_col;
+  HighsInt num_nz;
+  std::string mps_name;
 
-  ObjSense objSense = ObjSense::kMinimize;  // Minimization by default
-  double objOffset = 0;
+  ObjSense obj_sense = ObjSense::kMinimize;  // Minimization by default
+  double obj_offset = 0;
 
-  std::vector<HighsInt> Astart;
-  std::vector<HighsInt> Aindex;
-  std::vector<double> Avalue;
-  std::vector<double> colCost;
-  std::vector<double> colLower;
-  std::vector<double> colUpper;
-  std::vector<double> rowLower;
-  std::vector<double> rowUpper;
+  std::vector<HighsInt> a_start;
+  std::vector<HighsInt> a_index;
+  std::vector<double> a_value;
+  std::vector<double> col_cost;
+  std::vector<double> col_lower;
+  std::vector<double> col_upper;
+  std::vector<double> row_lower;
+  std::vector<double> row_upper;
 
-  std::vector<std::string> rowNames;
-  std::vector<std::string> colNames;
+  std::vector<std::string> row_names;
+  std::vector<std::string> col_names;
 
   std::vector<HighsVarType> col_integrality;
 

@@ -39,34 +39,34 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     return FreeFormatParserReturnCode::kParserError;
   }
 
-  colCost.assign(numCol, 0);
-  for (auto i : coeffobj) colCost[i.first] = i.second;
+  col_cost.assign(num_col, 0);
+  for (auto i : coeffobj) col_cost[i.first] = i.second;
   HighsInt status = fillMatrix();
   if (status) return FreeFormatParserReturnCode::kParserError;
   status = fillHessian();
   if (status) return FreeFormatParserReturnCode::kParserError;
 
-  lp.num_row_ = std::move(numRow);
-  lp.num_col_ = std::move(numCol);
+  lp.num_row_ = std::move(num_row);
+  lp.num_col_ = std::move(num_col);
 
-  lp.sense_ = objSense;
-  lp.offset_ = objOffset;
+  lp.sense_ = obj_sense;
+  lp.offset_ = obj_offset;
 
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  lp.a_matrix_.start_ = std::move(Astart);
-  lp.a_matrix_.index_ = std::move(Aindex);
-  lp.a_matrix_.value_ = std::move(Avalue);
-  // a_matrix must have at least start_[0]=0 for the fictitious column
+  lp.a_matrix_.start_ = std::move(a_start);
+  lp.a_matrix_.index_ = std::move(a_index);
+  lp.a_matrix_.value_ = std::move(a_value);
+  // a must have at least start_[0]=0 for the fictitious column
   // 0
   if ((int)lp.a_matrix_.start_.size() == 0) lp.a_matrix_.clear();
-  lp.col_cost_ = std::move(colCost);
-  lp.col_lower_ = std::move(colLower);
-  lp.col_upper_ = std::move(colUpper);
-  lp.row_lower_ = std::move(rowLower);
-  lp.row_upper_ = std::move(rowUpper);
+  lp.col_cost_ = std::move(col_cost);
+  lp.col_lower_ = std::move(col_lower);
+  lp.col_upper_ = std::move(col_upper);
+  lp.row_lower_ = std::move(row_lower);
+  lp.row_upper_ = std::move(row_upper);
 
-  lp.row_names_ = std::move(rowNames);
-  lp.col_names_ = std::move(colNames);
+  lp.row_names_ = std::move(row_names);
+  lp.col_names_ = std::move(col_names);
 
   // Only set up lp.integrality_ if non-continuous
   bool is_mip = false;
@@ -92,36 +92,36 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
 HighsInt HMpsFF::fillMatrix() {
   HighsInt num_entries = entries.size();
-  if (num_entries != nnz) return 1;
+  if (num_entries != num_nz) return 1;
 
-  Avalue.resize(nnz);
-  Aindex.resize(nnz);
-  Astart.assign(numCol + 1, 0);
+  a_value.resize(num_nz);
+  a_index.resize(num_nz);
+  a_start.assign(num_col + 1, 0);
   // Nothing to do if there are no entries in the matrix
   if (!num_entries) return 0;
 
   HighsInt newColIndex = std::get<0>(entries.at(0));
 
-  for (HighsInt k = 0; k < nnz; k++) {
-    Avalue.at(k) = std::get<2>(entries.at(k));
-    Aindex.at(k) = std::get<1>(entries.at(k));
+  for (HighsInt k = 0; k < num_nz; k++) {
+    a_value.at(k) = std::get<2>(entries.at(k));
+    a_index.at(k) = std::get<1>(entries.at(k));
 
     if (std::get<0>(entries.at(k)) != newColIndex) {
       HighsInt nEmptyCols = std::get<0>(entries.at(k)) - newColIndex;
       newColIndex = std::get<0>(entries.at(k));
-      if (newColIndex >= numCol) return 1;
+      if (newColIndex >= num_col) return 1;
 
-      Astart.at(newColIndex) = k;
+      a_start.at(newColIndex) = k;
       for (HighsInt i = 1; i < nEmptyCols; i++) {
-        Astart.at(newColIndex - i) = k;
+        a_start.at(newColIndex - i) = k;
       }
     }
   }
 
-  for (HighsInt col = newColIndex + 1; col <= numCol; col++) Astart[col] = nnz;
+  for (HighsInt col = newColIndex + 1; col <= num_col; col++) a_start[col] = num_nz;
 
-  for (HighsInt i = 0; i < numCol; i++) {
-    if (Astart[i] > Astart[i + 1]) {
+  for (HighsInt i = 0; i < num_col; i++) {
+    if (a_start[i] > a_start[i + 1]) {
       std::cout << "Error filling in matrix data\n";
       return 1;
     }
@@ -136,7 +136,7 @@ HighsInt HMpsFF::fillHessian() {
     q_dim = 0;
     return 0;
   } else {
-    q_dim = numCol;
+    q_dim = num_col;
   }
 
   q_start.resize(q_dim + 1);
@@ -154,7 +154,7 @@ HighsInt HMpsFF::fillHessian() {
     q_length[iCol]++;
   }
   q_start[0] = 0;
-  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
     q_length[iCol] = q_start[iCol];
   }
@@ -180,8 +180,8 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
               "readMPS: Trying to open file %s\n", filename.c_str());
   if (f.is_open()) {
     start_time = getWallTime();
-    nnz = 0;
-    numCol = 0;
+    num_nz = 0;
+    num_col = 0;
 
     // parsing loop
     while (keyword != HMpsFF::Parsekey::kFail &&
@@ -238,10 +238,10 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
     }
 
     // Assign bounds to columns that remain binary by default
-    for (HighsInt colidx = 0; colidx < numCol; colidx++) {
+    for (HighsInt colidx = 0; colidx < num_col; colidx++) {
       if (col_binary[colidx]) {
-        colLower[colidx] = 0.0;
-        colUpper[colidx] = 1.0;
+        col_lower[colidx] = 0.0;
+        col_upper[colidx] = 1.0;
       }
     }
 
@@ -261,9 +261,9 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
   if (keyword == HMpsFF::Parsekey::kTimeout)
     return FreeFormatParserReturnCode::kTimeout;
 
-  assert(row_type.size() == unsigned(numRow));
+  assert(row_type.size() == unsigned(num_row));
 
-  numCol = colname2idx.size();
+  num_col = colname2idx.size();
   // No need to update nRows because the assert ensures
   // it is correct.
 
@@ -389,7 +389,7 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
     if (key == HMpsFF::Parsekey::kName) {
       // Save name of the MPS file
       if (e < (HighsInt)strline.length()) {
-        mpsName = first_word(strline, e);
+        mps_name = first_word(strline, e);
       }
       highsLogDev(log_options, HighsLogType::kInfo,
                   "readMPS: Read NAME    OK\n");
@@ -402,10 +402,10 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
         std::string sense = first_word(strline, e);
         if (sense.compare("MAX") == 0) {
           // Found MAX sense on OBJSENSE line
-          objSense = ObjSense::kMaximize;
+          obj_sense = ObjSense::kMaximize;
         } else if (sense.compare("MIN") == 0) {
           // Found MIN sense on OBJSENSE line
-          objSense = ObjSense::kMinimize;
+          obj_sense = ObjSense::kMinimize;
         }
         // Don't return HMpsFF::Parsekey::kNone; in case there's a
         // redefinition of OBJSENSE on the "proper" line. If there's
@@ -438,11 +438,11 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 
     // Interpret key being MAX or MIN
     if (key == HMpsFF::Parsekey::kMax) {
-      objSense = ObjSense::kMaximize;
+      obj_sense = ObjSense::kMaximize;
       continue;
     }
     if (key == HMpsFF::Parsekey::kMin) {
-      objSense = ObjSense::kMinimize;
+      obj_sense = ObjSense::kMinimize;
       continue;
     }
     highsLogDev(log_options, HighsLogType::kInfo,
@@ -478,7 +478,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
-      numRow = int(nrows);
+      num_row = int(nrows);
       highsLogDev(log_options, HighsLogType::kInfo,
                   "readMPS: Read ROWS    OK\n");
       if (!hasobj) {
@@ -490,16 +490,16 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     }
 
     if (strline[start] == 'G') {
-      rowLower.push_back(0.0);
-      rowUpper.push_back(kHighsInf);
+      row_lower.push_back(0.0);
+      row_upper.push_back(kHighsInf);
       row_type.push_back(Boundtype::kGe);
     } else if (strline[start] == 'E') {
-      rowLower.push_back(0.0);
-      rowUpper.push_back(0.0);
+      row_lower.push_back(0.0);
+      row_upper.push_back(0.0);
       row_type.push_back(Boundtype::kEq);
     } else if (strline[start] == 'L') {
-      rowLower.push_back(-kHighsInf);
-      rowUpper.push_back(0.0);
+      row_lower.push_back(-kHighsInf);
+      row_upper.push_back(0.0);
       row_type.push_back(Boundtype::kLe);
     } else if (strline[start] == 'N') {
       if (objectiveName == "") {
@@ -537,7 +537,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // Else is enough here because all free rows are ignored.
     if (!isobj)
-      rowNames.push_back(rowname);
+      row_names.push_back(rowname);
     else
       objectiveName = rowname;
 
@@ -547,9 +547,9 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     }
   }
 
-  // Update numRow in case there is free rows. They won't be added to the
+  // Update num_row in case there is free rows. They won't be added to the
   // constraint matrix.
-  numRow = rowLower.size();
+  num_row = row_lower.size();
 
   return HMpsFF::Parsekey::kFail;
 }
@@ -560,7 +560,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   std::string strline, word;
   HighsInt rowidx, start, end;
   HighsInt ncols = 0;
-  numCol = 0;
+  num_col = 0;
   bool integral_cols = false;
 
   // if (kAnyFirstNonBlankAsStarImpliesComment) {
@@ -577,7 +577,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     rowidx = mit->second;
 
     if (rowidx >= 0)
-      this->nnz++;
+      this->num_nz++;
     else
       assert(-1 == rowidx || -2 == rowidx);
   };
@@ -671,8 +671,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     if (!(word == colname)) {
       colname = word;
       auto ret = colname2idx.emplace(colname, ncols++);
-      numCol++;
-      colNames.push_back(colname);
+      num_col++;
+      col_names.push_back(colname);
 
       if (!ret.second) {
         std::cerr << "duplicate column " << std::endl;
@@ -687,8 +687,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       col_binary.push_back(integral_cols && kintegerVarsInColumnsAreBinary);
 
       // initialize with default bounds
-      colLower.push_back(0.0);
-      colUpper.push_back(kHighsInf);
+      col_lower.push_back(0.0);
+      col_upper.push_back(kHighsInf);
     }
 
     assert(ncols > 0);
@@ -712,7 +712,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     } else {
       double value = atof(word.c_str());
       if (value) {
-        parsename(marker);  // rowidx set and nnz incremented
+        parsename(marker);  // rowidx set and num_nz incremented
         addtuple(value);
       }
     }
@@ -745,7 +745,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       };
       double value = atof(word.c_str());
       if (value) {
-        parsename(marker);  // rowidx set and nnz incremented
+        parsename(marker);  // rowidx set and num_nz incremented
         addtuple(value);
       }
     }
@@ -764,25 +764,25 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     assert(mit != rowname2idx.end());
     rowidx = mit->second;
 
-    assert(rowidx < numRow);
+    assert(rowidx < num_row);
   };
 
   auto addrhs = [this](double val, HighsInt rowidx) {
     if (rowidx > -1) {
       if (row_type[rowidx] == Boundtype::kEq ||
           row_type[rowidx] == Boundtype::kLe) {
-        assert(size_t(rowidx) < rowUpper.size());
-        rowUpper[rowidx] = val;
+        assert(size_t(rowidx) < row_upper.size());
+        row_upper[rowidx] = val;
       }
 
       if (row_type[rowidx] == Boundtype::kEq ||
           row_type[rowidx] == Boundtype::kGe) {
-        assert(size_t(rowidx) < rowLower.size());
-        rowLower[rowidx] = val;
+        assert(size_t(rowidx) < row_lower.size());
+        row_lower[rowidx] = val;
       }
     } else if (rowidx == -1) {
       // objective shift
-      objOffset = -val;
+      obj_offset = -val;
     }
   };
 
@@ -845,7 +845,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     // that's the case. "word" will then hold the marker,
     // so also get new "word" and "end" values
     if (mit == rowname2idx.end()) {
-      if (marker == mpsName) {
+      if (marker == mps_name) {
         marker = word;
         end_marker = end;
         word = "";
@@ -925,7 +925,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     // No check because if mit = end we add an empty column with the
     // corresponding bound.
     if (mit == colname2idx.end())
-      colidx = numCol;
+      colidx = num_col;
     else
       colidx = mit->second;
     assert(colidx >= 0);
@@ -1095,19 +1095,19 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     parsename(marker, colidx);
 
     // If empty column with empty cost add column
-    if (colidx == numCol) {
+    if (colidx == num_col) {
       std::string colname = marker;
-      // auto ret = colname2idx.emplace(colname, numCol++);
-      colNames.push_back(colname);
+      // auto ret = colname2idx.emplace(colname, num_col++);
+      col_names.push_back(colname);
 
       // Mark the column as continuous and non-binary
       col_integrality.push_back(HighsVarType::kContinuous);
       col_binary.push_back(false);
 
       // initialize with default bounds
-      colLower.push_back(0.0);
-      colUpper.push_back(kHighsInf);
-      numCol++;
+      col_lower.push_back(0.0);
+      col_upper.push_back(kHighsInf);
+      num_col++;
     }
     if (is_defaultbound) {
       // MI, PL, BV or FR
@@ -1125,13 +1125,13 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
         // Mark the column as integer and binary
         col_integrality[colidx] = HighsVarType::kInteger;
         col_binary[colidx] = true;
-        assert(colLower[colidx] == 0.0);
-        colUpper[colidx] = 1.0;
+        assert(col_lower[colidx] == 0.0);
+        col_upper[colidx] = 1.0;
       } else {
         // continuous: MI, PL or FR
         col_binary[colidx] = false;
-        if (is_lb) colLower[colidx] = -kHighsInf;
-        if (is_ub) colUpper[colidx] = kHighsInf;
+        if (is_lb) col_lower[colidx] = -kHighsInf;
+        if (is_ub) col_upper[colidx] = kHighsInf;
       }
       continue;
     }
@@ -1168,8 +1168,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       col_integrality[colidx] = HighsVarType::kSemiContinuous;
     }
     // Assign the bounds that have been read
-    if (is_lb) colLower[colidx] = value;
-    if (is_ub) colUpper[colidx] = value;
+    if (is_lb) col_lower[colidx] = value;
+    if (is_ub) col_upper[colidx] = value;
     // Column is not binary by default
     col_binary[colidx] = false;
   }
@@ -1187,20 +1187,20 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     rowidx = mit->second;
 
     assert(rowidx >= 0);
-    assert(rowidx < numRow);
+    assert(rowidx < num_row);
   };
 
   auto addrhs = [this](double val, HighsInt& rowidx) {
     if ((row_type[rowidx] == Boundtype::kEq && val < 0) ||
         row_type[rowidx] == Boundtype::kLe) {
-      assert(rowUpper.at(rowidx) < kHighsInf);
-      rowLower.at(rowidx) = rowUpper.at(rowidx) - fabs(val);
+      assert(row_upper.at(rowidx) < kHighsInf);
+      row_lower.at(rowidx) = row_upper.at(rowidx) - fabs(val);
     }
 
     else if ((row_type[rowidx] == Boundtype::kEq && val > 0) ||
              row_type[rowidx] == Boundtype::kGe) {
-      assert(rowLower.at(rowidx) > (-kHighsInf));
-      rowUpper.at(rowidx) = rowLower.at(rowidx) + fabs(val);
+      assert(row_lower.at(rowidx) > (-kHighsInf));
+      row_upper.at(rowidx) = row_lower.at(rowidx) + fabs(val);
     }
   };
 
@@ -1356,7 +1356,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       continue;
     };
     colidx = mit->second;
-    assert(colidx >= 0 && colidx < numCol);
+    assert(colidx >= 0 && colidx < num_col);
 
     // Loop over the maximum of two entries per row of the file
     for (int entry = 0; entry < 2; entry++) {
@@ -1387,7 +1387,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
         break;
       };
       rowidx = mit->second;
-      assert(rowidx >= 0 && rowidx < numCol);
+      assert(rowidx >= 0 && rowidx < num_col);
 
       double coeff = atof(coeff_name.c_str());
       if (coeff) {
@@ -1469,11 +1469,11 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   }
   rowidx = mit->second;
   assert(rowidx >= -1);
-  assert(rowidx < numRow);
+  assert(rowidx < num_row);
 
   if( rowidx >= 0 )
-     qrows_entries.resize(numRow);
-  assert(rowidx == -1 || (HighsInt)qrows_entries.size() == numRow);
+     qrows_entries.resize(num_row);
+  assert(rowidx == -1 || (HighsInt)qrows_entries.size() == num_row);
 
   auto& qentries = (rowidx == -1 ? q_entries : qrows_entries[rowidx]);
 
@@ -1513,7 +1513,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
       continue;
     };
     qcolidx = mit->second;
-    assert(qcolidx >= 0 && qcolidx < numCol);
+    assert(qcolidx >= 0 && qcolidx < num_col);
 
     // Loop over the maximum of two entries per row of the file
     for (int entry = 0; entry < 2; entry++) {
@@ -1544,7 +1544,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
         break;
       };
       qrowidx = mit->second;
-      assert(qrowidx >= 0 && qrowidx < numCol);
+      assert(qrowidx >= 0 && qrowidx < num_col);
 
       double coeff = atof(coeff_name.c_str());
       if (coeff) {
@@ -1660,18 +1660,18 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
     HighsInt colidx;
     auto mit = colname2idx.find(colname);
     if (mit == colname2idx.end()) {
-      colidx = numCol++;
+      colidx = num_col++;
       colname2idx.emplace(colname, colidx);
-      colNames.push_back(colname);
+      col_names.push_back(colname);
       col_integrality.push_back(HighsVarType::kContinuous);
       col_binary.push_back(false);
-      colLower.push_back(0.0);
-      colUpper.push_back(kHighsInf);
+      col_lower.push_back(0.0);
+      col_upper.push_back(kHighsInf);
     }
     else
        colidx = mit->second;
     assert(colidx >= 0);
-    assert(colidx < numCol);
+    assert(colidx < num_col);
 
     cone_entries.back().push_back(colidx);
   }
@@ -1762,18 +1762,18 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     HighsInt colidx;
     auto mit = colname2idx.find(colname);
     if (mit == colname2idx.end()) {
-      colidx = numCol++;
+      colidx = num_col++;
       colname2idx.emplace(colname, colidx);
-      colNames.push_back(colname);
+      col_names.push_back(colname);
       col_integrality.push_back(HighsVarType::kContinuous);
       col_binary.push_back(false);
-      colLower.push_back(0.0);
-      colUpper.push_back(kHighsInf);
+      col_lower.push_back(0.0);
+      col_upper.push_back(kHighsInf);
     }
     else
        colidx = mit->second;
     assert(colidx >= 0);
-    assert(colidx < numCol);
+    assert(colidx < num_col);
 
     // last word is weight, allow to omit
     double weight = 0.0;
