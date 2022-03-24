@@ -406,9 +406,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     for (HighsInt iCol = previous_col + 1; iCol < numCol; iCol++)
       Qstart.push_back(hessian_nz);
     Qstart.push_back(hessian_nz);
-    assert(Qstart.size() == Qdim + 1);
-    assert(Qindex.size() == hessian_nz);
-    assert(Qvalue.size() == hessian_nz);
+    assert((HighsInt)Qstart.size() == Qdim + 1);
+    assert((HighsInt)Qindex.size() == hessian_nz);
+    assert((HighsInt)Qvalue.size() == hessian_nz);
   }
   // Determine the number of integer variables and set bounds of [0,1]
   // for integer variables without bounds
@@ -887,9 +887,8 @@ HighsStatus writeMps(
   if (q_dim) {
     // Write out Hessian info
     assert((HighsInt)q_start.size() >= q_dim + 1);
-    HighsInt hessian_num_nz = q_start[q_dim];
-    assert((HighsInt)q_index.size() >= hessian_num_nz);
-    assert((HighsInt)q_value.size() >= hessian_num_nz);
+    assert((HighsInt)q_index.size() >= q_start[q_dim]);
+    assert((HighsInt)q_value.size() >= q_start[q_dim]);
 
     // Assumes that Hessian entries are the lower triangle column-wise
     fprintf(file, "QUADOBJ\n");
