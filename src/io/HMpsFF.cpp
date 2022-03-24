@@ -118,7 +118,8 @@ HighsInt HMpsFF::fillMatrix() {
     }
   }
 
-  for (HighsInt col = newColIndex + 1; col <= num_col; col++) a_start[col] = num_nz;
+  for (HighsInt col = newColIndex + 1; col <= num_col; col++)
+    a_start[col] = num_nz;
 
   for (HighsInt i = 0; i < num_col; i++) {
     if (a_start[i] > a_start[i + 1]) {
@@ -223,8 +224,8 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
           break;
         case HMpsFF::Parsekey::kSets:
         case HMpsFF::Parsekey::kSos:
-           keyword = parseSos(log_options, f, keyword);
-           break;
+          keyword = parseSos(log_options, f, keyword);
+          break;
         case HMpsFF::Parsekey::kFail:
           f.close();
           return FreeFormatParserReturnCode::kParserError;
@@ -1431,16 +1432,14 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   std::string coeff_name;
   HighsInt end_row_name;
   HighsInt end_coeff_name;
-  HighsInt rowidx; // index of quadratic row
+  HighsInt rowidx;            // index of quadratic row
   HighsInt qcolidx, qrowidx;  // indices in quadratic coefs matrix
 
   // Get row name from section argument
   std::string rowname = first_word(section_args, 0);
   if (rowname.empty()) {
-    highsLogUser(
-      log_options, HighsLogType::kError,
-      "No row name given in argument of %s\n",
-      section_name.c_str());
+    highsLogUser(log_options, HighsLogType::kError,
+                 "No row name given in argument of %s\n", section_name.c_str());
     return HMpsFF::Parsekey::kFail;
   }
 
@@ -1448,10 +1447,9 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   // if row of section does not exist or is free (index -2), then skip
   if (mit == rowname2idx.end() || mit->second == -2) {
     if (mit == rowname2idx.end())
-      highsLogUser(
-        log_options, HighsLogType::kWarning,
-        "%s section is for row %s not in ROWS section: ignored\n",
-        section_name.c_str(), rowname.c_str());
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s section is for row %s not in ROWS section: ignored\n",
+                   section_name.c_str(), rowname.c_str());
     // read lines until start of new section
     while (getline(file, strline)) {
       HighsInt begin = 0;
@@ -1471,8 +1469,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   assert(rowidx >= -1);
   assert(rowidx < num_row);
 
-  if( rowidx >= 0 )
-     qrows_entries.resize(num_row);
+  if (rowidx >= 0) qrows_entries.resize(num_row);
   assert(rowidx == -1 || (HighsInt)qrows_entries.size() == num_row);
 
   auto& qentries = (rowidx == -1 ? q_entries : qrows_entries[rowidx]);
@@ -1576,7 +1573,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   end = first_word_end(section_args, end);
 
   if (conename.empty()) {
-    highsLogUser(log_options, HighsLogType::kError, "Cone name missing in CSECTION\n");
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cone name missing in CSECTION\n");
     return HMpsFF::Parsekey::kFail;
   }
 
@@ -1591,15 +1589,15 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   std::string coneparam = "0.0";
   std::string conetypestr;
   if (thirdarg.empty()) {
-     conetypestr = secondarg;
-  }
-  else {
-     coneparam = secondarg;
-     conetypestr = thirdarg;
+    conetypestr = secondarg;
+  } else {
+    coneparam = secondarg;
+    conetypestr = thirdarg;
   }
 
   if (conetypestr.empty()) {
-    highsLogUser(log_options, HighsLogType::kError, "Cone type missing in CSECTION %s\n", section_args.c_str());
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cone type missing in CSECTION %s\n", section_args.c_str());
     return HMpsFF::Parsekey::kFail;
   }
 
@@ -1619,7 +1617,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   else if (conetypestr == "DPOW")
     conetype = ConeType::kDPow;
   else {
-    highsLogUser(log_options, HighsLogType::kError, "Unrecognized cone type %s\n", conetypestr.c_str());
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Unrecognized cone type %s\n", conetypestr.c_str());
     return HMpsFF::Parsekey::kFail;
   }
 
@@ -1652,7 +1651,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, colname);
 
     if (key != Parsekey::kNone) {
-      highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read CSECTION OK\n");
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read CSECTION OK\n");
       return key;
     }
 
@@ -1667,9 +1667,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
       col_binary.push_back(false);
       col_lower.push_back(0.0);
       col_upper.push_back(kHighsInf);
-    }
-    else
-       colidx = mit->second;
+    } else
+      colidx = mit->second;
     assert(colidx >= 0);
     assert(colidx < num_col);
 
@@ -1677,7 +1676,6 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   }
 
   return HMpsFF::Parsekey::kFail;
-
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
@@ -1707,7 +1705,8 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, word);
 
     if (key != Parsekey::kNone) {
-      highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read SETS    OK\n");
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read SETS    OK\n");
       return key;
     }
 
@@ -1716,7 +1715,8 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
       std::string sosname = first_word(strline, end);
 
       if (sosname.empty()) {
-        highsLogUser(log_options, HighsLogType::kError, "No name given for SOS\n");
+        highsLogUser(log_options, HighsLogType::kError,
+                     "No name given for SOS\n");
         return HMpsFF::Parsekey::kFail;
       }
 
@@ -1731,7 +1731,8 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
      */
     if (sos_entries.empty()) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "SOS type specification missing before %s.\n", strline.c_str());
+                   "SOS type specification missing before %s.\n",
+                   strline.c_str());
       return HMpsFF::Parsekey::kFail;
     }
 
@@ -1740,18 +1741,20 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     if (keyword == HMpsFF::Parsekey::kSos) {
       // first word is column index
       colname = word;
-    }
-    else {
+    } else {
       // first word is SOS name, second word is colname, third word is weight
       // we expect SOS definitions to be contiguous for now
       if (word != sos_name.back()) {
         highsLogUser(log_options, HighsLogType::kError,
-                     "SOS specification for SOS %s mixed with SOS %s. This is currently not supported.\n", sos_name.back().c_str(), word.c_str());
+                     "SOS specification for SOS %s mixed with SOS %s. This is "
+                     "currently not supported.\n",
+                     sos_name.back().c_str(), word.c_str());
         return HMpsFF::Parsekey::kFail;
       }
       if (is_end(strline, end)) {
         highsLogUser(log_options, HighsLogType::kError,
-                     "Missing variable in SOS specification line %s.\n", strline.c_str());
+                     "Missing variable in SOS specification line %s.\n",
+                     strline.c_str());
         return HMpsFF::Parsekey::kFail;
       }
       colname = first_word(strline, end);
@@ -1769,9 +1772,8 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
       col_binary.push_back(false);
       col_lower.push_back(0.0);
       col_upper.push_back(kHighsInf);
-    }
-    else
-       colidx = mit->second;
+    } else
+      colidx = mit->second;
     assert(colidx >= 0);
     assert(colidx < num_col);
 

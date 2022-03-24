@@ -153,17 +153,17 @@ class HMpsFF {
 
   std::vector<Triplet> entries;
   std::vector<Triplet> q_entries;
-  std::vector<std::vector<Triplet> > qrows_entries;
+  std::vector<std::vector<Triplet>> qrows_entries;
   std::vector<std::pair<HighsInt, double>> coeffobj;
 
   std::vector<std::string> sos_name;
   std::vector<short> sos_type;
-  std::vector<std::vector<std::pair<HighsInt, double> > > sos_entries;
+  std::vector<std::vector<std::pair<HighsInt, double>>> sos_entries;
 
   std::vector<std::string> cone_name;
   std::vector<ConeType> cone_type;
   std::vector<double> cone_param;
-  std::vector<std::vector<HighsInt> > cone_entries;
+  std::vector<std::vector<HighsInt>> cone_entries;
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
   mutable std::string section_args;
