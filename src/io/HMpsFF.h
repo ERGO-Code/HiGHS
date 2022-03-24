@@ -106,12 +106,11 @@ class HMpsFF {
   HighsInt fillMatrix();
   HighsInt fillHessian();
 
-  const bool any_first_non_blank_as_star_implies_comment = false;
-  const bool handle_bv_in_bounds = false;
+  const bool kAnyFirstNonBlankAsStarImpliesComment = false;
   /// how to treat variables that appear in COLUMNS section first
   /// assume them to be binary as in the original IBM interpretation
   /// or integer with default bounds
-  bool integer_vars_in_columns_are_binary = true;
+  bool kintegerVarsInColumnsAreBinary = true;
 
   enum class Parsekey {
     kName,

@@ -563,7 +563,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   numCol = 0;
   bool integral_cols = false;
 
-  // if (any_first_non_blank_as_star_implies_comment) {
+  // if (kAnyFirstNonBlankAsStarImpliesComment) {
   //   printf("In free format MPS reader: treating line as comment if first
   //   non-blank character is *\n");
   // } else {
@@ -594,7 +594,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
 
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -684,7 +684,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       col_integrality.push_back(integral_cols ? HighsVarType::kInteger
                                               : HighsVarType::kContinuous);
       // Mark the column as binary as well
-      col_binary.push_back(integral_cols && integer_vars_in_columns_are_binary);
+      col_binary.push_back(integral_cols && kintegerVarsInColumnsAreBinary);
 
       // initialize with default bounds
       colLower.push_back(0.0);
@@ -791,7 +791,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
 
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -936,7 +936,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
 
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -1209,7 +1209,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
 
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -1324,7 +1324,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -1481,7 +1481,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -1635,7 +1635,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
 
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
@@ -1690,7 +1690,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
 
-    if (any_first_non_blank_as_star_implies_comment) {
+    if (kAnyFirstNonBlankAsStarImpliesComment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
     } else {
