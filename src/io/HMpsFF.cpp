@@ -23,6 +23,22 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   FreeFormatParserReturnCode result = parse(log_options, filename);
   if (result != FreeFormatParserReturnCode::kSuccess) return result;
 
+  if (!qrows_entries.empty()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Quadratic rows not supported by HiGHS\n");
+    return FreeFormatParserReturnCode::kParserError;
+  }
+  if (!sos_entries.empty()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "SOS not supported by HiGHS\n");
+    return FreeFormatParserReturnCode::kParserError;
+  }
+  if (!cone_entries.empty()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cones not supported by HiGHS\n");
+    return FreeFormatParserReturnCode::kParserError;
+  }
+
   colCost.assign(numCol, 0);
   for (auto i : coeffobj) colCost[i.first] = i.second;
   HighsInt status = fillMatrix();
