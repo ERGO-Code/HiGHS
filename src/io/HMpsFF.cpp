@@ -323,6 +323,7 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
   end = first_word_end(strline, start + 1);
 
   word = strline.substr(start, end - start);
+
   // store rest of strline for keywords that have arguments
   if (word == "QCMATRIX" || word == "QSECTION" || word == "CSECTION")
     section_args = strline.substr(end, strline.length());
@@ -377,6 +378,23 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
     return HMpsFF::Parsekey::kEnd;
   else
     return HMpsFF::Parsekey::kNone;
+}
+
+HighsInt HMpsFF::getColIdx(const std::string& colname) {
+  // look up column name
+  auto mit = colname2idx.find(colname);
+  if (mit != colname2idx.end())
+    return mit->second;
+
+  // add new continuous column with default bounds
+  colname2idx.emplace(colname, num_col++);
+  col_names.push_back(colname);
+  col_integrality.push_back(HighsVarType::kContinuous);
+  col_binary.push_back(false);
+  col_lower.push_back(0.0);
+  col_upper.push_back(kHighsInf);
+
+  return num_col-1;
 }
 
 HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
@@ -910,7 +928,6 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
 HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
                                      std::ifstream& file) {
-  HighsInt numWarnings = 0;
   std::string strline, word;
 
   HighsInt num_mi = 0;
@@ -920,17 +937,6 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
   HighsInt num_ui = 0;
   HighsInt num_si = 0;
   HighsInt num_sc = 0;
-  auto parsename = [this](const std::string& name, HighsInt& colidx) {
-    auto mit = colname2idx.find(name);
-    // assert(mit != colname2idx.end());
-    // No check because if mit = end we add an empty column with the
-    // corresponding bound.
-    if (mit == colname2idx.end())
-      colidx = num_col;
-    else
-      colidx = mit->second;
-    assert(colidx >= 0);
-  };
 
   while (getline(file, strline)) {
     double current = getWallTime();
@@ -1072,44 +1078,9 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       end_marker = first_word_end(strline, end_bound_name);
     }
 
-    auto mit = colname2idx.find(marker);
-    if (mit == colname2idx.end()) {
-      if (numWarnings < 10) {
-        ++numWarnings;
-        if (numWarnings == 10) {
-          highsLogUser(
-              log_options, HighsLogType::kWarning,
-              "BOUNDS section contains col %s not in COLS section: "
-              "ignored\nFurther warnings of this type are not printed\n",
-              marker.c_str());
-        } else {
-          highsLogUser(
-              log_options, HighsLogType::kWarning,
-              "BOUNDS section contains col %s not in COLS section: ignored\n",
-              marker.c_str());
-        }
-      }
-      continue;
-    };
+    // get column index, this adds new column if not existing yet
+    HighsInt colidx = getColIdx(marker);
 
-    HighsInt colidx;
-    parsename(marker, colidx);
-
-    // If empty column with empty cost add column
-    if (colidx == num_col) {
-      std::string colname = marker;
-      // auto ret = colname2idx.emplace(colname, num_col++);
-      col_names.push_back(colname);
-
-      // Mark the column as continuous and non-binary
-      col_integrality.push_back(HighsVarType::kContinuous);
-      col_binary.push_back(false);
-
-      // initialize with default bounds
-      col_lower.push_back(0.0);
-      col_upper.push_back(kHighsInf);
-      num_col++;
-    }
     if (is_defaultbound) {
       // MI, PL, BV or FR
       if (is_integral)
@@ -1349,14 +1320,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
     }
 
     // Get the column name
-    auto mit = colname2idx.find(col_name);
-    if (mit == colname2idx.end()) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "%s contains col %s not in COLS section: ignored\n",
-                   section_name.c_str(), col_name.c_str());
-      continue;
-    };
-    colidx = mit->second;
+    colidx = getColIdx(col_name);
     assert(colidx >= 0 && colidx < num_col);
 
     // Loop over the maximum of two entries per row of the file
@@ -1379,15 +1343,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
         return HMpsFF::Parsekey::kFail;
       }
 
-      mit = colname2idx.find(row_name);
-      if (mit == colname2idx.end()) {
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "%s contains entry %s not in COLS section for column %s: ignored\n",
-            section_name.c_str(), row_name.c_str(), col_name.c_str());
-        break;
-      };
-      rowidx = mit->second;
+      rowidx = getColIdx(row_name);
       assert(rowidx >= 0 && rowidx < num_col);
 
       double coeff = atof(coeff_name.c_str());
@@ -1414,6 +1370,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
 
   return HMpsFF::Parsekey::kFail;
 }
+
 typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
     const HighsLogOptions& log_options, std::ifstream& file,
     const HMpsFF::Parsekey keyword) {
@@ -1501,15 +1458,8 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
       return key;
     }
 
-    // Get the column name
-    auto mit = colname2idx.find(col_name);
-    if (mit == colname2idx.end()) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "%s contains col %s not in COLS section: ignored\n",
-                   section_name.c_str(), col_name.c_str());
-      continue;
-    };
-    qcolidx = mit->second;
+    // Get the column index
+    qcolidx = getColIdx(col_name);
     assert(qcolidx >= 0 && qcolidx < num_col);
 
     // Loop over the maximum of two entries per row of the file
@@ -1532,15 +1482,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
         return HMpsFF::Parsekey::kFail;
       }
 
-      mit = colname2idx.find(row_name);
-      if (mit == colname2idx.end()) {
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "%s contains entry %s not in COLS section for column %s: ignored\n",
-            section_name.c_str(), row_name.c_str(), col_name.c_str());
-        break;
-      };
-      qrowidx = mit->second;
+      qrowidx = getColIdx(row_name);
       assert(qrowidx >= 0 && qrowidx < num_col);
 
       double coeff = atof(coeff_name.c_str());
@@ -1657,18 +1599,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
     }
 
     // colname -> colidx
-    HighsInt colidx;
-    auto mit = colname2idx.find(colname);
-    if (mit == colname2idx.end()) {
-      colidx = num_col++;
-      colname2idx.emplace(colname, colidx);
-      col_names.push_back(colname);
-      col_integrality.push_back(HighsVarType::kContinuous);
-      col_binary.push_back(false);
-      col_lower.push_back(0.0);
-      col_upper.push_back(kHighsInf);
-    } else
-      colidx = mit->second;
+    HighsInt colidx = getColIdx(colname);
     assert(colidx >= 0);
     assert(colidx < num_col);
 
@@ -1762,18 +1693,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     }
 
     // colname -> colidx
-    HighsInt colidx;
-    auto mit = colname2idx.find(colname);
-    if (mit == colname2idx.end()) {
-      colidx = num_col++;
-      colname2idx.emplace(colname, colidx);
-      col_names.push_back(colname);
-      col_integrality.push_back(HighsVarType::kContinuous);
-      col_binary.push_back(false);
-      col_lower.push_back(0.0);
-      col_upper.push_back(kHighsInf);
-    } else
-      colidx = mit->second;
+    HighsInt colidx = getColIdx(colname);
     assert(colidx >= 0);
     assert(colidx < num_col);
 
@@ -1789,4 +1709,5 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
 
   return HMpsFF::Parsekey::kFail;
 }
+
 }  // namespace free_format_parser
