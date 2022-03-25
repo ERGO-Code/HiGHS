@@ -49,6 +49,7 @@ struct cache_aligned {
   struct Deleter {
     template <typename T>
     void operator()(T* ptr) const {
+      ptr->~T();
       free(ptr);
     }
   };
@@ -62,7 +63,7 @@ struct cache_aligned {
   template <typename T, typename... Args>
   static shared_ptr<T> make_shared(Args&&... args) {
     return shared_ptr<T>(new (alloc(sizeof(T))) T(std::forward<Args>(args)...),
-                         free);
+                         Deleter());
   }
 
   template <typename T, typename... Args>
