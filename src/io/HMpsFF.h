@@ -148,6 +148,7 @@ class HMpsFF {
 
   // see https://docs.mosek.com/latest/capi/mps-format.html#csection-optional
   enum class ConeType { kZero, kQuad, kRQuad, kPExp, kPPow, kDExp, kDPow };
+
   std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 
@@ -166,6 +167,7 @@ class HMpsFF {
   std::vector<std::vector<HighsInt>> cone_entries;
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
+
   mutable std::string section_args;
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
@@ -173,6 +175,10 @@ class HMpsFF {
   /// checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
                                   HighsInt& end, std::string& word) const;
+
+  // get index of column from column name
+  // add new column if no index is found yet
+  HighsInt getColIdx(const std::string& colname);
 
   HMpsFF::Parsekey parseDefault(const HighsLogOptions& log_options,
                                 std::ifstream& file);
@@ -199,6 +205,7 @@ class HMpsFF {
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,
                             std::ifstream& file,
                             const HMpsFF::Parsekey keyword);
+
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
 };
