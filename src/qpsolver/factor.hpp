@@ -125,7 +125,7 @@ class CholeskyFactor {
       double k = 1 / (beta + sqrt(beta * beta - mu));
       double alpha = k * mu - beta;
 
-      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", current_k, alpha,
+      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", (int)current_k, alpha,
              beta, k);
 
       a.clear();

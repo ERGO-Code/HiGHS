@@ -68,25 +68,25 @@ class HMpsFF {
  private:
   double start_time;
 
-  HighsInt numRow;
-  HighsInt numCol;
-  HighsInt nnz;
-  std::string mpsName;
+  HighsInt num_row;
+  HighsInt num_col;
+  HighsInt num_nz;
+  std::string mps_name;
 
-  ObjSense objSense = ObjSense::kMinimize;  // Minimization by default
-  double objOffset = 0;
+  ObjSense obj_sense = ObjSense::kMinimize;  // Minimization by default
+  double obj_offset = 0;
 
-  std::vector<HighsInt> Astart;
-  std::vector<HighsInt> Aindex;
-  std::vector<double> Avalue;
-  std::vector<double> colCost;
-  std::vector<double> colLower;
-  std::vector<double> colUpper;
-  std::vector<double> rowLower;
-  std::vector<double> rowUpper;
+  std::vector<HighsInt> a_start;
+  std::vector<HighsInt> a_index;
+  std::vector<double> a_value;
+  std::vector<double> col_cost;
+  std::vector<double> col_lower;
+  std::vector<double> col_upper;
+  std::vector<double> row_lower;
+  std::vector<double> row_upper;
 
-  std::vector<std::string> rowNames;
-  std::vector<std::string> colNames;
+  std::vector<std::string> row_names;
+  std::vector<std::string> col_names;
 
   std::vector<HighsVarType> col_integrality;
 
@@ -106,8 +106,11 @@ class HMpsFF {
   HighsInt fillMatrix();
   HighsInt fillHessian();
 
-  const bool any_first_non_blank_as_star_implies_comment = false;
-  const bool handle_bv_in_bounds = false;
+  const bool kAnyFirstNonBlankAsStarImpliesComment = false;
+  /// how to treat variables that appear in COLUMNS section first
+  /// assume them to be binary as in the original IBM interpretation
+  /// or integer with default bounds
+  bool kintegerVarsInColumnsAreBinary = true;
 
   enum class Parsekey {
     kName,
@@ -128,6 +131,7 @@ class HMpsFF {
     kModelcuts,
     kIndicators,
     kSets,
+    kSos,
     kGencons,
     kPwlobj,
     kPwlnam,
@@ -142,21 +146,39 @@ class HMpsFF {
 
   enum class Boundtype { kLe, kEq, kGe };  //, kFr };
 
+  // see https://docs.mosek.com/latest/capi/mps-format.html#csection-optional
+  enum class ConeType { kZero, kQuad, kRQuad, kPExp, kPPow, kDExp, kDPow };
+
   std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 
   std::vector<Triplet> entries;
   std::vector<Triplet> q_entries;
+  std::vector<std::vector<Triplet>> qrows_entries;
   std::vector<std::pair<HighsInt, double>> coeffobj;
 
+  std::vector<std::string> sos_name;
+  std::vector<short> sos_type;
+  std::vector<std::vector<std::pair<HighsInt, double>>> sos_entries;
+
+  std::vector<std::string> cone_name;
+  std::vector<ConeType> cone_type;
+  std::vector<double> cone_param;
+  std::vector<std::vector<HighsInt>> cone_entries;
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
+
+  mutable std::string section_args;
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
   /// checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
                                   HighsInt& end, std::string& word) const;
+
+  // get index of column from column name
+  // add new column if no index is found yet
+  HighsInt getColIdx(const std::string& colname);
 
   HMpsFF::Parsekey parseDefault(const HighsLogOptions& log_options,
                                 std::ifstream& file);
@@ -175,6 +197,15 @@ class HMpsFF {
   HMpsFF::Parsekey parseHessian(const HighsLogOptions& log_options,
                                 std::ifstream& file,
                                 const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseQuadRows(const HighsLogOptions& log_options,
+                                 std::ifstream& file,
+                                 const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseCones(const HighsLogOptions& log_options,
+                              std::ifstream& file);
+  HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,
+                            std::ifstream& file,
+                            const HMpsFF::Parsekey keyword);
+
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
 };
