@@ -18,8 +18,14 @@
 #include "reducedgradient.hpp"
 #include "snippets.hpp"
 #include "steepestedgepricing.hpp"
+#include "scaling.hpp"
+#include "perturbation.hpp"
 
 void Quass::solve() {
+  scale(runtime);
+  runtime.instance = runtime.scaled;
+  perturb(runtime);
+  runtime.instance = runtime.perturbed;
   CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
   computestartingpoint(runtime, crash);
   if (runtime.status != ProblemStatus::INDETERMINED) {
