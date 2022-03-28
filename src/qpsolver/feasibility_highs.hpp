@@ -131,13 +131,13 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
 
   for (HighsInt ia : initialinactive) {
     if (ia < runtime.instance.num_con) {
-      printf("free row %d\n", ia);
+      printf("free row %d\n", (int)ia);
       assert(runtime.instance.con_lo[ia] ==
              -std::numeric_limits<double>::infinity());
       assert(runtime.instance.con_up[ia] ==
              std::numeric_limits<double>::infinity());
     } else {
-      // printf("free col %d\n", ia);
+      // printf("free col %d\n", (int)ia);
       assert(runtime.instance.var_lo[ia - runtime.instance.num_con] ==
              -std::numeric_limits<double>::infinity());
       assert(runtime.instance.var_up[ia - runtime.instance.num_con] ==
