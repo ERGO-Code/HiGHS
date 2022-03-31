@@ -11,6 +11,11 @@
 
 #include "def.hpp"
 
+#include "HConfig.h"  // for ZLIB_FOUND
+#ifdef ZLIB_FOUND
+#include "zstr.hpp"
+#endif
+
 enum class RawTokenType {
    NONE,
    STR,
@@ -117,7 +122,11 @@ struct ProcessedComparisonToken : ProcessedToken {
 
 class Reader {
 private:
+#ifdef ZLIB_FOUND
+   zstr::ifstream file;
+#else
    std::ifstream file;
+#endif
    std::vector<std::unique_ptr<RawToken>> rawtokens;
    std::vector<std::unique_ptr<ProcessedToken>> processedtokens;
    std::map<LpSectionKeyword, std::vector<std::unique_ptr<ProcessedToken>>> sectiontokens;
