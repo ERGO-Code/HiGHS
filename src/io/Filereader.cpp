@@ -86,6 +86,10 @@ std::string extractModelName(const std::string filename) {
   std::size_t found = name.find_last_of("/\\");
   if (found < name.size()) name = name.substr(found + 1);
   found = name.find_last_of(".");
+  if (name.substr(found + 1) == "gz") {
+    name.erase(found, name.size() - found);
+    found = name.find_last_of(".");
+  }
   if (found < name.size()) name.erase(found, name.size() - found);
   return name;
 }
