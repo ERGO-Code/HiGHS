@@ -25,6 +25,10 @@
 #include "util/HighsUtils.h"
 #include "util/stringutil.h"
 
+#ifdef ZLIB_FOUND
+#include "zstr.hpp"
+#endif
+
 using std::map;
 
 //
@@ -54,7 +58,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   Astart.clear();
   highsLogDev(log_options, HighsLogType::kInfo,
               "readMPS: Trying to open file %s\n", filename.c_str());
+#ifdef ZLIB_FOUND
+  zstr::ifstream file;
+#else
   std::ifstream file;
+#endif
   file.open(filename, std::ios::in);
   if (!file.is_open()) {
     highsLogDev(log_options, HighsLogType::kInfo,
