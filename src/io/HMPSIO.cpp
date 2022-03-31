@@ -16,6 +16,7 @@
 #include "io/HMPSIO.h"
 
 #include <algorithm>
+#include <cstdio>
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
@@ -53,8 +54,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   Astart.clear();
   highsLogDev(log_options, HighsLogType::kInfo,
               "readMPS: Trying to open file %s\n", filename.c_str());
-  FILE* file = fopen(filename.c_str(), "r");
-  if (file == 0) {
+  std::ifstream file;
+  file.open(filename, std::ios::in);
+  if (!file.is_open()) {
     highsLogDev(log_options, HighsLogType::kInfo,
                 "readMPS: Not opened file OK\n");
     return FilereaderRetcode::kFileNotFound;
@@ -433,16 +435,15 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
               " integer\n",
               numRow, numCol, num_int);
   // Load ENDATA and close file
-  fclose(file);
+  file.close();
   // If there are no integer variables then clear the integrality vector
   if (!num_int) integerColumn.clear();
   return FilereaderRetcode::kOk;
 }
 
-bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
+bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
                   char* line, char* flag, double* data) {
   HighsInt F1 = 1, F2 = 4, F3 = 14, F4 = 24, F5 = 39, F6 = 49;
-  char* fgets_rt;
 
   // check the buffer
   if (flag[1]) {
@@ -455,12 +456,17 @@ bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
   // try to read some to the line
   for (;;) {
     // Line input
-    fgets_rt = fgets(line, lmax, file);
-    if (fgets_rt == NULL) {
+    *line = '\0';
+    file.get(line, lmax);
+    if (*line == '\0' && file.eof()) // nothing read and EOF
       return false;
-    }
+
     // Line trim   -- to delete tailing white spaces
     HighsInt lcnt = strlen(line) - 1;
+    // if file.get() did not stop because it reached the lmax-1 limit,
+    // then because it reached a newline char (or eof); lets consume this newline (or do nothing if eof)
+    if (lcnt+1 < lmax-1)
+       file.get();
     while (isspace(line[lcnt]) && lcnt >= 0) lcnt--;
     if (lcnt <= 0 || line[0] == '*') continue;
 
