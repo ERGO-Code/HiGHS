@@ -60,10 +60,16 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
               "readMPS: Trying to open file %s\n", filename.c_str());
 #ifdef ZLIB_FOUND
   zstr::ifstream file;
+  try {
+    file.open(filename, std::ios::in);
+  } catch( const strict_fstream::Exception& e ) {
+    highsLogDev(log_options, HighsLogType::kInfo, e.what());
+    return FilereaderRetcode::kFileNotFound;
+  }
 #else
   std::ifstream file;
-#endif
   file.open(filename, std::ios::in);
+#endif
   if (!file.is_open()) {
     highsLogDev(log_options, HighsLogType::kInfo,
                 "readMPS: Not opened file OK\n");

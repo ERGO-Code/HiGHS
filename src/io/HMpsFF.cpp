@@ -177,16 +177,22 @@ HighsInt HMpsFF::fillHessian() {
 
 FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
                                          const std::string& filename) {
-#ifdef ZLIB_FOUND
-  zstr::ifstream f;
-#else
-  std::ifstream f;
-#endif
   HMpsFF::Parsekey keyword = HMpsFF::Parsekey::kNone;
 
-  f.open(filename.c_str(), std::ios::in);
   highsLogDev(log_options, HighsLogType::kInfo,
               "readMPS: Trying to open file %s\n", filename.c_str());
+#ifdef ZLIB_FOUND
+  zstr::ifstream f;
+  try {
+    f.open(filename.c_str(), std::ios::in);
+  } catch( const strict_fstream::Exception& e ) {
+    highsLogDev(log_options, HighsLogType::kInfo, e.what());
+    return FreeFormatParserReturnCode::kFileNotFound;
+  }
+#else
+  std::ifstream f;
+  f.open(filename.c_str(), std::ios::in);
+#endif
   if (f.is_open()) {
     start_time = getWallTime();
     num_nz = 0;

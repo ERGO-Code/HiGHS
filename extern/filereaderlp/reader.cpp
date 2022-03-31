@@ -153,7 +153,15 @@ private:
    void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i);
 
 public:
-   Reader(std::string filename) : file(filename) {
+   Reader(std::string filename) {
+#ifdef ZLIB_FOUND
+      try {
+        file.open(filename);
+      } catch ( const strict_fstream::Exception& e ) {
+      }
+#else
+      file.open(filename);
+#endif
       lpassert(file.is_open());
    };
 
