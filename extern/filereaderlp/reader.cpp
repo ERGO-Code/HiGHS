@@ -2,7 +2,8 @@
 
 #include "builder.hpp"
 
-#include <cstdio>
+#include <iostream>
+#include <fstream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -116,15 +117,13 @@ struct ProcessedComparisonToken : ProcessedToken {
 
 class Reader {
 private:
-   FILE* file;
+   std::ifstream file;
    std::vector<std::unique_ptr<RawToken>> rawtokens;
    std::vector<std::unique_ptr<ProcessedToken>> processedtokens;
    std::map<LpSectionKeyword, std::vector<std::unique_ptr<ProcessedToken>>> sectiontokens;
    
-   char linebuffer[LP_MAX_LINE_LENGTH+1];
-   char* linebufferpos;
-   bool linefullyread;
-   bool newline_encountered;
+   std::string linebuffer;
+   std::size_t linebufferpos;
 
    Builder builder;
 
@@ -145,12 +144,12 @@ private:
    void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i);
 
 public:
-   Reader(std::string filename) : file(fopen(filename.c_str(), "r")) {
-      lpassert(file != nullptr);
+   Reader(std::string filename) : file(filename) {
+      lpassert(file.is_open());
    };
 
    ~Reader() {
-      fclose(file);
+      file.close();
    }
 
    Model read();
@@ -793,9 +792,7 @@ void Reader::processtokens() {
 
 // reads the entire file and separates 
 void Reader::tokenize() {
-   this->linefullyread = true;;
-   this->newline_encountered = true;
-   this->linebufferpos = this->linebuffer;
+   this->linebufferpos = 0;
    bool done = false;
    while(true) {
       this->readnexttoken(done);
@@ -807,80 +804,34 @@ void Reader::tokenize() {
 
 void Reader::readnexttoken(bool& done) {
    done = false;
-   if (!this->linefullyread) {
-      // fill up line
-      
-      // how many do we need to read?
-      unsigned int num_already_read = this->linebufferpos - this->linebuffer;
 
-      // shift buffer
-      for (unsigned int i=num_already_read; i<LP_MAX_LINE_LENGTH+1; i++) {
-         this->linebuffer[i-num_already_read] = this->linebuffer[i];
-      }
+   if (this->linebufferpos == this->linebuffer.size()) {
+     // read next line
+     std::getline(this->file, linebuffer);
 
-      char* write_start = &this->linebuffer[LP_MAX_LINE_LENGTH-num_already_read];
+     // drop \r
+     if (!linebuffer.empty() && linebuffer.back() == '\r')
+        linebuffer.pop_back();
 
-      // read more values
-      char* eof = fgets(write_start, num_already_read+1, this->file);
-      unsigned int linelength;
-      for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
-         if (this->linebuffer[linelength] == '\r') {
-            this->linebuffer[linelength] = '\n';
-         }
-         if (this->linebuffer[linelength] == '\n') {
-            break;
-         }
-      }
+     // reset linebufferpos
+     this->linebufferpos = 0;
+   }
 
-      if (this->linebuffer[linelength] == '\n') {
-         this->linefullyread = true;
-      } else {
-         this->linefullyread = false;
-      }
-
-      // fgets returns nullptr if end of file reached (EOF following a \n)
-      if (eof == nullptr) {
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
-         return;
-      }
-      this->linebufferpos = this->linebuffer;
-   } else if(newline_encountered) {
-      newline_encountered = false;
-      char* eof = fgets(this->linebuffer, LP_MAX_LINE_LENGTH+1, this->file);
-      this->linebufferpos = this->linebuffer;
-
-      unsigned int linelength;
-      for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
-         if (this->linebuffer[linelength] == '\r') {
-            this->linebuffer[linelength] = '\n';
-         }
-         if (this->linebuffer[linelength] == '\n') {
-            break;
-         }
-      }
-      if (this->linebuffer[linelength] == '\n') {
-         this->linefullyread = true;
-      } else {
-         this->linefullyread = false;
-      }
-
-      // fgets returns nullptr if end of file reached (EOF following a \n)
-      if (eof == nullptr) {
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
-         return;
-      }
+   // if all line has been read and we are at end of file, then stop
+   if (this->linebufferpos == this->linebuffer.size() && this->file.eof()) {
+     this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
+     done = true;
+     return;
    }
 
    // check single character tokens
-   char nextchar = *this->linebufferpos;
+   char nextchar = this->linebuffer[this->linebufferpos];
 
    switch (nextchar) {
       // check for comment
       case '\\':
-         this->newline_encountered = true;
-         this->linefullyread = true;
+         // skip rest of line
+         this->linebufferpos = this->linebuffer.size();
          return;
       
       // check for bracket opening
@@ -957,9 +908,8 @@ void Reader::readnexttoken(bool& done) {
 
       // check for line end
       case ';':
-      case '\n':
-         this->newline_encountered = true;
-         this->linefullyread = true;
+      case '\n':  // \n should not happen due to using getline()
+         this->linebufferpos = this->linebuffer.size();
          return;
 
       // check for file end (EOF at end of some line)
@@ -972,16 +922,16 @@ void Reader::readnexttoken(bool& done) {
    // check for double value
    double constant;
    int ncharconsumed;
-   int nread = sscanf(this->linebufferpos, "%lf%n", &constant, &ncharconsumed);
+   int nread = sscanf(this->linebuffer.data()+this->linebufferpos, "%lf%n", &constant, &ncharconsumed);
    if (nread == 1) {
       this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawConstantToken(constant)));
       this->linebufferpos += ncharconsumed;
       return;
    }
 
-   // assume it's an (section/variable/constraint) idenifier
+   // assume it's an (section/variable/constraint) identifier
    char stringbuffer[LP_MAX_NAME_LENGTH+1];
-   nread = sscanf(this->linebufferpos, "%[^][\t\n\\:+<>^= /-]%n",
+   nread = sscanf(this->linebuffer.data()+this->linebufferpos, "%[^][\t\n\\:+<>^= /-]%n",
                  stringbuffer, &ncharconsumed);
    if (nread == 1) {
       this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(stringbuffer)));
