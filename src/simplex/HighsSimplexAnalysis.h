@@ -242,7 +242,9 @@ class HighsSimplexAnalysis {
 
   HighsInt num_quad_chuzc = 0;
   HighsInt num_heap_chuzc = 0;
+  double sum_quad_chuzc_size = 0;
   double sum_heap_chuzc_size = 0;
+  HighsInt max_quad_chuzc_size = 0;
   HighsInt max_heap_chuzc_size = 0;
 
   HighsInt num_improve_choose_column_row_call = 0;

@@ -210,7 +210,9 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     // Initialise the dual simplex flip/shift records
     num_quad_chuzc = 0;
     num_heap_chuzc = 0;
+    sum_quad_chuzc_size = 0;
     sum_heap_chuzc_size = 0;
+    max_quad_chuzc_size = 0;
     max_heap_chuzc_size = 0;
 
     num_improve_choose_column_row_call = 0;
@@ -912,21 +914,27 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("\n");
   }
 
+  const double average_quad_chuzc_size =
+      num_quad_chuzc ? sum_quad_chuzc_size / num_quad_chuzc : 0;
   const double average_heap_chuzc_size =
       num_heap_chuzc ? sum_heap_chuzc_size / num_heap_chuzc : 0;
   if (num_quad_chuzc + num_heap_chuzc) {
     printf("\nQuad/heap CHUZC summary\n");
     if (num_quad_chuzc)
-      printf("%12" HIGHSINT_FORMAT " quad CHUZC\n", num_quad_chuzc);
+      printf("%12" HIGHSINT_FORMAT
+	     " quad CHUZC: average / max = %d / %" HIGHSINT_FORMAT "\n",
+             num_quad_chuzc, (int)average_quad_chuzc_size, max_quad_chuzc_size);
     if (num_heap_chuzc)
       printf("%12" HIGHSINT_FORMAT
              " heap CHUZC: average / max = %d / %" HIGHSINT_FORMAT "\n",
              num_heap_chuzc, (int)average_heap_chuzc_size, max_heap_chuzc_size);
   }
-  printf("\ngrepQuadHeapChuzc,%s,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
-         ",%d,%" HIGHSINT_FORMAT "\n",
-         model_name_.c_str(), lp_name_.c_str(), num_quad_chuzc, num_heap_chuzc,
-         (int)average_heap_chuzc_size, max_heap_chuzc_size);
+  printf("\ngrepQuadHeapChuzc,%s,%s, %"
+	 HIGHSINT_FORMAT ", ,%d,%" HIGHSINT_FORMAT ", %"
+	 HIGHSINT_FORMAT ", ,%d,%" HIGHSINT_FORMAT "\n",
+         model_name_.c_str(), lp_name_.c_str(), 
+         num_quad_chuzc, (int)average_quad_chuzc_size, max_quad_chuzc_size,
+         num_heap_chuzc, (int)average_heap_chuzc_size, max_heap_chuzc_size);
 
   if (num_improve_choose_column_row_call >= 0) {
     printf("\nDual_CHUZC: Number of improve CHUZC row calls =  %d\n",
