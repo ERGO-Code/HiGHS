@@ -1959,6 +1959,7 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
+  const double double_tolerance = 1e-13;
   if (style == kSolutionStylePretty) {
     const HighsVarType* integrality_ptr =
         lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
@@ -1970,6 +1971,11 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
                             have_basis, basis.row_status);
+    fprintf(file, "\nModel status: %s\n",
+            utilModelStatusToString(model_status).c_str());
+    std::array<char, 32> objStr = highsDoubleToString(
+        (double)info.objective_function_value, double_tolerance);
+    fprintf(file, "\nObjective value: %s\n", objStr.data());
   } else if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, lp, basis, solution);
   } else {
