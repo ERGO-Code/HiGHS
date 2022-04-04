@@ -342,7 +342,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
           // unbounded
           runtime.status = ProblemStatus::UNBOUNDED;
         }
-        atfsep = true;
+        atfsep = false;
         redgrad.update(stepres.alpha, false);
       }
 

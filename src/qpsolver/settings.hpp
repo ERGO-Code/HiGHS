@@ -38,7 +38,7 @@ struct Settings {
   bool rowscaling = true;
   bool varscaling = true;
 
-  bool perturbation = false;
+  bool perturbation = true;
 };
 
 #endif
