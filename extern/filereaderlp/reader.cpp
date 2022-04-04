@@ -2,6 +2,7 @@
 
 #include "builder.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <fstream>
 #include <limits>
@@ -929,10 +930,8 @@ void Reader::readnexttoken(bool& done) {
          this->linebufferpos = this->linebuffer.size();
          return;
 
-      // check for file end (EOF at end of some line)
-      case '\0': 
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
+      case '\0':  // empty line
+         assert(this->linebufferpos == this->linebuffer.size());
          return;
    }
    
