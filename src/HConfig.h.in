@@ -5,6 +5,7 @@
 #cmakedefine SCIP_DEV
 #cmakedefine HiGHSDEV
 #cmakedefine OSI_FOUND
+#cmakedefine ZLIB_FOUND
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HiGHSRELEASE
 #cmakedefine IPX_ON

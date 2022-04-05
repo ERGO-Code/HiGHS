@@ -13,6 +13,10 @@
 
 #include "io/HMpsFF.h"
 
+#ifdef ZLIB_FOUND
+#include "zstr.hpp"
+#endif
+
 namespace free_format_parser {
 
 FreeFormatParserReturnCode HMpsFF::loadProblem(
@@ -173,12 +177,22 @@ HighsInt HMpsFF::fillHessian() {
 
 FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
                                          const std::string& filename) {
-  std::ifstream f;
   HMpsFF::Parsekey keyword = HMpsFF::Parsekey::kNone;
 
-  f.open(filename.c_str(), std::ios::in);
   highsLogDev(log_options, HighsLogType::kInfo,
               "readMPS: Trying to open file %s\n", filename.c_str());
+#ifdef ZLIB_FOUND
+  zstr::ifstream f;
+  try {
+    f.open(filename.c_str(), std::ios::in);
+  } catch( const strict_fstream::Exception& e ) {
+    highsLogDev(log_options, HighsLogType::kInfo, e.what());
+    return FreeFormatParserReturnCode::kFileNotFound;
+  }
+#else
+  std::ifstream f;
+  f.open(filename.c_str(), std::ios::in);
+#endif
   if (f.is_open()) {
     start_time = getWallTime();
     num_nz = 0;
@@ -398,7 +412,7 @@ HighsInt HMpsFF::getColIdx(const std::string& colname) {
 }
 
 HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
-                                      std::ifstream& file) {
+                                      std::istream& file) {
   std::string strline, word;
   if (getline(file, strline)) {
     strline = trim(strline);
@@ -444,7 +458,7 @@ double getWallTime() {
 }
 
 HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
-                                       std::ifstream& file) {
+                                       std::istream& file) {
   std::string strline, word;
 
   while (getline(file, strline)) {
@@ -475,7 +489,7 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 }
 
 HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
-                                   std::ifstream& file) {
+                                   std::istream& file) {
   std::string strline, word;
   size_t nrows = 0;
   bool hasobj = false;
@@ -574,7 +588,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
-                                            std::ifstream& file) {
+                                            std::istream& file) {
   std::string colname = "";
   std::string strline, word;
   HighsInt rowidx, start, end;
@@ -774,7 +788,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 }
 
 HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
-                                  std::ifstream& file) {
+                                  std::istream& file) {
   std::string strline;
 
   auto parsename = [this](const std::string& name, HighsInt& rowidx) {
@@ -927,7 +941,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 }
 
 HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
-                                     std::ifstream& file) {
+                                     std::istream& file) {
   std::string strline, word;
 
   HighsInt num_mi = 0;
@@ -1149,7 +1163,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
 }
 
 HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
-                                     std::ifstream& file) {
+                                     std::istream& file) {
   std::string strline, word;
 
   auto parsename = [this](const std::string& name, HighsInt& rowidx) {
@@ -1273,7 +1287,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseHessian(
-    const HighsLogOptions& log_options, std::ifstream& file,
+    const HighsLogOptions& log_options, std::istream& file,
     const HMpsFF::Parsekey keyword) {
   // Parse Hessian information from QUADOBJ or QMATRIX
   // section according to keyword
@@ -1372,7 +1386,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
-    const HighsLogOptions& log_options, std::ifstream& file,
+    const HighsLogOptions& log_options, std::istream& file,
     const HMpsFF::Parsekey keyword) {
   // Parse Hessian information from QSECTION or QCMATRIX
   // section according to keyword
@@ -1507,7 +1521,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
-                                             std::ifstream& file) {
+                                             std::istream& file) {
   HighsInt end = 0;
 
   // first argument should be cone name
@@ -1610,7 +1624,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
-                                           std::ifstream& file,
+                                           std::istream& file,
                                            const HMpsFF::Parsekey keyword) {
   std::string strline, word;
 
