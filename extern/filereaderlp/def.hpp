@@ -10,9 +10,6 @@ void inline lpassert(bool condition) {
    }
 }
 
-const unsigned int LP_MAX_NAME_LENGTH = 255;
-const unsigned int LP_MAX_LINE_LENGTH = 560;
-
 const std::string LP_KEYWORD_MIN[] = {"minimize", "min", "minimum"};
 const std::string LP_KEYWORD_MAX[] = {"maximize", "max", "maximum"};
 const std::string LP_KEYWORD_ST[] = {"subject to", "such that", "st", "s.t."};
