@@ -151,7 +151,7 @@ private:
    void processsemisec();
    void processsossec();
    void processendsec();
-   void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i);
+   void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj);
 
 public:
    Reader(std::string filename) {
@@ -258,7 +258,7 @@ void Reader::processnonesec() {
    lpassert(sectiontokens[LpSectionKeyword::NONE].empty());
 }
 
-void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i) {
+void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj) {
    if (tokens.size() - i >= 1 && tokens[0]->type == ProcessedTokenType::CONID) {
       expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
       i++;
@@ -379,13 +379,22 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
                i += 3;
                continue;
             }
+            break;
          }
-         lpassert(tokens.size() - i >= 3);
-         lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
-         lpassert(tokens[i+1]->type == ProcessedTokenType::SLASH);
-         lpassert(tokens[i+2]->type == ProcessedTokenType::CONST);
-         lpassert(((ProcessedConstantToken*)tokens[i+2].get())->value == 2.0);
-         i += 3;
+         if (isobj) {
+           // only in the objective function, a quadratic term is followed by "/2.0"
+           lpassert(tokens.size() - i >= 3);
+           lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
+           lpassert(tokens[i+1]->type == ProcessedTokenType::SLASH);
+           lpassert(tokens[i+2]->type == ProcessedTokenType::CONST);
+           lpassert(((ProcessedConstantToken*)tokens[i+2].get())->value == 2.0);
+           i += 3;
+         }
+         else {
+           lpassert(tokens.size() - i >= 1);
+           lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
+           i += 1;
+         }
          continue;
       }
 
@@ -396,7 +405,7 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
 void Reader::processobjsec() {
    builder.model.objective = std::shared_ptr<Expression>(new Expression);
    unsigned int i = 0;   
-   parseexpression(sectiontokens[LpSectionKeyword::OBJ], builder.model.objective, i);
+   parseexpression(sectiontokens[LpSectionKeyword::OBJ], builder.model.objective, i, true);
    lpassert(i == sectiontokens[LpSectionKeyword::OBJ].size());
 }
 
@@ -404,7 +413,7 @@ void Reader::processconsec() {
    unsigned int i=0;
    while (i<sectiontokens[LpSectionKeyword::CON].size()) {
       std::shared_ptr<Constraint> con = std::shared_ptr<Constraint>(new Constraint);
-      parseexpression(sectiontokens[LpSectionKeyword::CON], con->expr, i);
+      parseexpression(sectiontokens[LpSectionKeyword::CON], con->expr, i, false);
       lpassert(sectiontokens[LpSectionKeyword::CON].size() - i >= 2);
 	  lpassert(sectiontokens[LpSectionKeyword::CON][i]->type == ProcessedTokenType::COMP);
       lpassert(sectiontokens[LpSectionKeyword::CON][i+1]->type == ProcessedTokenType::CONST);
@@ -670,7 +679,7 @@ void Reader::processtokens() {
          continue;
       }
 
-      // check if infinty
+      // check if infinity
       if (rawtokens[i]->istype(RawTokenType::STR) && iskeyword(((RawStringToken*)rawtokens[i].get())->value, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(std::numeric_limits<double>::infinity())));
          i++;
