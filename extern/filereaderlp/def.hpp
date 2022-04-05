@@ -6,7 +6,7 @@
 
 void inline lpassert(bool condition) {
    if (!condition) {
-      throw std::invalid_argument("File not existant or illegal file format.");
+      throw std::invalid_argument("File not existent or illegal file format.");
    }
 }
 
