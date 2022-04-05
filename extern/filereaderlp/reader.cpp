@@ -934,24 +934,24 @@ void Reader::readnexttoken(bool& done) {
          assert(this->linebufferpos == this->linebuffer.size());
          return;
    }
-   
+
    // check for double value
-   double constant;
-   int ncharconsumed;
-   int nread = sscanf(this->linebuffer.data()+this->linebufferpos, "%lf%n", &constant, &ncharconsumed);
-   if (nread == 1) {
+   const char* startptr = this->linebuffer.data()+this->linebufferpos;
+   char* endptr;
+   double constant = strtod(startptr, &endptr);
+   if (endptr != startptr) {
       this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawConstantToken(constant)));
-      this->linebufferpos += ncharconsumed;
+      this->linebufferpos += endptr - startptr;
       return;
    }
 
    // assume it's an (section/variable/constraint) identifier
-   char stringbuffer[LP_MAX_NAME_LENGTH+1];
-   nread = sscanf(this->linebuffer.data()+this->linebufferpos, "%[^][\t\n\\:+<>^= /-]%n",
-                 stringbuffer, &ncharconsumed);
-   if (nread == 1) {
-      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(stringbuffer)));
-      this->linebufferpos += ncharconsumed;
+   auto endpos = this->linebuffer.find_first_of("\t\n\\:+<>^= /-", this->linebufferpos);
+   if( endpos == std::string::npos )
+      endpos = this->linebuffer.size();  // take complete rest of string
+   if( endpos > this->linebufferpos ) {
+      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(std::string(this->linebuffer, this->linebufferpos, endpos - this->linebufferpos))));
+      this->linebufferpos = endpos;
       return;
    }
    
