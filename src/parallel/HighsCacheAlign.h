@@ -46,8 +46,8 @@ struct cache_aligned {
     }
   }
 
+  template <typename T>
   struct Deleter {
-    template <typename T>
     void operator()(T* ptr) const {
       ptr->~T();
       free(ptr);
@@ -55,7 +55,12 @@ struct cache_aligned {
   };
 
   template <typename T>
-  using unique_ptr = std::unique_ptr<T, Deleter>;
+  struct Deleter<T[]> {
+    void operator()(T* ptr) const { free(ptr); }
+  };
+
+  template <typename T>
+  using unique_ptr = std::unique_ptr<T, Deleter<T>>;
 
   template <typename T>
   using shared_ptr = std::shared_ptr<T>;
@@ -63,7 +68,7 @@ struct cache_aligned {
   template <typename T, typename... Args>
   static shared_ptr<T> make_shared(Args&&... args) {
     return shared_ptr<T>(new (alloc(sizeof(T))) T(std::forward<Args>(args)...),
-                         Deleter());
+                         Deleter<T>());
   }
 
   template <typename T, typename... Args>
