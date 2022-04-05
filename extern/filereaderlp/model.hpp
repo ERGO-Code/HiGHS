@@ -54,11 +54,18 @@ struct Constraint {
    Constraint() : expr(std::shared_ptr<Expression>(new Expression)) {};
 };
 
+struct SOS {
+   std::string name = "";
+   short type = 0;   // 1 or 2
+   std::vector<std::pair<std::shared_ptr<Variable>, double>> entries;
+};
+
 struct Model {
    std::shared_ptr<Expression> objective;
    ObjectiveSense sense;
    std::vector<std::shared_ptr<Constraint>> constraints;
    std::vector<std::shared_ptr<Variable>> variables;
+   std::vector<std::shared_ptr<SOS>> soss;
 };
 
 #endif
