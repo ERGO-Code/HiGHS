@@ -722,11 +722,11 @@ class Highs {
   }
 
   /**
-   * @brief Adds multiple variables to the incumbent model, without the costs or matrix
-   * coefficients
+   * @brief Adds multiple variables to the incumbent model, without the costs or
+   * matrix coefficients
    */
-  HighsStatus addVars(const HighsInt num_new_var, 
-                      const double* lower, const double* upper);
+  HighsStatus addVars(const HighsInt num_new_var, const double* lower,
+                      const double* upper);
 
   /**
    * @brief Add a row to the incumbent model, without the matrix coefficients if

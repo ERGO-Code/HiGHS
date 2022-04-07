@@ -1629,15 +1629,15 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::addVars(const HighsInt num_new_var, 
-			   const double* lower, const double* upper) {
+HighsStatus Highs::addVars(const HighsInt num_new_var, const double* lower,
+                           const double* upper) {
   HighsStatus return_status = HighsStatus::kOk;
   // Avoid touching entry [0] of a vector of size 0
-  if (num_new_var<=0) returnFromHighs(return_status);
+  if (num_new_var <= 0) returnFromHighs(return_status);
   std::vector<double> cost;
   cost.assign(num_new_var, 0);
   return addCols(num_new_var, &cost[0], lower, upper, 0, nullptr, nullptr,
-		 nullptr);
+                 nullptr);
 }
 
 HighsStatus Highs::addRow(const double lower_bound, const double upper_bound,
