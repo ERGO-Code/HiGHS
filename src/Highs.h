@@ -79,7 +79,7 @@ class Highs {
   HighsStatus passModel(
       const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
       const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
-      const HighsInt sense, const double offset, const double* costs,
+      const HighsInt sense, const double offset, const double* col_cost,
       const double* col_lower, const double* col_upper, const double* row_lower,
       const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
       const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
@@ -92,7 +92,7 @@ class Highs {
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const HighsInt a_format,
                         const HighsInt sense, const double offset,
-                        const double* costs, const double* col_lower,
+                        const double* col_cost, const double* col_lower,
                         const double* col_upper, const double* row_lower,
                         const double* row_upper, const HighsInt* a_start,
                         const HighsInt* a_index, const double* a_value,
@@ -445,7 +445,7 @@ class Highs {
       const HighsInt
           to_col,  //!< The index of the last column to get from the model
       HighsInt& num_col,  //!< Number of columns got from the model
-      double* costs,      //!< Array of size num_col with costs
+      double* cost,       //!< Array of size num_col with costs
       double* lower,      //!< Array of size num_col with lower bounds
       double* upper,      //!< Array of size num_col with upper bounds
       HighsInt& num_nz,   //!< Number of nonzeros got from the model
@@ -464,7 +464,7 @@ class Highs {
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns to get
       HighsInt& num_col,    //!< Number of columns got from the model
-      double* costs,        //!< Array of size num_col with costs
+      double* cost,         //!< Array of size num_col with costs
       double* lower,        //!< Array of size num_col with lower bounds
       double* upper,        //!< Array of size num_col with upper bounds
       HighsInt& num_nz,     //!< Number of nonzeros got from the model
@@ -481,7 +481,7 @@ class Highs {
   HighsStatus getCols(
       const HighsInt* mask,  //!< Full length array with 1 => get; 0 => not
       HighsInt& num_col,     //!< Number of columns got from the model
-      double* costs,         //!< Array of size num_col with costs
+      double* cost,          //!< Array of size num_col with cost
       double* lower,         //!< Array of size num_col with lower bounds
       double* upper,         //!< Array of size num_col with upper bounds
       HighsInt& num_nz,      //!< Number of nonzeros got from the model
@@ -695,7 +695,25 @@ class Highs {
   }
 
   /**
-   * @brief Adds a column to the incumbent model, without the matrix
+   * @brief Adds a variable to the incumbent model, without the matrix
+   * coefficients
+   */
+  HighsStatus addVar(const double cost, const double lower, const double upper) {
+    return this->addVars(1, &cost, &lower, &upper);
+  }
+
+  /**
+   * @brief Adds multiple variables to the incumbent model, without the matrix
+   * coefficients
+   */
+  HighsStatus addVars(const HighsInt num_new_var, const double* cost,
+                      const double* lower, const double* upper) {
+    return this->addCols(num_new_var, cost, lower, upper,
+			 0, nullptr, nullptr, nullptr);
+  }
+
+  /**
+   * @brief Adds a variable to the incumbent model, without the matrix
    * coefficients if num_new_nz = 0, in which case indices and values
    * arrays can be nullptr
    */
@@ -708,7 +726,7 @@ class Highs {
    * coefficients if num_new_nz = 0, in which case column-wise starts,
    * indices and values arrays can be nullptr
    */
-  HighsStatus addCols(const HighsInt num_new_col, const double* costs,
+  HighsStatus addCols(const HighsInt num_new_col, const double* cost,
                       const double* lower, const double* upper,
                       const HighsInt num_new_nz, const HighsInt* starts,
                       const HighsInt* indices, const double* values);
