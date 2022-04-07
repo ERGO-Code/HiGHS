@@ -414,7 +414,11 @@ class ifstream
 {
 public:
     explicit ifstream(const std::string filename, std::ios_base::openmode mode = std::ios_base::in, size_t buff_size = default_buff_size)
-        : detail::strict_fstream_holder< strict_fstream::ifstream >(filename, mode),
+        : detail::strict_fstream_holder< strict_fstream::ifstream >(filename, mode
+#ifdef _WIN32  // to avoid problems with conversion of \r\n, only windows as otherwise there are problems on mac
+           | std::ios_base::binary
+#endif
+           ),
           std::istream(new istreambuf(_fs.rdbuf(), buff_size))
     {
         exceptions(std::ios_base::badbit);
@@ -424,7 +428,11 @@ public:
         _fs.close();
     }
     void open(const std::string filename, std::ios_base::openmode mode = std::ios_base::in) {
-        _fs.open(filename, mode);
+        _fs.open(filename, mode
+#ifdef _WIN32  // to avoid problems with conversion of \r\n, only windows as otherwise there are problems on mac
+           | std::ios_base::binary
+#endif
+           );
         std::istream::operator=(std::istream(new istreambuf(_fs.rdbuf())));
     }
     bool is_open() const {
