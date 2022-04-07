@@ -5,6 +5,7 @@ from .highs import (
     HighsStatus,
     HighsLogType,
     HighsSolution,
+    HighsBasis,
     Highs,
     kHighsInf,
     HIGHS_VERSION_MAJOR,
