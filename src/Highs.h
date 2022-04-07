@@ -252,6 +252,16 @@ class Highs {
   HighsStatus writeInfo(const std::string filename) const;
 
   /**
+   * @brief Get the value of infinity used by HiGHS
+   */
+  double getInfinity() { return kHighsInf; }
+
+  /**
+   * @brief Get the run time of HiGHS
+   */
+  double getRunTime() { return timer_.readRunHighsClock(); }
+
+  /**
    * Methods for model output
    */
 
@@ -677,23 +687,12 @@ class Highs {
   HighsStatus changeCoeff(const HighsInt row, const HighsInt col,
                           const double value);
   /**
-   * @brief Add a row to the incumbent model, without the matrix coefficients if
-   * num_new_nz = 0, in which case indices and values arrays can be
-   * nullptr
+   * @brief Sets the constraint matrix format of the incumbent model
    */
-  HighsStatus addRow(const double lower, const double upper,
-                     const HighsInt num_new_nz, const HighsInt* indices,
-                     const double* values);
-
-  /**
-   * @brief Adds multiple rows to the incumbent model, without the matrix
-   * coefficients if num_new_nz = 0, in which case row-wise starts,
-   * indices and values arrays can be nullptr
-   */
-  HighsStatus addRows(const HighsInt num_new_row, const double* lower,
-                      const double* upper, const HighsInt num_new_nz,
-                      const HighsInt* starts, const HighsInt* indices,
-                      const double* values);
+  HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
+    this->model_.lp_.setFormat(desired_format);
+    return HighsStatus::kOk;
+  }
 
   /**
    * @brief Adds a column to the incumbent model, without the matrix
@@ -713,6 +712,25 @@ class Highs {
                       const double* lower, const double* upper,
                       const HighsInt num_new_nz, const HighsInt* starts,
                       const HighsInt* indices, const double* values);
+
+  /**
+   * @brief Add a row to the incumbent model, without the matrix coefficients if
+   * num_new_nz = 0, in which case indices and values arrays can be
+   * nullptr
+   */
+  HighsStatus addRow(const double lower, const double upper,
+                     const HighsInt num_new_nz, const HighsInt* indices,
+                     const double* values);
+
+  /**
+   * @brief Adds multiple rows to the incumbent model, without the matrix
+   * coefficients if num_new_nz = 0, in which case row-wise starts,
+   * indices and values arrays can be nullptr
+   */
+  HighsStatus addRows(const HighsInt num_new_row, const double* lower,
+                      const double* upper, const HighsInt num_new_nz,
+                      const HighsInt* starts, const HighsInt* indices,
+                      const double* values);
 
   /**
    * @brief Delete multiple columns from the incumbent model given by an
@@ -798,6 +816,28 @@ class Highs {
   HighsStatus setBasis();
 
   /**
+   * @brief Run IPX crossover (possibly from a given HighsSolution
+   * instance) and, if successful, set the internal HighsBasis
+   * instance
+   */
+  HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
+
+  /**
+   * @brief Open a named log file
+   */
+  HighsStatus openLogFile(const std::string log_file = "");
+
+  /**
+   * @brief Interpret common qualifiers to string values
+   */
+  std::string modelStatusToString(const HighsModelStatus model_status) const;
+  std::string solutionStatusToString(const HighsInt solution_status) const;
+  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
+  std::string basisValidityToString(const HighsInt basis_validity) const;
+
+  // Start of advanced methods for HiGHS MIP solver
+  /**
    * @brief Set up for simplex using the supplied hot start
    * data. Advanced method: for HiGHS MIP solver
    */
@@ -840,16 +880,6 @@ class Highs {
   HighsStatus getIterate();
 
   /**
-   * @brief Get the value of infinity used by HiGHS
-   */
-  double getInfinity() { return kHighsInf; }
-
-  /**
-   * @brief Get the run time of HiGHS
-   */
-  double getRunTime() { return timer_.readRunHighsClock(); }
-
-  /**
    * @brief Get the dual edge weights (steepest/devex) in the order of
    * the basic indices or nullptr when they are not available.
    */
@@ -857,35 +887,6 @@ class Highs {
     return ekk_instance_.dual_edge_weight_.empty()
                ? nullptr
                : ekk_instance_.dual_edge_weight_.data();
-  }
-
-  /**
-   * @brief Run IPX crossover (possibly from a given HighsSolution
-   * instance) and, if successful, set the internal HighsBasis
-   * instance
-   */
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
-
-  /**
-   * @brief Open a named log file
-   */
-  HighsStatus openLogFile(const std::string log_file = "");
-
-  /**
-   * @brief Interpret common qualifiers to string values
-   */
-  std::string modelStatusToString(const HighsModelStatus model_status) const;
-  std::string solutionStatusToString(const HighsInt solution_status) const;
-  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
-  std::string basisValidityToString(const HighsInt basis_validity) const;
-
-  /**
-   * @brief Sets the constraint matrix format of the incumbent model
-   */
-  HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
-    this->model_.lp_.setFormat(desired_format);
-    return HighsStatus::kOk;
   }
 
 #ifdef OSI_FOUND
