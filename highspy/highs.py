@@ -7,6 +7,7 @@ from .highs_bindings import (
     CallbackTuple,
     HighsSolution,
     HighsBasis,
+    HighsInfo,
     _Highs,
     kHighsInf,
     HIGHS_VERSION_MAJOR,

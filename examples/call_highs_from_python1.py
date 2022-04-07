@@ -15,8 +15,14 @@ values = np.array([-1, 1, 1, 1], dtype=np.double)
 h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
 h.setOptionValue('log_to_console', True)
 h.run()
+num_var = h.getNumCol()
 solution = h.getSolution()
 basis = h.getBasis()
-#info = h.getInfo()
+info = h.getInfo()
+#model_status = h.getModelStatus()
+print('Optimal objective = ', info.objective_function_value)
+print('Iteration count = ', info.simplex_iteration_count)
+for icol in range(num_var):
+    print(icol, solution.col_value[icol])
 
 

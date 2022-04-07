@@ -6,6 +6,7 @@ from .highs import (
     HighsLogType,
     HighsSolution,
     HighsBasis,
+    HighsInfo,
     Highs,
     kHighsInf,
     HIGHS_VERSION_MAJOR,
