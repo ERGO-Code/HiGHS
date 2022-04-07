@@ -31,6 +31,12 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   try {
     Model m = readinstance(filename);
 
+    if (!m.soss.empty()) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "SOS not supported by HiGHS\n");
+      return FilereaderRetcode::kParserError;
+    }
+
     // build variable index and gather variable information
     std::map<std::string, unsigned int> varindex;
 
