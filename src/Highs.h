@@ -696,25 +696,6 @@ class Highs {
 
   /**
    * @brief Adds a variable to the incumbent model, without the matrix
-   * coefficients
-   */
-  HighsStatus addVar(const double cost, const double lower,
-                     const double upper) {
-    return this->addVars(1, &cost, &lower, &upper);
-  }
-
-  /**
-   * @brief Adds multiple variables to the incumbent model, without the matrix
-   * coefficients
-   */
-  HighsStatus addVars(const HighsInt num_new_var, const double* cost,
-                      const double* lower, const double* upper) {
-    return this->addCols(num_new_var, cost, lower, upper, 0, nullptr, nullptr,
-                         nullptr);
-  }
-
-  /**
-   * @brief Adds a variable to the incumbent model, without the matrix
    * coefficients if num_new_nz = 0, in which case indices and values
    * arrays can be nullptr
    */
@@ -731,6 +712,21 @@ class Highs {
                       const double* lower, const double* upper,
                       const HighsInt num_new_nz, const HighsInt* starts,
                       const HighsInt* indices, const double* values);
+
+  /**
+   * @brief Adds a variable to the incumbent model, without the cost or matrix
+   * coefficients
+   */
+  HighsStatus addVar(const double lower, const double upper) {
+    return this->addVars(1, &lower, &upper);
+  }
+
+  /**
+   * @brief Adds multiple variables to the incumbent model, without the costs or matrix
+   * coefficients
+   */
+  HighsStatus addVars(const HighsInt num_new_var, 
+                      const double* lower, const double* upper);
 
   /**
    * @brief Add a row to the incumbent model, without the matrix coefficients if
