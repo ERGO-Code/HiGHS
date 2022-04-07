@@ -185,7 +185,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
   zstr::ifstream f;
   try {
     f.open(filename.c_str(), std::ios::in);
-  } catch( const strict_fstream::Exception& e ) {
+  } catch (const strict_fstream::Exception& e) {
     highsLogDev(log_options, HighsLogType::kInfo, e.what());
     return FreeFormatParserReturnCode::kFileNotFound;
   }

@@ -203,8 +203,7 @@ class HMpsFF {
   HMpsFF::Parsekey parseCones(const HighsLogOptions& log_options,
                               std::istream& file);
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,
-                            std::istream& file,
-                            const HMpsFF::Parsekey keyword);
+                            std::istream& file, const HMpsFF::Parsekey keyword);
 
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);

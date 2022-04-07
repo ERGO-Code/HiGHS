@@ -698,7 +698,8 @@ class Highs {
    * @brief Adds a variable to the incumbent model, without the matrix
    * coefficients
    */
-  HighsStatus addVar(const double cost, const double lower, const double upper) {
+  HighsStatus addVar(const double cost, const double lower,
+                     const double upper) {
     return this->addVars(1, &cost, &lower, &upper);
   }
 
@@ -708,8 +709,8 @@ class Highs {
    */
   HighsStatus addVars(const HighsInt num_new_var, const double* cost,
                       const double* lower, const double* upper) {
-    return this->addCols(num_new_var, cost, lower, upper,
-			 0, nullptr, nullptr, nullptr);
+    return this->addCols(num_new_var, cost, lower, upper, 0, nullptr, nullptr,
+                         nullptr);
   }
 
   /**

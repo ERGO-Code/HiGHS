@@ -62,7 +62,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   zstr::ifstream file;
   try {
     file.open(filename, std::ios::in);
-  } catch( const strict_fstream::Exception& e ) {
+  } catch (const strict_fstream::Exception& e) {
     highsLogDev(log_options, HighsLogType::kInfo, e.what());
     return FilereaderRetcode::kFileNotFound;
   }
@@ -472,15 +472,15 @@ bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
     // Line input
     *line = '\0';
     file.get(line, lmax);
-    if (*line == '\0' && file.eof()) // nothing read and EOF
+    if (*line == '\0' && file.eof())  // nothing read and EOF
       return false;
 
     // Line trim   -- to delete tailing white spaces
     HighsInt lcnt = strlen(line) - 1;
     // if file.get() did not stop because it reached the lmax-1 limit,
-    // then because it reached a newline char (or eof); lets consume this newline (or do nothing if eof)
-    if (lcnt+1 < lmax-1)
-       file.get();
+    // then because it reached a newline char (or eof); lets consume this
+    // newline (or do nothing if eof)
+    if (lcnt + 1 < lmax - 1) file.get();
     while (isspace(line[lcnt]) && lcnt >= 0) lcnt--;
     if (lcnt <= 0 || line[0] == '*') continue;
 
