@@ -62,10 +62,7 @@ void highs_addCol(Highs* h, double cost, double lower, double upper, int num_new
 
 void highs_addVar(Highs* h, double lower, double upper)
 {
-  int* indices;
-  double* values;
-
-  HighsStatus status = h->addCol(0, lower, upper, 0, indices, values);
+  HighsStatus status = h->addVar(lower, upper);
 
   if (status != HighsStatus::kOk)
     throw py::value_error("Error when adding var");  
@@ -74,20 +71,13 @@ void highs_addVar(Highs* h, double lower, double upper)
 
 void highs_addVars(Highs* h, int num_vars, py::array_t<double> lower, py::array_t<double> upper)
 {
-  int* starts;
-  int* indices;
-  double* values;
-  double* costs = new double[num_vars]();
-
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
 
   double* lower_ptr = static_cast<double*>(lower_info.ptr);
   double* upper_ptr = static_cast<double*>(upper_info.ptr);
 
-  HighsStatus status = h->addCols(num_vars, costs, lower_ptr, upper_ptr, 0, starts, indices, values);
-
-  delete[] costs;
+  HighsStatus status = h->addVars(num_vars, lower_ptr, upper_ptr);
 
   if (status != HighsStatus::kOk)
     throw py::value_error("Error when adding vars");  
