@@ -24,5 +24,5 @@ print('Optimal objective = ', info.objective_function_value)
 print('Iteration count = ', info.simplex_iteration_count)
 for icol in range(num_var):
     print(icol, solution.col_value[icol])
-
-
+h.readModel("check/instances/avgas.mps")
+h.run()

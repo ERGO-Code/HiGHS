@@ -354,6 +354,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("sum_dual_infeasibilities", &HighsInfo::sum_dual_infeasibilities);
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
+    .def("readModel", &Highs::readModel)
     .def("run", &Highs::run)
     .def("getSolution", &Highs::getSolution)
     .def("getBasis", &Highs::getBasis)
