@@ -785,9 +785,7 @@ class Highs {
    * a mask (full length array with 1 => change; 0 => not). New index
    * of any variable not deleted is returned in place of the value 0.
    */
-  HighsStatus deleteVars(HighsInt* mask) {
-    return deleteCols(mask);
-  }
+  HighsStatus deleteVars(HighsInt* mask) { return deleteCols(mask); }
 
   /**
    * @brief Delete multiple rows from the incumbent model given by an interval
