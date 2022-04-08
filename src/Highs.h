@@ -766,6 +766,30 @@ class Highs {
   HighsStatus deleteCols(HighsInt* mask);
 
   /**
+   * @brief Delete multiple variables from the incumbent model given by an
+   * interval [from_var, to_var]
+   */
+  HighsStatus deleteVars(const HighsInt from_var, const HighsInt to_var) {
+    return deleteCols(from_var, to_var);
+  }
+
+  /**
+   * @brief Delete multiple variables from the incumbent model given by a set
+   */
+  HighsStatus deleteVars(const HighsInt num_set_entries, const HighsInt* set) {
+    return deleteCols(num_set_entries, set);
+  }
+
+  /**
+   * @brief Delete multiple variables from the incumbent model given by
+   * a mask (full length array with 1 => change; 0 => not). New index
+   * of any variable not deleted is returned in place of the value 0.
+   */
+  HighsStatus deleteVars(HighsInt* mask) {
+    return deleteCols(mask);
+  }
+
+  /**
    * @brief Delete multiple rows from the incumbent model given by an interval
    * [from_row, to_row]
    */

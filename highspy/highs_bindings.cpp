@@ -137,7 +137,7 @@ void highs_deleteVars(Highs* h, int num_set_entries, py::array_t<int> indices)
 
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
 
-  HighsStatus status = h->deleteCols(num_set_entries, indices_ptr);
+  HighsStatus status = h->deleteVars(num_set_entries, indices_ptr);
 
   if (status != HighsStatus::kOk)
     throw py::value_error("Error when deleting columns");  
@@ -288,6 +288,13 @@ PYBIND11_MODULE(highs_bindings, m)
   py::enum_<HessianFormat>(m, "HessianFormat")
     .value("kTriangular", HessianFormat::kTriangular)
     .value("kSquare", HessianFormat::kSquare);
+  py::enum_<SolutionStatus>(m, "SolutionStatus")
+    .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
+    .value("kSolutionStatusInfeasible", SolutionStatus::kSolutionStatusInfeasible)
+    .value("kSolutionStatusFeasible", SolutionStatus::kSolutionStatusFeasible);
+  py::enum_<BasisValidity>(m, "BasisValidity")
+    .value("kBasisValidityInvalid", BasisValidity::kBasisValidityInvalid)
+    .value("kBasisValidityValid", BasisValidity::kBasisValidityValid);
   py::enum_<HighsModelStatus>(m, "HighsModelStatus")
     .value("kNotset", HighsModelStatus::kNotset)
     .value("kLoadError", HighsModelStatus::kLoadError)
@@ -305,9 +312,17 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kTimeLimit", HighsModelStatus::kTimeLimit)
     .value("kIterationLimit", HighsModelStatus::kIterationLimit)
     .value("kUnknown", HighsModelStatus::kUnknown);
+  py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
+    .value("kLower", HighsBasisStatus::kLower)
+    .value("kBasic", HighsBasisStatus::kBasic)
+    .value("kUpper", HighsBasisStatus::kUpper)
+    .value("kZero", HighsBasisStatus::kZero)
+    .value("kNonbasic", HighsBasisStatus::kNonbasic);
   py::enum_<HighsVarType>(m, "HighsVarType")
     .value("kContinuous", HighsVarType::kContinuous)
-    .value("kInteger", HighsVarType::kInteger);
+    .value("kInteger", HighsVarType::kInteger)
+    .value("kSemiContinuous", HighsVarType::kSemiContinuous)
+    .value("kSemiInteger", HighsVarType::kSemiInteger);
   py::enum_<HighsStatus>(m, "HighsStatus")
     .value("kError", HighsStatus::kError)
     .value("kOk", HighsStatus::kOk)
@@ -431,7 +446,12 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string)>(&Highs::setOptionValue));
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string)>(&Highs::setOptionValue))
+    .def("modelStatusToString", &Highs::modelStatusToString)
+    .def("solutionStatusToString", &Highs::solutionStatusToString)
+    .def("basisStatusToString", &Highs::basisStatusToString)
+    .def("basisValidityToString", &Highs::basisValidityToString);
+  
   m.attr("kHighsInf") = kHighsInf;
   m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
   m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;
