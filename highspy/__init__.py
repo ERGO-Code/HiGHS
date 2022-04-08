@@ -4,6 +4,8 @@ from .highs import (
     HighsVarType,
     HighsStatus,
     HighsLogType,
+    HighsSparseMatrix,
+    HighsLp,
     HighsSolution,
     HighsBasis,
     HighsInfo,

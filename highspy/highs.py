@@ -5,6 +5,8 @@ from .highs_bindings import (
     HighsStatus,
     HighsLogType,
     CallbackTuple,
+    HighsSparseMatrix,
+    HighsLp,
     HighsSolution,
     HighsBasis,
     HighsInfo,

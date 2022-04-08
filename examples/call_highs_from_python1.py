@@ -25,4 +25,11 @@ print('Iteration count = ', info.simplex_iteration_count)
 for icol in range(num_var):
     print(icol, solution.col_value[icol])
 h.readModel("check/instances/avgas.mps")
+h.writeModel("ml.mps")
 h.run()
+lp = h.getLp()
+num_nz = h.getNumNz()
+print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
+lp.num_col_ = 99
+num_col = h.getNumCol()
+print('LP has ', num_col, ' columns')
