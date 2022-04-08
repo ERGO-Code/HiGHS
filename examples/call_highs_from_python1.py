@@ -44,7 +44,7 @@ h.clear()
 # Now define the blending model as a HighsLp instance
 #
 # ToDo Determine whether an empty HighsLp instance can be created as
-# in C++, rather than pulling it from an emty Highs instance like this
+# in C++, rather than pulling it from an empty Highs instance like this
 lp = h.getLp()
 num_nz = h.getNumNz()
 print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
@@ -79,3 +79,30 @@ for icol in range(num_var):
 print('Constraints')
 for irow in range(num_row):
     print(irow, solution.row_value[irow], h.basisStatusToString(basis.row_status[irow]))
+
+# Clear so that incumbent model is empty
+h.clear()
+# Now define the test-semi-definite0 model (from TestQpSolver.cpp) as a HighsModel instance
+#
+# ToDo Determine whether an empty HighsModel instance can be created as
+# in C++, rather than pulling it from an empty Highs instance like this
+model = h.getModel()
+model.lp_.model_name_ = "semi-definite"
+model.lp_.num_col_ = 3
+model.lp_.num_row_ = 1
+model.lp_.col_cost_ = np.array([1.0, 1.0, 2.0], dtype=np.double)
+model.lp_.col_lower_ = np.array([0, 0, 0], dtype=np.double)
+model.lp_.col_upper_ = np.array([inf, inf, inf], dtype=np.double)
+model.lp_.row_lower_ = np.array([2], dtype=np.double)
+model.lp_.row_upper_ = np.array([inf], dtype=np.double)
+model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kColwise
+model.lp_.a_matrix_.start_ = np.array([0, 1, 2, 3])
+model.lp_.a_matrix_.index_ = np.array([0, 0, 0])
+model.lp_.a_matrix_.value_ = np.array([1.0, 1.0, 1.0], dtype=np.double)
+model.hessian_.dim_ = model.lp_.num_col_
+model.hessian_.start_ = np.array([0, 2, 2, 3])
+model.hessian_.index_ = np.array([0, 2, 2])
+model.hessian_.value_ = np.array([2.0, -1.0, 1.0], dtype=np.double)
+
+h.passModel(model)
+h.run()

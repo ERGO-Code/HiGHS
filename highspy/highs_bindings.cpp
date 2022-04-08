@@ -22,6 +22,13 @@ void highs_passLp(Highs* h, HighsLp& lp)
     throw py::value_error("Error when passing LP");
 }
  
+void highs_passHessian(Highs* h, HighsHessian& hessian)
+{
+  HighsStatus status = h->passHessian(hessian);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when passing Hessian");
+}
+ 
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info indices_info = indices.request();
@@ -360,25 +367,34 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("p_end_", &HighsSparseMatrix::p_end_)
     .def_readwrite("index_", &HighsSparseMatrix::index_)
     .def_readwrite("value_", &HighsSparseMatrix::value_);
- py::class_<HighsLp>(m, "HighsLp")
-   .def_readwrite("num_col_", &HighsLp::num_col_)
-   .def_readwrite("num_row_", &HighsLp::num_row_)
-   .def_readwrite("col_cost_", &HighsLp::col_cost_)
-   .def_readwrite("col_lower_", &HighsLp::col_lower_)
-   .def_readwrite("col_upper_", &HighsLp::col_upper_)
-   .def_readwrite("row_lower_", &HighsLp::row_lower_)
-   .def_readwrite("row_upper_", &HighsLp::row_upper_)
-   .def_readwrite("a_matrix_", &HighsLp::a_matrix_)
-   .def_readwrite("sense_", &HighsLp::sense_)
-   .def_readwrite("offset_", &HighsLp::offset_)
-   .def_readwrite("model_name_", &HighsLp::model_name_)
-   .def_readwrite("col_names_", &HighsLp::col_names_)
-   .def_readwrite("row_names_", &HighsLp::row_names_)
-   .def_readwrite("integrality_", &HighsLp::integrality_)
-   .def_readwrite("scale_", &HighsLp::scale_)
-   .def_readwrite("is_scaled_", &HighsLp::is_scaled_)
-   .def_readwrite("is_moved_", &HighsLp::is_moved_)
-   .def_readwrite("mods_", &HighsLp::mods_);
+  py::class_<HighsLp>(m, "HighsLp")
+    .def_readwrite("num_col_", &HighsLp::num_col_)
+    .def_readwrite("num_row_", &HighsLp::num_row_)
+    .def_readwrite("col_cost_", &HighsLp::col_cost_)
+    .def_readwrite("col_lower_", &HighsLp::col_lower_)
+    .def_readwrite("col_upper_", &HighsLp::col_upper_)
+    .def_readwrite("row_lower_", &HighsLp::row_lower_)
+    .def_readwrite("row_upper_", &HighsLp::row_upper_)
+    .def_readwrite("a_matrix_", &HighsLp::a_matrix_)
+    .def_readwrite("sense_", &HighsLp::sense_)
+    .def_readwrite("offset_", &HighsLp::offset_)
+    .def_readwrite("model_name_", &HighsLp::model_name_)
+    .def_readwrite("col_names_", &HighsLp::col_names_)
+    .def_readwrite("row_names_", &HighsLp::row_names_)
+    .def_readwrite("integrality_", &HighsLp::integrality_)
+    .def_readwrite("scale_", &HighsLp::scale_)
+    .def_readwrite("is_scaled_", &HighsLp::is_scaled_)
+    .def_readwrite("is_moved_", &HighsLp::is_moved_)
+    .def_readwrite("mods_", &HighsLp::mods_);
+  py::class_<HighsHessian>(m, "HighsHessian")
+    .def_readwrite("dim_", &HighsHessian::dim_)
+    .def_readwrite("format_", &HighsHessian::format_)
+    .def_readwrite("start_", &HighsHessian::start_)
+    .def_readwrite("index_", &HighsHessian::index_)
+    .def_readwrite("value_", &HighsHessian::value_);
+  py::class_<HighsModel>(m, "HighsModel")
+    .def_readwrite("lp_", &HighsModel::lp_)
+    .def_readwrite("hessian_", &HighsModel::hessian_);
   py::class_<HighsSolution>(m, "HighsSolution")
     .def_readwrite("value_valid", &HighsSolution::value_valid)
     .def_readwrite("dual_valid", &HighsSolution::dual_valid)
@@ -420,8 +436,10 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("readModel", &Highs::readModel)
     .def("passModel", &highs_passModel)
     .def("passLp", &highs_passLp)
+    .def("passHessian", &highs_passHessian)
     .def("run", &Highs::run)
     .def("writeModel", &Highs::writeModel)
+    .def("getModel", &Highs::getModel)
     .def("getLp", &Highs::getLp)
     .def("getSolution", &Highs::getSolution)
     .def("getBasis", &Highs::getBasis)

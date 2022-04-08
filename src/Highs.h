@@ -297,12 +297,6 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
-   * @brief Get the hot start basis data from the most recent simplex
-   * solve. Advanced method: for HiGHS MIP solver
-   */
-  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
-
-  /**
    * @brief Return the status for the incumbent model. Returning the
    * scaled model status is deprecated
    */
@@ -874,6 +868,12 @@ class Highs {
   std::string basisValidityToString(const HighsInt basis_validity) const;
 
   // Start of advanced methods for HiGHS MIP solver
+  /**
+   * @brief Get the hot start basis data from the most recent simplex
+   * solve. Advanced method: for HiGHS MIP solver
+   */
+  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
+
   /**
    * @brief Set up for simplex using the supplied hot start
    * data. Advanced method: for HiGHS MIP solver
