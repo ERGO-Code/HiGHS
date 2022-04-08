@@ -8,6 +8,20 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 
+void highs_passModel(Highs* h, HighsModel& model)
+{
+  HighsStatus status = h->passModel(model);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when passing model");
+}
+ 
+void highs_passLp(Highs* h, HighsLp& lp)
+{
+  HighsStatus status = h->passModel(lp);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when passing LP");
+}
+ 
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info indices_info = indices.request();
@@ -404,6 +418,8 @@ PYBIND11_MODULE(highs_bindings, m)
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
     .def("readModel", &Highs::readModel)
+    .def("passModel", &highs_passModel)
+    .def("passLp", &highs_passLp)
     .def("run", &Highs::run)
     .def("writeModel", &Highs::writeModel)
     .def("getLp", &Highs::getLp)
