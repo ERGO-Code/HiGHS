@@ -104,5 +104,38 @@ model.hessian_.start_ = np.array([0, 2, 2, 3])
 model.hessian_.index_ = np.array([0, 2, 2])
 model.hessian_.value_ = np.array([2.0, -1.0, 1.0], dtype=np.double)
 
+print('test-semi-definite0 as HighsModel')
 h.passModel(model)
+h.run()
+
+# Clear so that incumbent model is empty
+h.clear()
+num_col = 3
+num_row = 1
+sense = highspy.ObjSense.kMinimize
+offset = 0
+col_cost = np.array([1.0, 1.0, 2.0], dtype=np.double)
+col_lower = np.array([0, 0, 0], dtype=np.double)
+col_upper = np.array([inf, inf, inf], dtype=np.double)
+row_lower = np.array([2], dtype=np.double)
+row_upper = np.array([inf], dtype=np.double)
+a_matrix_format = highspy.MatrixFormat.kColwise
+a_matrix_start = np.array([0, 1, 2, 3])
+a_matrix_index = np.array([0, 0, 0])
+a_matrix_value = np.array([1.0, 1.0, 1.0], dtype=np.double)
+a_matrix_num_nz = a_matrix_start[num_col]
+hessian_format = highspy.HessianFormat.kTriangular
+hessian_start = np.array([0, 2, 2, 3])
+hessian_index = np.array([0, 2, 2])
+hessian_value = np.array([2.0, -1.0, 1.0], dtype=np.double)
+hessian_num_nz = hessian_start[num_col]
+integrality = np.array([0, 0, 0])
+
+print('test-semi-definite0 as pointers')
+h.passModelPointers(num_col, num_row, a_matrix_num_nz, hessian_num_nz,
+                    a_matrix_format, hessian_format, sense, offset,
+                    col_cost, col_lower, col_upper, row_lower, row_upper,
+                    a_matrix_start, a_matrix_index, a_matrix_value,
+                    hessian_start, hessian_index, hessian_value,
+                    integrality)
 h.run()

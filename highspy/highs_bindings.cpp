@@ -15,11 +15,108 @@ void highs_passModel(Highs* h, HighsModel& model)
     throw py::value_error("Error when passing model");
 }
  
+void highs_passModelPointers(Highs* h, 
+			     const int num_col, const int num_row, const int num_nz,
+			     const int q_num_nz, const int a_format, const int q_format,
+			     const int sense, const double offset,
+			     const py::array_t<double> col_cost,
+			     const py::array_t<double> col_lower,
+			     const py::array_t<double> col_upper,
+			     const py::array_t<double> row_lower,
+			     const py::array_t<double> row_upper,
+			     const py::array_t<int> a_start,
+			     const py::array_t<int> a_index,
+			     const py::array_t<double> a_value,
+			     const py::array_t<int> q_start,
+			     const py::array_t<int> q_index,
+			     const py::array_t<double> q_value,
+			     const py::array_t<int> integrality)
+{
+  py::buffer_info col_cost_info = col_cost.request();
+  py::buffer_info col_lower_info = col_lower.request();
+  py::buffer_info col_upper_info = col_upper.request();
+  py::buffer_info row_lower_info = row_lower.request();
+  py::buffer_info row_upper_info = row_upper.request();
+  py::buffer_info a_start_info = a_start.request();
+  py::buffer_info a_index_info = a_index.request();
+  py::buffer_info a_value_info = a_value.request();
+  py::buffer_info q_start_info = q_start.request();
+  py::buffer_info q_index_info = q_index.request();
+  py::buffer_info q_value_info = q_value.request();
+  py::buffer_info integrality_info = integrality.request();
+
+  const double* col_cost_ptr = static_cast<double*>(col_cost_info.ptr);
+  const double* col_lower_ptr = static_cast<double*>(col_lower_info.ptr);
+  const double* col_upper_ptr = static_cast<double*>(col_upper_info.ptr);
+  const double* row_lower_ptr = static_cast<double*>(row_lower_info.ptr);
+  const double* row_upper_ptr = static_cast<double*>(row_upper_info.ptr);
+  const int* a_start_ptr = static_cast<int*>(a_start_info.ptr);
+  const int* a_index_ptr = static_cast<int*>(a_index_info.ptr);
+  const double* a_value_ptr = static_cast<double*>(a_value_info.ptr);
+  const int* q_start_ptr = static_cast<int*>(q_start_info.ptr);
+  const int* q_index_ptr = static_cast<int*>(q_index_info.ptr);
+  const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
+  const int* integrality_ptr = static_cast<int*>(integrality_info.ptr);
+
+  HighsStatus status = h->passModel(num_col, num_row, num_nz,
+				    q_num_nz, a_format, q_format,
+				    sense, offset, col_cost_ptr,
+				    col_lower_ptr, col_upper_ptr, row_lower_ptr,
+				    row_upper_ptr, a_start_ptr, a_index_ptr,
+				    a_value_ptr, q_start_ptr, q_index_ptr,
+				    q_value_ptr, integrality_ptr);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when passing model");
+}
+ 
 void highs_passLp(Highs* h, HighsLp& lp)
 {
   HighsStatus status = h->passModel(lp);
   if (status != HighsStatus::kOk)
     throw py::value_error("Error when passing LP");
+}
+ 
+void highs_passLpPointers(Highs* h, 
+			  const int num_col, const int num_row, const int num_nz,
+			  const int a_format, const int sense, const double offset,
+			  const py::array_t<double> col_cost,
+			  const py::array_t<double> col_lower,
+			  const py::array_t<double> col_upper,
+			  const py::array_t<double> row_lower,
+			  const py::array_t<double> row_upper,
+			  const py::array_t<int> a_start,
+			  const py::array_t<int> a_index,
+			  const py::array_t<double> a_value,
+			  const py::array_t<int> integrality)
+{
+  py::buffer_info col_cost_info = col_cost.request();
+  py::buffer_info col_lower_info = col_lower.request();
+  py::buffer_info col_upper_info = col_upper.request();
+  py::buffer_info row_lower_info = row_lower.request();
+  py::buffer_info row_upper_info = row_upper.request();
+  py::buffer_info a_start_info = a_start.request();
+  py::buffer_info a_index_info = a_index.request();
+  py::buffer_info a_value_info = a_value.request();
+  py::buffer_info integrality_info = integrality.request();
+
+  const double* col_cost_ptr = static_cast<double*>(col_cost_info.ptr);
+  const double* col_lower_ptr = static_cast<double*>(col_lower_info.ptr);
+  const double* col_upper_ptr = static_cast<double*>(col_upper_info.ptr);
+  const double* row_lower_ptr = static_cast<double*>(row_lower_info.ptr);
+  const double* row_upper_ptr = static_cast<double*>(row_upper_info.ptr);
+  const int* a_start_ptr = static_cast<int*>(a_start_info.ptr);
+  const int* a_index_ptr = static_cast<int*>(a_index_info.ptr);
+  const double* a_value_ptr = static_cast<double*>(a_value_info.ptr);
+  const int* integrality_ptr = static_cast<int*>(integrality_info.ptr);
+
+  HighsStatus status = h->passModel(num_col, num_row, num_nz,
+				    a_format, sense, offset,
+				    col_cost_ptr, col_lower_ptr, col_upper_ptr,
+				    row_lower_ptr, row_upper_ptr,
+				    a_start_ptr, a_index_ptr, a_value_ptr,
+				    integrality_ptr);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when passing model");
 }
  
 void highs_passHessian(Highs* h, HighsHessian& hessian)
@@ -435,7 +532,9 @@ PYBIND11_MODULE(highs_bindings, m)
     .def(py::init<>())
     .def("readModel", &Highs::readModel)
     .def("passModel", &highs_passModel)
+    .def("passModelPointers", &highs_passModelPointers)
     .def("passLp", &highs_passLp)
+    .def("passLpPointers", &highs_passLpPointers)
     .def("passHessian", &highs_passHessian)
     .def("run", &Highs::run)
     .def("writeModel", &Highs::writeModel)
