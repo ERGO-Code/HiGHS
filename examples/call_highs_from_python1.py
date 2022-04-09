@@ -139,3 +139,4 @@ h.passModelPointers(num_col, num_row, a_matrix_num_nz, hessian_num_nz,
                     hessian_start, hessian_index, hessian_value,
                     integrality)
 h.run()
+h.writeSolution("", 1)

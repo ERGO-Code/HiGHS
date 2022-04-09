@@ -126,6 +126,33 @@ void highs_passHessian(Highs* h, HighsHessian& hessian)
     throw py::value_error("Error when passing Hessian");
 }
  
+void highs_passHessianPointers(Highs* h, 
+			       const int dim, const int num_nz, const int format,
+			       const py::array_t<int> q_start,
+			       const py::array_t<int> q_index,
+			       const py::array_t<double> q_value)
+{
+  py::buffer_info q_start_info = q_start.request();
+  py::buffer_info q_index_info = q_index.request();
+  py::buffer_info q_value_info = q_value.request();
+
+  const int* q_start_ptr = static_cast<int*>(q_start_info.ptr);
+  const int* q_index_ptr = static_cast<int*>(q_index_info.ptr);
+  const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
+
+  HighsStatus status = h->passHessian(dim, num_nz, format,
+				      q_start_ptr, q_index_ptr, q_value_ptr);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when passing Hessian");
+}
+ 
+void highs_writeSolution(Highs* h, const std::string filename, const int style)
+{
+  HighsStatus status = h->writeSolution(filename, style);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error when writing solution");
+}
+
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info indices_info = indices.request();
@@ -530,13 +557,16 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("sum_dual_infeasibilities", &HighsInfo::sum_dual_infeasibilities);
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
-    .def("readModel", &Highs::readModel)
     .def("passModel", &highs_passModel)
     .def("passModelPointers", &highs_passModelPointers)
     .def("passLp", &highs_passLp)
     .def("passLpPointers", &highs_passLpPointers)
     .def("passHessian", &highs_passHessian)
+    .def("passHessianPointers", &highs_passHessianPointers)
+    .def("readModel", &Highs::readModel)
     .def("run", &Highs::run)
+    .def("writeSolution", &highs_writeSolution)
+    .def("readSolution", &Highs::readSolution)
     .def("writeModel", &Highs::writeModel)
     .def("getModel", &Highs::getModel)
     .def("getLp", &Highs::getLp)
