@@ -51,6 +51,12 @@ struct HighsLogOptions {
 };
 
 /**
+ * @brief Write the HiGHS version, compilation date, git hash and
+ * copyright statement
+ */
+void highsLogHeader(const HighsLogOptions& log_options);
+
+/**
  * @brief Convert a double number to a string using given tolerance
  */
 std::array<char, 32> highsDoubleToString(double val, double tolerance);
