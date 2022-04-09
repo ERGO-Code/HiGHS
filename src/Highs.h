@@ -982,6 +982,8 @@ class Highs {
   HighsStatus writeSolution(const std::string filename,
                             const bool pretty = false) const;
 
+  void logHeader();
+
   void deprecationMessage(const std::string method_name,
                           const std::string alt_method_name) const;
 
@@ -1011,6 +1013,8 @@ class Highs {
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
+
+  bool written_log_header = false;
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();

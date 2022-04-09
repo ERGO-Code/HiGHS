@@ -14,9 +14,9 @@
  * @brief HiGHS main
  */
 #include "Highs.h"
+//#include "io/HighsIO.h"
 #include "lp_data/HighsRuntimeOptions.h"
 
-void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
                              const HighsModel& model);
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   // settings defined in any options file.
   highs.passOptions(loaded_options);
 
-  printHighsVersionCopyright(log_options);
+  highs.logHeader();
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
@@ -72,15 +72,6 @@ int main(int argc, char** argv) {
       return (int)write_model_status;  // todo: change to write model error
   }
   return (int)run_status;
-}
-
-void printHighsVersionCopyright(const HighsLogOptions& log_options) {
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
-               (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
-               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
 }
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,

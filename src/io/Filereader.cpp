@@ -36,9 +36,10 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
   std::string extension = getFilenameExt(filename);
   if (extension == "gz") {
 #ifdef ZLIB_FOUND
-    extension = getFilenameExt(filename.substr(0,filename.size()-3));
+    extension = getFilenameExt(filename.substr(0, filename.size() - 3));
 #else
-    highsLogUser(log_options, HighsLogType::kError, "HiGHS build without zlib support. Cannot read .gz file.\n",
+    highsLogUser(log_options, HighsLogType::kError,
+                 "HiGHS build without zlib support. Cannot read .gz file.\n",
                  filename.c_str());
     reader = NULL;
 #endif
