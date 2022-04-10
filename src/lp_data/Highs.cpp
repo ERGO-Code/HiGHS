@@ -596,6 +596,7 @@ HighsStatus Highs::presolve() {
     model_presolve_status_ = runPresolve(force_presolve);
   }
 
+  bool using_reduced_lp = false;
   switch (model_presolve_status_) {
     case HighsPresolveStatus::kNotPresolved: {
       // Shouldn't happen
@@ -620,7 +621,7 @@ HighsStatus Highs::presolve() {
       } else if (model_presolve_status_ == HighsPresolveStatus::kReduced) {
         // Nontrivial reduction, so fill Highs presolved model with the
         // presolved model
-        presolved_model_.lp_ = presolve_.getReducedProblem();
+	using_reduced_lp = true;
       }
       return_status = HighsStatus::kOk;
       break;
@@ -628,7 +629,7 @@ HighsStatus Highs::presolve() {
     case HighsPresolveStatus::kTimeout: {
       // Timeout, so assume that it's OK to fill the Highs presolved model with
       // the presolved model, but return warning.
-      presolved_model_.lp_ = presolve_.getReducedProblem();
+      using_reduced_lp = true;
       return_status = HighsStatus::kWarning;
       break;
     }
@@ -638,6 +639,11 @@ HighsStatus Highs::presolve() {
       return_status = HighsStatus::kError;
     }
   }
+  if (using_reduced_lp) {
+    presolved_model_.lp_ = presolve_.getReducedProblem();
+    presolved_model_.lp_.setMatrixDimensions();
+  }
+
   highsLogUser(
       options_.log_options, HighsLogType::kInfo, "Presolve status: %s\n",
       presolve_.presolveStatusToString(model_presolve_status_).c_str());
@@ -2458,6 +2464,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
 
 void Highs::clearPresolve() {
   model_presolve_status_ = HighsPresolveStatus::kNotPresolved;
+  presolved_model_.clear();
   presolve_.clear();
 }
 
