@@ -613,7 +613,8 @@ HighsStatus Highs::presolve() {
       if (model_presolve_status_ == HighsPresolveStatus::kInfeasible) {
         // Infeasible model, so indicate that the incumbent model is
         // known as such
-        setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kInfeasible);
       } else if (model_presolve_status_ == HighsPresolveStatus::kNotReduced) {
         // No reduction, so fill Highs presolved model with the
         // incumbent model
@@ -621,7 +622,7 @@ HighsStatus Highs::presolve() {
       } else if (model_presolve_status_ == HighsPresolveStatus::kReduced) {
         // Nontrivial reduction, so fill Highs presolved model with the
         // presolved model
-	using_reduced_lp = true;
+        using_reduced_lp = true;
       }
       return_status = HighsStatus::kOk;
       break;
@@ -635,7 +636,8 @@ HighsStatus Highs::presolve() {
     }
     default: {
       // case HighsPresolveStatus::kError
-      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kPresolveError);
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kPresolveError);
       return_status = HighsStatus::kError;
     }
   }
@@ -2775,7 +2777,6 @@ HighsStatus Highs::callSolveMip() {
 
 HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                     const HighsBasis& basis) {
-
   HighsStatus return_status = HighsStatus::kOk;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
 
