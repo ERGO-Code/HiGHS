@@ -2778,6 +2778,7 @@ HighsStatus Highs::callSolveMip() {
 HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                     const HighsBasis& basis) {
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
 
   const bool solution_ok = isSolutionRightSize(presolved_lp, solution);
@@ -2793,74 +2794,68 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     return HighsStatus::kError;
   }
   presolve_.data_.recovered_solution_ = solution;
-  presolve_.data_.recovered_basis_.col_status = basis.col_status;
-  presolve_.data_.recovered_basis_.row_status = basis.row_status;
+  presolve_.data_.recovered_basis_ = basis;
 
   HighsInt postsolve_iteration_count = -1;
   HighsPostsolveStatus postsolve_status = runPostsolve();
-  /*
   if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Postsolve finished\n");
-    resetModelStatusAndSolutionParams(hmos_[0]);
-
-    hmos_[0].solution_ = presolve_.data_.recovered_solution_;
-    hmos_[0].solution_.value_valid = true;
-    hmos_[0].solution_.dual_valid = true;
-
+    // Set solution and its status
+    solution_.clear();
+    solution_ = presolve_.data_.recovered_solution_;
+    solution_.value_valid = true;
+    solution_.dual_valid = true;
     // Set basis and its status
-    hmos_[0].basis_.valid = true;
-    hmos_[0].basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-    hmos_[0].basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-
-    // The basis returned from postsolve is just basic/nonbasic
-    // and EKK expects a refined basis, so set it up now
-    refineBasis(model_.lp_, hmos_[0].solution_, hmos_[0].basis_);
-
+    basis_.valid = true;
+    basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+    basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+    basis_.debug_origin_name += ": after postsolve";
+    // Save the options to allow the best simplex strategy to
+    // be used
     HighsOptions save_options = options_;
-    const bool full_logging = false;
-    if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
-    // Force the use of simplex to clean up if IPM has been used
-    // to solve the presolved problem
-    if (options_.solver == kIpmString) options_.solver = kSimplexString;
     options_.simplex_strategy = kSimplexStrategyChoose;
     // Ensure that the parallel solver isn't used
-    options_.highs_min_threads = 1;
-    options_.highs_max_threads = 1;
+    options_.simplex_min_concurrency = 1;
+    options_.simplex_max_concurrency = 1;
     // Use any pivot threshold resulting from solving the presolved LP
-    //    if (factor_pivot_threshold > 0)
-    //      options_.factor_pivot_threshold = factor_pivot_threshold;
-
-    HighsInt iteration_count0 = info_.simplex_iteration_count;
-    hmos_[0].ekk_instance_.lp_name_ = "Postsolve LP";
-    HighsStatus call_status = callSolveLp(
-        hmos_[0], "Solving the original LP from the solution after postsolve");
-    return_status =
-        interpretCallStatus(call_status, return_status, "callSolveLp");
+    // if (factor_pivot_threshold > 0)
+    //    options_.factor_pivot_threshold = factor_pivot_threshold;
+    // The basis returned from postsolve is just basic/nonbasic
+    // and EKK expects a refined basis, so set it up now
+    HighsLp& incumbent_lp = model_.lp_;
+    refineBasis(incumbent_lp, solution_, basis_);
+    // Scrap the EKK data from solving the presolved LP
+    ekk_instance_.invalidate();
+    ekk_instance_.lp_name_ = "Postsolve LP";
+    // Set up the iteration count and timing records so that
+    // adding the corresponding values after callSolveLp gives
+    // difference
+    postsolve_iteration_count = -info_.simplex_iteration_count;
+    timer_.start(timer_.solve_clock);
+    call_status = callSolveLp(
+        incumbent_lp,
+        "Solving the original LP from the solution after postsolve");
+    timer_.stop(timer_.solve_clock);
+    // Determine the iteration count and timing records
+    postsolve_iteration_count += info_.simplex_iteration_count;
+    return_status = interpretCallStatus(options_.log_options, call_status,
+                                        return_status, "callSolveLp");
+    // Recover the options
     options_ = save_options;
     if (return_status == HighsStatus::kError)
       return returnFromRun(return_status);
-    postsolve_iteration_count =
-        info_.simplex_iteration_count - iteration_count0;
   } else {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Postsolve return status is %d\n", (int)postsolve_status);
-    setHighsModelStatusAndInfo(HighsModelStatus::kPostsolveError);
+    setHighsModelStatusAndClearSolutionAndBasis(
+        HighsModelStatus::kPostsolveError);
     return returnFromRun(HighsStatus::kError);
   }
-  HighsModelStatus solved_model_status = hmos_[0].unscaled_model_status_;
-  setHighsModelStatusAndInfo(solved_model_status);
-  if (postsolve_iteration_count < 0) {
-    highsLogDev(options_.log_options, HighsLogType::kInfo, "Postsolve  : \n");
-  } else {
-    highsLogDev(options_.log_options, HighsLogType::kInfo,
-                "Postsolve  : %" HIGHSINT_FORMAT "\n",
-                postsolve_iteration_count);
-  }
-  HighsStatus call_status =
-      highsStatusFromHighsModelStatus(scaled_model_status_);
-  return_status = interpretCallStatus(call_status, return_status);
-  */
+  call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
+  return_status =
+      interpretCallStatus(options_.log_options, call_status, return_status,
+                          "highsStatusFromHighsModelStatus");
   return return_status;
 }
 

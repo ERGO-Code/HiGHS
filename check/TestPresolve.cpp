@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("PresolveSolvePostsolve", "[highs_test_presolve]") {
   Highs highs0;
