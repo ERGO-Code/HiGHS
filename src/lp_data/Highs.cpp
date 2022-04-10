@@ -584,6 +584,66 @@ HighsStatus Highs::writeBasis(const std::string filename) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::presolve() {
+  this->logHeader();
+  HighsStatus return_status = HighsStatus::kOk;
+
+  clearPresolve();
+  if (model_.isEmpty()) {
+    model_presolve_status_ = HighsPresolveStatus::kNotReduced;
+  } else {
+    const bool force_presolve = true;
+    model_presolve_status_ = runPresolve(force_presolve);
+  }
+
+  switch (model_presolve_status_) {
+    case HighsPresolveStatus::kNotPresolved: {
+      // Shouldn't happen
+      assert(model_presolve_status_ != HighsPresolveStatus::kNotPresolved);
+      return_status = HighsStatus::kError;
+      break;
+    }
+    case HighsPresolveStatus::kNotReduced:
+    case HighsPresolveStatus::kInfeasible:
+    case HighsPresolveStatus::kReduced:
+    case HighsPresolveStatus::kReducedToEmpty:
+    case HighsPresolveStatus::kUnboundedOrInfeasible: {
+      // All OK
+      if (model_presolve_status_ == HighsPresolveStatus::kInfeasible) {
+        // Infeasible model, so indicate that the incumbent model is
+        // known as such
+        setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
+      } else if (model_presolve_status_ == HighsPresolveStatus::kNotReduced) {
+        // No reduction, so fill Highs presolved model with the
+        // incumbent model
+        presolved_model_ = model_;
+      } else if (model_presolve_status_ == HighsPresolveStatus::kReduced) {
+        // Nontrivial reduction, so fill Highs presolved model with the
+        // presolved model
+        presolved_model_.lp_ = presolve_.getReducedProblem();
+      }
+      return_status = HighsStatus::kOk;
+      break;
+    }
+    case HighsPresolveStatus::kTimeout: {
+      // Timeout, so assume that it's OK to fill the Highs presolved model with
+      // the presolved model, but return warning.
+      presolved_model_.lp_ = presolve_.getReducedProblem();
+      return_status = HighsStatus::kWarning;
+      break;
+    }
+    default: {
+      // case HighsPresolveStatus::kError
+      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kPresolveError);
+      return_status = HighsStatus::kError;
+    }
+  }
+  highsLogUser(
+      options_.log_options, HighsLogType::kInfo, "Presolve status: %s\n",
+      presolve_.presolveStatusToString(model_presolve_status_).c_str());
+  return returnFromHighs(return_status);
+}
+
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
@@ -2281,17 +2341,17 @@ std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
 }
 
 // Private methods
-HighsPresolveStatus Highs::runPresolve() {
+HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   presolve_.clear();
-  // Exit if the problem is empty or if presolve is set to off.
-  if (options_.presolve == kHighsOffString)
+  // Exit if presolve is set to off (unless presolve is forced)
+  if (options_.presolve == kHighsOffString && !force_presolve)
     return HighsPresolveStatus::kNotPresolved;
 
-  // @FlipRowDual Side-stpe presolve until @leona has fixed it wrt row dual flip
-  const bool force_no_presolve = false;
-  if (force_no_presolve) {
-    printf("Forcing no presolve!!\n");
-    return HighsPresolveStatus::kNotPresolved;
+  if (model_.isEmpty()) {
+    // Empty models shouldn't reach here, but this status would cause
+    // no harm if one did
+    assert(1 == 0);
+    return HighsPresolveStatus::kNotReduced;
   }
 
   // Ensure that the LP is column-wise
@@ -2704,6 +2764,114 @@ HighsStatus Highs::callSolveMip() {
     options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
   }
   return return_status;
+}
+
+HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
+                                    const HighsBasis& basis) {
+
+  HighsStatus return_status = HighsStatus::kOk;
+  const HighsLp& presolved_lp = presolve_.getReducedProblem();
+
+  const bool solution_ok = isSolutionRightSize(presolved_lp, solution);
+  if (!solution_ok) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Solution provided to postsolve is incorrect size\n");
+    return HighsStatus::kError;
+  }
+  const bool basis_ok = isBasisConsistent(presolved_lp, basis);
+  if (!basis_ok) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Basis provided to postsolve is incorrect size\n");
+    return HighsStatus::kError;
+  }
+  presolve_.data_.recovered_solution_ = solution;
+  presolve_.data_.recovered_basis_.col_status = basis.col_status;
+  presolve_.data_.recovered_basis_.row_status = basis.row_status;
+
+  HighsInt postsolve_iteration_count = -1;
+  HighsPostsolveStatus postsolve_status = runPostsolve();
+  /*
+  if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
+    highsLogDev(options_.log_options, HighsLogType::kVerbose,
+                "Postsolve finished\n");
+    resetModelStatusAndSolutionParams(hmos_[0]);
+
+    hmos_[0].solution_ = presolve_.data_.recovered_solution_;
+    hmos_[0].solution_.value_valid = true;
+    hmos_[0].solution_.dual_valid = true;
+
+    // Set basis and its status
+    hmos_[0].basis_.valid = true;
+    hmos_[0].basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+    hmos_[0].basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+
+    // The basis returned from postsolve is just basic/nonbasic
+    // and EKK expects a refined basis, so set it up now
+    refineBasis(model_.lp_, hmos_[0].solution_, hmos_[0].basis_);
+
+    HighsOptions save_options = options_;
+    const bool full_logging = false;
+    if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
+    // Force the use of simplex to clean up if IPM has been used
+    // to solve the presolved problem
+    if (options_.solver == kIpmString) options_.solver = kSimplexString;
+    options_.simplex_strategy = kSimplexStrategyChoose;
+    // Ensure that the parallel solver isn't used
+    options_.highs_min_threads = 1;
+    options_.highs_max_threads = 1;
+    // Use any pivot threshold resulting from solving the presolved LP
+    //    if (factor_pivot_threshold > 0)
+    //      options_.factor_pivot_threshold = factor_pivot_threshold;
+
+    HighsInt iteration_count0 = info_.simplex_iteration_count;
+    hmos_[0].ekk_instance_.lp_name_ = "Postsolve LP";
+    HighsStatus call_status = callSolveLp(
+        hmos_[0], "Solving the original LP from the solution after postsolve");
+    return_status =
+        interpretCallStatus(call_status, return_status, "callSolveLp");
+    options_ = save_options;
+    if (return_status == HighsStatus::kError)
+      return returnFromRun(return_status);
+    postsolve_iteration_count =
+        info_.simplex_iteration_count - iteration_count0;
+  } else {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Postsolve return status is %d\n", (int)postsolve_status);
+    setHighsModelStatusAndInfo(HighsModelStatus::kPostsolveError);
+    return returnFromRun(HighsStatus::kError);
+  }
+  HighsModelStatus solved_model_status = hmos_[0].unscaled_model_status_;
+  setHighsModelStatusAndInfo(solved_model_status);
+  if (postsolve_iteration_count < 0) {
+    highsLogDev(options_.log_options, HighsLogType::kInfo, "Postsolve  : \n");
+  } else {
+    highsLogDev(options_.log_options, HighsLogType::kInfo,
+                "Postsolve  : %" HIGHSINT_FORMAT "\n",
+                postsolve_iteration_count);
+  }
+  HighsStatus call_status =
+      highsStatusFromHighsModelStatus(scaled_model_status_);
+  return_status = interpretCallStatus(call_status, return_status);
+  */
+  return return_status;
+}
+
+HighsStatus Highs::postsolve(const HighsSolution& solution,
+                             const HighsBasis& basis) {
+  const bool can_run_postsolve =
+      model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
+      model_presolve_status_ == HighsPresolveStatus::kReduced ||
+      model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
+      model_presolve_status_ == HighsPresolveStatus::kTimeout;
+  if (!can_run_postsolve) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "Cannot run postsolve with presolve status: %s\n",
+        presolve_.presolveStatusToString(model_presolve_status_).c_str());
+    return HighsStatus::kWarning;
+  }
+  HighsStatus return_status = callRunPostsolve(solution, basis);
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::writeSolution(const std::string filename,
