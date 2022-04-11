@@ -17,7 +17,6 @@
 #define IO_HMPSIO_H_
 
 #include <cmath>
-#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -73,7 +72,7 @@ HighsStatus writeMps(
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format = true);
 
-bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
+bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
                   char* line, char* flag, double* data);
 
 HighsStatus writeModelAsMps(const HighsOptions& options,

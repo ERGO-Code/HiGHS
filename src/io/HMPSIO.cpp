@@ -16,6 +16,7 @@
 #include "io/HMPSIO.h"
 
 #include <algorithm>
+#include <cstdio>
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
@@ -23,6 +24,10 @@
 #include "lp_data/HighsOptions.h"
 #include "util/HighsUtils.h"
 #include "util/stringutil.h"
+
+#ifdef ZLIB_FOUND
+#include "zstr.hpp"
+#endif
 
 using std::map;
 
@@ -53,8 +58,19 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   Astart.clear();
   highsLogDev(log_options, HighsLogType::kInfo,
               "readMPS: Trying to open file %s\n", filename.c_str());
-  FILE* file = fopen(filename.c_str(), "r");
-  if (file == 0) {
+#ifdef ZLIB_FOUND
+  zstr::ifstream file;
+  try {
+    file.open(filename, std::ios::in);
+  } catch (const strict_fstream::Exception& e) {
+    highsLogDev(log_options, HighsLogType::kInfo, e.what());
+    return FilereaderRetcode::kFileNotFound;
+  }
+#else
+  std::ifstream file;
+  file.open(filename, std::ios::in);
+#endif
+  if (!file.is_open()) {
     highsLogDev(log_options, HighsLogType::kInfo,
                 "readMPS: Not opened file OK\n");
     return FilereaderRetcode::kFileNotFound;
@@ -406,9 +422,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     for (HighsInt iCol = previous_col + 1; iCol < numCol; iCol++)
       Qstart.push_back(hessian_nz);
     Qstart.push_back(hessian_nz);
-    assert(Qstart.size() == Qdim + 1);
-    assert(Qindex.size() == hessian_nz);
-    assert(Qvalue.size() == hessian_nz);
+    assert((HighsInt)Qstart.size() == Qdim + 1);
+    assert((HighsInt)Qindex.size() == hessian_nz);
+    assert((HighsInt)Qvalue.size() == hessian_nz);
   }
   // Determine the number of integer variables and set bounds of [0,1]
   // for integer variables without bounds
@@ -433,16 +449,15 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
               " integer\n",
               numRow, numCol, num_int);
   // Load ENDATA and close file
-  fclose(file);
+  file.close();
   // If there are no integer variables then clear the integrality vector
   if (!num_int) integerColumn.clear();
   return FilereaderRetcode::kOk;
 }
 
-bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
+bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
                   char* line, char* flag, double* data) {
   HighsInt F1 = 1, F2 = 4, F3 = 14, F4 = 24, F5 = 39, F6 = 49;
-  char* fgets_rt;
 
   // check the buffer
   if (flag[1]) {
@@ -455,12 +470,17 @@ bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
   // try to read some to the line
   for (;;) {
     // Line input
-    fgets_rt = fgets(line, lmax, file);
-    if (fgets_rt == NULL) {
+    *line = '\0';
+    file.get(line, lmax);
+    if (*line == '\0' && file.eof())  // nothing read and EOF
       return false;
-    }
+
     // Line trim   -- to delete tailing white spaces
     HighsInt lcnt = strlen(line) - 1;
+    // if file.get() did not stop because it reached the lmax-1 limit,
+    // then because it reached a newline char (or eof); lets consume this
+    // newline (or do nothing if eof)
+    if (lcnt + 1 < lmax - 1) file.get();
     while (isspace(line[lcnt]) && lcnt >= 0) lcnt--;
     if (lcnt <= 0 || line[0] == '*') continue;
 
@@ -887,9 +907,8 @@ HighsStatus writeMps(
   if (q_dim) {
     // Write out Hessian info
     assert((HighsInt)q_start.size() >= q_dim + 1);
-    HighsInt hessian_num_nz = q_start[q_dim];
-    assert((HighsInt)q_index.size() >= hessian_num_nz);
-    assert((HighsInt)q_value.size() >= hessian_num_nz);
+    assert((HighsInt)q_index.size() >= q_start[q_dim]);
+    assert((HighsInt)q_value.size() >= q_start[q_dim]);
 
     // Assumes that Hessian entries are the lower triangle column-wise
     fprintf(file, "QUADOBJ\n");

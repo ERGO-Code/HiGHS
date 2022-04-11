@@ -41,7 +41,8 @@ class Filereader {
   virtual HighsStatus writeModelToFile(const HighsOptions& options,
                                        const std::string filename,
                                        const HighsModel& model) = 0;
-  static Filereader* getFilereader(const std::string filename);
+  static Filereader* getFilereader(const HighsLogOptions& log_options,
+                                   const std::string filename);
 
   virtual ~Filereader(){};
 };
