@@ -492,6 +492,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("index_", &HighsSparseMatrix::index_)
     .def_readwrite("value_", &HighsSparseMatrix::value_);
   py::class_<HighsLp>(m, "HighsLp")
+    .def(py::init<>())
     .def_readwrite("num_col_", &HighsLp::num_col_)
     .def_readwrite("num_row_", &HighsLp::num_row_)
     .def_readwrite("col_cost_", &HighsLp::col_cost_)

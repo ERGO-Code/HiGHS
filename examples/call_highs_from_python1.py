@@ -45,7 +45,7 @@ h.clear()
 #
 # ToDo Determine whether an empty HighsLp instance can be created as
 # in C++, rather than pulling it from an empty Highs instance like this
-lp = h.getLp()
+lp = highspy.HighsLp()
 num_nz = h.getNumNz()
 print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
 lp.num_col_ = 2
