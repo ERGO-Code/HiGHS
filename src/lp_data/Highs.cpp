@@ -2316,17 +2316,70 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   return returnFromHighs(return_status);
 }
 
-void Highs::deprecationMessage(const std::string method_name,
-                               const std::string alt_method_name) const {
-  if (alt_method_name.compare("None") == 0) {
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Method %s is deprecated: no alternative method\n",
-                 method_name.c_str());
-  } else {
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Method %s is deprecated: alternative method is %s\n",
-                 method_name.c_str(), alt_method_name.c_str());
+HighsStatus Highs::postsolve(const HighsSolution& solution,
+                             const HighsBasis& basis) {
+  this->logHeader();
+  const bool can_run_postsolve =
+      model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
+      model_presolve_status_ == HighsPresolveStatus::kReduced ||
+      model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
+      model_presolve_status_ == HighsPresolveStatus::kTimeout;
+  if (!can_run_postsolve) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "Cannot run postsolve with presolve status: %s\n",
+        presolve_.presolveStatusToString(model_presolve_status_).c_str());
+    return HighsStatus::kWarning;
   }
+  HighsStatus return_status = callRunPostsolve(solution, basis);
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::writeSolution(const std::string filename,
+                                 const HighsInt style) {
+  this->logHeader();
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writeSolution", file, html);
+  return_status = interpretCallStatus(options_.log_options, call_status,
+                                      return_status, "openWriteFile");
+  if (return_status == HighsStatus::kError) return return_status;
+  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
+                    style);
+  if (style == kSolutionStyleRaw) {
+    fprintf(file, "\n# Basis\n");
+    writeBasisFile(file, basis_);
+  }
+  if (options_.ranging == kHighsOnString) {
+    if (model_.isMip() || model_.isQp()) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot determing ranging information for MIP or QP\n");
+      return HighsStatus::kError;
+    }
+    return_status = interpretCallStatus(
+        options_.log_options, this->getRanging(), return_status, "getRanging");
+    if (return_status == HighsStatus::kError) return return_status;
+    fprintf(file, "\n# Ranging\n");
+    writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
+                     solution_, ranging_, style);
+  }
+  if (file != stdout) fclose(file);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::readSolution(const std::string filename,
+                                const HighsInt style) {
+  this->logHeader();
+  return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
+                          style);
+}
+
+HighsStatus Highs::checkSolutionFeasibility() {
+  this->logHeader();
+  checkLpSolutionFeasibility(options_, model_.lp_, solution_);
+  return HighsStatus::kOk;
 }
 
 std::string Highs::modelStatusToString(
@@ -2349,6 +2402,19 @@ std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
 }
 
 // Private methods
+void Highs::deprecationMessage(const std::string method_name,
+                               const std::string alt_method_name) const {
+  if (alt_method_name.compare("None") == 0) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Method %s is deprecated: no alternative method\n",
+                 method_name.c_str());
+  } else {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Method %s is deprecated: alternative method is %s\n",
+                 method_name.c_str(), alt_method_name.c_str());
+  }
+}
+
 HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   presolve_.clear();
   // Exit if presolve is set to off (unless presolve is forced)
@@ -2857,68 +2923,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       interpretCallStatus(options_.log_options, call_status, return_status,
                           "highsStatusFromHighsModelStatus");
   return return_status;
-}
-
-HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             const HighsBasis& basis) {
-  const bool can_run_postsolve =
-      model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
-      model_presolve_status_ == HighsPresolveStatus::kReduced ||
-      model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
-      model_presolve_status_ == HighsPresolveStatus::kTimeout;
-  if (!can_run_postsolve) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kWarning,
-        "Cannot run postsolve with presolve status: %s\n",
-        presolve_.presolveStatusToString(model_presolve_status_).c_str());
-    return HighsStatus::kWarning;
-  }
-  HighsStatus return_status = callRunPostsolve(solution, basis);
-  return returnFromHighs(return_status);
-}
-
-HighsStatus Highs::writeSolution(const std::string filename,
-                                 const HighsInt style) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  FILE* file;
-  bool html;
-  call_status = openWriteFile(filename, "writeSolution", file, html);
-  return_status = interpretCallStatus(options_.log_options, call_status,
-                                      return_status, "openWriteFile");
-  if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
-                    style);
-  if (style == kSolutionStyleRaw) {
-    fprintf(file, "\n# Basis\n");
-    writeBasisFile(file, basis_);
-  }
-  if (options_.ranging == kHighsOnString) {
-    if (model_.isMip() || model_.isQp()) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot determing ranging information for MIP or QP\n");
-      return HighsStatus::kError;
-    }
-    return_status = interpretCallStatus(
-        options_.log_options, this->getRanging(), return_status, "getRanging");
-    if (return_status == HighsStatus::kError) return return_status;
-    fprintf(file, "\n# Ranging\n");
-    writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
-                     solution_, ranging_, style);
-  }
-  if (file != stdout) fclose(file);
-  return HighsStatus::kOk;
-}
-
-HighsStatus Highs::readSolution(const std::string filename,
-                                const HighsInt style) {
-  return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
-                          style);
-}
-
-HighsStatus Highs::checkSolutionFeasibility() {
-  checkLpSolutionFeasibility(options_, model_.lp_, solution_);
-  return HighsStatus::kOk;
 }
 
 // End of public methods
