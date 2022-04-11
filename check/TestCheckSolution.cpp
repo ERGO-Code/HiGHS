@@ -55,6 +55,7 @@ TEST_CASE("check-set-solution", "[highs_check_solution]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
+  const HighsInfo& info = highs.getInfo();
   if (dev_run) printf("\nSolving from scratch\n");
   highs.setOptionValue("output_flag", dev_run);
 

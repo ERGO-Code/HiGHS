@@ -248,8 +248,14 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
+
 HighsInt Highs_clearModel(void* highs) {
   return (HighsInt)((Highs*)highs)->clearModel();
+}
+
+HighsInt Highs_clearSolver(void* highs) {
+  return (HighsInt)((Highs*)highs)->clearSolver();
 }
 
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,

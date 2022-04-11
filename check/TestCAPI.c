@@ -6,6 +6,7 @@
 #undef NDEBUG
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
@@ -881,6 +882,40 @@ void test_passHessian() {
   Highs_destroy(highs);
 }
 
+void test_setSolution() {
+  void* highs = Highs_create();
+  // Perform in C the equivalent of std::string model_file =
+  // std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+
+  char* dir = HIGHS_DIR;
+  char model_file0[100];
+  strcat(model_file0, dir);
+  strcat(model_file0, "/check/instances/egout.mps");
+  strcat(model_file0, "\0");
+  char* substr = model_file0 + 1;
+  memmove(model_file0, substr, strlen(substr) + 1);
+  int length = strlen(model_file0) + 1;
+  char model_file[length];
+  strcpy(model_file, model_file0);
+  
+  printf("Using file %s of length %d\n", model_file, length);
+  if (dev_run) printf("\nSolving from scratch\n");
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+
+  Highs_readModel(highs, model_file);
+  Highs_run(highs);
+  int num_col = Highs_getNumCol(highs);
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  Highs_clear(highs);
+  if (dev_run) printf("\nSolving from saved solution\n");
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_readModel(highs, model_file);
+  Highs_setSolution(highs, col_value, NULL, NULL, NULL);
+  Highs_run(highs);
+  
+}
+
 int main() {
   minimal_api();
   full_api();
@@ -893,5 +928,6 @@ int main() {
   options();
   test_getColsByRange();
   test_passHessian();
+  test_setSolution();
   return 0;
 }

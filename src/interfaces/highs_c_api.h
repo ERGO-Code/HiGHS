@@ -235,9 +235,29 @@ HighsInt Highs_readModel(void* highs, const char* filename);
 HighsInt Highs_writeModel(void* highs, const char* filename);
 
 /**
+ * Reset the options and then calls clearModel()
+ *
+ * See `Highs_destroy` to free all associated memory.
+ *
+ * @param highs     a pointer to the Highs instance
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_clear(void* highs);
+
+/**
  * Remove all variables and constraints from the model `highs`, but do not
  * invalidate the pointer `highs`. Future calls (for example, adding new
  * variables and constraints) are allowed.
+ *
+ * @param highs     a pointer to the Highs instance
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_clearModel(void* highs);
+
+/**
+ * Clear all solution data associated with the model
  *
  * See `Highs_destroy` to clear the model and free all associated memory.
  *
@@ -245,7 +265,7 @@ HighsInt Highs_writeModel(void* highs, const char* filename);
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_clearModel(void* highs);
+HighsInt Highs_clearSolution(void* highs);
 
 /**
  * Optimize a model. The algorithm used by HiGHS depends on the options that
