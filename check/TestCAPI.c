@@ -898,7 +898,6 @@ void test_setSolution() {
   char model_file[length];
   strcpy(model_file, model_file0);
   
-  printf("Using file %s of length %d\n", model_file, length);
   if (dev_run) printf("\nSolving from scratch\n");
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
 
