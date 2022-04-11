@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status);
@@ -16,9 +16,7 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   HighsStatus require_read_status;
   HighsModelStatus require_model_status;
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   //  const HighsInfo& info = highs.getInfo();
 
   const bool test_st_test23 = false;
@@ -53,6 +51,24 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   runWriteReadCheckSolution(highs, model, require_model_status);
 }
 
+TEST_CASE("check-set-solution", "[highs_check_solution]") {
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  if (dev_run) printf("\nSolving from scratch\n");
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.readModel(model_file);
+  highs.run();
+  HighsSolution solution = highs.getSolution();
+  highs.clear();
+  if (dev_run) printf("\nSolving from saved solution\n");
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  
+  highs.setSolution(solution);
+  highs.run();
+  
+}
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status) {
   HighsStatus run_status;
