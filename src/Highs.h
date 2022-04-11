@@ -306,6 +306,13 @@ class Highs {
   }
 
   /**
+   * @brief Returns the current model's presolve status
+   */
+  const HighsPresolveStatus& getModelPresolveStatus() const {
+    return model_presolve_status_;
+  }
+
+  /**
    * @brief Indicate whether a dual unbounded ray exists, and gets
    * it if it does and dual_ray is not nullptr
    */
@@ -1020,6 +1027,8 @@ class Highs {
   HighsStatus writeSolution(const std::string filename,
                             const bool pretty = false) const;
 
+  void logHeader();
+
   void deprecationMessage(const std::string method_name,
                           const std::string alt_method_name) const;
 
@@ -1050,6 +1059,8 @@ class Highs {
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
 
+  bool written_log_header = false;
+
   void exactResizeModel() {
     this->model_.lp_.exactResize();
     this->model_.hessian_.exactResize();
@@ -1058,9 +1069,11 @@ class Highs {
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
+  HighsStatus callRunPostsolve(const HighsSolution& solution,
+                               const HighsBasis& basis);
 
   PresolveComponent presolve_;
-  HighsPresolveStatus runPresolve();
+  HighsPresolveStatus runPresolve(const bool force_presolve = false);
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
