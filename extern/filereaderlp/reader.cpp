@@ -2,13 +2,20 @@
 
 #include "builder.hpp"
 
-#include <cstdio>
+#include <cassert>
+#include <iostream>
+#include <fstream>
 #include <limits>
 #include <map>
 #include <memory>
 #include <vector>
 
 #include "def.hpp"
+
+#include "HConfig.h"  // for ZLIB_FOUND
+#ifdef ZLIB_FOUND
+#include "zstr.hpp"
+#endif
 
 enum class RawTokenType {
    NONE,
@@ -60,7 +67,8 @@ enum class ProcessedTokenType {
    LNEND,
    SLASH,
    ASTERISK,
-   HAT
+   HAT,
+   SOSTYPE
 };
 
 enum class LpSectionKeyword {
@@ -94,6 +102,11 @@ struct ProcessedTokenObjectiveSectionKeyword : ProcessedTokenSectionKeyword {
    ProcessedTokenObjectiveSectionKeyword(LpObjectiveSectionKeywordType os) : ProcessedTokenSectionKeyword(LpSectionKeyword::OBJ), objsense(os) {};
 };
 
+struct ProcessedSOSTypeToken : ProcessedToken {
+   std::string type;  // S1 or S2
+   ProcessedSOSTypeToken(std::string t) : ProcessedToken(ProcessedTokenType::SOSTYPE), type(t) {};
+};
+
 struct ProcessedConsIdToken : ProcessedToken {
    std::string name;
    ProcessedConsIdToken(std::string n) : ProcessedToken(ProcessedTokenType::CONID), name(n) {};
@@ -116,15 +129,17 @@ struct ProcessedComparisonToken : ProcessedToken {
 
 class Reader {
 private:
-   FILE* file;
+#ifdef ZLIB_FOUND
+   zstr::ifstream file;
+#else
+   std::ifstream file;
+#endif
    std::vector<std::unique_ptr<RawToken>> rawtokens;
    std::vector<std::unique_ptr<ProcessedToken>> processedtokens;
    std::map<LpSectionKeyword, std::vector<std::unique_ptr<ProcessedToken>>> sectiontokens;
    
-   char linebuffer[LP_MAX_LINE_LENGTH+1];
-   char* linebufferpos;
-   bool linefullyread;
-   bool newline_encountered;
+   std::string linebuffer;
+   std::size_t linebufferpos;
 
    Builder builder;
 
@@ -142,15 +157,23 @@ private:
    void processsemisec();
    void processsossec();
    void processendsec();
-   void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i);
+   void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj);
 
 public:
-   Reader(std::string filename) : file(fopen(filename.c_str(), "r")) {
-      lpassert(file != nullptr);
+   Reader(std::string filename) {
+#ifdef ZLIB_FOUND
+      try {
+        file.open(filename);
+      } catch ( const strict_fstream::Exception& e ) {
+      }
+#else
+      file.open(filename);
+#endif
+      lpassert(file.is_open());
    };
 
    ~Reader() {
-      fclose(file);
+      file.close();
    }
 
    Model read();
@@ -161,6 +184,7 @@ Model readinstance(std::string filename) {
    return reader.read();
 }
 
+static
 bool isstrequalnocase(const std::string str1, const std::string str2) {
    size_t len = str1.size();
     if (str2.size() != len)
@@ -171,6 +195,7 @@ bool isstrequalnocase(const std::string str1, const std::string str2) {
     return true;
 }
 
+static
 bool iskeyword(const std::string str, const std::string* keywords, const int nkeywords) {
    for (int i=0; i<nkeywords; i++) {
       if (isstrequalnocase(str, keywords[i])) {
@@ -180,6 +205,7 @@ bool iskeyword(const std::string str, const std::string* keywords, const int nke
    return false;
 }
 
+static
 LpObjectiveSectionKeywordType parseobjectivesectionkeyword(const std::string str) {
    if (iskeyword(str, LP_KEYWORD_MIN, LP_KEYWORD_MIN_N)) {
       return LpObjectiveSectionKeywordType::MIN;
@@ -192,6 +218,7 @@ LpObjectiveSectionKeywordType parseobjectivesectionkeyword(const std::string str
    return LpObjectiveSectionKeywordType::NONE;
 }
 
+static
 LpSectionKeyword parsesectionkeyword(const std::string& str) {
    if (parseobjectivesectionkeyword(str) != LpObjectiveSectionKeywordType::NONE) {
       return LpSectionKeyword::OBJ;
@@ -241,7 +268,7 @@ void Reader::processnonesec() {
    lpassert(sectiontokens[LpSectionKeyword::NONE].empty());
 }
 
-void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i) {
+void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj) {
    if (tokens.size() - i >= 1 && tokens[0]->type == ProcessedTokenType::CONID) {
       expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
       i++;
@@ -362,13 +389,22 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
                i += 3;
                continue;
             }
+            break;
          }
-         lpassert(tokens.size() - i >= 3);
-         lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
-         lpassert(tokens[i+1]->type == ProcessedTokenType::SLASH);
-         lpassert(tokens[i+2]->type == ProcessedTokenType::CONST);
-         lpassert(((ProcessedConstantToken*)tokens[i+2].get())->value == 2.0);
-         i += 3;
+         if (isobj) {
+           // only in the objective function, a quadratic term is followed by "/2.0"
+           lpassert(tokens.size() - i >= 3);
+           lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
+           lpassert(tokens[i+1]->type == ProcessedTokenType::SLASH);
+           lpassert(tokens[i+2]->type == ProcessedTokenType::CONST);
+           lpassert(((ProcessedConstantToken*)tokens[i+2].get())->value == 2.0);
+           i += 3;
+         }
+         else {
+           lpassert(tokens.size() - i >= 1);
+           lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
+           i += 1;
+         }
          continue;
       }
 
@@ -379,7 +415,7 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
 void Reader::processobjsec() {
    builder.model.objective = std::shared_ptr<Expression>(new Expression);
    unsigned int i = 0;   
-   parseexpression(sectiontokens[LpSectionKeyword::OBJ], builder.model.objective, i);
+   parseexpression(sectiontokens[LpSectionKeyword::OBJ], builder.model.objective, i, true);
    lpassert(i == sectiontokens[LpSectionKeyword::OBJ].size());
 }
 
@@ -387,7 +423,7 @@ void Reader::processconsec() {
    unsigned int i=0;
    while (i<sectiontokens[LpSectionKeyword::CON].size()) {
       std::shared_ptr<Constraint> con = std::shared_ptr<Constraint>(new Constraint);
-      parseexpression(sectiontokens[LpSectionKeyword::CON], con->expr, i);
+      parseexpression(sectiontokens[LpSectionKeyword::CON], con->expr, i, false);
       lpassert(sectiontokens[LpSectionKeyword::CON].size() - i >= 2);
 	  lpassert(sectiontokens[LpSectionKeyword::CON][i]->type == ProcessedTokenType::COMP);
       lpassert(sectiontokens[LpSectionKeyword::CON][i+1]->type == ProcessedTokenType::CONST);
@@ -548,8 +584,50 @@ void Reader::processsemisec() {
 }
 
 void Reader::processsossec() {
-   // TODO
-   lpassert(sectiontokens[LpSectionKeyword::SOS].empty());
+   unsigned int i=0;
+   auto& tokens = sectiontokens[LpSectionKeyword::SOS];
+   while (i<tokens.size()) {
+      std::shared_ptr<SOS> sos = std::shared_ptr<SOS>(new SOS);
+
+      // sos1: S1 :: x1 : 1  x2 : 2  x3 : 3
+
+      // name of SOS is mandatory
+      lpassert(tokens[i]->type == ProcessedTokenType::CONID);
+      sos->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
+      i++;
+
+      // SOS type
+      lpassert(i < tokens.size());
+      lpassert(tokens[i]->type == ProcessedTokenType::SOSTYPE);
+      std::string sostype = ((ProcessedSOSTypeToken*)tokens[i].get())->type;   // should be S1 or S2
+      lpassert(sostype.size() == 2);
+      lpassert(sostype[0] == 'S' || sostype[0] == 's');
+      lpassert(sostype[1] == '1' || sostype[1] == '2');
+      sos->type = sostype[1] - '0';
+      i++;
+
+      while (i<tokens.size()) {
+         // process all "var : weight" entries
+         // when processtokens() sees a string followed by a colon, it classifies this as a CONID
+         // but in a SOS section, this is actually a variable identifier
+         if (tokens.size() - i >= 2
+         && tokens[i]->type == ProcessedTokenType::CONID
+         && tokens[i+1]->type == ProcessedTokenType::CONST) {
+            std::string name = ((ProcessedConsIdToken*)tokens[i].get())->name;
+            auto var = builder.getvarbyname(name);
+            double weight = ((ProcessedConstantToken*)tokens[i+1].get())->value;
+
+            sos->entries.push_back({var, weight});
+
+            i += 2;
+            continue;
+         }
+
+         break;
+      }
+
+      builder.model.soss.push_back(sos);
+   }
 }
 
 void Reader::processendsec() {
@@ -639,6 +717,13 @@ void Reader::processtokens() {
          }
       }
 
+      // sos type identifier? "S1 ::" or "S2 ::"
+      if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::COLON) && rawtokens[i+2]->istype(RawTokenType::COLON)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedSOSTypeToken(((RawStringToken*)rawtokens[i].get())->value)));
+         i += 3;
+         continue;
+      }
+
       // constraint identifier?
       if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::COLON)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConsIdToken(((RawStringToken*)rawtokens[i].get())->value)));
@@ -653,7 +738,7 @@ void Reader::processtokens() {
          continue;
       }
 
-      // check if infinty
+      // check if infinity
       if (rawtokens[i]->istype(RawTokenType::STR) && iskeyword(((RawStringToken*)rawtokens[i].get())->value, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(std::numeric_limits<double>::infinity())));
          i++;
@@ -793,9 +878,7 @@ void Reader::processtokens() {
 
 // reads the entire file and separates 
 void Reader::tokenize() {
-   this->linefullyread = true;;
-   this->newline_encountered = true;
-   this->linebufferpos = this->linebuffer;
+   this->linebufferpos = 0;
    bool done = false;
    while(true) {
       this->readnexttoken(done);
@@ -807,80 +890,34 @@ void Reader::tokenize() {
 
 void Reader::readnexttoken(bool& done) {
    done = false;
-   if (!this->linefullyread) {
-      // fill up line
-      
-      // how many do we need to read?
-      unsigned int num_already_read = this->linebufferpos - this->linebuffer;
 
-      // shift buffer
-      for (unsigned int i=num_already_read; i<LP_MAX_LINE_LENGTH+1; i++) {
-         this->linebuffer[i-num_already_read] = this->linebuffer[i];
-      }
+   if (this->linebufferpos == this->linebuffer.size()) {
+     // read next line
+     std::getline(this->file, linebuffer);
 
-      char* write_start = &this->linebuffer[LP_MAX_LINE_LENGTH-num_already_read];
+     // drop \r
+     if (!linebuffer.empty() && linebuffer.back() == '\r')
+        linebuffer.pop_back();
 
-      // read more values
-      char* eof = fgets(write_start, num_already_read+1, this->file);
-      unsigned int linelength;
-      for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
-         if (this->linebuffer[linelength] == '\r') {
-            this->linebuffer[linelength] = '\n';
-         }
-         if (this->linebuffer[linelength] == '\n') {
-            break;
-         }
-      }
+     // reset linebufferpos
+     this->linebufferpos = 0;
+   }
 
-      if (this->linebuffer[linelength] == '\n') {
-         this->linefullyread = true;
-      } else {
-         this->linefullyread = false;
-      }
-
-      // fgets returns nullptr if end of file reached (EOF following a \n)
-      if (eof == nullptr) {
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
-         return;
-      }
-      this->linebufferpos = this->linebuffer;
-   } else if(newline_encountered) {
-      newline_encountered = false;
-      char* eof = fgets(this->linebuffer, LP_MAX_LINE_LENGTH+1, this->file);
-      this->linebufferpos = this->linebuffer;
-
-      unsigned int linelength;
-      for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
-         if (this->linebuffer[linelength] == '\r') {
-            this->linebuffer[linelength] = '\n';
-         }
-         if (this->linebuffer[linelength] == '\n') {
-            break;
-         }
-      }
-      if (this->linebuffer[linelength] == '\n') {
-         this->linefullyread = true;
-      } else {
-         this->linefullyread = false;
-      }
-
-      // fgets returns nullptr if end of file reached (EOF following a \n)
-      if (eof == nullptr) {
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
-         return;
-      }
+   // if all line has been read and we are at end of file, then stop
+   if (this->linebufferpos == this->linebuffer.size() && this->file.eof()) {
+     this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
+     done = true;
+     return;
    }
 
    // check single character tokens
-   char nextchar = *this->linebufferpos;
+   char nextchar = this->linebuffer[this->linebufferpos];
 
    switch (nextchar) {
       // check for comment
       case '\\':
-         this->newline_encountered = true;
-         this->linefullyread = true;
+         // skip rest of line
+         this->linebufferpos = this->linebuffer.size();
          return;
       
       // check for bracket opening
@@ -957,35 +994,32 @@ void Reader::readnexttoken(bool& done) {
 
       // check for line end
       case ';':
-      case '\n':
-         this->newline_encountered = true;
-         this->linefullyread = true;
+      case '\n':  // \n should not happen due to using getline()
+         this->linebufferpos = this->linebuffer.size();
          return;
 
-      // check for file end (EOF at end of some line)
-      case '\0': 
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
+      case '\0':  // empty line
+         assert(this->linebufferpos == this->linebuffer.size());
          return;
    }
-   
+
    // check for double value
-   double constant;
-   int ncharconsumed;
-   int nread = sscanf(this->linebufferpos, "%lf%n", &constant, &ncharconsumed);
-   if (nread == 1) {
+   const char* startptr = this->linebuffer.data()+this->linebufferpos;
+   char* endptr;
+   double constant = strtod(startptr, &endptr);
+   if (endptr != startptr) {
       this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawConstantToken(constant)));
-      this->linebufferpos += ncharconsumed;
+      this->linebufferpos += endptr - startptr;
       return;
    }
 
-   // assume it's an (section/variable/constraint) idenifier
-   char stringbuffer[LP_MAX_NAME_LENGTH+1];
-   nread = sscanf(this->linebufferpos, "%[^][\t\n\\:+<>^= /-]%n",
-                 stringbuffer, &ncharconsumed);
-   if (nread == 1) {
-      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(stringbuffer)));
-      this->linebufferpos += ncharconsumed;
+   // assume it's an (section/variable/constraint) identifier
+   auto endpos = this->linebuffer.find_first_of("\t\n\\:+<>^= /-", this->linebufferpos);
+   if( endpos == std::string::npos )
+      endpos = this->linebuffer.size();  // take complete rest of string
+   if( endpos > this->linebufferpos ) {
+      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(std::string(this->linebuffer, this->linebufferpos, endpos - this->linebufferpos))));
+      this->linebufferpos = endpos;
       return;
    }
    

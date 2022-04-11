@@ -6,12 +6,9 @@
 
 void inline lpassert(bool condition) {
    if (!condition) {
-      throw std::invalid_argument("File not existant or illegal file format.");
+      throw std::invalid_argument("File not existent or illegal file format.");
    }
 }
-
-const unsigned int LP_MAX_NAME_LENGTH = 255;
-const unsigned int LP_MAX_LINE_LENGTH = 560;
 
 const std::string LP_KEYWORD_MIN[] = {"minimize", "min", "minimum"};
 const std::string LP_KEYWORD_MAX[] = {"maximize", "max", "maximum"};

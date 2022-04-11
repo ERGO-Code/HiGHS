@@ -386,6 +386,10 @@ if (OSI_FOUND)
         DESTINATION lib/pkgconfig)
 endif()
 
+if (ZLIB_FOUND)
+  target_include_directories(libhighs PUBLIC ${ZLIB_INCLUDE_DIRS})
+  target_link_libraries(libhighs ${ZLIB_LIBRARIES})
+endif()
 
 # set the install rpath to the installed destination
 set_target_properties(highs PROPERTIES INSTALL_RPATH

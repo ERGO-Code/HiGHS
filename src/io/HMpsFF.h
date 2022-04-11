@@ -181,30 +181,29 @@ class HMpsFF {
   HighsInt getColIdx(const std::string& colname);
 
   HMpsFF::Parsekey parseDefault(const HighsLogOptions& log_options,
-                                std::ifstream& file);
+                                std::istream& file);
   HMpsFF::Parsekey parseObjsense(const HighsLogOptions& log_options,
-                                 std::ifstream& file);
+                                 std::istream& file);
   HMpsFF::Parsekey parseRows(const HighsLogOptions& log_options,
-                             std::ifstream& file);
+                             std::istream& file);
   HMpsFF::Parsekey parseCols(const HighsLogOptions& log_options,
-                             std::ifstream& file);
+                             std::istream& file);
   HMpsFF::Parsekey parseRhs(const HighsLogOptions& log_options,
-                            std::ifstream& file);
+                            std::istream& file);
   HMpsFF::Parsekey parseRanges(const HighsLogOptions& log_options,
-                               std::ifstream& file);
+                               std::istream& file);
   HMpsFF::Parsekey parseBounds(const HighsLogOptions& log_options,
-                               std::ifstream& file);
+                               std::istream& file);
   HMpsFF::Parsekey parseHessian(const HighsLogOptions& log_options,
-                                std::ifstream& file,
+                                std::istream& file,
                                 const HMpsFF::Parsekey keyword);
   HMpsFF::Parsekey parseQuadRows(const HighsLogOptions& log_options,
-                                 std::ifstream& file,
+                                 std::istream& file,
                                  const HMpsFF::Parsekey keyword);
   HMpsFF::Parsekey parseCones(const HighsLogOptions& log_options,
-                              std::ifstream& file);
+                              std::istream& file);
   HMpsFF::Parsekey parseSos(const HighsLogOptions& log_options,
-                            std::ifstream& file,
-                            const HMpsFF::Parsekey keyword);
+                            std::istream& file, const HMpsFF::Parsekey keyword);
 
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);

@@ -302,6 +302,9 @@ if(NOT MSVC)
     endif()
 endif()
 
+# if zlib is found, then we can enable reading zlib-compressed input
+find_package(ZLIB 1.2.3)
+
 set(IPX_ON ON)
 
 # whether to use shared or static libraries
@@ -324,6 +327,7 @@ include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
     ${HIGHS_SOURCE_DIR}/extern
+    ${HIGHS_SOURCE_DIR}/extern/zstr
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
     ${HIGHS_SOURCE_DIR}/src/ipm/ipx
