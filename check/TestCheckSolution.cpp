@@ -52,7 +52,8 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
 }
 
 TEST_CASE("check-set-solution", "[highs_check_solution]") {
-  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   if (dev_run) printf("\nSolving from scratch\n");
   highs.setOptionValue("output_flag", dev_run);
@@ -64,10 +65,9 @@ TEST_CASE("check-set-solution", "[highs_check_solution]") {
   if (dev_run) printf("\nSolving from saved solution\n");
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
-  
+
   highs.setSolution(solution);
   highs.run();
-  
 }
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status) {
