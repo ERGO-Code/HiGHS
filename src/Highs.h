@@ -1087,6 +1087,7 @@ class Highs {
   void underDevelopmentLogMessage(const std::string method_name);
 
   // Interface methods
+  HighsStatus basisForSolution();
   HighsStatus addColsInterface(
       HighsInt ext_num_new_col, const double* ext_col_cost,
       const double* ext_col_lower, const double* ext_col_upper,

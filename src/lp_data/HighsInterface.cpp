@@ -20,6 +20,8 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
+HighsStatus Highs::basisForSolution() { return HighsStatus::kError; }
+
 HighsStatus Highs::addColsInterface(
     HighsInt ext_num_new_col, const double* ext_col_cost,
     const double* ext_col_lower, const double* ext_col_upper,
