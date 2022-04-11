@@ -20,7 +20,7 @@ solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
 # ToDo Avoid having to pass "False"
-model_status = h.getModelStatus(False)
+model_status = h.getModelStatus()
 print('Model status = ', h.modelStatusToString(model_status))
 print('Optimal objective = ', info.objective_function_value)
 print('Iteration count = ', info.simplex_iteration_count)
@@ -45,7 +45,7 @@ h.clear()
 #
 # ToDo Determine whether an empty HighsLp instance can be created as
 # in C++, rather than pulling it from an empty Highs instance like this
-lp = h.getLp()
+lp = highspy.HighsLp()
 num_nz = h.getNumNz()
 print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
 lp.num_col_ = 2
