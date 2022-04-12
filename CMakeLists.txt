@@ -49,10 +49,8 @@ endif()
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
 
-# Note: ON by default yet
-option(FAST_BUILD "Fast build: only build static lib and exe and quick test." ON)
-option(FORTRAN "Build Fortran interface" OFF)
-option(CSHARP "Build CSharp interface" OFF)
+# Note: Not ON by default yet
+option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
@@ -105,7 +103,6 @@ else()
         HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
-if (NOT FAST_BUILD)
 # Function to set compiler flags on and off easily.
 include(CheckCXXCompilerFlag)
 function(enable_cxx_compiler_flag_if_supported flag)
@@ -125,7 +122,6 @@ enable_cxx_compiler_flag_if_supported("-Wextra")
 enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
 enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
 enable_cxx_compiler_flag_if_supported("-pedantic")
-endif()
 
 option(DEBUGSOL "check the debug solution" OFF)
 
@@ -146,7 +142,6 @@ if(MSVC)
     add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 endif()
 
-if (NOT FAST_BUILD OR FORTRAN)
 include(CheckLanguage)
 if(NOT MSVC)
     check_language("Fortran")
@@ -157,9 +152,7 @@ if(CMAKE_Fortran_COMPILER)
 else()
     set(FORTRAN_FOUND OFF)
 endif(CMAKE_Fortran_COMPILER)
-endif()
 
-if (NOT FAST_BUILD OR CSHARP)
 check_language("CSharp")
 if(CMAKE_CSharp_COMPILER)
     enable_language(CSharp)
@@ -167,9 +160,6 @@ if(CMAKE_CSharp_COMPILER)
 else()
     set(CSHARP_FOUND OFF)
 endif(CMAKE_CSharp_COMPILER)
-endif()
-
-if (NOT FAST_BUILD)
 
 check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
 if(NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
@@ -187,6 +177,8 @@ endif()
 # set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+
+if (NOT FAST_BUILD)
 
 include(CPack)
 set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
