@@ -1028,38 +1028,7 @@ HighsStatus HEkk::unpermute() {
 }
 
 HighsStatus HEkk::solve(const bool force_phase2) {
-  debug_solve_call_num_++;
-  debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
-  const HighsInt debug_from_solve_call_num = -12;
-  const HighsInt debug_num_solve = 3;
-  const HighsInt debug_to_solve_call_num =
-      debug_from_solve_call_num + debug_num_solve - 1;
-  const HighsInt debug_build_synthetic_tick = 445560;
-  if (debug_solve_call_num_ < debug_from_solve_call_num) {
-    debug_solve_report_ = false;
-  } else if (debug_solve_call_num_ == debug_from_solve_call_num) {
-    debug_solve_report_ = build_synthetic_tick_ == debug_build_synthetic_tick;
-  } else if (debug_solve_call_num_ > debug_to_solve_call_num) {
-    debug_solve_report_ = false;
-  }
-  const HighsInt time_from_solve_call_num = -1;
-  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
-  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
-                 debug_solve_call_num_ <= time_to_solve_call_num;
-  const HighsInt debug_basis_id = -999;
-  debug_basis_report_ = basis_.debug_id == debug_basis_id;
-  if (debug_solve_report_) {
-    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
-    debugReporting(-1);
-    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed); //
-  }
-  if (time_report_) {
-    timeReporting(-1);
-    timeReporting(0);
-  }
-  if (debug_basis_report_) {
-    printf("HEkk::solve basis %d\n", (int)debug_basis_id);
-  }
+  debugInitialise();
 
   initialiseAnalysis();
   initialiseControl();
@@ -1082,6 +1051,9 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     assert(simplex_nla_ok);
     return returnFromEkkSolve(HighsStatus::kError);
   }
+
+  const bool report_initial_basis = false;
+  if (report_initial_basis) debugReportInitialBasis();
 
   assert(status_.has_basis);
   assert(status_.has_invert);

@@ -4,10 +4,12 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status);
+
+void runSetLpSolution(const std::string model);
 
 TEST_CASE("check-solution", "[highs_check_solution]") {
   std::string model = "";
@@ -52,6 +54,7 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
 }
 
 TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
+  HighsStatus return_status;
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
@@ -67,31 +70,16 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
 
-  highs.setSolution(solution);
+  return_status = highs.setSolution(solution);
+  REQUIRE(return_status == HighsStatus::kOk);
   highs.run();
 }
 
 TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
-  std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  Highs highs;
-  const HighsInfo& info = highs.getInfo();
-  if (dev_run) printf("\nSolving from scratch\n");
-  highs.setOptionValue("output_flag", dev_run);
-
-  highs.readModel(model_file);
-  highs.run();
-  HighsInt simplex_iteration_count0 = info.simplex_iteration_count;
-  HighsSolution solution = highs.getSolution();
-  highs.clear();
-  if (dev_run) printf("\nSolving from saved solution\n");
-  highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(model_file);
-
-  highs.setSolution(solution);
-  highs.run();
-  HighsInt simplex_iteration_count1 = info.simplex_iteration_count;
-  REQUIRE(simplex_iteration_count1 < simplex_iteration_count0);
+  //  runSetLpSolution("avgas");
+  runSetLpSolution("adlittle");
+  runSetLpSolution("shell");
+  runSetLpSolution("stair");
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
@@ -117,4 +105,42 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   return_status = highs.checkSolutionFeasibility();
   REQUIRE(return_status == HighsStatus::kOk);
   std::remove(solution_file.c_str());
+}
+
+void runSetLpSolution(const std::string model) {
+  HighsStatus return_status;
+  Highs highs;
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  const HighsInfo& info = highs.getInfo();
+  if (dev_run) printf("\nSolving from scratch\n");
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
+
+  highs.readModel(model_file);
+  highs.run();
+  HighsInt simplex_iteration_count0 = info.simplex_iteration_count;
+  HighsSolution solution = highs.getSolution();
+  highs.clear();
+  if (dev_run) printf("\nSolving from saved solution\n");
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
+  highs.readModel(model_file);
+
+  // solution.col_value.assign(highs.getNumCol(), 0);
+
+  return_status = highs.setSolution(solution);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.run();
+  // Use a reduction in iteration count as a anity check that starting
+  // from the optimal solution has worked
+  HighsInt simplex_iteration_count1 = info.simplex_iteration_count;
+  //  if (dev_run)
+  printf(
+      "For model %s: iteration counts are %d from logical basis and %d from "
+      "optimal solution\n",
+      model.c_str(), (int)simplex_iteration_count0,
+      (int)simplex_iteration_count1);
+  REQUIRE(simplex_iteration_count1 < simplex_iteration_count0);
 }

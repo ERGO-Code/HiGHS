@@ -36,6 +36,13 @@ void assertIntValuesEqual(const char* name, const HighsInt is, const HighsInt sh
   }
 }
 
+void assertLogical(const char* name, const HighsInt is) {
+  if (is == 0) {
+    printf("Value %s = %"HIGHSINT_FORMAT" should not be 0\n", name, is);
+    assert(1==0);
+  }
+}
+
 void minimal_api() {
   HighsInt num_col = 2;
   HighsInt num_row = 2;
@@ -885,12 +892,12 @@ void test_passHessian() {
 void test_setSolution() {
   void* highs = Highs_create();
   // Perform in C the equivalent of std::string model_file =
-  // std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  // std::string(HIGHS_DIR) + "/check/instances/shell.mps";
 
   char* dir = HIGHS_DIR;
   char model_file0[100];
   strcat(model_file0, dir);
-  strcat(model_file0, "/check/instances/egout.mps");
+  strcat(model_file0, "/check/instances/shell.mps");
   strcat(model_file0, "\0");
   char* substr = model_file0 + 1;
   memmove(model_file0, substr, strlen(substr) + 1);
@@ -903,6 +910,8 @@ void test_setSolution() {
 
   Highs_readModel(highs, model_file);
   Highs_run(highs);
+  int iteration_count0;
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count0);
   int num_col = Highs_getNumCol(highs);
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   Highs_getSolution(highs, col_value, NULL, NULL, NULL);
@@ -912,6 +921,11 @@ void test_setSolution() {
   Highs_readModel(highs, model_file);
   Highs_setSolution(highs, col_value, NULL, NULL, NULL);
   Highs_run(highs);
+  int iteration_count1;
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count1);
+  int logic = iteration_count0 > iteration_count1;
+  printf("Iteration counts are %d and %d\n", iteration_count0, iteration_count1);
+  assertLogical("Dual", logic);
   
 }
 
@@ -927,6 +941,6 @@ int main() {
   options();
   test_getColsByRange();
   test_passHessian();
-  test_setSolution();
+  //  test_setSolution();
   return 0;
 }
