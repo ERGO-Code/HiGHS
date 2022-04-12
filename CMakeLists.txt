@@ -105,9 +105,10 @@ else()
         HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
+include(CheckCXXCompilerFlag)
+
 if (NOT FAST_BUILD)
 # Function to set compiler flags on and off easily.
-include(CheckCXXCompilerFlag)
 function(enable_cxx_compiler_flag_if_supported flag)
     string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
     if(flag_already_set EQUAL -1)
@@ -169,8 +170,6 @@ else()
 endif(CMAKE_CSharp_COMPILER)
 endif()
 
-if (NOT FAST_BUILD)
-
 check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
 if(NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
@@ -187,6 +186,11 @@ endif()
 # set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+
+# if zlib is found, then we can enable reading zlib-compressed input
+find_package(ZLIB 1.2.3)
+
+if (NOT FAST_BUILD)
 
 include(CPack)
 set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
@@ -302,20 +306,12 @@ if(NOT MSVC)
     endif()
 endif()
 
-# if zlib is found, then we can enable reading zlib-compressed input
-find_package(ZLIB 1.2.3)
-
 set(IPX_ON ON)
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
-
-# make 'Release' the default build type
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     set(HiGHSRELEASE ON)

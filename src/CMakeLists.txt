@@ -608,6 +608,11 @@ target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simpl
                            presolve/ util/ test/ interfaces/ ../extern/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
+if (ZLIB_FOUND)
+    target_include_directories(libhighs PUBLIC ${ZLIB_INCLUDE_DIRS} ../extern/zstr)
+    target_link_libraries(libhighs ${ZLIB_LIBRARIES})
+endif()
+
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
