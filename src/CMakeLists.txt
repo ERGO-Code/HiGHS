@@ -354,34 +354,6 @@ if (IPX_ON)
         MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 endif()
 
-if(FORTRAN_FOUND)
-    set(fortransources interfaces/highs_fortran_api.f90)
-    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
-    add_library(FortranHighs interfaces/highs_fortran_api.f90)
-    target_link_libraries(FortranHighs PUBLIC libhighs)
-    install(TARGETS FortranHighs
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include
-        MODULES DESTINATION modules)
-    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
-    set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
-endif(FORTRAN_FOUND)
-
-if(CSHARP_FOUND)
-    message(STATUS "CSharp supported")
-    set(csharpsources
-    interfaces/highs_csharp_api.cs)
-    add_library(HighsCsharp interfaces/highs_csharp_api.cs)
-    target_compile_options(HighsCsharp PUBLIC "/unsafe")
-    add_executable(csharpexample ../examples/call_highs_from_csharp.cs)
-    target_compile_options(csharpexample PUBLIC "/unsafe")
-    target_link_libraries(csharpexample PUBLIC HighsCsharp)
-else()
-    message(STATUS "No CSharp support")
-endif()
-
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
     set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
@@ -816,6 +788,34 @@ endif()
     set_target_properties(libhighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
 
+endif()
+
+if(FORTRAN_FOUND)
+    set(fortransources interfaces/highs_fortran_api.f90)
+    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
+    add_library(FortranHighs interfaces/highs_fortran_api.f90)
+    target_link_libraries(FortranHighs PUBLIC libhighs)
+    install(TARGETS FortranHighs
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include
+        MODULES DESTINATION modules)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
+    set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
+        "${CMAKE_INSTALL_PREFIX}/lib")
+endif(FORTRAN_FOUND)
+
+if(CSHARP_FOUND)
+    message(STATUS "CSharp supported")
+    set(csharpsources
+    interfaces/highs_csharp_api.cs)
+    add_library(HighsCsharp interfaces/highs_csharp_api.cs)
+    target_compile_options(HighsCsharp PUBLIC "/unsafe")
+    add_executable(csharpexample ../examples/call_highs_from_csharp.cs)
+    target_compile_options(csharpexample PUBLIC "/unsafe")
+    target_link_libraries(csharpexample PUBLIC HighsCsharp)
+else()
+    message(STATUS "No CSharp support")
 endif()
 
 find_package(Threads REQUIRED)
