@@ -848,10 +848,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "error: lpsolver reached iteration limit, resolving with basis "
         //     "from ipm\n");
         Highs ipm;
-        ipm.passModel(lpsolver.getLp());
-        ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("output_flag", false);
+        ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("ipm_iteration_limit", 200);
+        ipm.passModel(lpsolver.getLp());
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
