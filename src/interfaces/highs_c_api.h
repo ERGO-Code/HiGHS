@@ -235,9 +235,29 @@ HighsInt Highs_readModel(void* highs, const char* filename);
 HighsInt Highs_writeModel(void* highs, const char* filename);
 
 /**
+ * Reset the options and then calls clearModel()
+ *
+ * See `Highs_destroy` to free all associated memory.
+ *
+ * @param highs     a pointer to the Highs instance
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_clear(void* highs);
+
+/**
  * Remove all variables and constraints from the model `highs`, but do not
  * invalidate the pointer `highs`. Future calls (for example, adding new
  * variables and constraints) are allowed.
+ *
+ * @param highs     a pointer to the Highs instance
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_clearModel(void* highs);
+
+/**
+ * Clear all solution data associated with the model
  *
  * See `Highs_destroy` to clear the model and free all associated memory.
  *
@@ -245,7 +265,7 @@ HighsInt Highs_writeModel(void* highs, const char* filename);
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_clearModel(void* highs);
+HighsInt Highs_clearSolution(void* highs);
 
 /**
  * Optimize a model. The algorithm used by HiGHS depends on the options that
@@ -832,6 +852,24 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
 HighsInt Highs_setLogicalBasis(void* highs);
+
+/**
+ * Set a solution by passing the column and row primal and dual
+ * solution values. For any values that are unavailable pass NULL.
+ *
+ * @param highs       a pointer to the Highs instance
+ * @param col_value   an array of length [num_col] with the column solution
+ *                    values
+ * @param row_value   an array of length [num_row] with the row solution
+ *                    values
+ * @param col_dual    an array of length [num_col] with the column dual values
+ * @param row_dual    an array of length [num_row] with the row dual values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_setSolution(void* highs, const double* col_value,
+                           const double* row_value, const double* col_dual,
+                           const double* row_dual);
 
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.

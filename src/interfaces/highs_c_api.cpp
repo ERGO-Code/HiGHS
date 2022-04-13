@@ -248,8 +248,14 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
+
 HighsInt Highs_clearModel(void* highs) {
   return (HighsInt)((Highs*)highs)->clearModel();
+}
+
+HighsInt Highs_clearSolver(void* highs) {
+  return (HighsInt)((Highs*)highs)->clearSolver();
 }
 
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
@@ -502,6 +508,40 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
 
 HighsInt Highs_setLogicalBasis(void* highs) {
   return (HighsInt)((Highs*)highs)->setBasis();
+}
+
+HighsInt Highs_setSolution(void* highs, const double* col_value,
+                           const double* row_value, const double* col_dual,
+                           const double* row_dual) {
+  HighsSolution solution;
+  const HighsInt num__col = Highs_getNumCol(highs);
+  if (num__col > 0) {
+    if (col_value) {
+      solution.col_value.resize(num__col);
+      for (HighsInt i = 0; i < num__col; i++)
+        solution.col_value[i] = col_value[i];
+    }
+    if (col_dual) {
+      solution.col_dual.resize(num__col);
+      for (HighsInt i = 0; i < num__col; i++)
+        solution.col_dual[i] = col_dual[i];
+    }
+  }
+  const HighsInt num__row = Highs_getNumRow(highs);
+  if (num__row > 0) {
+    if (row_value) {
+      solution.row_value.resize(num__row);
+      for (HighsInt i = 0; i < num__row; i++)
+        solution.row_value[i] = row_value[i];
+    }
+    if (row_dual) {
+      solution.row_dual.resize(num__row);
+      for (HighsInt i = 0; i < num__row; i++)
+        solution.row_dual[i] = row_dual[i];
+    }
+  }
+
+  return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
 double Highs_getRunTime(const void* highs) {

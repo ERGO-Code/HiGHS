@@ -1536,10 +1536,19 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::kOk;
-  // Check if primal solution is valid.
-  if (model_.lp_.num_col_ > 0 &&
-      solution.col_value.size() >= model_.lp_.num_col_) {
-    // Worth considering the column values
+  // Determine whether a new solution will be defined. If so,
+  // the old solution and any basis are cleared
+  const bool new_primal_solution =
+      model_.lp_.num_col_ > 0 &&
+      solution.col_value.size() >= model_.lp_.num_col_;
+  const bool new_dual_solution =
+      model_.lp_.num_row_ > 0 &&
+      solution.row_dual.size() >= model_.lp_.num_row_;
+  const bool new_solution = new_primal_solution || new_dual_solution;
+
+  if (new_solution) clearUserSolverData();
+
+  if (new_primal_solution) {
     solution_.col_value = solution.col_value;
     if (model_.lp_.num_row_ > 0) {
       // Worth computing the row values
@@ -1550,14 +1559,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.value_valid = true;
-  } else {
-    // Primal solution not valid
-    solution_.value_valid = false;
   }
-  // Check if dual solution is valid.
-  if (model_.lp_.num_row_ > 0 &&
-      solution.row_dual.size() >= model_.lp_.num_row_) {
-    // Worth considering the row duals
+  if (new_dual_solution) {
     solution_.row_dual = solution.row_dual;
     if (model_.lp_.num_col_ > 0) {
       // Worth computing the column duals
@@ -1568,9 +1571,13 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.dual_valid = true;
-  } else {
-    // Dual solution not valid
-    solution_.dual_valid = false;
+  }
+  if (new_solution && !model_.lp_.isMip()) {
+    // Determine a basis corresponding to the new solution, unless the model is
+    // a MIP
+    return_status =
+        interpretCallStatus(options_.log_options, this->basisForSolution(),
+                            return_status, "basisForSolution");
   }
   return returnFromHighs(return_status);
 }
