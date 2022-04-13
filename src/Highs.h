@@ -895,6 +895,21 @@ class Highs {
     return HighsStatus::kOk;
   }
 
+  /**
+   * @brief Releases all resources held by the global scheduler instance. It is
+   * not thread-safe to call this function while calling run() or presolve() on
+   * any other Highs instance in any thread. After this function has terminated
+   * it is guaranteed that eventually all previously created scheduler threads
+   * will terminate and allocated memory will be released. After this function
+   * has returned the option value for the number of threads may be altered to a
+   * new value before the next call to run() or presolve(). If the given bool
+   * parameter has value true, then the function will not return until all
+   * memory is freed, which might be desirable when debugging heap memory but
+   * requires the calling thread to wait for all scheduler threads to wake-up
+   * which is usually not necessary.
+   */
+  static void resetGlobalScheduler(bool blocking = false);
+
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif

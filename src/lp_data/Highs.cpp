@@ -593,6 +593,19 @@ HighsStatus Highs::presolve() {
     model_presolve_status_ = HighsPresolveStatus::kNotReduced;
   } else {
     const bool force_presolve = true;
+    // make sure global scheduler is initialized before calling presolve, since
+    // MIP presolve may use parallelism
+    highs::parallel::initialize_scheduler(options_.threads);
+    max_threads = highs::parallel::num_threads();
+    if (options_.threads != 0 && max_threads != options_.threads) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "Option 'threads' is set to %d but global scheduler has already been "
+          "initialized to use %d threads. The previous scheduler instance can "
+          "be destroyed by calling Highs::resetGlobalScheduler().\n",
+          (int)options_.threads, max_threads);
+      return HighsStatus::kError;
+    }
     model_presolve_status_ = runPresolve(force_presolve);
   }
 
@@ -698,8 +711,8 @@ HighsStatus Highs::run() {
     highsLogUser(
         options_.log_options, HighsLogType::kError,
         "Option 'threads' is set to %d but global scheduler has already been "
-        "initialized to use %d threads. The previous scheduler instance can be "
-        "destroyed by calling HighsTaskExecutor::shutdown().\n",
+        "initialized to use %d threads. The previous scheduler instance can "
+        "be destroyed by calling Highs::resetGlobalScheduler().\n",
         (int)options_.threads, max_threads);
     return HighsStatus::kError;
   }
@@ -3293,4 +3306,8 @@ HighsStatus Highs::crossover(HighsSolution& solution) {
 HighsStatus Highs::openLogFile(const std::string log_file) {
   highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
+}
+
+void Highs::resetGlobalScheduler(bool blocking) {
+  HighsTaskExecutor::shutdown(blocking);
 }

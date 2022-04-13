@@ -137,7 +137,7 @@ class HighsTaskExecutor {
     }
   }
 
-  static void shutdown() {
+  static void shutdown(bool blocking = false) {
     if (globalExecutor) {
       // first spin until every worker has acquired its executor reference
       while (globalExecutor.use_count() != globalExecutor->workerDeques.size())
@@ -148,6 +148,11 @@ class HighsTaskExecutor {
       for (auto& workerDeque : globalExecutor->workerDeques)
         workerDeque->injectTaskAndNotify(nullptr);
       // finally release the global executor reference
+      if (blocking) {
+        while (globalExecutor.use_count() != 1)
+          HighsSpinMutex::yieldProcessor();
+      }
+
       globalExecutor.reset();
     }
   }

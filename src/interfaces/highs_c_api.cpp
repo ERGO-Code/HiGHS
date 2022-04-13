@@ -923,6 +923,10 @@ HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
   return (HighsInt)((Highs*)highs)->crossover(solution);
 }
 
+void Highs_resetGlobalScheduler(HighsInt blocking) {
+  Highs::resetGlobalScheduler(blocking);
+}
+
 // *********************
 // * Deprecated methods*
 // *********************
