@@ -47,8 +47,6 @@ int main(int argc, char** argv) {
   // settings defined in any options file.
   highs.passOptions(loaded_options);
 
-  highs.logHeader();
-
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(log_options, read_status, highs.getModel());
