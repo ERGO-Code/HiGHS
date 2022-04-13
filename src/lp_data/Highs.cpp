@@ -1704,32 +1704,6 @@ HighsStatus Highs::getIterate() {
   return returnFromHighs(HighsStatus::kOk);
 }
 
-HighsStatus Highs::addRow(const double lower_bound, const double upper_bound,
-                          const HighsInt num_new_nz, const HighsInt* indices,
-                          const double* values) {
-  this->logHeader();
-  HighsInt starts = 0;
-  return addRows(1, &lower_bound, &upper_bound, num_new_nz, &starts, indices,
-                 values);
-}
-
-HighsStatus Highs::addRows(const HighsInt num_new_row,
-                           const double* lower_bounds,
-                           const double* upper_bounds,
-                           const HighsInt num_new_nz, const HighsInt* starts,
-                           const HighsInt* indices, const double* values) {
-  this->logHeader();
-  HighsStatus return_status = HighsStatus::kOk;
-  clearPresolve();
-  return_status = interpretCallStatus(
-      options_.log_options,
-      addRowsInterface(num_new_row, lower_bounds, upper_bounds, num_new_nz,
-                       starts, indices, values),
-      return_status, "addRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
-}
-
 HighsStatus Highs::addCol(const double cost, const double lower_bound,
                           const double upper_bound, const HighsInt num_new_nz,
                           const HighsInt* indices, const double* values) {
@@ -1752,6 +1726,44 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
       addColsInterface(num_new_col, costs, lower_bounds, upper_bounds,
                        num_new_nz, starts, indices, values),
       return_status, "addCols");
+  if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::addVars(const HighsInt num_new_var, const double* lower,
+                           const double* upper) {
+  this->logHeader();
+  HighsStatus return_status = HighsStatus::kOk;
+  // Avoid touching entry [0] of a vector of size 0
+  if (num_new_var <= 0) returnFromHighs(return_status);
+  std::vector<double> cost;
+  cost.assign(num_new_var, 0);
+  return addCols(num_new_var, &cost[0], lower, upper, 0, nullptr, nullptr,
+                 nullptr);
+}
+
+HighsStatus Highs::addRow(const double lower_bound, const double upper_bound,
+                          const HighsInt num_new_nz, const HighsInt* indices,
+                          const double* values) {
+  this->logHeader();
+  HighsInt starts = 0;
+  return addRows(1, &lower_bound, &upper_bound, num_new_nz, &starts, indices,
+                 values);
+}
+
+HighsStatus Highs::addRows(const HighsInt num_new_row,
+                           const double* lower_bounds,
+                           const double* upper_bounds,
+                           const HighsInt num_new_nz, const HighsInt* starts,
+                           const HighsInt* indices, const double* values) {
+  this->logHeader();
+  HighsStatus return_status = HighsStatus::kOk;
+  clearPresolve();
+  return_status = interpretCallStatus(
+      options_.log_options,
+      addRowsInterface(num_new_row, lower_bounds, upper_bounds, num_new_nz,
+                       starts, indices, values),
+      return_status, "addRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }

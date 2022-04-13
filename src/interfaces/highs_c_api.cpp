@@ -508,21 +508,6 @@ double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }
 
-HighsInt Highs_addRow(void* highs, const double lower, const double upper,
-                      const HighsInt num_new_nz, const HighsInt* index,
-                      const double* value) {
-  return (HighsInt)((Highs*)highs)
-      ->addRow(lower, upper, num_new_nz, index, value);
-}
-
-HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
-                       const double* lower, const double* upper,
-                       const HighsInt num_new_nz, const HighsInt* starts,
-                       const HighsInt* index, const double* value) {
-  return (HighsInt)((Highs*)highs)
-      ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
-}
-
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
                       const HighsInt* index, const double* value) {
@@ -538,6 +523,30 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
   return (HighsInt)((Highs*)highs)
       ->addCols(num_new_col, costs, lower, upper, num_new_nz, starts, index,
                 value);
+}
+
+HighsInt Highs_addVar(void* highs, const double lower, const double upper) {
+  return (HighsInt)((Highs*)highs)->addVar(lower, upper);
+}
+
+HighsInt Highs_addVars(void* highs, const HighsInt num_new_var,
+                       const double* lower, const double* upper) {
+  return (HighsInt)((Highs*)highs)->addVars(num_new_var, lower, upper);
+}
+
+HighsInt Highs_addRow(void* highs, const double lower, const double upper,
+                      const HighsInt num_new_nz, const HighsInt* index,
+                      const double* value) {
+  return (HighsInt)((Highs*)highs)
+      ->addRow(lower, upper, num_new_nz, index, value);
+}
+
+HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
+                       const double* lower, const double* upper,
+                       const HighsInt num_new_nz, const HighsInt* starts,
+                       const HighsInt* index, const double* value) {
+  return (HighsInt)((Highs*)highs)
+      ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {

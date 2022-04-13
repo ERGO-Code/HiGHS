@@ -843,6 +843,72 @@ HighsInt Highs_setLogicalBasis(void* highs);
 double Highs_getRunTime(const void* highs);
 
 /**
+ * Add a new column (variable) to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param cost          objective coefficient of the column
+ * @param lower         lower bound of the column
+ * @param upper         upper bound of the column
+ * @param num_new_nz    number of non-zeros in the column
+ * @param index         array of size [num_new_nz] with the row indices
+ * @param value         array of size [num_new_nz] with row values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addCol(void* highs, const double cost, const double lower,
+                      const double upper, const HighsInt num_new_nz,
+                      const HighsInt* index, const double* value);
+
+/**
+ * Add multiple columns (variables) to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param num_new_col   number of new columns to add
+ * @param costs         array of size [num_new_col] with objective coefficients
+ * @param lower         array of size [num_new_col] with lower bounds
+ * @param upper         array of size [num_new_col] with upper bounds
+ * @param num_new_nz    number of new nonzeros in the constraint matrix
+ * @param starts        the constraint coefficients are given as a matrix in
+ *                      compressed sparse column form by the arrays `starts`,
+ *                      `index`, and `value`. `starts` is an array of size
+ *                      [num_new_cols] with the start index of each row in
+ *                      indices and values.
+ * @param index         array of size [num_new_nz] with row indices
+ * @param value         array of size [num_new_nz] with row values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
+                       const double* costs, const double* lower,
+                       const double* upper, const HighsInt num_new_nz,
+                       const HighsInt* starts, const HighsInt* index,
+                       const double* value);
+
+/**
+ * Add a new variable to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param lower         lower bound of the column
+ * @param upper         upper bound of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addVar(void* highs, const double lower, const double upper);
+
+/**
+ * Add multiple variables to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param num_new_var   number of new variables to add
+ * @param lower         array of size [num_new_var] with lower bounds
+ * @param upper         array of size [num_new_var] with upper bounds
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addVars(void* highs, const HighsInt num_new_var,
+                       const double* lower, const double* upper);
+
+/**
  * Add a new row (a linear constraint) to the model.
  *
  * @param highs         a pointer to the Highs instance
@@ -882,48 +948,6 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const double* lower, const double* upper,
                        const HighsInt num_new_nz, const HighsInt* starts,
                        const HighsInt* index, const double* value);
-
-/**
- * Add a new column (variable) to the model.
- *
- * @param highs         a pointer to the Highs instance
- * @param cost          objective coefficient of the column
- * @param lower         lower bound of the column
- * @param upper         upper bound of the column
- * @param num_new_nz    number of non-zeros in the column
- * @param index         array of size [num_new_nz] with the row indices
- * @param value         array of size [num_new_nz] with row values
- *
- * @returns a `kHighsStatus` constant indicating whether the call succeeded
- */
-HighsInt Highs_addCol(void* highs, const double cost, const double lower,
-                      const double upper, const HighsInt num_new_nz,
-                      const HighsInt* index, const double* value);
-
-/**
- * Add multiple columns (linear constraints) to the model.
- *
- * @param highs         a pointer to the Highs instance
- * @param num_new_col   number of new columns to add
- * @param costs         array of size [num_new_col] with objective coefficients
- * @param lower         array of size [num_new_col] with lower bounds
- * @param upper         array of size [num_new_col] with upper bounds
- * @param num_new_nz    number of new nonzeros in the constraint matrix
- * @param starts        the constraint coefficients are given as a matrix in
- *                      compressed sparse column form by the arrays `starts`,
- *                      `index`, and `value`. `starts` is an array of size
- *                      [num_new_cols] with the start index of each row in
- *                      indices and values.
- * @param index         array of size [num_new_nz] with row indices
- * @param value         array of size [num_new_nz] with row values
- *
- * @returns a `kHighsStatus` constant indicating whether the call succeeded
- */
-HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
-                       const double* costs, const double* lower,
-                       const double* upper, const HighsInt num_new_nz,
-                       const HighsInt* starts, const HighsInt* index,
-                       const double* value);
 
 /**
  * Change the objective sense of the model.
