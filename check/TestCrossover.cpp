@@ -4,6 +4,9 @@
 const bool dev_run = true;
 const double inf = kHighsInf;
 
+void writeSolutionAndObjective(const std::string message, const HighsLp& lp,
+                               const HighsSolution& solution);
+
 // No commas in test case name.
 TEST_CASE("test-crossover", "[highs_crossover]") {
   HighsStatus return_status;
@@ -37,8 +40,23 @@ TEST_CASE("test-crossover", "[highs_crossover]") {
   // Set solution to interior of optimal face
   HighsSolution solution;
   solution.col_value = {2, 1};
+  writeSolutionAndObjective("Before crossover", lp, solution);
   return_status = highs.crossover(solution);
   REQUIRE(return_status == HighsStatus::kOk);
-  highs.writeSolution("", 1);
+  writeSolutionAndObjective("After crossover", lp, solution);
+  writeSolutionAndObjective("From Highs", lp, highs.getSolution());
   REQUIRE(require_optimal_objective == info.objective_function_value);
+}
+
+void writeSolutionAndObjective(const std::string message, const HighsLp& lp,
+                               const HighsSolution& solution) {
+  if (!dev_run) return;
+  double objective = lp.offset_;
+  printf("Solution: %s\n  Ix       Value\n", message.c_str());
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double value = solution.col_value[iCol];
+    objective += value * lp.col_cost_[iCol];
+    printf("%4d %11.4g\n", (int)iCol, value);
+  }
+  printf(" Obj %11.4g\n", objective);
 }
