@@ -3294,3 +3294,7 @@ HighsStatus Highs::openLogFile(const std::string log_file) {
   highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }
+
+void Highs::resetGlobalScheduler(bool blocking) {
+  HighsTaskExecutor::shutdown(blocking);
+}
