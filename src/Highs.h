@@ -904,7 +904,9 @@ class Highs {
    * has returned the option value for the number of threads may be altered to a
    * new value before the next call to run() or presolve(). If the given bool
    * parameter has value true, then the function will not return until all
-   * memory is freed, which might be desirable when debugging heap memory.
+   * memory is freed, which might be desirable when debugging heap memory but
+   * requires the calling thread to wait for all scheduler threads to wake-up
+   * which is usually not necessary.
    */
   static void resetGlobalScheduler(bool blocking = false);
 
