@@ -85,9 +85,7 @@ for irow in range(num_row):
 h.clear()
 # Now define the test-semi-definite0 model (from TestQpSolver.cpp) as a HighsModel instance
 #
-# ToDo Determine whether an empty HighsModel instance can be created as
-# in C++, rather than pulling it from an empty Highs instance like this
-model = h.getModel()
+model = highspy.HighsModel()
 model.lp_.model_name_ = "semi-definite"
 model.lp_.num_col_ = 3
 model.lp_.num_row_ = 1
@@ -150,11 +148,24 @@ h.readModel("check/instances/25fv47.mps")
 h.presolve()
 presolved_lp = h.getPresolvedLp()
 # Create a HiGHS instance to solve the presolved LP
+print('\nCreate Highs instance to solve presolved LP')
 h1 = highspy.Highs()
 h1.passLp(presolved_lp)
 options = h1.getOptions()
 options.presolve = 'off'
-
+options.solver = 'ipm'
+h1.passOptions(options)
+h1.writeOptions("", True)
+h1.run()
+solution = h1.getSolution()
+basis = h1.getBasis()
+print('\nPostsolve LP using solution and basis from other Highs instance')
+h.postsolve(solution, basis)
+info = h.getInfo()
+model_status = h.getModelStatus()
+print('Model status = ', h.modelStatusToString(model_status))
+print('Optimal objective = ', info.objective_function_value)
+print('Iteration count = ', info.simplex_iteration_count)
 
 run_time = h.getRunTime()
 print('Total HiGHS run time is ', run_time)

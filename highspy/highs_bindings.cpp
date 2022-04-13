@@ -564,7 +564,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("sum_dual_infeasibilities", &HighsInfo::sum_dual_infeasibilities);
   py::class_<HighsOptions>(m, "HighsOptions")
     .def(py::init<>())
-    .def_readwrite("presolve", &HighsOptions::presolve);
+    .def_readwrite("presolve", &HighsOptions::presolve)
+    .def_readwrite("solver", &HighsOptions::solver);
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
     .def("passModel", &highs_passModel)
@@ -622,7 +623,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("resetOptions", &Highs::resetOptions)
     .def("readOptions", &Highs::readOptions)
     .def("passOptions", &Highs::passOptions)
-    .def("writeOptions", &Highs::writeOptions)
+    .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
     .def("getOptions", &Highs::getOptions)
     .def("getOptionValue", &highs_getOptionValue)
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
