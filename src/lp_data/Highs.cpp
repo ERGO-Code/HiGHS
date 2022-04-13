@@ -238,8 +238,8 @@ HighsStatus Highs::writeInfo(const std::string filename) const {
 // associated with it. Hence returnFromHighs is called at the end of
 // each
 HighsStatus Highs::passModel(HighsModel model) {
-// This is the "master" Highs::passModel, in that all the others
-// eventually call it
+  // This is the "master" Highs::passModel, in that all the others
+  // eventually call it
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   // Clear the incumbent model and any associated data
@@ -324,12 +324,12 @@ HighsStatus Highs::passModel(
   // Check that the formats of the constraint matrix and Hessian are valid
   if (!aFormatOk(a_num_nz, a_format)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Model has illegal constraint matrix format\n");
+                 "Model has illegal constraint matrix format\n");
     return HighsStatus::kError;
   }
   if (!qFormatOk(q_num_nz, q_format)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Model has illegal Hessian matrix format\n");
+                 "Model has illegal Hessian matrix format\n");
     return HighsStatus::kError;
   }
   const bool a_rowwise =
@@ -462,7 +462,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   HighsHessian hessian;
   if (!qFormatOk(num_nz, format)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Model has illegal Hessian matrix format\n");
+                 "Model has illegal Hessian matrix format\n");
     return HighsStatus::kError;
   }
   HighsInt num_col = model_.lp_.num_col_;
