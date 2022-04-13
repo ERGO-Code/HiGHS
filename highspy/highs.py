@@ -17,6 +17,7 @@ from .highs_bindings import (
     HighsSolution,
     HighsBasis,
     HighsInfo,
+    HighsOptions,
     _Highs,
     kHighsInf,
     HIGHS_VERSION_MAJOR,

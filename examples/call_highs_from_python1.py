@@ -1,7 +1,11 @@
 import highspy
 import numpy as np
 inf = highspy.kHighsInf
+
 h = highspy.Highs()
+alt_inf = h.getInfinity()
+print('highspy.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
+
 h.addVar(-inf, inf)
 h.addVar(-inf, inf)
 h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
@@ -19,7 +23,6 @@ num_var = h.getNumCol()
 solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
-# ToDo Avoid having to pass "False"
 model_status = h.getModelStatus()
 print('Model status = ', h.modelStatusToString(model_status))
 print('Optimal objective = ', info.objective_function_value)
@@ -43,8 +46,6 @@ h.clear()
 
 # Now define the blending model as a HighsLp instance
 #
-# ToDo Determine whether an empty HighsLp instance can be created as
-# in C++, rather than pulling it from an empty Highs instance like this
 lp = highspy.HighsLp()
 num_nz = h.getNumNz()
 print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
@@ -140,3 +141,20 @@ h.passModelPointers(num_col, num_row, a_matrix_num_nz, hessian_num_nz,
                     integrality)
 h.run()
 h.writeSolution("", 1)
+
+# Clear so that incumbent model is empty
+h.clear()
+print('25fv47 as HighsModel')
+
+h.readModel("check/instances/25fv47.mps")
+h.presolve()
+presolved_lp = h.getPresolvedLp()
+# Create a HiGHS instance to solve the presolved LP
+h1 = highspy.Highs()
+h1.passLp(presolved_lp)
+options = h1.getOptions()
+options.presolve = 'off'
+
+
+run_time = h.getRunTime()
+print('Total HiGHS run time is ', run_time)
