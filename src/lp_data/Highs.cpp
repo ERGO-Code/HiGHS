@@ -3288,7 +3288,6 @@ HighsStatus Highs::crossover() { return crossover(solution_); }
 
 HighsStatus Highs::crossover(HighsSolution& solution) {
 #ifdef IPX_ON
-  std::cout << "Loading crossover...\n";
   HighsBasis basis;
   bool x_status = callCrossover(model_.lp_, options_, solution, basis);
   if (!x_status) return HighsStatus::kError;

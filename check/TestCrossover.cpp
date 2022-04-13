@@ -1,11 +1,12 @@
 #include "Highs.h"
 #include "catch.hpp"
+#include "lp_data/HighsModelUtils.h"
 
 const bool dev_run = true;
 const double inf = kHighsInf;
 
-void writeSolutionAndObjective(const std::string message, const HighsLp& lp,
-                               const HighsSolution& solution);
+void report(const std::string message, const HighsLp& lp,
+            const HighsSolution& solution, const HighsBasis& basis);
 
 // No commas in test case name.
 TEST_CASE("test-crossover", "[highs_crossover]") {
@@ -40,23 +41,26 @@ TEST_CASE("test-crossover", "[highs_crossover]") {
   // Set solution to interior of optimal face
   HighsSolution solution;
   solution.col_value = {2, 1};
-  writeSolutionAndObjective("Before crossover", lp, solution);
+  HighsBasis basis;
+  report("Before crossover", lp, solution, basis);
   return_status = highs.crossover(solution);
   REQUIRE(return_status == HighsStatus::kOk);
-  writeSolutionAndObjective("After crossover", lp, solution);
-  writeSolutionAndObjective("From Highs", lp, highs.getSolution());
+  report("After crossover", lp, solution, basis);
+  report("From Highs", lp, highs.getSolution(), highs.getBasis());
   REQUIRE(require_optimal_objective == info.objective_function_value);
 }
 
-void writeSolutionAndObjective(const std::string message, const HighsLp& lp,
-                               const HighsSolution& solution) {
+void report(const std::string message, const HighsLp& lp,
+            const HighsSolution& solution, const HighsBasis& basis) {
   if (!dev_run) return;
   double objective = lp.offset_;
-  printf("Solution: %s\n  Ix       Value\n", message.c_str());
+  printf("Solution: %s\n  Ix       Value   Status\n", message.c_str());
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    double value = solution.col_value[iCol];
+    const double value = solution.col_value[iCol];
+    const std::string status =
+        basis.valid ? utilBasisStatusToString(basis.col_status[iCol]) : "";
     objective += value * lp.col_cost_[iCol];
-    printf("%4d %11.4g\n", (int)iCol, value);
+    printf("%4d %11.4g   %s\n", (int)iCol, value, status.c_str());
   }
   printf(" Obj %11.4g\n", objective);
 }
