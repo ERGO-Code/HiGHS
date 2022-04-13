@@ -146,6 +146,20 @@ void highs_passHessianPointers(Highs* h,
     throw py::value_error("Error when passing Hessian");
 }
  
+void highs_crossover(Highs* h)
+{
+  HighsStatus status = h->crossover();
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error in crossover");
+}
+ 
+void highs_crossoverFromSolution(Highs* h, HighsSolution& solution)
+{
+  HighsStatus status = h->crossover(solution);
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error in crossover");
+}
+ 
 void highs_writeSolution(Highs* h, const std::string filename, const int style)
 {
   HighsStatus status = h->writeSolution(filename, style);
@@ -565,6 +579,7 @@ PYBIND11_MODULE(highs_bindings, m)
   py::class_<HighsOptions>(m, "HighsOptions")
     .def(py::init<>())
     .def_readwrite("presolve", &HighsOptions::presolve)
+    .def_readwrite("run_crossover", &HighsOptions::run_crossover)
     .def_readwrite("solver", &HighsOptions::solver);
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
@@ -590,6 +605,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getInfo", &Highs::getInfo)
     .def("getRunTime", &Highs::getRunTime)
     .def("getInfinity", &Highs::getInfinity)
+    .def("crossover", &highs_crossover)
+    .def("crossoverFromSolution", &highs_crossoverFromSolution)
     .def("changeObjectiveSense", &Highs::changeObjectiveSense)
     .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)
     .def("changeColIntegrality", &Highs::changeColIntegrality)
@@ -609,6 +626,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsCost", &highs_changeColsCost)
     .def("changeColsBounds", &highs_changeColsBounds)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
+    .def("setLogCallback", &highs_setLogCallback)
     .def("setLogCallback", &highs_setLogCallback)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
