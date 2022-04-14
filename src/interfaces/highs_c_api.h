@@ -235,9 +235,29 @@ HighsInt Highs_readModel(void* highs, const char* filename);
 HighsInt Highs_writeModel(void* highs, const char* filename);
 
 /**
+ * Reset the options and then calls clearModel()
+ *
+ * See `Highs_destroy` to free all associated memory.
+ *
+ * @param highs     a pointer to the Highs instance
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_clear(void* highs);
+
+/**
  * Remove all variables and constraints from the model `highs`, but do not
  * invalidate the pointer `highs`. Future calls (for example, adding new
  * variables and constraints) are allowed.
+ *
+ * @param highs     a pointer to the Highs instance
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_clearModel(void* highs);
+
+/**
+ * Clear all solution data associated with the model
  *
  * See `Highs_destroy` to clear the model and free all associated memory.
  *
@@ -245,7 +265,7 @@ HighsInt Highs_writeModel(void* highs, const char* filename);
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_clearModel(void* highs);
+HighsInt Highs_clearSolution(void* highs);
 
 /**
  * Optimize a model. The algorithm used by HiGHS depends on the options that
@@ -834,6 +854,24 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
 HighsInt Highs_setLogicalBasis(void* highs);
 
 /**
+ * Set a solution by passing the column and row primal and dual
+ * solution values. For any values that are unavailable pass NULL.
+ *
+ * @param highs       a pointer to the Highs instance
+ * @param col_value   an array of length [num_col] with the column solution
+ *                    values
+ * @param row_value   an array of length [num_row] with the row solution
+ *                    values
+ * @param col_dual    an array of length [num_col] with the column dual values
+ * @param row_dual    an array of length [num_row] with the row dual values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_setSolution(void* highs, const double* col_value,
+                           const double* row_value, const double* col_dual,
+                           const double* row_dual);
+
+/**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
  * @param highs     a pointer to the Highs instance
@@ -841,6 +879,72 @@ HighsInt Highs_setLogicalBasis(void* highs);
  * @returns the cumulative wall-clock time spent in `Highs_run`
  */
 double Highs_getRunTime(const void* highs);
+
+/**
+ * Add a new column (variable) to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param cost          objective coefficient of the column
+ * @param lower         lower bound of the column
+ * @param upper         upper bound of the column
+ * @param num_new_nz    number of non-zeros in the column
+ * @param index         array of size [num_new_nz] with the row indices
+ * @param value         array of size [num_new_nz] with row values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addCol(void* highs, const double cost, const double lower,
+                      const double upper, const HighsInt num_new_nz,
+                      const HighsInt* index, const double* value);
+
+/**
+ * Add multiple columns (variables) to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param num_new_col   number of new columns to add
+ * @param costs         array of size [num_new_col] with objective coefficients
+ * @param lower         array of size [num_new_col] with lower bounds
+ * @param upper         array of size [num_new_col] with upper bounds
+ * @param num_new_nz    number of new nonzeros in the constraint matrix
+ * @param starts        the constraint coefficients are given as a matrix in
+ *                      compressed sparse column form by the arrays `starts`,
+ *                      `index`, and `value`. `starts` is an array of size
+ *                      [num_new_cols] with the start index of each row in
+ *                      indices and values.
+ * @param index         array of size [num_new_nz] with row indices
+ * @param value         array of size [num_new_nz] with row values
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
+                       const double* costs, const double* lower,
+                       const double* upper, const HighsInt num_new_nz,
+                       const HighsInt* starts, const HighsInt* index,
+                       const double* value);
+
+/**
+ * Add a new variable to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param lower         lower bound of the column
+ * @param upper         upper bound of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addVar(void* highs, const double lower, const double upper);
+
+/**
+ * Add multiple variables to the model.
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param num_new_var   number of new variables to add
+ * @param lower         array of size [num_new_var] with lower bounds
+ * @param upper         array of size [num_new_var] with upper bounds
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_addVars(void* highs, const HighsInt num_new_var,
+                       const double* lower, const double* upper);
 
 /**
  * Add a new row (a linear constraint) to the model.
@@ -882,48 +986,6 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const double* lower, const double* upper,
                        const HighsInt num_new_nz, const HighsInt* starts,
                        const HighsInt* index, const double* value);
-
-/**
- * Add a new column (variable) to the model.
- *
- * @param highs         a pointer to the Highs instance
- * @param cost          objective coefficient of the column
- * @param lower         lower bound of the column
- * @param upper         upper bound of the column
- * @param num_new_nz    number of non-zeros in the column
- * @param index         array of size [num_new_nz] with the row indices
- * @param value         array of size [num_new_nz] with row values
- *
- * @returns a `kHighsStatus` constant indicating whether the call succeeded
- */
-HighsInt Highs_addCol(void* highs, const double cost, const double lower,
-                      const double upper, const HighsInt num_new_nz,
-                      const HighsInt* index, const double* value);
-
-/**
- * Add multiple columns (linear constraints) to the model.
- *
- * @param highs         a pointer to the Highs instance
- * @param num_new_col   number of new columns to add
- * @param costs         array of size [num_new_col] with objective coefficients
- * @param lower         array of size [num_new_col] with lower bounds
- * @param upper         array of size [num_new_col] with upper bounds
- * @param num_new_nz    number of new nonzeros in the constraint matrix
- * @param starts        the constraint coefficients are given as a matrix in
- *                      compressed sparse column form by the arrays `starts`,
- *                      `index`, and `value`. `starts` is an array of size
- *                      [num_new_cols] with the start index of each row in
- *                      indices and values.
- * @param index         array of size [num_new_nz] with row indices
- * @param value         array of size [num_new_nz] with row values
- *
- * @returns a `kHighsStatus` constant indicating whether the call succeeded
- */
-HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
-                       const double* costs, const double* lower,
-                       const double* upper, const HighsInt num_new_nz,
-                       const HighsInt* starts, const HighsInt* index,
-                       const double* value);
 
 /**
  * Change the objective sense of the model.

@@ -121,6 +121,8 @@ class HEkk {
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
   // Debug methods
+  void debugInitialise();
+  void debugReportInitialBasis();
   void debugReporting(
       const HighsInt save_mod_recover,
       const HighsInt log_dev_level_ = kHighsLogDevLevelDetailed);
