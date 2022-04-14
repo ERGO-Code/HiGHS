@@ -1572,13 +1572,6 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     }
     solution_.dual_valid = true;
   }
-  if (new_solution && !model_.lp_.isMip()) {
-    // Determine a basis corresponding to the new solution, unless the model is
-    // a MIP
-    return_status =
-        interpretCallStatus(options_.log_options, this->basisForSolution(),
-                            return_status, "basisForSolution");
-  }
   return returnFromHighs(return_status);
 }
 

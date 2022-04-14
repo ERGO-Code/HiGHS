@@ -147,6 +147,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return returnFromSolveLpSimplex(solver_object, call_status);
       }
+    } else if (solution.value_valid) {
+      // There is a solution to start from
+      assert(111==999);
+      // Determine a basis corresponding to the solution
+      //      return_status =
+      //        interpretCallStatus(options_.log_options, this->basisForSolution(),
+      //                            return_status, "basisForSolution");
     } else {
       // Starting from a logical basis, so consider dualising and/or
       // permuting the LP
