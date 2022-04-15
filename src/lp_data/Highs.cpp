@@ -3260,9 +3260,9 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
 
 HighsStatus Highs::crossover(const HighsSolution& user_solution) {
   HighsStatus return_status = HighsStatus::kOk;
+  HighsLogOptions& log_options = options_.log_options;
 #ifdef IPX_ON
   HighsLp& lp = model_.lp_;
-  HighsLogOptions& log_options = options_.log_options;
   if (lp.isMip()) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Cannot apply crossover to solve MIP\n");
