@@ -19,7 +19,10 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 
-bool callCrossover(const HighsLp& lp, const HighsOptions& options,
-                   HighsSolution& solution, HighsBasis& highs_basis);
+HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
+                          HighsBasis& highs_basis,
+                          HighsSolution& highs_solution,
+                          HighsModelStatus& model_status,
+                          HighsInfo& highs_info);
 
 #endif

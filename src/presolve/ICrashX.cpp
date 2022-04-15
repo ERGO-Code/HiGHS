@@ -19,16 +19,20 @@
 #include "ipm/IpxWrapper.h"
 
 #ifndef IPX_ON
-bool callCrossover(const HighsLp& lp, const HighsOptions& options,
-                   HighsSolution& solution, HighsBasis& highs_basis) {
+bool callCrossover(const HighsOptions& options, const HighsLp& lp,
+                   HighsBasis& highs_basis, HighsSolution& highs_solution,
+                   HighsModelStatus& model_status, HighsInfo& highs_info) {
   return false;
 }
 #else
 
 #include "ipm/IpxWrapper.h"
 
-bool callCrossover(const HighsLp& lp, const HighsOptions& options,
-                   HighsSolution& solution, HighsBasis& basis) {
+HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
+                          HighsBasis& highs_basis,
+                          HighsSolution& highs_solution,
+                          HighsModelStatus& model_status,
+                          HighsInfo& highs_info) {
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
@@ -36,7 +40,7 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
 
   fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
                 rhs, constraint_type);
-  // if (res != IpxStatus::OK) return false;
+  // if (res != IpxStatus::OK) return HighsStatus::kError;
 
   const HighsLogOptions& log_options = options.log_options;
 
@@ -58,17 +62,17 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   ipx::LpSolver lps;
   lps.SetParameters(parameters);
 
-  ipx::Int errflag =
+  ipx::Int load_status =
       lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
                     &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
-  if (errflag != 0) {
+  if (load_status != 0) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Error loading ipx model\n");
-    return false;
+    return HighsStatus::kError;
   }
 
   // Set x values within bounds.
-  std::vector<double> x(solution.col_value);
+  std::vector<double> x(highs_solution.col_value);
   for (int i = 0; i < num_col; i++) {
     x[i] = std::max(x[i], col_lb[i]);
     x[i] = std::min(x[i], col_ub[i]);
@@ -92,31 +96,41 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
         break;
     }
   }
-  if (solution.dual_valid && solution.col_dual.size() == num_col &&
-      solution.row_dual.size() == num_row) {
+  ipx::Int crossover_status;
+  if (highs_solution.dual_valid && highs_solution.col_dual.size() == num_col &&
+      highs_solution.row_dual.size() == num_row) {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with primal and dual values\n");
-    errflag = lps.CrossoverFromStartingPoint(
-        &x[0], &slack[0], &solution.row_dual[0], &solution.col_dual[0]);
+    crossover_status = lps.CrossoverFromStartingPoint(
+        &x[0], &slack[0], &highs_solution.row_dual[0],
+        &highs_solution.col_dual[0]);
   } else {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with only primal values\n");
-    errflag =
+    crossover_status =
         lps.CrossoverFromStartingPoint(&x[0], &slack[0], nullptr, nullptr);
   }
 
-  if (errflag != 0) {
+  if (crossover_status != 0) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "IPX crossover error: flag = %d\n", (int)errflag);
-    return false;
+                 "IPX crossover error: flag = %d\n", (int)crossover_status);
+    return HighsStatus::kError;
   }
-  ipx::Info info = lps.GetInfo();
-  if (info.status_crossover != IPX_STATUS_optimal &&
-      info.status_crossover != IPX_STATUS_imprecise) {
+  ipx::Info ipx_info = lps.GetInfo();
+  highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  const bool imprecise_solution =
+      ipx_info.status_crossover == IPX_STATUS_imprecise;
+  if (ipx_info.status_crossover != IPX_STATUS_optimal &&
+      ipx_info.status_crossover != IPX_STATUS_imprecise &&
+      ipx_info.status_crossover != IPX_STATUS_time_limit) {
     highsLogUser(log_options, HighsLogType::kError,
                  "IPX crossover failed: status = %d\n",
-                 (int)info.status_crossover);
-    return false;
+                 (int)ipx_info.status_crossover);
+    return HighsStatus::kError;
+  }
+  if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
+    model_status = HighsModelStatus::kTimeLimit;
+    return HighsStatus::kWarning;
   }
 
   // Get basis
@@ -129,7 +143,7 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   ipx_solution.ipx_row_dual.resize(num_row);
   ipx_solution.ipx_row_status.resize(num_row);
   ipx_solution.ipx_col_status.resize(num_col);
-  errflag = lps.GetBasicSolution(
+  ipx::Int errflag = lps.GetBasicSolution(
       &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
       &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
       &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
@@ -137,22 +151,31 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
     highsLogUser(log_options, HighsLogType::kError,
                  "IPX crossover getting basic solution: flag = %d\n",
                  (int)errflag);
-    return false;
+    return HighsStatus::kError;
   }
 
   // Convert the IPX basic solution to a HiGHS basic solution
   HighsStatus status = ipxBasicSolutionToHighsBasicSolution(
-      options.log_options, lp, rhs, constraint_type, ipx_solution, basis,
-      solution);
+      options.log_options, lp, rhs, constraint_type, ipx_solution, highs_basis,
+      highs_solution);
 
   if (status != HighsStatus::kOk) {
     highsLogUser(
         log_options, HighsLogType::kError,
         "Failed to convert IPX basic solution to Highs basic solution\n");
-    return false;
+    return HighsStatus::kError;
   }
-
-  return true;
+  highs_info.basis_validity =
+      highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
+  HighsStatus return_status;
+  if (imprecise_solution) {
+    model_status = HighsModelStatus::kUnknown;
+    return_status = HighsStatus::kWarning;
+  } else {
+    model_status = HighsModelStatus::kOptimal;
+    return_status = HighsStatus::kOk;
+  }
+  return return_status;
 }
 
 #endif

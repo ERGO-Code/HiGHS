@@ -3272,18 +3272,17 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
                  "Cannot apply crossover to solve QP\n");
     return_status = HighsStatus::kError;
   } else {
-    HighsSolution solution = user_solution;
-    HighsBasis basis;
+    clearSolver();
+    solution_ = user_solution;
     // Use IPX crossover to try to form a basic solution
-    bool x_status = callCrossover(model_.lp_, options_, solution, basis);
-    if (!x_status) {
-      return_status = HighsStatus::kError;
-    } else {
-      // Crossover was successful, so use the basis generated to set the Highs
-      // basis
-      return_status = setBasis(basis);
-      if (return_status == HighsStatus::kOk) return_status = run();
-    }
+    return_status = callCrossover(options_, model_.lp_, basis_, solution_,
+                                  model_status_, info_);
+    if (return_status == HighsStatus::kError) return return_status;
+    scaled_model_status_ = model_status_;
+    // Get the objective and any KKT failures
+    info_.objective_function_value =
+        model_.lp_.objectiveValue(solution_.col_value);
+    getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
   }
 #else
   // No IPX available so end here at approximate solve.
