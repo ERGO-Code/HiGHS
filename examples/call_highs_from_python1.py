@@ -144,13 +144,13 @@ h.writeSolution("", 1)
 h.clear()
 print('25fv47 as HighsModel')
 
-h.readModel("check/instances/25fv47.mps")
+h.readModel("../../../check/instances/25fv47.mps")
 h.presolve()
 presolved_lp = h.getPresolvedLp()
 # Create a HiGHS instance to solve the presolved LP
 print('\nCreate Highs instance to solve presolved LP')
 h1 = highspy.Highs()
-h1.passLp(presolved_lp)
+h1.passModel(presolved_lp)
 options = h1.getOptions()
 options.presolve = 'off'
 options.solver = 'ipm'
