@@ -20,6 +20,48 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
+HighsStatus Highs::basisForSolution() {
+  HighsLp& lp = model_.lp_;
+  assert(!lp.isMip());
+  assert(solution_.value_valid);
+  clearBasis();
+  HighsInt num_basic = 0;
+  HighsBasis basis;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (std::fabs(lp.col_lower_[iCol] - solution_.col_value[iCol]) <=
+        options_.primal_feasibility_tolerance) {
+      basis.col_status.push_back(HighsBasisStatus::kLower);
+    } else if (std::fabs(lp.col_upper_[iCol] - solution_.col_value[iCol]) <=
+               options_.primal_feasibility_tolerance) {
+      basis.col_status.push_back(HighsBasisStatus::kUpper);
+    } else {
+      num_basic++;
+      basis.col_status.push_back(HighsBasisStatus::kBasic);
+    }
+  }
+  const HighsInt num_basic_col = num_basic;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (std::fabs(lp.row_lower_[iRow] - solution_.row_value[iRow]) <=
+        options_.primal_feasibility_tolerance) {
+      basis.row_status.push_back(HighsBasisStatus::kLower);
+    } else if (std::fabs(lp.row_upper_[iRow] - solution_.row_value[iRow]) <=
+               options_.primal_feasibility_tolerance) {
+      basis.row_status.push_back(HighsBasisStatus::kUpper);
+    } else {
+      num_basic++;
+      basis.row_status.push_back(HighsBasisStatus::kBasic);
+    }
+  }
+  const HighsInt num_basic_row = num_basic - num_basic_col;
+  assert((int)basis.col_status.size() == lp.num_col_);
+  assert((int)basis.row_status.size() == lp.num_row_);
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "LP has %d rows and %d basic variables (%d / %d; %d / %d)\n",
+               (int)lp.num_row_, (int)num_basic, (int)num_basic_col,
+               (int)lp.num_col_, (int)num_basic_row, (int)lp.num_row_);
+  return this->setBasis(basis);
+}
+
 HighsStatus Highs::addColsInterface(
     HighsInt ext_num_new_col, const double* ext_col_cost,
     const double* ext_col_lower, const double* ext_col_upper,
