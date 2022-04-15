@@ -20,9 +20,11 @@
 
 #ifndef IPX_ON
 HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
-                   HighsBasis& highs_basis, HighsSolution& highs_solution,
-                   HighsModelStatus& model_status, HighsInfo& highs_info) {
-  return  HighsStatus::kError;
+                          HighsBasis& highs_basis,
+                          HighsSolution& highs_solution,
+                          HighsModelStatus& model_status,
+                          HighsInfo& highs_info) {
+  return HighsStatus::kError;
 }
 #else
 
