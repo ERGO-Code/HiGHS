@@ -60,7 +60,7 @@ lp.row_upper_ = np.array([120, 210], dtype=np.double)
 lp.a_matrix_.start_ = np.array([0, 2, 4])
 lp.a_matrix_.index_ = np.array([0, 1, 0, 1])
 lp.a_matrix_.value_ = np.array([0.3, 0.7, 0.5, 0.5], dtype=np.double)
-h.passLp(lp)
+h.passModel(lp)
 h.run()
 solution = h.getSolution()
 basis = h.getBasis()
@@ -131,12 +131,12 @@ hessian_num_nz = hessian_start[num_col]
 integrality = np.array([0, 0, 0])
 
 print('test-semi-definite0 as pointers')
-h.passModelPointers(num_col, num_row, a_matrix_num_nz, hessian_num_nz,
-                    a_matrix_format, hessian_format, sense, offset,
-                    col_cost, col_lower, col_upper, row_lower, row_upper,
-                    a_matrix_start, a_matrix_index, a_matrix_value,
-                    hessian_start, hessian_index, hessian_value,
-                    integrality)
+h.passModel(num_col, num_row, a_matrix_num_nz, hessian_num_nz,
+            a_matrix_format, hessian_format, sense, offset,
+            col_cost, col_lower, col_upper, row_lower, row_upper,
+            a_matrix_start, a_matrix_index, a_matrix_value,
+            hessian_start, hessian_index, hessian_value,
+            integrality)
 h.run()
 h.writeSolution("", 1)
 

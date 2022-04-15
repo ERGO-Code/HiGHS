@@ -1,6 +1,8 @@
 name: test_python_api
 
-on: ["push"]
+on:
+  push:
+  pull_request:
 
 jobs:
   build:
@@ -50,5 +52,5 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}
       run: |
-         pip install -e ./HiGHS
-         nosetests -v ./HiGHS/highspy
+         pip install -e ./HiGHS/src/interfaces/highspy/
+         nosetests -v ./HiGHS/src/interfaces/highspy/
