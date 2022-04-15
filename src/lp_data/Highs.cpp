@@ -3257,22 +3257,41 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "unpredictable\n",
                method_name.c_str());
 }
-HighsStatus Highs::crossover() { return crossover(solution_); }
 
-HighsStatus Highs::crossover(HighsSolution& solution) {
+HighsStatus Highs::crossover(const HighsSolution& user_solution) {
+  HighsStatus return_status = HighsStatus::kOk;
 #ifdef IPX_ON
-  HighsBasis basis;
-  bool x_status = callCrossover(model_.lp_, options_, solution, basis);
-  if (!x_status) return HighsStatus::kError;
-
-  setBasis(basis);
+  HighsLp& lp = model_.lp_;
+  HighsLogOptions& log_options = options_.log_options;
+  if (lp.isMip()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cannot apply crossover to solve MIP\n");
+    return_status = HighsStatus::kError;
+  } else if (model_.isQp()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cannot apply crossover to solve QP\n");
+    return_status = HighsStatus::kError;
+  } else {
+    HighsSolution solution = user_solution;
+    HighsBasis basis;
+    // Use IPX crossover to try to form a basic solution
+    bool x_status = callCrossover(model_.lp_, options_, solution, basis);
+    if (!x_status) {
+      return_status = HighsStatus::kError;
+    } else {
+      // Crossover was successful, so use the basis generated to set the Highs
+      // basis
+      return_status = setBasis(basis);
+      if (return_status == HighsStatus::kOk) return_status = run();
+    }
+  }
 #else
   // No IPX available so end here at approximate solve.
-  std::cout << "No ipx code available. Error." << std::endl;
-  return HighsStatus::kError;
+  highsLogUser(log_options, HighsLogType::kError,
+               "No IPX code available for crossover\n");
+  return_status = HighsStatus::kError;
 #endif
-
-  return HighsStatus::kOk;
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::openLogFile(const std::string log_file) {
