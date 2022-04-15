@@ -136,11 +136,11 @@ void runSetLpSolution(const std::string model) {
   // Use a reduction in iteration count as a anity check that starting
   // from the optimal solution has worked
   HighsInt simplex_iteration_count1 = info.simplex_iteration_count;
-  //  if (dev_run)
-  printf(
-      "For model %s: iteration counts are %d from logical basis and %d from "
-      "optimal solution\n",
-      model.c_str(), (int)simplex_iteration_count0,
-      (int)simplex_iteration_count1);
+  if (dev_run)
+    printf(
+        "For model %s: iteration counts are %d from logical basis and %d from "
+        "optimal solution\n",
+        model.c_str(), (int)simplex_iteration_count0,
+        (int)simplex_iteration_count1);
   REQUIRE(simplex_iteration_count1 < simplex_iteration_count0);
 }
