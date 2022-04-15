@@ -5,21 +5,13 @@
 const bool dev_run = true;
 const double inf = kHighsInf;
 
+void test_crossover(Highs& highs, HighsLp& lp);
 void report(const std::string message, const HighsLp& lp,
             const HighsSolution& solution, const HighsBasis& basis);
 
 // No commas in test case name.
 TEST_CASE("test-crossover", "[highs_crossover]") {
-  HighsStatus return_status;
-  std::string model;
-  std::string model_file;
-  model = "adlittle";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
 
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("output_flag", false);
-  const HighsInfo& info = highs.getInfo();
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 1;
@@ -33,23 +25,62 @@ TEST_CASE("test-crossover", "[highs_crossover]") {
   lp.a_matrix_.start_ = {0, 2};
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 2};
+  HighsLp df_lp = lp;
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", false);
+  // From feasible non-vertex for feasible LP
+  if (dev_run) printf("\nCrossover from feasible non-vertex for feasible LP\n");
+  test_crossover(highs, lp);  
+
+  if (dev_run) printf("\nCrossover from infeasible non-vertex for feasible LP\n");
+  highs.clear();
+  lp = df_lp;
+  lp.col_lower_[0] = 4;
+  test_crossover(highs, lp);  
+
+  if (dev_run) printf("\nCrossover from infeasible non-vertex for infeasible LP\n");
+  highs.clear();
+  lp = df_lp;
+  lp.col_lower_ = {4, 2};
+  test_crossover(highs, lp);  
+
+  if (dev_run) printf("\nCrossover from feasible non-vertex for unbounded LP\n");
+  highs.clear();
+  lp = df_lp;
+  lp.row_lower_ = {4};
+  lp.row_upper_ = {inf};
+  test_crossover(highs, lp);  
+
+  
+}
+
+void test_crossover(Highs& highs, HighsLp& lp) {
+  HighsStatus return_status;
   return_status = highs.passModel(lp);
   REQUIRE(return_status == HighsStatus::kOk);
   highs.run();
+  const std::vector<double> from_primal_value = {2, 1};
+  HighsModelStatus model_status = highs.getModelStatus();
+  const HighsInfo& info = highs.getInfo();
   const double require_optimal_objective = info.objective_function_value;
+  
   highs.clearSolver();
   // Set solution to interior of optimal face
   HighsSolution solution;
-  solution.col_value = {2, 1};
+  solution.col_value = from_primal_value;
   HighsBasis basis;
   report("Before crossover", lp, solution, basis);
   return_status = highs.crossover(solution);
   REQUIRE(return_status == HighsStatus::kOk);
   report("After crossover", lp, solution, basis);
   report("From Highs", lp, highs.getSolution(), highs.getBasis());
-  REQUIRE(require_optimal_objective == info.objective_function_value);
-}
+  if (model_status != HighsModelStatus::kUnbounded) {
+    REQUIRE(require_optimal_objective == info.objective_function_value);
+  }
 
+}
 void report(const std::string message, const HighsLp& lp,
             const HighsSolution& solution, const HighsBasis& basis) {
   if (!dev_run) return;
