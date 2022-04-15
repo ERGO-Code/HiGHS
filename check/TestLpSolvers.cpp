@@ -42,9 +42,9 @@ void testSolver(Highs& highs, const std::string solver,
     return_status = highs.getOptionValue("simplex_iteration_limit",
                                          default_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::kOk);
-    // Force HiGHS to start from a logical basis - if this is the
-    // second or subsequent call to testSolver
-    return_status = highs.setBasis();
+    // Clear the solver information - necessary if this is the second
+    // or subsequent call to testSolver
+    return_status = highs.clearSolver();
     REQUIRE(return_status == HighsStatus::kOk);
   } else {
     return_status = highs.getOptionValue("ipm_iteration_limit",
@@ -153,7 +153,7 @@ void testSolver(Highs& highs, const std::string solver,
     return_status = highs.setOptionValue("simplex_iteration_limit",
                                          further_simplex_iterations);
     REQUIRE(return_status == HighsStatus::kOk);
-    return_status = highs.setBasis();
+    return_status = highs.clearSolver();
     REQUIRE(return_status == HighsStatus::kOk);
   } else {
     if (dev_run)
@@ -369,7 +369,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "\nSolving LP without presolve and larger dual objective value upper "
         "bound of %g\n",
         larger_min_objective_bound);
-  status = highs.setBasis();
+  status = highs.clearSolver();
   REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
