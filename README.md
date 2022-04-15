@@ -187,13 +187,13 @@ HiGHS can be used from javascript directly inside a web browser thanks to [highs
 Python
 ------
 
-In order to build the Python interface, build (and install?) the HiGHS
+In order to build the Python interface, build and install the HiGHS
 library as described above, ensure the shared library is in the
 `LD_LIBRARY_PATH` environment variable, and then run
 
 `pip install ./`
 
-from the root HiGHS folder (there should be a `setup.py` file there).
+from `src/interfaces/highspy` (there should be a `setup.py` file there).
 
 You may also require
 
