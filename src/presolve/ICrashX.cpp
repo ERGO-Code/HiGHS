@@ -19,10 +19,10 @@
 #include "ipm/IpxWrapper.h"
 
 #ifndef IPX_ON
-bool callCrossover(const HighsOptions& options, const HighsLp& lp,
+HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
                    HighsBasis& highs_basis, HighsSolution& highs_solution,
                    HighsModelStatus& model_status, HighsInfo& highs_info) {
-  return false;
+  return  HighsStatus::kError;
 }
 #else
 
