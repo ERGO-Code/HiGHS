@@ -838,6 +838,17 @@ HighsStatus Highs::run() {
   const bool ipx_no_crossover =
       options_.solver == kIpmString && !options_.run_crossover;
 
+  if (!basis_.valid && solution_.value_valid) {
+    // There is no valid basis, but there is a valid solution, so use
+    // it to construct a basis
+    return_status =
+        interpretCallStatus(options_.log_options, basisForSolution(),
+                            return_status, "basisForSolution");
+    if (return_status == HighsStatus::kError)
+      return returnFromRun(return_status);
+    assert(basis_.valid);
+  }
+
   if (basis_.valid || options_.presolve == kHighsOffString) {
     // There is a valid basis for the problem or presolve is off
     ekk_instance_.lp_name_ = "LP without presolve or with basis";
