@@ -19,7 +19,7 @@
 #include "lp_data/HighsLpSolverObject.h"
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
-  solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
+  solver_object.model_status_ = HighsModelStatus::kNotset;
   return HighsStatus::kError;
 }
 #endif
