@@ -146,20 +146,6 @@ void highs_passHessianPointers(Highs* h,
     throw py::value_error("Error when passing Hessian");
 }
  
-void highs_crossover(Highs* h)
-{
-  HighsStatus status = h->crossover();
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error in crossover");
-}
- 
-void highs_crossoverFromSolution(Highs* h, HighsSolution& solution)
-{
-  HighsStatus status = h->crossover(solution);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error in crossover");
-}
- 
 void highs_writeSolution(Highs* h, const std::string filename, const int style)
 {
   HighsStatus status = h->writeSolution(filename, style);
@@ -610,8 +596,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getInfo", &Highs::getInfo)
     .def("getRunTime", &Highs::getRunTime)
     .def("getInfinity", &Highs::getInfinity)
-    .def("crossover", &highs_crossover)
-    .def("crossoverFromSolution", &highs_crossoverFromSolution)
+    .def("crossover", &Highs::crossover)
     .def("changeObjectiveSense", &Highs::changeObjectiveSense)
     .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)
     .def("changeColIntegrality", &Highs::changeColIntegrality)
