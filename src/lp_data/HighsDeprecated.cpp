@@ -172,6 +172,5 @@ HighsStatus Highs::writeSolution(const std::string filename,
 const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
   deprecationMessage("getModelStatus(const bool scaled_model)",
                      "getModelStatus()");
-  assert(9999 == 1111);
   return model_status_;
 }
