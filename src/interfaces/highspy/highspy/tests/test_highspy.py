@@ -202,3 +202,9 @@ class TestHighsPy(unittest.TestCase):
             h.run()
         out = out.getvalue()
         self.assertIn('got a log message:  HighsLogType.kInfo an instance of Foo Presolving model', out)
+
+    def test_dual_ray(self):
+        h = self.get_basic_model()
+        h.setOptionValue('log_to_console', True)
+        h.run()
+ 
