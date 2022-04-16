@@ -297,13 +297,9 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
-   * @brief Return the status for the incumbent model. Returning the
-   * scaled model status is deprecated
+   * @brief Return the status for the incumbent model. 
    */
-  const HighsModelStatus& getModelStatus(
-      const bool scaled_model = false) const {
-    return scaled_model ? scaled_model_status_ : model_status_;
-  }
+  const HighsModelStatus& getModelStatus() const { return model_status_; }
 
   /**
    * @brief Returns the current model's presolve status
@@ -1041,6 +1037,8 @@ class Highs {
 
   HighsStatus writeSolution(const std::string filename,
                             const bool pretty = false) const;
+
+  const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
   void logHeader();
 
