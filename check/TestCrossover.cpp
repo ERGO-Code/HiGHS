@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsModelUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 void test_crossover(Highs& highs, HighsLp& lp);
@@ -11,7 +11,6 @@ void report(const std::string message, const HighsLp& lp,
 
 // No commas in test case name.
 TEST_CASE("test-crossover", "[highs_crossover]") {
-
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 1;
@@ -28,36 +27,35 @@ TEST_CASE("test-crossover", "[highs_crossover]") {
   HighsLp df_lp = lp;
 
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  //  highs.setOptionValue("output_flag", false);
   // From feasible non-vertex for feasible LP
   if (dev_run) printf("\nCrossover from feasible non-vertex for feasible LP\n");
-  test_crossover(highs, lp);  
+  test_crossover(highs, lp);
 
-  if (dev_run) printf("\nCrossover from infeasible non-vertex for feasible LP\n");
-  highs.clear();
+  if (dev_run)
+    printf("\nCrossover from infeasible non-vertex for feasible LP\n");
   lp = df_lp;
   lp.col_lower_[0] = 4;
-  test_crossover(highs, lp);  
+  test_crossover(highs, lp);
 
-  if (dev_run) printf("\nCrossover from infeasible non-vertex for infeasible LP\n");
-  highs.clear();
+  if (dev_run)
+    printf("\nCrossover from infeasible non-vertex for infeasible LP\n");
   lp = df_lp;
   lp.col_lower_ = {4, 2};
-  test_crossover(highs, lp);  
+  test_crossover(highs, lp);
 
-  if (dev_run) printf("\nCrossover from feasible non-vertex for unbounded LP\n");
-  highs.clear();
+  if (dev_run)
+    printf("\nCrossover from feasible non-vertex for unbounded LP\n");
   lp = df_lp;
   lp.row_lower_ = {4};
   lp.row_upper_ = {inf};
-  test_crossover(highs, lp);  
-
-  
+  test_crossover(highs, lp);
 }
 
 void test_crossover(Highs& highs, HighsLp& lp) {
   HighsStatus return_status;
+  highs.clear();
+  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", false);
   return_status = highs.passModel(lp);
   REQUIRE(return_status == HighsStatus::kOk);
   highs.run();
@@ -65,7 +63,7 @@ void test_crossover(Highs& highs, HighsLp& lp) {
   HighsModelStatus model_status = highs.getModelStatus();
   const HighsInfo& info = highs.getInfo();
   const double require_optimal_objective = info.objective_function_value;
-  
+
   highs.clearSolver();
   // Set solution to interior of optimal face
   HighsSolution solution;
@@ -73,13 +71,25 @@ void test_crossover(Highs& highs, HighsLp& lp) {
   HighsBasis basis;
   report("Before crossover", lp, solution, basis);
   return_status = highs.crossover(solution);
-  REQUIRE(return_status == HighsStatus::kOk);
+  if (model_status == HighsModelStatus::kOptimal) {
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == model_status);
+    REQUIRE(require_optimal_objective == info.objective_function_value);
+  } else if (model_status == HighsModelStatus::kInfeasible) {
+    // Crossover returns "imprecise" => HighsStatus::kWarning and
+    // HighsModelStatus::kUnknown
+    REQUIRE(return_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  } else if (model_status == HighsModelStatus::kUnbounded) {
+    // Crossover returns "imprecise" => HighsStatus::kWarning and
+    // HighsModelStatus::kUnknown
+    REQUIRE(return_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  } else {
+    assert(1 == 0);
+  }
   report("After crossover", lp, solution, basis);
   report("From Highs", lp, highs.getSolution(), highs.getBasis());
-  if (model_status != HighsModelStatus::kUnbounded) {
-    REQUIRE(require_optimal_objective == info.objective_function_value);
-  }
-
 }
 void report(const std::string message, const HighsLp& lp,
             const HighsSolution& solution, const HighsBasis& basis) {
