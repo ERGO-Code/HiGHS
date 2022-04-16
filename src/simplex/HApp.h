@@ -81,9 +81,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsOptions& options = solver_object.options_;
   HighsLp& incumbent_lp = solver_object.lp_;
   HighsSolution& solution = solver_object.solution_;
-  HighsModelStatus& unscaled_model_status =
-      solver_object.unscaled_model_status_;
-  HighsModelStatus& scaled_model_status = solver_object.scaled_model_status_;
+  HighsModelStatus& model_status = solver_object.model_status_;
+  HighsModelStatus scaled_model_status = HighsModelStatus::kUnknown;
   HighsInfo& highs_info = solver_object.highs_info_;
   HighsBasis& basis = solver_object.basis_;
 
@@ -278,8 +277,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
            scaled_model_status == HighsModelStatus::kUnknown);
       // Handle the case when refinement will not take place
       if (!refine_solution) {
-        unscaled_model_status = scaled_model_status;
-        return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
+        model_status = scaled_model_status;
+        return_status = highsStatusFromHighsModelStatus(model_status);
         return returnFromSolveLpSimplex(solver_object, return_status);
       }
     } else {
@@ -393,8 +392,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // Error return, so make sure that the unscaled and scaled model
     // status values are the same, and that they correspond to an
     // error return
-    unscaled_model_status = scaled_model_status;
-    return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
+    model_status = scaled_model_status;
+    return_status = highsStatusFromHighsModelStatus(model_status);
     assert(return_status == HighsStatus::kError);
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }
@@ -418,8 +417,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(scaled_model_status == HighsModelStatus::kInfeasible);
   }
   setSolutionStatus(highs_info);
-  unscaled_model_status = scaled_model_status;
-  return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
+  model_status = scaled_model_status;
+  return_status = highsStatusFromHighsModelStatus(model_status);
   return returnFromSolveLpSimplex(solver_object, return_status);
 }
 #endif

@@ -297,7 +297,7 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
-   * @brief Return the status for the incumbent model. 
+   * @brief Return the status for the incumbent model.
    */
   const HighsModelStatus& getModelStatus() const { return model_status_; }
 
@@ -1060,7 +1060,6 @@ class Highs {
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   HEkk ekk_instance_;
 
@@ -1102,8 +1101,8 @@ class Highs {
   void setHighsModelStatusAndClearSolutionAndBasis(
       const HighsModelStatus model_status);
   //
-  // Sets unscaled and scaled model status, basis, solution and info
-  // from the highs_model_object
+  // Sets model status, basis, solution and info from the
+  // highs_model_object
   void setBasisValidity();
   //
   // Clears the presolved model and its status
@@ -1121,7 +1120,7 @@ class Highs {
   // Clears the model status, solution_ and info_
   void clearModelStatusSolutionAndInfo();
   //
-  // Sets unscaled and scaled model status to HighsModelStatus::kNotset
+  // Sets model status to HighsModelStatus::kNotset
   void clearModelStatus();
   //
   // Sets primal and dual solution status to

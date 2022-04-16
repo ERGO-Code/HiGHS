@@ -765,7 +765,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     return Status::kError;
   }
 
-  // Was 
+  // Was
   //  HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   HighsModelStatus model_status = lpsolver.getModelStatus();
   switch (model_status) {

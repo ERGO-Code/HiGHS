@@ -41,8 +41,7 @@ class HighsLpSolverObject {
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
+  HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 };
 
 #endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
