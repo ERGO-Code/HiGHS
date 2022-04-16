@@ -1129,7 +1129,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
     bool lpWasSolved = false;
     HighsLpRelaxation::Status status;
     if (lpBoundsChanged ||
-        lp.getLpSolver().getModelStatus(true) == HighsModelStatus::kNotset) {
+        lp.getLpSolver().getModelStatus() == HighsModelStatus::kNotset) {
       int64_t lpIters = -lp.getNumLpIterations();
       status = lp.resolveLp(&domain);
       lpIters += lp.getNumLpIterations();

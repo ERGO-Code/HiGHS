@@ -167,6 +167,11 @@ void highs_writeSolution(Highs* h, const std::string filename, const int style)
     throw py::value_error("Error when writing solution");
 }
 
+HighsModelStatus highs_getModelStatus(Highs* h)
+{
+  return h->getModelStatus(); 
+}
+
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info indices_info = indices.request();
@@ -617,7 +622,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveValue", &Highs::getObjectiveValue)
     .def("getObjectiveSense", &highs_getObjectiveSense)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
-    .def("getModelStatus", &Highs::getModelStatus, py::arg("scaled_model") = false)
+    .def("getRunTime", &Highs::getRunTime)
+    .def("getModelStatus", &highs_getModelStatus)
     .def("addRows", &highs_addRows)
     .def("addRow", &highs_addRow)
     .def("addCol", &highs_addCol)

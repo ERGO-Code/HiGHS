@@ -73,7 +73,7 @@ double possInfProduct(double poss_inf, double value) {
 HighsStatus getRangingData(HighsRanging& ranging,
                            HighsLpSolverObject& solver_object) {
   ranging.clear();
-  if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal) {
+  if (solver_object.model_status_ != HighsModelStatus::kOptimal) {
     highsLogUser(solver_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without an optimal solution\n");
     return HighsStatus::kError;

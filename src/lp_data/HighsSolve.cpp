@@ -49,8 +49,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-    // Set the scaled model status for completeness
-    solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
   } else if (options.solver == kIpmString) {
     // Use IPM
 #ifdef IPX_ON
@@ -70,8 +68,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) return return_status;
-    // model status has been set in solveLpIpx
-    solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
     // Get the objective and any KKT failures
     solver_object.highs_info_.objective_function_value =
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
@@ -79,8 +75,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                      solver_object.basis_, solver_object.highs_info_);
     // Seting the IPM-specific values of (highs_)info_ has been done in
     // solveLpIpx
-    if ((solver_object.unscaled_model_status_ == HighsModelStatus::kUnknown ||
-         (solver_object.unscaled_model_status_ ==
+    if ((solver_object.model_status_ == HighsModelStatus::kUnknown ||
+         (solver_object.model_status_ ==
               HighsModelStatus::kUnboundedOrInfeasible &&
           !options.allow_unbounded_or_infeasible)) &&
         options.run_crossover) {
@@ -137,7 +133,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 // and HighsInfo
 HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object) {
   return (solveUnconstrainedLp(solver_object.options_, solver_object.lp_,
-                               solver_object.unscaled_model_status_,
+                               solver_object.model_status_,
                                solver_object.highs_info_,
                                solver_object.solution_, solver_object.basis_));
 }
