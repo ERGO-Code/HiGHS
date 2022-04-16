@@ -34,6 +34,7 @@ set(TEST_SOURCES
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
+    TestCrossover.cpp
     TestHighsHash.cpp
     TestHighsIntegers.cpp
     TestHighsParallel.cpp
