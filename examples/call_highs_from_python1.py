@@ -47,8 +47,6 @@ h.clear()
 # Now define the blending model as a HighsLp instance
 #
 lp = highspy.HighsLp()
-num_nz = h.getNumNz()
-print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
 lp.num_col_ = 2
 lp.num_row_ = 2
 lp.sense_ = highspy.ObjSense.kMaximize
