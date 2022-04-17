@@ -1308,10 +1308,7 @@ HighsStatus Highs::run() {
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   if (!ekk_instance_.status_.has_invert)
     return invertRequirementError("getDualRay");
-  HighsStatus return_status = getDualRayInterface(has_dual_ray, dual_ray_value);
-  printf("Highs::getDualRay = %d\n", has_dual_ray);
-  return return_status;
-  //  return getDualRayInterface(has_dual_ray, dual_ray_value);
+  return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,

@@ -199,8 +199,8 @@ class TestHighsPy(unittest.TestCase):
         h = self.get_infeasible_model()
         h.setOptionValue('log_to_console', True)
         h.run()
-        has_dual_ray = False
-        h.getDualRay(has_dual_ray)
+        has_dual_ray = h.getDualRay()
+        print('has_dual_ray = ', has_dual_ray)
         self.assertTrue(has_dual_ray)
  
     def test_check_solution_feasibility(self):

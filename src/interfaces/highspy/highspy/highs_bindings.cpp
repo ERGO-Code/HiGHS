@@ -158,8 +158,9 @@ HighsModelStatus highs_getModelStatus(Highs* h)
   return h->getModelStatus(); 
 }
 
-void highs_getDualRay(Highs* h, bool& has_dual_ray, py::array_t<double> values)
+bool highs_getDualRay(Highs* h, py::array_t<double> values)
 {
+  bool has_dual_ray;
   py::buffer_info values_info = values.request();
   double* values_ptr = static_cast<double*>(values_info.ptr);
 
@@ -167,6 +168,8 @@ void highs_getDualRay(Highs* h, bool& has_dual_ray, py::array_t<double> values)
 
   if (status != HighsStatus::kOk)
     throw py::value_error("Error when calling get dual ray");
+
+  return has_dual_ray;
 }
 
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
@@ -675,7 +678,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
     .def("getRunTime", &Highs::getRunTime)
     .def("getModelStatus", &highs_getModelStatus)
-    .def("getDualRay", &highs_getDualRay, py::arg("has_dual_ray"), py::arg("dual_ray_value") = nullptr)
+    .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     //    .def("getPrimalRay", &highs_getPrimalRay)   
     //    .def("getObjectiveValue", &Highs::getObjectiveValue)   
     //    .def("getBasicVariables", &highs_getBasicVariables)   
