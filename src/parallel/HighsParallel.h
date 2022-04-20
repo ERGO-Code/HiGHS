@@ -28,7 +28,9 @@ inline void initialize_scheduler(int numThreads = 0) {
   HighsTaskExecutor::initialize(numThreads);
 }
 
-inline int num_threads() { return HighsTaskExecutor::getNumWorkerThreads(); }
+inline int num_threads() {
+  return HighsTaskExecutor::getThisWorkerDeque()->getNumWorkers();
+}
 
 inline int thread_num() {
   return HighsTaskExecutor::getThisWorkerDeque()->getOwnerId();
@@ -55,7 +57,7 @@ inline void sync(HighsSplitDeque* localDeque) {
       // spawn already
       break;
     case HighsSplitDeque::Status::kStolen:
-      HighsTaskExecutor::getGlobalTaskExecutor()->sync_stolen_task(
+      HighsTaskExecutor::sync_stolen_task(
           localDeque, popResult.second);
       break;
     case HighsSplitDeque::Status::kWork:
