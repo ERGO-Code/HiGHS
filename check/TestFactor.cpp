@@ -17,6 +17,34 @@ HFactor factor;
 HighsInt rowOut(const HighsInt variable_out);
 bool iterate(const HighsInt variable_out, const HighsInt variable_in);
 bool testSolve();
+bool testSolveDense();
+
+TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
+  std::string filename;
+  const bool avgas = false;  // true;//
+  std::string model = avgas ? "avgas" : "adlittle";
+  filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+  lp = highs.getLp();
+  num_row = lp.num_row_;
+  highs.run();
+  basic_set.resize(num_row);
+  // Get the optimal set of basic variables
+  highs.getBasicVariables(&basic_set[0]);
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    basic_set[iRow] =
+        basic_set[iRow] < 0 ? num_col - basic_set[iRow] + 1 : basic_set[iRow];
+  factor.setup(lp.a_matrix_, basic_set);
+  factor.build();
+  solution.resize(num_row);
+  HighsRandom random;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    solution[iRow] = random.fraction();
+  rhs.setup(num_row);
+  REQUIRE(testSolveDense());
+}
 
 TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
   std::string filename;
@@ -112,6 +140,7 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   }
   HighsRandom random;
   solution.resize(num_row);
+  basic_set.clear();
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     solution[iRow] = random.fraction();
     basic_set.push_back(num_col + iRow);
@@ -270,5 +299,85 @@ bool testSolve() {
     if (error_norm > 1e-4) return false;
   }
   factor.setDebugReport(false);
+  return true;
+}
+
+bool testSolveDense() {
+  const bool test_all = true;
+  bool test_sparse_ftran = test_all;
+  bool test_sparse_btran = test_all;
+  bool test_dense_ftran = test_all;
+  bool test_dense_btran = test_all;
+  std::vector<double> rhs_dense;
+  double error_norm = 0;
+  HighsInt iCol;
+  if (test_sparse_ftran) {
+    HighsRandom random;
+    iCol = random.integer(num_row);
+    rhs.clear();
+    lp.a_matrix_.collectAj(rhs, basic_set[iCol], 1);
+    rhs_dense = rhs.array;
+    factor.ftranCall(rhs_dense);
+    error_norm = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      if (iRow == iCol) {
+        error_norm = std::max(std::fabs(1 - rhs_dense[iRow]), error_norm);
+      } else {
+        error_norm = std::max(std::fabs(rhs_dense[iRow]), error_norm);
+      }
+    }
+    if (dev_run) printf("Sparse  FTRAN: %g\n", error_norm);
+    if (error_norm > 1e-4) return false;
+  }
+
+  if (test_dense_ftran) {
+    rhs.clear();
+    for (HighsInt iCol = 0; iCol < num_row; iCol++)
+      lp.a_matrix_.collectAj(rhs, basic_set[iCol], solution[iCol]);
+    rhs_dense = rhs.array;
+    factor.ftranCall(rhs_dense);
+    error_norm = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      error_norm =
+          std::max(std::fabs(solution[iRow] - rhs_dense[iRow]), error_norm);
+    if (dev_run) printf("Dense   FTRAN: %g\n", error_norm);
+    if (error_norm > 1e-4) return false;
+  }
+
+  if (test_sparse_btran) {
+    // Sparse BTRAN
+    std::vector<double> unit;
+    unit.assign(num_row, 0);
+    unit[iCol] = 1.0;
+    rhs_dense.clear();
+    for (HighsInt iCol = 0; iCol < num_row; iCol++)
+      rhs_dense[iCol] = lp.a_matrix_.computeDot(unit, basic_set[iCol]);
+    factor.btranCall(rhs_dense);
+    error_norm = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      if (iRow == iCol) {
+        error_norm = std::max(std::fabs(1 - rhs_dense[iRow]), error_norm);
+      } else {
+        error_norm = std::max(std::fabs(rhs_dense[iRow]), error_norm);
+      }
+    }
+    if (dev_run) printf("Sparse  BTRAN: %g\n", error_norm);
+    if (error_norm > 1e-4) return false;
+  }
+
+  if (test_dense_btran) {
+    // Dense BTRAN
+    rhs_dense.clear();
+    for (HighsInt iCol = 0; iCol < num_row; iCol++)
+      rhs_dense[iCol] = lp.a_matrix_.computeDot(solution, basic_set[iCol]);
+    factor.btranCall(rhs_dense);
+    error_norm = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      error_norm =
+          std::max(std::fabs(solution[iRow] - rhs_dense[iRow]), error_norm);
+    if (dev_run) printf("Sparse  BTRAN: %g\n", error_norm);
+    if (error_norm > 1e-4) return false;
+  }
+
   return true;
 }

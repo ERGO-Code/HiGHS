@@ -54,9 +54,10 @@ void HVectorBase<Real>::clear() {
    * Clear an HVector instance
    */
   // Standard HVector to clear
-  HighsInt clearVector_inDense = count < 0 || count > size * 0.3;
-  if (clearVector_inDense) {
-    // Treat the array as full if there are no indices or too many indices
+  HighsInt dense_clear = count < 0 || count > size * 0.3;
+  if (dense_clear) {
+    // Treat the array as full if there are no indices or too many
+    // indices
     array.assign(size, Real{0});
   } else {
     // Zero according to the indices of (possible) nonzeros
@@ -64,33 +65,47 @@ void HVectorBase<Real>::clear() {
       array[index[i]] = 0;
     }
   }
+  this->clearScalars();
+}
+
+template <typename Real>
+void HVectorBase<Real>::clearScalars() {
+  /*
+   * Clear scalars in an HVector instance
+   */
   // Reset the flag to indicate when to pack
-  packFlag = false;
+  this->packFlag = false;
   // Zero the number of stored indices
-  count = 0;
+  this->count = 0;
   // Zero the synthetic clock for operations with this vector
-  synthetic_tick = 0;
+  this->synthetic_tick = 0;
   // Initialise the next value
-  next = 0;
+  this->next = 0;
 }
 
 template <typename Real>
 void HVectorBase<Real>::tight() {
   /*
-   * Zero values in Vector.array that do not exceed kHighsTiny in magnitude
+   * Zero values in Vector.array that do not exceed kHighsTiny in
+   * magnitude, maintaining index if it is well defined
    */
   HighsInt totalCount = 0;
   using std::abs;
-  for (HighsInt i = 0; i < count; i++) {
-    const HighsInt my_index = index[i];
-    const Real& value = array[my_index];
-    if (abs(value) >= kHighsTiny) {
-      index[totalCount++] = my_index;
-    } else {
-      array[my_index] = Real{0};
+  if (count < 0) {
+    for (HighsInt my_index = 0; my_index < array.size(); my_index++)
+      if (abs(array[my_index]) < kHighsTiny) array[my_index] = 0;
+  } else {
+    for (HighsInt i = 0; i < count; i++) {
+      const HighsInt my_index = index[i];
+      const Real& value = array[my_index];
+      if (abs(value) >= kHighsTiny) {
+        index[totalCount++] = my_index;
+      } else {
+        array[my_index] = Real{0};
+      }
     }
+    count = totalCount;
   }
-  count = totalCount;
 }
 
 template <typename Real>
@@ -99,16 +114,28 @@ void HVectorBase<Real>::pack() {
    * Packing (if packFlag set): Pack values/indices in Vector.array
    * into packValue/Index
    */
-  if (packFlag) {
-    packFlag = false;
-    packCount = 0;
-    for (HighsInt i = 0; i < count; i++) {
-      const HighsInt ipack = index[i];
-      packIndex[packCount] = ipack;
-      packValue[packCount] = array[ipack];
-      packCount++;
-    }
+  if (!packFlag) return;
+  packFlag = false;
+  packCount = 0;
+  for (HighsInt i = 0; i < count; i++) {
+    const HighsInt ipack = index[i];
+    packIndex[packCount] = ipack;
+    packValue[packCount] = array[ipack];
+    packCount++;
   }
+}
+
+template <typename Real>
+void HVectorBase<Real>::reIndex() {
+  /*
+   * Possibly determine the indices from scratch by passing through
+   * the array
+   */
+  // Don't do it if there are relatively few nonzeros
+  if (count >= 0 && count <= size * 0.1) return;
+  count = 0;
+  for (HighsInt i = 0; i < size; i++)
+    if ((double)array[i]) index[count++] = i;
 }
 
 template <typename Real>
