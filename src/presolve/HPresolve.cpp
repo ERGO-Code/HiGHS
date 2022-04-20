@@ -5857,7 +5857,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     highs.passOptions(options);
     highs.setOptionValue("presolve", "off");
     highs.run();
-    if (highs.getModelStatus(true) != HighsModelStatus::kOptimal) return;
+    if (highs.getModelStatus() != HighsModelStatus::kOptimal) return;
     reducedsol = highs.getSolution();
     reducedbasis = highs.getBasis();
   }

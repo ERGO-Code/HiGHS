@@ -313,8 +313,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   if (lp.num_col_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
-    scaled_model_status_ = HighsModelStatus::kNotset;
-    model_status_ = scaled_model_status_;
+    model_status_ = HighsModelStatus::kNotset;
     basis.valid = false;
   }
   if (lp.scale_.has_scaling) {
@@ -358,8 +357,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   if (lp.num_row_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
-    scaled_model_status_ = HighsModelStatus::kNotset;
-    model_status_ = scaled_model_status_;
+    model_status_ = HighsModelStatus::kNotset;
     basis.valid = false;
   }
   if (lp.scale_.has_scaling) {
