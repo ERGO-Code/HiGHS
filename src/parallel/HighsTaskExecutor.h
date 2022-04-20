@@ -30,17 +30,14 @@ class HighsTaskExecutor {
   static constexpr int kMicroSecsBeforeSleep = 5000;
   static constexpr int kMicroSecsBeforeGlobalSync = 1000;
 
- private:
   using cache_aligned = highs::cache_aligned;
   struct ExecutorHandle {
     cache_aligned::shared_ptr<HighsTaskExecutor> ptr{nullptr};
 
-    ~ExecutorHandle() {
-      if (ptr && this == ptr->mainWorkerHandle.load(std::memory_order_relaxed))
-        HighsTaskExecutor::shutdown();
-    }
+    ~ExecutorHandle();
   };
 
+ private:
 #ifdef _WIN32
   static HighsSplitDeque*& threadLocalWorkerDeque();
   static ExecutorHandle& threadLocalExecutorHandle();
