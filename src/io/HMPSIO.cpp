@@ -805,9 +805,9 @@ HighsStatus writeMps(
   // End any integer section
   if (integerFg)
     fprintf(file,
-	    "    MARK%04" HIGHSINT_FORMAT
-	    "  'MARKER'                 'INTEND'\n",
-	    nIntegerMk++);
+            "    MARK%04" HIGHSINT_FORMAT
+            "  'MARKER'                 'INTEND'\n",
+            nIntegerMk++);
   have_rhs = true;
   if (have_rhs) {
     fprintf(file, "RHS\n");
