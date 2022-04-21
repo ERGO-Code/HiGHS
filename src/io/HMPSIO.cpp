@@ -780,16 +780,14 @@ HighsStatus writeMps(
         fprintf(file,
                 "    MARK%04" HIGHSINT_FORMAT
                 "  'MARKER'                 'INTORG'\n",
-                nIntegerMk);
-        nIntegerMk++;
+                nIntegerMk++);
         integerFg = true;
       } else if (integrality[c_n] != HighsVarType::kInteger && integerFg) {
         // End an integer section
         fprintf(file,
                 "    MARK%04" HIGHSINT_FORMAT
                 "  'MARKER'                 'INTEND'\n",
-                nIntegerMk);
-        nIntegerMk++;
+                nIntegerMk++);
         integerFg = false;
       }
     }
@@ -804,6 +802,12 @@ HighsStatus writeMps(
               row_names[r_n].c_str(), v);
     }
   }
+  // End any integer section
+  if (integerFg)
+    fprintf(file,
+            "    MARK%04" HIGHSINT_FORMAT
+            "  'MARKER'                 'INTEND'\n",
+            nIntegerMk++);
   have_rhs = true;
   if (have_rhs) {
     fprintf(file, "RHS\n");
@@ -844,7 +848,7 @@ HighsStatus writeMps(
           // Column would have a bound to report
           num_zero_no_cost_columns_in_bounds_section++;
         }
-        if (write_zero_no_cost_columns) continue;
+        if (!write_zero_no_cost_columns) continue;
       }
       if (lb == ub) {
         // Equal lower and upper bounds: Fixed
