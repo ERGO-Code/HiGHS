@@ -22,14 +22,12 @@
 
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSplitDeque.h"
+#include "parallel/HighsSchedulerConstants.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+
 class HighsTaskExecutor {
  public:
-  static constexpr int kNumTryFac = 16;
-  static constexpr int kMicroSecsBeforeSleep = 5000;
-  static constexpr int kMicroSecsBeforeGlobalSync = 1000;
-
   using cache_aligned = highs::cache_aligned;
   struct ExecutorHandle {
     cache_aligned::shared_ptr<HighsTaskExecutor> ptr{nullptr};
@@ -78,7 +76,7 @@ class HighsTaskExecutor {
               std::chrono::high_resolution_clock::now() - tStart)
               .count();
 
-      if (numMicroSecs < kMicroSecsBeforeGlobalSync)
+      if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeGlobalSync)
         numTries *= 2;
       else
         break;
@@ -165,9 +163,10 @@ class HighsTaskExecutor {
 
   static void sync_stolen_task(HighsSplitDeque* localDeque,
                                HighsTask* stolenTask) {
-    if (!localDeque->leapfrogStolenTask(stolenTask)) {
+    HighsSplitDeque* stealer;
+    if (!localDeque->leapfrogStolenTask(stolenTask, stealer)) {
       const int numWorkers = localDeque->getNumWorkers();
-      int numTries = kNumTryFac * (numWorkers - 1);
+      int numTries = HighsSchedulerConstants::kNumTryFac * (numWorkers - 1);
 
       auto tStart = std::chrono::high_resolution_clock::now();
 
@@ -185,14 +184,14 @@ class HighsTaskExecutor {
                 std::chrono::high_resolution_clock::now() - tStart)
                 .count();
 
-        if (numMicroSecs < kMicroSecsBeforeSleep)
+        if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeSleep)
           numTries *= 2;
         else
           break;
       }
 
       if (!stolenTask->isFinished())
-        localDeque->waitForTaskToFinish(stolenTask);
+        localDeque->waitForTaskToFinish(stolenTask, stealer);
     }
 
     localDeque->popStolen();

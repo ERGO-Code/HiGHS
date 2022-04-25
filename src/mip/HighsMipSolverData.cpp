@@ -85,7 +85,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic center computation should be cancelled, e.g.
     // due to early return in the root node evaluation
-    if (taskGroup.isCancelled()) return;
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", false);
@@ -1197,12 +1196,7 @@ void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   highs::parallel::TaskGroup tg;
 restart:
-  // subMIP problems have a much higher chance of being infeasible so we only
-  // start solving the analytic center problem once the first LP is feasible,
-  // for the main problem we start the analytic center computation before
-  // starting to solve the root LP
-  if (!mipsolver.submip && !analyticCenterComputed)
-    startAnalyticCenterComputation(tg);
+  if (!analyticCenterComputed) startAnalyticCenterComputation(tg);
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
@@ -1237,9 +1231,6 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
     return;
-
-  if (mipsolver.submip && !analyticCenterComputed)
-    startAnalyticCenterComputation(tg);
 
   firstlpsol = lp.getSolution().col_value;
   firstlpsolobj = lp.getObjective();
@@ -1503,6 +1494,7 @@ restart:
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
+        tg.cancel();
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "\n%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
