@@ -354,6 +354,7 @@ if (OSI_FOUND)
     install(TARGETS OsiHighs
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
         INCLUDES DESTINATION include)
 
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
@@ -401,17 +402,11 @@ if (UNIX)
     #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
 endif()
 
-if (WIN32)
-    install(TARGETS libhighs EXPORT highs-targets
-        LIBRARY DESTINATION bin
-        ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
-else()
-    install(TARGETS libhighs EXPORT highs-targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
-endif()
+install(TARGETS libhighs EXPORT highs-targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include)
 
 # Add library targets to the build-tree export set
 export(TARGETS libhighs
@@ -760,6 +755,7 @@ if(FORTRAN_FOUND)
     install(TARGETS FortranHighs
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
         INCLUDES DESTINATION include
         MODULES DESTINATION modules)
     install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
