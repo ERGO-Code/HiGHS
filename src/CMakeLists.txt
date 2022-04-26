@@ -311,19 +311,20 @@ set(headers
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
-    set(sources ${sources} ipm/IpxWrapper.cpp)
-    add_library(libbasiclu ${basiclu_sources})
-    add_library(libipx ${ipx_sources})
-    target_link_libraries(libipx libbasiclu)
+    set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
+    #Todo: removed separate libraries for now
+    #add_library(libbasiclu ${basiclu_sources})
+    #add_library(libipx ${ipx_sources})
+    #target_link_libraries(libipx libbasiclu)
 else ()
     set(headers ${headers} ipm/IpxWrapperEmpty.h)
 endif()
 
 add_library(libhighs ${sources})
 
-if (IPX_ON)
-    target_link_libraries(libhighs libipx)
-endif()
+#if (IPX_ON)
+#    target_link_libraries(libhighs libipx)
+#endif()
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
