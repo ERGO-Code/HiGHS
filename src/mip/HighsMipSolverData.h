@@ -137,6 +137,11 @@ struct HighsMipSolverData {
       const highs::parallel::TaskGroup& taskGroup);
   void finishAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);
+  void startSymmetryDetection(
+      const highs::parallel::TaskGroup& taskGroup,
+      std::unique_ptr<HighsSymmetryDetection>& symDetection);
+  void finishSymmetryDetection(const highs::parallel::TaskGroup& taskGroup);
+
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;
   bool moreHeuristicsAllowed();
