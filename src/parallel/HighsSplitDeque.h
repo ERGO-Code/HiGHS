@@ -534,17 +534,18 @@ class HighsSplitDeque {
   // stolen from the stealer. If the task is finished then true is returned,
   // otherwise false is returned
   bool leapfrogStolenTask(HighsTask* task, HighsSplitDeque*& stealer) {
-    stealer = task->getStealerIfUnfinished();
+    bool cancelled;
+    stealer = task->getStealerIfUnfinished(&cancelled);
 
     if (stealer == nullptr) return true;
 
-    assert(!task->isCancelled());
-
-    do {
-      HighsTask* t = stealer->stealWithRetryLoop();
-      if (t == nullptr) break;
-      runStolenTask(t);
-    } while (!task->isFinished());
+    if (!cancelled) {
+      do {
+        HighsTask* t = stealer->stealWithRetryLoop();
+        if (t == nullptr) break;
+        runStolenTask(t);
+      } while (!task->isFinished());
+    }
 
     return task->isFinished();
   }

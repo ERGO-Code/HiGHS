@@ -150,7 +150,7 @@ class HighsTask {
   /// get the stealer of a stolen task, or nullptr if the stealer finished
   /// executing the task. Spin waits for the stealer to have started executing
   /// the task if necessary.
-  HighsSplitDeque* getStealerIfUnfinished() {
+  HighsSplitDeque* getStealerIfUnfinished(bool* cancelled = nullptr) {
     uintptr_t state = metadata.stealer.load(std::memory_order_acquire);
     if (state & kFinishedFlag)
       return nullptr;
@@ -166,6 +166,8 @@ class HighsTask {
     }
 
     if (state & kFinishedFlag) return nullptr;
+
+    if (cancelled) *cancelled = state & kCancelFlag;
 
     return reinterpret_cast<HighsSplitDeque*>(state & kPtrMask);
   }
