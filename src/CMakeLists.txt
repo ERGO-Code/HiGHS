@@ -322,14 +322,14 @@ endif()
 
 add_library(libhighs ${sources})
 
-#if (IPX_ON)
-#    target_link_libraries(libhighs libipx)
-#endif()
+# if (IPX_ON)
+#     target_link_libraries(libhighs libipx)
+# endif()
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
-        VERSION 
+        VERSION
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     if(MINGW)
@@ -347,14 +347,14 @@ set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
-if (IPX_ON)
-    set_target_properties(libipx PROPERTIES
-        OUTPUT_NAME "ipx"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-    set_target_properties(libbasiclu PROPERTIES
-        OUTPUT_NAME "basiclu"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
+# if (IPX_ON)
+#     set_target_properties(libipx PROPERTIES
+#         OUTPUT_NAME "ipx"
+#         MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+#     set_target_properties(libbasiclu PROPERTIES
+#         OUTPUT_NAME "basiclu"
+#         MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+# endif()
 
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
@@ -366,7 +366,7 @@ if (OSI_FOUND)
 
     if(${BUILD_SHARED_LIBS})
         set_target_properties(OsiHighs PROPERTIES
-           VERSION 
+           VERSION
            ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
            SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     else()
@@ -417,27 +417,27 @@ if (IPX_ON)
 
         #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
         #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
-        target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
+        #target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-        target_compile_options(libipx PRIVATE "-Wno-unused-variable")
-        target_compile_options(libipx PRIVATE "-Wno-sign-compare")
+        #target_compile_options(libipx PRIVATE "-Wno-unused-variable")
+        #target_compile_options(libipx PRIVATE "-Wno-sign-compare")
         #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
     endif()
 
     if (WIN32)
-        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
+        install(TARGETS libhighs EXPORT highs-targets
             LIBRARY DESTINATION bin
             ARCHIVE DESTINATION lib
             INCLUDES DESTINATION include)
     else()
-        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
+        install(TARGETS libhighs EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
             INCLUDES DESTINATION include)
     endif()
 
     # Add library targets to the build-tree export set
-    export(TARGETS libhighs libipx libbasiclu
+    export(TARGETS libhighs
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 else()
     if (WIN32)
@@ -453,7 +453,7 @@ else()
     endif()
 
     # Add library targets to the build-tree export set
-    export(TARGETS libhighs 
+    export(TARGETS libhighs
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
 
@@ -478,14 +478,14 @@ configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
 # Install the targets of the highs export group, the config file so that other
 # cmake-projects can link easily against highs, and the pkg-config flie so that
 # other projects can easily build against highs
-install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION 
+install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
     lib/cmake/highs)
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" 
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
     DESTINATION lib/cmake/highs)
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
     DESTINATION lib/pkgconfig)
 
-else() 
+else()
 
 # FAST_BUILD is set to on.
 # At the moment used only for gradually updating the CMake targets build and
