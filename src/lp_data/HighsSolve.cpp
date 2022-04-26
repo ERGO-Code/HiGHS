@@ -16,11 +16,7 @@
 
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HApp.h"
-#ifdef IPX_ON
 #include "ipm/IpxWrapper.h"
-#else
-#include "ipm/IpxWrapperEmpty.h"
-#endif
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {

@@ -18,15 +18,6 @@
 #include "HConfig.h"
 #include "ipm/IpxWrapper.h"
 
-#ifndef IPX_ON
-bool callCrossover(const HighsLp& lp, const HighsOptions& options,
-                   HighsSolution& solution, HighsBasis& highs_basis) {
-  return false;
-}
-#else
-
-#include "ipm/IpxWrapper.h"
-
 bool callCrossover(const HighsLp& lp, const HighsOptions& options,
                    HighsSolution& solution, HighsBasis& basis) {
   std::cout << "Calling ipx crossover\n";
@@ -134,5 +125,3 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
 
   return true;
 }
-
-#endif
