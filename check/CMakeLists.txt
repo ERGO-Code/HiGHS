@@ -61,9 +61,7 @@ if (NOT APPLE)
     set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
 endif()
 
-if (IPX_ON)
-    set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
-endif()
+set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 if (UNIX)

@@ -57,8 +57,7 @@ inline void sync(HighsSplitDeque* localDeque) {
       // spawn already
       break;
     case HighsSplitDeque::Status::kStolen:
-      HighsTaskExecutor::sync_stolen_task(
-          localDeque, popResult.second);
+      HighsTaskExecutor::sync_stolen_task(localDeque, popResult.second);
       break;
     case HighsSplitDeque::Status::kWork:
       popResult.second->run();
@@ -69,13 +68,11 @@ inline void sync() { sync(HighsTaskExecutor::getThisWorkerDeque()); }
 class TaskGroup {
   HighsSplitDeque* workerDeque;
   int dequeHead;
-  std::atomic_bool cancelFlag;
 
  public:
   TaskGroup() {
     workerDeque = HighsTaskExecutor::getThisWorkerDeque();
     dequeHead = workerDeque->getCurrentHead();
-    cancelFlag.store(false, std::memory_order_relaxed);
   }
 
   template <typename F>
@@ -93,11 +90,10 @@ class TaskGroup {
       highs::parallel::sync(workerDeque);
   }
 
-  bool isCancelled() const {
-    return cancelFlag.load(std::memory_order_relaxed);
+  void cancel() {
+    for (int i = dequeHead; i < workerDeque->getCurrentHead(); ++i)
+      workerDeque->cancelTask(i);
   }
-
-  void cancel() { cancelFlag.store(true, std::memory_order_relaxed); }
 
   ~TaskGroup() {
     cancel();
@@ -121,6 +117,7 @@ void for_each(HighsInt start, HighsInt end, F&& f, HighsInt grainSize = 1) {
     } while (end - start > grainSize);
 
     f(start, end);
+    tg.taskWait();
   }
 }
 

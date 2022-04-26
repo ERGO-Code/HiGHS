@@ -105,7 +105,7 @@ class HighsCliqueTable {
   std::vector<uint8_t> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
-  std::vector<uint8_t> neighborhoodFlags;
+  std::vector<HighsInt> neighborhoodInds;
 
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
@@ -173,7 +173,7 @@ class HighsCliqueTable {
     cliquesetTree.resize(2 * ncols);
     sizeTwoCliquesetTree.resize(2 * ncols);
     numcliquesvar.resize(2 * ncols, 0);
-    neighborhoodFlags.resize(2 * ncols, 0);
+    neighborhoodInds.reserve(2 * ncols);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;

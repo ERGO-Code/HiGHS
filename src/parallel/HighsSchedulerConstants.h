@@ -2,24 +2,23 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file ipm/IpxWrapperEmpty.h
- * @brief
- */
-#ifndef IPM_IPX_WRAPPER_EMPTY_H_
-#define IPM_IPX_WRAPPER_EMPTY_H_
+#ifndef HIGHS_SCHEDULER_CONSTANTS_H_
+#define HIGHS_SCHEDULER_CONSTANTS_H_
 
-#include "lp_data/HighsLpSolverObject.h"
+struct HighsSchedulerConstants {
+  enum Constants {
+    kNumTryFac = 16,
+    kMicroSecsBeforeSleep = 5000,
+    kMicroSecsBeforeGlobalSync = 1000,
+  };
+};
 
-HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
-  solver_object.model_status_ = HighsModelStatus::kNotset;
-  return HighsStatus::kError;
-}
 #endif

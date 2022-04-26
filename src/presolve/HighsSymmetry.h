@@ -121,6 +121,7 @@ struct HighsSymmetries {
   HighsHashTable<HighsInt, HighsInt> columnToOrbitope;
   HighsInt numPerms = 0;
   HighsInt numGenerators = 0;
+  double detectionTime = 0.0;
 
   void clear();
   void mergeOrbits(HighsInt col1, HighsInt col2);
@@ -276,6 +277,8 @@ class HighsSymmetryDetection {
 
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);
+
+  bool initializeDetection();
 
   void run(HighsSymmetries& symmetries);
 };

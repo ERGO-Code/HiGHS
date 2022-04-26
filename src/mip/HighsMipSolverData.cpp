@@ -85,7 +85,6 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic center computation should be cancelled, e.g.
     // due to early return in the root node evaluation
-    if (taskGroup.isCancelled()) return;
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", false);
@@ -145,6 +144,71 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
   }
+}
+
+void HighsMipSolverData::startSymmetryDetection(
+    const highs::parallel::TaskGroup& taskGroup,
+    std::unique_ptr<HighsSymmetryDetection>& symDetection) {
+  symDetection =
+      std::unique_ptr<HighsSymmetryDetection>(new HighsSymmetryDetection());
+  symDetection->loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
+                                 mipsolver.options_mip_->small_matrix_value);
+  detectSymmetries = symDetection->initializeDetection();
+
+  if (detectSymmetries) {
+    taskGroup.spawn([&]() {
+      double startTime = mipsolver.timer_.getWallTime();
+      // highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+      //              "(%4.1fs) Starting symmetry detection\n",
+      //              mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+      symDetection->run(symmetries);
+      symmetries.detectionTime = mipsolver.timer_.getWallTime() - startTime;
+    });
+  } else
+    symDetection.reset();
+}
+
+void HighsMipSolverData::finishSymmetryDetection(
+    const highs::parallel::TaskGroup& taskGroup) {
+  taskGroup.sync();
+
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+               "\nSymmetry detection completed in %.1fs\n",
+               symmetries.detectionTime);
+
+  if (symmetries.numGenerators == 0) {
+    detectSymmetries = false;
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "No symmetry present\n\n", symmetries.detectionTime);
+  } else if (symmetries.orbitopes.size() == 0) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "Found %" HIGHSINT_FORMAT " generators\n\n",
+                 symmetries.detectionTime, symmetries.numGenerators);
+
+  } else {
+    if (symmetries.numPerms != 0) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Found %" HIGHSINT_FORMAT " generators and %" HIGHSINT_FORMAT
+                   " full orbitope(s) acting on %" HIGHSINT_FORMAT
+                   " columns\n\n",
+                   symmetries.detectionTime, symmetries.numPerms,
+                   (HighsInt)symmetries.orbitopes.size(),
+                   (HighsInt)symmetries.columnToOrbitope.size());
+    } else {
+      highsLogUser(
+          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+          "Found %" HIGHSINT_FORMAT
+          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n\n",
+          symmetries.detectionTime, (HighsInt)symmetries.orbitopes.size(),
+          (HighsInt)symmetries.columnToOrbitope.size());
+    }
+  }
+
+  for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
+    orbitope.determineOrbitopeType(cliquetable);
+
+  if (symmetries.numPerms != 0)
+    globalOrbits = symmetries.computeStabilizerOrbits(domain);
 }
 
 double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
@@ -560,64 +624,6 @@ void HighsMipSolverData::runSetup() {
   analyticCenter.clear();
 
   symmetries.clear();
-
-  if (detectSymmetries) {
-    if (numRestarts == 0)
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\n");
-
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "(%4.1fs) Starting symmetry detection\n",
-                 mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-    HighsSymmetryDetection symDetection;
-    symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
-                                  mipsolver.options_mip_->small_matrix_value);
-    symDetection.run(symmetries);
-    if (symmetries.numGenerators == 0) {
-      detectSymmetries = false;
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "(%4.1fs) No symmetry present\n",
-                   mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-    } else if (symmetries.orbitopes.size() == 0) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
-                   mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                   symmetries.numGenerators);
-
-    } else {
-      if (symmetries.numPerms != 0) {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) Found %" HIGHSINT_FORMAT
-                     " generators and %" HIGHSINT_FORMAT
-                     " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                     " columns\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                     symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-                     (HighsInt)symmetries.columnToOrbitope.size());
-      } else {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) Found %" HIGHSINT_FORMAT
-                     " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                     " columns\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                     (HighsInt)symmetries.orbitopes.size(),
-                     (HighsInt)symmetries.columnToOrbitope.size());
-      }
-      for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
-        orbitope.determineOrbitopeType(cliquetable);
-
-      if (!domain.getChangedCols().empty()) {
-        domain.propagate();
-        if (domain.infeasible()) {
-          mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
-          lower_bound = kHighsInf;
-          pruned_treeweight = 1.0;
-          return;
-        }
-        domain.clearChangedCols();
-      }
-    }
-  }
 
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -1196,13 +1202,11 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   highs::parallel::TaskGroup tg;
+  std::unique_ptr<HighsSymmetryDetection> symDetection;
 restart:
-  // subMIP problems have a much higher chance of being infeasible so we only
-  // start solving the analytic center problem once the first LP is feasible,
-  // for the main problem we start the analytic center computation before
-  // starting to solve the root LP
-  if (!mipsolver.submip && !analyticCenterComputed)
-    startAnalyticCenterComputation(tg);
+  if (detectSymmetries) startSymmetryDetection(tg, symDetection);
+  if (!analyticCenterComputed) startAnalyticCenterComputation(tg);
+
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
@@ -1210,9 +1214,6 @@ restart:
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
   lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
-
-  if (symmetries.numPerms != 0)
-    globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
   printDisplayLine();
 
@@ -1237,9 +1238,6 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
     return;
-
-  if (mipsolver.submip && !analyticCenterComputed)
-    startAnalyticCenterComputation(tg);
 
   firstlpsol = lp.getSolution().col_value;
   firstlpsolobj = lp.getObjective();
@@ -1503,10 +1501,12 @@ restart:
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
+        tg.cancel();
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "\n%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         if (stall != -1) maxSepaRounds = std::min(maxSepaRounds, nseparounds);
+        tg.taskWait();
         performRestart();
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
@@ -1514,6 +1514,13 @@ restart:
         return;
       }
     }
+
+    if (detectSymmetries) {
+      finishSymmetryDetection(tg);
+      status = evaluateRootLp();
+      if (status == HighsLpRelaxation::Status::kInfeasible) return;
+    }
+
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(),
                           std::vector<HighsInt>(), lower_bound,
