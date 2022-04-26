@@ -207,16 +207,8 @@ void HighsMipSolverData::finishSymmetryDetection(
   for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
     orbitope.determineOrbitopeType(cliquetable);
 
-  if (!domain.getChangedCols().empty()) {
-    domain.propagate();
-    if (domain.infeasible()) {
-      mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
-      lower_bound = kHighsInf;
-      pruned_treeweight = 1.0;
-      return;
-    }
-    domain.clearChangedCols();
-  }
+  if (symmetries.numPerms != 0)
+    globalOrbits = symmetries.computeStabilizerOrbits(domain);
 }
 
 double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
@@ -1223,9 +1215,6 @@ restart:
   lp.setObjectiveLimit(upper_limit);
   lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
 
-  if (symmetries.numPerms != 0)
-    globalOrbits = symmetries.computeStabilizerOrbits(domain);
-
   printDisplayLine();
 
   if (firstrootbasis.valid)
@@ -1526,7 +1515,11 @@ restart:
       }
     }
 
-    if (detectSymmetries) finishSymmetryDetection(tg);
+    if (detectSymmetries) {
+      finishSymmetryDetection(tg);
+      status = evaluateRootLp();
+      if (status == HighsLpRelaxation::Status::kInfeasible) return;
+    }
 
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(),
