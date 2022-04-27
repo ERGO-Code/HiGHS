@@ -114,8 +114,8 @@ class HMpsFF {
 
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);
-  HighsInt fillMatrix();
-  HighsInt fillHessian();
+  HighsInt fillMatrix(const HighsLogOptions& log_options);
+  HighsInt fillHessian(const HighsLogOptions& log_options);
 
   const bool kAnyFirstNonBlankAsStarImpliesComment = false;
   /// how to treat variables that appear in COLUMNS section first
