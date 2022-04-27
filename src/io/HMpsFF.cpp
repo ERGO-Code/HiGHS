@@ -617,9 +617,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   std::string colname = "";
   std::string strline, word;
   HighsInt rowidx, start, end;
-  HighsInt ncols = 0;
-  num_col = 0;
   bool integral_cols = false;
+  assert(num_col == 0);
 
   // if (kAnyFirstNonBlankAsStarImpliesComment) {
   //   printf("In free format MPS reader: treating line as comment if first
@@ -640,11 +639,12 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       assert(-1 == rowidx || -2 == rowidx);
   };
 
-  auto addtuple = [&rowidx, &ncols, this](double coeff) {
+  HighsInt local_num_col = num_col;
+  auto addtuple = [&rowidx, &local_num_col, this](double coeff) {
     if (rowidx >= 0)
-      entries.push_back(std::make_tuple(ncols - 1, rowidx, coeff));
+      entries.push_back(std::make_tuple(num_col - 1, rowidx, coeff));
     else if (rowidx == -1)
-      coeffobj.push_back(std::make_pair(ncols - 1, coeff));
+      coeffobj.push_back(std::make_pair(num_col - 1, coeff));
   };
 
   while (getline(file, strline)) {
@@ -728,12 +728,10 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     // new column?
     if (!(word == colname)) {
       colname = word;
-      auto ret = colname2idx.emplace(colname, ncols++);
-      num_col++;
-      assert(num_col == ncols);
+      auto ret = colname2idx.emplace(colname, num_col++);
       col_names.push_back(colname);
-      printf("New column: \"%s\" num_col = %d; ncols = %d; colname2idx.size() = %d\n",
-	     colname.c_str(), (int)num_col, (int)ncols, (int)colname2idx.size());
+      printf("New column: \"%s\" num_col = %d; num_col = %d; colname2idx.size() = %d\n",
+	     colname.c_str(), (int)num_col, (int)num_col, (int)colname2idx.size());
 
       if (!ret.second) {
       // Duplicate col name
@@ -744,7 +742,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 	  assert(mit != colname2idx.end());
 	  duplicate_col_name_ = colname;
 	  duplicate_col_name_index0_ = mit->second;
-	  duplicate_col_name_index1_ = ncols-1;
+	  duplicate_col_name_index1_ = num_col-1;
 	  highsLogUser(log_options, HighsLogType::kWarning,
 		       "Variables %d and %d have the same name \"%s\"\n",
 		       (int)duplicate_col_name_index0_,
@@ -765,7 +763,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       col_upper.push_back(kHighsInf);
     }
 
-    assert(ncols > 0);
+    assert(num_col > 0);
 
     // here marker is the row name and end marks its end
     word = "";
