@@ -168,9 +168,6 @@ class HMpsFF {
   std::vector<std::vector<Triplet>> qrows_entries;
   std::vector<std::pair<HighsInt, double>> coeffobj;
 
-  std::vector<Triplet> alt_entries;
-  std::vector<std::pair<HighsInt, double>> alt_coeffobj;
-
   std::vector<std::string> sos_name;
   std::vector<short> sos_type;
   std::vector<std::vector<std::pair<HighsInt, double>>> sos_entries;

@@ -73,11 +73,6 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   }
   col_cost.assign(num_col, 0);
   for (auto i : coeffobj) col_cost[i.first] = i.second;
-  //  for (auto i : alt_coeffobj) assert(col_cost[i.first] == i.second);
-  //  for (auto i : alt_entries) assert(col_cost[i.first] == i.second);
-  assert(coeffobj == alt_coeffobj);
-  assert(entries == alt_entries);
-
   HighsInt status = fillMatrix(log_options);
   if (status) return FreeFormatParserReturnCode::kParserError;
   status = fillHessian(log_options);
@@ -664,14 +659,6 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       assert(-1 == rowidx || -2 == rowidx);
   };
 
-  HighsInt local_num_col = num_col;
-  auto addtuple = [&rowidx, &local_num_col, this](double coeff) {
-    if (rowidx >= 0)
-      entries.push_back(std::make_tuple(num_col - 1, rowidx, coeff));
-    else if (rowidx == -1)
-      coeffobj.push_back(std::make_pair(num_col - 1, coeff));
-  };
-
   while (getline(file, strline)) {
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
@@ -695,13 +682,13 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     if (key != Parsekey::kNone) {
       if (num_col) {
         if (col_cost) {
-          alt_coeffobj.push_back(std::make_pair(num_col - 1, col_cost));
+          coeffobj.push_back(std::make_pair(num_col - 1, col_cost));
           col_cost = 0;
         }
         for (HighsInt iEl = 0; iEl < col_count; iEl++) {
           const HighsInt iRow = col_index[iEl];
           assert(col_value[iRow]);
-          alt_entries.push_back(
+          entries.push_back(
               std::make_tuple(num_col - 1, iRow, col_value[iRow]));
           col_value[iRow] = 0;
         }
@@ -772,13 +759,13 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       // Record the nonzeros in any previous column
       if (num_col) {
         if (col_cost) {
-          alt_coeffobj.push_back(std::make_pair(num_col - 1, col_cost));
+          coeffobj.push_back(std::make_pair(num_col - 1, col_cost));
           col_cost = 0;
         }
         for (HighsInt iEl = 0; iEl < col_count; iEl++) {
           const HighsInt iRow = col_index[iEl];
           assert(col_value[iRow]);
-          alt_entries.push_back(
+          entries.push_back(
               std::make_tuple(num_col - 1, iRow, col_value[iRow]));
           col_value[iRow] = 0;
         }
@@ -837,7 +824,6 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       double value = atof(word.c_str());
       if (value) {
         parsename(marker);  // rowidx set and num_nz incremented
-        addtuple(value);
         if (rowidx >= 0) {
           if (col_value[rowidx]) {
             // Ignore duplicate entry
@@ -889,7 +875,6 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       double value = atof(word.c_str());
       if (value) {
         parsename(marker);  // rowidx set and num_nz incremented
-        addtuple(value);
         if (rowidx >= 0) {
           if (col_value[rowidx]) {
             // Ignore duplicate entry
