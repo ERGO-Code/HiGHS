@@ -101,6 +101,17 @@ class HMpsFF {
   // any LI or UI flags in the BOUNDS section
   std::vector<bool> col_binary;
 
+  // Record whether there are duplicate row or column names, and the
+  // name and indices of the first duplicates
+  bool has_duplicate_row_name_;
+  bool has_duplicate_col_name_;
+  std::string duplicate_row_name_;
+  HighsInt duplicate_row_name_index0_;
+  HighsInt duplicate_row_name_index1_;
+  std::string duplicate_col_name_;
+  HighsInt duplicate_col_name_index0_;
+  HighsInt duplicate_col_name_index1_;
+
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);
   HighsInt fillMatrix();
@@ -172,13 +183,13 @@ class HMpsFF {
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
-  /// checks first word of strline and wraps it by it_begin and it_end
+  // Checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
                                   HighsInt& end, std::string& word) const;
 
-  // get index of column from column name
-  // add new column if no index is found yet
-  HighsInt getColIdx(const std::string& colname);
+  // Get index of column from column name, possibly adding new column
+  // if no index is found
+  HighsInt getColIdx(const std::string& colname, const bool add_if_new = true);
 
   HMpsFF::Parsekey parseDefault(const HighsLogOptions& log_options,
                                 std::istream& file);

@@ -50,8 +50,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   status = fillHessian();
   if (status) return FreeFormatParserReturnCode::kParserError;
 
-  lp.num_row_ = std::move(num_row);
-  lp.num_col_ = std::move(num_col);
+  lp.num_row_ = num_row;
+  lp.num_col_ = num_col;
 
   lp.sense_ = obj_sense;
   lp.offset_ = obj_offset;
@@ -195,9 +195,12 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
 #endif
   if (f.is_open()) {
     start_time = getWallTime();
-    num_nz = 0;
+    num_row = 0;
     num_col = 0;
-
+    num_nz = 0;
+    // Indicate that no duplicate rows or columns have been found
+    has_duplicate_row_name_ = false;
+    has_duplicate_col_name_ = false;
     // parsing loop
     while (keyword != HMpsFF::Parsekey::kFail &&
            keyword != HMpsFF::Parsekey::kEnd &&
@@ -278,6 +281,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
 
   assert(row_type.size() == unsigned(num_row));
 
+  printf("HMpsFF::parse num_col = %d; colname2idx.size() = %d\n", (int)num_col, (int)colname2idx.size());
   num_col = colname2idx.size();
   // No need to update nRows because the assert ensures
   // it is correct.
@@ -394,11 +398,12 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
     return HMpsFF::Parsekey::kNone;
 }
 
-HighsInt HMpsFF::getColIdx(const std::string& colname) {
+  HighsInt HMpsFF::getColIdx(const std::string& colname, const bool add_if_new) {
   // look up column name
   auto mit = colname2idx.find(colname);
   if (mit != colname2idx.end()) return mit->second;
 
+  if (!add_if_new) return -1;
   // add new continuous column with default bounds
   colname2idx.emplace(colname, num_col++);
   col_names.push_back(colname);
@@ -494,6 +499,9 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   bool hasobj = false;
   std::string objectiveName = "";
 
+  assert(num_row == 0);
+  assert(row_lower.size() == 0);
+  assert(row_upper.size() == 0);
   while (getline(file, strline)) {
     if (is_empty(strline) || strline[0] == '*') continue;
     double current = getWallTime();
@@ -510,6 +518,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
+      assert(num_row == nrows);
       num_row = int(nrows);
       highsLogDev(log_options, HighsLogType::kInfo,
                   "readMPS: Read ROWS    OK\n");
@@ -541,7 +550,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
         isFreeRow = true;
       }
     } else {
-      std::cerr << "reading error in ROWS section " << std::endl;
+      highsLogUser(log_options, HighsLogType::kError,
+		   "Entry in ROWS section of MPS file is of type %s\n", strline[start]);
       return HMpsFF::Parsekey::kFail;
     }
 
@@ -566,6 +576,10 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // so in rowname2idx -1 is the objective, -2 is all the free rows
     auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (nrows++));
+    if (!isobj) num_row++;
+    // ret is a pair consisting of an iterator to the inserted
+    // element (or the already-existing element if no insertion
+    // happened) and a bool denoting whether the insertion took place
 
     // Else is enough here because all free rows are ignored.
     if (!isobj)
@@ -574,14 +588,32 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       objectiveName = rowname;
 
     if (!ret.second) {
-      std::cerr << "duplicate row " << rowname << std::endl;
-      return HMpsFF::Parsekey::kFail;
+      // Duplicate row name
+      if (!has_duplicate_row_name_) {
+	// This is the first so record it
+	has_duplicate_row_name_ = true;
+	auto mit = rowname2idx.find(rowname);
+	assert(mit != rowname2idx.end());
+	duplicate_row_name_ = rowname;
+	duplicate_row_name_index0_ = mit->second;
+	duplicate_row_name_index1_ = nrows-1;
+	highsLogUser(log_options, HighsLogType::kWarning,
+		     "Linear constraints %d and %d have the same name \"%s\"\n",
+		     (int)duplicate_row_name_index0_,
+		     (int)duplicate_row_name_index1_,
+		     duplicate_row_name_.c_str());
+      }
     }
   }
 
+  // Hard to imagine how the following lines are executed
+  highsLogUser(log_options, HighsLogType::kError,
+	       "Anomalous exit when parsing BOUNDS section of MPS file\n");
+  assert(1==0);
   // Update num_row in case there is free rows. They won't be added to the
   // constraint matrix.
   num_row = row_lower.size();
+  assert(nrows == num_row);
 
   return HMpsFF::Parsekey::kFail;
 }
@@ -705,10 +737,25 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       auto ret = colname2idx.emplace(colname, ncols++);
       num_col++;
       col_names.push_back(colname);
+      printf("New column: \"%s\" num_col = %d; ncols = %d; colname2idx.size() = %d\n",
+	     colname.c_str(), (int)num_col, (int)ncols, (int)colname2idx.size());
 
       if (!ret.second) {
-        std::cerr << "duplicate column " << std::endl;
-        return Parsekey::kFail;
+      // Duplicate col name
+	if (!has_duplicate_col_name_) {
+	  // This is the first so record it
+	  has_duplicate_col_name_ = true;
+	  auto mit = colname2idx.find(colname);
+	  assert(mit != colname2idx.end());
+	  duplicate_col_name_ = colname;
+	  duplicate_col_name_index0_ = mit->second;
+	  duplicate_col_name_index1_ = ncols-1;
+	  highsLogUser(log_options, HighsLogType::kWarning,
+		       "Variables %d and %d have the same name \"%s\"\n",
+		       (int)duplicate_col_name_index0_,
+		       (int)duplicate_col_name_index1_,
+		       duplicate_col_name_.c_str());
+	}
       }
 
       // Mark the column as integer, according to whether
@@ -1091,8 +1138,15 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       end_marker = first_word_end(strline, end_bound_name);
     }
 
-    // get column index, this adds new column if not existing yet
-    HighsInt colidx = getColIdx(marker);
+    // BOUNDS: get column index from name, without adding new column
+    // if not existing yet
+    HighsInt colidx = getColIdx(marker, false);
+    if (colidx < 0) {
+ 	highsLogUser(log_options, HighsLogType::kWarning,
+		     "Column name \"%s\" in BOUNDS section is not defined: ignored\n",
+		     marker.c_str());
+	continue;
+    }
 
     if (is_defaultbound) {
       // MI, PL, BV or FR
@@ -1332,7 +1386,7 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       return key;
     }
 
-    // Get the column name
+    // Get the column index from the name
     colidx = getColIdx(col_name);
     assert(colidx >= 0 && colidx < num_col);
 
