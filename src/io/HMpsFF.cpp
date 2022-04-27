@@ -75,6 +75,11 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   }
   col_cost.assign(num_col, 0);
   for (auto i : coeffobj) col_cost[i.first] = i.second;
+  //  for (auto i : alt_coeffobj) assert(col_cost[i.first] == i.second);
+  //  for (auto i : alt_entries) assert(col_cost[i.first] == i.second);
+  assert(coeffobj == alt_coeffobj);
+  assert(entries == alt_entries);
+  
   HighsInt status = fillMatrix(log_options);
   if (status) return FreeFormatParserReturnCode::kParserError;
   status = fillHessian(log_options);
@@ -640,14 +645,14 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   HighsInt rowidx, start, end;
   bool integral_cols = false;
   assert(num_col == 0);
+  // Define the scattered value vector, index vector and count
+  std::vector<double> col_value;
+  std::vector<HighsInt> col_index;
+  HighsInt col_count = 0;
+  double col_cost = 0;
+  col_value.assign(num_row, 0);
+  col_index.resize(num_row);
 
-  // if (kAnyFirstNonBlankAsStarImpliesComment) {
-  //   printf("In free format MPS reader: treating line as comment if first
-  //   non-blank character is *\n");
-  // } else {
-  //   printf("In free format MPS reader: treating line as comment if first
-  //   character is *\n");
-  // }
   auto parsename = [&rowidx, this](std::string name) {
     auto mit = rowname2idx.find(name);
 
@@ -689,6 +694,21 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
     // start of new section?
     if (key != Parsekey::kNone) {
+
+      if (num_col) {
+	if (col_cost) {
+	  alt_coeffobj.push_back(std::make_pair(num_col-1, col_cost));
+	  col_cost = 0;
+	}
+	for (HighsInt iEl = 0; iEl < col_count; iEl++) {
+	  const HighsInt iRow = col_index[iEl];
+	  assert(col_value[iRow]);
+	  alt_entries.push_back(std::make_tuple(num_col-1, iRow, col_value[iRow]));
+	  col_value[iRow] = 0;
+	}
+	col_count = 0;
+      }
+
       highsLogDev(log_options, HighsLogType::kInfo,
                   "readMPS: Read COLUMNS OK\n");
       return key;
@@ -749,6 +769,22 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
     // Test for new column
     if (!(word == colname)) {
+      // Record the nonzeros in any previous column
+      if (num_col) {
+	if (col_cost) {
+	  alt_coeffobj.push_back(std::make_pair(num_col-1, col_cost));
+	  col_cost = 0;
+	}
+	for (HighsInt iEl = 0; iEl < col_count; iEl++) {
+	  const HighsInt iRow = col_index[iEl];
+	  assert(col_value[iRow]);
+	  alt_entries.push_back(std::make_tuple(num_col-1, iRow, col_value[iRow]));
+	  col_value[iRow] = 0;
+	}
+	col_count = 0;
+      }
+      assert(allZeroed(col_value));
+      assert(!col_cost);
       colname = word;
       auto ret = colname2idx.emplace(colname, num_col++);
       col_names.push_back(colname);
@@ -800,6 +836,24 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       if (value) {
         parsename(marker);  // rowidx set and num_nz incremented
         addtuple(value);
+	if (rowidx >= 0) {
+	  if (col_value[rowidx]) {
+	    // Ignore duplicate entry
+	    num_nz--;
+	    continue;
+	  } else {
+	    col_value[rowidx] = value;
+	    col_index[col_count++] = rowidx;
+	  }
+	} else if (rowidx == -1) {
+	  if (col_cost) {
+	    // Ignore duplicate entry
+	    num_nz--;
+	    continue;
+	  } else {
+	    col_cost = value;
+	  }
+	}
       }
     }
 
@@ -832,6 +886,24 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       if (value) {
         parsename(marker);  // rowidx set and num_nz incremented
         addtuple(value);
+	if (rowidx >= 0) {
+	  if (col_value[rowidx]) {
+	    // Ignore duplicate entry
+	    num_nz--;
+	    continue;
+	  } else {
+	    col_value[rowidx] = value;
+	    col_index[col_count++] = rowidx;
+	  }
+	} else if (rowidx == -1) {
+	  if (col_cost) {
+	    // Ignore duplicate entry
+	    num_nz--;
+	    continue;
+	  } else {
+	    col_cost = value;
+	  }
+	}
       }
     }
   }
@@ -1780,5 +1852,12 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
 
   return HMpsFF::Parsekey::kFail;
 }
+
+bool HMpsFF::allZeroed(const std::vector<double> value) {
+  for(HighsInt iRow = 0; iRow < num_row; iRow++)
+    if (value[iRow]) return false;
+  return true;
+}
+
 
 }  // namespace free_format_parser
