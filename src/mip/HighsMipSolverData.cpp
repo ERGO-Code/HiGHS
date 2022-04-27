@@ -1217,19 +1217,23 @@ restart:
 
   printDisplayLine();
 
-  if (firstrootbasis.valid)
-    lp.getLpSolver().setBasis(firstrootbasis,
-                              "HighsMipSolverData::evaluateRootNode");
-  else
-    lp.getLpSolver().setOptionValue(kPresolveString, kHighsOnString);
   if (mipsolver.options_mip_->highs_debug_level)
     lp.getLpSolver().setOptionValue("output_flag",
                                     mipsolver.options_mip_->output_flag);
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
+  HighsInt rootLpStrategy;
+  if (firstrootbasis.valid) {
+    lp.getLpSolver().setBasis(firstrootbasis,
+                              "HighsMipSolverData::evaluateRootNode");
+    rootLpStrategy = 1;
+  } else {
+    lp.getLpSolver().setOptionValue(kPresolveString, kHighsOnString);
+    rootLpStrategy = mipsolver.options_mip_->mip_root_lp_strategy;
+  }
 
-  switch (mipsolver.options_mip_->mip_root_lp_strategy) {
+  switch (rootLpStrategy) {
     case 0:
     case 1:
       // strategy is to use serial simplex
