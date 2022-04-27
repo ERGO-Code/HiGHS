@@ -1186,7 +1186,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     } else {
       highsLogUser(log_options, HighsLogType::kError,
                    "Entry in BOUNDS section of MPS file is of type \"%s\"\n",
-                   word);
+                   word.c_str());
       return HMpsFF::Parsekey::kFail;
     }
 
