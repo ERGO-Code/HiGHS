@@ -520,7 +520,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
                                    std::istream& file) {
   std::string strline, word;
   bool hasobj = false;
-  std::string objectiveName = "";
+  objective_name = "";
 
   assert(num_row == 0);
   assert(row_lower.size() == 0);
@@ -564,7 +564,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       row_upper.push_back(0.0);
       row_type.push_back(Boundtype::kLe);
     } else if (strline[start] == 'N') {
-      if (objectiveName == "") {
+      if (objective_name == "") {
         isobj = true;
         hasobj = true;
       } else {
@@ -606,7 +606,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     if (!isobj)
       row_names.push_back(rowname);
     else
-      objectiveName = rowname;
+      objective_name = rowname;
 
     if (!ret.second) {
       // Duplicate row name
@@ -828,16 +828,19 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           if (col_value[rowidx]) {
             // Ignore duplicate entry
             num_nz--;
-            continue;
+            highsLogUser(log_options, HighsLogType::kWarning,
+                         "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
+                         colname.c_str(), marker.c_str());
           } else {
             col_value[rowidx] = value;
             col_index[col_count++] = rowidx;
           }
         } else if (rowidx == -1) {
+          // Ignore duplicate entry
           if (col_cost) {
-            // Ignore duplicate entry
-            num_nz--;
-            continue;
+            highsLogUser(log_options, HighsLogType::kWarning,
+                         "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
+                         colname.c_str(), objective_name.c_str());
           } else {
             col_cost = value;
           }
@@ -879,16 +882,19 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           if (col_value[rowidx]) {
             // Ignore duplicate entry
             num_nz--;
-            continue;
+            highsLogUser(log_options, HighsLogType::kWarning,
+                         "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
+                         colname.c_str(), marker.c_str());
           } else {
             col_value[rowidx] = value;
             col_index[col_count++] = rowidx;
           }
         } else if (rowidx == -1) {
+          // Ignore duplicate entry
           if (col_cost) {
-            // Ignore duplicate entry
-            num_nz--;
-            continue;
+            highsLogUser(log_options, HighsLogType::kWarning,
+                         "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
+                         colname.c_str(), objective_name.c_str());
           } else {
             col_cost = value;
           }

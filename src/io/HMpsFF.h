@@ -160,6 +160,7 @@ class HMpsFF {
   // see https://docs.mosek.com/latest/capi/mps-format.html#csection-optional
   enum class ConeType { kZero, kQuad, kRQuad, kPExp, kPPow, kDExp, kDPow };
 
+  std::string objective_name;
   std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 
