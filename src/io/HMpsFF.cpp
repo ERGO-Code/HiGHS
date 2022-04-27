@@ -283,8 +283,8 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
 
   printf("HMpsFF::parse num_col = %d; colname2idx.size() = %d\n", (int)num_col, (int)colname2idx.size());
   num_col = colname2idx.size();
-  // No need to update nRows because the assert ensures
-  // it is correct.
+  // No need to update num_row because the assert ensures that it is
+  // correct.
 
   return FreeFormatParserReturnCode::kSuccess;
 }
@@ -495,7 +495,6 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
                                    std::istream& file) {
   std::string strline, word;
-  size_t nrows = 0;
   bool hasobj = false;
   std::string objectiveName = "";
 
@@ -518,8 +517,6 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
-      assert(num_row == nrows);
-      num_row = int(nrows);
       highsLogDev(log_options, HighsLogType::kInfo,
                   "readMPS: Read ROWS    OK\n");
       if (!hasobj) {
@@ -575,8 +572,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     }
 
     // so in rowname2idx -1 is the objective, -2 is all the free rows
-    auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (nrows++));
-    if (!isobj) num_row++;
+    auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (num_row++));
     // ret is a pair consisting of an iterator to the inserted
     // element (or the already-existing element if no insertion
     // happened) and a bool denoting whether the insertion took place
@@ -596,7 +592,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 	assert(mit != rowname2idx.end());
 	duplicate_row_name_ = rowname;
 	duplicate_row_name_index0_ = mit->second;
-	duplicate_row_name_index1_ = nrows-1;
+	duplicate_row_name_index1_ = num_row-1;
 	highsLogUser(log_options, HighsLogType::kWarning,
 		     "Linear constraints %d and %d have the same name \"%s\"\n",
 		     (int)duplicate_row_name_index0_,
@@ -613,8 +609,6 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   // Update num_row in case there is free rows. They won't be added to the
   // constraint matrix.
   num_row = row_lower.size();
-  assert(nrows == num_row);
-
   return HMpsFF::Parsekey::kFail;
 }
 
@@ -736,6 +730,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       colname = word;
       auto ret = colname2idx.emplace(colname, ncols++);
       num_col++;
+      assert(num_col == ncols);
       col_names.push_back(colname);
       printf("New column: \"%s\" num_col = %d; ncols = %d; colname2idx.size() = %d\n",
 	     colname.c_str(), (int)num_col, (int)ncols, (int)colname2idx.size());
