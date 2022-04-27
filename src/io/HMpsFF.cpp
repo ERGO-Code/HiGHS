@@ -56,21 +56,19 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   // Note that rowname2idx and colname2idx will return the index
   // corresponding to the first occurrence of the name, so values for
   // rows in the COLUMNS, RHS and RANGES sections, and columns in the
-  // BOUNDS and other sections can only be defined for 
+  // BOUNDS and other sections can only be defined for
   if (has_duplicate_row_name_) {
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "Linear constraints %d and %d have the same name \"%s\"\n",
-		 (int)duplicate_row_name_index0_,
-		 (int)duplicate_row_name_index1_,
-		 duplicate_row_name_.c_str());
+                 "Linear constraints %d and %d have the same name \"%s\"\n",
+                 (int)duplicate_row_name_index0_,
+                 (int)duplicate_row_name_index1_, duplicate_row_name_.c_str());
     row_names.clear();
   }
   if (has_duplicate_col_name_) {
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "Variables %d and %d have the same name \"%s\"\n",
-		 (int)duplicate_col_name_index0_,
-		 (int)duplicate_col_name_index1_,
-		 duplicate_col_name_.c_str());
+                 "Variables %d and %d have the same name \"%s\"\n",
+                 (int)duplicate_col_name_index0_,
+                 (int)duplicate_col_name_index1_, duplicate_col_name_.c_str());
     col_names.clear();
   }
   col_cost.assign(num_col, 0);
@@ -79,7 +77,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   //  for (auto i : alt_entries) assert(col_cost[i.first] == i.second);
   assert(coeffobj == alt_coeffobj);
   assert(entries == alt_entries);
-  
+
   HighsInt status = fillMatrix(log_options);
   if (status) return FreeFormatParserReturnCode::kParserError;
   status = fillHessian(log_options);
@@ -163,7 +161,7 @@ HighsInt HMpsFF::fillMatrix(const HighsLogOptions& log_options) {
   for (HighsInt i = 0; i < num_col; i++) {
     if (a_start[i] > a_start[i + 1]) {
       highsLogUser(log_options, HighsLogType::kError,
-		   "Non-monotonic starts in MPS file reader\n");
+                   "Non-monotonic starts in MPS file reader\n");
       return 1;
     }
   }
@@ -429,7 +427,7 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
     return HMpsFF::Parsekey::kNone;
 }
 
-  HighsInt HMpsFF::getColIdx(const std::string& colname, const bool add_if_new) {
+HighsInt HMpsFF::getColIdx(const std::string& colname, const bool add_if_new) {
   // look up column name
   auto mit = colname2idx.find(colname);
   if (mit != colname2idx.end()) return mit->second;
@@ -579,7 +577,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       }
     } else {
       highsLogUser(log_options, HighsLogType::kError,
-		   "Entry in ROWS section of MPS file is of type \"%s\"\n", strline[start]);
+                   "Entry in ROWS section of MPS file is of type \"%s\"\n",
+                   strline[start]);
       return HMpsFF::Parsekey::kFail;
     }
 
@@ -617,21 +616,21 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     if (!ret.second) {
       // Duplicate row name
       if (!has_duplicate_row_name_) {
-	// This is the first so record it
-	has_duplicate_row_name_ = true;
-	auto mit = rowname2idx.find(rowname);
-	assert(mit != rowname2idx.end());
-	duplicate_row_name_ = rowname;
-	duplicate_row_name_index0_ = mit->second;
-	duplicate_row_name_index1_ = num_row-1;
+        // This is the first so record it
+        has_duplicate_row_name_ = true;
+        auto mit = rowname2idx.find(rowname);
+        assert(mit != rowname2idx.end());
+        duplicate_row_name_ = rowname;
+        duplicate_row_name_index0_ = mit->second;
+        duplicate_row_name_index1_ = num_row - 1;
       }
     }
   }
 
   // Hard to imagine how the following lines are executed
   highsLogUser(log_options, HighsLogType::kError,
-	       "Anomalous exit when parsing BOUNDS section of MPS file\n");
-  assert(1==0);
+               "Anomalous exit when parsing BOUNDS section of MPS file\n");
+  assert(1 == 0);
   // Update num_row in case there is free rows. They won't be added to the
   // constraint matrix.
   num_row = row_lower.size();
@@ -694,19 +693,19 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
     // start of new section?
     if (key != Parsekey::kNone) {
-
       if (num_col) {
-	if (col_cost) {
-	  alt_coeffobj.push_back(std::make_pair(num_col-1, col_cost));
-	  col_cost = 0;
-	}
-	for (HighsInt iEl = 0; iEl < col_count; iEl++) {
-	  const HighsInt iRow = col_index[iEl];
-	  assert(col_value[iRow]);
-	  alt_entries.push_back(std::make_tuple(num_col-1, iRow, col_value[iRow]));
-	  col_value[iRow] = 0;
-	}
-	col_count = 0;
+        if (col_cost) {
+          alt_coeffobj.push_back(std::make_pair(num_col - 1, col_cost));
+          col_cost = 0;
+        }
+        for (HighsInt iEl = 0; iEl < col_count; iEl++) {
+          const HighsInt iRow = col_index[iEl];
+          assert(col_value[iRow]);
+          alt_entries.push_back(
+              std::make_tuple(num_col - 1, iRow, col_value[iRow]));
+          col_value[iRow] = 0;
+        }
+        col_count = 0;
       }
 
       highsLogDev(log_options, HighsLogType::kInfo,
@@ -723,8 +722,9 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
       if ((integral_cols && marker != "'INTEND'") ||
           (!integral_cols && marker != "'INTORG'")) {
-	highsLogUser(log_options, HighsLogType::kError,
-		     "Integrality marker error in COLUMNS section of MPS file\n");
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "Integrality marker error in COLUMNS section of MPS file\n");
         return Parsekey::kFail;
       }
       integral_cols = !integral_cols;
@@ -771,17 +771,18 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     if (!(word == colname)) {
       // Record the nonzeros in any previous column
       if (num_col) {
-	if (col_cost) {
-	  alt_coeffobj.push_back(std::make_pair(num_col-1, col_cost));
-	  col_cost = 0;
-	}
-	for (HighsInt iEl = 0; iEl < col_count; iEl++) {
-	  const HighsInt iRow = col_index[iEl];
-	  assert(col_value[iRow]);
-	  alt_entries.push_back(std::make_tuple(num_col-1, iRow, col_value[iRow]));
-	  col_value[iRow] = 0;
-	}
-	col_count = 0;
+        if (col_cost) {
+          alt_coeffobj.push_back(std::make_pair(num_col - 1, col_cost));
+          col_cost = 0;
+        }
+        for (HighsInt iEl = 0; iEl < col_count; iEl++) {
+          const HighsInt iRow = col_index[iEl];
+          assert(col_value[iRow]);
+          alt_entries.push_back(
+              std::make_tuple(num_col - 1, iRow, col_value[iRow]));
+          col_value[iRow] = 0;
+        }
+        col_count = 0;
       }
       assert(allZeroed(col_value));
       assert(!col_cost);
@@ -789,16 +790,16 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       auto ret = colname2idx.emplace(colname, num_col++);
       col_names.push_back(colname);
       if (!ret.second) {
-	// Duplicate col name
-	if (!has_duplicate_col_name_) {
-	  // This is the first so record it
-	  has_duplicate_col_name_ = true;
-	  auto mit = colname2idx.find(colname);
-	  assert(mit != colname2idx.end());
-	  duplicate_col_name_ = colname;
-	  duplicate_col_name_index0_ = mit->second;
-	  duplicate_col_name_index1_ = num_col-1;
-	}
+        // Duplicate col name
+        if (!has_duplicate_col_name_) {
+          // This is the first so record it
+          has_duplicate_col_name_ = true;
+          auto mit = colname2idx.find(colname);
+          assert(mit != colname2idx.end());
+          duplicate_col_name_ = colname;
+          duplicate_col_name_index0_ = mit->second;
+          duplicate_col_name_index1_ = num_col - 1;
+        }
       }
 
       // Mark the column as integer, according to whether
@@ -828,32 +829,33 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
-                   marker.c_str());
+      highsLogUser(
+          log_options, HighsLogType::kWarning,
+          "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
+          marker.c_str());
     } else {
       double value = atof(word.c_str());
       if (value) {
         parsename(marker);  // rowidx set and num_nz incremented
         addtuple(value);
-	if (rowidx >= 0) {
-	  if (col_value[rowidx]) {
-	    // Ignore duplicate entry
-	    num_nz--;
-	    continue;
-	  } else {
-	    col_value[rowidx] = value;
-	    col_index[col_count++] = rowidx;
-	  }
-	} else if (rowidx == -1) {
-	  if (col_cost) {
-	    // Ignore duplicate entry
-	    num_nz--;
-	    continue;
-	  } else {
-	    col_cost = value;
-	  }
-	}
+        if (rowidx >= 0) {
+          if (col_value[rowidx]) {
+            // Ignore duplicate entry
+            num_nz--;
+            continue;
+          } else {
+            col_value[rowidx] = value;
+            col_index[col_count++] = rowidx;
+          }
+        } else if (rowidx == -1) {
+          if (col_cost) {
+            // Ignore duplicate entry
+            num_nz--;
+            continue;
+          } else {
+            col_cost = value;
+          }
+        }
       }
     }
 
@@ -862,7 +864,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       marker = first_word(strline, end);
       if (word == "") {
         highsLogUser(log_options, HighsLogType::kError,
-                     "No coefficient given for column \"%s\"\n", marker.c_str());
+                     "No coefficient given for column \"%s\"\n",
+                     marker.c_str());
         return HMpsFF::Parsekey::kFail;
       }
       end_marker = first_word_end(strline, end);
@@ -877,33 +880,34 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsLogUser(log_options, HighsLogType::kWarning,
-		     "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
-		     marker.c_str());
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
+            marker.c_str());
         continue;
       };
       double value = atof(word.c_str());
       if (value) {
         parsename(marker);  // rowidx set and num_nz incremented
         addtuple(value);
-	if (rowidx >= 0) {
-	  if (col_value[rowidx]) {
-	    // Ignore duplicate entry
-	    num_nz--;
-	    continue;
-	  } else {
-	    col_value[rowidx] = value;
-	    col_index[col_count++] = rowidx;
-	  }
-	} else if (rowidx == -1) {
-	  if (col_cost) {
-	    // Ignore duplicate entry
-	    num_nz--;
-	    continue;
-	  } else {
-	    col_cost = value;
-	  }
-	}
+        if (rowidx >= 0) {
+          if (col_value[rowidx]) {
+            // Ignore duplicate entry
+            num_nz--;
+            continue;
+          } else {
+            col_value[rowidx] = value;
+            col_index[col_count++] = rowidx;
+          }
+        } else if (rowidx == -1) {
+          if (col_cost) {
+            // Ignore duplicate entry
+            num_nz--;
+            continue;
+          } else {
+            col_cost = value;
+          }
+        }
       }
     }
   }
@@ -1049,8 +1053,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
         highsLogUser(log_options, HighsLogType::kWarning,
-		     "Row name \"%s\" in RHS section is not defined: ignored\n",
-		     marker.c_str());
+                     "Row name \"%s\" in RHS section is not defined: ignored\n",
+                     marker.c_str());
         continue;
       };
 
@@ -1196,7 +1200,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       num_sc++;
     } else {
       highsLogUser(log_options, HighsLogType::kError,
-		   "Entry in BOUNDS section of MPS file is of type \"%s\"\n", word);
+                   "Entry in BOUNDS section of MPS file is of type \"%s\"\n",
+                   word);
       return HMpsFF::Parsekey::kFail;
     }
 
@@ -1220,10 +1225,11 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     // if not existing yet
     HighsInt colidx = getColIdx(marker, false);
     if (colidx < 0) {
- 	highsLogUser(log_options, HighsLogType::kWarning,
-		     "Column name \"%s\" in BOUNDS section is not defined: ignored\n",
-		     marker.c_str());
-	continue;
+      highsLogUser(
+          log_options, HighsLogType::kWarning,
+          "Column name \"%s\" in BOUNDS section is not defined: ignored\n",
+          marker.c_str());
+      continue;
     }
 
     if (is_defaultbound) {
@@ -1367,8 +1373,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
       highsLogUser(log_options, HighsLogType::kWarning,
-		   "Row name \"%s\" in RANGES is not defined: ignored\n",
-		   marker.c_str());
+                   "Row name \"%s\" in RANGES is not defined: ignored\n",
+                   marker.c_str());
       continue;
     } else {
       parsename(marker, rowidx);
@@ -1394,8 +1400,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
         highsLogUser(log_options, HighsLogType::kWarning,
-		     "Row name \"%s\" in RANGES is not defined: ignored\n",
-		     marker.c_str());
+                     "Row name \"%s\" in RANGES is not defined: ignored\n",
+                     marker.c_str());
         continue;
       };
 
@@ -1480,9 +1486,10 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       end_coeff_name = first_word_end(strline, end_row_name);
 
       if (coeff_name == "") {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
-                     section_name.c_str(), row_name.c_str(), col_name.c_str());
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
+            section_name.c_str(), row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
 
@@ -1619,9 +1626,10 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
       end_coeff_name = first_word_end(strline, end_row_name);
 
       if (coeff_name == "") {
-        highsLogUser(log_options, HighsLogType::kError,
-                     "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
-                     section_name.c_str(), row_name.c_str(), col_name.c_str());
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
+            section_name.c_str(), row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
 
@@ -1854,10 +1862,9 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
 }
 
 bool HMpsFF::allZeroed(const std::vector<double> value) {
-  for(HighsInt iRow = 0; iRow < num_row; iRow++)
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
     if (value[iRow]) return false;
   return true;
 }
-
 
 }  // namespace free_format_parser
