@@ -45,6 +45,7 @@ set(TEST_SOURCES
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp
+    TestPresolve.cpp
     TestQpSolver.cpp
     TestRays.cpp
     TestRanging.cpp
@@ -60,9 +61,7 @@ if (NOT APPLE)
     set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
 endif()
 
-if (IPX_ON)
-    set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
-endif()
+set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 if (UNIX)
@@ -173,7 +172,7 @@ set(successInstances
     "adlittle\;74\; 2.2549496316\;"
     "afiro\;22\;-4.6475314286\;"
     "etamacro\;532\;-7.5571523330\;"
-    "greenbea\;5273\;-7.2555248130\;"
+    "greenbea\;5109\;-7.2555248130\;"
     "shell\;623\; 1.2088253460\;"
     "stair\;529\;-2.5126695119\;"
     "standata\;72\; 1.2576995000\;"
@@ -242,7 +241,11 @@ foreach(instance ${${instances}})
     endif()
 
     # specify the instance and the settings load command
-    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+    if(ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+    else()
+      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+    endif()
 
     # loop over all settings
     foreach(setting ${settings})

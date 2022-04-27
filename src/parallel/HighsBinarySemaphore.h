@@ -21,6 +21,7 @@
 #include <thread>
 
 #include "parallel/HighsCacheAlign.h"
+#include "parallel/HighsSchedulerConstants.h"
 #include "parallel/HighsSpinMutex.h"
 
 class HighsBinarySemaphore {
@@ -33,9 +34,6 @@ class HighsBinarySemaphore {
   };
 
   highs::cache_aligned::unique_ptr<Data> data_;
-  enum Constants {
-    kMicroSecsBeforeSleep = 5000,
-  };
 
  public:
   HighsBinarySemaphore(bool init = false)
@@ -73,7 +71,7 @@ class HighsBinarySemaphore {
               std::chrono::high_resolution_clock::now() - tStart)
               .count();
 
-      if (numMicroSecs < kMicroSecsBeforeSleep)
+      if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeSleep)
         spinIters *= 2;
       else
         break;

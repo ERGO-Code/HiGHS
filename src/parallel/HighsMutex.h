@@ -66,7 +66,7 @@ class HighsMutex {
               std::chrono::high_resolution_clock::now() - tStart)
               .count();
 
-      if (numMicroSecs < HighsTaskExecutor::kMicroSecsBeforeGlobalSync)
+      if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeGlobalSync)
         numTries *= 2;
       else
         break;

@@ -42,9 +42,9 @@ void testSolver(Highs& highs, const std::string solver,
     return_status = highs.getOptionValue("simplex_iteration_limit",
                                          default_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::kOk);
-    // Force HiGHS to start from a logical basis - if this is the
-    // second or subsequent call to testSolver
-    return_status = highs.setBasis();
+    // Clear the solver information - necessary if this is the second
+    // or subsequent call to testSolver
+    return_status = highs.clearSolver();
     REQUIRE(return_status == HighsStatus::kOk);
   } else {
     return_status = highs.getOptionValue("ipm_iteration_limit",
@@ -153,7 +153,7 @@ void testSolver(Highs& highs, const std::string solver,
     return_status = highs.setOptionValue("simplex_iteration_limit",
                                          further_simplex_iterations);
     REQUIRE(return_status == HighsStatus::kOk);
-    return_status = highs.setBasis();
+    return_status = highs.clearSolver();
     REQUIRE(return_status == HighsStatus::kOk);
   } else {
     if (dev_run)
@@ -285,11 +285,6 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(info.simplex_iteration_count == 476);  // 444);
 
   HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status ==
-          HighsModelStatus::kOptimal);  // Now etamacro is solved properly it's
-                                        // not HighsModelStatus::kNotset);
-
-  model_status = highs.getModelStatus(true);
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   // Test the solver without scaling
@@ -300,7 +295,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 619);  // 584);  //
+  REQUIRE(info.simplex_iteration_count == 650);  // 584);  //
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
@@ -369,7 +364,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "\nSolving LP without presolve and larger dual objective value upper "
         "bound of %g\n",
         larger_min_objective_bound);
-  status = highs.setBasis();
+  status = highs.clearSolver();
   REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();

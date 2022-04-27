@@ -1959,6 +1959,7 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
+  const double double_tolerance = 1e-13;
   if (style == kSolutionStylePretty) {
     const HighsVarType* integrality_ptr =
         lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
@@ -1970,6 +1971,11 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
                             have_basis, basis.row_status);
+    fprintf(file, "\nModel status: %s\n",
+            utilModelStatusToString(model_status).c_str());
+    std::array<char, 32> objStr = highsDoubleToString(
+        (double)info.objective_function_value, double_tolerance);
+    fprintf(file, "\nObjective value: %s\n", objStr.data());
   } else if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, lp, basis, solution);
   } else {
@@ -2289,8 +2295,8 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
 }
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
-  assert(solution.row_dual.size() > 0);
-  if (!isSolutionRightSize(lp, solution)) return HighsStatus::kError;
+  //  assert(solution.row_dual.size() > 0);
+  if (int(solution.row_dual.size()) < lp.num_row_) return HighsStatus::kError;
 
   solution.col_dual.assign(lp.num_col_, 0);
 
@@ -2311,7 +2317,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   // assert(solution.col_value.size() > 0);
-  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+  if (int(solution.col_value.size()) < lp.num_col_) return HighsStatus::kError;
 
   solution.row_value.clear();
   solution.row_value.assign(lp.num_row_, 0);

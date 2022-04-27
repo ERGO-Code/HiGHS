@@ -33,7 +33,6 @@ const std::string kHighsOnString = "on";
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
 
-const HighsInt kHighsPrereleaseRowDualSign = -1;
 const bool kExtendInvertWhenAddingRows = false;
 
 enum SimplexScaleStrategy {

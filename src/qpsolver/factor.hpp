@@ -5,13 +5,15 @@
 #include <vector>
 
 #include "matrix.hpp"
+#include "qpconst.hpp"
 #include "runtime.hpp"
 
 using std::min;
 
-class NewCholeskyFactor {
+class CholeskyFactor {
  private:
   bool uptodate = false;
+  HighsInt numberofreduces = 0;
 
   Runtime& runtime;
 
@@ -21,11 +23,16 @@ class NewCholeskyFactor {
   HighsInt current_k_max;
   std::vector<double> L;
 
+  bool has_negative_eigenvalue;
+  std::vector<double> a;
+
   void recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();
+    numberofreduces = 0;
 
     orig.assign(dim_ns, std::vector<double>(dim_ns, 0.0));
+    resize(dim_ns);
 
     Matrix temp(dim_ns, 0);
 
@@ -76,7 +83,7 @@ class NewCholeskyFactor {
   }
 
  public:
-  NewCholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
+  CholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
     uptodate = false;
     current_k_max =
         max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
@@ -84,26 +91,79 @@ class NewCholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
-  void expand(const Vector& yp, Vector& gyp, Vector& l) {
+  QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
     if (!uptodate) {
-      return;
+      return QpSolverStatus::OK;
     }
     double mu = gyp * yp;
     l.resparsify();
     double lambda = mu - l.norm2();
 
-    assert(lambda > 0);
+    if (lambda > 0.0) {
+      if (current_k_max <= current_k + 1) {
+        resize(current_k_max * 2);
+      }
 
-    if (current_k_max <= current_k + 1) {
-      resize(current_k_max * 2);
+      for (HighsInt i = 0; i < current_k; i++) {
+        L[i * current_k_max + current_k] = l.value[i];
+      }
+      L[current_k * current_k_max + current_k] = sqrt(lambda);
+
+      current_k++;
+    } else {
+      return QpSolverStatus::NOTPOSITIVDEFINITE;
+
+      //     |LL' 0|
+      // M = |0'  0| + bb' -aa'
+      // a = (k * m, alpha), b = (k * m, beta)
+      // b*b -a*a = mu
+      // k(b-a) = 1
+      // b + a = k*mu
+      const double tolerance = 0.001;
+
+      double beta = max(tolerance, sqrt(m.norm2() / L[0] + fabs(mu)));
+      double k = 1 / (beta + sqrt(beta * beta - mu));
+      double alpha = k * mu - beta;
+
+      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", (int)current_k, alpha,
+             beta, k);
+
+      a.clear();
+      a.resize(current_k + 1);
+      for (HighsInt i = 0; i < current_k; i++) {
+        a[i] = k * m.value[i];
+      }
+      a[current_k] = alpha;
+
+      std::vector<double> b(current_k + 1);
+      for (HighsInt i = 0; i < current_k; i++) {
+        b[i] = k * m.value[i];
+      }
+      b[current_k] = beta;
+
+      if (current_k_max <= current_k + 1) {
+        resize(current_k_max * 2);
+      }
+
+      // append b to the left of L
+      for (HighsInt row = current_k; row > 0; row--) {
+        // move row one position down
+        for (HighsInt i = 0; i < current_k; i++) {
+          L[row * current_k_max + i] = L[(row - 1) * current_k_max + i];
+        }
+      }
+      for (HighsInt i = 0; i < current_k + 1; i++) {
+        L[i] = b[i];
+      }
+
+      // re-triangulize
+      for (HighsInt i = 0; i < current_k + 1; i++) {
+        eliminate(L, i, i + 1, current_k_max, current_k + 1);
+      }
+
+      current_k = current_k + 1;
     }
-
-    for (HighsInt i = 0; i < current_k; i++) {
-      L[i * current_k_max + current_k] = l.value[i];
-    }
-    L[current_k * current_k_max + current_k] = sqrt(lambda);
-
-    current_k++;
+    return QpSolverStatus::OK;
   }
 
   void solveL(Vector& rhs) {
@@ -131,9 +191,9 @@ class NewCholeskyFactor {
     }
   }
 
- public:
   void solve(Vector& rhs) {
-    if (!uptodate) {
+    if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 &&
+                      !has_negative_eigenvalue)) {
       recompute();
     }
     solveL(rhs);
@@ -206,6 +266,10 @@ class NewCholeskyFactor {
     if (current_k == 0) {
       return;
     }
+    if (!uptodate) {
+      return;
+    }
+    numberofreduces++;
 
     unsigned p = maxabsd;  // col we push to the right and remove
 

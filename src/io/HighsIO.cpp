@@ -22,6 +22,15 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
+void highsLogHeader(const HighsLogOptions& log_options) {
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+               (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
+               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
+}
+
 std::array<char, 32> highsDoubleToString(double val, double tolerance) {
   std::array<char, 32> printString;
   double l =

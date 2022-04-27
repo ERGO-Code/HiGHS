@@ -1,4 +1,4 @@
-#include "solver.hpp"
+#include "quass.hpp"
 
 #include <algorithm>
 #include <map>
@@ -19,20 +19,19 @@
 #include "snippets.hpp"
 #include "steepestedgepricing.hpp"
 
-void Solver::solve() {
-  CrashSolution* crash;
+void Quass::solve() {
+  CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
   computestartingpoint(runtime, crash);
-  if (runtime.status == ProblemStatus::INFEASIBLE) {
+  if (runtime.status != ProblemStatus::INDETERMINED) {
     return;
   }
-  Basis basis(runtime, crash->active, crash->rowstatus, crash->inactive);
-  solve(crash->primal, crash->rowact, basis);
+  Basis basis(runtime, crash.active, crash.rowstatus, crash.inactive);
+  solve(crash.primal, crash.rowact, basis);
 }
 
-Solver::Solver(Runtime& rt) : runtime(rt) {}
+Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-void Solver::loginformation(Runtime& rt, Basis& basis,
-                            NewCholeskyFactor& factor) {
+void Quass::loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
@@ -86,7 +85,7 @@ void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 
 // VECTOR
 Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
-                                     NewCholeskyFactor& cf,
+                                     CholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
   Vector g2 = -redgrad.get();
   g2.sanitize();
@@ -99,16 +98,17 @@ Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 
 // VECTOR
 Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
-                                     NewCholeskyFactor& factor,
-                                     const Vector& yp, Gradient& gradient,
-                                     Vector& gyp, Vector& l, Vector& p) {
+                                     CholeskyFactor& factor, const Vector& yp,
+                                     Gradient& gradient, Vector& gyp, Vector& l,
+                                     Vector& m, Vector& p) {
   Vector yyp = yp;
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
   runtime.instance.Q.mat_vec(yyp, gyp);
   if (basis.getnumactive() < runtime.instance.num_var) {
-    basis.Ztprod(gyp, l);
+    basis.Ztprod(gyp, m);
+    l = m;
     factor.solveL(l);
     Vector v = l;
     factor.solveLT(v);
@@ -141,14 +141,15 @@ double computemaxsteplength(Runtime& runtime, const Vector& p,
   }
 }
 
-void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
-            Vector& buffer_d, HighsInt& maxabsd, HighsInt& constrainttodrop) {
+QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
+                      Vector& buffer_d, HighsInt& maxabsd,
+                      HighsInt& constrainttodrop) {
   HighsInt idx = indexof(basis.getinactive(), newactivecon);
   if (idx != -1) {
     maxabsd = idx;
     constrainttodrop = newactivecon;
     Vector::unit(basis.getinactive().size(), idx, buffer_d);
-    return;
+    return QpSolverStatus::OK;
     // return NullspaceReductionResult(true);
   }
 
@@ -169,13 +170,38 @@ void reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
         "degeneracy? not possible to find non-active constraint to "
         "leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n",
         maxabsd, log10(fabs(buffer_d.value[maxabsd])));
-    exit(1);
+    return QpSolverStatus::DEGENERATE;
   }
-  return;
+  return QpSolverStatus::OK;
   // return NullspaceReductionResult(idx != -1);
 }
 
-void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
+std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
+                                    ReducedCosts& redcosts) {
+  switch (runtime.settings.pricing) {
+    case PricingStrategy::Devex:
+      return std::unique_ptr<Pricing>(
+          new DevexPricing(runtime, basis, redcosts));
+    case PricingStrategy::DantzigWolfe:
+      return std::unique_ptr<Pricing>(
+          new DantzigPricing(runtime, basis, redcosts));
+  }
+  return nullptr;
+}
+void regularize(Runtime& rt) {
+  // add small diagonal to hessian
+  for (HighsInt i = 0; i < rt.instance.num_var; i++) {
+    for (HighsInt index = rt.instance.Q.mat.start[i];
+         index < rt.instance.Q.mat.start[i + 1]; index++) {
+      if (rt.instance.Q.mat.index[index] == i) {
+        rt.instance.Q.mat.value[index] +=
+            rt.settings.semidefiniteregularization;
+      }
+    }
+  }
+}
+
+void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;
@@ -183,13 +209,13 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   // TODO: remove redundant equations before starting
   // HOWTO: from crash start, check all (near-)equality constraints (not
   // bounds). if the residual is 0 (or near-zero?), remove constraint
+
   Gradient gradient(runtime);
   ReducedCosts redcosts(runtime, basis, gradient);
   ReducedGradient redgrad(runtime, basis, gradient);
-  NewCholeskyFactor factor(runtime, basis);
+  CholeskyFactor factor(runtime, basis);
   runtime.instance.A.mat_vec(runtime.primal, runtime.rowactivity);
-  std::unique_ptr<Pricing> pricing =
-      std::unique_ptr<Pricing>(new DevexPricing(runtime, basis, redcosts));
+  std::unique_ptr<Pricing> pricing = getPricing(runtime, basis, redcosts);
 
   Vector p(runtime.instance.num_var);
   Vector rowmove(runtime.instance.num_con);
@@ -197,11 +223,14 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Vector buffer_yp(runtime.instance.num_var);
   Vector buffer_gyp(runtime.instance.num_var);
   Vector buffer_l(runtime.instance.num_var);
+  Vector buffer_m(runtime.instance.num_var);
 
   Vector buffer_Qp(runtime.instance.num_var);
 
   // buffers for reduction
   Vector buffer_d(runtime.instance.num_var);
+
+  regularize(runtime);
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
@@ -226,11 +255,12 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
     runtime.statistics.num_iterations++;
 
+    QpSolverStatus status;
+
     bool zero_curvature_direction = false;
     double maxsteplength = 1.0;
     if (atfsep) {
       HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
-      // printf("%u -> ", minidx);
       if (minidx == -1) {
         runtime.status = ProblemStatus::OPTIMAL;
         break;
@@ -241,8 +271,9 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       basis.btran(buffer_yp, buffer_yp, true, minidx);
 
       buffer_l.dim = basis.getnuminactive();
+      buffer_m.dim = basis.getnuminactive();
       computesearchdirection_major(runtime, basis, factor, buffer_yp, gradient,
-                                   buffer_gyp, buffer_l, p);
+                                   buffer_gyp, buffer_l, buffer_m, p);
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
@@ -251,9 +282,13 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
-      if (!zero_curvature_direction)
-        factor.expand(buffer_yp, buffer_gyp, buffer_l);
-      // }
+      if (!zero_curvature_direction) {
+        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
+        if (status != QpSolverStatus::OK) {
+          runtime.status = ProblemStatus::INDETERMINED;
+          return;
+        }
+      }
       redgrad.expand(buffer_yp);
     } else {
       computesearchdirection_minor(runtime, basis, factor, redgrad, p);
@@ -265,15 +300,16 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         maxsteplength == 0.0) {
       atfsep = true;
     } else {
-      RatiotestResult stepres = runtime.settings.ratiotest->ratiotest(
-          runtime.primal, p, runtime.rowactivity, rowmove, runtime.instance,
-          maxsteplength);
-      // printf("%u, alpha= %lf\n", stepres.limitingconstraint,stepres.alpha);
+      RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);
       if (stepres.limitingconstraint != -1) {
         HighsInt constrainttodrop;
         HighsInt maxabsd;
-        reduce(runtime, basis, stepres.limitingconstraint, buffer_d, maxabsd,
-               constrainttodrop);
+        status = reduce(runtime, basis, stepres.limitingconstraint, buffer_d,
+                        maxabsd, constrainttodrop);
+        if (status != QpSolverStatus::OK) {
+          runtime.status = ProblemStatus::INDETERMINED;
+          return;
+        }
         if (!zero_curvature_direction) {
           factor.reduce(
               buffer_d, maxabsd,
@@ -282,10 +318,15 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);
 
-        basis.activate(runtime, stepres.limitingconstraint,
-                       stepres.nowactiveatlower ? BasisStatus::ActiveAtLower
-                                                : BasisStatus::ActiveAtUpper,
-                       constrainttodrop, pricing.get());
+        status = basis.activate(runtime, stepres.limitingconstraint,
+                                stepres.nowactiveatlower
+                                    ? BasisStatus::ActiveAtLower
+                                    : BasisStatus::ActiveAtUpper,
+                                constrainttodrop, pricing.get());
+        if (status != QpSolverStatus::OK) {
+          runtime.status = ProblemStatus::INDETERMINED;
+          return;
+        }
         if (basis.getnumactive() != runtime.instance.num_var) {
           atfsep = false;
         }
@@ -309,6 +350,9 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
   loginformation(runtime, basis, factor);
   runtime.endofiterationevent.fire(runtime);
+
+  runtime.instance.sumnumprimalinfeasibilities(
+      runtime.primal, runtime.instance.A.mat_vec(runtime.primal));
 
   Vector lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {

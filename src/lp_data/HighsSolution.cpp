@@ -1134,8 +1134,7 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
-  solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
-  solver_object.scaled_model_status_ = HighsModelStatus::kNotset;
+  solver_object.model_status_ = HighsModelStatus::kNotset;
   solver_object.highs_info_.objective_function_value = 0;
   solver_object.highs_info_.primal_solution_status = kSolutionStatusNone;
   solver_object.highs_info_.dual_solution_status = kSolutionStatusNone;

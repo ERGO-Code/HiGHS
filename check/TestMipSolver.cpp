@@ -29,8 +29,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs;
-  highs.readModel(filename);
   if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
   highs.run();
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
