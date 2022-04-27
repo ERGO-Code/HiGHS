@@ -2572,7 +2572,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
   }
 
   // zeros should not be linked in the matrix
-  assert(std::abs(val) > options->small_matrix_value);
+  assert(std::fabs(val) > options->small_matrix_value);
 
   double newColUpper = kHighsInf;
   double newColLower = -kHighsInf;
@@ -2588,10 +2588,26 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
       newColUpper = model->row_lower_[row] / val;
   }
 
-  bool lowerTightened = newColLower > model->col_lower_[col] + primal_feastol;
-  bool upperTightened = newColUpper < model->col_upper_[col] - primal_feastol;
-  double lb = lowerTightened ? newColLower : model->col_lower_[col];
-  double ub = upperTightened ? newColUpper : model->col_upper_[col];
+  // use either the primal feasibility tolerance for the bound constraint or
+  // for the singleton row including scaling, whichever is tighter.
+  const double boundTol = primal_feastol / std::max(1.0, std::fabs(val));
+  const bool isIntegral = model->integrality_[col] != HighsVarType::kContinuous;
+
+  bool lowerTightened = newColLower > model->col_lower_[col] + boundTol;
+  bool upperTightened = newColUpper < model->col_upper_[col] - boundTol;
+
+  double lb, ub;
+  if (lowerTightened) {
+    if (isIntegral) newColLower = std::ceil(newColLower - boundTol);
+    lb = newColLower;
+  } else
+    lb = model->col_lower_[col];
+
+  if (upperTightened) {
+    if (isIntegral) newColUpper = std::floor(newColUpper + boundTol);
+    ub = newColUpper;
+  } else
+    ub = model->col_upper_[col];
 
   // printf("old bounds [%.15g,%.15g], new bounds [%.15g,%.15g] ... ",
   //        model->col_lower_[col], model->col_upper_[col], lb, ub);
@@ -2606,8 +2622,9 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
     // set the bound to one of the values. To heuristically get rid of numerical
     // errors we choose the bound that was not tightened, or the midpoint if
     // both where tightened.
-    if (ub < lb ||
-        (ub > lb && (ub - lb) * getMaxAbsColVal(col) <= primal_feastol)) {
+    if (ub < lb || (ub > lb && (ub - lb) * std::max(std::fabs(val),
+                                                    getMaxAbsColVal(col)) <=
+                                   primal_feastol)) {
       if (lowerTightened && upperTightened) {
         ub = 0.5 * (ub + lb);
         lb = ub;
@@ -5840,7 +5857,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     highs.passOptions(options);
     highs.setOptionValue("presolve", "off");
     highs.run();
-    if (highs.getModelStatus(true) != HighsModelStatus::kOptimal) return;
+    if (highs.getModelStatus() != HighsModelStatus::kOptimal) return;
     reducedsol = highs.getSolution();
     reducedbasis = highs.getBasis();
   }

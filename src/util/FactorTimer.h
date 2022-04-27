@@ -30,11 +30,13 @@ enum iClockFactor {
   FactorFtran,             //!< FTRAN
   FactorFtranLower,        //!< FTRAN Lower part
   FactorFtranLowerAPF,     //!< FTRAN Lower part APF
+  FactorFtranLowerDse,     //!< FTRAN Lower part dense
   FactorFtranLowerSps,     //!< FTRAN Lower part sparse
   FactorFtranLowerHyper,   //!< FTRAN Lower part hyper-sparse
   FactorFtranUpper,        //!< FTRAN Upper part
   FactorFtranUpperFT,      //!< FTRAN Upper part FT
   FactorFtranUpperMPF,     //!< FTRAN Upper part MPF
+  FactorFtranUpperDse,     //!< FTRAN Upper part dense
   FactorFtranUpperSps0,    //!< FTRAN Upper part sparse
   FactorFtranUpperSps1,    //!< FTRAN Upper part sparse
   FactorFtranUpperSps2,    //!< FTRAN Upper part sparse
@@ -47,11 +49,13 @@ enum iClockFactor {
   FactorFtranUpperPF,      //!< FTRAN Upper part PF
   FactorBtran,             //!< BTRAN
   FactorBtranLower,        //!< BTRAN Lower part
+  FactorBtranLowerDse,     //!< BTRAN Lower part dense
   FactorBtranLowerSps,     //!< BTRAN Lower part sparse
   FactorBtranLowerHyper,   //!< BTRAN Lower part hyper-sparse
   FactorBtranLowerAPF,     //!< BTRAN Lower part APF
   FactorBtranUpper,        //!< BTRAN Upper part
   FactorBtranUpperPF,      //!< BTRAN Upper part PF
+  FactorBtranUpperDse,     //!< BTRAN Upper part dense
   FactorBtranUpperSps,     //!< BTRAN Upper part sparse
   FactorBtranUpperHyper,   //!< BTRAN Upper part hyper-sparse
   FactorBtranUpperFT,      //!< BTRAN Upper part FT
@@ -102,6 +106,8 @@ class FactorTimer {
     clock[FactorFtranLower] = timer_pointer->clock_def("FTRAN Lower", "FTL");
     clock[FactorFtranLowerAPF] =
         timer_pointer->clock_def("FTRAN Lower APF", "FLA");
+    clock[FactorFtranLowerDse] =
+        timer_pointer->clock_def("FTRAN Lower Dse", "FLD");
     clock[FactorFtranLowerSps] =
         timer_pointer->clock_def("FTRAN Lower Sps", "FLS");
     clock[FactorFtranLowerHyper] =
@@ -111,6 +117,8 @@ class FactorTimer {
         timer_pointer->clock_def("FTRAN Upper FT", "FUF");
     clock[FactorFtranUpperMPF] =
         timer_pointer->clock_def("FTRAN Upper MPF", "FUM");
+    clock[FactorFtranUpperDse] =
+        timer_pointer->clock_def("FTRAN Upper Dse", "FUD");
     clock[FactorFtranUpperSps0] =
         timer_pointer->clock_def("FTRAN Upper Sps0", "FUS");
     clock[FactorFtranUpperSps1] =
@@ -133,6 +141,8 @@ class FactorTimer {
         timer_pointer->clock_def("FTRAN Upper PF", "FUP");
     clock[FactorBtran] = timer_pointer->clock_def("BTRAN", "BTR");
     clock[FactorBtranLower] = timer_pointer->clock_def("BTRAN Lower", "BTL");
+    clock[FactorBtranLowerDse] =
+        timer_pointer->clock_def("BTRAN Lower Dse", "BLD");
     clock[FactorBtranLowerSps] =
         timer_pointer->clock_def("BTRAN Lower Sps", "BLS");
     clock[FactorBtranLowerHyper] =
@@ -142,6 +152,8 @@ class FactorTimer {
     clock[FactorBtranUpper] = timer_pointer->clock_def("BTRAN Upper", "BTU");
     clock[FactorBtranUpperPF] =
         timer_pointer->clock_def("BTRAN Upper PF", "BUP");
+    clock[FactorBtranUpperDse] =
+        timer_pointer->clock_def("BTRAN Upper Dse", "BUD");
     clock[FactorBtranUpperSps] =
         timer_pointer->clock_def("BTRAN Upper Sps", "BUS");
     clock[FactorBtranUpperHyper] =
@@ -191,14 +203,16 @@ class FactorTimer {
   void reportFactorLevel2Clock(HighsTimerClock& factor_timer_clock) {
     std::vector<HighsInt> factor_clock_list{
         FactorInvertSimple,     FactorInvertKernel,     FactorInvertDeficient,
-        FactorInvertFinish,     FactorFtranLowerAPF,    FactorFtranLowerSps,
-        FactorFtranLowerHyper,  FactorFtranUpperFT,     FactorFtranUpperMPF,
-        FactorFtranUpperSps0,   FactorFtranUpperSps1,   FactorFtranUpperSps2,
-        FactorFtranUpperHyper0, FactorFtranUpperHyper1, FactorFtranUpperHyper2,
-        FactorFtranUpperHyper3, FactorFtranUpperHyper4, FactorFtranUpperHyper5,
-        FactorFtranUpperPF,     FactorBtranLowerSps,    FactorBtranLowerHyper,
-        FactorBtranLowerAPF,    FactorBtranUpperPF,     FactorBtranUpperSps,
-        FactorBtranUpperHyper,  FactorBtranUpperFT,     FactorBtranUpperMPF};
+        FactorInvertFinish,     FactorFtranLowerAPF,    FactorFtranLowerDse,
+        FactorFtranLowerSps,    FactorFtranLowerHyper,  FactorFtranUpperFT,
+        FactorFtranUpperMPF,    FactorFtranUpperDse,    FactorFtranUpperSps0,
+        FactorFtranUpperSps1,   FactorFtranUpperSps2,   FactorFtranUpperHyper0,
+        FactorFtranUpperHyper1, FactorFtranUpperHyper2, FactorFtranUpperHyper3,
+        FactorFtranUpperHyper4, FactorFtranUpperHyper5, FactorFtranUpperPF,
+        FactorBtranLowerDse,    FactorBtranLowerSps,    FactorBtranLowerHyper,
+        FactorBtranLowerAPF,    FactorBtranUpperPF,     FactorBtranUpperDse,
+        FactorBtranUpperSps,    FactorBtranUpperHyper,  FactorBtranUpperFT,
+        FactorBtranUpperMPF};
     reportFactorClockList("FactorLevel2", factor_timer_clock,
                           factor_clock_list);
   };

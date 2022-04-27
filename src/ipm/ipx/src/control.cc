@@ -1,3 +1,4 @@
+#include "parallel/HighsParallel.h"
 #include "control.h"
 #include <iostream>
 
@@ -9,6 +10,7 @@ Control::Control() {
 }
 
 Int Control::InterruptCheck() const {
+    HighsTaskExecutor::getThisWorkerDeque()->checkInterrupt();
     if (parameters_.time_limit >= 0.0 &&
         parameters_.time_limit < timer_.Elapsed())
         return IPX_ERROR_interrupt_time;

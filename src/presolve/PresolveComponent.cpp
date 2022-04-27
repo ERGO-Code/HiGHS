@@ -88,7 +88,10 @@ HighsPresolveStatus PresolveComponent::run() {
       presolve_status = HighsPresolveStatus::kReducedToEmpty;
       break;
     default:
-      presolve_status = HighsPresolveStatus::kReduced;
+      if (data_.postSolveStack.numReductions() == 0)
+        presolve_status = HighsPresolveStatus::kNotReduced;
+      else
+        presolve_status = HighsPresolveStatus::kReduced;
   }
   this->presolve_status_ = presolve_status;
   return presolve_status;

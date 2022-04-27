@@ -47,6 +47,7 @@ class HighsSplitDeque {
     uint32_t splitCopy = 0;
     int numWorkers = 0;
     int ownerId = -1;
+    HighsTask* rootTask = nullptr;
     bool allStolenCopy = true;
   };
 
@@ -267,6 +268,17 @@ class HighsSplitDeque {
                   "alignas failed to guarantee 64 byte alignment");
   }
 
+  void checkInterrupt() {
+    if (ownerData.rootTask && ownerData.rootTask->isCancelled())
+      throw HighsTask::Interrupt();
+  }
+
+  void cancelTask(HighsInt taskIndex) {
+    assert(taskIndex < ownerData.head);
+    assert(taskIndex >= 0);
+    taskArray[taskIndex].cancel();
+  }
+
   template <typename F>
   void push(F&& f) {
     if (ownerData.head >= kTaskArraySize) {
@@ -436,28 +448,109 @@ class HighsSplitDeque {
   void wait() { stealerData.semaphore.acquire(); }
 
   void runStolenTask(HighsTask* task) {
-    HighsSplitDeque* owner = task->run(this);
-    if (owner) owner->notify();
+    HighsTask* prevRootTask = ownerData.rootTask;
+    ownerData.rootTask = task;
+    uint32_t currentHead = ownerData.head;
+    try {
+      HighsSplitDeque* owner = task->run(this);
+      if (owner) owner->notify();
+    } catch (const HighsTask::Interrupt&) {
+      // in case the task was interrupted we unwind and cancel all subtasks of
+      // the stolen task
+
+      // first cancel all tasks
+      for (uint32_t i = currentHead; i < ownerData.head; ++i)
+        taskArray[i].cancel();
+
+      // now remove them from our deque so that we arrive at the original state
+      // before the stolen task was executed
+      while (ownerData.head != currentHead) {
+        std::pair<Status, HighsTask*> popResult = pop();
+        assert(popResult.first != Status::kEmpty);
+        // if the task was not stolen it would be up to this worker to execute
+        // it now and we simply skip its execution as it is cancelled
+        if (popResult.first != Status::kStolen) continue;
+
+        // The task was stolen. Check if the stealer is already finished with
+        // its execution in which case we just remove it from the deque.
+        HighsSplitDeque* stealer = popResult.second->getStealerIfUnfinished();
+        if (stealer == nullptr) {
+          popStolen();
+          continue;
+        }
+
+        // The task was stolen and the stealer is still executing the task.
+        // We now wait in a spin loop until the task is marked as finished for
+        // some time. We do not proceed with stealing other tasks as when there
+        // is a cancelled task the likelihood of that task being cancelled too
+        // might be high and our priority is to finish unwinding the chain of
+        // cancelled tasks as fast as possible.
+        // When the spinning proceeds for too long we request a notification
+        // from the stealer when it is finished and yield control to the
+        // operating system until then.
+        int numTries = HighsSchedulerConstants::kNumTryFac;
+        auto tStart = std::chrono::high_resolution_clock::now();
+
+        bool isFinished = popResult.second->isFinished();
+
+        while (!isFinished) {
+          for (int i = 0; i < numTries; ++i) {
+            HighsSpinMutex::yieldProcessor();
+            isFinished = popResult.second->isFinished();
+            if (isFinished) break;
+          }
+
+          if (!isFinished) {
+            auto numMicroSecs =
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now() - tStart)
+                    .count();
+
+            if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeSleep)
+              numTries *= 2;
+            else {
+              waitForTaskToFinish(popResult.second, stealer);
+              break;
+            }
+          }
+        }
+
+        // the task is finished and we can safely proceed to unwind to the next
+        // task
+        popStolen();
+      }
+
+      // unwinding is finished for all subtasks and we can mark the task as
+      // finished and then notify the owner if it is waiting for a signal
+      HighsSplitDeque* owner = task->markAsFinished(this);
+      if (owner) owner->notify();
+    }
+
+    ownerData.rootTask = prevRootTask;
+    checkInterrupt();
   }
 
   // steal from the stealer until this task is finished or no more work can be
   // stolen from the stealer. If the task is finished then true is returned,
   // otherwise false is returned
-  bool leapfrogStolenTask(HighsTask* task) {
-    HighsSplitDeque* stealer = task->getStealerIfUnfinished();
+  bool leapfrogStolenTask(HighsTask* task, HighsSplitDeque*& stealer) {
+    bool cancelled;
+    stealer = task->getStealerIfUnfinished(&cancelled);
 
     if (stealer == nullptr) return true;
 
-    do {
-      HighsTask* t = stealer->stealWithRetryLoop();
-      if (t == nullptr) break;
-      runStolenTask(t);
-    } while (!task->isFinished());
+    if (!cancelled) {
+      do {
+        HighsTask* t = stealer->stealWithRetryLoop();
+        if (t == nullptr) break;
+        runStolenTask(t);
+      } while (!task->isFinished());
+    }
 
     return task->isFinished();
   }
 
-  void waitForTaskToFinish(HighsTask* t) {
+  void waitForTaskToFinish(HighsTask* t, HighsSplitDeque* stealer) {
     std::unique_lock<std::mutex> lg =
         stealerData.semaphore.lockMutexForAcquire();
     // exchange the value stored in stealer with the pointer to owner
@@ -466,7 +559,7 @@ class HighsSplitDeque {
     // stealer will additionally acquire the wait mutex and signal the owner
     // thread that the task is finished
 
-    if (!t->requestNotifyWhenFinished(this)) return;
+    if (!t->requestNotifyWhenFinished(this, stealer)) return;
 
     stealerData.semaphore.acquire(std::move(lg));
   }
@@ -477,6 +570,8 @@ class HighsSplitDeque {
   }
 
   int getOwnerId() const { return ownerData.ownerId; }
+
+  int getNumWorkers() const { return ownerData.numWorkers; }
 
   int getCurrentHead() const { return ownerData.head; }
 

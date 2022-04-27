@@ -248,8 +248,14 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
+
 HighsInt Highs_clearModel(void* highs) {
   return (HighsInt)((Highs*)highs)->clearModel();
+}
+
+HighsInt Highs_clearSolver(void* highs) {
+  return (HighsInt)((Highs*)highs)->clearSolver();
 }
 
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
@@ -504,23 +510,42 @@ HighsInt Highs_setLogicalBasis(void* highs) {
   return (HighsInt)((Highs*)highs)->setBasis();
 }
 
+HighsInt Highs_setSolution(void* highs, const double* col_value,
+                           const double* row_value, const double* col_dual,
+                           const double* row_dual) {
+  HighsSolution solution;
+  const HighsInt num__col = Highs_getNumCol(highs);
+  if (num__col > 0) {
+    if (col_value) {
+      solution.col_value.resize(num__col);
+      for (HighsInt i = 0; i < num__col; i++)
+        solution.col_value[i] = col_value[i];
+    }
+    if (col_dual) {
+      solution.col_dual.resize(num__col);
+      for (HighsInt i = 0; i < num__col; i++)
+        solution.col_dual[i] = col_dual[i];
+    }
+  }
+  const HighsInt num__row = Highs_getNumRow(highs);
+  if (num__row > 0) {
+    if (row_value) {
+      solution.row_value.resize(num__row);
+      for (HighsInt i = 0; i < num__row; i++)
+        solution.row_value[i] = row_value[i];
+    }
+    if (row_dual) {
+      solution.row_dual.resize(num__row);
+      for (HighsInt i = 0; i < num__row; i++)
+        solution.row_dual[i] = row_dual[i];
+    }
+  }
+
+  return (HighsInt)((Highs*)highs)->setSolution(solution);
+}
+
 double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
-}
-
-HighsInt Highs_addRow(void* highs, const double lower, const double upper,
-                      const HighsInt num_new_nz, const HighsInt* index,
-                      const double* value) {
-  return (HighsInt)((Highs*)highs)
-      ->addRow(lower, upper, num_new_nz, index, value);
-}
-
-HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
-                       const double* lower, const double* upper,
-                       const HighsInt num_new_nz, const HighsInt* starts,
-                       const HighsInt* index, const double* value) {
-  return (HighsInt)((Highs*)highs)
-      ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
@@ -538,6 +563,30 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
   return (HighsInt)((Highs*)highs)
       ->addCols(num_new_col, costs, lower, upper, num_new_nz, starts, index,
                 value);
+}
+
+HighsInt Highs_addVar(void* highs, const double lower, const double upper) {
+  return (HighsInt)((Highs*)highs)->addVar(lower, upper);
+}
+
+HighsInt Highs_addVars(void* highs, const HighsInt num_new_var,
+                       const double* lower, const double* upper) {
+  return (HighsInt)((Highs*)highs)->addVars(num_new_var, lower, upper);
+}
+
+HighsInt Highs_addRow(void* highs, const double lower, const double upper,
+                      const HighsInt num_new_nz, const HighsInt* index,
+                      const double* value) {
+  return (HighsInt)((Highs*)highs)
+      ->addRow(lower, upper, num_new_nz, index, value);
+}
+
+HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
+                       const double* lower, const double* upper,
+                       const HighsInt num_new_nz, const HighsInt* starts,
+                       const HighsInt* index, const double* value) {
+  return (HighsInt)((Highs*)highs)
+      ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
@@ -921,6 +970,10 @@ HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
   }
 
   return (HighsInt)((Highs*)highs)->crossover(solution);
+}
+
+void Highs_resetGlobalScheduler(HighsInt blocking) {
+  Highs::resetGlobalScheduler(blocking);
 }
 
 // *********************

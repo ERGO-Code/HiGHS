@@ -79,7 +79,7 @@ class Highs {
   HighsStatus passModel(
       const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
       const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
-      const HighsInt sense, const double offset, const double* costs,
+      const HighsInt sense, const double offset, const double* col_cost,
       const double* col_lower, const double* col_upper, const double* row_lower,
       const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
       const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
@@ -92,7 +92,7 @@ class Highs {
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const HighsInt a_format,
                         const HighsInt sense, const double offset,
-                        const double* costs, const double* col_lower,
+                        const double* col_cost, const double* col_lower,
                         const double* col_upper, const double* row_lower,
                         const double* row_upper, const HighsInt* a_start,
                         const HighsInt* a_index, const double* a_value,
@@ -252,6 +252,16 @@ class Highs {
   HighsStatus writeInfo(const std::string filename) const;
 
   /**
+   * @brief Get the value of infinity used by HiGHS
+   */
+  double getInfinity() { return kHighsInf; }
+
+  /**
+   * @brief Get the run time of HiGHS
+   */
+  double getRunTime() { return timer_.readRunHighsClock(); }
+
+  /**
    * Methods for model output
    */
 
@@ -287,18 +297,15 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
-   * @brief Get the hot start basis data from the most recent simplex
-   * solve. Advanced method: for HiGHS MIP solver
+   * @brief Return the status for the incumbent model.
    */
-  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
+  const HighsModelStatus& getModelStatus() const { return model_status_; }
 
   /**
-   * @brief Return the status for the incumbent model. Returning the
-   * scaled model status is deprecated
+   * @brief Returns the current model's presolve status
    */
-  const HighsModelStatus& getModelStatus(
-      const bool scaled_model = false) const {
-    return scaled_model ? scaled_model_status_ : model_status_;
+  const HighsPresolveStatus& getModelPresolveStatus() const {
+    return model_presolve_status_;
   }
 
   /**
@@ -435,7 +442,7 @@ class Highs {
       const HighsInt
           to_col,  //!< The index of the last column to get from the model
       HighsInt& num_col,  //!< Number of columns got from the model
-      double* costs,      //!< Array of size num_col with costs
+      double* cost,       //!< Array of size num_col with costs
       double* lower,      //!< Array of size num_col with lower bounds
       double* upper,      //!< Array of size num_col with upper bounds
       HighsInt& num_nz,   //!< Number of nonzeros got from the model
@@ -454,7 +461,7 @@ class Highs {
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns to get
       HighsInt& num_col,    //!< Number of columns got from the model
-      double* costs,        //!< Array of size num_col with costs
+      double* cost,         //!< Array of size num_col with costs
       double* lower,        //!< Array of size num_col with lower bounds
       double* upper,        //!< Array of size num_col with upper bounds
       HighsInt& num_nz,     //!< Number of nonzeros got from the model
@@ -471,7 +478,7 @@ class Highs {
   HighsStatus getCols(
       const HighsInt* mask,  //!< Full length array with 1 => get; 0 => not
       HighsInt& num_col,     //!< Number of columns got from the model
-      double* costs,         //!< Array of size num_col with costs
+      double* cost,          //!< Array of size num_col with cost
       double* lower,         //!< Array of size num_col with lower bounds
       double* upper,         //!< Array of size num_col with upper bounds
       HighsInt& num_nz,      //!< Number of nonzeros got from the model
@@ -677,6 +684,48 @@ class Highs {
   HighsStatus changeCoeff(const HighsInt row, const HighsInt col,
                           const double value);
   /**
+   * @brief Sets the constraint matrix format of the incumbent model
+   */
+  HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
+    this->model_.lp_.setFormat(desired_format);
+    return HighsStatus::kOk;
+  }
+
+  /**
+   * @brief Adds a variable to the incumbent model, without the matrix
+   * coefficients if num_new_nz = 0, in which case indices and values
+   * arrays can be nullptr
+   */
+  HighsStatus addCol(const double cost, const double lower, const double upper,
+                     const HighsInt num_new_nz, const HighsInt* indices,
+                     const double* values);
+
+  /**
+   * @brief Adds multiple columns to the incumbent model, without the matrix
+   * coefficients if num_new_nz = 0, in which case column-wise starts,
+   * indices and values arrays can be nullptr
+   */
+  HighsStatus addCols(const HighsInt num_new_col, const double* cost,
+                      const double* lower, const double* upper,
+                      const HighsInt num_new_nz, const HighsInt* starts,
+                      const HighsInt* indices, const double* values);
+
+  /**
+   * @brief Adds a variable to the incumbent model, without the cost or matrix
+   * coefficients
+   */
+  HighsStatus addVar(const double lower, const double upper) {
+    return this->addVars(1, &lower, &upper);
+  }
+
+  /**
+   * @brief Adds multiple variables to the incumbent model, without the costs or
+   * matrix coefficients
+   */
+  HighsStatus addVars(const HighsInt num_new_var, const double* lower,
+                      const double* upper);
+
+  /**
    * @brief Add a row to the incumbent model, without the matrix coefficients if
    * num_new_nz = 0, in which case indices and values arrays can be
    * nullptr
@@ -696,25 +745,6 @@ class Highs {
                       const double* values);
 
   /**
-   * @brief Adds a column to the incumbent model, without the matrix
-   * coefficients if num_new_nz = 0, in which case indices and values
-   * arrays can be nullptr
-   */
-  HighsStatus addCol(const double cost, const double lower, const double upper,
-                     const HighsInt num_new_nz, const HighsInt* indices,
-                     const double* values);
-
-  /**
-   * @brief Adds multiple columns to the incumbent model, without the matrix
-   * coefficients if num_new_nz = 0, in which case column-wise starts,
-   * indices and values arrays can be nullptr
-   */
-  HighsStatus addCols(const HighsInt num_new_col, const double* costs,
-                      const double* lower, const double* upper,
-                      const HighsInt num_new_nz, const HighsInt* starts,
-                      const HighsInt* indices, const double* values);
-
-  /**
    * @brief Delete multiple columns from the incumbent model given by an
    * interval [from_col, to_col]
    */
@@ -731,6 +761,28 @@ class Highs {
    * of any column not deleted is returned in place of the value 0.
    */
   HighsStatus deleteCols(HighsInt* mask);
+
+  /**
+   * @brief Delete multiple variables from the incumbent model given by an
+   * interval [from_var, to_var]
+   */
+  HighsStatus deleteVars(const HighsInt from_var, const HighsInt to_var) {
+    return deleteCols(from_var, to_var);
+  }
+
+  /**
+   * @brief Delete multiple variables from the incumbent model given by a set
+   */
+  HighsStatus deleteVars(const HighsInt num_set_entries, const HighsInt* set) {
+    return deleteCols(num_set_entries, set);
+  }
+
+  /**
+   * @brief Delete multiple variables from the incumbent model given by
+   * a mask (full length array with 1 => change; 0 => not). New index
+   * of any variable not deleted is returned in place of the value 0.
+   */
+  HighsStatus deleteVars(HighsInt* mask) { return deleteCols(mask); }
 
   /**
    * @brief Delete multiple rows from the incumbent model given by an interval
@@ -798,6 +850,49 @@ class Highs {
   HighsStatus setBasis();
 
   /**
+   * @brief Run IPX crossover (possibly from a given HighsSolution
+   * instance) and, if successful, set the internal HighsBasis
+   * instance
+   */
+  HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
+
+  /**
+   * @brief Open a named log file
+   */
+  HighsStatus openLogFile(const std::string log_file = "");
+
+  /**
+   * @brief Interpret common qualifiers to string values
+   */
+  std::string modelStatusToString(const HighsModelStatus model_status) const;
+  std::string solutionStatusToString(const HighsInt solution_status) const;
+  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
+  std::string basisValidityToString(const HighsInt basis_validity) const;
+
+  /**
+   * @brief Releases all resources held by the global scheduler instance. It is
+   * not thread-safe to call this function while calling run() or presolve() on
+   * any other Highs instance in any thread. After this function has terminated
+   * it is guaranteed that eventually all previously created scheduler threads
+   * will terminate and allocated memory will be released. After this function
+   * has returned the option value for the number of threads may be altered to a
+   * new value before the next call to run() or presolve(). If the given bool
+   * parameter has value true, then the function will not return until all
+   * memory is freed, which might be desirable when debugging heap memory but
+   * requires the calling thread to wait for all scheduler threads to wake-up
+   * which is usually not necessary.
+   */
+  static void resetGlobalScheduler(bool blocking = false);
+
+  // Start of advanced methods for HiGHS MIP solver
+  /**
+   * @brief Get the hot start basis data from the most recent simplex
+   * solve. Advanced method: for HiGHS MIP solver
+   */
+  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
+
+  /**
    * @brief Set up for simplex using the supplied hot start
    * data. Advanced method: for HiGHS MIP solver
    */
@@ -840,16 +935,6 @@ class Highs {
   HighsStatus getIterate();
 
   /**
-   * @brief Get the value of infinity used by HiGHS
-   */
-  double getInfinity() { return kHighsInf; }
-
-  /**
-   * @brief Get the run time of HiGHS
-   */
-  double getRunTime() { return timer_.readRunHighsClock(); }
-
-  /**
    * @brief Get the dual edge weights (steepest/devex) in the order of
    * the basic indices or nullptr when they are not available.
    */
@@ -857,35 +942,6 @@ class Highs {
     return ekk_instance_.dual_edge_weight_.empty()
                ? nullptr
                : ekk_instance_.dual_edge_weight_.data();
-  }
-
-  /**
-   * @brief Run IPX crossover (possibly from a given HighsSolution
-   * instance) and, if successful, set the internal HighsBasis
-   * instance
-   */
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
-
-  /**
-   * @brief Open a named log file
-   */
-  HighsStatus openLogFile(const std::string log_file = "");
-
-  /**
-   * @brief Interpret common qualifiers to string values
-   */
-  std::string modelStatusToString(const HighsModelStatus model_status) const;
-  std::string solutionStatusToString(const HighsInt solution_status) const;
-  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
-  std::string basisValidityToString(const HighsInt basis_validity) const;
-
-  /**
-   * @brief Sets the constraint matrix format of the incumbent model
-   */
-  HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
-    this->model_.lp_.setFormat(desired_format);
-    return HighsStatus::kOk;
   }
 
 #ifdef OSI_FOUND
@@ -982,6 +1038,10 @@ class Highs {
   HighsStatus writeSolution(const std::string filename,
                             const bool pretty = false) const;
 
+  const HighsModelStatus& getModelStatus(const bool scaled_model) const;
+
+  void logHeader();
+
   void deprecationMessage(const std::string method_name,
                           const std::string alt_method_name) const;
 
@@ -1000,7 +1060,6 @@ class Highs {
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   HEkk ekk_instance_;
 
@@ -1012,6 +1071,8 @@ class Highs {
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
 
+  bool written_log_header = false;
+
   void exactResizeModel() {
     this->model_.lp_.exactResize();
     this->model_.hessian_.exactResize();
@@ -1020,9 +1081,11 @@ class Highs {
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
+  HighsStatus callRunPostsolve(const HighsSolution& solution,
+                               const HighsBasis& basis);
 
   PresolveComponent presolve_;
-  HighsPresolveStatus runPresolve();
+  HighsPresolveStatus runPresolve(const bool force_presolve = false);
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
@@ -1038,8 +1101,8 @@ class Highs {
   void setHighsModelStatusAndClearSolutionAndBasis(
       const HighsModelStatus model_status);
   //
-  // Sets unscaled and scaled model status, basis, solution and info
-  // from the highs_model_object
+  // Sets model status, basis, solution and info from the
+  // highs_model_object
   void setBasisValidity();
   //
   // Clears the presolved model and its status
@@ -1057,7 +1120,7 @@ class Highs {
   // Clears the model status, solution_ and info_
   void clearModelStatusSolutionAndInfo();
   //
-  // Sets unscaled and scaled model status to HighsModelStatus::kNotset
+  // Sets model status to HighsModelStatus::kNotset
   void clearModelStatus();
   //
   // Sets primal and dual solution status to
@@ -1083,6 +1146,7 @@ class Highs {
   void underDevelopmentLogMessage(const std::string method_name);
 
   // Interface methods
+  HighsStatus basisForSolution();
   HighsStatus addColsInterface(
       HighsInt ext_num_new_col, const double* ext_col_cost,
       const double* ext_col_lower, const double* ext_col_upper,

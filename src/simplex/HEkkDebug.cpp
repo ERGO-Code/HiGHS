@@ -42,6 +42,124 @@ const double updated_dual_small_absolute_error = 1e-6;
 const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
+void HEkk::debugInitialise() {
+  debug_solve_call_num_++;
+  debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
+  const HighsInt debug_from_solve_call_num = -12;
+  const HighsInt debug_num_solve = 3;
+  const HighsInt debug_to_solve_call_num =
+      debug_from_solve_call_num + debug_num_solve - 1;
+  const HighsInt debug_build_synthetic_tick = 445560;
+  if (debug_solve_call_num_ < debug_from_solve_call_num) {
+    debug_solve_report_ = false;
+  } else if (debug_solve_call_num_ == debug_from_solve_call_num) {
+    debug_solve_report_ = build_synthetic_tick_ == debug_build_synthetic_tick;
+  } else if (debug_solve_call_num_ > debug_to_solve_call_num) {
+    debug_solve_report_ = false;
+  }
+  const HighsInt time_from_solve_call_num = -1;
+  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
+  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
+                 debug_solve_call_num_ <= time_to_solve_call_num;
+  const HighsInt debug_basis_id = -999;
+  debug_basis_report_ = basis_.debug_id == debug_basis_id;
+  if (debug_solve_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    debugReporting(-1);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed); //
+  }
+  if (time_report_) {
+    timeReporting(-1);
+    timeReporting(0);
+  }
+  if (debug_basis_report_) {
+    printf("HEkk::solve basis %d\n", (int)debug_basis_id);
+  }
+}
+
+void HEkk::debugReportInitialBasis() {
+  HighsInt num_col_basic = 0;
+  HighsInt num_col_lower = 0;
+  HighsInt num_col_upper = 0;
+  HighsInt num_col_fixed = 0;
+  HighsInt num_col_free = 0;
+  HighsInt num_row_basic = 0;
+  HighsInt num_row_lower = 0;
+  HighsInt num_row_upper = 0;
+  HighsInt num_row_fixed = 0;
+  HighsInt num_row_free = 0;
+  std::vector<double>& lower = info_.workLower_;
+  std::vector<double>& upper = info_.workUpper_;
+  std::vector<double>& value = info_.workValue_;
+  const bool detail = lp_.num_col_ + lp_.num_row_ < 25;
+  for (HighsInt iCol = 0; iCol < lp_.num_col_; iCol++) {
+    HighsInt iVar = iCol;
+    if (!basis_.nonbasicFlag_[iVar]) {
+      num_col_basic++;
+      continue;
+    }
+    if (basis_.nonbasicMove_[iVar] > 0) {
+      num_col_lower++;
+    } else if (basis_.nonbasicMove_[iVar] < 0) {
+      num_col_upper++;
+    } else if (lower[iCol] == upper[iCol]) {
+      num_col_fixed++;
+    } else {
+      num_col_free++;
+    }
+    if (detail)
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                  "Col %3d [%11.4g, %11.4g, %11.4g] %3d %3d %3d %3d\n",
+                  (int)iCol, lower[iCol], value[iVar], upper[iCol],
+                  num_col_lower, num_col_upper, num_col_fixed, num_col_free);
+  }
+  for (HighsInt iRow = 0; iRow < lp_.num_row_; iRow++) {
+    HighsInt iVar = lp_.num_col_ + iRow;
+    if (!basis_.nonbasicFlag_[iVar]) {
+      num_row_basic++;
+      continue;
+    }
+    if (basis_.nonbasicMove_[iVar] > 0) {
+      num_row_lower++;
+    } else if (basis_.nonbasicMove_[iVar] < 0) {
+      num_row_upper++;
+    } else if (lower[iVar] == upper[iVar]) {
+      num_row_fixed++;
+    } else {
+      num_row_free++;
+    }
+    if (detail)
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                  "Row %3d [%11.4g, %11.4g, %11.4g] %3d %3d %3d %3d\n",
+                  (int)iRow, lower[iVar], value[iVar], upper[iVar],
+                  num_row_lower, num_row_upper, num_row_fixed, num_row_free);
+  }
+  HighsInt num_col_nonbasic =
+      num_col_lower + num_col_upper + num_col_fixed + num_col_free;
+  HighsInt num_row_nonbasic =
+      num_row_lower + num_row_upper + num_row_fixed + num_row_free;
+  assert(num_col_basic + num_row_basic == lp_.num_row_);
+  assert(num_col_nonbasic + num_row_nonbasic == lp_.num_col_);
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "For %d columns and %d rows\n"
+              "   NonBasic |  Lower  Upper  Fixed   Free |    Basic\n"
+              "Col %7d |%7d%7d%7d%7d |  %7d\n"
+              "Row %7d |%7d%7d%7d%7d |  %7d\n"
+              "----------------------------------------------------\n"
+              "    %7d |%7d%7d%7d%7d |  %7d\n",
+              (int)lp_.num_col_, (int)lp_.num_row_, (int)num_col_nonbasic,
+              (int)num_col_lower, (int)num_col_upper, (int)num_col_fixed,
+              (int)num_col_free, (int)num_col_basic, (int)num_row_nonbasic,
+              (int)num_row_lower, (int)num_row_upper, (int)num_row_fixed,
+              (int)num_row_free, (int)num_row_basic,
+              (int)num_col_nonbasic + (int)num_row_nonbasic,
+              (int)num_col_lower + (int)num_row_lower,
+              (int)num_col_upper + (int)num_row_upper,
+              (int)num_col_fixed + (int)num_row_fixed,
+              (int)num_col_free + (int)num_row_free,
+              (int)num_col_basic + (int)num_row_basic);
+}
+
 void HEkk::timeReporting(const HighsInt save_mod_recover) {
   static HighsInt highs_analysis_level;
   if (save_mod_recover == -1) {

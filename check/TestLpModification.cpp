@@ -1047,6 +1047,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
 TEST_CASE("LP-getcols", "[highs_data]") {
   Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   HighsInt aindex[2] = {0, 1};
@@ -1073,6 +1074,7 @@ TEST_CASE("LP-getcols", "[highs_data]") {
 
 TEST_CASE("LP-getrows", "[highs_data]") {
   Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   HighsInt aindex = 0;
@@ -1101,10 +1103,10 @@ TEST_CASE("LP-getrows", "[highs_data]") {
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getInfo();
 
-  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("log_to_console", true);
   highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
 
