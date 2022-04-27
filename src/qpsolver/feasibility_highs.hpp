@@ -2,13 +2,9 @@
 #define __SRC_LIB_FEASIBILITYHIGHS_HPP__
 
 #include "Highs.h"
-#include "feasibility.hpp"
+#include "crashsolution.hpp"
 
-bool isfreevar(Runtime& runtime, HighsInt idx) {
-  return runtime.instance.var_lo[idx] == -std::numeric_limits<double>::infinity() && runtime.instance.var_up[idx] == std::numeric_limits<double>::infinity();
-}
-
-void computestartingpoint(Runtime& runtime, CrashSolution& result) {
+void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) {
   // compute initial feasible point
   Highs highs;
 
