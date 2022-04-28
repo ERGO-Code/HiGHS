@@ -938,6 +938,10 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     }
   };
 
+  // Initialise tracking for duplicate entries
+  std::vector<bool> has_entry;
+  has_entry.assign(num_row, false);
+
   while (getline(file, strline)) {
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
@@ -1018,8 +1022,16 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                    marker.c_str());
     } else {
       parsename(marker, rowidx);
-      double value = atof(word.c_str());
-      addrhs(value, rowidx);
+      if (has_entry[rowidx]) {
+        highsLogUser(log_options, HighsLogType::kWarning,
+                     "Row name \"%s\" in RHS section has duplicate definition: "
+                     "ignored\n",
+                     marker.c_str());
+      } else {
+        double value = atof(word.c_str());
+        addrhs(value, rowidx);
+        has_entry[rowidx] = true;
+      }
     }
 
     if (!is_end(strline, end)) {
@@ -1050,8 +1062,16 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       };
 
       parsename(marker, rowidx);
-      double value = atof(word.c_str());
-      addrhs(value, rowidx);
+      if (has_entry[rowidx]) {
+        highsLogUser(log_options, HighsLogType::kWarning,
+                     "Row name \"%s\" in RHS section has duplicate definition: "
+                     "ignored\n",
+                     marker.c_str());
+      } else {
+        double value = atof(word.c_str());
+        addrhs(value, rowidx);
+        has_entry[rowidx] = true;
+      }
     }
   }
 
@@ -1069,6 +1089,11 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
   HighsInt num_ui = 0;
   HighsInt num_si = 0;
   HighsInt num_sc = 0;
+
+  std::vector<bool> has_lower;
+  std::vector<bool> has_upper;
+  has_lower.assign(num_col, false);
+  has_upper.assign(num_col, false);
 
   while (getline(file, strline)) {
     double current = getWallTime();
@@ -1223,6 +1248,16 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       continue;
     }
 
+    // Determine whether this entry yields a duplicate bound
+    // definition
+    if ((is_lb && has_lower[colidx]) || (is_ub && has_upper[colidx])) {
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "Column name \"%s\" in BOUNDS section has duplicate "
+                   "definition: ignored\n",
+                   marker.c_str());
+      continue;
+    }
+
     if (is_defaultbound) {
       // MI, PL, BV or FR
       if (is_integral)
@@ -1236,6 +1271,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
           assert(is_lb && is_ub);
           return HMpsFF::Parsekey::kFail;
         }
+        assert(is_lb && is_ub);
         // Mark the column as integer and binary
         col_integrality[colidx] = HighsVarType::kInteger;
         col_binary[colidx] = true;
@@ -1247,6 +1283,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
         if (is_lb) col_lower[colidx] = -kHighsInf;
         if (is_ub) col_upper[colidx] = kHighsInf;
       }
+      if (is_lb) has_lower[colidx] = true;
+      if (is_ub) has_upper[colidx] = true;
       continue;
     }
     // Bounds now are UP, LO, FX, LI, UI, SI or SC
@@ -1282,8 +1320,14 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       col_integrality[colidx] = HighsVarType::kSemiContinuous;
     }
     // Assign the bounds that have been read
-    if (is_lb) col_lower[colidx] = value;
-    if (is_ub) col_upper[colidx] = value;
+    if (is_lb) {
+      col_lower[colidx] = value;
+      has_lower[colidx] = true;
+    }
+    if (is_ub) {
+      col_upper[colidx] = value;
+      has_upper[colidx] = true;
+    }
     // Column is not binary by default
     col_binary[colidx] = false;
   }
@@ -1317,6 +1361,10 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       row_upper.at(rowidx) = row_lower.at(rowidx) + fabs(val);
     }
   };
+
+  // Initialise tracking for duplicate entries
+  std::vector<bool> has_entry;
+  has_entry.assign(num_row, false);
 
   while (getline(file, strline)) {
     double current = getWallTime();
@@ -1369,8 +1417,16 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       continue;
     } else {
       parsename(marker, rowidx);
-      double value = atof(word.c_str());
-      addrhs(value, rowidx);
+      if (has_entry[rowidx]) {
+        highsLogUser(log_options, HighsLogType::kWarning,
+                     "Row name \"%s\" in RANGES section has duplicate "
+                     "definition: ignored\n",
+                     marker.c_str());
+      } else {
+        double value = atof(word.c_str());
+        addrhs(value, rowidx);
+        has_entry[rowidx] = true;
+      }
     }
 
     if (!is_end(strline, end)) {
@@ -1397,8 +1453,16 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       };
 
       parsename(marker, rowidx);
-      double value = atof(word.c_str());
-      addrhs(value, rowidx);
+      if (has_entry[rowidx]) {
+        highsLogUser(log_options, HighsLogType::kWarning,
+                     "Row name \"%s\" in RANGES section has duplicate "
+                     "definition: ignored\n",
+                     marker.c_str());
+      } else {
+        double value = atof(word.c_str());
+        addrhs(value, rowidx);
+        has_entry[rowidx] = true;
+      }
 
       if (!is_end(strline, end)) {
         highsLogUser(log_options, HighsLogType::kError,
