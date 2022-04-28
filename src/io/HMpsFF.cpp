@@ -932,15 +932,28 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
         assert(size_t(rowidx) < row_lower.size());
         row_lower[rowidx] = val;
       }
-    } else if (rowidx == -1) {
+      has_row_entry_[rowidx] = true;
+    } else {
       // objective shift
+      assert(rowidx == -1);
       obj_offset = -val;
+      has_obj_entry_ = true;
+    }
+  };
+
+  auto hasEntry = [this](const HighsInt& rowidx, bool& has_entry) {
+    if (rowidx > -1) {
+      has_entry = has_row_entry_[rowidx];
+    } else {
+      assert(rowidx == -1);
+      has_entry = has_obj_entry_;
     }
   };
 
   // Initialise tracking for duplicate entries
-  std::vector<bool> has_entry;
-  has_entry.assign(num_row, false);
+  has_row_entry_.assign(num_row, false);
+  has_obj_entry_ = false;
+  bool has_entry = false;
 
   while (getline(file, strline)) {
     double current = getWallTime();
@@ -1022,7 +1035,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                    marker.c_str());
     } else {
       parsename(marker, rowidx);
-      if (has_entry[rowidx]) {
+      hasEntry(rowidx, has_entry);
+      if (has_entry) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RHS section has duplicate definition: "
                      "ignored\n",
@@ -1030,7 +1044,6 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       } else {
         double value = atof(word.c_str());
         addrhs(value, rowidx);
-        has_entry[rowidx] = true;
       }
     }
 
@@ -1062,7 +1075,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       };
 
       parsename(marker, rowidx);
-      if (has_entry[rowidx]) {
+      hasEntry(rowidx, has_entry);
+      if (has_entry) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RHS section has duplicate definition: "
                      "ignored\n",
@@ -1070,7 +1084,6 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       } else {
         double value = atof(word.c_str());
         addrhs(value, rowidx);
-        has_entry[rowidx] = true;
       }
     }
   }
@@ -1360,12 +1373,12 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       assert(row_lower.at(rowidx) > (-kHighsInf));
       row_upper.at(rowidx) = row_lower.at(rowidx) + fabs(val);
     }
+    has_row_entry_[rowidx] = true;
   };
 
   // Initialise tracking for duplicate entries
-  std::vector<bool> has_entry;
-  has_entry.assign(num_row, false);
-
+  has_row_entry_.assign(num_row, false);
+  
   while (getline(file, strline)) {
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
@@ -1417,7 +1430,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       continue;
     } else {
       parsename(marker, rowidx);
-      if (has_entry[rowidx]) {
+      if (has_row_entry_[rowidx]) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RANGES section has duplicate "
                      "definition: ignored\n",
@@ -1425,7 +1438,6 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       } else {
         double value = atof(word.c_str());
         addrhs(value, rowidx);
-        has_entry[rowidx] = true;
       }
     }
 
@@ -1453,7 +1465,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       };
 
       parsename(marker, rowidx);
-      if (has_entry[rowidx]) {
+      if (has_row_entry_[rowidx]) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RANGES section has duplicate "
                      "definition: ignored\n",
@@ -1461,7 +1473,6 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       } else {
         double value = atof(word.c_str());
         addrhs(value, rowidx);
-        has_entry[rowidx] = true;
       }
 
       if (!is_end(strline, end)) {
