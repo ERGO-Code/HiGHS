@@ -242,7 +242,11 @@ foreach(instance ${${instances}})
     endif()
 
     # specify the instance and the settings load command
-    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+    if(ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+    else()
+      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+    endif()
 
     # loop over all settings
     foreach(setting ${settings})

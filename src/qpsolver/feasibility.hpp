@@ -1,17 +1,20 @@
 #ifndef __SRC_LIB_FEASIBILITY_HPP__
 #define __SRC_LIB_FEASIBILITY_HPP__
 
-#include <cstdlib>
+#include "runtime.hpp"
+#include "crashsolution.hpp"
+#include "feasibility_highs.hpp"
+#include "feasibility_quass.hpp"
 
-struct CrashSolution {
-  std::vector<HighsInt> active;
-  std::vector<HighsInt> inactive;
-  std::vector<BasisStatus> rowstatus;
-  Vector primal;
-  Vector rowact;
-
-  CrashSolution(HighsInt num_var, HighsInt num_row)
-      : primal(Vector(num_var)), rowact(Vector(num_row)) {}
-};
+void computestartingpoint(Runtime& runtime, CrashSolution& result) {
+    switch (runtime.settings.phase1strategy) {
+        case Phase1Strategy::HIGHS:
+            computestartingpoint_highs(runtime, result);
+            break;
+        case Phase1Strategy::QUASS:
+            computestartingpoint_quass(runtime, result);
+            break;
+    }
+}
 
 #endif

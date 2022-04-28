@@ -5,11 +5,12 @@
 
 #include "Highs.h"
 #include "basis.hpp"
+#include "crashsolution.hpp"
 #include "dantzigpricing.hpp"
 #include "devexharrispricing.hpp"
 #include "devexpricing.hpp"
 #include "factor.hpp"
-#include "feasibility_highs.hpp"
+#include "feasibility.hpp"
 #include "gradient.hpp"
 #include "instance.hpp"
 #include "lp_data/HighsAnalysis.h"
@@ -324,7 +325,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);
 
-        status = basis.activate(runtime, stepres.limitingconstraint,
+        status = basis.activate(runtime.settings, stepres.limitingconstraint,
                                 stepres.nowactiveatlower
                                     ? BasisStatus::ActiveAtLower
                                     : BasisStatus::ActiveAtUpper,

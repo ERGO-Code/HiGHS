@@ -469,7 +469,8 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
 
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  Filereader* reader = Filereader::getFilereader(filename);
+  Filereader* reader =
+      Filereader::getFilereader(options_.log_options, filename);
   if (reader == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model file %s not supported\n", filename.c_str());
@@ -539,7 +540,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
     reportModel();
     return_status = HighsStatus::kOk;
   } else {
-    Filereader* writer = Filereader::getFilereader(filename);
+    Filereader* writer =
+        Filereader::getFilereader(options_.log_options, filename);
     if (writer == NULL) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Model file %s not supported\n", filename.c_str());

@@ -440,8 +440,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_double =
-        new OptionRecordDouble(kTimeLimitString, "Time limit", advanced,
-                               &time_limit, 0, kHighsInf, kHighsInf);
+        new OptionRecordDouble(kTimeLimitString, "Time limit (seconds)",
+                               advanced, &time_limit, 0, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_string =
