@@ -122,6 +122,7 @@ struct HighsSymmetries {
   HighsInt numPerms = 0;
   HighsInt numGenerators = 0;
   double detectionTime = 0.0;
+  bool detectionFinished = false;
 
   void clear();
   void mergeOrbits(HighsInt col1, HighsInt col2);
@@ -132,6 +133,7 @@ struct HighsSymmetries {
   HighsInt getBranchingColumn(const std::vector<double>& colLower,
                               const std::vector<double>& colUpper,
                               HighsInt col) const {
+    if (!detectionFinished) return col;
     if (columnToOrbitope.size() == 0) return col;
     const HighsInt* orbitope = columnToOrbitope.find(col);
     if (!orbitope || orbitopes[*orbitope].numSetPackingRows == 0) return col;

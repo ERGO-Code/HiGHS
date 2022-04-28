@@ -172,6 +172,8 @@ void HighsMipSolverData::finishSymmetryDetection(
     const highs::parallel::TaskGroup& taskGroup) {
   taskGroup.sync();
 
+  symmetries.detectionFinished = true;
+
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                "\nSymmetry detection completed in %.1fs\n",
                symmetries.detectionTime);
