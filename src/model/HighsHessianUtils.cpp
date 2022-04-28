@@ -246,14 +246,17 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
   }
   const HighsInt num_ignored_nz = hessian.start_[dim] - nnz;
   assert(num_ignored_nz >= 0);
-  if (hessian.format_ == HessianFormat::kTriangular && num_ignored_nz) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Ignored %" HIGHSINT_FORMAT
-                 " entries of Hessian in opposite triangle\n",
-                 num_ignored_nz);
+  if (num_ignored_nz) {
+    if (hessian.format_ == HessianFormat::kTriangular) {
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Ignored %" HIGHSINT_FORMAT
+                   " entries of Hessian in opposite triangle\n",
+                   num_ignored_nz);
+      return_status = HighsStatus::kWarning;
+    }
     hessian.start_[dim] = nnz;
-    return_status = HighsStatus::kWarning;
   }
+  assert(hessian.start_[dim] == nnz);
   hessian.format_ = HessianFormat::kTriangular;
   return return_status;
 }
@@ -317,6 +320,8 @@ void triangularToSquareHessian(const HighsHessian& hessian,
 
 HighsStatus normaliseHessian(const HighsOptions& options,
                              HighsHessian& hessian) {
+  // Only relevant for a Hessian with format HessianFormat::kSquare
+  assert(hessian.format_ == HessianFormat::kSquare);
   // Normalise the Hessian to be (Q + Q^T)/2, where Q is the matrix
   // supplied. This guarantees that what's used internally is
   // symmetric.
@@ -357,8 +362,9 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   transpose.start_[0] = 0;
   for (HighsInt iRow = 0; iRow < dim; iRow++)
     transpose.start_[iRow + 1] = transpose.start_[iRow] + qr_length[iRow];
-
+  // Instantiate a square format Hessian in which to accumulate (Q + Q^T)/2
   HighsHessian normalised;
+  normalised.format_ = HessianFormat::kSquare;
   HighsInt normalised_num_nz = 0;
   HighsInt normalised_size = hessian_num_nz;
   normalised.dim_ = dim;
@@ -369,6 +375,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   vector<HighsInt> column_index;
   column_index.resize(dim);
   column_value.assign(dim, 0.0);
+  const bool check_column_value_zero = false;
   const double small_matrix_value = 0;
   HighsInt num_small_values = 0;
   double max_small_value = 0;
@@ -444,7 +451,10 @@ HighsStatus normaliseHessian(const HighsOptions& options,
         column_value[iRow] = 0;
       }
     }
-    for (HighsInt iRow = 0; iRow < dim; iRow++) assert(column_value[iRow] == 0);
+    if (check_column_value_zero) {
+      for (HighsInt iRow = 0; iRow < dim; iRow++)
+        assert(column_value[iRow] == 0);
+    }
     normalised.start_[iCol + 1] = normalised_num_nz;
   }
   if (num_small_values) {
@@ -458,6 +468,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   }
   // Replace the Hessian by the normalised form
   hessian = normalised;
+  assert(hessian.format_ == HessianFormat::kSquare);
   if (warning_found)
     return_status = HighsStatus::kWarning;
   else

@@ -74,7 +74,7 @@ void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) {
     return;
   }
 
-  runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
+  runtime.statistics.phase1_iterations = highs.getInfo().simplex_iteration_count;
 
   HighsModelStatus phase1stat = highs.getModelStatus();
   if (phase1stat == HighsModelStatus::kInfeasible) {
