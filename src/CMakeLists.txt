@@ -719,6 +719,8 @@ set(headers_fast_build_
     parallel/HighsTask.h
     qpsolver/quass.hpp
     qpsolver/vector.hpp
+    qpsolver/scaling.hpp
+    qpsolver/perturbation.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h
