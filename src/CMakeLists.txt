@@ -528,6 +528,8 @@ target_sources(libhighs PRIVATE
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
+    qpsolver/scaling.cpp
+    qpsolver/perturbation.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -653,6 +655,8 @@ set(headers_fast_build_
     parallel/HighsTask.h
     qpsolver/quass.hpp
     qpsolver/vector.hpp
+    qpsolver/scaling.hpp
+    qpsolver/perturbation.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h
