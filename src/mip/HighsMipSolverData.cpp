@@ -148,12 +148,12 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
 
 void HighsMipSolverData::startSymmetryDetection(
     const highs::parallel::TaskGroup& taskGroup,
-    std::unique_ptr<HighsSymmetryDetection>& symDetection) {
-  symDetection =
-      std::unique_ptr<HighsSymmetryDetection>(new HighsSymmetryDetection());
-  symDetection->loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
-                                 mipsolver.options_mip_->small_matrix_value);
-  detectSymmetries = symDetection->initializeDetection();
+    std::unique_ptr<SymmetryDetectionData>& symData) {
+  symData = std::unique_ptr<SymmetryDetectionData>(new SymmetryDetectionData());
+  symData->symDetection.loadModelAsGraph(
+      mipsolver.mipdata_->presolvedModel,
+      mipsolver.options_mip_->small_matrix_value);
+  detectSymmetries = symData->symDetection.initializeDetection();
 
   if (detectSymmetries) {
     taskGroup.spawn([&]() {
@@ -161,31 +161,31 @@ void HighsMipSolverData::startSymmetryDetection(
       // highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
       //              "(%4.1fs) Starting symmetry detection\n",
       //              mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-      symDetection->run(symmetries);
-      symmetries.detectionTime = mipsolver.timer_.getWallTime() - startTime;
+      symData->symDetection.run(symData->symmetries);
+      symData->detectionTime = mipsolver.timer_.getWallTime() - startTime;
     });
   } else
-    symDetection.reset();
+    symData.reset();
 }
 
 void HighsMipSolverData::finishSymmetryDetection(
-    const highs::parallel::TaskGroup& taskGroup) {
+    const highs::parallel::TaskGroup& taskGroup,
+    std::unique_ptr<SymmetryDetectionData>& symData) {
   taskGroup.sync();
 
-  symmetries.detectionFinished = true;
-
+  symmetries = std::move(symData->symmetries);
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                "\nSymmetry detection completed in %.1fs\n",
-               symmetries.detectionTime);
+               symData->detectionTime);
 
   if (symmetries.numGenerators == 0) {
     detectSymmetries = false;
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "No symmetry present\n\n", symmetries.detectionTime);
+                 "No symmetry present\n\n");
   } else if (symmetries.orbitopes.size() == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Found %" HIGHSINT_FORMAT " generators\n\n",
-                 symmetries.detectionTime, symmetries.numGenerators);
+                 symmetries.numGenerators);
 
   } else {
     if (symmetries.numPerms != 0) {
@@ -193,18 +193,18 @@ void HighsMipSolverData::finishSymmetryDetection(
                    "Found %" HIGHSINT_FORMAT " generators and %" HIGHSINT_FORMAT
                    " full orbitope(s) acting on %" HIGHSINT_FORMAT
                    " columns\n\n",
-                   symmetries.detectionTime, symmetries.numPerms,
-                   (HighsInt)symmetries.orbitopes.size(),
+                   symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
                    (HighsInt)symmetries.columnToOrbitope.size());
     } else {
-      highsLogUser(
-          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-          "Found %" HIGHSINT_FORMAT
-          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n\n",
-          symmetries.detectionTime, (HighsInt)symmetries.orbitopes.size(),
-          (HighsInt)symmetries.columnToOrbitope.size());
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Found %" HIGHSINT_FORMAT
+                   " full orbitope(s) acting on %" HIGHSINT_FORMAT
+                   " columns\n\n",
+                   (HighsInt)symmetries.orbitopes.size(),
+                   (HighsInt)symmetries.columnToOrbitope.size());
     }
   }
+  symData.reset();
 
   for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
     orbitope.determineOrbitopeType(cliquetable);
@@ -1203,10 +1203,10 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
+  std::unique_ptr<SymmetryDetectionData> symData;
   highs::parallel::TaskGroup tg;
-  std::unique_ptr<HighsSymmetryDetection> symDetection;
 restart:
-  if (detectSymmetries) startSymmetryDetection(tg, symDetection);
+  if (detectSymmetries) startSymmetryDetection(tg, symData);
   if (!analyticCenterComputed) startAnalyticCenterComputation(tg);
 
   // lp.getLpSolver().setOptionValue(
@@ -1518,7 +1518,7 @@ restart:
     }
 
     if (detectSymmetries) {
-      finishSymmetryDetection(tg);
+      finishSymmetryDetection(tg, symData);
       status = evaluateRootLp();
       if (status == HighsLpRelaxation::Status::kInfeasible) return;
     }
