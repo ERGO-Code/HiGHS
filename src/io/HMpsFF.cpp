@@ -383,8 +383,7 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
 HighsInt HMpsFF::getColIdx(const std::string& colname) {
   // look up column name
   auto mit = colname2idx.find(colname);
-  if (mit != colname2idx.end())
-    return mit->second;
+  if (mit != colname2idx.end()) return mit->second;
 
   // add new continuous column with default bounds
   colname2idx.emplace(colname, num_col++);
@@ -394,7 +393,7 @@ HighsInt HMpsFF::getColIdx(const std::string& colname) {
   col_lower.push_back(0.0);
   col_upper.push_back(kHighsInf);
 
-  return num_col-1;
+  return num_col - 1;
 }
 
 HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
