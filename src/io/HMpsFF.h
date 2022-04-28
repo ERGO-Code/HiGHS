@@ -112,10 +112,10 @@ class HMpsFF {
   HighsInt duplicate_col_name_index0_;
   HighsInt duplicate_col_name_index1_;
 
-  // 
+  //
   std::vector<bool> has_row_entry_;
   bool has_obj_entry_;
-  
+
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);
   HighsInt fillMatrix(const HighsLogOptions& log_options);

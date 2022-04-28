@@ -647,7 +647,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   col_value.assign(num_row, 0);
   col_index.resize(num_row);
 
-  auto parsename = [&rowidx, this](std::string name) {
+  auto parseName = [&rowidx, this](std::string name) {
     auto mit = rowname2idx.find(name);
 
     assert(mit != rowname2idx.end());
@@ -823,7 +823,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     } else {
       double value = atof(word.c_str());
       if (value) {
-        parsename(marker);  // rowidx set and num_nz incremented
+        parseName(marker);  // rowidx set and num_nz incremented
         if (rowidx >= 0) {
           if (col_value[rowidx]) {
             // Ignore duplicate entry
@@ -877,7 +877,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       };
       double value = atof(word.c_str());
       if (value) {
-        parsename(marker);  // rowidx set and num_nz incremented
+        parseName(marker);  // rowidx set and num_nz incremented
         if (rowidx >= 0) {
           if (col_value[rowidx]) {
             // Ignore duplicate entry
@@ -910,23 +910,30 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                                   std::istream& file) {
   std::string strline;
 
-  auto parsename = [this](const std::string& name, HighsInt& rowidx) {
+  auto parseName = [this](const std::string& name, HighsInt& rowidx,
+                          bool& has_entry) {
     auto mit = rowname2idx.find(name);
 
     assert(mit != rowname2idx.end());
     rowidx = mit->second;
 
     assert(rowidx < num_row);
+
+    if (rowidx > -1) {
+      has_entry = has_row_entry_[rowidx];
+    } else {
+      assert(rowidx == -1);
+      has_entry = has_obj_entry_;
+    }
   };
 
-  auto addrhs = [this](double val, HighsInt rowidx) {
+  auto addRhs = [this](double val, HighsInt rowidx) {
     if (rowidx > -1) {
       if (row_type[rowidx] == Boundtype::kEq ||
           row_type[rowidx] == Boundtype::kLe) {
         assert(size_t(rowidx) < row_upper.size());
         row_upper[rowidx] = val;
       }
-
       if (row_type[rowidx] == Boundtype::kEq ||
           row_type[rowidx] == Boundtype::kGe) {
         assert(size_t(rowidx) < row_lower.size());
@@ -938,15 +945,6 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       assert(rowidx == -1);
       obj_offset = -val;
       has_obj_entry_ = true;
-    }
-  };
-
-  auto hasEntry = [this](const HighsInt& rowidx, bool& has_entry) {
-    if (rowidx > -1) {
-      has_entry = has_row_entry_[rowidx];
-    } else {
-      assert(rowidx == -1);
-      has_entry = has_obj_entry_;
     }
   };
 
@@ -1034,8 +1032,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                    "Row name \"%s\" in RHS section is not defined: ignored\n",
                    marker.c_str());
     } else {
-      parsename(marker, rowidx);
-      hasEntry(rowidx, has_entry);
+      parseName(marker, rowidx, has_entry);
       if (has_entry) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RHS section has duplicate definition: "
@@ -1043,7 +1040,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      marker.c_str());
       } else {
         double value = atof(word.c_str());
-        addrhs(value, rowidx);
+        addRhs(value, rowidx);
       }
     }
 
@@ -1074,8 +1071,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
         continue;
       };
 
-      parsename(marker, rowidx);
-      hasEntry(rowidx, has_entry);
+      parseName(marker, rowidx, has_entry);
       if (has_entry) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RHS section has duplicate definition: "
@@ -1083,7 +1079,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      marker.c_str());
       } else {
         double value = atof(word.c_str());
-        addrhs(value, rowidx);
+        addRhs(value, rowidx);
       }
     }
   }
@@ -1351,25 +1347,22 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                                      std::istream& file) {
   std::string strline, word;
 
-  auto parsename = [this](const std::string& name, HighsInt& rowidx) {
+  auto parseName = [this](const std::string& name, HighsInt& rowidx) {
     auto mit = rowname2idx.find(name);
 
     assert(mit != rowname2idx.end());
     rowidx = mit->second;
 
-    assert(rowidx >= 0);
     assert(rowidx < num_row);
   };
 
-  auto addrhs = [this](double val, HighsInt& rowidx) {
+  auto addRhs = [this](double val, HighsInt& rowidx) {
     if ((row_type[rowidx] == Boundtype::kEq && val < 0) ||
         row_type[rowidx] == Boundtype::kLe) {
       assert(row_upper.at(rowidx) < kHighsInf);
       row_lower.at(rowidx) = row_upper.at(rowidx) - fabs(val);
-    }
-
-    else if ((row_type[rowidx] == Boundtype::kEq && val > 0) ||
-             row_type[rowidx] == Boundtype::kGe) {
+    } else if ((row_type[rowidx] == Boundtype::kEq && val > 0) ||
+               row_type[rowidx] == Boundtype::kGe) {
       assert(row_lower.at(rowidx) > (-kHighsInf));
       row_upper.at(rowidx) = row_lower.at(rowidx) + fabs(val);
     }
@@ -1378,7 +1371,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
   // Initialise tracking for duplicate entries
   has_row_entry_.assign(num_row, false);
-  
+
   while (getline(file, strline)) {
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
@@ -1424,20 +1417,25 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "Row name \"%s\" in RANGES is not defined: ignored\n",
-                   marker.c_str());
-      continue;
+      highsLogUser(
+          log_options, HighsLogType::kWarning,
+          "Row name \"%s\" in RANGES section is not defined: ignored\n",
+          marker.c_str());
     } else {
-      parsename(marker, rowidx);
-      if (has_row_entry_[rowidx]) {
+      parseName(marker, rowidx);
+      if (rowidx < 0) {
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "Row name \"%s\" in RANGES section is not valid: ignored\n",
+            marker.c_str());
+      } else if (has_row_entry_[rowidx]) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RANGES section has duplicate "
                      "definition: ignored\n",
                      marker.c_str());
       } else {
         double value = atof(word.c_str());
-        addrhs(value, rowidx);
+        addRhs(value, rowidx);
       }
     }
 
@@ -1458,21 +1456,26 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RANGES is not defined: ignored\n",
-                     marker.c_str());
-        continue;
-      };
-
-      parsename(marker, rowidx);
-      if (has_row_entry_[rowidx]) {
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RANGES section has duplicate "
-                     "definition: ignored\n",
-                     marker.c_str());
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "Row name \"%s\" in RANGES section is not defined: ignored\n",
+            marker.c_str());
       } else {
-        double value = atof(word.c_str());
-        addrhs(value, rowidx);
+        parseName(marker, rowidx);
+        if (rowidx < 0) {
+          highsLogUser(
+              log_options, HighsLogType::kWarning,
+              "Row name \"%s\" in RANGES section is not valid: ignored\n",
+              marker.c_str());
+        } else if (has_row_entry_[rowidx]) {
+          highsLogUser(log_options, HighsLogType::kWarning,
+                       "Row name \"%s\" in RANGES section has duplicate "
+                       "definition: ignored\n",
+                       marker.c_str());
+        } else {
+          double value = atof(word.c_str());
+          addRhs(value, rowidx);
+        }
       }
 
       if (!is_end(strline, end)) {
