@@ -160,7 +160,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
       std::fabs(mps_objective_function_value - info.objective_function_value);
   if (delta)
     printf("TestFilereader: LP-MPS |objective difference| of %g\n", delta);
-  REQUIRE(delta < 1e-12);
+  REQUIRE(delta < 1e-8);
 
   std::remove(filename_lp.c_str());
 }
