@@ -739,9 +739,8 @@ HighsStatus Highs::run() {
   // From here all return statements execute returnFromRun()
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  // Initialise the HiGHS model status values
+  // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
-  scaled_model_status_ = HighsModelStatus::kNotset;
   // Clear the run info
   clearInfo();
   // Zero the iteration counts
@@ -995,8 +994,7 @@ HighsStatus Highs::run() {
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
-        have_optimal_solution =
-            scaled_model_status_ == HighsModelStatus::kOptimal;
+        have_optimal_solution = model_status_ == HighsModelStatus::kOptimal;
         no_incumbent_lp_solution_or_basis =
             model_status_ == HighsModelStatus::kInfeasible ||
             model_status_ == HighsModelStatus::kUnbounded ||
@@ -1103,7 +1101,7 @@ HighsStatus Highs::run() {
 
     if (have_optimal_solution) {
       // ToDo Put this in a separate method
-      assert(scaled_model_status_ == HighsModelStatus::kOptimal ||
+      assert(model_status_ == HighsModelStatus::kOptimal ||
              model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
       if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
           model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty) {
@@ -1301,7 +1299,7 @@ HighsStatus Highs::run() {
   }
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
-  call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
+  call_status = highsStatusFromHighsModelStatus(model_status_);
   return_status =
       interpretCallStatus(options_.log_options, call_status, return_status);
   return returnFromRun(return_status);
@@ -1325,8 +1323,7 @@ HighsStatus Highs::getRanging() {
   // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
                                     ekk_instance_, options_, timer_);
-  solver_object.scaled_model_status_ = scaled_model_status_;
-  solver_object.unscaled_model_status_ = model_status_;
+  solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }
 
@@ -2537,10 +2534,7 @@ void Highs::clearModelStatusSolutionAndInfo() {
   clearInfo();
 }
 
-void Highs::clearModelStatus() {
-  model_status_ = HighsModelStatus::kNotset;
-  scaled_model_status_ = HighsModelStatus::kNotset;
-}
+void Highs::clearModelStatus() { model_status_ = HighsModelStatus::kNotset; }
 
 void Highs::clearSolution() {
   info_.primal_solution_status = kSolutionStatusNone;
@@ -2580,9 +2574,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
 
   // Solve the LP
   return_status = solveLp(solver_object, message);
-  // Extract the scaled/unscaled model status
-  model_status_ = solver_object.unscaled_model_status_;
-  scaled_model_status_ = solver_object.scaled_model_status_;
+  // Extract the model status
+  model_status_ = solver_object.model_status_;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("LP", return_status);
   return return_status;
@@ -2598,8 +2591,7 @@ HighsStatus Highs::callSolveQp() {
                 "Hessian dimension = %" HIGHSINT_FORMAT
                 " incompatible with matrix dimension = %" HIGHSINT_FORMAT "\n",
                 hessian.dim_, lp.num_col_);
-    scaled_model_status_ = HighsModelStatus::kModelError;
-    model_status_ = scaled_model_status_;
+    model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;
     return HighsStatus::kError;
@@ -2670,7 +2662,7 @@ HighsStatus Highs::callSolveQp() {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  scaled_model_status_ =
+  model_status_ =
       runtime.status == ProblemStatus::OPTIMAL
           ? HighsModelStatus::kOptimal
           : runtime.status == ProblemStatus::UNBOUNDED
@@ -2682,7 +2674,6 @@ HighsStatus Highs::callSolveQp() {
                             : runtime.status == ProblemStatus::TIMELIMIT
                                   ? HighsModelStatus::kTimeLimit
                                   : HighsModelStatus::kNotset;
-  model_status_ = scaled_model_status_;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
   const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
@@ -2751,7 +2742,6 @@ HighsStatus Highs::callSolveMip() {
   HighsStatus return_status =
       highsStatusFromHighsModelStatus(solver.modelstatus_);
   model_status_ = solver.modelstatus_;
-  scaled_model_status_ = model_status_;
   // Extract the solution
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
@@ -2773,7 +2763,6 @@ HighsStatus Highs::callSolveMip() {
       activeModifiedUpperBounds(options_, model_.lp_, solution_.col_value)) {
     solution_.value_valid = false;
     model_status_ = HighsModelStatus::kSolveError;
-    scaled_model_status_ = model_status_;
     return_status = HighsStatus::kError;
   }
   // There is no dual solution: should be so by default
@@ -2904,7 +2893,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         HighsModelStatus::kPostsolveError);
     return returnFromRun(HighsStatus::kError);
   }
-  call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
+  call_status = highsStatusFromHighsModelStatus(model_status_);
   return_status =
       interpretCallStatus(options_.log_options, call_status, return_status,
                           "highsStatusFromHighsModelStatus");
@@ -2959,7 +2948,6 @@ void Highs::forceHighsSolutionBasisSize() {
 void Highs::setHighsModelStatusAndClearSolutionAndBasis(
     const HighsModelStatus model_status) {
   model_status_ = model_status;
-  scaled_model_status_ = model_status_;
   clearSolution();
   clearBasis();
   info_.valid = true;
@@ -3000,14 +2988,10 @@ HighsStatus Highs::openWriteFile(const string filename,
 // Applies checks before returning from run()
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(!called_return_from_run);
-  HighsStatus return_status =
-      highsStatusFromHighsModelStatus(scaled_model_status_);
+  HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
-  // ToDo: Outcome of Run() should be driven by model_status_, not
-  // scaled_model_status_. This is currently done because latter may
-  // be optimal but tolerances not satisfied for unscaled model.
-  switch (scaled_model_status_) {
+  switch (model_status_) {
       // First consider the error returns
     case HighsModelStatus::kNotset:
     case HighsModelStatus::kLoadError:
@@ -3020,15 +3004,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       clearInfo();
       clearSolution();
       clearBasis();
-      // if (model_status_ != scaled_model_status_) {
-      //   printf(
-      //       "Highs::returnFromRun Solve %d: %d = model_status_ != "
-      //       "scaled_model_status_ = %d\n",
-      //       (int)ekk_instance_.debug_solve_call_num_, (int)model_status_,
-      //       (int)scaled_model_status_);
-      //   fflush(stdout);
-      // }
-      assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kError);
       break;
 
@@ -3037,7 +3012,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       clearInfo();
       clearSolution();
       clearBasis();
-      assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kOk);
       break;
 
@@ -3058,7 +3032,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kObjectiveTarget:
       // For kInfeasible, will not have a basis, if infeasibility was
       // detected in presolve or by IPX without crossover
-      assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kOk);
       break;
 
@@ -3066,7 +3039,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       if (options_.allow_unbounded_or_infeasible ||
           (options_.solver == kIpmString && options_.run_crossover) ||
           model_.isMip()) {
-        assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::kOk);
       } else {
         // This model status is not permitted unless IPM is run without
@@ -3084,7 +3056,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kUnknown:
-      assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kWarning);
       break;
     default:
@@ -3100,7 +3071,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(have_primal_solution || !have_dual_solution);
   //  const bool have_solution = have_primal_solution && have_dual_solution;
   const bool have_basis = basis_.valid;
-  switch (scaled_model_status_) {
+  switch (model_status_) {
     case HighsModelStatus::kNotset:
     case HighsModelStatus::kLoadError:
     case HighsModelStatus::kModelError:
@@ -3125,8 +3096,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!
       assert(have_info == true);
-      //      if (have_primal_solution == true || scaled_model_status_ ==
-      //      HighsModelStatus::kInfeasible);
       break;
     default:
       // All cases should have been considered so assert on reaching here
@@ -3155,7 +3124,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       return_status = HighsStatus::kError;
   }
   if (debugInfo(options_, model_.lp_, basis_, solution_, info_,
-                scaled_model_status_) == HighsDebugStatus::kLogicalError)
+                model_status_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
 
   // Record that returnFromRun() has been called
@@ -3226,7 +3195,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 void Highs::reportSolvedLpQpStats() {
   HighsLogOptions& log_options = options_.log_options;
   highsLogUser(log_options, HighsLogType::kInfo, "Model   status      : %s\n",
-               modelStatusToString(scaled_model_status_).c_str());
+               modelStatusToString(model_status_).c_str());
   if (info_.simplex_iteration_count)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
@@ -3261,7 +3230,6 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
 HighsStatus Highs::crossover(const HighsSolution& user_solution) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsLogOptions& log_options = options_.log_options;
-#ifdef IPX_ON
   HighsLp& lp = model_.lp_;
   if (lp.isMip()) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -3278,18 +3246,11 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
     return_status = callCrossover(options_, model_.lp_, basis_, solution_,
                                   model_status_, info_);
     if (return_status == HighsStatus::kError) return return_status;
-    scaled_model_status_ = model_status_;
     // Get the objective and any KKT failures
     info_.objective_function_value =
         model_.lp_.objectiveValue(solution_.col_value);
     getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
   }
-#else
-  // No IPX available so end here at approximate solve.
-  highsLogUser(log_options, HighsLogType::kError,
-               "No IPX code available for crossover\n");
-  return_status = HighsStatus::kError;
-#endif
   return returnFromHighs(return_status);
 }
 

@@ -1077,7 +1077,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
         }
       }
     } else if (status == HighsLpRelaxation::Status::kInfeasible) {
-      if (lp->getLpSolver().getModelStatus(true) ==
+      if (lp->getLpSolver().getModelStatus() ==
           HighsModelStatus::kObjectiveBound)
         result = NodeResult::kBoundExceeding;
       else

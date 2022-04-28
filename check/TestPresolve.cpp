@@ -75,12 +75,7 @@ TEST_CASE("Presolve", "[highs_test_presolve]") {
   highs.passModel(lp);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(lp.equalButForNames(presolved_model.lp_));
-  // ToDo @leona this LP isn't reduced by presolve, so the model
-  // presolve status should be HighsPresolveStatus::kNotReduced, but
-  // is HighsPresolveStatus::kReduced
-  //  REQUIRE(highs.getModelPresolveStatus() ==
-  //  HighsPresolveStatus::kNotReduced);
-  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kNotReduced);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
   REQUIRE(!presolved_model.isEmpty());
 

@@ -20,36 +20,41 @@
 #include <thread>
 #include <vector>
 
-#include "libhighs_export.h"
 #include "parallel/HighsCacheAlign.h"
 #include "parallel/HighsSplitDeque.h"
+#include "parallel/HighsSchedulerConstants.h"
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+
 class HighsTaskExecutor {
  public:
-  static constexpr int kNumTryFac = 16;
-  static constexpr int kMicroSecsBeforeSleep = 5000;
-  static constexpr int kMicroSecsBeforeGlobalSync = 1000;
+  using cache_aligned = highs::cache_aligned;
+  struct ExecutorHandle {
+    cache_aligned::shared_ptr<HighsTaskExecutor> ptr{nullptr};
+
+    ~ExecutorHandle();
+  };
 
  private:
-  using cache_aligned = highs::cache_aligned;
-
 #ifdef _WIN32
   static HighsSplitDeque*& threadLocalWorkerDeque();
+  static ExecutorHandle& threadLocalExecutorHandle();
 #else
   static thread_local HighsSplitDeque* threadLocalWorkerDequePtr;
+  static thread_local ExecutorHandle globalExecutorHandle;
+
   static HighsSplitDeque*& threadLocalWorkerDeque() {
     return threadLocalWorkerDequePtr;
   }
-#endif
 
-  static LIBHIGHS_EXPORT cache_aligned::shared_ptr<HighsTaskExecutor>
-      globalExecutor;
-  static LIBHIGHS_EXPORT HighsSpinMutex initMutex;
+  static ExecutorHandle& threadLocalExecutorHandle() {
+    return globalExecutorHandle;
+  }
+#endif
 
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
-  std::atomic<bool> active;
+  std::atomic<ExecutorHandle*> mainWorkerHandle;
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -71,7 +76,7 @@ class HighsTaskExecutor {
               std::chrono::high_resolution_clock::now() - tStart)
               .count();
 
-      if (numMicroSecs < kMicroSecsBeforeGlobalSync)
+      if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeGlobalSync)
         numTries *= 2;
       else
         break;
@@ -82,10 +87,11 @@ class HighsTaskExecutor {
 
   void run_worker(int workerId) {
     // spin until the global executor pointer is set up
-    while (!active.load(std::memory_order_acquire))
+    ExecutorHandle* executor;
+    while (!(executor = mainWorkerHandle.load(std::memory_order_acquire)))
       HighsSpinMutex::yieldProcessor();
     // now acquire a reference count of the global executor
-    auto executor = globalExecutor;
+    threadLocalExecutorHandle() = *executor;
     HighsSplitDeque* localDeque = workerDeques[workerId].get();
     threadLocalWorkerDeque() = localDeque;
     HighsTask* currentTask = workerBunk->waitForNewTask(localDeque);
@@ -102,7 +108,7 @@ class HighsTaskExecutor {
  public:
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
-    active.store(false, std::memory_order_relaxed);
+    mainWorkerHandle.store(nullptr, std::memory_order_relaxed);
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
     for (int i = 0; i < numThreads; ++i)
@@ -118,49 +124,49 @@ class HighsTaskExecutor {
     return threadLocalWorkerDeque();
   }
 
-  static HighsTaskExecutor* getGlobalTaskExecutor() {
-    return globalExecutor.get();
-  }
-
   static int getNumWorkerThreads() {
-    return globalExecutor->workerDeques.size();
+    return threadLocalWorkerDeque()->getNumWorkers();
   }
 
   static void initialize(int numThreads) {
-    if (!globalExecutor) {
-      std::lock_guard<HighsSpinMutex> lg{initMutex};
-      if (!globalExecutor) {
-        globalExecutor =
-            cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
-        globalExecutor->active.store(true, std::memory_order_release);
-      }
+    auto& executorHandle = threadLocalExecutorHandle();
+    if (!executorHandle.ptr) {
+      executorHandle.ptr =
+          cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
+      executorHandle.ptr->mainWorkerHandle.store(&executorHandle,
+                                                 std::memory_order_release);
     }
   }
 
   static void shutdown(bool blocking = false) {
-    if (globalExecutor) {
+    auto& executorHandle = threadLocalExecutorHandle();
+    if (executorHandle.ptr) {
       // first spin until every worker has acquired its executor reference
-      while (globalExecutor.use_count() != globalExecutor->workerDeques.size())
+      while (executorHandle.ptr.use_count() !=
+             executorHandle.ptr->workerDeques.size())
         HighsSpinMutex::yieldProcessor();
       // set the active flag to false first with release ordering
-      globalExecutor->active.store(false, std::memory_order_release);
+      executorHandle.ptr->mainWorkerHandle.store(nullptr,
+                                                 std::memory_order_release);
       // now inject the null task as termination signal to every worker
-      for (auto& workerDeque : globalExecutor->workerDeques)
+      for (auto& workerDeque : executorHandle.ptr->workerDeques)
         workerDeque->injectTaskAndNotify(nullptr);
       // finally release the global executor reference
       if (blocking) {
-        while (globalExecutor.use_count() != 1)
+        while (executorHandle.ptr.use_count() != 1)
           HighsSpinMutex::yieldProcessor();
       }
 
-      globalExecutor.reset();
+      executorHandle.ptr.reset();
     }
   }
 
-  void sync_stolen_task(HighsSplitDeque* localDeque, HighsTask* stolenTask) {
-    if (!localDeque->leapfrogStolenTask(stolenTask)) {
-      const int numWorkers = workerDeques.size();
-      int numTries = kNumTryFac * (numWorkers - 1);
+  static void sync_stolen_task(HighsSplitDeque* localDeque,
+                               HighsTask* stolenTask) {
+    HighsSplitDeque* stealer;
+    if (!localDeque->leapfrogStolenTask(stolenTask, stealer)) {
+      const int numWorkers = localDeque->getNumWorkers();
+      int numTries = HighsSchedulerConstants::kNumTryFac * (numWorkers - 1);
 
       auto tStart = std::chrono::high_resolution_clock::now();
 
@@ -178,14 +184,14 @@ class HighsTaskExecutor {
                 std::chrono::high_resolution_clock::now() - tStart)
                 .count();
 
-        if (numMicroSecs < kMicroSecsBeforeSleep)
+        if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeSleep)
           numTries *= 2;
         else
           break;
       }
 
       if (!stolenTask->isFinished())
-        localDeque->waitForTaskToFinish(stolenTask);
+        localDeque->waitForTaskToFinish(stolenTask, stealer);
     }
 
     localDeque->popStolen();

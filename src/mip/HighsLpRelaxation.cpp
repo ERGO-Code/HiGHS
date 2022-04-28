@@ -529,7 +529,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 }
 
 void HighsLpRelaxation::storeDualInfProof() {
-  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kInfeasible);
+  assert(lpsolver.getModelStatus() == HighsModelStatus::kInfeasible);
   hasdualproof = false;
   if (lpsolver.getInfo().basis_validity == kBasisValidityInvalid) return;
   HighsInt numrow = lpsolver.getNumRow();
@@ -653,7 +653,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 }
 
 void HighsLpRelaxation::storeDualUBProof() {
-  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kObjectiveBound);
+  assert(lpsolver.getModelStatus() == HighsModelStatus::kObjectiveBound);
 
   dualproofinds.clear();
   dualproofvals.clear();
@@ -765,8 +765,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     return Status::kError;
   }
 
-  HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
-  switch (scaledmodelstatus) {
+  // Was
+  //  HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
+  HighsModelStatus model_status = lpsolver.getModelStatus();
+  switch (model_status) {
     case HighsModelStatus::kObjectiveBound:
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
@@ -838,7 +840,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kUnscaledDualFeasible;
 
-      if (scaledmodelstatus == HighsModelStatus::kOptimal)
+      if (model_status == HighsModelStatus::kOptimal)
         return Status::kUnscaledInfeasible;
 
       return Status::kError;
@@ -864,19 +866,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // printf("error: lpsolver reached iteration limit\n");
       return Status::kError;
     }
-    // case HighsModelStatus::kUnboundedOrInfeasible:
-    //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
-    //    return Status::kInfeasible;
-    //  return Status::kError;
     case HighsModelStatus::kTimeLimit:
       return Status::kError;
     default:
       // printf("error: lpsolver stopped with unexpected status %"
       // HIGHSINT_FORMAT "\n",
-      //        (HighsInt)scaledmodelstatus);
+      //        (HighsInt)model_status);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
                    "LP solved to unexpected status: %s\n",
-                   lpsolver.modelStatusToString(scaledmodelstatus).c_str());
+                   lpsolver.modelStatusToString(model_status).c_str());
       return Status::kError;
   }
 }

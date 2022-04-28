@@ -26,7 +26,7 @@ using std::min;
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
                     solver_object.basis_, solver_object.solution_, 
-                    solver_object.unscaled_model_status_, solver_object.highs_info_);
+                    solver_object.model_status_, solver_object.highs_info_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options,

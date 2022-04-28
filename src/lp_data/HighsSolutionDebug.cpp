@@ -39,11 +39,11 @@ HighsDebugStatus debugHighsLpSolution(
   const bool check_model_status_and_highs_info = true;
   // Define an empty Hessian
   HighsHessian hessian;
-  return debugHighsSolution(
-      message, solver_object.options_, solver_object.lp_, hessian,
-      solver_object.solution_, solver_object.basis_,
-      solver_object.unscaled_model_status_, solver_object.highs_info_,
-      check_model_status_and_highs_info);
+  return debugHighsSolution(message, solver_object.options_, solver_object.lp_,
+                            hessian, solver_object.solution_,
+                            solver_object.basis_, solver_object.model_status_,
+                            solver_object.highs_info_,
+                            check_model_status_and_highs_info);
 }
 
 HighsDebugStatus debugHighsSolution(const string message,

@@ -285,11 +285,6 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(info.simplex_iteration_count == 476);  // 444);
 
   HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status ==
-          HighsModelStatus::kOptimal);  // Now etamacro is solved properly it's
-                                        // not HighsModelStatus::kNotset);
-
-  model_status = highs.getModelStatus(true);
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   // Test the solver without scaling
@@ -300,7 +295,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 619);  // 584);  //
+  REQUIRE(info.simplex_iteration_count == 650);  // 584);  //
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

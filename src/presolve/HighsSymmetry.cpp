@@ -22,6 +22,7 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
+#include "parallel/HighsParallel.h"
 #include "pdqsort/pdqsort.h"
 #include "util/HighsDisjointSets.h"
 
@@ -1328,7 +1329,6 @@ HighsSymmetryDetection::dumpCurrentGraph() {
 void HighsSymmetryDetection::switchToNextNode(HighsInt backtrackDepth) {
   HighsInt stackEnd = cellCreationStack.size();
   // we need to backtrack the datastructures
-
   nodeStack.resize(backtrackDepth);
   if (backtrackDepth == 0) return;
   do {
@@ -1683,16 +1683,22 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   return true;
 }
 
-void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
+bool HighsSymmetryDetection::initializeDetection() {
   initializeHashValues();
   partitionRefinement();
   removeFixPoints();
-  if (numActiveCols == 0) return;
+  if (numActiveCols == 0) return false;
+  return true;
+}
+
+void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
+  assert(numActiveCols != 0);
   initializeGroundSet();
   currNodeCertificate.clear();
   cellCreationStack.clear();
   createNode();
   HighsInt maxPerms = 64000000 / numActiveCols;
+  HighsSplitDeque* workerDeque = HighsTaskExecutor::getThisWorkerDeque();
   while (!nodeStack.empty()) {
     HighsInt targetCell = selectTargetCell();
     if (targetCell == -1) {
@@ -1821,6 +1827,8 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
 
         switchToNextNode(backtrackDepth);
       }
+
+      workerDeque->checkInterrupt();
     } else {
       Node& currNode = nodeStack.back();
       currNode.targetCell = targetCell;

@@ -279,11 +279,11 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
   std::vector<CliqueVar> PminusNu;
   PminusNu.reserve(Plen);
   queryNeighborhood(pivot, data.P.data(), Plen);
-  for (HighsInt i = 0; i != Plen; ++i) {
-    if (neighborhoodFlags[i])
-      neighborhoodFlags[i] = false;
-    else
-      PminusNu.push_back(data.P[i]);
+  neighborhoodInds.push_back(Plen);
+  HighsInt k = 0;
+  for (HighsInt i : neighborhoodInds) {
+    while (k < i) PminusNu.push_back(data.P[k++]);
+    ++k;
   }
 
   pdqsort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
@@ -504,9 +504,16 @@ struct ThreadNeighborhoodQueryData {
 
 void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
                                          HighsInt N) {
+  neighborhoodInds.clear();
+  if (sizeTwoCliquesetTree[v.index()].root == -1 &&
+      cliquesetTree[v.index()].root == -1)
+    return;
+
   if (numEntries < minEntriesForParallelism) {
-    for (HighsInt i = 0; i < N; ++i)
-      neighborhoodFlags[i] = haveCommonClique(numNeighborhoodQueries, v, q[i]);
+    for (HighsInt i = 0; i < N; ++i) {
+      if (haveCommonClique(numNeighborhoodQueries, v, q[i]))
+        neighborhoodInds.push_back(i);
+    }
   } else {
     auto neighborhoodData =
         makeHighsCombinable<ThreadNeighborhoodQueryData>([N]() {
@@ -527,9 +534,12 @@ void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
         10);
 
     neighborhoodData.combine_each([&](ThreadNeighborhoodQueryData& d) {
-      for (HighsInt i : d.neighborhoodInds) neighborhoodFlags[i] = true;
+      neighborhoodInds.insert(neighborhoodInds.end(),
+                              d.neighborhoodInds.begin(),
+                              d.neighborhoodInds.end());
       numNeighborhoodQueries += d.numQueries;
     });
+    pdqsort(neighborhoodInds.begin(), neighborhoodInds.end());
   }
 }
 
@@ -537,32 +547,20 @@ HighsInt HighsCliqueTable::partitionNeighborhood(CliqueVar v, CliqueVar* q,
                                                  HighsInt N) {
   queryNeighborhood(v, q, N);
 
-  HighsInt k = 0;
-  for (HighsInt i = 0; i < N; ++i) {
-    if (neighborhoodFlags[i]) {
-      std::swap(q[k], q[i]);
-      neighborhoodFlags[i] = false;
-      k += 1;
-    }
-  }
+  for (HighsInt i = 0; i < (HighsInt)neighborhoodInds.size(); ++i)
+    std::swap(q[i], q[neighborhoodInds[i]]);
 
-  return k;
+  return neighborhoodInds.size();
 }
 
 HighsInt HighsCliqueTable::shrinkToNeighborhood(CliqueVar v, CliqueVar* q,
                                                 HighsInt N) {
   queryNeighborhood(v, q, N);
 
-  HighsInt k = 0;
-  for (HighsInt i = 0; i < N; ++i) {
-    if (neighborhoodFlags[i]) {
-      q[k] = q[i];
-      neighborhoodFlags[i] = false;
-      k += 1;
-    }
-  }
+  for (HighsInt i = 0; i < (HighsInt)neighborhoodInds.size(); ++i)
+    q[i] = q[neighborhoodInds[i]];
 
-  return k;
+  return neighborhoodInds.size();
 }
 
 bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
@@ -1093,21 +1091,28 @@ void HighsCliqueTable::cliquePartition(const std::vector<double>& objective,
   partitionStart.reserve(clqVars.size());
   HighsInt extensionEnd = numClqVars;
   partitionStart.push_back(0);
+  HighsInt lastSwappedIndex = 0;
   for (HighsInt i = 0; i < numClqVars; ++i) {
     if (i == extensionEnd) {
       partitionStart.push_back(i);
       extensionEnd = numClqVars;
-      pdqsort_branchless(clqVars.begin() + i, clqVars.end(),
-                         [&](CliqueVar v1, CliqueVar v2) {
-                           return (2 * v1.val - 1) * objective[v1.col] >
-                                  (2 * v2.val - 1) * objective[v2.col];
-                         });
+      if (lastSwappedIndex >= i)
+        pdqsort_branchless(clqVars.begin() + i,
+                           clqVars.begin() + lastSwappedIndex + 1,
+                           [&](CliqueVar v1, CliqueVar v2) {
+                             return (2 * v1.val - 1) * objective[v1.col] >
+                                    (2 * v2.val - 1) * objective[v2.col];
+                           });
+      lastSwappedIndex = 0;
     }
     CliqueVar v = clqVars[i];
     HighsInt extensionStart = i + 1;
     extensionEnd = partitionNeighborhood(v, clqVars.data() + extensionStart,
                                          extensionEnd - extensionStart) +
                    extensionStart;
+    if (!neighborhoodInds.empty())
+      lastSwappedIndex =
+          std::max(neighborhoodInds.back() + extensionStart, lastSwappedIndex);
   }
 
   partitionStart.push_back(numClqVars);

@@ -1,10 +1,6 @@
 # Define library.
 # Outdated CMake approach: update in progress
-if (NOT FAST_BUILD)
-  set(IPX_ON ON)
-endif()
 
-if (IPX_ON)
 set(basiclu_sources
     ipm/basiclu/src/basiclu_factorize.c
     ipm/basiclu/src/basiclu_solve_dense.c
@@ -67,7 +63,6 @@ set(ipx_sources
     ipm/ipx/src/symbolic_invert.cc
     ipm/ipx/src/timer.cc
     ipm/ipx/src/utils.cc)
-endif()
 
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
@@ -243,6 +238,7 @@ set(headers
     parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
+    parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
@@ -307,27 +303,16 @@ set(headers
     interfaces/highs_c_api.h
 )
 
-if (IPX_ON)
-    set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
-        ${ipx_headers})
-    set(sources ${sources} ipm/IpxWrapper.cpp)
-    add_library(libbasiclu ${basiclu_sources})
-    add_library(libipx ${ipx_sources})
-    target_link_libraries(libipx libbasiclu)
-else ()
-    set(headers ${headers} ipm/IpxWrapperEmpty.h)
-endif()
+set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
+    ${ipx_headers})
+set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
 
 add_library(libhighs ${sources})
-
-if (IPX_ON)
-    target_link_libraries(libhighs libipx)
-endif()
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
-        VERSION 
+        VERSION
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     if(MINGW)
@@ -345,15 +330,6 @@ set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
-if (IPX_ON)
-    set_target_properties(libipx PROPERTIES
-        OUTPUT_NAME "ipx"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-    set_target_properties(libbasiclu PROPERTIES
-        OUTPUT_NAME "basiclu"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
-
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
     set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
@@ -364,7 +340,7 @@ if (OSI_FOUND)
 
     if(${BUILD_SHARED_LIBS})
         set_target_properties(OsiHighs PROPERTIES
-           VERSION 
+           VERSION
            ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
            SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     else()
@@ -401,61 +377,41 @@ foreach ( file ${headers} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
-install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
-if (IPX_ON)
-    if (UNIX)
-        #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-        #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
-        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+if (UNIX)
+    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
-        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-        #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
-        #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
-        #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
-        target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
+    #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-        target_compile_options(libipx PRIVATE "-Wno-unused-variable")
-        target_compile_options(libipx PRIVATE "-Wno-sign-compare")
-        #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
-    endif()
-
-    if (WIN32)
-        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
-            LIBRARY DESTINATION bin
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
-    else()
-        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
-    endif()
-
-    # Add library targets to the build-tree export set
-    export(TARGETS libhighs libipx libbasiclu
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-else()
-    if (WIN32)
-        install(TARGETS libhighs EXPORT highs-targets
-                LIBRARY DESTINATION bin
-                ARCHIVE DESTINATION lib
-                INCLUDES DESTINATION include)
-    else()
-        install(TARGETS libhighs EXPORT highs-targets
-                LIBRARY DESTINATION lib
-                ARCHIVE DESTINATION lib
-                INCLUDES DESTINATION include)
-    endif()
-
-    # Add library targets to the build-tree export set
-    export(TARGETS libhighs 
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+    #target_compile_options(libipx PRIVATE "-Wno-unused-variable")
+    #target_compile_options(libipx PRIVATE "-Wno-sign-compare")
+    #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
 endif()
 
+if (WIN32)
+    install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION bin
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)
+else()
+    install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)
+endif()
+
+# Add library targets to the build-tree export set
+export(TARGETS libhighs
+FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 # Configure the config file for the build tree:
 # Either list all the src/* directories here, or put explicit paths in all the
@@ -477,14 +433,14 @@ configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
 # Install the targets of the highs export group, the config file so that other
 # cmake-projects can link easily against highs, and the pkg-config flie so that
 # other projects can easily build against highs
-install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION 
+install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
     lib/cmake/highs)
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" 
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
     DESTINATION lib/cmake/highs)
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
     DESTINATION lib/pkgconfig)
 
-else() 
+else()
 
 # FAST_BUILD is set to on.
 # At the moment used only for gradually updating the CMake targets build and
@@ -686,6 +642,7 @@ set(headers_fast_build_
     parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
+    parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
@@ -750,12 +707,8 @@ set(headers_fast_build_
     interfaces/highs_c_api.h
 )
 
-if(IPX_ON)
-    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
-        ${ipx_headers})
-else()
-    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
-endif()
+set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
+    ${ipx_headers})
 
 #set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
@@ -769,7 +722,6 @@ foreach ( file ${headers_fast_build_} )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
-install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
@@ -778,20 +730,17 @@ install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
 target_include_directories(libhighs PUBLIC ipm/ipx/src
     ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
-if (IPX_ON)
-    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
+target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
-    if (UNIX)
-        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
-        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-    endif()
-
+if (UNIX)
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
 endif()
 
-    set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
+set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+    "${CMAKE_INSTALL_PREFIX}/lib")
 
 endif()
 
