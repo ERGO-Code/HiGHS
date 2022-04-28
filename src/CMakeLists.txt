@@ -600,6 +600,8 @@ target_sources(libhighs PRIVATE
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
+    qpsolver/scaling.cpp
+    qpsolver/perturbation.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
