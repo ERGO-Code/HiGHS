@@ -43,7 +43,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     return FreeFormatParserReturnCode::kParserError;
   }
   // Duplicate row and column names in MPS files occur if the same row
-  // name appears twice in the ROS section, or if a column name
+  // name appears twice in the RHS section, or if a column name
   // reoccurs in the COLUMNS section after another column has been
   // defined. They are anomalies, but are only handled by a warning in
   // some solvers. Hence, rather than fail, HiGHS does the same.
