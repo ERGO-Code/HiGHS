@@ -112,7 +112,6 @@ class HMpsFF {
   HighsInt duplicate_col_name_index0_;
   HighsInt duplicate_col_name_index1_;
 
-  //
   std::vector<bool> has_row_entry_;
   bool has_obj_entry_;
 
