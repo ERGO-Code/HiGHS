@@ -24,7 +24,7 @@ HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
   assert(!lp.isMip());
   assert(solution_.value_valid);
-  clearBasis();
+  invalidateBasis();
   HighsInt num_basic = 0;
   HighsBasis basis;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {

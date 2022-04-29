@@ -1128,10 +1128,9 @@ HighsStatus Highs::run() {
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
           if (ipx_no_crossover) {
-            // IPX was used without crossover, so only have a primal solution
+            // IPX was used without crossover, so have a dual solution, but no basis
             solution_.dual_valid = true;
-            basis_.clear();
-            basis_.valid = false;
+            basis_.invalidate();
           } else {
             //
             // Hot-start the simplex solver for the incumbent LP
@@ -1637,7 +1636,7 @@ HighsStatus Highs::setBasis() {
   //
   // Don't set to logical basis since that causes presolve to be
   // skipped
-  basis_.clear();
+  basis_.invalidate();
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -2522,7 +2521,7 @@ void Highs::clearPresolve() {
 void Highs::clearUserSolverData() {
   invalidateModelStatus();
   clearSolution();
-  clearBasis();
+  invalidateBasis();
   clearRanging();
   invalidateInfo();
   invalidateEkk();
@@ -2548,9 +2547,9 @@ void Highs::clearSolution() {
   this->solution_.clear();
 }
 
-void Highs::clearBasis() {
+void Highs::invalidateBasis() {
   info_.basis_validity = kBasisValidityInvalid;
-  this->basis_.clear();
+  this->basis_.invalidate();
 }
 
 void Highs::invalidateInfo() { info_.invalidate(); }
@@ -2949,7 +2948,7 @@ void Highs::setHighsModelStatusAndClearSolutionAndBasis(
     const HighsModelStatus model_status) {
   model_status_ = model_status;
   clearSolution();
-  clearBasis();
+  invalidateBasis();
   info_.valid = true;
 }
 
@@ -3003,7 +3002,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       //      clearUserSolverData();
       invalidateInfo();
       clearSolution();
-      clearBasis();
+      invalidateBasis();
       assert(return_status == HighsStatus::kError);
       break;
 
@@ -3011,7 +3010,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kModelEmpty:
       invalidateInfo();
       clearSolution();
-      clearBasis();
+      invalidateBasis();
       assert(return_status == HighsStatus::kOk);
       break;
 
