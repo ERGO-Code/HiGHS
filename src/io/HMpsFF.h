@@ -112,8 +112,11 @@ class HMpsFF {
   HighsInt duplicate_col_name_index0_;
   HighsInt duplicate_col_name_index1_;
 
-  std::vector<bool> has_row_entry_;
+  // Record whether there is a data entry in the RHS section of an MPS
+  // file for the objective or a row. Have to be class data members so
+  // that they can be used by parseName and addRhs in HMpsFF::parseRhs
   bool has_obj_entry_;
+  std::vector<bool> has_row_entry_;
 
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);

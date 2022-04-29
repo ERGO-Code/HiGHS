@@ -43,7 +43,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     return FreeFormatParserReturnCode::kParserError;
   }
   // Duplicate row and column names in MPS files occur if the same row
-  // name appears twice in the RHS section, or if a column name
+  // name appears twice in the ROWS section, or if a column name
   // reoccurs in the COLUMNS section after another column has been
   // defined. They are anomalies, but are only handled by a warning in
   // some solvers. Hence, rather than fail, HiGHS does the same.
@@ -56,7 +56,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   // Note that rowname2idx and colname2idx will return the index
   // corresponding to the first occurrence of the name, so values for
   // rows in the COLUMNS, RHS and RANGES sections, and columns in the
-  // BOUNDS and other sections can only be defined for the first occurrence
+  // BOUNDS and other sections can only be defined for the first
+  // occurrence
   if (has_duplicate_row_name_) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Linear constraints %d and %d have the same name \"%s\"\n",
