@@ -2525,7 +2525,7 @@ void Highs::clearUserSolverData() {
   clearBasis();
   clearRanging();
   clearInfo();
-  clearEkk();
+  invalidateEkk();
 }
 
 void Highs::clearModelStatusSolutionAndInfo() {
@@ -2557,7 +2557,7 @@ void Highs::clearInfo() { info_.clear(); }
 
 void Highs::clearRanging() { ranging_.clear(); }
 
-void Highs::clearEkk() { ekk_instance_.invalidate(); }
+void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {

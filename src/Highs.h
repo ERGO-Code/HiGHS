@@ -1114,7 +1114,7 @@ class Highs {
   //
   // Clears all solver data in Highs class members by calling
   // clearModelStatus(), clearSolution(), clearBasis(),
-  // clearInfo() and clearEkk()
+  // clearInfo() and invalidateEkk()
   void clearUserSolverData();
   //
   // Clears the model status, solution_ and info_
@@ -1137,7 +1137,7 @@ class Highs {
   void clearRanging();
 
   // Invalidates ekk_instance_
-  void clearEkk();
+  void invalidateEkk();
 
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
