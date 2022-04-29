@@ -211,8 +211,10 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (HighsInt i = 0; i < lp.num_col_; i++) {
-    this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.col_cost_[i],
-                      (i + 1));
+    double coef = lp.col_cost_[i];
+    if (coef != 0.0) {
+      this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", coef, (i + 1));
+    }
   }
   if (model.isQp()) {
     this->writeToFile(file, "+ [ ");
@@ -220,9 +222,15 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       for (HighsInt i = model.hessian_.start_[col];
            i < model.hessian_.start_[col + 1]; i++) {
         if (col <= model.hessian_.index_[i]) {
-          this->writeToFile(
-              file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ",
-              model.hessian_.value_[i], col, model.hessian_.index_[i]);
+          double coef = model.hessian_.value_[i];
+          if (col != model.hessian_.index_[i]) {
+            coef *= 2;
+          }
+          if (coef != 0.0) {
+            this->writeToFile(
+                file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ",
+                coef, col, model.hessian_.index_[i]);
+          }
         }
       }
     }

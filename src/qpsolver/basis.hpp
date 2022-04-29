@@ -121,10 +121,10 @@ class Basis {
   // Nullspace from now on)
   void deactivate(HighsInt conid);
 
-  QpSolverStatus activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
+  QpSolverStatus activate(const Settings& settings, HighsInt conid, BasisStatus atlower,
                           HighsInt nonactivetoremove, Pricing* pricing);
 
-  void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
+  void updatebasis(const Settings& settings, HighsInt newactivecon, HighsInt droppedcon,
                    Pricing* pricing);
 
   Vector btran(const Vector& rhs, bool buffer = false, HighsInt p = -1);

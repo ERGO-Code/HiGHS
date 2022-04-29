@@ -5,11 +5,12 @@
 
 #include "Highs.h"
 #include "basis.hpp"
+#include "crashsolution.hpp"
 #include "dantzigpricing.hpp"
 #include "devexharrispricing.hpp"
 #include "devexpricing.hpp"
 #include "factor.hpp"
-#include "feasibility_highs.hpp"
+#include "feasibility.hpp"
 #include "gradient.hpp"
 #include "instance.hpp"
 #include "lp_data/HighsAnalysis.h"
@@ -18,8 +19,14 @@
 #include "reducedgradient.hpp"
 #include "snippets.hpp"
 #include "steepestedgepricing.hpp"
+#include "scaling.hpp"
+#include "perturbation.hpp"
 
 void Quass::solve() {
+  scale(runtime);
+  runtime.instance = runtime.scaled;
+  perturb(runtime);
+  runtime.instance = runtime.perturbed;
   CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
   computestartingpoint(runtime, crash);
   if (runtime.status != ProblemStatus::INDETERMINED) {
@@ -318,7 +325,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);
 
-        status = basis.activate(runtime, stepres.limitingconstraint,
+        status = basis.activate(runtime.settings, stepres.limitingconstraint,
                                 stepres.nowactiveatlower
                                     ? BasisStatus::ActiveAtLower
                                     : BasisStatus::ActiveAtUpper,
@@ -336,7 +343,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
           // unbounded
           runtime.status = ProblemStatus::UNBOUNDED;
         }
-        atfsep = true;
+        atfsep = false;
         redgrad.update(stepres.alpha, false);
       }
 
