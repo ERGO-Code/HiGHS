@@ -1930,7 +1930,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
   return HMpsFF::Parsekey::kFail;
 }
 
-bool HMpsFF::allZeroed(const std::vector<double> value) {
+bool HMpsFF::allZeroed(const std::vector<double>& value) {
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     if (value[iRow]) return false;
   return true;
