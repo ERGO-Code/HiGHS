@@ -335,7 +335,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
 
     highsLogUser(log_options, HighsLogType::kWarning,
                  "There are empty or excessively-long %s names: using "
-                 "constructed names with prefix %s\n",
+                 "constructed names with prefix \"%s\"\n",
                  name_type.c_str(), name_prefix.c_str());
     for (HighsInt ix = 0; ix < num_name; ix++)
       names[ix] = name_prefix + std::to_string(ix);
