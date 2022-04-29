@@ -56,7 +56,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   // Note that rowname2idx and colname2idx will return the index
   // corresponding to the first occurrence of the name, so values for
   // rows in the COLUMNS, RHS and RANGES sections, and columns in the
-  // BOUNDS and other sections can only be defined for
+  // BOUNDS and other sections can only be defined for the first occurrence
   if (has_duplicate_row_name_) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Linear constraints %d and %d have the same name \"%s\"\n",
