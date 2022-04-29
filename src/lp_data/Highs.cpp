@@ -742,7 +742,7 @@ HighsStatus Highs::run() {
   // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
   // Clear the run info
-  clearInfo();
+  invalidateInfo();
   // Zero the iteration counts
   zeroIterationCounts();
   // Start the HiGHS run clock
@@ -2520,21 +2520,21 @@ void Highs::clearPresolve() {
 }
 
 void Highs::clearUserSolverData() {
-  clearModelStatus();
+  invalidateModelStatus();
   clearSolution();
   clearBasis();
   clearRanging();
-  clearInfo();
+  invalidateInfo();
   invalidateEkk();
 }
 
 void Highs::clearModelStatusSolutionAndInfo() {
-  clearModelStatus();
+  invalidateModelStatus();
   clearSolution();
-  clearInfo();
+  invalidateInfo();
 }
 
-void Highs::clearModelStatus() { model_status_ = HighsModelStatus::kNotset; }
+void Highs::invalidateModelStatus() { model_status_ = HighsModelStatus::kNotset; }
 
 void Highs::clearSolution() {
   info_.primal_solution_status = kSolutionStatusNone;
@@ -2553,7 +2553,7 @@ void Highs::clearBasis() {
   this->basis_.clear();
 }
 
-void Highs::clearInfo() { info_.clear(); }
+void Highs::invalidateInfo() { info_.invalidate(); }
 
 void Highs::clearRanging() { ranging_.clear(); }
 
@@ -3001,7 +3001,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kPostsolveError:
       // Don't clear the model status!
       //      clearUserSolverData();
-      clearInfo();
+      invalidateInfo();
       clearSolution();
       clearBasis();
       assert(return_status == HighsStatus::kError);
@@ -3009,7 +3009,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
       // Then consider the OK returns
     case HighsModelStatus::kModelEmpty:
-      clearInfo();
+      invalidateInfo();
       clearSolution();
       clearBasis();
       assert(return_status == HighsStatus::kOk);

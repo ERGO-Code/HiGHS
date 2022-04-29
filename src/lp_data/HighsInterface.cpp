@@ -596,7 +596,7 @@ HighsStatus Highs::changeIntegralityInterface(
   HighsStatus call_status;
   changeLpIntegrality(model_.lp_, index_collection, local_integrality);
   // Deduce the consequences of new integrality
-  clearModelStatus();
+  invalidateModelStatus();
   return HighsStatus::kOk;
 }
 

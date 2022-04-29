@@ -1112,15 +1112,15 @@ class Highs {
   // the inumcumbent model.
   //
   // Clears all solver data in Highs class members by calling
-  // clearModelStatus(), clearSolution(), clearBasis(),
-  // clearInfo() and invalidateEkk()
+  // invalidateModelStatus(), clearSolution(), clearBasis(),
+  // invalidateInfo() and invalidateEkk()
   void clearUserSolverData();
   //
   // Clears the model status, solution_ and info_
   void clearModelStatusSolutionAndInfo();
   //
   // Sets model status to HighsModelStatus::kNotset
-  void clearModelStatus();
+  void invalidateModelStatus();
   //
   // Sets primal and dual solution status to
   // kSolutionStatusNone, and clears solution_ vectors
@@ -1130,7 +1130,7 @@ class Highs {
   void clearBasis();
   //
   // Invalidates info_ and resets the values of its members
-  void clearInfo();
+  void invalidateInfo();
   //
   // Invalidates ranging_ and clears its vectors
   void clearRanging();
