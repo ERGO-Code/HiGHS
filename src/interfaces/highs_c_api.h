@@ -1592,16 +1592,6 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         HighsInt* integrality);
 
 /**
- * Given a model solved with an interior point method, run crossover to compute
- * a basic feasible solution.
- *
- * @param highs     a pointer to the Highs instance
- *
- * @returns a `kHighsStatus` constant indicating whether the call succeeded
- */
-HighsInt Highs_crossover(void* highs);
-
-/**
  * Set a primal (and possibly dual) solution as a starting point, then run
  * crossover to compute a basic feasible solution. If there is no dual solution,
  * pass col_dual and row_dual as nullptr.
@@ -1618,9 +1608,9 @@ HighsInt Highs_crossover(void* highs);
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
-                             double* col_value, double* col_dual,
-                             double* row_dual);
+HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
+                         const double* col_value, const double* col_dual,
+                         const double* row_dual);
 
 /**
  * Releases all resources held by the global scheduler instance. It is

@@ -850,12 +850,11 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Run IPX crossover (possibly from a given HighsSolution
-   * instance) and, if successful, set the internal HighsBasis
+   * @brief Run IPX crossover from a given HighsSolution instance and,
+   * if successful, set the internal HighsBasis and HighsSolution
    * instance
    */
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
+  HighsStatus crossover(const HighsSolution& user_solution);
 
   /**
    * @brief Open a named log file
