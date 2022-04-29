@@ -51,7 +51,7 @@ HighsStatus Highs::clearModel() {
 HighsStatus Highs::clearSolver() {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  clearUserSolverData();
+  invalidateUserSolverData();
   return returnFromHighs(return_status);
 }
 
@@ -1128,7 +1128,8 @@ HighsStatus Highs::run() {
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
           if (ipx_no_crossover) {
-            // IPX was used without crossover, so have a dual solution, but no basis
+            // IPX was used without crossover, so have a dual solution, but no
+            // basis
             solution_.dual_valid = true;
             basis_.invalidate();
           } else {
@@ -1553,7 +1554,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       solution.row_dual.size() >= model_.lp_.num_row_;
   const bool new_solution = new_primal_solution || new_dual_solution;
 
-  if (new_solution) clearUserSolverData();
+  if (new_solution) invalidateUserSolverData();
 
   if (new_primal_solution) {
     solution_.col_value = solution.col_value;
@@ -1680,7 +1681,7 @@ HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
   // Get the corresponding HiGHS basis
   basis_ = ekk_instance_.getHighsBasis(model_.lp_);
   // Clear everything else
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   return returnFromHighs(HighsStatus::kOk);
 }
 
@@ -1707,7 +1708,7 @@ HighsStatus Highs::getIterate() {
   // Get the corresponding HiGHS basis
   basis_ = ekk_instance_.getHighsBasis(model_.lp_);
   // Clear everything else
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   return returnFromHighs(HighsStatus::kOk);
 }
 
@@ -1781,7 +1782,7 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
     model_.lp_.sense_ = sense;
     // Nontrivial change
     clearPresolve();
-    clearModelStatusSolutionAndInfo();
+    invalidateModelStatusSolutionAndInfo();
   }
   return returnFromHighs(HighsStatus::kOk);
 }
@@ -2518,24 +2519,26 @@ void Highs::clearPresolve() {
   presolve_.clear();
 }
 
-void Highs::clearUserSolverData() {
+void Highs::invalidateUserSolverData() {
   invalidateModelStatus();
-  clearSolution();
+  invalidateSolution();
   invalidateBasis();
-  clearRanging();
+  invalidateRanging();
   invalidateInfo();
   invalidateEkk();
 }
 
-void Highs::clearModelStatusSolutionAndInfo() {
+void Highs::invalidateModelStatusSolutionAndInfo() {
   invalidateModelStatus();
-  clearSolution();
+  invalidateSolution();
   invalidateInfo();
 }
 
-void Highs::invalidateModelStatus() { model_status_ = HighsModelStatus::kNotset; }
+void Highs::invalidateModelStatus() {
+  model_status_ = HighsModelStatus::kNotset;
+}
 
-void Highs::clearSolution() {
+void Highs::invalidateSolution() {
   info_.primal_solution_status = kSolutionStatusNone;
   info_.dual_solution_status = kSolutionStatusNone;
   info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
@@ -2544,7 +2547,7 @@ void Highs::clearSolution() {
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  this->solution_.clear();
+  this->solution_.invalidate();
 }
 
 void Highs::invalidateBasis() {
@@ -2554,7 +2557,7 @@ void Highs::invalidateBasis() {
 
 void Highs::invalidateInfo() { info_.invalidate(); }
 
-void Highs::clearRanging() { ranging_.clear(); }
+void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
@@ -2715,7 +2718,7 @@ HighsStatus Highs::callSolveMip() {
   }
   // Ensure that any solver data for users in Highs class members are
   // cleared
-  clearUserSolverData();
+  invalidateUserSolverData();
   if (user_solution) {
     // Recover the col and row values
     solution_.col_value = std::move(user_solution_col_value);
@@ -2947,7 +2950,7 @@ void Highs::forceHighsSolutionBasisSize() {
 void Highs::setHighsModelStatusAndClearSolutionAndBasis(
     const HighsModelStatus model_status) {
   model_status_ = model_status;
-  clearSolution();
+  invalidateSolution();
   invalidateBasis();
   info_.valid = true;
 }
@@ -2999,9 +3002,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
       // Don't clear the model status!
-      //      clearUserSolverData();
+      //      invalidateUserSolverData();
       invalidateInfo();
-      clearSolution();
+      invalidateSolution();
       invalidateBasis();
       assert(return_status == HighsStatus::kError);
       break;
@@ -3009,7 +3012,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       // Then consider the OK returns
     case HighsModelStatus::kModelEmpty:
       invalidateInfo();
-      clearSolution();
+      invalidateSolution();
       invalidateBasis();
       assert(return_status == HighsStatus::kOk);
       break;
