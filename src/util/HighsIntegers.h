@@ -186,7 +186,7 @@ class HighsIntegers {
         val = startdenom * vals[i];
         fraction = val - floor(val);
         denom *= denominator(double(fraction), deltaup, 1000);
-        val = denom * vals[i];
+        val = denom * HighsCDouble(vals[i]);
         downval = floor(val + deltaup);
         fraction = val - downval;
 
