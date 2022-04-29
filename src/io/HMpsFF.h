@@ -223,7 +223,7 @@ class HMpsFF {
 
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
-  bool allZeroed(const std::vector<double> value);
+  bool allZeroed(const std::vector<double>& value);
 };
 
 }  // namespace free_format_parser
