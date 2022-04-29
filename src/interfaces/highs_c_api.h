@@ -265,7 +265,7 @@ HighsInt Highs_clearModel(void* highs);
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_clearSolution(void* highs);
+HighsInt Highs_clearSolver(void* highs);
 
 /**
  * Optimize a model. The algorithm used by HiGHS depends on the options that
