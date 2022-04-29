@@ -3226,17 +3226,32 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "unpredictable\n",
                method_name.c_str());
 }
-HighsStatus Highs::crossover() { return crossover(solution_); }
 
-HighsStatus Highs::crossover(HighsSolution& solution) {
-  std::cout << "Loading crossover...\n";
-  HighsBasis basis;
-  bool x_status = callCrossover(model_.lp_, options_, solution, basis);
-  if (!x_status) return HighsStatus::kError;
-
-  setBasis(basis);
-
-  return HighsStatus::kOk;
+HighsStatus Highs::crossover(const HighsSolution& user_solution) {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsLogOptions& log_options = options_.log_options;
+  HighsLp& lp = model_.lp_;
+  if (lp.isMip()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cannot apply crossover to solve MIP\n");
+    return_status = HighsStatus::kError;
+  } else if (model_.isQp()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cannot apply crossover to solve QP\n");
+    return_status = HighsStatus::kError;
+  } else {
+    clearSolver();
+    solution_ = user_solution;
+    // Use IPX crossover to try to form a basic solution
+    return_status = callCrossover(options_, model_.lp_, basis_, solution_,
+                                  model_status_, info_);
+    if (return_status == HighsStatus::kError) return return_status;
+    // Get the objective and any KKT failures
+    info_.objective_function_value =
+        model_.lp_.objectiveValue(solution_.col_value);
+    getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
+  }
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::openLogFile(const std::string log_file) {

@@ -24,6 +24,13 @@
 #include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HighsSolution.h"
 
+HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
+
+HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
+                       const HighsLp& lp, HighsBasis& highs_basis,
+                       HighsSolution& highs_solution,
+                       HighsModelStatus& model_status, HighsInfo& highs_info);
+
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& obj, std::vector<double>& col_lb,
                    std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
@@ -54,20 +61,13 @@ bool illegalIpxStoppedCrossoverStatus(const ipx::Info& ipx_info,
 void reportIpmNoProgress(const HighsOptions& options,
                          const ipx::Info& ipx_info);
 
-void getHighsNonVertexSolution(const HighsLogOptions& log_options,
-                               const HighsLp& lp, const ipx::Int num_col,
-                               const ipx::Int num_row,
+void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
+                               const ipx::Int num_col, const ipx::Int num_row,
                                const std::vector<double>& rhs,
                                const std::vector<char>& constraint_type,
                                const ipx::LpSolver& lps,
+                               const HighsModelStatus model_status,
                                HighsSolution& highs_solution);
-
-HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
-                       HighsModelStatus& model_status, HighsInfo& highs_info);
-
-HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
 
 void reportSolveData(const HighsLogOptions& log_options,
                      const ipx::Info& ipx_info);

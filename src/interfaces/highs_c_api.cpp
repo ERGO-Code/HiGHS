@@ -944,13 +944,9 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   return kHighsStatusOk;
 }
 
-HighsInt Highs_crossover(void* highs) {
-  return (HighsInt)((Highs*)highs)->crossover();
-}
-
-HighsInt Highs_crossover_set(void* highs, const int num_col, const int num_row,
-                             double* col_value, double* col_dual,
-                             double* row_dual) {
+HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
+                         const double* col_value, const double* col_dual,
+                         const double* row_dual) {
   HighsSolution solution;
   if (col_value) {
     solution.value_valid = true;
