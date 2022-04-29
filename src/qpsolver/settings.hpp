@@ -7,6 +7,8 @@ enum class PricingStrategy { DantzigWolfe, Devex };
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
+enum class Phase1Strategy { HIGHS, QUASS };
+
 struct Settings {
   RatiotestStrategy ratiotest = RatiotestStrategy::TwoPass;
   double ratiotest_t = 1E-9;
@@ -20,7 +22,9 @@ struct Settings {
 
   double semidefiniteregularization = 1E-7;
 
+  Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
   bool phase1movefreevarsbasic = false;
+  bool phase1boundfreevars = false;
 
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 100;
@@ -37,6 +41,8 @@ struct Settings {
 
   bool rowscaling = true;
   bool varscaling = true;
+
+  bool perturbation = false;
 };
 
 #endif

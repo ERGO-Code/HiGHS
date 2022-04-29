@@ -19,6 +19,8 @@ enum class ProblemStatus {
 
 struct Runtime {
   Instance instance;
+  Instance scaled;
+  Instance perturbed;
   Settings settings;
   Statistics statistics;
 
