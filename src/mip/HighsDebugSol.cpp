@@ -41,7 +41,7 @@ void HighsDebugSol::activate() {
       std::map<std::string, int> nametoidx;
 
       for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
-        nametoidx["C" + std::to_string(i)] = i;
+        nametoidx["c" + std::to_string(i)] = i;
 
       debugSolution.resize(mipsolver->model_->num_col_, 0.0);
       while (!file.eof()) {

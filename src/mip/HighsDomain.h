@@ -516,6 +516,12 @@ class HighsDomain {
     return -kHighsInf;
   }
 
+  void getCutoffConstraint(const double*& vals, const HighsInt*& inds,
+                           HighsInt& len, double& rhs) {
+    objProp_.getPropagationConstraint(domchgstack_.size(), vals, inds, len,
+                                      rhs);
+  }
+
   HighsInt getNumDomainChanges() const { return domchgstack_.size(); }
 
   bool colBoundsAreGlobal(HighsInt col) const {

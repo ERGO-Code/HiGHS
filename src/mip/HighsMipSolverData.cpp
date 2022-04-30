@@ -240,7 +240,7 @@ double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
     // is definitely included in the remaining search
     new_upper_limit += feastol;
   } else {
-    new_upper_limit = ub - feastol;
+    new_upper_limit = std::min(ub - feastol, std::nextafter(ub, -kHighsInf));
 
     if (mip_rel_gap != 0.0)
       new_upper_limit =
@@ -911,7 +911,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                mipsolver.options_mip_->mip_rel_gap);
       nodequeue.setOptimalityLimit(optimality_limit);
       debugSolution.newIncumbentFound();
-      redcostfixing.propagateRootRedcost(mipsolver);
+      domain.propagate();
+      if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
+
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
