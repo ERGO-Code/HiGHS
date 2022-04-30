@@ -1492,11 +1492,12 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 }
 
 void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
-  HighsInt nbin = mipsolver.mipdata_->objectiveFunction.getNumBinariesInObjective();
-  if( nbin <= 1 ) return;
+  HighsInt nbin =
+      mipsolver.mipdata_->objectiveFunction.getNumBinariesInObjective();
+  if (nbin <= 1) return;
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
-  if( globaldom.getObjectiveLowerBound() == -kHighsInf ) return;
-  
+  if (globaldom.getObjectiveLowerBound() == -kHighsInf) return;
+
   const double* vals;
   const HighsInt* inds;
   HighsInt len;
