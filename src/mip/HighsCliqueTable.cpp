@@ -1492,90 +1492,86 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 }
 
 void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
-  std::vector<HighsInt> inds;
-  std::vector<double> vals;
-  std::vector<HighsInt> perm;
-  std::vector<int8_t> complementation;
-  std::vector<CliqueVar> clique;
-  HighsHashTable<HighsInt, double> entries;
-  double offset = 0.0;
-
+  HighsInt nbin =
+      mipsolver.mipdata_->objectiveFunction.getNumBinariesInObjective();
+  if (nbin <= 1) return;
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
-  for (HighsInt j = 0; j != mipsolver.numCol(); ++j) {
-    HighsInt col = j;
-    double val = mipsolver.colCost(col);
-    if (val == 0.0) continue;
+  if (globaldom.getObjectiveLowerBound() == -kHighsInf) return;
 
-    if (globaldom.isFixed(col)) {
-      offset += val * globaldom.col_lower_[col];
-      continue;
-    }
+  const std::vector<double>& vals =
+      mipsolver.mipdata_->objectiveFunction.getObjectiveValuesPacked();
+  const std::vector<HighsInt>& inds =
+      mipsolver.mipdata_->objectiveFunction.getObjectiveNonzeros();
+  HighsInt len = inds.size();
+  double rhs = mipsolver.mipdata_->upper_limit;
 
-    resolveSubstitution(col, val, offset);
-    entries[col] += val;
-  }
+  std::vector<HighsInt> perm;
+  perm.resize(nbin);
+  std::iota(perm.begin(), perm.end(), 0);
 
-  double rhs = mipsolver.mipdata_->upper_limit - offset;
+  auto binaryend = std::partition(perm.begin(), perm.end(), [&](HighsInt pos) {
+    return !globaldom.isFixed(inds[pos]);
+  });
 
-  bool freevar = false;
-  HighsInt nbin = 0;
+  nbin = binaryend - perm.begin();
 
-  for (const auto& entry : entries) {
-    HighsInt col = entry.key();
-    double val = entry.value();
+  // only one binary means we do have no cliques
+  if (nbin <= 1) return;
 
-    if (std::abs(val) <= mipsolver.mipdata_->epsilon) continue;
+  std::vector<CliqueVar> clique;
+  clique.reserve(nbin);
 
-    if (globaldom.isBinary(col)) ++nbin;
+  pdqsort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
+    return std::make_pair(std::fabs(vals[p1]), p1) >
+           std::make_pair(std::fabs(vals[p2]), p2);
+  });
 
-    if (val < 0) {
-      if (globaldom.col_upper_[col] == kHighsInf) {
-        freevar = true;
-        break;
-      }
+  // check if any cliques exists
+  HighsCDouble minact;
+  HighsInt ninf;
+  globaldom.computeMinActivity(0, len, inds.data(), vals.data(), ninf, minact);
+  const double feastol = mipsolver.mipdata_->feastol;
+  if (std::fabs(vals[perm[0]]) + std::fabs(vals[perm[1]]) <=
+      double(rhs - minact + feastol))
+    return;
 
-      vals.push_back(-val);
-      inds.push_back(col);
-      complementation.push_back(-1);
-      rhs -= val * globaldom.col_upper_[col];
-    } else {
-      if (globaldom.col_lower_[col] == -kHighsInf) {
-        freevar = true;
-        break;
-      }
+  for (HighsInt k = nbin - 1; k != 0; --k) {
+    double mincliqueval =
+        double(rhs - minact - std::fabs(vals[perm[k]]) + feastol);
+    auto cliqueend = std::partition_point(
+        perm.begin(), perm.begin() + k,
+        [&](HighsInt p) { return std::abs(vals[p]) > mincliqueval; });
 
-      vals.push_back(val);
-      inds.push_back(col);
-      complementation.push_back(1);
-      rhs -= val * globaldom.col_lower_[col];
-    }
-  }
+    // no clique for this variable
+    if (cliqueend == perm.begin()) continue;
 
-  if (!freevar) {
-    HighsInt len = (HighsInt)inds.size();
+    clique.clear();
 
-    HighsInt nfixed = 0;
-    for (HighsInt i = 0; i != len; ++i) {
-      if (mipsolver.variableType(inds[i]) != HighsVarType::kInteger) continue;
-      if (vals[i] <= rhs + mipsolver.mipdata_->feastol) continue;
-      if (globaldom.isFixed(inds[i])) continue;
-
-      ++nfixed;
-      if (complementation[i] == -1)
-        globaldom.fixCol(inds[i], globaldom.col_upper_[inds[i]]);
+    for (auto j = perm.begin(); j != cliqueend; ++j) {
+      HighsInt pos = *j;
+      if (vals[pos] < 0)
+        clique.emplace_back(inds[pos], 0);
       else
-        globaldom.fixCol(inds[i], globaldom.col_lower_[inds[i]]);
+        clique.emplace_back(inds[pos], 1);
+    }
+
+    if (vals[perm[k]] < 0)
+      clique.emplace_back(inds[perm[k]], 0);
+    else
+      clique.emplace_back(inds[perm[k]], 1);
+
+    // printf("extracted this clique from obj:\n");
+    // printClique(clique);
+    if (clique.size() >= 2) {
+      // printf("extracted clique from obj\n");
+      // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
+
+      addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
     }
 
-    // printf("extracing cliques from this row:\n");
-    // printRow(globaldom, inds.data(), vals.data(), inds.size(),
-    //         -kHighsInf, rhs);
-    if (nbin != 0) {
-      extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
-                     clique, mipsolver.mipdata_->feastol);
-      if (globaldom.infeasible()) return;
-    }
+    // further cliques are just subsets of this clique
+    if (cliqueend == perm.begin() + k) return;
   }
 }
 

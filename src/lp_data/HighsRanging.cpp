@@ -24,8 +24,10 @@
 
 using std::min;
 
+void HighsRanging::invalidate() { valid = false; }
+
 void HighsRanging::clear() {
-  valid = false;
+  this->invalidate();
   this->col_cost_up.value_.clear();
   this->col_cost_up.objective_.clear();
   this->col_cost_up.in_var_.clear();

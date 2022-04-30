@@ -156,10 +156,10 @@ class HighsIntegers {
     if (expMaxVal + expshift > 32) expshift = 32 - expMaxVal;
 
     uint64_t denom = uint64_t{75} << expshift;
-    HighsCDouble startdenom = denom;
+    int64_t startdenom = denom;
     // now check if the values are integral and if not compute a common
     // denominator for their remaining fraction
-    HighsCDouble val = startdenom * vals[0];
+    HighsCDouble val = startdenom * HighsCDouble(vals[0]);
     HighsCDouble downval = floor(val + deltaup);
     HighsCDouble fraction = val - downval;
 
@@ -167,7 +167,7 @@ class HighsIntegers {
       // use a continued fraction algorithm to compute small missing
       // denominators for the remaining fraction
       denom *= denominator(double(fraction), deltaup, 1000);
-      val = denom * vals[0];
+      val = denom * HighsCDouble(vals[0]);
       downval = floor(val + deltaup);
       fraction = val - downval;
 
@@ -183,10 +183,10 @@ class HighsIntegers {
       fraction = val - downval;
 
       if (fraction > deltadown) {
-        val = startdenom * vals[i];
+        val = startdenom * HighsCDouble(vals[i]);
         fraction = val - floor(val);
         denom *= denominator(double(fraction), deltaup, 1000);
-        val = denom * vals[i];
+        val = denom * HighsCDouble(vals[i]);
         downval = floor(val + deltaup);
         fraction = val - downval;
 
@@ -200,6 +200,7 @@ class HighsIntegers {
         // unecessary overflows
         if (denom > std::numeric_limits<unsigned int>::max()) {
           denom /= currgcd;
+          if (startdenom != 1) startdenom /= gcd(currgcd, startdenom);
           currgcd = 1;
         }
       }

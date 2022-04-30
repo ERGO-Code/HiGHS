@@ -28,14 +28,13 @@ TEST_CASE("HighsIntegers", "[util]") {
   // so for computing the correct fraction it is necessary to use HighsCDouble
   // which represents a roughly quad precision number as the unevaluated sum of
   // two double precision numbers, otherwise the algorithm will fail.
-  int64_t primes[] = {967, 971, 977, 983, 991, 997};
+  int64_t primes[] = {967, 971, 977, 983};
   std::vector<double> values{1.0 / primes[0], 2.0 / primes[1], 3.0 / primes[2],
-                             4.0 / primes[3], 5.0 / primes[4], 6.0 / primes[5]};
+                             4.0 / primes[3]};
 
-  integralscalar = HighsIntegers::integralScale(values, 1e-6, 1e-9);
+  integralscalar = HighsIntegers::integralScale(values, 1e-6, 1e-6);
 
-  REQUIRE(integralscalar == primes[0] * primes[1] * primes[2] * primes[3] *
-                                primes[4] * primes[5]);
+  REQUIRE(integralscalar == primes[0] * primes[1] * primes[2] * primes[3]);
 
   if (dev_run) printf("integral scalar is %g\n", integralscalar);
 }

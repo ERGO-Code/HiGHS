@@ -113,7 +113,6 @@ void HighsSymmetries::clear() {
   orbitopes.clear();
   numPerms = 0;
   numGenerators = 0;
-  detectionTime = 0.0;
 }
 
 void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2) {

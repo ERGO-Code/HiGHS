@@ -1206,22 +1206,30 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          (HighsInt)basis.row_status.size() == lp.num_row_;
 }
 
-void HighsSolution::clear() {
-  this->col_value.clear();
-  this->row_value.clear();
+void HighsSolution::invalidate() {
   this->value_valid = false;
-  this->col_dual.clear();
-  this->row_dual.clear();
   this->dual_valid = false;
 }
 
-void HighsBasis::clear() {
+void HighsSolution::clear() {
+  this->invalidate();
+  this->col_value.clear();
+  this->row_value.clear();
+  this->col_dual.clear();
+  this->row_dual.clear();
+}
+
+void HighsBasis::invalidate() {
   this->valid = false;
   this->alien = true;
   this->was_alien = true;
   this->debug_id = -1;
   this->debug_update_count = -1;
   this->debug_origin_name = "None";
+}
+
+void HighsBasis::clear() {
+  this->invalidate();
   this->row_status.clear();
   this->col_status.clear();
 }

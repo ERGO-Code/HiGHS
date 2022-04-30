@@ -101,10 +101,27 @@ class HMpsFF {
   // any LI or UI flags in the BOUNDS section
   std::vector<bool> col_binary;
 
+  // Record whether there are duplicate row or column names, and the
+  // name and indices of the first duplicates
+  bool has_duplicate_row_name_;
+  bool has_duplicate_col_name_;
+  std::string duplicate_row_name_;
+  HighsInt duplicate_row_name_index0_;
+  HighsInt duplicate_row_name_index1_;
+  std::string duplicate_col_name_;
+  HighsInt duplicate_col_name_index0_;
+  HighsInt duplicate_col_name_index1_;
+
+  // Record whether there is a data entry in the RHS section of an MPS
+  // file for the objective or a row. Have to be class data members so
+  // that they can be used by parseName and addRhs in HMpsFF::parseRhs
+  bool has_obj_entry_;
+  std::vector<bool> has_row_entry_;
+
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);
-  HighsInt fillMatrix();
-  HighsInt fillHessian();
+  HighsInt fillMatrix(const HighsLogOptions& log_options);
+  HighsInt fillHessian(const HighsLogOptions& log_options);
 
   const bool kAnyFirstNonBlankAsStarImpliesComment = false;
   /// how to treat variables that appear in COLUMNS section first
@@ -149,6 +166,7 @@ class HMpsFF {
   // see https://docs.mosek.com/latest/capi/mps-format.html#csection-optional
   enum class ConeType { kZero, kQuad, kRQuad, kPExp, kPPow, kDExp, kDPow };
 
+  std::string objective_name;
   std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 
@@ -172,13 +190,13 @@ class HMpsFF {
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
-  /// checks first word of strline and wraps it by it_begin and it_end
+  // Checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
                                   HighsInt& end, std::string& word) const;
 
-  // get index of column from column name
-  // add new column if no index is found yet
-  HighsInt getColIdx(const std::string& colname);
+  // Get index of column from column name, possibly adding new column
+  // if no index is found
+  HighsInt getColIdx(const std::string& colname, const bool add_if_new = true);
 
   HMpsFF::Parsekey parseDefault(const HighsLogOptions& log_options,
                                 std::istream& file);
@@ -207,6 +225,7 @@ class HMpsFF {
 
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
+  bool allZeroed(const std::vector<double>& value);
 };
 
 }  // namespace free_format_parser
