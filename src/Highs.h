@@ -850,12 +850,11 @@ class Highs {
   HighsStatus setBasis();
 
   /**
-   * @brief Run IPX crossover (possibly from a given HighsSolution
-   * instance) and, if successful, set the internal HighsBasis
+   * @brief Run IPX crossover from a given HighsSolution instance and,
+   * if successful, set the internal HighsBasis and HighsSolution
    * instance
    */
-  HighsStatus crossover();
-  HighsStatus crossover(HighsSolution& solution);
+  HighsStatus crossover(const HighsSolution& user_solution);
 
   /**
    * @brief Open a named log file
@@ -1112,32 +1111,31 @@ class Highs {
   // before (possibly) updating them with data from trying to solve
   // the inumcumbent model.
   //
-  // Clears all solver data in Highs class members by calling
-  // clearModelStatus(), clearSolution(), clearBasis(),
-  // clearInfo() and clearEkk()
-  void clearUserSolverData();
+  // Invalidates all solver data in Highs class members by calling
+  // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
+  // invalidateInfo() and invalidateEkk()
+  void invalidateUserSolverData();
   //
-  // Clears the model status, solution_ and info_
-  void clearModelStatusSolutionAndInfo();
+  // Invalidates the model status, solution_ and info_
+  void invalidateModelStatusSolutionAndInfo();
   //
   // Sets model status to HighsModelStatus::kNotset
-  void clearModelStatus();
+  void invalidateModelStatus();
   //
-  // Sets primal and dual solution status to
-  // kSolutionStatusNone, and clears solution_ vectors
-  void clearSolution();
+  // Invalidates primal and dual solution
+  void invalidateSolution();
   //
-  // Invalidates basis and clears basis_ vectors
-  void clearBasis();
+  // Invalidates basis
+  void invalidateBasis();
   //
   // Invalidates info_ and resets the values of its members
-  void clearInfo();
+  void invalidateInfo();
   //
-  // Invalidates ranging_ and clears its vectors
-  void clearRanging();
+  // Invalidates ranging_
+  void invalidateRanging();
 
   // Invalidates ekk_instance_
-  void clearEkk();
+  void invalidateEkk();
 
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);

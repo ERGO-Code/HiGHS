@@ -51,7 +51,7 @@ HighsStatus Highs::clearModel() {
 HighsStatus Highs::clearSolver() {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  clearUserSolverData();
+  invalidateUserSolverData();
   return returnFromHighs(return_status);
 }
 
@@ -742,7 +742,7 @@ HighsStatus Highs::run() {
   // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
   // Clear the run info
-  clearInfo();
+  invalidateInfo();
   // Zero the iteration counts
   zeroIterationCounts();
   // Start the HiGHS run clock
@@ -1128,10 +1128,10 @@ HighsStatus Highs::run() {
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
           if (ipx_no_crossover) {
-            // IPX was used without crossover, so only have a primal solution
+            // IPX was used without crossover, so have a dual solution, but no
+            // basis
             solution_.dual_valid = true;
-            basis_.clear();
-            basis_.valid = false;
+            basis_.invalidate();
           } else {
             //
             // Hot-start the simplex solver for the incumbent LP
@@ -1554,7 +1554,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       solution.row_dual.size() >= model_.lp_.num_row_;
   const bool new_solution = new_primal_solution || new_dual_solution;
 
-  if (new_solution) clearUserSolverData();
+  if (new_solution) invalidateUserSolverData();
 
   if (new_primal_solution) {
     solution_.col_value = solution.col_value;
@@ -1637,7 +1637,7 @@ HighsStatus Highs::setBasis() {
   //
   // Don't set to logical basis since that causes presolve to be
   // skipped
-  basis_.clear();
+  basis_.invalidate();
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1681,7 +1681,7 @@ HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
   // Get the corresponding HiGHS basis
   basis_ = ekk_instance_.getHighsBasis(model_.lp_);
   // Clear everything else
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   return returnFromHighs(HighsStatus::kOk);
 }
 
@@ -1708,7 +1708,7 @@ HighsStatus Highs::getIterate() {
   // Get the corresponding HiGHS basis
   basis_ = ekk_instance_.getHighsBasis(model_.lp_);
   // Clear everything else
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   return returnFromHighs(HighsStatus::kOk);
 }
 
@@ -1782,7 +1782,7 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
     model_.lp_.sense_ = sense;
     // Nontrivial change
     clearPresolve();
-    clearModelStatusSolutionAndInfo();
+    invalidateModelStatusSolutionAndInfo();
   }
   return returnFromHighs(HighsStatus::kOk);
 }
@@ -2519,24 +2519,26 @@ void Highs::clearPresolve() {
   presolve_.clear();
 }
 
-void Highs::clearUserSolverData() {
-  clearModelStatus();
-  clearSolution();
-  clearBasis();
-  clearRanging();
-  clearInfo();
-  clearEkk();
+void Highs::invalidateUserSolverData() {
+  invalidateModelStatus();
+  invalidateSolution();
+  invalidateBasis();
+  invalidateRanging();
+  invalidateInfo();
+  invalidateEkk();
 }
 
-void Highs::clearModelStatusSolutionAndInfo() {
-  clearModelStatus();
-  clearSolution();
-  clearInfo();
+void Highs::invalidateModelStatusSolutionAndInfo() {
+  invalidateModelStatus();
+  invalidateSolution();
+  invalidateInfo();
 }
 
-void Highs::clearModelStatus() { model_status_ = HighsModelStatus::kNotset; }
+void Highs::invalidateModelStatus() {
+  model_status_ = HighsModelStatus::kNotset;
+}
 
-void Highs::clearSolution() {
+void Highs::invalidateSolution() {
   info_.primal_solution_status = kSolutionStatusNone;
   info_.dual_solution_status = kSolutionStatusNone;
   info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
@@ -2545,19 +2547,19 @@ void Highs::clearSolution() {
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  this->solution_.clear();
+  this->solution_.invalidate();
 }
 
-void Highs::clearBasis() {
+void Highs::invalidateBasis() {
   info_.basis_validity = kBasisValidityInvalid;
-  this->basis_.clear();
+  this->basis_.invalidate();
 }
 
-void Highs::clearInfo() { info_.clear(); }
+void Highs::invalidateInfo() { info_.invalidate(); }
 
-void Highs::clearRanging() { ranging_.clear(); }
+void Highs::invalidateRanging() { ranging_.invalidate(); }
 
-void Highs::clearEkk() { ekk_instance_.invalidate(); }
+void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
@@ -2716,7 +2718,7 @@ HighsStatus Highs::callSolveMip() {
   }
   // Ensure that any solver data for users in Highs class members are
   // cleared
-  clearUserSolverData();
+  invalidateUserSolverData();
   if (user_solution) {
     // Recover the col and row values
     solution_.col_value = std::move(user_solution_col_value);
@@ -2948,8 +2950,8 @@ void Highs::forceHighsSolutionBasisSize() {
 void Highs::setHighsModelStatusAndClearSolutionAndBasis(
     const HighsModelStatus model_status) {
   model_status_ = model_status;
-  clearSolution();
-  clearBasis();
+  invalidateSolution();
+  invalidateBasis();
   info_.valid = true;
 }
 
@@ -3000,18 +3002,18 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
       // Don't clear the model status!
-      //      clearUserSolverData();
-      clearInfo();
-      clearSolution();
-      clearBasis();
+      //      invalidateUserSolverData();
+      invalidateInfo();
+      invalidateSolution();
+      invalidateBasis();
       assert(return_status == HighsStatus::kError);
       break;
 
       // Then consider the OK returns
     case HighsModelStatus::kModelEmpty:
-      clearInfo();
-      clearSolution();
-      clearBasis();
+      invalidateInfo();
+      invalidateSolution();
+      invalidateBasis();
       assert(return_status == HighsStatus::kOk);
       break;
 
@@ -3226,17 +3228,32 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "unpredictable\n",
                method_name.c_str());
 }
-HighsStatus Highs::crossover() { return crossover(solution_); }
 
-HighsStatus Highs::crossover(HighsSolution& solution) {
-  std::cout << "Loading crossover...\n";
-  HighsBasis basis;
-  bool x_status = callCrossover(model_.lp_, options_, solution, basis);
-  if (!x_status) return HighsStatus::kError;
-
-  setBasis(basis);
-
-  return HighsStatus::kOk;
+HighsStatus Highs::crossover(const HighsSolution& user_solution) {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsLogOptions& log_options = options_.log_options;
+  HighsLp& lp = model_.lp_;
+  if (lp.isMip()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cannot apply crossover to solve MIP\n");
+    return_status = HighsStatus::kError;
+  } else if (model_.isQp()) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Cannot apply crossover to solve QP\n");
+    return_status = HighsStatus::kError;
+  } else {
+    clearSolver();
+    solution_ = user_solution;
+    // Use IPX crossover to try to form a basic solution
+    return_status = callCrossover(options_, model_.lp_, basis_, solution_,
+                                  model_status_, info_);
+    if (return_status == HighsStatus::kError) return return_status;
+    // Get the objective and any KKT failures
+    info_.objective_function_value =
+        model_.lp_.objectiveValue(solution_.col_value);
+    getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
+  }
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::openLogFile(const std::string log_file) {

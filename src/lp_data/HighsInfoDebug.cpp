@@ -132,7 +132,7 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
 
 HighsDebugStatus debugNoInfo(const HighsInfo& info) {
   HighsInfo no_info;
-  no_info.clear();
+  no_info.invalidate();
   bool error_found = false;
   const std::vector<InfoRecord*>& info_records = info.records;
   const std::vector<InfoRecord*>& no_info_records = no_info.records;

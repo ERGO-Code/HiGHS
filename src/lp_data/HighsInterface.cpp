@@ -24,7 +24,7 @@ HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
   assert(!lp.isMip());
   assert(solution_.value_valid);
-  clearBasis();
+  invalidateBasis();
   HighsInt num_basic = 0;
   HighsBasis basis;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -174,7 +174,7 @@ HighsStatus Highs::addColsInterface(
   assert(lpDimensionsOk("addCols", lp, options.log_options));
 
   // Deduce the consequences of adding new columns
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
   ekk_instance_.addCols(lp, local_a_matrix);
@@ -293,7 +293,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   assert(lpDimensionsOk("addRows", lp, options.log_options));
 
   // Deduce the consequences of adding new rows
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
   return return_status;
@@ -322,7 +322,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     lp.scale_.num_col = lp.num_col_;
   }
   // Deduce the consequences of deleting columns
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
   ekk_instance_.deleteCols(index_collection);
@@ -366,7 +366,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     lp.scale_.num_row = lp.num_row_;
   }
   // Deduce the consequences of deleting rows
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
   ekk_instance_.deleteRows(index_collection);
@@ -596,7 +596,7 @@ HighsStatus Highs::changeIntegralityInterface(
   HighsStatus call_status;
   changeLpIntegrality(model_.lp_, index_collection, local_integrality);
   // Deduce the consequences of new integrality
-  clearModelStatus();
+  invalidateModelStatus();
   return HighsStatus::kOk;
 }
 
@@ -619,7 +619,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   if (return_status == HighsStatus::kError) return return_status;
   changeLpCosts(model_.lp_, index_collection, local_colCost);
   // Deduce the consequences of new costs
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewCosts);
   return HighsStatus::kOk;
@@ -664,7 +664,7 @@ HighsStatus Highs::changeColBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
   // Deduce the consequences of new col bounds
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
@@ -708,7 +708,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
   // Deduce the consequences of new row bounds
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
@@ -731,7 +731,7 @@ void Highs::changeCoefficientInterface(const HighsInt ext_row,
   //
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if it's a new row
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewRows);
@@ -775,7 +775,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
     }
   }
   // Deduce the consequences of a scaled column
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kScaledCol);
@@ -822,7 +822,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
     }
   }
   // Deduce the consequences of a scaled row
-  clearModelStatusSolutionAndInfo();
+  invalidateModelStatusSolutionAndInfo();
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kScaledRow);

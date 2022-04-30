@@ -164,8 +164,8 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.getNumRow(), 2)
         self.assertEqual(h.getNumNz(), 4)
         sol = h.getSolution()
-        self.assertAlmostEqual(sol.col_value[0], 0)
-        self.assertAlmostEqual(sol.col_value[1], 0)
+        self.assertFalse(sol.value_valid)
+        self.assertFalse(sol.dual_valid)
 
         h = self.get_basic_model()
         orig_feas_tol = h.getOptionValue('primal_feasibility_tolerance')
