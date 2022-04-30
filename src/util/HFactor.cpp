@@ -610,16 +610,24 @@ void HFactor::buildSimple() {
       // 1.2 Structural column
       HighsInt start = a_start[iMat];
       HighsInt count = a_start[iMat + 1] - start;
-      HighsInt lc_iRow = a_index[start];
-      // Check for unit column with double pivot
-      bool unit_col = count == 1 && a_value[start] == 1;
-      if (unit_col && mr_count_before[lc_iRow] >= 0) {
+      // If this column and all subsequent columns are zero (so count
+      // is 0) then a_index[start] and a_value[start] are unassigned,
+      // so determine a unit column in two stages
+      bool ok_unit_col = false;
+      if (count == 1) {
+        // Column has only one nonzero, but have to make sure that the
+        // value is 1 and that there's not already a pivot
+        // corresponding to this unit column
+        ok_unit_col =
+            a_value[start] == 1 && mr_count_before[a_index[start]] >= 0;
+      }
+      if (ok_unit_col) {
         if (report_unit) printf("Stage %d: Unit\n", (int)(l_start.size() - 1));
         // Don't exploit this special case in case the matrix is
         // re-factorized after scaling has been applied, making this
         // column non-unit.
         pivot_type = kPivotColSingleton;  //;kPivotUnit;//
-        iRow = lc_iRow;
+        iRow = a_index[start];
       } else {
         for (HighsInt k = start; k < start + count; k++) {
           mr_count_before[a_index[k]]++;

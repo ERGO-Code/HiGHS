@@ -19,7 +19,7 @@
 
 #include "lp_data/HighsOptions.h"
 
-void HighsInfo::clear() {
+void HighsInfo::invalidate() {
   valid = false;
   mip_node_count = -1;
   simplex_iteration_count = -1;
