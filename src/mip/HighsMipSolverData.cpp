@@ -911,7 +911,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                mipsolver.options_mip_->mip_rel_gap);
       nodequeue.setOptimalityLimit(optimality_limit);
       debugSolution.newIncumbentFound();
-      redcostfixing.propagateRootRedcost(mipsolver);
+      domain.propagate();
+      if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
+
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();

@@ -1039,6 +1039,10 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
               inheuristic ? 'H' : 'T');
+          if (lp->unscaledDualFeasible(status)) {
+            addBoundExceedingConflict();
+            result = NodeResult::kBoundExceeding;
+          }
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
         }
