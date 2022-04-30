@@ -733,6 +733,26 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                         mipsolver.timer_.read(mipsolver.timer_.solve_clock));
   // lpsolver.setOptionValue("output_flag", true);
   HighsStatus callstatus = lpsolver.run();
+  std::string solver;
+  lpsolver.getOptionValue("solver", solver);
+  if (callstatus != HighsStatus::kError && solver == kIpmString) {
+    // IPM used as solver, so clean up using simplex
+    const HighsInfo& info = lpsolver.getInfo();
+    HighsInt simplex_iteration_count = -info.simplex_iteration_count;
+    lpsolver.setOptionValue("solver", kSimplexString);
+    bool output_flag;
+    lpsolver.getOptionValue("output_flag", output_flag);
+    lpsolver.setOptionValue("output_flag", true);
+    callstatus = lpsolver.run();
+    simplex_iteration_count += info.simplex_iteration_count;
+    if (simplex_iteration_count) {
+      printf("Simplex clean-up after IPM required %d simplex iterations\n",
+             (int)simplex_iteration_count);
+    }
+    // Revert solver option just in case it's inspected later
+    lpsolver.setOptionValue("solver", kIpmString);
+    lpsolver.setOptionValue("output_flag", output_flag);
+  }
 
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
