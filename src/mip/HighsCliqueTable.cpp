@@ -1498,19 +1498,18 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
   if (globaldom.getObjectiveLowerBound() == -kHighsInf) return;
 
-  const std::vector<double>& vals =
-      mipsolver.mipdata_->objectiveFunction.getObjectiveValuesPacked();
-  const std::vector<HighsInt>& inds =
-      mipsolver.mipdata_->objectiveFunction.getObjectiveNonzeros();
-  HighsInt len = inds.size();
-  double rhs = mipsolver.mipdata_->upper_limit;
+  const double* vals;
+  const HighsInt* inds;
+  HighsInt len;
+  double rhs;
+  globaldom.getCutoffConstraint(vals, inds, len, rhs);
 
   std::vector<HighsInt> perm;
   perm.resize(nbin);
   std::iota(perm.begin(), perm.end(), 0);
 
   auto binaryend = std::partition(perm.begin(), perm.end(), [&](HighsInt pos) {
-    return !globaldom.isFixed(inds[pos]);
+    return vals[pos] != 0.0 && !globaldom.isFixed(inds[pos]);
   });
 
   nbin = binaryend - perm.begin();
@@ -1529,7 +1528,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
   // check if any cliques exists
   HighsCDouble minact;
   HighsInt ninf;
-  globaldom.computeMinActivity(0, len, inds.data(), vals.data(), ninf, minact);
+  globaldom.computeMinActivity(0, len, inds, vals, ninf, minact);
   const double feastol = mipsolver.mipdata_->feastol;
   if (std::fabs(vals[perm[0]]) + std::fabs(vals[perm[1]]) <=
       double(rhs - minact + feastol))
