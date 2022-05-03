@@ -2870,15 +2870,14 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     // Scrap the EKK data from solving the presolved LP
     ekk_instance_.invalidate();
     ekk_instance_.lp_name_ = "Postsolve LP";
-    // Set up the iteration count and timing records so that
-    // adding the corresponding values after callSolveLp gives
-    // difference
+    // Set up the timing record so that adding the corresponding
+    // values after callSolveLp gives difference
     timer_.start(timer_.solve_clock);
     call_status = callSolveLp(
         incumbent_lp,
         "Solving the original LP from the solution after postsolve");
+    // Determine the timing record
     timer_.stop(timer_.solve_clock);
-    // Determine the iteration count and timing records
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     // Recover the options
