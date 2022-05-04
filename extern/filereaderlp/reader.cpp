@@ -903,8 +903,8 @@ void Reader::readnexttoken(bool& done) {
      this->linebufferpos = 0;
    }
 
-   // if all line has been read and we are at end of file, then stop
-   if (this->linebufferpos == this->linebuffer.size() && this->file.eof()) {
+   // if we are at end of file, then stop
+   if (this->file.eof()) {
      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
      done = true;
      return;
