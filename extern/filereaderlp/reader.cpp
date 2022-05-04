@@ -892,7 +892,12 @@ void Reader::readnexttoken(bool& done) {
    done = false;
 
    if (this->linebufferpos == this->linebuffer.size()) {
-     // read next line
+     // read next line if any are left. 
+     if (this->file.eof()) {
+         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
+         done = true;
+         return;
+     }
      std::getline(this->file, linebuffer);
 
      // drop \r
@@ -901,13 +906,6 @@ void Reader::readnexttoken(bool& done) {
 
      // reset linebufferpos
      this->linebufferpos = 0;
-   }
-
-   // if all line has been read and we are at end of file, then stop
-   if (this->linebufferpos == this->linebuffer.size() && this->file.eof()) {
-     this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-     done = true;
-     return;
    }
 
    // check single character tokens
