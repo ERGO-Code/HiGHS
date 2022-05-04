@@ -43,6 +43,7 @@ set(TEST_SOURCES
     TestHighsModel.cpp
     TestHSet.cpp
     TestLogging.cpp
+    TestLPFileFormat.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp
