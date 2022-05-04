@@ -535,16 +535,12 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   }
   HighsInt cat = maxCat;
   if (colCatK[cat]) lastRpCat = cat;
-  HighsInt sumK = 0;
   HighsInt pct;
   double v;
-  HighsInt sumPct = 0;
   for (HighsInt cat = 0; cat < lastRpCat; cat++) {
-    sumK += colCatK[cat];
     v = 100 * colCatK[cat];
     v = v / numCol + 0.5;
     pct = v;
-    sumPct += pct;
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%) columns of count in [%3" HIGHSINT_FORMAT
@@ -553,11 +549,9 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   }
 
   cat = lastRpCat;
-  sumK += colCatK[cat];
   v = 100 * colCatK[cat];
   v = v / numCol + 0.5;
   pct = v;
-  sumPct += pct;
   if (cat == maxCat) {
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
@@ -580,16 +574,12 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   }
   cat = maxCat;
   if (rowCatK[cat]) lastRpCat = cat;
-  sumK = 0;
   pct = 0;
   v = 0;
-  sumPct = 0;
   for (HighsInt cat = 0; cat < lastRpCat; cat++) {
-    sumK += rowCatK[cat];
     v = 100 * rowCatK[cat];
     v = v / numRow + 0.5;
     pct = v;
-    sumPct += pct;
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%)    rows of count in [%3" HIGHSINT_FORMAT
@@ -598,11 +588,9 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   }
 
   cat = lastRpCat;
-  sumK += rowCatK[cat];
   v = 100 * rowCatK[cat];
   v = v / numRow + 0.5;
   pct = v;
-  sumPct += pct;
   if (cat == maxCat) {
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
@@ -719,7 +707,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
   bool not_reported_ones = true;
   HighsInt sum_count =
       value_distribution.num_zero_ + value_distribution.num_one_;
-  double sum_percentage = 0;
   const double min_value = value_distribution.min_value_;
   for (HighsInt i = 0; i < num_count + 1; i++)
     sum_count += value_distribution.count_[i];
@@ -752,7 +739,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
   HighsInt count = value_distribution.num_zero_;
   if (count) {
     percentage = doublePercentage(count, sum_count);
-    sum_percentage += percentage;
     int_percentage = percentage;
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
@@ -763,7 +749,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
   count = value_distribution.count_[0];
   if (count) {
     percentage = doublePercentage(count, sum_count);
-    sum_percentage += percentage;
     int_percentage = percentage;
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
@@ -785,7 +770,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
       count = value_distribution.num_one_;
       if (count) {
         percentage = doublePercentage(count, sum_count);
-        sum_percentage += percentage;
         int_percentage = percentage;
         highsLogDev(log_options, HighsLogType::kInfo,
                     "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
@@ -804,7 +788,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
     count = value_distribution.count_[i];
     if (count) {
       percentage = doublePercentage(count, sum_count);
-      sum_percentage += percentage;
       int_percentage = percentage;
       highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
@@ -828,7 +811,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
     count = value_distribution.num_one_;
     if (count) {
       percentage = doublePercentage(count, sum_count);
-      sum_percentage += percentage;
       int_percentage = percentage;
       highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
@@ -847,7 +829,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
   count = value_distribution.count_[num_count];
   if (count) {
     percentage = doublePercentage(count, sum_count);
-    sum_percentage += percentage;
     int_percentage = percentage;
     highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
@@ -867,7 +848,6 @@ bool logValueDistribution(const HighsLogOptions& log_options,
     count = value_distribution.num_one_;
     if (count) {
       percentage = doublePercentage(count, sum_count);
-      sum_percentage += percentage;
       int_percentage = percentage;
       highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT

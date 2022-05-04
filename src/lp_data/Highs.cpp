@@ -2839,7 +2839,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   presolve_.data_.recovered_solution_ = solution;
   presolve_.data_.recovered_basis_ = basis;
 
-  HighsInt postsolve_iteration_count = -1;
   HighsPostsolveStatus postsolve_status = runPostsolve();
   if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -2871,17 +2870,14 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     // Scrap the EKK data from solving the presolved LP
     ekk_instance_.invalidate();
     ekk_instance_.lp_name_ = "Postsolve LP";
-    // Set up the iteration count and timing records so that
-    // adding the corresponding values after callSolveLp gives
-    // difference
-    postsolve_iteration_count = -info_.simplex_iteration_count;
+    // Set up the timing record so that adding the corresponding
+    // values after callSolveLp gives difference
     timer_.start(timer_.solve_clock);
     call_status = callSolveLp(
         incumbent_lp,
         "Solving the original LP from the solution after postsolve");
+    // Determine the timing record
     timer_.stop(timer_.solve_clock);
-    // Determine the iteration count and timing records
-    postsolve_iteration_count += info_.simplex_iteration_count;
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     // Recover the options
