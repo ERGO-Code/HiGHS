@@ -762,7 +762,7 @@ HighsStatus Highs::run() {
   // Ensure that the matrix has no large values
   if (model_.lp_.a_matrix_.hasLargeValue(options_.large_matrix_value)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Canot solve a model with a |value| exceeding %g in "
+                 "Cannot solve a model with a |value| exceeding %g in "
                  "constraint matrix\n",
                  options_.large_matrix_value);
     return returnFromRun(HighsStatus::kError);
@@ -805,7 +805,7 @@ HighsStatus Highs::run() {
     // Ensure that it's not MIQP!
     if (model_.isMip()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Canot solve MIQP problems with HiGHS\n");
+                   "Cannot solve MIQP problems with HiGHS\n");
       return returnFromRun(HighsStatus::kError);
     }
     call_status = callSolveQp();
