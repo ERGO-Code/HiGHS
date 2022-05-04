@@ -419,9 +419,9 @@ restart:
         mipdata_->printDisplayLine();
 
         if (!mipdata_->domain.getChangedCols().empty()) {
-          highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                       "added %" HIGHSINT_FORMAT " global bound changes\n",
-                       (HighsInt)mipdata_->domain.getChangedCols().size());
+          highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
+                      "added %" HIGHSINT_FORMAT " global bound changes\n",
+                      (HighsInt)mipdata_->domain.getChangedCols().size());
           mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
           for (HighsInt col : mipdata_->domain.getChangedCols())
             mipdata_->implications.cleanupVarbounds(col);
