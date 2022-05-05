@@ -332,8 +332,10 @@ void analyseVectorValues(const HighsLogOptions* log_options,
   for (HighsInt ix = 0; ix < vecDim; ix++) {
     double v = vec[ix];
     double absV = std::fabs(v);
-    min_abs_value = std::min(absV, min_abs_value);
-    max_abs_value = std::max(absV, max_abs_value);
+    if (absV) {
+      min_abs_value = std::min(absV, min_abs_value);
+      max_abs_value = std::max(absV, max_abs_value);
+    }
     HighsInt log10V;
     if (absV > 0) {
       // Nonzero value
