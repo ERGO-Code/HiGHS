@@ -71,18 +71,3 @@ return_status, model_status, col_value, col_dual, row_value, row_dual , col_basi
 print ("return_status = ", return_status)
 print ("model_status = ", model_status)
 print (col_value, col_dual, row_value, row_dual, col_basis, row_basis)
-
-# Illustrate the reading of an MPS file
-#
-return_status, n_col, n_row, sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index, a_value = Highs_lpMpsRead()
-
-# Find the continuous solution of the LP
-return_status, model_status, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_lpCall(
-    col_cost, col_lower, col_upper,
-    row_lower, row_upper,
-    a_start, a_index, a_value)
-
-print ("return_status = ", return_status)
-print ("model_status = ", model_status)
-print (col_value)
-
