@@ -70,5 +70,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   hessian.value_[0] = illegal_small_hessian_diagonal_entry;
   hessian.value_[1] = illegal_negative_hessian_diagonal_entry;
   status = highs.passModel(model);
+  REQUIRE(status == HighsStatus::kOk);
+  status = highs.run();
   REQUIRE(status == HighsStatus::kError);
 }

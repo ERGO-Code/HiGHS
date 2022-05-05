@@ -282,9 +282,9 @@ HighsStatus Highs::passModel(HighsModel model) {
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(
-      options_.log_options, assessHessian(hessian, options_, lp.sense_),
-      return_status, "assessHessian");
+  return_status = interpretCallStatus(options_.log_options,
+                                      assessHessian(hessian, options_),
+                                      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -436,9 +436,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(
-      options_.log_options, assessHessian(hessian, options_, model_.lp_.sense_),
-      return_status, "assessHessian");
+  return_status = interpretCallStatus(options_.log_options,
+                                      assessHessian(hessian, options_),
+                                      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -806,6 +806,13 @@ HighsStatus Highs::run() {
     if (model_.isMip()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Cannot solve MIQP problems with HiGHS\n");
+      return returnFromRun(HighsStatus::kError);
+    }
+    // Ensure that its diagonal entries are OK in the context of the
+    // objective sense. It's OK to be semi-definite
+    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot solve non-convex QP problems with HiGHS\n");
       return returnFromRun(HighsStatus::kError);
     }
     call_status = callSolveQp();
