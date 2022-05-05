@@ -24,8 +24,7 @@
 
 using std::fabs;
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
-                          const ObjSense sense) {
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
@@ -88,13 +87,10 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
 
   HighsInt hessian_num_nz = hessian.numNz();
   // If the Hessian has nonzeros, complete its diagonal with explicit
-  // zeros if necessary, and then check its diagonal entries in the
-  // context of the objective sense. It's OK to be semi-definite
+  // zeros if necessary
   if (hessian_num_nz) {
     completeHessianDiagonal(options, hessian);
     hessian_num_nz = hessian.numNz();
-    if (!okHessianDiagonal(options, hessian, sense))
-      return_status = HighsStatus::kError;
   }
   // If entries have been removed from the matrix, resize the index
   // and value vectors
@@ -201,17 +197,17 @@ bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
       num_illegal_diagonal_value > 0;
   if (certainly_not_positive_semidefinite) {
     if (sense == ObjSense::kMinimize) {
-      highsLogUser(
-          options.log_options, HighsLogType::kError,
-          "Hessian has %" HIGHSINT_FORMAT
-          " diagonal entries in [%g, 0) so is not positive semidefinite\n",
-          num_illegal_diagonal_value, min_diagonal_value);
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Hessian has %" HIGHSINT_FORMAT
+                   " diagonal entries in [%g, 0) so is not positive "
+                   "semidefinite for minimization\n",
+                   num_illegal_diagonal_value, min_diagonal_value);
     } else {
-      highsLogUser(
-          options.log_options, HighsLogType::kError,
-          "Hessian has %" HIGHSINT_FORMAT
-          " diagonal entries in (0, %g] so is not negative semidefinite\n",
-          num_illegal_diagonal_value, -min_diagonal_value);
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Hessian has %" HIGHSINT_FORMAT
+                   " diagonal entries in (0, %g] so is not negative "
+                   "semidefinite for maximization\n",
+                   num_illegal_diagonal_value, -min_diagonal_value);
     }
   }
   return !certainly_not_positive_semidefinite;
