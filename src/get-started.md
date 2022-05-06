@@ -14,7 +14,7 @@ For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` fil
 
 For Mac users: choose the `x86_64-apple-darwin.tar.gz` file.### Build HiGHS from source code using CMake
 
-## Build
+### Build
 
 HiGHS uses CMake as a build system. The simplest setup is to create a build folder (within the folder into which HiGHS has been downloaded) and then build HiGHS within it. The name of the build folder is arbitrary but, assuming it is HiGHS/build, the full sequence of commands required is as follows
 

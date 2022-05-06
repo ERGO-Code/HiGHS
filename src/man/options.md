@@ -8,4 +8,7 @@ For usage and runtime option information see
 
 ## Library Options
 
-todo: add options
+The class members for the latest options are defined in file `HiGHS/src/lp_data/HighsOptions.h` in 
+```
+struct HighsOptionsStruct;
+```
