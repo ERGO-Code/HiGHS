@@ -30,6 +30,7 @@ makedocs(
             "Examples" => "man/examples.md"],
         "Options" => "man/options.md",
         "Linking" => "man/link.md",
+        "Interfaces" => "man/interfaces.md",
     ],
     strict = !("strict=false" in ARGS),
     doctest = ("doctest=only" in ARGS) ? :only : true,

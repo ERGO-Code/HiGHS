@@ -12,11 +12,9 @@ HiGHS can be used as a standalone executable on Windows, Linux and MacOS. There 
 a C++11 library which can be used within a C++ project or, via one of
 the interfaces, to a project written in other languages.
 
-Installing HiGHS from source code requires CMake minimum version 3.15, but no other third-party utilities ** Threads. 
+Installing HiGHS from source code requires CMake minimum version 3.15, but no other third-party utilities. 
 
-Your comments or specific questions on HiGHS would be greatly appreciated, so please send an email to <a href="mailto:highsopt@gmail.com">highsopt@gmail.com</a> to get in touch with the team.
-
-<img src="images/HiGHS_banner.png" width="250" alt="" class="center" />
+Your comments or specific questions on HiGHS would be greatly appreciated, so please send an email to  [highsopt@gmail.com](mailto:highsopt@gmail.com) to get in touch with the team.
 
 ### LP and MIP 
 Linear programming problems (LP) in general bounded form are defined as
@@ -25,4 +23,4 @@ Linear programming problems (LP) in general bounded form are defined as
 ```
 and mixed integer programming (MIP) problems of the same form, for which some of the variables must take integer values. 
 
-More on the theory background can be found at [www.highs.dev](http://www.highs.dev). 
+More on the theory background can be found at [www.highs.dev](http://www.highs.info). 

@@ -1,6 +1,6 @@
 ### Language interfaces
 
-There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in `HiGHS/src/interfaces`, with example driver files in `HiGHS/examples`. 
+There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in [`HiGHS/interfaces`]( https://github.com/ERGO-Code/HiGHS/tree/master/src/interfaces), with example driver files in [`HiGHS/examples/`](https://github.com/ERGO-Code/HiGHS/tree/master/src/examples). 
 
 Julia
 -----

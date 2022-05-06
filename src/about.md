@@ -20,7 +20,7 @@ HiGHS can be used with the following compilers:
 
 ## Dependencies
 
-No third party sortware is required by HiGHS. ** Threads
+No third party sortware is required by HiGHS, except for the Threads library.
 
 In order to build HiGHS from source CMake 3.15 is required. For precompiled executables and libraries please contact us at [highsopt@gmail.com](mailto:highsopt@gmail.com).
 
