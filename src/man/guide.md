@@ -5,17 +5,18 @@ In this guide are outlined basic operations with the HiGHS Library:
 
 HiGHS can be used to modify the current model and re-solve it efficiently. 
 
-Loading a model
+### Loading a model
 - from data file (.lp, .mps)
 - via data provided by another application
 
-Solving a model
+### Solving a model
 - LP Revised dual Simplex 
 - LP Interior point 
 - MIP branch-and-bound 
 
-Solution 
+### Solution 
 - Write to file 
 - Load directly
 
-Model Modifications
+### Model Modifications
+- 
