@@ -1,5 +1,7 @@
 push!(LOAD_PATH,"src/")
 
+Pkg.instantiate()
+
 using Documenter, HighsDocs
 
 # makedocs(sitename="HiGHS Documentation",format = Documenter.HTML(

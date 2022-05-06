@@ -1,9 +1,9 @@
-name: build-unix
+name: build
 
 on: ["push"]
 
 jobs:
-  debug:
+  build:
 
     runs-on: ${{ matrix.os }}
     strategy:

@@ -1,12 +1,17 @@
-# HighsDocs.jl
-
 Documentation for [HiGHS](https://github.com/ERGO-Code/HiGHS)
+Branch highs-docs
 
 ## Editing the Docs
 
-To edit the documentation, edit the Markdown files in [docs/src](https://github.com/galabovaa/HighsDocs.jl)
-The new documentation files will be pushed to the [`gh-pages`](https://github.com/galabovaa/HighsDocs.jl/tree/gh-pages) branch in this repository 
+To edit the documentation, checkout a branch and edit the Markdown files in [docs/src](https://github.com/galabovaa/HighsDocs.jl)
 
-## Building the docs
+To build locally, call 
+'''
+julia --project=. make.jl
+'''
 
-With proper dependencies installed, run `GKSwstype=nul julia --project=docs/ docs/make.jl`.
+and the website is generated in the build/ folder. To check it out, load build/index.html in your browser. 
+
+When you are happy with the changes, rename the build/ folder to docs/ and push the changes the highs-docs branch. Alternatively, if you have pending changes you wish to discuss with the team, please checkout a new branch and open a PR to branch highs-docs.
+
+The GH Page is generated from the docs/ folder of the highs-docs branch. 
