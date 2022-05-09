@@ -226,8 +226,6 @@ HighsInt HighsCliqueTable::runCliqueSubsumption(
   return nremoved;
 }
 
-#define PARALLEL_NEIGHBORHOOD 1
-
 void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
                                            HighsInt Plen, const CliqueVar* X,
                                            HighsInt Xlen) {
@@ -509,7 +507,7 @@ void HighsCliqueTable::queryNeighborhood(CliqueVar v, CliqueVar* q,
       cliquesetTree[v.index()].root == -1)
     return;
 
-  if (numEntries < minEntriesForParallelism) {
+  if (numEntries - sizeTwoCliques.size() * 2 < minEntriesForParallelism) {
     for (HighsInt i = 0; i < N; ++i) {
       if (haveCommonClique(numNeighborhoodQueries, v, q[i]))
         neighborhoodInds.push_back(i);
