@@ -1036,8 +1036,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
     }
 
     bool havecycle = !referencepoints.emplace(referencepoint).second;
-
-    while (havecycle) {
+    for (HighsInt k = 0; havecycle && k < 2; ++k) {
       for (HighsInt i = 0; i != 10; ++i) {
         HighsInt flippos =
             randgen.integer(mipsolver.mipdata_->integer_cols.size());
@@ -1055,6 +1054,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
       }
       havecycle = !referencepoints.emplace(referencepoint).second;
     }
+
+    if (havecycle) return;
 
     if (linesearchRounding(lpsol, roundedsol, 'F')) return;
 
