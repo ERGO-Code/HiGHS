@@ -6,9 +6,9 @@ Branch highs-docs
 To edit the documentation, checkout a branch and edit the Markdown files in [docs/src].
 
 To build locally, call 
-'''
+```
 julia --project=. make.jl
-'''
+```
 
 and the website is generated in the `build/` folder. To check it out, load `build/index.html` in your browser. 
 
