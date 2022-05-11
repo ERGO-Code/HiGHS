@@ -144,7 +144,7 @@ private:
    Builder builder;
 
    void tokenize();
-   void readnexttoken(bool& done);
+   void readnexttoken();
    void processtokens();
    void splittokens();
    void processsections();
@@ -879,23 +879,19 @@ void Reader::processtokens() {
 // reads the entire file and separates 
 void Reader::tokenize() {
    this->linebufferpos = 0;
-   bool done = false;
    while(true) {
-      this->readnexttoken(done);
+      this->readnexttoken();
       if (this->rawtokens.size() >= 1 && this->rawtokens.back()->type == RawTokenType::FLEND) {
          break;
       }
    }
 }
 
-void Reader::readnexttoken(bool& done) {
-   done = false;
-
+void Reader::readnexttoken() {
    if (this->linebufferpos == this->linebuffer.size()) {
      // read next line if any are left. 
      if (this->file.eof()) {
          this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         done = true;
          return;
      }
      std::getline(this->file, linebuffer);
@@ -966,7 +962,7 @@ void Reader::readnexttoken(bool& done) {
          this->linebufferpos++;
          return;
 
-      // check for hat
+      // check for slash
       case '/':
          this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::SLASH)));
          this->linebufferpos++;
