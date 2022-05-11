@@ -10,7 +10,7 @@ and add the correct path to HIGHS_DIR.
 
 ### Compiling and linking without CMake
 
-An executable defined in the file `use_highs.cpp` is linked with the HiGHS library as follows. Make sure HiGHS is installed in `install_folder` following https://ergo-code.github.io/HiGHS/get-started.html#Install. Afterwards, compile and run with
+An executable defined in the file `use_highs.cpp` is linked with the HiGHS library as follows. Make sure HiGHS is installed in `install_folder` following the [installation guide](https://ergo-code.github.io/HiGHS/get-started.html#Install). Afterwards, compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 

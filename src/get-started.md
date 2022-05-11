@@ -37,7 +37,7 @@ The default installation location may need administrative permissions. To instal
 cmake --install . 
 ```
 
-To install in a specified installation directory run CMake with the CMAKE_INSTALL_PREFIX flag set: 
+To install in a specified installation directory run CMake with the `CMAKE_INSTALL_PREFIX` flag set: 
 
 ``` bash
 cmake -DCMAKE_INSTALL_PREFIX=/path/to/highs_install ..
@@ -46,7 +46,7 @@ cmake --install .
 ```
 
 ## Precompiled executables 
-Precompiled executables are available for a variety of platforms at [https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases]
+Precompiled executables are available for a variety of platforms at the [JuliaBinaryWrappers HiGHS repository](https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases).
 
 Note that HiGHS is still pre-1.0, so the version numbers in the releases do not match versions of HiGHS in this repository.
 

@@ -5,7 +5,7 @@ There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in [`HiGHS/inter
 Julia
 -----
 
-- A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
+- A Julia interface is available at [HiGHS.jl](https://github.com/jump-dev/HiGHS.jl).
 
 Rust
 ----
