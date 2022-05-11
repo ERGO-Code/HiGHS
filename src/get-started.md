@@ -1,4 +1,4 @@
-## Download 
+## Download source code
 
 HiGHS can be cloned from the Edinburgh Group in Research and Optimization ([ERGO](https://www.maths.ed.ac.uk/ERGO/)) [GitHub repo](https://www.github.com/ERGO-COde/HiGHS).
 
@@ -6,13 +6,6 @@ HiGHS can be cloned from the Edinburgh Group in Research and Optimization ([ERGO
 git clone https://github.com/ERGO-Code/HiGHS.git
 ```
 
-Precompiled executables are available for a variety of platforms at https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases
-
-Note that HiGHS is still pre-1.0, so the version numbers in the releases do not match versions of HiGHS in this repository.
-
-For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` file
-
-For Mac users: choose the `x86_64-apple-darwin.tar.gz` file.
 
 ### Build HiGHS from source code
 
@@ -36,7 +29,7 @@ To perform a quick test to see whether the compilation was successful, run ctest
 ctest 
 ```
 
-## Install 
+### Install 
 
 The default installation location may need administrative permissions. To install, after building and testing, run 
 
@@ -51,3 +44,12 @@ cmake -DCMAKE_INSTALL_PREFIX=/path/to/highs_install ..
 cmake --build .
 cmake --install . 
 ```
+
+## Precompiled executables 
+Precompiled executables are available for a variety of platforms at [https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases]
+
+Note that HiGHS is still pre-1.0, so the version numbers in the releases do not match versions of HiGHS in this repository.
+
+For Windows users: if in doubt, choose the `x86_64-w64-mingw32-cxx11.tar.gz` file
+
+For Mac users: choose the `x86_64-apple-darwin.tar.gz` file.
