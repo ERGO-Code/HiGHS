@@ -20,10 +20,11 @@
 #include <sstream>
 #include <vector>
 
-#include "HConfig.h"
-#include "io/HighsIO.h"
-#include "lp_data/HConst.h"
-#include "util/HighsUtils.h"
+//#include "model/HighsModel.h"
+//#include "HConfig.h"
+//#include "io/HighsIO.h"
+//#include "lp_data/HConst.h"
+//#include "util/HighsUtils.h"
 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
@@ -349,6 +350,177 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
   if (max_name_length > 8 && names_with_spaces) return HighsStatus::kError;
   if (construct_names) return HighsStatus::kWarning;
   return HighsStatus::kOk;
+}
+
+void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
+		       const HighsModel& model, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style) {
+  const bool have_primal = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  const double double_tolerance = 1e-13;
+  const HighsLp& lp = model.lp_;
+   if (style == kSolutionStyleOldRaw) {
+    writeOldRawSolution(file, lp, basis, solution);
+  } else if (style == kSolutionStylePretty) {
+    const HighsVarType* integrality_ptr =
+        lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
+    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
+                            lp.col_upper_, lp.col_names_, have_primal,
+                            solution.col_value, have_dual, solution.col_dual,
+                            have_basis, basis.col_status, integrality_ptr);
+    writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
+                            lp.row_upper_, lp.row_names_, have_primal,
+                            solution.row_value, have_dual, solution.row_dual,
+                            have_basis, basis.row_status);
+    fprintf(file, "\nModel status: %s\n",
+            utilModelStatusToString(model_status).c_str());
+    std::array<char, 32> objStr = highsDoubleToString(
+        (double)info.objective_function_value, double_tolerance);
+    fprintf(file, "\nObjective value: %s\n", objStr.data());
+  } else if (style == kSolutionStyleGlpsol) {
+     writeGlpsolSolution(file, log_options, model, basis, solution, model_status, info);
+  } else {
+    fprintf(file, "Model status\n");
+    fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
+    writeModelSolution(file, lp, solution, info);
+  }
+}
+
+void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
+			 const HighsModel& model, const HighsBasis& basis,
+                         const HighsSolution& solution,
+			 const HighsModelStatus model_status,
+			 const HighsInfo& info) {
+  const bool have_value = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  vector<double> use_col_value;
+  vector<double> use_row_value;
+  vector<double> use_col_dual;
+  vector<double> use_row_dual;
+  vector<HighsBasisStatus> use_col_status;
+  vector<HighsBasisStatus> use_row_status;
+  if (have_value) {
+    use_col_value = solution.col_value;
+    use_row_value = solution.row_value;
+  }
+  if (have_dual) {
+    use_col_dual = solution.col_dual;
+    use_row_dual = solution.row_dual;
+  }
+  if (have_basis) {
+    use_col_status = basis.col_status;
+    use_row_status = basis.row_status;
+  }
+  if (!have_value && !have_dual && !have_basis) return;
+  const double kGlpsolHighQuality = 1e-9;
+  const double kGlpsolMediumQuality = 1e-6;
+  const double kGlpsolLowQuality = 1e-3;
+  const double kGlpsolPrintAsZero = 1e-9;
+  const HighsLp& lp = model.lp_;
+  highsLogUser(log_options, HighsLogType::kInfo, "Writing glpsol solution\n");  
+  fprintf(file, "%-12s%s\n", "Problem:", lp.model_name_.c_str());
+  fprintf(file, "%-12s%d\n", "Rows:", (int)lp.num_row_);
+  fprintf(file, "%-12s%d\n", "Columns:", (int)lp.num_col_);
+  fprintf(file, "%-12s%d\n", "Non-zeros:", (int)lp.a_matrix_.numNz());
+  std::string model_status_text;
+  switch (model_status) {
+  case HighsModelStatus::kOptimal:
+    model_status_text = "OPTIMAL";
+    break;
+  case HighsModelStatus::kInfeasible:
+    model_status_text = "INFEASIBLE (FINAL)";
+    break;
+  case HighsModelStatus::kUnboundedOrInfeasible:
+    model_status_text = "INFEASIBLE (INTERMEDIATE)";
+    break;
+  case HighsModelStatus::kUnbounded:
+    model_status_text = "UNBOUNDED";
+    break;
+  default:
+    model_status_text = "????";
+    break;
+  }
+  fprintf(file, "%-12s%s\n", "Status:", model_status_text.c_str());
+  // Determine whether there is an objective function
+  bool has_objective = false; 
+  for (HighsInt iCol=0; iCol < lp.num_col_; iCol++) {
+    if (lp.col_cost_[iCol]) {
+      has_objective = true;
+      break;
+    }
+  }
+  if (model.hessian_.dim_) has_objective = true;
+  //  xfprintf(fp, "%-12s%s%s%.10g (%s)\n", "Objective:",
+ 
+}
+
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution) {
+  const bool have_value = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  vector<double> use_col_value;
+  vector<double> use_row_value;
+  vector<double> use_col_dual;
+  vector<double> use_row_dual;
+  vector<HighsBasisStatus> use_col_status;
+  vector<HighsBasisStatus> use_row_status;
+  if (have_value) {
+    use_col_value = solution.col_value;
+    use_row_value = solution.row_value;
+  }
+  if (have_dual) {
+    use_col_dual = solution.col_dual;
+    use_row_dual = solution.row_dual;
+  }
+  if (have_basis) {
+    use_col_status = basis.col_status;
+    use_row_status = basis.row_status;
+  }
+  if (!have_value && !have_dual && !have_basis) return;
+  fprintf(file,
+          "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
+          " : Number of columns and rows for primal or dual solution "
+          "or basis\n",
+          lp.num_col_, lp.num_row_);
+  if (have_value) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Primal solution\n");
+  if (have_dual) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Dual solution\n");
+  if (have_basis) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Basis\n");
+  fprintf(file, "Columns\n");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
+    if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
+    fprintf(file, "\n");
+  }
+  fprintf(file, "Rows\n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
+    if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
+    fprintf(file, "\n");
+  }
 }
 
 HighsBasisStatus checkedVarHighsNonbasicStatus(

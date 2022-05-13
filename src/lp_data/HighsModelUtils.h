@@ -18,10 +18,12 @@
 
 //#include "Highs.h"
 //#include "lp_data/HighsStatus.h"
-#include "lp_data/HStruct.h"
+#include "model/HighsModel.h"
 #include "lp_data/HighsInfo.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
+//#include "lp_data/HStruct.h"
+//#include "lp_data/HighsInfo.h"
+//#include "lp_data/HighsLp.h"
+//#include "lp_data/HighsOptions.h"
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -47,6 +49,20 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
                            const std::string name_type, const HighsInt num_name,
                            std::vector<std::string>& names,
                            HighsInt& max_name_length);
+
+void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
+		       const HighsModel& model, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style);
+
+void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
+			 const HighsModel& model, const HighsBasis& basis,
+                         const HighsSolution& solution,
+			 const HighsModelStatus model_status,
+			 const HighsInfo& info);
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution);
 
 HighsBasisStatus checkedVarHighsNonbasicStatus(
     const HighsBasisStatus ideal_status, const double lower,
