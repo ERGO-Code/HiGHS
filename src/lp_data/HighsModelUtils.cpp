@@ -416,17 +416,33 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
     use_col_status = basis.col_status;
     use_row_status = basis.row_status;
   }
-  if (!have_value && !have_dual && !have_basis) return;
+  if (!have_value) return;
   const double kGlpsolHighQuality = 1e-9;
   const double kGlpsolMediumQuality = 1e-6;
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
   const HighsLp& lp = model.lp_;
+  const bool have_col_names = lp.col_names_.size();
+  const bool have_row_names = lp.row_names_.size();
   highsLogUser(log_options, HighsLogType::kInfo, "Writing glpsol solution\n");
+  // Despite being written in C, GLPSOL indexes rows (columns) from
+  // 1..m (1..n) with - bizarrely! - m being one more than the number
+  // of constraints, and the objective as an explicit row "m"
+  const HighsInt num_row = lp.num_row_;
+  const HighsInt num_col = lp.num_col_;
+  const HighsInt glpsol_num_row = num_row + 1;
+  // Determine number of nonzeros including the objective function,
+  HighsInt num_nz = lp.a_matrix_.numNz();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    if (lp.col_cost_[iCol]) num_nz++;
+  // Determine whether there is an objective function
+  bool has_objective = num_nz > lp.a_matrix_.numNz();
+  if (model.hessian_.dim_) has_objective = true;
+
   fprintf(file, "%-12s%s\n", "Problem:", lp.model_name_.c_str());
-  fprintf(file, "%-12s%d\n", "Rows:", (int)lp.num_row_);
-  fprintf(file, "%-12s%d\n", "Columns:", (int)lp.num_col_);
-  fprintf(file, "%-12s%d\n", "Non-zeros:", (int)lp.a_matrix_.numNz());
+  fprintf(file, "%-12s%d\n", "Rows:", (int)glpsol_num_row);
+  fprintf(file, "%-12s%d\n", "Columns:", (int)num_col);
+  fprintf(file, "%-12s%d\n", "Non-zeros:", (int)num_nz);
   std::string model_status_text;
   switch (model_status) {
     case HighsModelStatus::kOptimal:
@@ -448,15 +464,6 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   fprintf(file, "%-12s%s\n", "Status:", model_status_text.c_str());
   // If info is not valid, then cannot write more
   if (!info.valid) return;
-  // Determine whether there is an objective function
-  bool has_objective = false;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.col_cost_[iCol]) {
-      has_objective = true;
-      break;
-    }
-  }
-  if (model.hessian_.dim_) has_objective = true;
   fprintf(file, "%-12s%s%s%.10g (%s)\n",
           "Objective:", !has_objective ? "" : lp.objective_name_.c_str(),
           !has_objective ? "" : " = ",
@@ -464,6 +471,157 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
           has_objective
               ? (lp.sense_ == ObjSense::kMinimize ? "MINimum" : "MAXimum")
               : "???");
+  fprintf(file, "\n");
+  fprintf(file,
+          "   No.   Row name   %s   Activity     Lower bound  "
+          " Upper bound    Marginal\n",
+          have_basis ? "St" : "  ");
+  fprintf(file,
+          "------ ------------ %s ------------- ------------- "
+          "------------- -------------\n",
+          have_basis ? "--" : "  ");
+  // Must loop all the way to lp.num_row_ so that the objective is
+  // reported
+  for (HighsInt iRow = 0; iRow <= lp.num_row_; iRow++) {
+    fprintf(file, "%6d ", (int)(iRow + 1));
+    const bool objective_row = iRow == lp.num_row_;
+    std::string row_name = "";
+    if (objective_row) {
+      row_name = lp.objective_name_;
+    } else if (have_row_names) {
+      row_name = lp.row_names_[iRow];
+    }
+    if (row_name.length() <= 12) {
+      fprintf(file, "%-12s ", row_name.c_str());
+    } else {
+      fprintf(file, "%s\n%20s", row_name.c_str(), "");
+    }
+    if (objective_row) {
+      fprintf(file, "   %13.6g ", info.objective_function_value);
+    } else {
+      const double lower = lp.row_lower_[iRow];
+      const double upper = lp.row_upper_[iRow];
+      const double value = solution.row_value[iRow];
+      const double dual = have_dual ? solution.row_dual[iRow] : 0;
+      std::string status_text = "  ";
+      if (have_basis) {
+        const HighsBasisStatus status = basis.row_status[iRow];
+        switch (basis.row_status[iRow]) {
+          case HighsBasisStatus::kBasic:
+            status_text = "B ";
+            break;
+          case HighsBasisStatus::kLower:
+            status_text = lower == upper ? "NS" : "NL";
+            break;
+          case HighsBasisStatus::kUpper:
+            status_text = lower == upper ? "NS" : "NU";
+            break;
+          case HighsBasisStatus::kZero:
+            status_text = "NF";
+            break;
+          default:
+            status_text = "??";
+            break;
+        }
+      }
+      fprintf(file, "%s ", status_text.c_str());
+      fprintf(file, "%13.6g ", fabs(value) <= kGlpsolPrintAsZero ? 0.0 : value);
+      if (lower > -kHighsInf)
+        fprintf(file, "%13.6g ", lower);
+      else
+        fprintf(file, "%13s ", "");
+      if (lower != upper && upper < kHighsInf)
+        fprintf(file, "%13.6g ", upper);
+      else
+        fprintf(file, "%13s ", lower == upper ? "=" : "");
+      if (have_dual) {
+        // If the row is known to be basic, don't print the dual
+        // value. If there's no basis, row cannot be known to be basic
+        bool not_basic = have_basis;
+        if (have_basis)
+          not_basic = basis.row_status[iRow] != HighsBasisStatus::kBasic;
+        if (not_basic) {
+          if (fabs(dual) <= kGlpsolPrintAsZero)
+            fprintf(file, "%13s", "< eps");
+          else
+            fprintf(file, "%13.6g ", dual);
+        }
+      }
+    }
+    fprintf(file, "\n");
+    fflush(file);
+  }
+  fprintf(file, "\n");
+  fprintf(file,
+          "   No. Column name  %s   Activity     Lower bound  "
+          " Upper bound    Marginal\n",
+          have_basis ? "St" : "  ");
+  fprintf(file,
+          "------ ------------ %s ------------- ------------- "
+          "------------- -------------\n",
+          have_basis ? "--" : "  ");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    fprintf(file, "%6d ", (int)(iCol + 1));
+    std::string col_name = "";
+    if (have_col_names) col_name = lp.col_names_[iCol];
+    if (!have_col_names || col_name.length() <= 12) {
+      fprintf(file, "%-12s ", !have_col_names ? "" : col_name.c_str());
+    } else {
+      fprintf(file, "%s\n%20s", col_name.c_str(), "");
+    }
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const double value = solution.col_value[iCol];
+    const double dual = have_dual ? solution.col_dual[iCol] : 0;
+    std::string status_text = "  ";
+    if (have_basis) {
+      const HighsBasisStatus status = basis.col_status[iCol];
+      switch (basis.col_status[iCol]) {
+        case HighsBasisStatus::kBasic:
+          status_text = "B ";
+          break;
+        case HighsBasisStatus::kLower:
+          status_text = lower == upper ? "NS" : "NL";
+          break;
+        case HighsBasisStatus::kUpper:
+          status_text = lower == upper ? "NS" : "NU";
+          break;
+        case HighsBasisStatus::kZero:
+          status_text = "NF";
+          break;
+        default:
+          status_text = "??";
+          break;
+      }
+    }
+    fprintf(file, "%s ", status_text.c_str());
+    fprintf(file, "%13.6g ", fabs(value) <= kGlpsolPrintAsZero ? 0.0 : value);
+    if (lower > -kHighsInf)
+      fprintf(file, "%13.6g ", lower);
+    else
+      fprintf(file, "%13s ", "");
+    if (lower != upper && upper < kHighsInf)
+      fprintf(file, "%13.6g ", upper);
+    else
+      fprintf(file, "%13s ", lower == upper ? "=" : "");
+    if (have_dual) {
+      // If the column is known to be basic, don't print the dual
+      // value. If there's no basis, column cannot be known to be
+      // basic
+      bool not_basic = have_basis;
+      if (have_basis)
+        not_basic = basis.col_status[iCol] != HighsBasisStatus::kBasic;
+      if (not_basic) {
+        if (fabs(dual) <= kGlpsolPrintAsZero)
+          fprintf(file, "%13s", "< eps");
+        else
+          fprintf(file, "%13.6g ", dual);
+      }
+    }
+    fprintf(file, "\n");
+    fflush(file);
+  }
+  fprintf(file, "\n");
 }
 
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
