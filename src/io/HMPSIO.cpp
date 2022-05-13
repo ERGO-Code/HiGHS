@@ -34,21 +34,17 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMps(const HighsLogOptions& log_options,
-                          const std::string filename, HighsInt mxNumRow,
-                          HighsInt mxNumCol, HighsInt& numRow, HighsInt& numCol,
-                          ObjSense& objSense, double& objOffset,
-                          vector<HighsInt>& Astart, vector<HighsInt>& Aindex,
-                          vector<double>& Avalue, vector<double>& colCost,
-                          vector<double>& colLower, vector<double>& colUpper,
-                          vector<double>& rowLower, vector<double>& rowUpper,
-                          vector<HighsVarType>& integerColumn,
-			  std::string objective_name,
-                          vector<std::string>& col_names,
-			  vector<std::string>& row_names,
-                          HighsInt& Qdim, vector<HighsInt>& Qstart,
-                          vector<HighsInt>& Qindex, vector<double>& Qvalue,
-                          const HighsInt keep_n_rows) {
+FilereaderRetcode readMps(
+    const HighsLogOptions& log_options, const std::string filename,
+    HighsInt mxNumRow, HighsInt mxNumCol, HighsInt& numRow, HighsInt& numCol,
+    ObjSense& objSense, double& objOffset, vector<HighsInt>& Astart,
+    vector<HighsInt>& Aindex, vector<double>& Avalue, vector<double>& colCost,
+    vector<double>& colLower, vector<double>& colUpper,
+    vector<double>& rowLower, vector<double>& rowUpper,
+    vector<HighsVarType>& integerColumn, std::string& objective_name,
+    vector<std::string>& col_names, vector<std::string>& row_names,
+    HighsInt& Qdim, vector<HighsInt>& Qstart, vector<HighsInt>& Qindex,
+    vector<double>& Qvalue, const HighsInt keep_n_rows) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -121,9 +117,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
         (objName == 0 || keep_n_rows == kKeepNRowsDeleteRows)) {
       // N-row: take the first as the objective and possibly ignore any others
       if (objName == 0) {
-	objName = data[1];
-	std::string name(&line[4], &line[4] + 8);
-	objective_name = trim(name);
+        objName = data[1];
+        std::string name(&line[4], &line[4] + 8);
+        objective_name = trim(name);
       }
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow)
@@ -582,34 +578,33 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       warning_found = true;
     }
   }
-  // Set up a default objective name, 
+  // Set up a default objective name,
   std::string local_objective_name = use_free_format ? "Objective" : "OBJECTIV";
   // Over-write with any existing objective name
   if (lp.objective_name_ != "") local_objective_name = lp.objective_name_;
   // Ensure that the objective name doesn't clash with any row names
-  for (HighsInt iRow=0; iRow<lp.num_row_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (local_objective_name == local_row_names[iRow]) {
-       highsLogUser(options.log_options, HighsLogType::kError,
-                   "Objective name %s cannot be the same as name %s for row %d\n",
-		    local_objective_name.c_str(),
-		    local_row_names[iRow].c_str(),
-		    (int)iRow);		    
-       assert(1==0);
-       return HighsStatus::kError;
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "Objective name %s cannot be the same as name %s for row %d\n",
+          local_objective_name.c_str(), local_row_names[iRow].c_str(),
+          (int)iRow);
+      assert(1 == 0);
+      return HighsStatus::kError;
     }
   }
   // If there is Hessian data to write out, writeMps assumes that hessian is
   // triangular
   if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);
 
-  HighsStatus write_status =
-      writeMps(options.log_options, filename, lp.model_name_, lp.num_row_,
-               lp.num_col_, hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_,
-               lp.col_lower_, lp.col_upper_, lp.row_lower_, lp.row_upper_,
-               lp.a_matrix_.start_, lp.a_matrix_.index_, lp.a_matrix_.value_,
-               hessian.start_, hessian.index_, hessian.value_, lp.integrality_,
-	       local_objective_name,
-               local_col_names, local_row_names, use_free_format);
+  HighsStatus write_status = writeMps(
+      options.log_options, filename, lp.model_name_, lp.num_row_, lp.num_col_,
+      hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
+      lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_matrix_.start_,
+      lp.a_matrix_.index_, lp.a_matrix_.value_, hessian.start_, hessian.index_,
+      hessian.value_, lp.integrality_, local_objective_name, local_col_names,
+      local_row_names, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;
   return write_status;
@@ -625,10 +620,8 @@ HighsStatus writeMps(
     const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
-    const vector<HighsVarType>& integrality,
-    const std::string objective_name, 
-    const vector<std::string>& col_names,
-    const vector<std::string>& row_names,
+    const vector<HighsVarType>& integrality, const std::string objective_name,
+    const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
   HighsInt num_zero_no_cost_columns = 0;
@@ -796,7 +789,8 @@ HighsStatus writeMps(
       if (write_zero_no_cost_columns) {
         // Give the column a presence by writing out a zero cost
         double v = 0;
-        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(), objective_name.c_str(), v);
+        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
+                objective_name.c_str(), v);
       }
       continue;
     }
@@ -820,7 +814,7 @@ HighsStatus writeMps(
     if (col_cost[c_n] != 0) {
       double v = (HighsInt)sense * col_cost[c_n];
       fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
-	      objective_name.c_str(), v);
+              objective_name.c_str(), v);
     }
     for (HighsInt el_n = a_start[c_n]; el_n < a_start[c_n + 1]; el_n++) {
       double v = a_value[el_n];

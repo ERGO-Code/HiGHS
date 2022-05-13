@@ -353,7 +353,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
 }
 
 void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
-		       const HighsModel& model, const HighsBasis& basis,
+                       const HighsModel& model, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,
                        const HighsModelStatus model_status,
                        const HighsInt style) {
@@ -362,7 +362,7 @@ void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
   const bool have_basis = basis.valid;
   const double double_tolerance = 1e-13;
   const HighsLp& lp = model.lp_;
-   if (style == kSolutionStyleOldRaw) {
+  if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, lp, basis, solution);
   } else if (style == kSolutionStylePretty) {
     const HighsVarType* integrality_ptr =
@@ -381,7 +381,8 @@ void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
         (double)info.objective_function_value, double_tolerance);
     fprintf(file, "\nObjective value: %s\n", objStr.data());
   } else if (style == kSolutionStyleGlpsol) {
-     writeGlpsolSolution(file, log_options, model, basis, solution, model_status, info);
+    writeGlpsolSolution(file, log_options, model, basis, solution, model_status,
+                        info);
   } else {
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
@@ -390,10 +391,10 @@ void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
 }
 
 void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
-			 const HighsModel& model, const HighsBasis& basis,
+                         const HighsModel& model, const HighsBasis& basis,
                          const HighsSolution& solution,
-			 const HighsModelStatus model_status,
-			 const HighsInfo& info) {
+                         const HighsModelStatus model_status,
+                         const HighsInfo& info) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
@@ -421,47 +422,48 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
   const HighsLp& lp = model.lp_;
-  highsLogUser(log_options, HighsLogType::kInfo, "Writing glpsol solution\n");  
+  highsLogUser(log_options, HighsLogType::kInfo, "Writing glpsol solution\n");
   fprintf(file, "%-12s%s\n", "Problem:", lp.model_name_.c_str());
   fprintf(file, "%-12s%d\n", "Rows:", (int)lp.num_row_);
   fprintf(file, "%-12s%d\n", "Columns:", (int)lp.num_col_);
   fprintf(file, "%-12s%d\n", "Non-zeros:", (int)lp.a_matrix_.numNz());
   std::string model_status_text;
   switch (model_status) {
-  case HighsModelStatus::kOptimal:
-    model_status_text = "OPTIMAL";
-    break;
-  case HighsModelStatus::kInfeasible:
-    model_status_text = "INFEASIBLE (FINAL)";
-    break;
-  case HighsModelStatus::kUnboundedOrInfeasible:
-    model_status_text = "INFEASIBLE (INTERMEDIATE)";
-    break;
-  case HighsModelStatus::kUnbounded:
-    model_status_text = "UNBOUNDED";
-    break;
-  default:
-    model_status_text = "????";
-    break;
+    case HighsModelStatus::kOptimal:
+      model_status_text = "OPTIMAL";
+      break;
+    case HighsModelStatus::kInfeasible:
+      model_status_text = "INFEASIBLE (FINAL)";
+      break;
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      model_status_text = "INFEASIBLE (INTERMEDIATE)";
+      break;
+    case HighsModelStatus::kUnbounded:
+      model_status_text = "UNBOUNDED";
+      break;
+    default:
+      model_status_text = "????";
+      break;
   }
   fprintf(file, "%-12s%s\n", "Status:", model_status_text.c_str());
   // If info is not valid, then cannot write more
   if (!info.valid) return;
   // Determine whether there is an objective function
-  bool has_objective = false; 
-  for (HighsInt iCol=0; iCol < lp.num_col_; iCol++) {
+  bool has_objective = false;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.col_cost_[iCol]) {
       has_objective = true;
       break;
     }
   }
   if (model.hessian_.dim_) has_objective = true;
-  fprintf(file, "%-12s%s%s%.10g (%s)\n", "Objective:",
-	  !has_objective ? "" : lp.objective_name_.c_str(),
-	  !has_objective ? "" : " = ",
-	  has_objective ? info.objective_function_value : 0,
-	  has_objective ? 
-	  (lp.sense_ == ObjSense::kMinimize ? "MINimum" : "MAXimum") : "???");
+  fprintf(file, "%-12s%s%s%.10g (%s)\n",
+          "Objective:", !has_objective ? "" : lp.objective_name_.c_str(),
+          !has_objective ? "" : " = ",
+          has_objective ? info.objective_function_value : 0,
+          has_objective
+              ? (lp.sense_ == ObjSense::kMinimize ? "MINimum" : "MAXimum")
+              : "???");
 }
 
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,

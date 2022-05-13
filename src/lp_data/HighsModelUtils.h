@@ -18,8 +18,8 @@
 
 //#include "Highs.h"
 //#include "lp_data/HighsStatus.h"
-#include "model/HighsModel.h"
 #include "lp_data/HighsInfo.h"
+#include "model/HighsModel.h"
 //#include "lp_data/HStruct.h"
 //#include "lp_data/HighsInfo.h"
 //#include "lp_data/HighsLp.h"
@@ -51,16 +51,16 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
                            HighsInt& max_name_length);
 
 void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
-		       const HighsModel& model, const HighsBasis& basis,
+                       const HighsModel& model, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,
                        const HighsModelStatus model_status,
                        const HighsInt style);
 
 void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
-			 const HighsModel& model, const HighsBasis& basis,
+                         const HighsModel& model, const HighsBasis& basis,
                          const HighsSolution& solution,
-			 const HighsModelStatus model_status,
-			 const HighsInfo& info);
+                         const HighsModelStatus model_status,
+                         const HighsInfo& info);
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution);
 
