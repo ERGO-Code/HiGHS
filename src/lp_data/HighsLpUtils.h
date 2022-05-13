@@ -196,7 +196,8 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
-void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
+		       const HighsLp& lp, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,
                        const HighsModelStatus model_status,
                        const HighsInt style);
@@ -238,6 +239,9 @@ HighsLp withoutSemiVariables(const HighsLp& lp);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
 
+void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
+			 const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution);
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution);
 #endif  // LP_DATA_HIGHSLPUTILS_H_
