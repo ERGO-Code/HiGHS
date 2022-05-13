@@ -497,7 +497,8 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
       fprintf(file, "%s\n%20s", row_name.c_str(), "");
     }
     if (objective_row) {
-      fprintf(file, "   %13.6g ", info.objective_function_value);
+      fprintf(file, "B  %13.6g %13s %13s ", info.objective_function_value, "",
+              "");
     } else {
       const double lower = lp.row_lower_[iRow];
       const double upper = lp.row_upper_[iRow];
