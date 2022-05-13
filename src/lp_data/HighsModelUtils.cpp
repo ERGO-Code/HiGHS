@@ -438,24 +438,47 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   // Determine whether there is an objective function
   bool has_objective = num_nz > lp.a_matrix_.numNz();
   if (model.hessian_.dim_) has_objective = true;
+  // Record the discrete nature of the model
+  HighsInt num_integer = 0;
+  HighsInt num_binary = 0;
+  bool is_mip = false;
+  if (lp.integrality_.size() == lp.num_col_) {
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] != HighsVarType::kContinuous) {
+        is_mip = true;
+        num_integer++;
+        if (lp.col_lower_[iCol] == 0 && lp.col_upper_[iCol] == 1) num_binary++;
+      }
+    }
+  }
 
   fprintf(file, "%-12s%s\n", "Problem:", lp.model_name_.c_str());
   fprintf(file, "%-12s%d\n", "Rows:", (int)glpsol_num_row);
-  fprintf(file, "%-12s%d\n", "Columns:", (int)num_col);
+  fprintf(file, "%-12s%d", "Columns:", (int)num_col);
+  if (is_mip)
+    fprintf(file, " (%d integer, %d binary)", (int)num_integer,
+            (int)num_binary);
+  fprintf(file, "\n");
   fprintf(file, "%-12s%d\n", "Non-zeros:", (int)num_nz);
-  std::string model_status_text;
+  std::string model_status_text = "";
   switch (model_status) {
     case HighsModelStatus::kOptimal:
-      model_status_text = "OPTIMAL";
+      if (is_mip) model_status_text = "INTEGER ";
+      model_status_text += "OPTIMAL";
       break;
     case HighsModelStatus::kInfeasible:
-      model_status_text = "INFEASIBLE (FINAL)";
+      if (is_mip) {
+        model_status_text = "INTEGER INFEASIBLE";
+      } else {
+        model_status_text = "INFEASIBLE (FINAL)";
+      }
       break;
     case HighsModelStatus::kUnboundedOrInfeasible:
-      model_status_text = "INFEASIBLE (INTERMEDIATE)";
+      model_status_text += "INFEASIBLE (INTERMEDIATE)";
       break;
     case HighsModelStatus::kUnbounded:
-      model_status_text = "UNBOUNDED";
+      if (is_mip) model_status_text = "INTEGER ";
+      model_status_text += "UNBOUNDED";
       break;
     default:
       model_status_text = "????";
@@ -474,12 +497,17 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   fprintf(file, "\n");
   fprintf(file,
           "   No.   Row name   %s   Activity     Lower bound  "
-          " Upper bound    Marginal\n",
+          " Upper bound",
           have_basis ? "St" : "  ");
+  if (have_dual) fprintf(file, "    Marginal");
+  fprintf(file, "\n");
+
   fprintf(file,
           "------ ------------ %s ------------- ------------- "
-          "------------- -------------\n",
+          "-------------",
           have_basis ? "--" : "  ");
+  if (have_dual) fprintf(file, " -------------");
+  fprintf(file, "\n");
   // Must loop all the way to lp.num_row_ so that the objective is
   // reported
   for (HighsInt iRow = 0; iRow <= lp.num_row_; iRow++) {
@@ -497,8 +525,12 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
       fprintf(file, "%s\n%20s", row_name.c_str(), "");
     }
     if (objective_row) {
-      fprintf(file, "B  %13.6g %13s %13s ", info.objective_function_value, "",
-              "");
+      if (is_mip) {
+        fprintf(file, "   ");
+      } else {
+        fprintf(file, "B  ");
+      }
+      fprintf(file, "%13.6g %13s %13s ", info.objective_function_value, "", "");
     } else {
       const double lower = lp.row_lower_[iRow];
       const double upper = lp.row_upper_[iRow];
@@ -550,17 +582,21 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
       }
     }
     fprintf(file, "\n");
-    fflush(file);
   }
   fprintf(file, "\n");
   fprintf(file,
           "   No. Column name  %s   Activity     Lower bound  "
-          " Upper bound    Marginal\n",
+          " Upper bound",
           have_basis ? "St" : "  ");
+  if (have_dual) fprintf(file, "    Marginal");
+  fprintf(file, "\n");
   fprintf(file,
           "------ ------------ %s ------------- ------------- "
-          "------------- -------------\n",
+          "-------------",
           have_basis ? "--" : "  ");
+  if (have_dual) fprintf(file, " -------------");
+  fprintf(file, "\n");
+
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     fprintf(file, "%6d ", (int)(iCol + 1));
     std::string col_name = "";
@@ -594,6 +630,9 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
           status_text = "??";
           break;
       }
+    } else if (is_mip) {
+      if (lp.integrality_[iCol] != HighsVarType::kContinuous)
+        status_text = "* ";
     }
     fprintf(file, "%s ", status_text.c_str());
     fprintf(file, "%13.6g ", fabs(value) <= kGlpsolPrintAsZero ? 0.0 : value);
@@ -620,9 +659,7 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
       }
     }
     fprintf(file, "\n");
-    fflush(file);
   }
-  fprintf(file, "\n");
 }
 
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
