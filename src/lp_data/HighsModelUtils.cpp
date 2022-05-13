@@ -445,6 +445,8 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
     break;
   }
   fprintf(file, "%-12s%s\n", "Status:", model_status_text.c_str());
+  // If info is not valid, then cannot write more
+  if (!info.valid) return;
   // Determine whether there is an objective function
   bool has_objective = false; 
   for (HighsInt iCol=0; iCol < lp.num_col_; iCol++) {
@@ -454,8 +456,12 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
     }
   }
   if (model.hessian_.dim_) has_objective = true;
-  //  xfprintf(fp, "%-12s%s%s%.10g (%s)\n", "Objective:",
- 
+  fprintf(file, "%-12s%s%s%.10g (%s)\n", "Objective:",
+	  !has_objective ? "" : lp.objective_name_.c_str(),
+	  !has_objective ? "" : " = ",
+	  has_objective ? info.objective_function_value : 0,
+	  has_objective ? 
+	  (lp.sense_ == ObjSense::kMinimize ? "MINimum" : "MAXimum") : "???");
 }
 
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,

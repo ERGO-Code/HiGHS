@@ -98,6 +98,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.row_lower_ = std::move(row_lower);
   lp.row_upper_ = std::move(row_upper);
 
+  lp.objective_name_ = objective_name;
   lp.row_names_ = std::move(row_names);
   lp.col_names_ = std::move(col_names);
 
@@ -521,7 +522,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
                                    std::istream& file) {
   std::string strline, word;
   bool hasobj = false;
-  objective_name = "";
+  // Assign a default objective name
+  objective_name = "Objective";
 
   assert(num_row == 0);
   assert(row_lower.size() == 0);
@@ -565,7 +567,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       row_upper.push_back(0.0);
       row_type.push_back(Boundtype::kLe);
     } else if (strline[start] == 'N') {
-      if (objective_name == "") {
+      if (!hasobj) {
         isobj = true;
         hasobj = true;
       } else {

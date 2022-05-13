@@ -41,6 +41,7 @@ class HighsLp {
   double offset_;
 
   std::string model_name_;
+  std::string objective_name_;
 
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;

@@ -43,7 +43,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                           vector<double>& colLower, vector<double>& colUpper,
                           vector<double>& rowLower, vector<double>& rowUpper,
                           vector<HighsVarType>& integerColumn,
-                          vector<string>& col_names, vector<string>& row_names,
+			  std::string objective_name,
+                          vector<std::string>& col_names,
+			  vector<std::string>& row_names,
                           HighsInt& Qdim, vector<HighsInt>& Qstart,
                           vector<HighsInt>& Qindex, vector<double>& Qvalue,
                           const HighsInt keep_n_rows) {
@@ -52,6 +54,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   numCol = 0;
   objOffset = 0;
   objSense = ObjSense::kMinimize;
+  objective_name = "";
 
   // Astart.clear() added since setting Astart.push_back(0) in
   // setup_clearModel() messes up the MPS read
@@ -117,7 +120,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     if (flag[0] == 'N' &&
         (objName == 0 || keep_n_rows == kKeepNRowsDeleteRows)) {
       // N-row: take the first as the objective and possibly ignore any others
-      if (objName == 0) objName = data[1];
+      if (objName == 0) {
+	objName = data[1];
+	std::string name(&line[4], &line[4] + 8);
+	objective_name = trim(name);
+      }
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow)
         return FilereaderRetcode::kParserError;
@@ -540,7 +547,6 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.num_col_);
   local_row_names.resize(lp.num_row_);
-  //
   // Initialise the local names to any existing names
   if (have_col_names) local_col_names = lp.col_names_;
   if (have_row_names) local_row_names = lp.row_names_;
@@ -576,6 +582,22 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       warning_found = true;
     }
   }
+  // Set up a default objective name, 
+  std::string local_objective_name = use_free_format ? "Objective" : "OBJECTIV";
+  // Over-write with any existing objective name
+  if (lp.objective_name_ != "") local_objective_name = lp.objective_name_;
+  // Ensure that the objective name doesn't clash with any row names
+  for (HighsInt iRow=0; iRow<lp.num_row_; iRow++) {
+    if (local_objective_name == local_row_names[iRow]) {
+       highsLogUser(options.log_options, HighsLogType::kError,
+                   "Objective name %s cannot be the same as name %s for row %d\n",
+		    local_objective_name.c_str(),
+		    local_row_names[iRow].c_str(),
+		    (int)iRow);		    
+       assert(1==0);
+       return HighsStatus::kError;
+    }
+  }
   // If there is Hessian data to write out, writeMps assumes that hessian is
   // triangular
   if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);
@@ -586,6 +608,7 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
                lp.col_lower_, lp.col_upper_, lp.row_lower_, lp.row_upper_,
                lp.a_matrix_.start_, lp.a_matrix_.index_, lp.a_matrix_.value_,
                hessian.start_, hessian.index_, hessian.value_, lp.integrality_,
+	       local_objective_name,
                local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;
@@ -603,7 +626,9 @@ HighsStatus writeMps(
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
     const vector<HighsVarType>& integrality,
-    const vector<std::string>& col_names, const vector<std::string>& row_names,
+    const std::string objective_name, 
+    const vector<std::string>& col_names,
+    const vector<std::string>& row_names,
     const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
   HighsInt num_zero_no_cost_columns = 0;
@@ -629,6 +654,7 @@ HighsStatus writeMps(
         max_name_length);
     return HighsStatus::kError;
   }
+  assert(objective_name != "");
   vector<HighsInt> r_ty;
   vector<double> rhs, ranges;
   bool have_rhs = false;
@@ -748,7 +774,7 @@ HighsStatus writeMps(
 
   fprintf(file, "NAME        %s\n", model_name.c_str());
   fprintf(file, "ROWS\n");
-  fprintf(file, " N  COST\n");
+  fprintf(file, " N  %-8s\n", objective_name.c_str());
   for (HighsInt r_n = 0; r_n < num_row; r_n++) {
     if (r_ty[r_n] == MPS_ROW_TY_E) {
       fprintf(file, " E  %-8s\n", row_names[r_n].c_str());
@@ -770,7 +796,7 @@ HighsStatus writeMps(
       if (write_zero_no_cost_columns) {
         // Give the column a presence by writing out a zero cost
         double v = 0;
-        fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(), objective_name.c_str(), v);
       }
       continue;
     }
@@ -793,7 +819,8 @@ HighsStatus writeMps(
     }
     if (col_cost[c_n] != 0) {
       double v = (HighsInt)sense * col_cost[c_n];
-      fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
+	      objective_name.c_str(), v);
     }
     for (HighsInt el_n = a_start[c_n]; el_n < a_start[c_n + 1]; el_n++) {
       double v = a_value[el_n];
@@ -814,7 +841,7 @@ HighsStatus writeMps(
     if (offset) {
       // Handle the objective offset as a RHS entry for the cost row
       double v = -(HighsInt)sense * offset;
-      fprintf(file, "    RHS_V     COST      %.15g\n", v);
+      fprintf(file, "    RHS_V     %-8s  %.15g\n", objective_name.c_str(), v);
     }
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = rhs[r_n];
