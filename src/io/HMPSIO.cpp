@@ -578,22 +578,9 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       warning_found = true;
     }
   }
-  // Set up a default objective name,
-  std::string local_objective_name = use_free_format ? "Objective" : "OBJECTIV";
-  // Over-write with any existing objective name
-  if (lp.objective_name_ != "") local_objective_name = lp.objective_name_;
-  // Ensure that the objective name doesn't clash with any row names
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (local_objective_name == local_row_names[iRow]) {
-      highsLogUser(
-          options.log_options, HighsLogType::kError,
-          "Objective name %s cannot be the same as name %s for row %d\n",
-          local_objective_name.c_str(), local_row_names[iRow].c_str(),
-          (int)iRow);
-      assert(1 == 0);
-      return HighsStatus::kError;
-    }
-  }
+  // Set a local objective name, creating one if necessary
+  const std::string local_objective_name =
+      findModelObjectiveName(&lp, &hessian);
   // If there is Hessian data to write out, writeMps assumes that hessian is
   // triangular
   if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);

@@ -81,4 +81,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 std::string statusToString(const HighsBasisStatus status, const double lower,
                            const double upper);
 std::string typeToString(const HighsVarType type);
+
+std::string findModelObjectiveName(const HighsLp* lp,
+                                   const HighsHessian* hessian = nullptr);
+
 #endif

@@ -24,7 +24,7 @@
 //#include "HConfig.h"
 //#include "io/HighsIO.h"
 //#include "lp_data/HConst.h"
-//#include "util/HighsUtils.h"
+#include "util/stringutil.h"
 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
@@ -425,19 +425,24 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   const bool have_col_names = lp.col_names_.size();
   const bool have_row_names = lp.row_names_.size();
   highsLogUser(log_options, HighsLogType::kInfo, "Writing glpsol solution\n");
-  // Despite being written in C, GLPSOL indexes rows (columns) from
-  // 1..m (1..n) with - bizarrely! - m being one more than the number
-  // of constraints, and the objective as an explicit row "m"
-  const HighsInt num_row = lp.num_row_;
-  const HighsInt num_col = lp.num_col_;
-  const HighsInt glpsol_num_row = num_row + 1;
-  // Determine number of nonzeros including the objective function,
+  // Determine number of nonzeros including the objective function
+  // and, hence, determine whether there is an objective function
   HighsInt num_nz = lp.a_matrix_.numNz();
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     if (lp.col_cost_[iCol]) num_nz++;
-  // Determine whether there is an objective function
-  bool has_objective = num_nz > lp.a_matrix_.numNz();
+  bool has_cost_row = num_nz > lp.a_matrix_.numNz();
+  bool has_objective = has_cost_row;
   if (model.hessian_.dim_) has_objective = true;
+  // Despite being written in C, GLPSOL indexes rows (columns) from
+  // 1..m (1..n) with - bizarrely! - m being one more than the number
+  // of constraints if the cost vector has nonzeros. In glpsol output,
+  // the cost vector appears wherever the "N" row was in the MPS file,
+  // but that can't be done in HiGHS
+  const HighsInt num_row = lp.num_row_;
+  const HighsInt num_col = lp.num_col_;
+  const HighsInt delta_num_row = has_cost_row ? 1 : 0;
+  const HighsInt glpsol_num_row = num_row + delta_num_row;
+
   // Record the discrete nature of the model
   HighsInt num_integer = 0;
   HighsInt num_binary = 0;
@@ -487,13 +492,23 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   fprintf(file, "%-12s%s\n", "Status:", model_status_text.c_str());
   // If info is not valid, then cannot write more
   if (!info.valid) return;
-  fprintf(file, "%-12s%s%s%.10g (%s)\n",
-          "Objective:", !has_objective ? "" : lp.objective_name_.c_str(),
-          !has_objective ? "" : " = ",
+  // Now write out the numerical information
+  //
+  // Determine the objective name to write out
+  std::string objective_name = lp.objective_name_;
+  // Make sure that no objective name is written out if there are rows
+  // and no row names
+  if (lp.num_row_ && !have_row_names) objective_name = "";
+  // if there are row names to be written out, there must be a
+  // non-trivial objective name
+  if (have_row_names) assert(lp.objective_name_ != "");
+  const bool has_objective_name = lp.objective_name_ != "";
+  fprintf(file, "%-12s%s%.10g (%s)\n", "Objective:",
+          !(has_objective && has_objective_name)
+              ? ""
+              : (objective_name + " = ").c_str(),
           has_objective ? info.objective_function_value : 0,
-          has_objective
-              ? (lp.sense_ == ObjSense::kMinimize ? "MINimum" : "MAXimum")
-              : "???");
+          lp.sense_ == ObjSense::kMinimize ? "MINimum" : "MAXimum");
   fprintf(file, "\n");
   fprintf(file,
           "   No.   Row name   %s   Activity     Lower bound  "
@@ -508,80 +523,79 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
           have_basis ? "--" : "  ");
   if (have_dual) fprintf(file, " -------------");
   fprintf(file, "\n");
-  // Must loop all the way to lp.num_row_ so that the objective is
-  // reported
-  for (HighsInt iRow = 0; iRow <= lp.num_row_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     fprintf(file, "%6d ", (int)(iRow + 1));
-    const bool objective_row = iRow == lp.num_row_;
     std::string row_name = "";
-    if (objective_row) {
-      row_name = lp.objective_name_;
-    } else if (have_row_names) {
-      row_name = lp.row_names_[iRow];
-    }
+    if (have_row_names) row_name = lp.row_names_[iRow];
     if (row_name.length() <= 12) {
       fprintf(file, "%-12s ", row_name.c_str());
     } else {
       fprintf(file, "%s\n%20s", row_name.c_str(), "");
     }
-    if (objective_row) {
-      if (is_mip) {
-        fprintf(file, "   ");
-      } else {
-        fprintf(file, "B  ");
+    const double lower = lp.row_lower_[iRow];
+    const double upper = lp.row_upper_[iRow];
+    const double value = solution.row_value[iRow];
+    const double dual = have_dual ? solution.row_dual[iRow] : 0;
+    std::string status_text = "  ";
+    if (have_basis) {
+      const HighsBasisStatus status = basis.row_status[iRow];
+      switch (basis.row_status[iRow]) {
+        case HighsBasisStatus::kBasic:
+          status_text = "B ";
+          break;
+        case HighsBasisStatus::kLower:
+          status_text = lower == upper ? "NS" : "NL";
+          break;
+        case HighsBasisStatus::kUpper:
+          status_text = lower == upper ? "NS" : "NU";
+          break;
+        case HighsBasisStatus::kZero:
+          status_text = "NF";
+          break;
+        default:
+          status_text = "??";
+          break;
       }
-      fprintf(file, "%13.6g %13s %13s ", info.objective_function_value, "", "");
-    } else {
-      const double lower = lp.row_lower_[iRow];
-      const double upper = lp.row_upper_[iRow];
-      const double value = solution.row_value[iRow];
-      const double dual = have_dual ? solution.row_dual[iRow] : 0;
-      std::string status_text = "  ";
-      if (have_basis) {
-        const HighsBasisStatus status = basis.row_status[iRow];
-        switch (basis.row_status[iRow]) {
-          case HighsBasisStatus::kBasic:
-            status_text = "B ";
-            break;
-          case HighsBasisStatus::kLower:
-            status_text = lower == upper ? "NS" : "NL";
-            break;
-          case HighsBasisStatus::kUpper:
-            status_text = lower == upper ? "NS" : "NU";
-            break;
-          case HighsBasisStatus::kZero:
-            status_text = "NF";
-            break;
-          default:
-            status_text = "??";
-            break;
-        }
-      }
-      fprintf(file, "%s ", status_text.c_str());
-      fprintf(file, "%13.6g ", fabs(value) <= kGlpsolPrintAsZero ? 0.0 : value);
-      if (lower > -kHighsInf)
-        fprintf(file, "%13.6g ", lower);
-      else
-        fprintf(file, "%13s ", "");
-      if (lower != upper && upper < kHighsInf)
-        fprintf(file, "%13.6g ", upper);
-      else
-        fprintf(file, "%13s ", lower == upper ? "=" : "");
-      if (have_dual) {
-        // If the row is known to be basic, don't print the dual
-        // value. If there's no basis, row cannot be known to be basic
-        bool not_basic = have_basis;
-        if (have_basis)
-          not_basic = basis.row_status[iRow] != HighsBasisStatus::kBasic;
-        if (not_basic) {
-          if (fabs(dual) <= kGlpsolPrintAsZero)
-            fprintf(file, "%13s", "< eps");
-          else
-            fprintf(file, "%13.6g ", dual);
-        }
+    }
+    fprintf(file, "%s ", status_text.c_str());
+    fprintf(file, "%13.6g ", fabs(value) <= kGlpsolPrintAsZero ? 0.0 : value);
+    if (lower > -kHighsInf)
+      fprintf(file, "%13.6g ", lower);
+    else
+      fprintf(file, "%13s ", "");
+    if (lower != upper && upper < kHighsInf)
+      fprintf(file, "%13.6g ", upper);
+    else
+      fprintf(file, "%13s ", lower == upper ? "=" : "");
+    if (have_dual) {
+      // If the row is known to be basic, don't print the dual
+      // value. If there's no basis, row cannot be known to be basic
+      bool not_basic = have_basis;
+      if (have_basis)
+        not_basic = basis.row_status[iRow] != HighsBasisStatus::kBasic;
+      if (not_basic) {
+        if (fabs(dual) <= kGlpsolPrintAsZero)
+          fprintf(file, "%13s", "< eps");
+        else
+          fprintf(file, "%13.6g ", dual);
       }
     }
     fprintf(file, "\n");
+  }
+
+  if (has_cost_row) {
+    fprintf(file, "%6d ", (int)(lp.num_row_ + 1));
+    if (objective_name.length() <= 12) {
+      fprintf(file, "%-12s ", objective_name.c_str());
+    } else {
+      fprintf(file, "%s\n%20s", objective_name.c_str(), "");
+    }
+    if (is_mip) {
+      fprintf(file, "   ");
+    } else {
+      fprintf(file, "B  ");
+    }
+    fprintf(file, "%13.6g %13s %13s \n", info.objective_function_value, "", "");
   }
   fprintf(file, "\n");
   fprintf(file,
@@ -910,4 +924,53 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     default:
       return HighsStatus::kError;
   }
+}
+
+std::string findModelObjectiveName(const HighsLp* lp,
+                                   const HighsHessian* hessian) {
+  // Return any non-trivial current objective name
+  if (lp->objective_name_ != "") return lp->objective_name_;
+
+  std::string objective_name = "";
+  // Determine whether there is a nonzero cost vector
+  bool has_objective = false;
+  for (HighsInt iCol = 0; iCol < lp->num_col_; iCol++) {
+    if (lp->col_cost_[iCol]) {
+      has_objective = true;
+      break;
+    }
+  }
+  if (!has_objective && hessian) {
+    // Zero cost vector, so only chance of an objective comes from any
+    // Hessian
+    has_objective = hessian->dim_;
+  }
+  HighsInt pass = 0;
+  for (;;) {
+    // Loop until a valid name is found. Vanishingly unlikely to have
+    // to pass more than once, since check for objective name
+    // duplicating a row name is very unlikely to fail
+    //
+    // So set up an appropriate name (stem)
+    if (has_objective) {
+      objective_name = "Obj";
+    } else {
+      objective_name = "NoObj";
+    }
+    if (pass) objective_name += pass;
+    // Ensure that the objective name doesn't clash with any row names
+    bool ok_objective_name = true;
+    for (HighsInt iRow = 0; iRow < lp->num_row_; iRow++) {
+      std::string trimmed_name = lp->row_names_[iRow];
+      trimmed_name = trim(trimmed_name);
+      if (objective_name == trimmed_name) {
+        ok_objective_name = false;
+        break;
+      }
+    }
+    if (ok_objective_name) break;
+    pass++;
+  }
+  assert(objective_name != "");
+  return objective_name;
 }

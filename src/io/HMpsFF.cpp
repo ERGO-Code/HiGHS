@@ -13,6 +13,8 @@
 
 #include "io/HMpsFF.h"
 
+#include "lp_data/HighsModelUtils.h"
+
 #ifdef ZLIB_FOUND
 #include "zstr.hpp"
 #endif
@@ -120,6 +122,9 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   // hessian must have at least start_[0]=0 for the fictitious column
   // 0
   if (hessian.start_.size() == 0) hessian.clear();
+
+  // Set the objective name, creating one if necessary
+  lp.objective_name_ = findModelObjectiveName(&lp, &hessian);
 
   return FreeFormatParserReturnCode::kSuccess;
 }
@@ -1255,7 +1260,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     if (colidx < 0) {
       // add new column if did not exist yet
       colidx = getColIdx(marker, true);
-      assert(colidx == num_col-1);
+      assert(colidx == num_col - 1);
       has_lower.push_back(false);
       has_upper.push_back(false);
     }
