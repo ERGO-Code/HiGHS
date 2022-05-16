@@ -188,8 +188,13 @@ const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
-const HighsInt kHighsIllegalInfeasibilityCount = -1;
 const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
+const HighsInt kHighsIllegalInfeasibilityCount = -1;
+
+// Illegal values for HighsError - used to indicate that true
+// values aren't known
+const double kHighsIllegalErrorValue = kHighsInf;
+const HighsInt kHighsIllegalErrorIndex = -1;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;

@@ -32,6 +32,15 @@ class HighsOptions;
 
 using std::string;
 
+struct HighsError {
+  double absolute_value;
+  HighsInt absolute_index;
+  double relative_value;
+  HighsInt relative_index;
+  void reset();
+  void invalidate();
+};
+
 struct HighsPrimalDualErrors {
   HighsInt num_nonzero_basic_duals;
   HighsInt num_large_nonzero_basic_duals;
@@ -41,11 +50,13 @@ struct HighsPrimalDualErrors {
   double max_off_bound_nonbasic;
   double sum_off_bound_nonbasic;
   HighsInt num_primal_residual;
-  double max_primal_residual;
   double sum_primal_residual;
   HighsInt num_dual_residual;
-  double max_dual_residual;
   double sum_dual_residual;
+  HighsError max_primal_residual;
+  HighsError max_primal_infeasibility;
+  HighsError max_dual_residual;
+  HighsError max_dual_infeasibility;
 };
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
