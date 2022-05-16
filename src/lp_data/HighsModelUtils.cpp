@@ -24,6 +24,7 @@
 //#include "HConfig.h"
 //#include "io/HighsIO.h"
 //#include "lp_data/HConst.h"
+#include "lp_data/HighsSolution.h"
 #include "util/stringutil.h"
 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -352,7 +353,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
   return HighsStatus::kOk;
 }
 
-void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
+void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,
                        const HighsModelStatus model_status,
@@ -381,7 +382,7 @@ void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
         (double)info.objective_function_value, double_tolerance);
     fprintf(file, "\nObjective value: %s\n", objStr.data());
   } else if (style == kSolutionStyleGlpsol) {
-    writeGlpsolSolution(file, log_options, model, basis, solution, model_status,
+    writeGlpsolSolution(file, options, model, basis, solution, model_status,
                         info);
   } else {
     fprintf(file, "Model status\n");
@@ -390,7 +391,7 @@ void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
   }
 }
 
-void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
+void writeGlpsolSolution(FILE* file, const HighsOptions& options,
                          const HighsModel& model, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,
@@ -424,7 +425,6 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
   const HighsLp& lp = model.lp_;
   const bool have_col_names = lp.col_names_.size();
   const bool have_row_names = lp.row_names_.size();
-  highsLogUser(log_options, HighsLogType::kInfo, "Writing glpsol solution\n");
   // Determine number of nonzeros including the objective function
   // and, hence, determine whether there is an objective function
   HighsInt num_nz = lp.a_matrix_.numNz();
@@ -674,6 +674,90 @@ void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
     }
     fprintf(file, "\n");
   }
+  HighsPrimalDualErrors errors;
+  HighsInfo local_info;
+  HighsInt absolute_error_index;
+  double absolute_error_value;
+  HighsInt relative_error_index;
+  double relative_error_value;
+  getKktFailures(options, model, solution, basis, local_info, errors, true);
+  fprintf(file, "\n");
+  fprintf(file, "Karush-Kuhn-Tucker optimality conditions:\n");
+  fprintf(file, "\n");
+  // Primal residual
+  absolute_error_value = errors.max_primal_residual.absolute_value;
+  absolute_error_index = errors.max_primal_residual.absolute_index + 1;
+  relative_error_value = errors.max_primal_residual.relative_value;
+  relative_error_index = errors.max_primal_residual.relative_index + 1;
+  if (!absolute_error_value) absolute_error_index = 0;
+  if (!relative_error_value) relative_error_index = 0;
+  fprintf(file, "KKT.PE: max.abs.err = %.2e on row %d\n",
+	  absolute_error_value, absolute_error_index == 0 ? 0 : (int)(absolute_error_index - lp.num_col_));
+  fprintf(file, "        max.rel.err = %.2e on row %d\n",
+	  relative_error_value, absolute_error_index == 0 ? 0 : (int)(relative_error_index - lp.num_col_));
+  fprintf(file, "%8s%s\n", "",
+	  relative_error_value <= kGlpsolHighQuality ? "High quality" :
+	  relative_error_value <= kGlpsolMediumQuality ? "Medium quality" :
+	  relative_error_value <= kGlpsolLowQuality ? "Low quality" : "PRIMAL SOLUTION IS WRONG");
+  fprintf(file, "\n");
+
+  // Primal infeasibility
+  absolute_error_value = errors.max_primal_infeasibility.absolute_value;
+  absolute_error_index = errors.max_primal_infeasibility.absolute_index + 1;
+  relative_error_value = errors.max_primal_infeasibility.relative_value;
+  relative_error_index = errors.max_primal_infeasibility.relative_index + 1;
+  if (!absolute_error_value) absolute_error_index = 0;
+  if (!relative_error_value) relative_error_index = 0;
+  fprintf(file, "KKT.PB: max.abs.err = %.2e on %s %d\n",
+	  absolute_error_value, absolute_error_index <= lp.num_col_ ? "column" : "row",
+	  absolute_error_index <= lp.num_col_ ? (int)absolute_error_index : (int)(absolute_error_index - lp.num_col_));
+  fprintf(file, "        max.rel.err = %.2e on %s %d\n",
+	  relative_error_value, relative_error_index <= lp.num_col_ ? "column" : "row",
+	  relative_error_index <= lp.num_col_ ? (int)relative_error_index : (int)(relative_error_index - lp.num_col_));
+  fprintf(file, "%8s%s\n", "",
+	  relative_error_value <= kGlpsolHighQuality ? "High quality" :
+	  relative_error_value <= kGlpsolMediumQuality ? "Medium quality" :
+	  relative_error_value <= kGlpsolLowQuality ? "Low quality" : "PRIMAL SOLUTION IS INFEASIBLE");
+  fprintf(file, "\n");
+
+  if (have_dual) {
+    // Dual residual
+    absolute_error_value = errors.max_dual_residual.absolute_value;
+    absolute_error_index = errors.max_dual_residual.absolute_index + 1;
+    relative_error_value = errors.max_dual_residual.relative_value;
+    relative_error_index = errors.max_dual_residual.relative_index + 1;
+    if (!absolute_error_value) absolute_error_index = 0;
+    if (!relative_error_value) relative_error_index = 0;
+    fprintf(file, "KKT.DE: max.abs.err = %.2e on column %d\n",
+	    absolute_error_value, (int)absolute_error_index);
+    fprintf(file, "        max.rel.err = %.2e on column %d\n",
+	    relative_error_value, (int)relative_error_index);
+    fprintf(file, "%8s%s\n", "",
+	    relative_error_value <= kGlpsolHighQuality ? "High quality" :
+	    relative_error_value <= kGlpsolMediumQuality ? "Medium quality" :
+	    relative_error_value <= kGlpsolLowQuality ? "Low quality" : "DUAL SOLUTION IS WRONG");
+    fprintf(file, "\n");
+    
+    // Dual infeasibility
+    absolute_error_value = errors.max_dual_infeasibility.absolute_value;
+    absolute_error_index = errors.max_dual_infeasibility.absolute_index + 1;
+    relative_error_value = errors.max_dual_infeasibility.relative_value;
+    relative_error_index = errors.max_dual_infeasibility.relative_index + 1;
+    if (!absolute_error_value) absolute_error_index = 0;
+    if (!relative_error_value) relative_error_index = 0;
+    fprintf(file, "KKT.DB: max.abs.err = %.2e on %s %d\n",
+	    absolute_error_value, absolute_error_index <= lp.num_col_ ? "column" : "row",
+	    absolute_error_index <= lp.num_col_ ? (int)absolute_error_index : (int)(absolute_error_index - lp.num_col_));
+    fprintf(file, "        max.rel.err = %.2e on %s %d\n",
+	    relative_error_value, relative_error_index <= lp.num_col_ ? "column" : "row",
+	    relative_error_index <= lp.num_col_ ? (int)relative_error_index : (int)(relative_error_index - lp.num_col_));
+    fprintf(file, "%8s%s\n", "",
+	    relative_error_value <= kGlpsolHighQuality ? "High quality" :
+	    relative_error_value <= kGlpsolMediumQuality ? "Medium quality" :
+	    relative_error_value <= kGlpsolLowQuality ? "Low quality" : "DUAL SOLUTION IS INFEASIBLE");
+    fprintf(file, "\n");
+  }
+  fprintf(file, "End of output\n");
 }
 
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,

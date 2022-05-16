@@ -37,6 +37,7 @@ struct HighsError {
   HighsInt absolute_index;
   double relative_value;
   HighsInt relative_index;
+  void print(std::string message);
   void reset();
   void invalidate();
 };
@@ -92,8 +93,10 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double value, const double dual,
                             const HighsBasisStatus* status_pointer,
                             const HighsVarType integrality,
-                            double& primal_infeasibility,
-                            double& dual_infeasibility, double& value_residual);
+                            double& absolute_primal_infeasibility,
+			    double& relative_primal_infeasibility,
+                            double& dual_infeasibility,
+			    double& value_residual);
 
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
 

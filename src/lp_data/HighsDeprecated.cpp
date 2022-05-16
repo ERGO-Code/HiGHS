@@ -162,7 +162,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   } else {
     style = kSolutionStyleRaw;
   }
-  writeSolutionFile(file, options_.log_options,
+  writeSolutionFile(file, options_,
 		    model_, basis_, solution_, info_, model_status_,
                     style);
   if (file != stdout) fclose(file);

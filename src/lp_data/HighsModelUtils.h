@@ -50,13 +50,13 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
                            std::vector<std::string>& names,
                            HighsInt& max_name_length);
 
-void writeSolutionFile(FILE* file, const HighsLogOptions& log_options,
+void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,
                        const HighsSolution& solution, const HighsInfo& info,
                        const HighsModelStatus model_status,
                        const HighsInt style);
 
-void writeGlpsolSolution(FILE* file, const HighsLogOptions& log_options,
+void writeGlpsolSolution(FILE* file, const HighsOptions& options,
                          const HighsModel& model, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,

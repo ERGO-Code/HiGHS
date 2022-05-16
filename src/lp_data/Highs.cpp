@@ -2343,7 +2343,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionFile(file, options_.log_options, model_, basis_, solution_,
+  writeSolutionFile(file, options_, model_, basis_, solution_,
                     info_, model_status_, style);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
