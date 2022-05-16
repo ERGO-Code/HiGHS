@@ -1253,11 +1253,11 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     // if not existing yet
     HighsInt colidx = getColIdx(marker, false);
     if (colidx < 0) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "Column name \"%s\" in BOUNDS section is not defined: ignored\n",
-          marker.c_str());
-      continue;
+      // add new column if did not exist yet
+      colidx = getColIdx(marker, true);
+      assert(colidx == num_col-1);
+      has_lower.push_back(false);
+      has_upper.push_back(false);
     }
 
     // Determine whether this entry yields a duplicate bound
