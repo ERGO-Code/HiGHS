@@ -852,10 +852,10 @@ HighsStatus Highs::run() {
       return HighsStatus::kError;
     }
     ICrashOptions icrash_options{
-      options_.icrash_dualize,         strategy,
-	options_.icrash_starting_weight, (int)options_.icrash_iterations,
-        (int)options_.icrash_approx_iter,     options_.icrash_exact,
-        options_.icrash_breakpoints,     options_.log_options};
+        options_.icrash_dualize,          strategy,
+        options_.icrash_starting_weight,  (int)options_.icrash_iterations,
+        (int)options_.icrash_approx_iter, options_.icrash_exact,
+        options_.icrash_breakpoints,      options_.log_options};
 
     HighsStatus icrash_status =
         callICrash(model_.lp_, icrash_options, icrash_info_);
