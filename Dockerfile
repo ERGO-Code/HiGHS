@@ -9,8 +9,8 @@ RUN apk update && \
             gcc \
             git
 
-ADD /HiGHS.zip /HiGHS
-RUN unzip HiGHS.zip
+ADD /HiGHS.zip /
+RUN unzip HiGHS.zip -d /HiGHS
 RUN mkdir HiGHS/build && \
         cd HiGHS/build && \
         cmake .. && \
