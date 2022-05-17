@@ -292,7 +292,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     if (force_report) report_level = HighsLogType::kInfo;
     highsLogDev(
         options.log_options, report_level,
-        "PrDuErrors : %-9s Nonzero basic duals:       num = %2" HIGHSINT_FORMAT
+        "PrDuErrors : %-9s Nonzero basic duals:       num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
         value_adjective.c_str(), primal_dual_errors.num_nonzero_basic_duals,
@@ -312,7 +312,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     if (force_report) report_level = HighsLogType::kInfo;
     highsLogDev(
         options.log_options, report_level,
-        "PrDuErrors : %-9s Off-bound nonbasic values: num = %2" HIGHSINT_FORMAT
+        "PrDuErrors : %-9s Off-bound nonbasic values: num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
         value_adjective.c_str(), primal_dual_errors.num_off_bound_nonbasic,
@@ -338,7 +338,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     if (force_report) report_level = HighsLogType::kInfo;
     highsLogDev(
         options.log_options, report_level,
-        "PrDuErrors : %-9s Primal residual:           num = %2" HIGHSINT_FORMAT
+        "PrDuErrors : %-9s Primal residual:           num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
         value_adjective.c_str(), primal_dual_errors.num_primal_residual,
@@ -364,7 +364,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     if (force_report) report_level = HighsLogType::kInfo;
     highsLogDev(
         options.log_options, report_level,
-        "PrDuErrors : %-9s Dual residual:             num = %2" HIGHSINT_FORMAT
+        "PrDuErrors : %-9s Dual residual:             num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
         value_adjective.c_str(), primal_dual_errors.num_dual_residual,

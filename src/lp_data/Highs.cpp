@@ -1151,7 +1151,7 @@ HighsStatus Highs::run() {
             basis_.debug_origin_name += ": after postsolve";
             // Basic primal activities are wrong after postsolve, so
             // possibly skip KKT check
-            const bool perform_kkt_check = false;
+            const bool perform_kkt_check = true;
             if (perform_kkt_check) {
               // Possibly force debug to perform KKT check on what's
               // returned from postsolve
@@ -2513,6 +2513,8 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
+  // Compute the row activities
+  calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
     presolve_.negateReducedLpColDuals(true);
