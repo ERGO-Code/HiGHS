@@ -381,9 +381,12 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     std::array<char, 32> objStr = highsDoubleToString(
         (double)info.objective_function_value, double_tolerance);
     fprintf(file, "\nObjective value: %s\n", objStr.data());
-  } else if (style == kSolutionStyleGlpsol) {
-    writeGlpsolSolution(file, options, model, basis, solution, model_status,
-                        info);
+  } else if (style == kSolutionStyleGlpsolRaw) {
+    writeGlpsolRawSolution(file, options, model, basis, solution, model_status,
+			   info);
+  } else if (style == kSolutionStyleGlpsolPretty) {
+    writeGlpsolPrettySolution(file, options, model, basis, solution, model_status,
+			      info);
   } else {
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
@@ -391,32 +394,21 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
   }
 }
 
-void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
-                         const HighsSolution& solution,
-                         const HighsModelStatus model_status,
-                         const HighsInfo& info) {
+void writeGlpsolRawSolution(FILE* file, const HighsOptions& options,
+			    const HighsModel& model, const HighsBasis& basis,
+			    const HighsSolution& solution,
+			    const HighsModelStatus model_status,
+			    const HighsInfo& info) {
+}
+
+void writeGlpsolPrettySolution(FILE* file, const HighsOptions& options,
+			       const HighsModel& model, const HighsBasis& basis,
+			       const HighsSolution& solution,
+			       const HighsModelStatus model_status,
+			       const HighsInfo& info) {
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  vector<double> use_col_value;
-  vector<double> use_row_value;
-  vector<double> use_col_dual;
-  vector<double> use_row_dual;
-  vector<HighsBasisStatus> use_col_status;
-  vector<HighsBasisStatus> use_row_status;
-  if (have_value) {
-    use_col_value = solution.col_value;
-    use_row_value = solution.row_value;
-  }
-  if (have_dual) {
-    use_col_dual = solution.col_dual;
-    use_row_dual = solution.row_dual;
-  }
-  if (have_basis) {
-    use_col_status = basis.col_status;
-    use_row_status = basis.row_status;
-  }
   if (!have_value) return;
   const double kGlpsolHighQuality = 1e-9;
   const double kGlpsolMediumQuality = 1e-6;

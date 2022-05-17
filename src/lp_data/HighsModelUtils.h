@@ -56,11 +56,18 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModelStatus model_status,
                        const HighsInt style);
 
-void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
-                         const HighsSolution& solution,
-                         const HighsModelStatus model_status,
-                         const HighsInfo& info);
+void writeGlpsolRawSolution(FILE* file, const HighsOptions& options,
+			    const HighsModel& model, const HighsBasis& basis,
+			    const HighsSolution& solution,
+			    const HighsModelStatus model_status,
+			    const HighsInfo& info);
+
+void writeGlpsolPrettySolution(FILE* file, const HighsOptions& options,
+			       const HighsModel& model, const HighsBasis& basis,
+			       const HighsSolution& solution,
+			       const HighsModelStatus model_status,
+			       const HighsInfo& info);
+
 void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution);
 

@@ -124,10 +124,11 @@ enum BasisValidity {
 enum SolutionStyle {
   kSolutionStyleOldRaw = -1,
   kSolutionStyleRaw = 0,
-  kSolutionStylePretty,  // 1;
-  kSolutionStyleGlpsol,  // 2;
+  kSolutionStylePretty,       // 1;
+  kSolutionStyleGlpsolRaw,    // 2;
+  kSolutionStyleGlpsolPretty, // 3;
   kSolutionStyleMin = kSolutionStyleOldRaw,
-  kSolutionStyleMax = kSolutionStyleGlpsol
+  kSolutionStyleMax = kSolutionStyleGlpsolPretty
 };
 
 const std::string kHighsFilenameDefault = "";
