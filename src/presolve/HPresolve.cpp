@@ -439,15 +439,16 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
   // right hand side -cost which becomes a >= constraint with side +cost.
   // Furthermore, we can ignore strictly redundant primal
   // column bounds and treat them as if they are infinite
+  double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
   double dualRowLower =
       (model->col_lower_[col] == -kHighsInf) ||
-              (implColLower[col] > model->col_lower_[col] + primal_feastol)
+              (implColLower[col] > model->col_lower_[col] + impliedMargin)
           ? model->col_cost_[col]
           : -kHighsInf;
 
   double dualRowUpper =
       (model->col_upper_[col] == kHighsInf) ||
-              (implColUpper[col] < model->col_upper_[col] - primal_feastol)
+              (implColUpper[col] < model->col_upper_[col] - impliedMargin)
           ? model->col_cost_[col]
           : kHighsInf;
 
@@ -2434,17 +2435,26 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
       // both columns continuous the one with a larger absolute coefficient
       // value if the difference is more than factor 2, and otherwise the one
       // with fewer nonzeros if those are equal
-
-      double abs1Val = std::abs(Avalue[nzPos1]);
-      double abs2Val = std::abs(Avalue[nzPos2]);
       bool colAtPos1Better;
-      double ratio = std::max(abs1Val, abs2Val) / std::min(abs1Val, abs2Val);
-      if (ratio <= 2.0)
-        colAtPos1Better = colsize[Acol[nzPos1]] < colsize[Acol[nzPos2]];
-      else if (abs1Val > abs2Val)
+      HighsInt col1Size = colsize[Acol[nzPos1]];
+      if (col1Size == 1)
         colAtPos1Better = true;
-      else
-        colAtPos1Better = false;
+      else {
+        HighsInt col2Size = colsize[Acol[nzPos2]];
+        if (col2Size == 1)
+          colAtPos1Better = false;
+        else {
+          double abs1Val = std::fabs(Avalue[nzPos1]);
+          double abs2Val = std::fabs(Avalue[nzPos2]);
+          if (col1Size != col2Size &&
+              std::max(abs1Val, abs2Val) <= 2.0 * std::min(abs1Val, abs2Val))
+            colAtPos1Better = col1Size < col2Size;
+          else if (abs1Val > abs2Val)
+            colAtPos1Better = true;
+          else
+            colAtPos1Better = false;
+        }
+      }
 
       if (colAtPos1Better) {
         substcol = Acol[nzPos1];
@@ -2841,17 +2851,64 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
     return checkLimits(postSolveStack);
   }
 
-  double rowUpper = implRowDualLower[row] > options->dual_feasibility_tolerance
-                        ? model->row_lower_[row]
-                        : model->row_upper_[row];
-  double rowLower = implRowDualUpper[row] < -options->dual_feasibility_tolerance
-                        ? model->row_upper_[row]
-                        : model->row_lower_[row];
-  if (rowsize[row] == 2 && rowLower == rowUpper) {
-    model->row_lower_[row] = rowLower;
-    model->row_upper_[row] = rowUpper;
-    return doubletonEq(postSolveStack, row);
+  if (model->row_lower_[row] != model->row_upper_[row]) {
+    if (implRowDualLower[row] > options->dual_feasibility_tolerance) {
+      model->row_upper_[row] = model->row_lower_[row];
+      if (mipsolver == nullptr) {
+        HighsInt col = rowDualLowerSource[row];
+        assert(model->col_cost_[col] != 0.0);
+        if (colsize[col] == 1) {
+          double colCoef = Avalue[colhead[col]];
+          if (model->col_cost_[col] > 0) {
+            assert(
+                model->col_lower_[col] == -kHighsInf ||
+                (model->col_lower_[col] <= implColLower[col] + primal_feastol &&
+                 colLowerSource[col] == row));
+            if (model->col_lower_[col] > implColLower[col] - primal_feastol)
+              changeColLower(col, -kHighsInf);
+          } else {
+            assert(
+                model->col_upper_[col] == kHighsInf ||
+                (model->col_upper_[col] >= implColUpper[col] - primal_feastol &&
+                 colUpperSource[col] == row));
+            if (model->col_upper_[col] < implColUpper[col] + primal_feastol)
+              changeColUpper(col, kHighsInf);
+          }
+        }
+      }
+    }
+
+    if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
+      model->row_lower_[row] = model->row_upper_[row];
+      if (mipsolver == nullptr) {
+        HighsInt col = rowDualUpperSource[row];
+        assert(model->col_cost_[col] != 0.0);
+        if (colsize[col] == 1) {
+          if (model->col_cost_[col] > 0) {
+            assert(
+                model->col_lower_[col] == -kHighsInf ||
+                (model->col_lower_[col] <= implColLower[col] + primal_feastol &&
+                 colLowerSource[col] == row));
+            if (model->col_lower_[col] > implColLower[col] - primal_feastol)
+              changeColLower(col, -kHighsInf);
+          } else {
+            assert(
+                model->col_upper_[col] == kHighsInf ||
+                (model->col_upper_[col] >= implColUpper[col] - primal_feastol &&
+                 colUpperSource[col] == row));
+            if (model->col_upper_[col] < implColUpper[col] + primal_feastol)
+              changeColUpper(col, kHighsInf);
+          }
+        }
+      }
+    }
   }
+
+  double rowUpper = model->row_upper_[row];
+  double rowLower = model->row_lower_[row];
+
+  if (rowsize[row] == 2 && rowLower == rowUpper)
+    return doubletonEq(postSolveStack, row);
 
   // todo: do additional single row presolve for mip here. It may assume a
   // non-redundant and non-infeasible row when considering variable and implied
@@ -5961,8 +6018,8 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     // highs.writeBasis("bad.bas");
     highs.run();
     printf("simplex iterations with postsolved basis: %" HIGHSINT_FORMAT "\n",
-           highs.getSimplexIterationCount());
-    checkResult = highs.getSimplexIterationCount() == 0;
+           highs.getInfo().simplex_iteration_count);
+    checkResult = highs.getInfo().simplex_iteration_count == 0;
 #else
 
     if (reductionLim == good) break;
