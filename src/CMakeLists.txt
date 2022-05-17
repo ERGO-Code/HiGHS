@@ -126,8 +126,8 @@ set(sources
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     presolve/ICrash.cpp
-    presolve/ICrashX.cpp
     presolve/ICrashUtil.cpp
+    presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
@@ -267,6 +267,7 @@ set(headers
     simplex/SimplexTimer.h
     presolve/ICrash.h
     presolve/ICrashUtil.h
+    presolve/ICrashX.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -490,13 +491,8 @@ target_sources(libhighs PRIVATE
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     presolve/ICrash.cpp
-    presolve/ICrashX.cpp
     presolve/ICrashUtil.cpp
-    presolve/Presolve.cpp
-    presolve/PresolveComponent.cpp
-    presolve/PresolveAnalysis.cpp
-    presolve/PresolveUtils.cpp
-    presolve/HPreData.cpp
+    presolve/ICrashX.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
     mip/HighsDomain.cpp
@@ -684,6 +680,7 @@ set(headers_fast_build_
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
     presolve/ICrash.h
+    presolve/ICrashUtil.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h

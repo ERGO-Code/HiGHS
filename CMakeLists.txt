@@ -149,7 +149,6 @@ endif()
 
 if (NOT FAST_BUILD OR FORTRAN)
 include(CheckLanguage)
-if (NOT FAST_BUILD)
 if(NOT MSVC)
     check_language("Fortran")
 endif()

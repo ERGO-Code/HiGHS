@@ -1051,7 +1051,6 @@ class Highs {
  private:
   HighsSolution solution_;
   HighsBasis basis_;
-  HighsLp lp_;
   ICrashInfo icrash_info_;
 
   HighsModel model_;

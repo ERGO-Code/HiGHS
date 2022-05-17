@@ -346,8 +346,8 @@ struct HighsOptionsStruct {
   bool icrash_dualize;
   std::string icrash_strategy;
   double icrash_starting_weight;
-  int icrash_iterations;
-  int icrash_approx_iter;
+  HighsInt icrash_iterations;
+  HighsInt icrash_approx_iter;
   bool icrash_exact;
   bool icrash_breakpoints;
 
@@ -687,6 +687,7 @@ class HighsOptions : public HighsOptionsStruct {
 				     "Exact subproblem solution for iCrash",
 				     advanced, &icrash_breakpoints,
 				     false);
+
     record_string = new OptionRecordString(
         kWriteModelFileString, "Write model file", advanced, &write_model_file,
         kHighsFilenameDefault);
@@ -705,7 +706,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
-
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
