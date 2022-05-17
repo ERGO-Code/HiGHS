@@ -332,7 +332,7 @@ endif()
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
@@ -352,19 +352,19 @@ if (OSI_FOUND)
     endif()
 
     install(TARGETS OsiHighs
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include)
+        LIBRARY
+        ARCHIVE
+        RUNTIME
+        INCLUDES)
 
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
     #configure and install the pkg-config file
     configure_file(${HIGHS_SOURCE_DIR}/osi-highs.pc.in
         "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
     install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc"
-        DESTINATION lib/pkgconfig)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
 
 if (ZLIB_FOUND)
@@ -374,14 +374,14 @@ endif()
 
 # set the install rpath to the installed destination
 set_target_properties(highs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/lib")
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
 foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/${dir} )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if (UNIX)
     #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
@@ -403,14 +403,14 @@ if (UNIX)
 endif()
 
 install(TARGETS libhighs EXPORT highs-targets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include)
+    LIBRARY
+    ARCHIVE
+    RUNTIME
+    INCLUDES)
 
 # Add library targets to the build-tree export set
 export(TARGETS libhighs
-FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 # Configure the config file for the build tree:
 # Either list all the src/* directories here, or put explicit paths in all the
@@ -433,11 +433,11 @@ configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
 # cmake-projects can link easily against highs, and the pkg-config flie so that
 # other projects can easily build against highs
 install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
-    lib/cmake/highs)
+    ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
-    DESTINATION lib/cmake/highs)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
-    DESTINATION lib/pkgconfig)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 else()
 
@@ -573,11 +573,11 @@ endif()
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 if (UNIX)
     set_target_properties(libhighs PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/lib")
+        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
 endif()
 
 set(headers_fast_build_
@@ -717,14 +717,14 @@ set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_header
 
 # set the install rpath to the installed destination
 set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/lib")
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/${dir} )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
@@ -743,7 +743,7 @@ if (UNIX)
 endif()
 
 set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/lib")
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 endif()
 
@@ -753,14 +753,14 @@ if(FORTRAN_FOUND)
     add_library(FortranHighs interfaces/highs_fortran_api.f90)
     target_link_libraries(FortranHighs PUBLIC libhighs)
     install(TARGETS FortranHighs
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include
+        LIBRARY
+        ARCHIVE
+        RUNTIME
+        INCLUDES
         MODULES DESTINATION modules)
-    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fortran)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
 
 if(CSHARP_FOUND)
