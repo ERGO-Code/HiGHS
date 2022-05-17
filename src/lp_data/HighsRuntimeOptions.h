@@ -33,7 +33,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         "File of model to solve.",
         cxxopts::value<std::vector<std::string>>())
         (kPresolveString,
-        "Presolve: \"choose\" by default - \"on\"/\"off\"/\"mip\" are alternatives.",
+        "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
         cxxopts::value<std::string>(presolve))
         (kSolverString,
         "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
@@ -42,7 +42,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         "Parallel solve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
         cxxopts::value<std::string>(parallel))
         (kTimeLimitString,
-        "Run time limit (double).",
+        "Run time limit (seconds - double).",
         cxxopts::value<double>())
         (kOptionsFileString,
         "File containing HiGHS options.",

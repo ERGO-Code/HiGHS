@@ -282,9 +282,9 @@ HighsStatus Highs::passModel(HighsModel model) {
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(
-      options_.log_options, assessHessian(hessian, options_, lp.sense_),
-      return_status, "assessHessian");
+  return_status = interpretCallStatus(options_.log_options,
+                                      assessHessian(hessian, options_),
+                                      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -436,9 +436,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(
-      options_.log_options, assessHessian(hessian, options_, model_.lp_.sense_),
-      return_status, "assessHessian");
+  return_status = interpretCallStatus(options_.log_options,
+                                      assessHessian(hessian, options_),
+                                      return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
@@ -762,7 +762,7 @@ HighsStatus Highs::run() {
   // Ensure that the matrix has no large values
   if (model_.lp_.a_matrix_.hasLargeValue(options_.large_matrix_value)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Canot solve a model with a |value| exceeding %g in "
+                 "Cannot solve a model with a |value| exceeding %g in "
                  "constraint matrix\n",
                  options_.large_matrix_value);
     return returnFromRun(HighsStatus::kError);
@@ -805,7 +805,14 @@ HighsStatus Highs::run() {
     // Ensure that it's not MIQP!
     if (model_.isMip()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Canot solve MIQP problems with HiGHS\n");
+                   "Cannot solve MIQP problems with HiGHS\n");
+      return returnFromRun(HighsStatus::kError);
+    }
+    // Ensure that its diagonal entries are OK in the context of the
+    // objective sense. It's OK to be semi-definite
+    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot solve non-convex QP problems with HiGHS\n");
       return returnFromRun(HighsStatus::kError);
     }
     call_status = callSolveQp();
@@ -2840,7 +2847,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   presolve_.data_.recovered_solution_ = solution;
   presolve_.data_.recovered_basis_ = basis;
 
-  HighsInt postsolve_iteration_count = -1;
   HighsPostsolveStatus postsolve_status = runPostsolve();
   if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -2872,17 +2878,14 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     // Scrap the EKK data from solving the presolved LP
     ekk_instance_.invalidate();
     ekk_instance_.lp_name_ = "Postsolve LP";
-    // Set up the iteration count and timing records so that
-    // adding the corresponding values after callSolveLp gives
-    // difference
-    postsolve_iteration_count = -info_.simplex_iteration_count;
+    // Set up the timing record so that adding the corresponding
+    // values after callSolveLp gives difference
     timer_.start(timer_.solve_clock);
     call_status = callSolveLp(
         incumbent_lp,
         "Solving the original LP from the solution after postsolve");
+    // Determine the timing record
     timer_.stop(timer_.solve_clock);
-    // Determine the iteration count and timing records
-    postsolve_iteration_count += info_.simplex_iteration_count;
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     // Recover the options
@@ -3199,25 +3202,27 @@ void Highs::reportSolvedLpQpStats() {
   HighsLogOptions& log_options = options_.log_options;
   highsLogUser(log_options, HighsLogType::kInfo, "Model   status      : %s\n",
                modelStatusToString(model_status_).c_str());
-  if (info_.simplex_iteration_count)
+  if (info_.valid) {
+    if (info_.simplex_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.simplex_iteration_count);
+    if (info_.ipm_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "IPM       iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.ipm_iteration_count);
+    if (info_.crossover_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Crossover iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.crossover_iteration_count);
+    if (info_.qp_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.qp_iteration_count);
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
-                 info_.simplex_iteration_count);
-  if (info_.ipm_iteration_count)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "IPM       iterations: %" HIGHSINT_FORMAT "\n",
-                 info_.ipm_iteration_count);
-  if (info_.crossover_iteration_count)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Crossover iterations: %" HIGHSINT_FORMAT "\n",
-                 info_.crossover_iteration_count);
-  if (info_.qp_iteration_count)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",
-                 info_.qp_iteration_count);
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Objective value     : %17.10e\n",
-               info_.objective_function_value);
+                 "Objective value     : %17.10e\n",
+                 info_.objective_function_value);
+  }
   double run_time = timer_.readRunHighsClock();
   highsLogUser(log_options, HighsLogType::kInfo,
                "HiGHS run time      : %13.2f\n", run_time);
