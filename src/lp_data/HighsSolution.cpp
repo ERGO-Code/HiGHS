@@ -74,16 +74,21 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
 
-  HighsInt& max_absolute_primal_infeasibility_index = primal_dual_errors.max_primal_infeasibility.absolute_index;
-  double& max_absolute_primal_infeasibility_value = highs_info.max_primal_infeasibility;
-  HighsInt& max_relative_primal_infeasibility_index = primal_dual_errors.max_primal_infeasibility.relative_index;
-  double& max_relative_primal_infeasibility_value = primal_dual_errors.max_primal_infeasibility.relative_value;
+  HighsInt& max_absolute_primal_infeasibility_index =
+      primal_dual_errors.max_primal_infeasibility.absolute_index;
+  double& max_absolute_primal_infeasibility_value =
+      highs_info.max_primal_infeasibility;
+  HighsInt& max_relative_primal_infeasibility_index =
+      primal_dual_errors.max_primal_infeasibility.relative_index;
+  double& max_relative_primal_infeasibility_value =
+      primal_dual_errors.max_primal_infeasibility.relative_value;
 
   double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
 
   HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
 
-  HighsInt& max_dual_infeasibility_index = primal_dual_errors.max_dual_infeasibility.absolute_index;
+  HighsInt& max_dual_infeasibility_index =
+      primal_dual_errors.max_dual_infeasibility.absolute_index;
   double& max_dual_infeasibility_value = highs_info.max_dual_infeasibility;
 
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
@@ -132,19 +137,27 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
 
-  HighsInt& max_absolute_primal_residual_index = primal_dual_errors.max_primal_residual.absolute_index;
-  double& max_absolute_primal_residual_value = primal_dual_errors.max_primal_residual.absolute_value;
-  HighsInt& max_relative_primal_residual_index = primal_dual_errors.max_primal_residual.relative_index;
-  double& max_relative_primal_residual_value = primal_dual_errors.max_primal_residual.relative_value;
+  HighsInt& max_absolute_primal_residual_index =
+      primal_dual_errors.max_primal_residual.absolute_index;
+  double& max_absolute_primal_residual_value =
+      primal_dual_errors.max_primal_residual.absolute_value;
+  HighsInt& max_relative_primal_residual_index =
+      primal_dual_errors.max_primal_residual.relative_index;
+  double& max_relative_primal_residual_value =
+      primal_dual_errors.max_primal_residual.relative_value;
 
   double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
 
   HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
 
-  HighsInt& max_absolute_dual_residual_index = primal_dual_errors.max_dual_residual.absolute_index;
-  double& max_absolute_dual_residual_value = primal_dual_errors.max_dual_residual.absolute_value;
-  HighsInt& max_relative_dual_residual_index = primal_dual_errors.max_dual_residual.relative_index;
-  double& max_relative_dual_residual_value = primal_dual_errors.max_dual_residual.relative_value;
+  HighsInt& max_absolute_dual_residual_index =
+      primal_dual_errors.max_dual_residual.absolute_index;
+  double& max_absolute_dual_residual_value =
+      primal_dual_errors.max_dual_residual.absolute_value;
+  HighsInt& max_relative_dual_residual_index =
+      primal_dual_errors.max_dual_residual.relative_index;
+  double& max_relative_dual_residual_value =
+      primal_dual_errors.max_dual_residual.relative_value;
 
   double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
 
@@ -205,18 +218,14 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   // Without a primal solution, nothing can be done!
   if (!have_primal_solution) return;
-  std::vector<double> primal_activities;
-  std::vector<double> dual_activities;
   std::vector<double> primal_positive_sum;
   std::vector<double> primal_negative_sum;
   std::vector<double> dual_positive_sum;
   std::vector<double> dual_negative_sum;
   if (get_residuals) {
-    primal_activities.assign(lp.num_row_, 0);
     primal_positive_sum.assign(lp.num_row_, 0);
     primal_negative_sum.assign(lp.num_row_, 0);
     if (have_dual_solution) {
-      dual_activities.resize(lp.num_col_);
       dual_positive_sum.resize(lp.num_col_);
       dual_negative_sum.resize(lp.num_col_);
     }
@@ -263,18 +272,18 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     dual *= (HighsInt)lp.sense_;
     getVariableKktFailures(
         primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
-        value, dual, status_pointer, integrality,
-	absolute_primal_infeasibility,
-	relative_primal_infeasibility,
-        dual_infeasibility, value_residual);
+        value, dual, status_pointer, integrality, absolute_primal_infeasibility,
+        relative_primal_infeasibility, dual_infeasibility, value_residual);
     // Accumulate primal infeasiblilties
     if (absolute_primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibility++;
-    if (max_absolute_primal_infeasibility_value < absolute_primal_infeasibility) {
+    if (max_absolute_primal_infeasibility_value <
+        absolute_primal_infeasibility) {
       max_absolute_primal_infeasibility_index = iVar;
       max_absolute_primal_infeasibility_value = absolute_primal_infeasibility;
     }
-    if (max_relative_primal_infeasibility_value < relative_primal_infeasibility) {
+    if (max_relative_primal_infeasibility_value <
+        relative_primal_infeasibility) {
       max_relative_primal_infeasibility_index = iVar;
       max_relative_primal_infeasibility_value = relative_primal_infeasibility;
     }
@@ -285,9 +294,9 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       if (dual_infeasibility > dual_feasibility_tolerance)
         num_dual_infeasibility++;
       if (max_dual_infeasibility_value < dual_infeasibility) {
-	max_dual_infeasibility_value = dual_infeasibility;
-	max_dual_infeasibility_index = iVar;
-      }	
+        max_dual_infeasibility_value = dual_infeasibility;
+        max_dual_infeasibility_index = iVar;
+      }
       sum_dual_infeasibility += dual_infeasibility;
     }
     if (have_basis) {
@@ -313,105 +322,88 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
     if (iVar < lp.num_col_ && get_residuals) {
       HighsInt iCol = iVar;
-      double check_error;
       if (have_dual_solution) {
-	dual_activities[iCol] = gradient[iCol];
-	if (gradient[iCol] > 0) {
-	  dual_positive_sum[iCol] = gradient[iCol];
-	} else {
-	  dual_negative_sum[iCol] = -gradient[iCol];
-	}
-	check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - dual_activities[iCol]);
-	assert(check_error < 1e-8);
+        if (gradient[iCol] > 0) {
+          dual_positive_sum[iCol] = gradient[iCol];
+        } else {
+          dual_negative_sum[iCol] = -gradient[iCol];
+        }
       }
       for (HighsInt el = lp.a_matrix_.start_[iCol];
            el < lp.a_matrix_.start_[iCol + 1]; el++) {
         HighsInt iRow = lp.a_matrix_.index_[el];
         double Avalue = lp.a_matrix_.value_[el];
-	double term = value * Avalue;
-        primal_activities[iRow] += term;
-	if (term > 0) {
-	  primal_positive_sum[iRow] += term;
-	} else {
-	  primal_negative_sum[iRow] -= term;
-	}
-	check_error = std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow] - primal_activities[iRow]);
-	assert(check_error < 1e-8);
+        double term = value * Avalue;
+        if (term > 0) {
+          primal_positive_sum[iRow] += term;
+        } else {
+          primal_negative_sum[iRow] -= term;
+        }
         // @FlipRowDual += became -=
         if (have_dual_solution) {
-	  double term = -solution.row_dual[iRow] * Avalue;
-          dual_activities[iCol] += term;
-	  if (term > 0) {
-	    dual_positive_sum[iCol] += term;
-	  } else {
-	    dual_negative_sum[iCol] -= term; 
-	  }
-	  check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - dual_activities[iCol]);
-	  assert(check_error < 1e-8);
-	}
+          double term = -solution.row_dual[iRow] * Avalue;
+          if (term > 0) {
+            dual_positive_sum[iCol] += term;
+          } else {
+            dual_negative_sum[iCol] -= term;
+          }
+        }
       }
     }
   }
   if (get_residuals) {
     const double large_residual_error = 1e-12;
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      double check_error = std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow] - primal_activities[iRow]);
-      assert(check_error < 1e-8);
-
       double term = -solution.row_value[iRow];
       if (term > 0) {
-	primal_positive_sum[iRow] += term;
+        primal_positive_sum[iRow] += term;
       } else {
-	primal_negative_sum[iRow] -= term;
+        primal_negative_sum[iRow] -= term;
       }
       assert(primal_positive_sum[iRow] >= 0);
       assert(primal_negative_sum[iRow] >= 0);
-      check_error = std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow]);
-      assert(check_error < 1e-8);
       double absolute_primal_residual =
-          std::fabs(primal_activities[iRow] - solution.row_value[iRow]);
-      double relative_primal_residual = absolute_primal_residual /
-	(1+primal_positive_sum[iRow] + primal_negative_sum[iRow]);
+          std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow]);
+      double relative_primal_residual =
+          absolute_primal_residual /
+          (1 + primal_positive_sum[iRow] + primal_negative_sum[iRow]);
 
-      if (absolute_primal_residual > large_residual_error) num_primal_residual++;
+      if (absolute_primal_residual > large_residual_error)
+        num_primal_residual++;
       if (max_absolute_primal_residual_value < absolute_primal_residual) {
-	max_absolute_primal_residual_value = absolute_primal_residual;
-	max_absolute_primal_residual_index = iRow;
+        max_absolute_primal_residual_value = absolute_primal_residual;
+        max_absolute_primal_residual_index = iRow;
       }
       if (max_relative_primal_residual_value < relative_primal_residual) {
-	max_relative_primal_residual_value = relative_primal_residual;
-	max_relative_primal_residual_index = iRow;
+        max_relative_primal_residual_value = relative_primal_residual;
+        max_relative_primal_residual_index = iRow;
       }
       sum_primal_residual += absolute_primal_residual;
     }
     if (have_dual_solution) {
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-	double check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - solution.col_dual[iCol]);
-	assert(check_error < 1e-8);
-
-	double term = -solution.col_dual[iCol];
-	if (term > 0) {
-	  dual_positive_sum[iCol] += term;
-	} else {
-	  dual_negative_sum[iCol] -= term;
-	}
-	assert(dual_positive_sum[iCol] >= 0);
-	assert(dual_negative_sum[iCol] >= 0);
-	 check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol]);
-	assert(check_error < 1e-8);
+        double term = -solution.col_dual[iCol];
+        if (term > 0) {
+          dual_positive_sum[iCol] += term;
+        } else {
+          dual_negative_sum[iCol] -= term;
+        }
+        assert(dual_positive_sum[iCol] >= 0);
+        assert(dual_negative_sum[iCol] >= 0);
         double absolute_dual_residual =
-            std::fabs(dual_activities[iCol] - solution.col_dual[iCol]);
-	double relative_dual_residual = absolute_dual_residual /
-	(1+dual_positive_sum[iCol] + dual_negative_sum[iCol]);
+            std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol]);
+        double relative_dual_residual =
+            absolute_dual_residual /
+            (1 + dual_positive_sum[iCol] + dual_negative_sum[iCol]);
         if (absolute_dual_residual > large_residual_error) num_dual_residual++;
-	if (max_absolute_dual_residual_value < absolute_dual_residual) {
-	  max_absolute_dual_residual_value = absolute_dual_residual;
-	  max_absolute_dual_residual_index = iCol;
-	}
-	if (max_relative_dual_residual_value < relative_dual_residual) {
-	  max_relative_dual_residual_value = relative_dual_residual;
-	  max_relative_dual_residual_index = iCol;
-	}
+        if (max_absolute_dual_residual_value < absolute_dual_residual) {
+          max_absolute_dual_residual_value = absolute_dual_residual;
+          max_absolute_dual_residual_index = iCol;
+        }
+        if (max_relative_dual_residual_value < relative_dual_residual) {
+          max_relative_dual_residual_value = relative_dual_residual;
+          max_relative_dual_residual_index = iCol;
+        }
         sum_dual_residual += absolute_dual_residual;
       }
     }
@@ -432,18 +424,16 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   }
   // Assign the two entries in primal_dual_errors that are accumulated
   // in highs_info
-  primal_dual_errors.max_primal_infeasibility.absolute_value = highs_info.max_primal_infeasibility;;
-  primal_dual_errors.max_dual_infeasibility.absolute_value = highs_info.max_dual_infeasibility;
+  primal_dual_errors.max_primal_infeasibility.absolute_value =
+      highs_info.max_primal_infeasibility;
+  ;
+  primal_dual_errors.max_dual_infeasibility.absolute_value =
+      highs_info.max_dual_infeasibility;
   // Relative dual_infeasibility data is the same as absolute
   primal_dual_errors.max_dual_infeasibility.relative_value =
-    primal_dual_errors.max_dual_infeasibility.absolute_value;
+      primal_dual_errors.max_dual_infeasibility.absolute_value;
   primal_dual_errors.max_dual_infeasibility.relative_index =
-    primal_dual_errors.max_dual_infeasibility.absolute_index;
-  primal_dual_errors.max_primal_residual.print("Max primal residual");
-  primal_dual_errors.max_primal_infeasibility.print("Max primal infeasibility");
-  primal_dual_errors.max_dual_residual.print("Max dual residual");
-  primal_dual_errors.max_dual_infeasibility.print("Max dual infeasibility");
- 
+      primal_dual_errors.max_dual_infeasibility.absolute_index;
 }
 
 // Gets the KKT failures for a variable. The lack of a basis status is
@@ -462,9 +452,9 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsBasisStatus* status_pointer,
-			    const HighsVarType integrality,
+                            const HighsVarType integrality,
                             double& absolute_primal_infeasibility,
-			    double& relative_primal_infeasibility,
+                            double& relative_primal_infeasibility,
                             double& dual_infeasibility,
                             double& value_residual) {
   const double middle = (lower + upper) * 0.5;
@@ -474,11 +464,13 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
   if (value < lower - primal_feasibility_tolerance) {
     // Below lower
     absolute_primal_infeasibility = lower - value;
-    relative_primal_infeasibility = absolute_primal_infeasibility / (1+std::fabs(lower));
+    relative_primal_infeasibility =
+        absolute_primal_infeasibility / (1 + std::fabs(lower));
   } else if (value > upper + primal_feasibility_tolerance) {
     // Above upper
     absolute_primal_infeasibility = value - upper;
-    relative_primal_infeasibility = absolute_primal_infeasibility / (1+std::fabs(upper));
+    relative_primal_infeasibility =
+        absolute_primal_infeasibility / (1 + std::fabs(upper));
   }
   // Account for semi-variables
   if (absolute_primal_infeasibility > 0 &&
@@ -520,10 +512,11 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
 }
 
 void HighsError::print(std::string message) {
-  printf("\n%s\nAbsolute value = %11.4g; index = %9d\nRelative value = %11.4g; index = %9d\n",
-	 message.c_str(),
-	 this->absolute_value, (int)this->absolute_index,
-	 this->relative_value, (int)this->relative_index);
+  printf(
+      "\n%s\nAbsolute value = %11.4g; index = %9d\nRelative value = %11.4g; "
+      "index = %9d\n",
+      message.c_str(), this->absolute_value, (int)this->absolute_index,
+      this->relative_value, (int)this->relative_index);
 }
 
 void HighsError::reset() {

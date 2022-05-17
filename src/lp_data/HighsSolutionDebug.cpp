@@ -320,11 +320,13 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         primal_dual_errors.sum_off_bound_nonbasic);
   }
   if (primal_dual_errors.num_primal_residual >= 0) {
-    if (primal_dual_errors.max_primal_residual.absolute_value > excessive_residual_error) {
+    if (primal_dual_errors.max_primal_residual.absolute_value >
+        excessive_residual_error) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
       return_status = HighsDebugStatus::kError;
-    } else if (primal_dual_errors.max_primal_residual.absolute_value > large_residual_error) {
+    } else if (primal_dual_errors.max_primal_residual.absolute_value >
+               large_residual_error) {
       value_adjective = "Large";
       report_level = HighsLogType::kDetailed;
       return_status = HighsDebugStatus::kWarning;
@@ -344,11 +346,13 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         primal_dual_errors.sum_primal_residual);
   }
   if (primal_dual_errors.num_dual_residual >= 0) {
-    if (primal_dual_errors.max_dual_residual.absolute_value > excessive_residual_error) {
+    if (primal_dual_errors.max_dual_residual.absolute_value >
+        excessive_residual_error) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
       return_status = HighsDebugStatus::kError;
-    } else if (primal_dual_errors.max_dual_residual.absolute_value > large_residual_error) {
+    } else if (primal_dual_errors.max_dual_residual.absolute_value >
+               large_residual_error) {
       value_adjective = "Large";
       report_level = HighsLogType::kDetailed;
       return_status = HighsDebugStatus::kWarning;

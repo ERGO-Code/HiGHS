@@ -94,9 +94,8 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const HighsBasisStatus* status_pointer,
                             const HighsVarType integrality,
                             double& absolute_primal_infeasibility,
-			    double& relative_primal_infeasibility,
-                            double& dual_infeasibility,
-			    double& value_residual);
+                            double& relative_primal_infeasibility,
+                            double& dual_infeasibility, double& value_residual);
 
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
 
