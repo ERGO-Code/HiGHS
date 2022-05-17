@@ -848,31 +848,45 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      std::cout << 
-                        "ICrash error: unknown strategy." << std::endl;
+      std::cout << "ICrash error: unknown strategy." << std::endl;
       return HighsStatus::kError;
     }
     ICrashOptions icrash_options{
-        options_.icrash_dualize,
-        strategy,
-        options_.icrash_starting_weight,
-        options_.icrash_iterations,
-        options_.icrash_approx_iter,
-        options_.icrash_exact,
-        options_.icrash_breakpoints,
-        options_.log_options};
+        options_.icrash_dualize,         strategy,
+        options_.icrash_starting_weight, options_.icrash_iterations,
+        options_.icrash_approx_iter,     options_.icrash_exact,
+        options_.icrash_breakpoints,     options_.log_options};
 
-    HighsStatus icrash_status = callICrash(model_.lp_, icrash_options, icrash_info_);
+    HighsStatus icrash_status =
+        callICrash(model_.lp_, icrash_options, icrash_info_);
 
-    if (icrash_status != HighsStatus::kOk) return icrash_status;
+    if (icrash_status != HighsStatus::kOk) return returnFromRun(icrash_status);
 
     // for now set the solution_.col_value
     solution_.col_value = icrash_info_.x_values;
-    crossover(solution_);
-    // loops:
-    called_return_from_run = true;
+    // Better not to use Highs::crossover
+    const bool use_highs_crossover = false;
+    if (use_highs_crossover) {
+      crossover(solution_);
+      // loops:
+      called_return_from_run = true;
 
-    options_.icrash = false; // to avoid loop
+      options_.icrash = false;  // to avoid loop
+    } else {
+      HighsStatus crossover_status = callCrossover(
+          options_, model_.lp_, basis_, solution_, model_status_, info_);
+      // callCrossover can return HighsStatus::kWarning due to
+      // imprecise dual values. Ignore this since primal simplex will
+      // be called to clean up duals
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Crossover following iCrash has return status of %s, and "
+                   "problem status is %s\n",
+                   highsStatusToString(crossover_status).c_str(),
+                   modelStatusToString(model_status_).c_str());
+      if (crossover_status == HighsStatus::kError)
+        return returnFromRun(crossover_status);
+      assert(options_.simplex_strategy == kSimplexStrategyPrimal);
+    }
     // timer_.stopRunHighsClock();
     // run();
 

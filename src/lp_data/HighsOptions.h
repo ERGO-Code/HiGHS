@@ -642,51 +642,42 @@ class HighsOptions : public HighsOptionsStruct {
                             kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("icrash",
-				     "Run iCrash",
-				     advanced, &icrash,
-				     false);
+    record_bool =
+        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("icrash_dualize",
-				     "Dualise strategy for iCrash",
-				     advanced, &icrash_dualize,
-				     false);
+    record_bool =
+        new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
+                             advanced, &icrash_dualize, false);
     records.push_back(record_bool);
 
-    record_string = new OptionRecordString("icrash_strategy",
-				     "Strategy for iCrash",
-				     advanced, &icrash_strategy, "ICA");
+    record_string =
+        new OptionRecordString("icrash_strategy", "Strategy for iCrash",
+                               advanced, &icrash_strategy, "ICA");
     records.push_back(record_string);
 
-    record_double = new OptionRecordDouble("icrash_starting_weight",
-				     "iCrash starting weight",
-				     advanced, &icrash_starting_weight,
-				     1e-10, 1e-3, 1e50);
+    record_double = new OptionRecordDouble(
+        "icrash_starting_weight", "iCrash starting weight", advanced,
+        &icrash_starting_weight, 1e-10, 1e-3, 1e50);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt("icrash_iterations",
-				     "iCrash iterations",
-				     advanced, &icrash_iterations,
-				     0, 30, 200);
+    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
+                                     advanced, &icrash_iterations, 0, 30, 200);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("icrash_approx_iter",
-				     "iCrash approximate minimization iterations",
-				     advanced, &icrash_approx_iter,
-				     0, 50, 100);
+    record_int = new OptionRecordInt(
+        "icrash_approx_iter", "iCrash approximate minimization iterations",
+        advanced, &icrash_approx_iter, 0, 50, 100);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("icrash_exact",
-				     "Exact subproblem solution for iCrash",
-				     advanced, &icrash_exact,
-				     false);
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_exact, false);
     records.push_back(record_bool);
-    
+
     record_bool = new OptionRecordBool("icrash_breakpoints",
-				     "Exact subproblem solution for iCrash",
-				     advanced, &icrash_breakpoints,
-				     false);
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_breakpoints, false);
 
     record_string = new OptionRecordString(
         kWriteModelFileString, "Write model file", advanced, &write_model_file,

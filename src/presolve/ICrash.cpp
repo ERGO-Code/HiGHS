@@ -264,7 +264,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
       double delta_x = new_value - old_value;
       if (minor_iteration_details) {
         double quadratic_objective = getQuadraticObjective(idata);
-                printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
+        printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
                                    delta_x, objective_ica, residual_ica,
                                    quadratic_objective);
       }
@@ -301,8 +301,8 @@ void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
         continue;
 
       double old_value = idata.xk.col_value[col];
-      minimizeComponentQP(col, idata.mu, idata.lp, objective,
-                          residual, idata.xk);
+      minimizeComponentQP(col, idata.mu, idata.lp, objective, residual,
+                          idata.xk);
 
       double new_value = idata.xk.col_value[col];
       double delta_x = new_value - old_value;
@@ -313,7 +313,6 @@ void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
                                    quadratic_objective);
       }
     }
-
   }
 }
 
@@ -441,7 +440,8 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
       // std::cout << "Solution feasible within exit tolerance: " <<
       // kExitTolerance << std::endl;
       highsLogUser(options.log_options, HighsLogType::kInfo,
-                   "Solution feasible within exit tolerance: %g\n", kExitTolerance);
+                   "Solution feasible within exit tolerance: %g\n",
+                   kExitTolerance);
       iteration++;
       break;
     }
@@ -468,7 +468,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   // << "sec." << std::endl;
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "\nICrash finished successfully after: %.3g sec.\n",
-                   result.total_time);
+               result.total_time);
 
   return HighsStatus::kOk;
 }

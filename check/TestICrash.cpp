@@ -13,16 +13,17 @@ TEST_CASE("icrash-qap04", "[highs_presolve]") {
 
   Highs highs;
   HighsStatus highs_status = highs.readModel(filename);
-  REQUIRE(highs_status==HighsStatus::kOk);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   HighsOptions options;
 
   options.icrash = true;
   options.icrash_starting_weight = 10;
   options.icrash_approx_iter = 100;
+  options.simplex_strategy = kSimplexStrategyPrimal;
 
   highs_status = highs.passHighsOptions(options);
-  REQUIRE(highs_status==HighsStatus::kOk);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
