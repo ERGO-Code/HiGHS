@@ -31,8 +31,7 @@ jobs:
       - name: my-artifact 
         uses: actions/upload-artifact@v3.0.0
         with:
-          name: highs
-          path: ${{ github.workspace }}/HiGHS.zip
+          path: ${{ github.workspace }}/ternsai.zip
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
