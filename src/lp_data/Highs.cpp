@@ -862,7 +862,6 @@ HighsStatus Highs::run() {
         options_.icrash_breakpoints,
         options_.log_options};
 
-    // todo: timing. some strange compile issue.
     HighsStatus icrash_status = callICrash(model_.lp_, icrash_options, icrash_info_);
 
     if (icrash_status != HighsStatus::kOk) return icrash_status;
@@ -874,11 +873,11 @@ HighsStatus Highs::run() {
     called_return_from_run = true;
 
     options_.icrash = false; // to avoid loop
-    timer_.stopRunHighsClock();
-    run();
+    // timer_.stopRunHighsClock();
+    // run();
 
     // todo: add "dual" values
-    return HighsStatus::kOk;
+    // return HighsStatus::kOk;
   }
 
   if (!basis_.valid && solution_.value_valid) {
