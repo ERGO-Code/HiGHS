@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: eu-west-1
-  ECR_REPOSITORY: be-blue
+  ECR_REPOSITORY: highs
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
