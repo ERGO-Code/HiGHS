@@ -26,12 +26,12 @@ jobs:
       - name: Zip Release
         uses: TheDoctor0/zip-release@0.6.2
         with:
-          filename: ternsai.zip
+          filename: HiGHS.zip
           
       - name: my-artifact 
         uses: actions/upload-artifact@v3.0.0
         with:
-          path: ${{ github.workspace }}/ternsai.zip
+          path: ${{ github.workspace }}/HiGHS.zip
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
