@@ -50,6 +50,7 @@ class HighsLp {
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
+  HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
@@ -67,6 +68,7 @@ class HighsLp {
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp lp);
   void exactResize();
+  void unapplyMods();
   void clear();
 };
 

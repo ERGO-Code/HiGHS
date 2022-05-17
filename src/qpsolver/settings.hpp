@@ -1,16 +1,31 @@
 #ifndef __SRC_LIB_SETTINGS_HPP__
 #define __SRC_LIB_SETTINGS_HPP__
 
-#include "ratiotest.hpp"
+enum class RatiotestStrategy { TwoPass, Textbook };
+
+enum class PricingStrategy { DantzigWolfe, Devex };
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
+enum class Phase1Strategy { HIGHS, QUASS };
+
 struct Settings {
-  bool simplexsteps = false;
-  Ratiotest* ratiotest;
+  RatiotestStrategy ratiotest = RatiotestStrategy::TwoPass;
+  double ratiotest_t = 1E-9;
+  double ratiotest_d = 1E-8;
+
+  PricingStrategy pricing = PricingStrategy::Devex;
+
   double pnorm_zero_threshold = 10E-12;
   double d_zero_threshold = 10E-13;
   double lambda_zero_threshold = 10E-10;
+
+  double semidefiniteregularization = 1E-7;
+
+  Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
+  bool phase1movefreevarsbasic = false;
+  bool phase1boundfreevars = false;
+
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 100;
 
@@ -27,7 +42,7 @@ struct Settings {
   bool rowscaling = true;
   bool varscaling = true;
 
-  // TODO output settings
+  bool perturbation = false;
 };
 
 #endif

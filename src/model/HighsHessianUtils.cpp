@@ -24,8 +24,7 @@
 
 using std::fabs;
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
-                          const ObjSense sense) {
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
@@ -88,13 +87,10 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
 
   HighsInt hessian_num_nz = hessian.numNz();
   // If the Hessian has nonzeros, complete its diagonal with explicit
-  // zeros if necessary, and then check its diagonal entries in the
-  // context of the objective sense. It's OK to be semi-definite
+  // zeros if necessary
   if (hessian_num_nz) {
     completeHessianDiagonal(options, hessian);
     hessian_num_nz = hessian.numNz();
-    if (!okHessianDiagonal(options, hessian, sense))
-      return_status = HighsStatus::kError;
   }
   // If entries have been removed from the matrix, resize the index
   // and value vectors
@@ -201,17 +197,17 @@ bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
       num_illegal_diagonal_value > 0;
   if (certainly_not_positive_semidefinite) {
     if (sense == ObjSense::kMinimize) {
-      highsLogUser(
-          options.log_options, HighsLogType::kError,
-          "Hessian has %" HIGHSINT_FORMAT
-          " diagonal entries in [%g, 0) so is not positive semidefinite\n",
-          num_illegal_diagonal_value, min_diagonal_value);
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Hessian has %" HIGHSINT_FORMAT
+                   " diagonal entries in [%g, 0) so is not positive "
+                   "semidefinite for minimization\n",
+                   num_illegal_diagonal_value, min_diagonal_value);
     } else {
-      highsLogUser(
-          options.log_options, HighsLogType::kError,
-          "Hessian has %" HIGHSINT_FORMAT
-          " diagonal entries in (0, %g] so is not negative semidefinite\n",
-          num_illegal_diagonal_value, -min_diagonal_value);
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Hessian has %" HIGHSINT_FORMAT
+                   " diagonal entries in (0, %g] so is not negative "
+                   "semidefinite for maximization\n",
+                   num_illegal_diagonal_value, -min_diagonal_value);
     }
   }
   return !certainly_not_positive_semidefinite;
@@ -246,14 +242,17 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
   }
   const HighsInt num_ignored_nz = hessian.start_[dim] - nnz;
   assert(num_ignored_nz >= 0);
-  if (hessian.format_ == HessianFormat::kTriangular && num_ignored_nz) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Ignored %" HIGHSINT_FORMAT
-                 " entries of Hessian in opposite triangle\n",
-                 num_ignored_nz);
+  if (num_ignored_nz) {
+    if (hessian.format_ == HessianFormat::kTriangular) {
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Ignored %" HIGHSINT_FORMAT
+                   " entries of Hessian in opposite triangle\n",
+                   num_ignored_nz);
+      return_status = HighsStatus::kWarning;
+    }
     hessian.start_[dim] = nnz;
-    return_status = HighsStatus::kWarning;
   }
+  assert(hessian.start_[dim] == nnz);
   hessian.format_ = HessianFormat::kTriangular;
   return return_status;
 }
@@ -317,6 +316,8 @@ void triangularToSquareHessian(const HighsHessian& hessian,
 
 HighsStatus normaliseHessian(const HighsOptions& options,
                              HighsHessian& hessian) {
+  // Only relevant for a Hessian with format HessianFormat::kSquare
+  assert(hessian.format_ == HessianFormat::kSquare);
   // Normalise the Hessian to be (Q + Q^T)/2, where Q is the matrix
   // supplied. This guarantees that what's used internally is
   // symmetric.
@@ -357,8 +358,9 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   transpose.start_[0] = 0;
   for (HighsInt iRow = 0; iRow < dim; iRow++)
     transpose.start_[iRow + 1] = transpose.start_[iRow] + qr_length[iRow];
-
+  // Instantiate a square format Hessian in which to accumulate (Q + Q^T)/2
   HighsHessian normalised;
+  normalised.format_ = HessianFormat::kSquare;
   HighsInt normalised_num_nz = 0;
   HighsInt normalised_size = hessian_num_nz;
   normalised.dim_ = dim;
@@ -369,6 +371,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   vector<HighsInt> column_index;
   column_index.resize(dim);
   column_value.assign(dim, 0.0);
+  const bool check_column_value_zero = false;
   const double small_matrix_value = 0;
   HighsInt num_small_values = 0;
   double max_small_value = 0;
@@ -444,7 +447,10 @@ HighsStatus normaliseHessian(const HighsOptions& options,
         column_value[iRow] = 0;
       }
     }
-    for (HighsInt iRow = 0; iRow < dim; iRow++) assert(column_value[iRow] == 0);
+    if (check_column_value_zero) {
+      for (HighsInt iRow = 0; iRow < dim; iRow++)
+        assert(column_value[iRow] == 0);
+    }
     normalised.start_[iCol + 1] = normalised_num_nz;
   }
   if (num_small_values) {
@@ -458,6 +464,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
   }
   // Replace the Hessian by the normalised form
   hessian = normalised;
+  assert(hessian.format_ == HessianFormat::kSquare);
   if (warning_found)
     return_status = HighsStatus::kWarning;
   else

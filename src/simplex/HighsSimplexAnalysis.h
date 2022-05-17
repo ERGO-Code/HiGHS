@@ -165,7 +165,7 @@ class HighsSimplexAnalysis {
 
   // Local copies of simplex data for reporting
   HighsInt simplex_strategy = 0;
-  DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
+  EdgeWeightMode edge_weight_mode = EdgeWeightMode::kSteepestEdge;
   HighsInt solve_phase = 0;
   HighsInt simplex_iteration_count = 0;
   HighsInt devex_iteration_count = 0;
@@ -177,6 +177,7 @@ class HighsSimplexAnalysis {
   double reduced_rhs_value = 0;
   double reduced_cost_value = 0;
   double edge_weight = 0;
+  double edge_weight_error = 0;
   double primal_delta = 0;
   double primal_step = 0;
   double dual_step = 0;
@@ -199,6 +200,7 @@ class HighsSimplexAnalysis {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_steepest_edge_density;
   double col_basic_feasibility_change_density;
   double row_basic_feasibility_change_density;
   double col_BFRT_density;
@@ -240,7 +242,9 @@ class HighsSimplexAnalysis {
 
   HighsInt num_quad_chuzc = 0;
   HighsInt num_heap_chuzc = 0;
+  double sum_quad_chuzc_size = 0;
   double sum_heap_chuzc_size = 0;
+  HighsInt max_quad_chuzc_size = 0;
   HighsInt max_heap_chuzc_size = 0;
 
   HighsInt num_improve_choose_column_row_call = 0;
@@ -351,7 +355,8 @@ class HighsSimplexAnalysis {
     double AnIterTraceDensity[kNumSimplexNlaOperation];
     double AnIterTraceCostlyDse;
     HighsInt AnIterTraceIter;
-    HighsInt AnIterTrace_dual_edge_weight_mode;
+    HighsInt AnIterTrace_simplex_strategy;
+    HighsInt AnIterTrace_edge_weight_mode;
   };
 
   HighsInt AnIterTraceNumRec;
@@ -359,13 +364,14 @@ class HighsSimplexAnalysis {
   AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];
 
   HighsInt AnIterNumInvert[kRebuildReasonCount];
-  HighsInt AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kCount];
+  HighsInt AnIterNumEdWtIt[(HighsInt)EdgeWeightMode::kCount];
 
   HighsValueDistribution primal_step_distribution;
   HighsValueDistribution dual_step_distribution;
   HighsValueDistribution simplex_pivot_distribution;
   HighsValueDistribution numerical_trouble_distribution;
   HighsValueDistribution factor_pivot_threshold_distribution;
+  HighsValueDistribution edge_weight_error_distribution;
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXANALYSIS_H_ */

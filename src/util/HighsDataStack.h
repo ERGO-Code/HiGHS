@@ -71,10 +71,18 @@ class HighsDataStack {
     std::size_t numData;
     std::memcpy(&numData, &data[position], sizeof(std::size_t));
     // pop the data
-    position -= numData * sizeof(T);
-    r.resize(numData);
-    std::memcpy(r.data(), data.data() + position, numData * sizeof(T));
+    if (numData == 0) {
+      r.clear();
+    } else {
+      r.resize(numData);
+      position -= numData * sizeof(T);
+      std::memcpy(r.data(), data.data() + position, numData * sizeof(T));
+    }
   }
+
+  void setPosition(HighsInt position) { this->position = position; }
+
+  HighsInt getCurrentDataSize() const { return data.size(); }
 };
 
 #endif

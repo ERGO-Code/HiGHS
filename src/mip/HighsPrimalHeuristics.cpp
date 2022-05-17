@@ -710,12 +710,13 @@ retry:
 
     double change = 0.0;
     // select a set of fractional variables to fix
-    for (auto fracint : heurlp.getFractionalIntegers()) {
-      double fixval = getFixVal(fracint.first, fracint.second);
+    for (auto fracint = heurlp.getFractionalIntegers().begin();
+         fracint != fixcandend; ++fracint) {
+      double fixval = getFixVal(fracint->first, fracint->second);
 
-      if (localdom.col_lower_[fracint.first] < fixval) {
+      if (localdom.col_lower_[fracint->first] < fixval) {
         ++numBranched;
-        heur.branchUpwards(fracint.first, fixval, fracint.second);
+        heur.branchUpwards(fracint->first, fixval, fracint->second);
         if (localdom.infeasible()) {
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           break;
@@ -724,9 +725,9 @@ retry:
         fixingrate = neighborhood.getFixingRate();
       }
 
-      if (localdom.col_upper_[fracint.first] > fixval) {
+      if (localdom.col_upper_[fracint->first] > fixval) {
         ++numBranched;
-        heur.branchDownwards(fracint.first, fixval, fracint.second);
+        heur.branchDownwards(fracint->first, fixval, fracint->second);
         if (localdom.infeasible()) {
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           break;
@@ -737,7 +738,7 @@ retry:
 
       if (fixingrate >= maxfixingrate) break;
 
-      change += std::abs(fixval - fracint.second);
+      change += std::abs(fixval - fracint->second);
       if (change >= 0.5) break;
     }
 
@@ -1035,8 +1036,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
     }
 
     bool havecycle = !referencepoints.emplace(referencepoint).second;
-
-    while (havecycle) {
+    for (HighsInt k = 0; havecycle && k < 2; ++k) {
       for (HighsInt i = 0; i != 10; ++i) {
         HighsInt flippos =
             randgen.integer(mipsolver.mipdata_->integer_cols.size());
@@ -1054,6 +1054,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
       }
       havecycle = !referencepoints.emplace(referencepoint).second;
     }
+
+    if (havecycle) return;
 
     if (linesearchRounding(lpsol, roundedsol, 'F')) return;
 
@@ -1089,78 +1091,18 @@ void HighsPrimalHeuristics::feasibilityPump() {
 }
 
 void HighsPrimalHeuristics::centralRounding() {
-  Highs ipm;
-  ipm.setOptionValue("solver", "ipm");
-  ipm.setOptionValue("run_crossover", false);
-  ipm.setOptionValue("presolve", "off");
-  ipm.setOptionValue("output_flag", false);
-  ipm.setOptionValue("ipm_iteration_limit", 200);
-  HighsLp lpmodel(
-      *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
-  // lpmodel.col_lower_ = mipsolver.mipdata_->domain.col_lower_;
-  // lpmodel.col_upper_ = mipsolver.mipdata_->domain.col_upper_;
-  lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
-  ipm.passModel(std::move(lpmodel));
-
-  if (false && mipsolver.mipdata_->upper_limit != kHighsInf) {
-    std::vector<HighsInt> objinds;
-    std::vector<double> objval;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.colCost(i) != 0) {
-        objinds.push_back(i);
-        objval.push_back(mipsolver.colCost(i));
-      }
-    }
-
-    ipm.addRow(-kHighsInf, mipsolver.mipdata_->upper_limit, objinds.size(),
-               objinds.data(), objval.data());
-  }
-  ipm.run();
-  const std::vector<double>& sol = ipm.getSolution().col_value;
-  if (int(sol.size()) != mipsolver.numCol()) return;
-  if (ipm.getModelStatus() == HighsModelStatus::kOptimal) {
-    HighsInt nfixed = 0;
-    HighsInt nintfixed = 0;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      double boundRange = mipsolver.mipdata_->domain.col_upper_[i] -
-                          mipsolver.mipdata_->domain.col_lower_[i];
-      if (boundRange == 0.0) continue;
-
-      double tolerance =
-          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
-
-      if (sol[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kUpper, i, mipsolver.model_->col_lower_[i],
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-        ++nfixed;
-        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
-      } else if (sol[i] >= mipsolver.model_->col_upper_[i] - tolerance) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kLower, i, mipsolver.model_->col_upper_[i],
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-        ++nfixed;
-        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
-      }
-    }
-    if (nfixed > 0)
-      highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                  "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
-                  " integers) sitting at bound at "
-                  "analytic center\n",
-                  nfixed, nintfixed);
-    mipsolver.mipdata_->domain.propagate();
-    if (mipsolver.mipdata_->domain.infeasible()) return;
-  }
+  if (HighsInt(mipsolver.mipdata_->analyticCenter.size()) != mipsolver.numCol())
+    return;
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
-    linesearchRounding(mipsolver.mipdata_->firstlpsol, sol, 'C');
+    linesearchRounding(mipsolver.mipdata_->firstlpsol,
+                       mipsolver.mipdata_->analyticCenter, 'C');
   else if (!mipsolver.mipdata_->rootlpsol.empty())
-    linesearchRounding(mipsolver.mipdata_->rootlpsol, sol, 'C');
+    linesearchRounding(mipsolver.mipdata_->rootlpsol,
+                       mipsolver.mipdata_->analyticCenter, 'C');
   else
-    linesearchRounding(sol, sol, 'C');
+    linesearchRounding(mipsolver.mipdata_->analyticCenter,
+                       mipsolver.mipdata_->analyticCenter, 'C');
 }
 
 #if 0

@@ -35,6 +35,7 @@ struct HighsRanging {
   HighsRangingRecord col_bound_dn;
   HighsRangingRecord row_bound_up;
   HighsRangingRecord row_bound_dn;
+  void invalidate();
   void clear();
 };
 

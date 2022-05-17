@@ -13,11 +13,14 @@ enum class ProblemStatus {
   UNBOUNDED,
   INFEASIBLE,
   ITERATIONLIMIT,
-  TIMELIMIT
+  TIMELIMIT,
+  ERROR
 };
 
 struct Runtime {
   Instance instance;
+  Instance scaled;
+  Instance perturbed;
   Settings settings;
   Statistics statistics;
 

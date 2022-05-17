@@ -33,7 +33,6 @@ const std::string kHighsOnString = "on";
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
 
-const HighsInt kHighsPrereleaseRowDualSign = -1;
 const bool kExtendInvertWhenAddingRows = false;
 
 enum SimplexScaleStrategy {
@@ -122,10 +121,13 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
-const HighsInt kSolutionStyleRaw = 0;
-const HighsInt kSolutionStylePretty = 1;
-const HighsInt kSolutionStyleMin = kSolutionStyleRaw;
-const HighsInt kSolutionStyleMax = kSolutionStylePretty;
+enum SolutionStyle {
+  kSolutionStyleRaw = 0,
+  kSolutionStylePretty,  // 1;
+  kSolutionStyleOldRaw,  // 2;
+  kSolutionStyleMin = kSolutionStyleRaw,
+  kSolutionStyleMax = kSolutionStyleOldRaw
+};
 
 const std::string kHighsFilenameDefault = "";
 
@@ -169,7 +171,7 @@ enum class HighsModelStatus {
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
-enum class HighsBasisStatus {
+enum class HighsBasisStatus : uint8_t {
   kLower =
       0,   // (slack) variable is at its lower bound [including fixed variables]
   kBasic,  // (slack) variable is basic
@@ -179,10 +181,17 @@ enum class HighsBasisStatus {
              // and postsolve
 };
 
+// Default and max allowed power-of-two matrix scale factor
+const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
+const HighsInt kMaxAllowedMatrixPow2Scale = 30;
+
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
 const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
+
+// Maximum upper bound on semi-variables
+const double kMaxSemiVariableUpper = 1e5;
 
 // Termination link in linked lists
 const HighsInt kNoLink = -1;

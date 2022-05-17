@@ -168,3 +168,9 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return HighsStatus::kOk;
 }
 #endif
+
+const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
+  deprecationMessage("getModelStatus(const bool scaled_model)",
+                     "getModelStatus()");
+  return model_status_;
+}

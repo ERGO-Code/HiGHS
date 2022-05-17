@@ -35,6 +35,7 @@ class HighsMipSolver {
   double row_violation_;
   double dual_bound_;
   double primal_bound_;
+  double gap_;
   int64_t node_count_;
 
   bool submip;
@@ -64,8 +65,6 @@ class HighsMipSolver {
   const double* rowUpper() const { return model_->row_upper_.data(); }
 
   double rowUpper(HighsInt col) const { return model_->row_upper_[col]; }
-
-  bool isSolutionFeasible(const std::vector<double>& solution) const;
 
   const HighsVarType* variableType() const {
     return model_->integrality_.data();

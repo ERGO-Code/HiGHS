@@ -50,6 +50,15 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
+  // Load an LP file that does not end with a newline
+  model = "no-newline-eof";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  return_status = highs.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+
   // Load an existing MPS file and run HiGHS
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -156,7 +165,11 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
 
-  REQUIRE(mps_objective_function_value == info.objective_function_value);
+  double delta =
+      std::fabs(mps_objective_function_value - info.objective_function_value);
+  if (dev_run && delta)
+    printf("TestFilereader: LP-MPS |objective difference| of %g\n", delta);
+  REQUIRE(delta < 1e-8);
 
   std::remove(filename_lp.c_str());
 }

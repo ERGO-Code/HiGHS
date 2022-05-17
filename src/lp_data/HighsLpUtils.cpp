@@ -100,10 +100,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
     lp.a_matrix_.value_.resize(lp_num_nz);
 
-  if (return_status == HighsStatus::kError)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
+  //  if (return_status == HighsStatus::kError)
+  //    return_status = HighsStatus::kError;
+  //  else
+  //    return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
@@ -470,13 +470,20 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 }
 
 HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
-  const double kMaxSemiVariableUpper = 1e6;
   HighsStatus return_status = HighsStatus::kOk;
   if (!lp.integrality_.size()) return return_status;
   assert(lp.integrality_.size() == lp.num_col_);
+  HighsInt num_illegal_lower = 0;
   HighsInt num_illegal_upper = 0;
+  HighsInt num_modified_upper = 0;
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
+  const double kLowerBoundMu = 10.0;
+  std::vector<HighsInt>& upper_bound_index =
+      lp.mods_.save_semi_variable_upper_bound_index;
+  std::vector<double>& upper_bound_value =
+      lp.mods_.save_semi_variable_upper_bound_value;
+
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -493,18 +500,26 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
         }
         continue;
       }
-      // Semi-variables must have upper bound that's not too large
-      if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) num_illegal_upper++;
+      if (lp.col_lower_[iCol] < 0) {
+        // Semi-variables must have a positive lower bound
+        num_illegal_lower++;
+      } else if (lp.col_upper_[iCol] > kMaxSemiVariableUpper) {
+        // Semi-variables must have upper bound that's not too large,
+        // so see whether the limiting value is sufficiently larger than the
+        // lower bound
+        if (kLowerBoundMu * lp.col_lower_[iCol] > kMaxSemiVariableUpper) {
+          num_illegal_upper++;
+        } else {
+          // Record the upper bound change
+          upper_bound_index.push_back(iCol);
+          upper_bound_value.push_back(kMaxSemiVariableUpper);
+          num_modified_upper++;
+        }
+      }
       num_non_continuous_variables++;
     } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
       num_non_continuous_variables++;
     }
-  }
-  if (!num_non_continuous_variables) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "No semi-integer/integer variables in model with non-empty "
-                 "integrality\n");
-    return_status = HighsStatus::kWarning;
   }
   if (num_non_semi) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -514,15 +529,89 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
                  num_non_semi);
     return_status = HighsStatus::kWarning;
   }
-  if (num_illegal_upper) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+  if (!num_non_continuous_variables) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-integer/integer variables in model with non-empty "
+                 "integrality\n");
+    return_status = HighsStatus::kWarning;
+  }
+  const bool has_illegal_bounds = num_illegal_lower || num_illegal_upper;
+  if (num_modified_upper) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
                  " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %12g\n",
-                 num_illegal_upper, kMaxSemiVariableUpper);
+                 "exceeding %g that can be modified to %g > %g*lower)\n",
+                 num_modified_upper, kMaxSemiVariableUpper,
+                 kMaxSemiVariableUpper, kLowerBoundMu);
+    return_status = HighsStatus::kWarning;
+    if (has_illegal_bounds) {
+      // Don't apply upper bound modifications if there are illegal bounds
+      assert(num_illegal_lower || num_illegal_upper);
+      upper_bound_index.clear();
+      upper_bound_value.clear();
+    } else {
+      // Apply the upper bound modifications, saving the over-written
+      // values
+      for (HighsInt k = 0; k < num_modified_upper; k++) {
+        const double use_upper_bound = upper_bound_value[k];
+        const HighsInt iCol = upper_bound_index[k];
+        upper_bound_value[k] = lp.col_upper_[iCol];
+        lp.col_upper_[iCol] = use_upper_bound;
+      }
+    }
+  }
+  if (num_illegal_lower) {
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "%" HIGHSINT_FORMAT
+        " semi-continuous/integer variable(s) have negative lower bounds\n",
+        num_illegal_lower);
+    return_status = HighsStatus::kError;
+  }
+  if (num_illegal_upper) {
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "%" HIGHSINT_FORMAT
+        " semi-continuous/integer variables have upper bounds "
+        "exceeding %g that cannot be modified due to large lower bounds\n",
+        num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
   }
   return return_status;
+}
+
+bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
+                               const std::vector<double> col_value) {
+  const std::vector<HighsInt>& upper_bound_index =
+      lp.mods_.save_semi_variable_upper_bound_index;
+  const HighsInt num_modified_upper = upper_bound_index.size();
+  HighsInt num_active_modified_upper = 0;
+  double min_semi_variable_margin = kHighsInf;
+  for (HighsInt k = 0; k < num_modified_upper; k++) {
+    const double value = col_value[upper_bound_index[k]];
+    const double upper = lp.col_upper_[upper_bound_index[k]];
+    double semi_variable_margin = upper - value;
+    if (value > upper - options.primal_feasibility_tolerance) {
+      min_semi_variable_margin = 0;
+      num_active_modified_upper++;
+    } else {
+      min_semi_variable_margin =
+          std::min(semi_variable_margin, min_semi_variable_margin);
+    }
+  }
+  if (num_active_modified_upper) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "%" HIGHSINT_FORMAT
+                 " semi-variables are active at modified upper bounds\n",
+                 num_active_modified_upper);
+  } else if (num_modified_upper) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "No semi-variables are active at modified upper bounds:"
+                 " a large minimum margin (%g) suggests optimality,"
+                 " but there is no guarantee\n",
+                 min_semi_variable_margin);
+  }
+  return num_active_modified_upper;
 }
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
@@ -1870,6 +1959,7 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
+  const double double_tolerance = 1e-13;
   if (style == kSolutionStylePretty) {
     const HighsVarType* integrality_ptr =
         lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
@@ -1881,6 +1971,13 @@ void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
                             have_basis, basis.row_status);
+    fprintf(file, "\nModel status: %s\n",
+            utilModelStatusToString(model_status).c_str());
+    std::array<char, 32> objStr = highsDoubleToString(
+        (double)info.objective_function_value, double_tolerance);
+    fprintf(file, "\nObjective value: %s\n", objStr.data());
+  } else if (style == kSolutionStyleOldRaw) {
+    writeOldRawSolution(file, lp, basis, solution);
   } else {
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
@@ -2198,8 +2295,8 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
 }
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
-  assert(solution.row_dual.size() > 0);
-  if (!isSolutionRightSize(lp, solution)) return HighsStatus::kError;
+  //  assert(solution.row_dual.size() > 0);
+  if (int(solution.row_dual.size()) < lp.num_row_) return HighsStatus::kError;
 
   solution.col_dual.assign(lp.num_col_, 0);
 
@@ -2220,7 +2317,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   // assert(solution.col_value.size() > 0);
-  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+  if (int(solution.col_value.size()) < lp.num_col_) return HighsStatus::kError;
 
   solution.row_value.clear();
   solution.row_value.assign(lp.num_row_, 0);
@@ -2236,6 +2333,34 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
           solution.col_value[col] * lp.a_matrix_.value_[i];
     }
   }
+
+  return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
+  // assert(solution.col_value.size() > 0);
+  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+
+  std::vector<HighsCDouble> row_value;
+  row_value.assign(lp.num_row_, HighsCDouble{0.0});
+
+  solution.row_value.assign(lp.num_row_, 0);
+
+  for (HighsInt col = 0; col < lp.num_col_; col++) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i < lp.a_matrix_.start_[col + 1]; i++) {
+      const HighsInt row = lp.a_matrix_.index_[i];
+      assert(row >= 0);
+      assert(row < lp.num_row_);
+
+      row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+    }
+  }
+
+  // assign quad values to double vector
+  solution.row_value.resize(lp.num_row_);
+  std::transform(row_value.begin(), row_value.end(), solution.row_value.begin(),
+                 [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
 }
@@ -2508,6 +2633,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   lp.num_col_ += num_semi_variables;
   lp.num_row_ += 2 * num_semi_variables;
   assert(index.size() == new_num_nz);
+  // Clear any modifications inherited from lp_
+  lp.mods_.clear();
   return lp;
 }
 
@@ -2614,4 +2741,69 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
                "Removed %d rows of count 1\n", (int)num_row_count_1);
+}
+
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution) {
+  const bool have_value = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  vector<double> use_col_value;
+  vector<double> use_row_value;
+  vector<double> use_col_dual;
+  vector<double> use_row_dual;
+  vector<HighsBasisStatus> use_col_status;
+  vector<HighsBasisStatus> use_row_status;
+  if (have_value) {
+    use_col_value = solution.col_value;
+    use_row_value = solution.row_value;
+  }
+  if (have_dual) {
+    use_col_dual = solution.col_dual;
+    use_row_dual = solution.row_dual;
+  }
+  if (have_basis) {
+    use_col_status = basis.col_status;
+    use_row_status = basis.row_status;
+  }
+  if (!have_value && !have_dual && !have_basis) return;
+  fprintf(file,
+          "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
+          " : Number of columns and rows for primal or dual solution "
+          "or basis\n",
+          lp.num_col_, lp.num_row_);
+  if (have_value) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Primal solution\n");
+  if (have_dual) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Dual solution\n");
+  if (have_basis) {
+    fprintf(file, "T");
+  } else {
+    fprintf(file, "F");
+  }
+  fprintf(file, " Basis\n");
+  fprintf(file, "Columns\n");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
+    if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
+    fprintf(file, "\n");
+  }
+  fprintf(file, "Rows\n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
+    if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
+    if (have_basis)
+      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
+    fprintf(file, "\n");
+  }
 }

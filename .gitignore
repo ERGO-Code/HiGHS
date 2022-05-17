@@ -243,6 +243,8 @@ pip-log.txt
 #SCIP interface
 lpi_highs.cpp
 
+highspy/highs_bindings.cpython-38-x86_64-linux-gnu.so
+
 # Model written with HiGHSDEV=on
 HighsRunModel.mps
 

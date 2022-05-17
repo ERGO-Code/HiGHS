@@ -28,8 +28,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
 void Basis::build() {
   updatessinceinvert = 0;
 
-  baseindex =
-      new HighsInt[activeconstraintidx.size() + nonactiveconstraintsidx.size()];
+  baseindex.resize(activeconstraintidx.size() + nonactiveconstraintsidx.size());
   constraintindexinbasisfactor.clear();
 
   basisfactor = HFactor();
@@ -58,7 +57,7 @@ void Basis::build() {
   }
   basisfactor.setup(Atran.num_col, Atran.num_row, (HighsInt*)&Atran.start[0],
                     (HighsInt*)&Atran.index[0], (const double*)&Atran.value[0],
-                    baseindex);
+                    (HighsInt*)&baseindex[0]);
   basisfactor.build();
 
   for (size_t i = 0;
@@ -105,8 +104,8 @@ void Basis::deactivate(HighsInt conid) {
   nonactiveconstraintsidx.push_back(conid);
 }
 
-void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
-                     HighsInt nonactivetoremove, Pricing* pricing) {
+QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisStatus atlower,
+                               HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(activeconstraintidx, (HighsInt)conid)) {
     basisstatus[conid] = atlower;
@@ -114,7 +113,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
   } else {
     printf("Degeneracy? constraint %" HIGHSINT_FORMAT " already in basis\n",
            conid);
-    exit(1);
+    return QpSolverStatus::DEGENERATE;
   }
 
   // printf("drop %d\n", nonactivetoremove);
@@ -123,15 +122,16 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
 
   baseindex[rowtoremove] = conid;
   remove(nonactiveconstraintsidx, nonactivetoremove);
-  updatebasis(rt, conid, nonactivetoremove, pricing);
+  updatebasis(settings, conid, nonactivetoremove, pricing);
 
   if (updatessinceinvert != 0) {
     constraintindexinbasisfactor[nonactivetoremove] = -1;
     constraintindexinbasisfactor[conid] = rowtoremove;
   }
+  return QpSolverStatus::OK;
 }
 
-void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
+void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsInt droppedcon,
                         Pricing* pricing) {
   if (newactivecon == droppedcon) {
     return;
@@ -156,7 +156,7 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
   basisfactor.update(&col_aq, &row_ep, &row_out, &hint);
 
   updatessinceinvert++;
-  if (updatessinceinvert >= rt.settings.reinvertfrequency || hint != 99999) {
+  if (updatessinceinvert >= settings.reinvertfrequency || hint != 99999) {
     rebuild();
   }
   // since basis changed, buffered values are no longer valid
@@ -282,7 +282,7 @@ Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
 }
 
 Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
-  Vector temp(runtime.instance.num_var);
+  Vector temp(target.dim);
   for (HighsInt i = 0; i < rhs.num_nz; i++) {
     HighsInt nz = rhs.index[i];
     HighsInt nonactive = nonactiveconstraintsidx[nz];

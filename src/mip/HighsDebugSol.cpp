@@ -15,6 +15,7 @@
 #ifdef HIGHS_DEBUGSOL
 
 #include "io/FilereaderMps.h"
+#include "lp_data/HighsLpUtils.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
@@ -40,7 +41,7 @@ void HighsDebugSol::activate() {
       std::map<std::string, int> nametoidx;
 
       for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
-        nametoidx["C" + std::to_string(i)] = i;
+        nametoidx["c" + std::to_string(i)] = i;
 
       debugSolution.resize(mipsolver->model_->num_col_, 0.0);
       while (!file.eof()) {
@@ -163,6 +164,29 @@ void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue,
     violation += debugSolution[Rindex[i]] * Rvalue[i];
 
   assert(violation <= mipsolver->mipdata_->feastol);
+}
+
+void HighsDebugSol::checkRowAggregation(const HighsLp& lp,
+                                        const HighsInt* Rindex,
+                                        const double* Rvalue, HighsInt Rlen) {
+  if (!debugSolActive) return;
+  HighsCDouble violation = 0.0;
+
+  HighsSolution dbgSol;
+  dbgSol.dual_valid = false;
+  dbgSol.value_valid = true;
+  dbgSol.col_value = debugSolution;
+  calculateRowValues(lp, dbgSol);
+  for (HighsInt i = 0; i < Rlen; ++i) {
+    if (Rindex[i] < lp.num_col_)
+      violation += dbgSol.col_value[Rindex[i]] * Rvalue[i];
+    else
+      violation += dbgSol.row_value[Rindex[i] - lp.num_col_] * Rvalue[i];
+  }
+
+  double viol = fabs(double(violation));
+
+  assert(viol <= mipsolver->mipdata_->feastol);
 }
 
 void HighsDebugSol::checkRow(const HighsInt* Rindex, const double* Rvalue,

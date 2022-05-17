@@ -210,7 +210,8 @@ class HighsSymmetryDetection {
 
   bool compareCurrentGraph(
       const HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>>&
-          otherGraph);
+          otherGraph,
+      HighsInt& wrongCell);
 
   void removeFixPoints();
   void initializeGroundSet();
@@ -275,6 +276,8 @@ class HighsSymmetryDetection {
 
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);
+
+  bool initializeDetection();
 
   void run(HighsSymmetries& symmetries);
 };

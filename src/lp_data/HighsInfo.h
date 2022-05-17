@@ -183,7 +183,7 @@ class HighsInfo : public HighsInfoStruct {
     if (records.size() > 0) deleteRecords();
   }
 
-  void clear();
+  void invalidate();
 
  private:
   void deleteRecords() {

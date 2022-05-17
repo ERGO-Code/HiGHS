@@ -23,6 +23,323 @@
 
 using std::min;
 
+HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
+  return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
+                    solver_object.basis_, solver_object.solution_, 
+                    solver_object.model_status_, solver_object.highs_info_);
+}
+
+HighsStatus solveLpIpx(const HighsOptions& options,
+		       HighsTimer& timer,
+                       const HighsLp& lp, 
+                       HighsBasis& highs_basis,
+		       HighsSolution& highs_solution,
+                       HighsModelStatus& model_status,
+                       HighsInfo& highs_info) {
+  // Use IPX to try to solve the LP
+  //
+  // Can return HighsModelStatus (HighsStatus) values:
+  //
+  // 1. kSolveError (kError) if various unlikely solution errors occur
+  //
+  // 2. kTimeLimit (kWarning) if time limit is reached
+  //
+  // 3. kIterationLimit (kWarning) if iteration limit is reached
+  //
+  // 4. kUnknown (kWarning) if IPM makes no progress or if
+  // IPM/crossover are imprecise
+  //
+  // 5. kInfeasible (kOk) if IPM identifies primal infeasibility
+  //
+  // 6. kUnboundedOrInfeasible (kOk) if IPM identifies dual
+  // infeasibility
+  //
+  // kOptimal (kOk) if IPM/crossover identify optimality
+  //
+  // With a non-error return, if just IPM has been run then a
+  // non-vertex primal solution is obtained; if crossover has been run
+  // then a basis and primal+dual solution are obtained.
+  //
+  //
+  // Indicate that there is no valid primal solution, dual solution or basis
+  highs_basis.valid = false;
+  highs_solution.value_valid = false;
+  highs_solution.dual_valid = false;
+  // Indicate that no imprecise solution has (yet) been found
+  resetModelStatusAndHighsInfo(model_status, highs_info);
+  // Create the LpSolver instance
+  ipx::LpSolver lps;
+  // Set IPX parameters
+  //
+  // Cannot set internal IPX parameters directly since they are
+  // private, so create instance of parameters
+  ipx::Parameters parameters;
+  // Set IPX parameters from options
+  //
+  // Set display according to output
+  parameters.display = 1;
+  if (!options.output_flag) parameters.display = 0;
+  // Modify parameters.debug according to log_dev_level
+  parameters.debug = 0;
+  if (options.log_dev_level == kHighsLogDevLevelDetailed) {
+    // Default options.log_dev_level setting is kHighsLogDevLevelNone, yielding
+    // default setting debug = 0
+    parameters.debug = 0;
+  } else if (options.log_dev_level == kHighsLogDevLevelInfo) {
+    parameters.debug = 2;
+  } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
+    parameters.debug = 4;
+  }
+  // Just test feasibility and optimality tolerances for now
+  // ToDo Set more parameters
+  parameters.ipm_feasibility_tol = min(options.primal_feasibility_tolerance,
+                                       options.dual_feasibility_tolerance);
+
+  parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
+  parameters.crossover_start = options.start_crossover_tolerance;
+  parameters.analyse_basis_data = kHighsAnalysisLevelNlaData & options.highs_analysis_level;
+  // Determine the run time allowed for IPX
+  parameters.time_limit = options.time_limit - timer.readRunHighsClock();
+  parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
+  // Determine if crossover is to be run or not
+  parameters.crossover = options.run_crossover;
+  if (!parameters.crossover) {
+    // If crossover is not run, then set crossover_start to -1 so that
+    // IPX can terminate according to its feasibility and optimality
+    // tolerances
+    parameters.crossover_start = -1;
+  }
+
+  // Set the internal IPX parameters
+  lps.SetParameters(parameters);
+
+  ipx::Int num_col, num_row;
+  std::vector<ipx::Int> Ap, Ai;
+  std::vector<double> objective, col_lb, col_ub, Av, rhs;
+  std::vector<char> constraint_type;
+  fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
+                rhs, constraint_type);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+               " columns and %" HIGHSINT_FORMAT " nonzeros\n",
+               num_row, num_col, Ap[num_col]);
+
+  ipx::Int load_status =
+      lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
+                    &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
+
+  if (load_status) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  // Use IPX to solve the LP!
+  ipx::Int solve_status = lps.Solve();
+
+  const bool report_solve_data = kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
+  // Get solver and solution information.
+  // Struct ipx_info defined in ipx/include/ipx_info.h
+  const ipx::Info ipx_info = lps.GetInfo();
+  if (report_solve_data) reportSolveData(options.log_options, ipx_info);
+  highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
+  highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+
+  // If not solved...
+  if (solve_status != IPX_STATUS_solved) {
+    const HighsStatus solve_return_status =
+        reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
+    // Return error if IPX solve error has occurred
+    if (solve_return_status == HighsStatus::kError) {
+      model_status = HighsModelStatus::kSolveError;
+      return HighsStatus::kError;
+    }
+  }
+  bool ipm_status = true;
+  const HighsStatus ipm_return_status =
+      reportIpxIpmCrossoverStatus(options, ipx_info.status_ipm, ipm_status);
+  ipm_status = false;
+  const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(
+      options, ipx_info.status_crossover, ipm_status);
+  // Return error if IPX IPM or crossover error has occurred
+  if (ipm_return_status == HighsStatus::kError ||
+      crossover_return_status == HighsStatus::kError) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+  // Should only reach here if Solve() returned IPX_STATUS_solved or
+  // IPX_STATUS_stopped
+  if (ipxStatusError(solve_status != IPX_STATUS_solved &&
+		     solve_status != IPX_STATUS_stopped,
+		     options, "solve_status should be solved or stopped here but value is",
+		     (int)solve_status))
+    return HighsStatus::kError;
+
+  // Only error returns so far
+  //
+
+  if (solve_status == IPX_STATUS_stopped) {
+    // IPX stopped, so there's certainly no basic solution. Get the
+    // non-vertex solution, though. This needs the model status to
+    // know whether to worry about dual infeasibilities.
+    const HighsModelStatus local_model_status = HighsModelStatus::kUnknown;
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
+                              constraint_type, lps,
+			      local_model_status, highs_solution);
+    //
+    // Look at the reason why IPX stopped
+    //
+    // Return error if stopped status settings occur that JAJH doesn't
+    // think should happen
+    //
+    //==============
+    // For crossover
+    //==============
+    if (illegalIpxStoppedCrossoverStatus(ipx_info, options))
+      return HighsStatus::kError;
+    // Can stop and reach time limit
+    if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
+      model_status = HighsModelStatus::kTimeLimit;
+      return HighsStatus::kWarning;
+    }
+    //========
+    // For IPM
+    //========
+    //
+    // Note that IPX can stop with IPM optimal, imprecise,
+    // primal_infeas or dual_infeas, due to crossover stopping with
+    // time limit, and this is why crossover returns are tested first
+    if (illegalIpxStoppedIpmStatus(ipx_info, options))
+      return HighsStatus::kError;
+    // Can stop with time limit
+    // Can stop with iter limit
+    // Can stop with no progress
+    if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
+      model_status = HighsModelStatus::kTimeLimit;
+      return HighsStatus::kWarning;
+    } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
+      model_status = HighsModelStatus::kIterationLimit;
+      return HighsStatus::kWarning;
+    } else {
+      assert(ipx_info.status_ipm == IPX_STATUS_no_progress);
+      reportIpmNoProgress(options, ipx_info);
+      model_status = HighsModelStatus::kUnknown;
+      return HighsStatus::kWarning;
+    }
+  }
+  // Should only reach here if Solve() returned IPX_STATUS_solved
+  if (ipxStatusError(solve_status != IPX_STATUS_solved, options,
+                     "solve_status should be solved here but value is",
+                     (int)solve_status))
+    return HighsStatus::kError;
+  // Return error if solved status settings occur that JAJH doesn't
+  // think should happen
+  if (illegalIpxSolvedStatus(ipx_info, options)) return HighsStatus::kError;
+  //==============
+  // For crossover
+  //==============
+  // Can be not run
+  // Can solve and be optimal
+  // Can solve and be imprecise
+  //========
+  // For IPM
+  //========
+  // Can solve and be optimal
+  // Can solve and be imprecise
+  // Can solve and be primal_infeas
+  // Can solve and be dual_infeas
+  if (ipx_info.status_ipm == IPX_STATUS_primal_infeas ||
+      ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
+    // IPM identified primal or dual infeasibility: crossover will not
+    // have run, so get the non-vertex solution and return
+    if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
+      model_status = HighsModelStatus::kInfeasible;
+    } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
+      model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    }
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
+                              constraint_type, lps,
+			      model_status, highs_solution);
+    return HighsStatus::kOk;
+  }
+
+  // Should only reach here if IPM is optimal or imprecise
+  if (ipxStatusError(ipx_info.status_ipm != IPX_STATUS_optimal &&
+                         ipx_info.status_ipm != IPX_STATUS_imprecise,
+                     options,
+                     "ipm status should be not run, optimal or imprecise "
+                     "but value is",
+                     (int)ipx_info.status_ipm))
+    return HighsStatus::kError;
+
+  // Should only reach here if crossover is not run, optimal or imprecise
+  if (ipxStatusError(ipx_info.status_crossover != IPX_STATUS_not_run &&
+		     ipx_info.status_crossover != IPX_STATUS_optimal &&
+		     ipx_info.status_crossover != IPX_STATUS_imprecise,
+                     options,
+                     "crossover status should be not run, optimal or imprecise "
+                     "but value is",
+                     (int)ipx_info.status_crossover))
+    return HighsStatus::kError;
+
+  // Basic solution depends on crossover being run
+  const bool have_basic_solution =
+      ipx_info.status_crossover != IPX_STATUS_not_run;
+  // Both crossover and IPM can be imprecise
+  const bool imprecise_solution =
+    ipx_info.status_crossover == IPX_STATUS_imprecise ||
+    ipx_info.status_ipm == IPX_STATUS_imprecise;
+  if (have_basic_solution) {
+    IpxSolution ipx_solution;
+    ipx_solution.num_col = num_col;
+    ipx_solution.num_row = num_row;
+    ipx_solution.ipx_col_value.resize(num_col);
+    ipx_solution.ipx_row_value.resize(num_row);
+    ipx_solution.ipx_col_dual.resize(num_col);
+    ipx_solution.ipx_row_dual.resize(num_row);
+    ipx_solution.ipx_row_status.resize(num_row);
+    ipx_solution.ipx_col_status.resize(num_col);
+    ipx::Int errflag = lps.GetBasicSolution(
+        &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
+        &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
+        &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
+    if (errflag != 0) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "IPX crossover getting basic solution: flag = %d\n",
+		   (int)errflag);
+      return HighsStatus::kError;
+    }
+    // Convert the IPX basic solution to a HiGHS basic solution
+    HighsStatus status = ipxBasicSolutionToHighsBasicSolution(options.log_options, lp, rhs,
+                                         constraint_type, ipx_solution,
+                                         highs_basis, highs_solution);
+    if (status != HighsStatus::kOk) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Failed to convert IPX basic solution to Highs basic solution\n");
+      return HighsStatus::kError;
+    }
+
+  } else {
+    // No basic solution, so get a non-vertex HiGHS solution. This
+    // needs the model status to know whether to worry about dual
+    // infeasibilities.
+    const HighsModelStatus local_model_status = imprecise_solution ? HighsModelStatus::kUnknown : HighsModelStatus::kOptimal;
+    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
+                              constraint_type, lps,
+			      local_model_status, highs_solution);
+    assert(!highs_basis.valid);
+  }
+  highs_info.basis_validity = highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
+  HighsStatus return_status;
+  if (imprecise_solution) {
+    model_status = HighsModelStatus::kUnknown;
+    return_status = HighsStatus::kWarning;
+  } else {
+    model_status = HighsModelStatus::kOptimal;
+    return_status = HighsStatus::kOk;
+  }
+  return return_status;
+}
+
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& obj, std::vector<double>& col_lb,
                    std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
@@ -506,313 +823,6 @@ void getHighsNonVertexSolution(const HighsOptions& options,
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
                              num_row, x, slack, y, zl, zu,
 			     model_status, highs_solution);
-}
-
-HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, 
-                       HighsBasis& highs_basis,
-		       HighsSolution& highs_solution,
-                       HighsModelStatus& model_status,
-                       HighsInfo& highs_info) {
-  // Use IPX to try to solve the LP
-  //
-  // Can return HighsModelStatus (HighsStatus) values:
-  //
-  // 1. kSolveError (kError) if various unlikely solution errors occur
-  //
-  // 2. kTimeLimit (kWarning) if time limit is reached
-  //
-  // 3. kIterationLimit (kWarning) if iteration limit is reached
-  //
-  // 4. kUnknown (kWarning) if IPM makes no progress or if
-  // IPM/crossover are imprecise
-  //
-  // 5. kInfeasible (kOk) if IPM identifies primal infeasibility
-  //
-  // 6. kUnboundedOrInfeasible (kOk) if IPM identifies dual
-  // infeasibility
-  //
-  // kOptimal (kOk) if IPM/crossover identify optimality
-  //
-  // With a non-error return, if just IPM has been run then a
-  // non-vertex primal solution is obtained; if crossover has been run
-  // then a basis and primal+dual solution are obtained.
-  //
-  //
-  // Indicate that there is no valid primal solution, dual solution or basis
-  highs_basis.valid = false;
-  highs_solution.value_valid = false;
-  highs_solution.dual_valid = false;
-  // Indicate that no imprecise solution has (yet) been found
-  resetModelStatusAndHighsInfo(model_status, highs_info);
-  // Create the LpSolver instance
-  ipx::LpSolver lps;
-  // Set IPX parameters
-  //
-  // Cannot set internal IPX parameters directly since they are
-  // private, so create instance of parameters
-  ipx::Parameters parameters;
-  // Set IPX parameters from options
-  //
-  // Set display according to output
-  parameters.display = 1;
-  if (!options.output_flag) parameters.display = 0;
-  // Modify parameters.debug according to log_dev_level
-  parameters.debug = 0;
-  if (options.log_dev_level == kHighsLogDevLevelDetailed) {
-    // Default options.log_dev_level setting is kHighsLogDevLevelNone, yielding
-    // default setting debug = 0
-    parameters.debug = 0;
-  } else if (options.log_dev_level == kHighsLogDevLevelInfo) {
-    parameters.debug = 2;
-  } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
-    parameters.debug = 4;
-  }
-  // Just test feasibility and optimality tolerances for now
-  // ToDo Set more parameters
-  parameters.ipm_feasibility_tol = min(options.primal_feasibility_tolerance,
-                                       options.dual_feasibility_tolerance);
-
-  parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
-  parameters.crossover_start = options.start_crossover_tolerance;
-  parameters.analyse_basis_data = kHighsAnalysisLevelNlaData & options.highs_analysis_level;
-  // Determine the run time allowed for IPX
-  parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
-  // Determine if crossover is to be run or not
-  parameters.crossover = options.run_crossover;
-  if (!parameters.crossover) {
-    // If crossover is not run, then set crossover_start to -1 so that
-    // IPX can terminate according to its feasibility and optimality
-    // tolerances
-    parameters.crossover_start = -1;
-  }
-
-  // Set the internal IPX parameters
-  lps.SetParameters(parameters);
-
-  ipx::Int num_col, num_row;
-  std::vector<ipx::Int> Ap, Ai;
-  std::vector<double> objective, col_lb, col_ub, Av, rhs;
-  std::vector<char> constraint_type;
-  fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
-                rhs, constraint_type);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-               " columns and %" HIGHSINT_FORMAT " nonzeros\n",
-               num_row, num_col, Ap[num_col]);
-
-  ipx::Int load_status =
-      lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
-                    &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
-
-  if (load_status) {
-    model_status = HighsModelStatus::kSolveError;
-    return HighsStatus::kError;
-  }
-
-  // Use IPX to solve the LP!
-  ipx::Int solve_status = lps.Solve();
-
-  const bool report_solve_data = kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
-  // Get solver and solution information.
-  // Struct ipx_info defined in ipx/include/ipx_info.h
-  const ipx::Info ipx_info = lps.GetInfo();
-  if (report_solve_data) reportSolveData(options.log_options, ipx_info);
-  highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
-  highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
-  // highs_info.crossover_iteration_count += (int)ipx_info.pushes_crossover;
-
-  // If not solved...
-  if (solve_status != IPX_STATUS_solved) {
-    const HighsStatus solve_return_status =
-        reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
-    // Return error if IPX solve error has occurred
-    if (solve_return_status == HighsStatus::kError) {
-      model_status = HighsModelStatus::kSolveError;
-      return HighsStatus::kError;
-    }
-  }
-  bool ipm_status = true;
-  const HighsStatus ipm_return_status =
-      reportIpxIpmCrossoverStatus(options, ipx_info.status_ipm, ipm_status);
-  ipm_status = false;
-  const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(
-      options, ipx_info.status_crossover, ipm_status);
-  // Return error if IPX IPM or crossover error has occurred
-  if (ipm_return_status == HighsStatus::kError ||
-      crossover_return_status == HighsStatus::kError) {
-    model_status = HighsModelStatus::kSolveError;
-    return HighsStatus::kError;
-  }
-  // Should only reach here if Solve() returned IPX_STATUS_solved or
-  // IPX_STATUS_stopped
-  if (ipxStatusError(
-          solve_status != IPX_STATUS_solved &&
-              solve_status != IPX_STATUS_stopped,
-          options, "solve_status should be solved or stopped here but value is",
-          (int)solve_status))
-    return HighsStatus::kError;
-
-  // Only error returns so far
-  //
-
-  if (solve_status == IPX_STATUS_stopped) {
-    // IPX stopped, so there's certainly no basic solution. Get the
-    // non-vertex solution, though. This needs the model status to
-    // know whether to worry about dual infeasibilities.
-    const HighsModelStatus local_model_status = HighsModelStatus::kUnknown;
-    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
-                              constraint_type, lps,
-			      local_model_status, highs_solution);
-    //
-    // Look at the reason why IPX stopped
-    //
-    // Return error if stopped status settings occur that JAJH doesn't
-    // think should happen
-    //
-    //==============
-    // For crossover
-    //==============
-    if (illegalIpxStoppedCrossoverStatus(ipx_info, options))
-      return HighsStatus::kError;
-    // Can stop and reach time limit
-    if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::kTimeLimit;
-      return HighsStatus::kWarning;
-    }
-    //========
-    // For IPM
-    //========
-    //
-    // Note that IPX can stop with IPM optimal, imprecise,
-    // primal_infeas or dual_infeas, due to crossover stopping with
-    // time limit, and this is why crossover returns are tested first
-    if (illegalIpxStoppedIpmStatus(ipx_info, options))
-      return HighsStatus::kError;
-    // Can stop with time limit
-    // Can stop with iter limit
-    // Can stop with no progress
-    if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::kTimeLimit;
-      return HighsStatus::kWarning;
-    } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
-      model_status = HighsModelStatus::kIterationLimit;
-      return HighsStatus::kWarning;
-    } else {
-      assert(ipx_info.status_ipm == IPX_STATUS_no_progress);
-      reportIpmNoProgress(options, ipx_info);
-      model_status = HighsModelStatus::kUnknown;
-      return HighsStatus::kWarning;
-    }
-  }
-  // Should only reach here if Solve() returned IPX_STATUS_solved
-  if (ipxStatusError(solve_status != IPX_STATUS_solved, options,
-                     "solve_status should be solved here but value is",
-                     (int)solve_status))
-    return HighsStatus::kError;
-  // Return error if solved status settings occur that JAJH doesn't
-  // think should happen
-  if (illegalIpxSolvedStatus(ipx_info, options)) return HighsStatus::kError;
-  //==============
-  // For crossover
-  //==============
-  // Can be not run
-  // Can solve and be optimal
-  // Can solve and be imprecise
-  //========
-  // For IPM
-  //========
-  // Can solve and be optimal
-  // Can solve and be imprecise
-  // Can solve and be primal_infeas
-  // Can solve and be dual_infeas
-  if (ipx_info.status_ipm == IPX_STATUS_primal_infeas ||
-      ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    // IPM identified primal or dual infeasibility: crossover will not
-    // have run, so get the non-vertex solution and return
-    if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
-      model_status = HighsModelStatus::kInfeasible;
-    } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-      model_status = HighsModelStatus::kUnboundedOrInfeasible;
-    }
-    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
-                              constraint_type, lps,
-			      model_status, highs_solution);
-    return HighsStatus::kOk;
-  }
-
-  // Should only reach here if IPM is optimal or imprecise
-  if (ipxStatusError(ipx_info.status_ipm != IPX_STATUS_optimal &&
-                         ipx_info.status_ipm != IPX_STATUS_imprecise,
-                     options,
-                     "ipm status should be not run, optimal or imprecise "
-                     "but value is",
-                     (int)ipx_info.status_ipm))
-    return HighsStatus::kError;
-
-  // Should only reach here if crossover is not run, optimal or imprecise
-  if (ipxStatusError(ipx_info.status_crossover != IPX_STATUS_not_run &&
-                         ipx_info.status_crossover != IPX_STATUS_optimal &&
-                         ipx_info.status_crossover != IPX_STATUS_imprecise,
-                     options,
-                     "crossover status should be not run, optimal or imprecise "
-                     "but value is",
-                     (int)ipx_info.status_crossover))
-    return HighsStatus::kError;
-
-  // Basic solution depends on crossover being run
-  const bool have_basic_solution =
-      ipx_info.status_crossover != IPX_STATUS_not_run;
-  // Both crossover and IPM can be imprecise
-  const bool imprecise_solution =
-    ipx_info.status_crossover == IPX_STATUS_imprecise ||
-    ipx_info.status_ipm == IPX_STATUS_imprecise;
-  if (have_basic_solution) {
-    IpxSolution ipx_solution;
-    ipx_solution.num_col = num_col;
-    ipx_solution.num_row = num_row;
-    ipx_solution.ipx_col_value.resize(num_col);
-    ipx_solution.ipx_row_value.resize(num_row);
-    ipx_solution.ipx_col_dual.resize(num_col);
-    ipx_solution.ipx_row_dual.resize(num_row);
-    ipx_solution.ipx_row_status.resize(num_row);
-    ipx_solution.ipx_col_status.resize(num_col);
-    lps.GetBasicSolution(
-        &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
-        &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
-        &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
-
-    // Convert the IPX basic solution to a HiGHS basic solution
-    ipxBasicSolutionToHighsBasicSolution(options.log_options, lp, rhs,
-                                         constraint_type, ipx_solution,
-                                         highs_basis, highs_solution);
-  } else {
-    // No basic solution, so get a non-vertex HiGHS solution. This
-    // needs the model status to know whether to worry about dual
-    // infeasibilities.
-    const HighsModelStatus local_model_status = imprecise_solution ? HighsModelStatus::kUnknown : HighsModelStatus::kOptimal;
-    getHighsNonVertexSolution(options, lp, num_col, num_row, rhs,
-                              constraint_type, lps,
-			      local_model_status, highs_solution);
-    assert(!highs_basis.valid);
-  }
-  highs_info.basis_validity = highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
-  HighsStatus return_status;
-  if (imprecise_solution) {
-    model_status = HighsModelStatus::kUnknown;
-    return_status = HighsStatus::kWarning;
-  } else {
-    model_status = HighsModelStatus::kOptimal;
-    return_status = HighsStatus::kOk;
-  }
-  return return_status;
-}
-
-HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
-  return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
-                    solver_object.basis_, solver_object.solution_, 
-                    solver_object.unscaled_model_status_, solver_object.highs_info_);
 }
 
 void reportSolveData(const HighsLogOptions& log_options, const ipx::Info& ipx_info) {

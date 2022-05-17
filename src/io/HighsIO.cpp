@@ -22,11 +22,14 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-static void (*printmsgcb)(HighsInt, const char*, void*) = NULL;
-static void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
-static void* msgcb_data = NULL;
-
-static char msgbuffer[65536];
+void highsLogHeader(const HighsLogOptions& log_options) {
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+               (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
+               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
+}
 
 std::array<char, 32> highsDoubleToString(double val, double tolerance) {
   std::array<char, 32> printString;
@@ -105,7 +108,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!logmsgcb) {
+  if (!log_options_.log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
       if (prefix)
@@ -123,9 +126,11 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       if (flush_streams) fflush(stdout);
     }
   } else {
-    int len;
-    len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
-                   HighsLogTypeTag[(int)type]);
+    int len = 0;
+    char msgbuffer[kIoBufferSize];
+    if (prefix)
+      len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
+                     HighsLogTypeTag[(int)type]);
     if (len < (int)sizeof(msgbuffer))
       len +=
           vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
@@ -133,7 +138,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    logmsgcb(type, msgbuffer, msgcb_data);
+    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
   }
   va_end(argptr);
 }
@@ -161,7 +166,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!logmsgcb) {
+  if (!log_options_.log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
       // Write to log file stream
@@ -177,12 +182,13 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     }
   } else {
     int len;
+    char msgbuffer[kIoBufferSize];
     len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
     if (len >= (int)sizeof(msgbuffer)) {
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    logmsgcb(type, msgbuffer, msgcb_data);
+    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
   }
   va_end(argptr);
 }
@@ -194,22 +200,6 @@ void highsReportDevInfo(const HighsLogOptions* log_options,
   } else {
     printf("%s", line.c_str());
   }
-}
-
-void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
-                                             void* msgcb_data),
-                         void (*logmsgcb_)(HighsLogType type, const char* msg,
-                                           void* msgcb_data),
-                         void* msgcb_data_) {
-  printmsgcb = printmsgcb_;
-  logmsgcb = logmsgcb_;
-  msgcb_data = msgcb_data_;
-}
-
-void highsSetLogCallback(HighsOptions& options) {
-  printmsgcb = options.printmsgcb;
-  logmsgcb = options.logmsgcb;
-  msgcb_data = options.msgcb_data;
 }
 
 void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
@@ -234,14 +224,16 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
 std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  int len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+  int len;
+  char msgbuffer[kIoBufferSize];
+  len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+
   if (len >= (int)sizeof(msgbuffer)) {
     // Output was truncated: for now just ensure string is null-terminated
     msgbuffer[sizeof(msgbuffer) - 1] = '\0';
   }
   va_end(argptr);
-  std::string local_string(msgbuffer);
-  return local_string;
+  return std::string(msgbuffer);
 }
 
 const std::string highsBoolToString(const bool b) {

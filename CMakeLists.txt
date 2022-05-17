@@ -13,12 +13,13 @@ include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
 set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
-project(HIGHS VERSION 1.1 LANGUAGES CXX C)
-set(HIGHS_VERSION_PATCH 1)
-
+# set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
+
+project(HIGHS VERSION 1.2 LANGUAGES CXX C)
+set(HIGHS_VERSION_PATCH 2)
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -26,7 +27,7 @@ set(CMAKE_CXX_STANDARD 11)
 ### Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
 if(EXISTS "${LOC_PATH}")
-    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file). 
+    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file).
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
 
@@ -44,12 +45,14 @@ if(LINUX AND NOT MSVC)
     endif()
 endif()
 
-# Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
-# static library and exe without PIC. Used for gradually updating the CMake 
+# Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances,
+# static library and exe without PIC. Used for gradually updating the CMake
 # targets build and install / export.
 
-# Note: Not ON by default yet
+# Note: ON by default yet
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
+option(FORTRAN "Build Fortran interface" OFF)
+option(CSHARP "Build CSharp interface" OFF)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
@@ -102,8 +105,10 @@ else()
         HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
-# Function to set compiler flags on and off easily.
 include(CheckCXXCompilerFlag)
+
+if (NOT FAST_BUILD)
+# Function to set compiler flags on and off easily.
 function(enable_cxx_compiler_flag_if_supported flag)
     string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
     if(flag_already_set EQUAL -1)
@@ -121,6 +126,7 @@ enable_cxx_compiler_flag_if_supported("-Wextra")
 enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
 enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
 enable_cxx_compiler_flag_if_supported("-pedantic")
+endif()
 
 option(DEBUGSOL "check the debug solution" OFF)
 
@@ -141,6 +147,7 @@ if(MSVC)
     add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 endif()
 
+if (NOT FAST_BUILD OR FORTRAN)
 include(CheckLanguage)
 if (NOT FAST_BUILD)
 if(NOT MSVC)
@@ -152,7 +159,9 @@ if(CMAKE_Fortran_COMPILER)
 else()
     set(FORTRAN_FOUND OFF)
 endif(CMAKE_Fortran_COMPILER)
+endif()
 
+if (NOT FAST_BUILD OR CSHARP)
 check_language("CSharp")
 if(CMAKE_CSharp_COMPILER)
     enable_language(CSharp)
@@ -178,6 +187,9 @@ endif()
 # set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+
+# if zlib is found, then we can enable reading zlib-compressed input
+find_package(ZLIB 1.2.3)
 
 if (NOT FAST_BUILD)
 
@@ -231,7 +243,7 @@ if (HIGHS_COVERAGE)
   if (WIN32)
     message(FATAL_ERROR "Error: code coverage analysis is only available under Linux for now.")
   endif ()
-  
+
   find_program(GCOV_PATH gcov)
   find_program(LCOV_PATH lcov)
   find_program(GENHTML_PATH genhtml)
@@ -239,15 +251,15 @@ if (HIGHS_COVERAGE)
   if (NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Please install lcov and gcov. Aborting...")
   endif ()
-  
+
   if (NOT LCOV_PATH)
     message(FATAL_ERROR "lcov not found! Please install lcov and gcov. Aborting...")
   endif ()
-  
+
   if (NOT GENHTML_PATH)
     message(FATAL_ERROR "genhtml not found! Please install lcov and gcov. Aborting...")
   endif ()
-  
+
   # Capturing lcov counters and generating report
   if (NOT CI)
     add_custom_target(coverage
@@ -295,25 +307,10 @@ if(NOT MSVC)
     endif()
 endif()
 
-set(IPX_ON ON)
-
-option(GAMS_ROOT "GAMS root folder." "OFF")
-if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
-    message(STATUS "GAMS root folder set: " ${GAMS_ROOT})
-    set(GAMS_FOUND ON)
-else ()
-    set(GAMS_FOUND OFF)
-endif ()
-
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
-
-# make 'Release' the default build type
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     set(HiGHSRELEASE ON)
@@ -325,6 +322,7 @@ include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
     ${HIGHS_SOURCE_DIR}/extern
+    ${HIGHS_SOURCE_DIR}/extern/zstr
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
     ${HIGHS_SOURCE_DIR}/src/ipm/ipx
@@ -351,15 +349,14 @@ endif()
 #    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
 #endif()
 
-if (IPX_ON)
-    # use, i.e. don't skip the full RPATH for the build tree
-    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
-    # when building, don't use the install RPATH already
-    # (but later on when installing)
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
 
 # Targets
 enable_testing()
@@ -377,13 +374,6 @@ message(STATUS "FAST_BUILD set to on.
        experience any issues please let us know via email or on GitHub.")
 
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
-option(IPX "Use interior point solver" ON)
-
-if (IPX)
-    set(IPX_ON ON)
-else()
-    set(IPX_ON OFF)
-endif()
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
@@ -441,7 +431,7 @@ set(infeasibleInstances
 
 set(unboundedInstances
      "gas11\;         unbounded")
-     
+
 # define settings
 set(settings
     ""
@@ -495,10 +485,8 @@ if (NOT JULIA)
     add_instance_tests(failInstances "Fail" "")
     add_instance_tests(infeasibleInstances "Infeasible" "")
 #    add_instance_tests(unboundedInstances "Unbounded" "")
+    set(settings ${settings} "--solver=ipm")
 
-    if (IPX_ON)
-        set(settings ${settings} "--solver=ipm")
-    endif()
     foreach(setting ${settings})
         add_instance_tests(optionsInstances "Optimal" ${setting})
     endforeach()
@@ -509,7 +497,7 @@ if (EXP)
     #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
 
-    if (IPX_ON AND NOT APPLE)
+    if (NOT APPLE)
         # triggers hanging on macOS
         target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
     endif()
@@ -532,9 +520,6 @@ endif()
 
 
 endif()
-
-include(GenerateExportHeader)
-generate_export_header(libhighs)
 
 # # Comment out for scaffold/ tests
 # add_subdirectory(scaffold)

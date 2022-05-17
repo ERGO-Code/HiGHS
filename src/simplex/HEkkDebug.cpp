@@ -42,6 +42,124 @@ const double updated_dual_small_absolute_error = 1e-6;
 const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
+void HEkk::debugInitialise() {
+  debug_solve_call_num_++;
+  debug_initial_build_synthetic_tick_ = build_synthetic_tick_;
+  const HighsInt debug_from_solve_call_num = -12;
+  const HighsInt debug_num_solve = 3;
+  const HighsInt debug_to_solve_call_num =
+      debug_from_solve_call_num + debug_num_solve - 1;
+  const HighsInt debug_build_synthetic_tick = 445560;
+  if (debug_solve_call_num_ < debug_from_solve_call_num) {
+    debug_solve_report_ = false;
+  } else if (debug_solve_call_num_ == debug_from_solve_call_num) {
+    debug_solve_report_ = build_synthetic_tick_ == debug_build_synthetic_tick;
+  } else if (debug_solve_call_num_ > debug_to_solve_call_num) {
+    debug_solve_report_ = false;
+  }
+  const HighsInt time_from_solve_call_num = -1;
+  const HighsInt time_to_solve_call_num = time_from_solve_call_num;
+  time_report_ = debug_solve_call_num_ >= time_from_solve_call_num &&
+                 debug_solve_call_num_ <= time_to_solve_call_num;
+  const HighsInt debug_basis_id = -999;
+  debug_basis_report_ = basis_.debug_id == debug_basis_id;
+  if (debug_solve_report_) {
+    printf("HEkk::solve call %d\n", (int)debug_solve_call_num_);
+    debugReporting(-1);
+    debugReporting(0, kHighsLogDevLevelVerbose);  // Detailed); //
+  }
+  if (time_report_) {
+    timeReporting(-1);
+    timeReporting(0);
+  }
+  if (debug_basis_report_) {
+    printf("HEkk::solve basis %d\n", (int)debug_basis_id);
+  }
+}
+
+void HEkk::debugReportInitialBasis() {
+  HighsInt num_col_basic = 0;
+  HighsInt num_col_lower = 0;
+  HighsInt num_col_upper = 0;
+  HighsInt num_col_fixed = 0;
+  HighsInt num_col_free = 0;
+  HighsInt num_row_basic = 0;
+  HighsInt num_row_lower = 0;
+  HighsInt num_row_upper = 0;
+  HighsInt num_row_fixed = 0;
+  HighsInt num_row_free = 0;
+  std::vector<double>& lower = info_.workLower_;
+  std::vector<double>& upper = info_.workUpper_;
+  std::vector<double>& value = info_.workValue_;
+  const bool detail = lp_.num_col_ + lp_.num_row_ < 25;
+  for (HighsInt iCol = 0; iCol < lp_.num_col_; iCol++) {
+    HighsInt iVar = iCol;
+    if (!basis_.nonbasicFlag_[iVar]) {
+      num_col_basic++;
+      continue;
+    }
+    if (basis_.nonbasicMove_[iVar] > 0) {
+      num_col_lower++;
+    } else if (basis_.nonbasicMove_[iVar] < 0) {
+      num_col_upper++;
+    } else if (lower[iCol] == upper[iCol]) {
+      num_col_fixed++;
+    } else {
+      num_col_free++;
+    }
+    if (detail)
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                  "Col %3d [%11.4g, %11.4g, %11.4g] %3d %3d %3d %3d\n",
+                  (int)iCol, lower[iCol], value[iVar], upper[iCol],
+                  num_col_lower, num_col_upper, num_col_fixed, num_col_free);
+  }
+  for (HighsInt iRow = 0; iRow < lp_.num_row_; iRow++) {
+    HighsInt iVar = lp_.num_col_ + iRow;
+    if (!basis_.nonbasicFlag_[iVar]) {
+      num_row_basic++;
+      continue;
+    }
+    if (basis_.nonbasicMove_[iVar] > 0) {
+      num_row_lower++;
+    } else if (basis_.nonbasicMove_[iVar] < 0) {
+      num_row_upper++;
+    } else if (lower[iVar] == upper[iVar]) {
+      num_row_fixed++;
+    } else {
+      num_row_free++;
+    }
+    if (detail)
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                  "Row %3d [%11.4g, %11.4g, %11.4g] %3d %3d %3d %3d\n",
+                  (int)iRow, lower[iVar], value[iVar], upper[iVar],
+                  num_row_lower, num_row_upper, num_row_fixed, num_row_free);
+  }
+  HighsInt num_col_nonbasic =
+      num_col_lower + num_col_upper + num_col_fixed + num_col_free;
+  HighsInt num_row_nonbasic =
+      num_row_lower + num_row_upper + num_row_fixed + num_row_free;
+  assert(num_col_basic + num_row_basic == lp_.num_row_);
+  assert(num_col_nonbasic + num_row_nonbasic == lp_.num_col_);
+  highsLogDev(options_->log_options, HighsLogType::kInfo,
+              "For %d columns and %d rows\n"
+              "   NonBasic |  Lower  Upper  Fixed   Free |    Basic\n"
+              "Col %7d |%7d%7d%7d%7d |  %7d\n"
+              "Row %7d |%7d%7d%7d%7d |  %7d\n"
+              "----------------------------------------------------\n"
+              "    %7d |%7d%7d%7d%7d |  %7d\n",
+              (int)lp_.num_col_, (int)lp_.num_row_, (int)num_col_nonbasic,
+              (int)num_col_lower, (int)num_col_upper, (int)num_col_fixed,
+              (int)num_col_free, (int)num_col_basic, (int)num_row_nonbasic,
+              (int)num_row_lower, (int)num_row_upper, (int)num_row_fixed,
+              (int)num_row_free, (int)num_row_basic,
+              (int)num_col_nonbasic + (int)num_row_nonbasic,
+              (int)num_col_lower + (int)num_row_lower,
+              (int)num_col_upper + (int)num_row_upper,
+              (int)num_col_fixed + (int)num_row_fixed,
+              (int)num_col_free + (int)num_row_free,
+              (int)num_col_basic + (int)num_row_basic);
+}
+
 void HEkk::timeReporting(const HighsInt save_mod_recover) {
   static HighsInt highs_analysis_level;
   if (save_mod_recover == -1) {
@@ -89,7 +207,7 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
     this->options_->output_flag = true;
     this->options_->log_dev_level = log_dev_level_;
     this->options_->highs_analysis_level =
-        kHighsAnalysisLevelSolverSummaryData +
+        //        kHighsAnalysisLevelSolverSummaryData +
         kHighsAnalysisLevelSolverRuntimeData;
     this->options_->highs_debug_level = kHighsDebugLevelCostly;
     if (log_dev_level_ == kHighsLogDevLevelVerbose)
@@ -1384,6 +1502,92 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
                   info.workUpper_[iVar]);
       return HighsDebugStatus::kLogicalError;
     }
+  }
+  return HighsDebugStatus::kOk;
+}
+
+HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
+    const std::string message) {
+  // Possibly force the expensive check for development work
+  const bool check_dual_edge_weights = false;  // true;
+  if (check_dual_edge_weights) {
+    const bool check_all_dual_edge_weights = false;
+    const HighsInt alt_debug_level = check_all_dual_edge_weights
+                                         ? (HighsInt)kHighsDebugLevelExpensive
+                                         : (HighsInt)kHighsDebugLevelCostly;
+    //    printf("Performing level %1d check %s for dual steepest edge
+    //    weights\n", (int)alt_debug_level, message.c_str());
+    return debugDualSteepestEdgeWeights(alt_debug_level);
+  } else {
+    return debugDualSteepestEdgeWeights();
+  }
+}
+
+HighsDebugStatus HEkk::debugDualSteepestEdgeWeights(
+    const HighsInt alt_debug_level) {
+  const HighsInt use_debug_level = alt_debug_level >= 0
+                                       ? alt_debug_level
+                                       : this->options_->highs_debug_level;
+  if (use_debug_level < kHighsDebugLevelCostly)
+    return HighsDebugStatus::kNotChecked;
+  const HighsLp& lp = this->lp_;
+  const HighsInt num_row = lp.num_row_;
+  double dual_steepest_edge_weight_norm = 0;
+  double dual_steepest_edge_weight_error = 0;
+  HighsInt num_check_weight;
+  if (use_debug_level < kHighsDebugLevelExpensive) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      dual_steepest_edge_weight_norm += std::fabs(dual_edge_weight_[iRow]);
+    }
+    // Just check a few weights
+    num_check_weight =
+        std::max((HighsInt)1, std::min((HighsInt)10, num_row / 10));
+    HVector row_ep;
+    row_ep.setup(num_row);
+    for (HighsInt iCheck = 0; iCheck < num_check_weight; iCheck++) {
+      HighsInt iRow = random_.integer(num_row);
+      const double true_weight = computeDualSteepestEdgeWeight(iRow, row_ep);
+      dual_steepest_edge_weight_error +=
+          std::fabs(this->dual_edge_weight_[iRow] - true_weight);
+    }
+  } else {
+    // Check all weights
+    num_check_weight = num_row;
+    std::vector<double> updated_dual_edge_weight = this->dual_edge_weight_;
+    computeDualSteepestEdgeWeights();
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      dual_steepest_edge_weight_norm +=
+          std::fabs(this->dual_edge_weight_[iRow]);
+      const double error = std::fabs(updated_dual_edge_weight[iRow] -
+                                     this->dual_edge_weight_[iRow]);
+      dual_steepest_edge_weight_error += error;
+    }
+    this->dual_edge_weight_ = updated_dual_edge_weight;
+  }
+  // Now assess the relative error
+  assert(dual_steepest_edge_weight_norm > 0);
+  double relative_dual_steepest_edge_weight_error =
+      dual_steepest_edge_weight_error / dual_steepest_edge_weight_norm;
+  const double large_relative_dual_steepest_edge_weight_error = 1e-3;
+  if (relative_dual_steepest_edge_weight_error >
+      10 * debug_max_relative_dual_steepest_edge_weight_error) {
+    highsLogDev(options_->log_options, HighsLogType::kInfo,
+                "Call %2d; Tick %8d: ", (int)debug_solve_call_num_,
+                debug_initial_build_synthetic_tick_);
+    highsLogDev(
+        options_->log_options, HighsLogType::kInfo,
+        "HEkk::debugDualSteepestEdgeWeights   Iteration %5d: Checked %2d "
+        "weights: "
+        "error = %10.4g; norm = %10.4g; relative error = %10.4g\n",
+        (int)iteration_count_, (int)num_check_weight,
+        dual_steepest_edge_weight_error, dual_steepest_edge_weight_norm,
+        relative_dual_steepest_edge_weight_error);
+    fflush(stdout);
+    debug_max_relative_dual_steepest_edge_weight_error =
+        relative_dual_steepest_edge_weight_error;
+    if (relative_dual_steepest_edge_weight_error >
+        large_relative_dual_steepest_edge_weight_error)
+      return HighsDebugStatus::kLargeError;
   }
   return HighsDebugStatus::kOk;
 }

@@ -34,6 +34,7 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
+  void invalidate();
   void clear();
 };
 
@@ -62,6 +63,7 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  void invalidate();
   void clear();
 };
 
@@ -73,6 +75,13 @@ struct HighsScale {
   double cost;
   std::vector<double> col;
   std::vector<double> row;
+};
+
+struct HighsLpMods {
+  std::vector<HighsInt> save_semi_variable_upper_bound_index;
+  std::vector<double> save_semi_variable_upper_bound_value;
+  void clear();
+  bool isClear();
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

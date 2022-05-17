@@ -36,10 +36,11 @@ class HVectorBase {
   );
 
   /**
-   * @brief Clear the vector
+   * @brief Clear the vector - or just its scalars
    *
    */
   void clear();
+  void clearScalars();
 
   HighsInt size;           //!< Dimension of the vector
   HighsInt count;          //!< Number of nonzeros
@@ -65,6 +66,13 @@ class HVectorBase {
    */
   void pack();
 
+  /**
+   * @brief Possibly determine the indices from scratch by passing
+   * through the array
+   *
+   */
+  void reIndex();
+
   bool packFlag;               //!< Flag to indicate whether to pack or not
   HighsInt packCount;          //!< Number of nonzeros packed
   vector<HighsInt> packIndex;  //!< Packed indices
@@ -81,7 +89,7 @@ class HVectorBase {
   /**
    * @brief Compute the squared 2-norm of the vector
    */
-  Real norm2();
+  Real norm2() const;
 
   /**
    * @brief Add a multiple pivotX of *pivot into this vector,

@@ -134,9 +134,11 @@ class HighsIntegers {
                               double deltadown, double deltaup) {
     if (numVals == 0) return 0.0;
 
-    double minval = *std::min_element(
+    auto minmax = std::minmax_element(
         vals, vals + numVals,
         [](double a, double b) { return std::abs(a) < std::abs(b); });
+    const double minval = *minmax.first;
+    const double maxval = *minmax.second;
 
     int expshift = 0;
 
@@ -146,11 +148,18 @@ class HighsIntegers {
     if (minval < -deltadown || minval > deltaup) std::frexp(minval, &expshift);
     expshift = std::max(-expshift, 0) + 3;
 
+    // guard against making the largest value too big which may cause overflows
+    // with intermdediate gcd values
+    int expMaxVal;
+    std::frexp(maxval, &expMaxVal);
+    expMaxVal = std::min(expMaxVal, 32);
+    if (expMaxVal + expshift > 32) expshift = 32 - expMaxVal;
+
     uint64_t denom = uint64_t{75} << expshift;
-    HighsCDouble startdenom = denom;
+    int64_t startdenom = denom;
     // now check if the values are integral and if not compute a common
     // denominator for their remaining fraction
-    HighsCDouble val = startdenom * vals[0];
+    HighsCDouble val = startdenom * HighsCDouble(vals[0]);
     HighsCDouble downval = floor(val + deltaup);
     HighsCDouble fraction = val - downval;
 
@@ -158,7 +167,7 @@ class HighsIntegers {
       // use a continued fraction algorithm to compute small missing
       // denominators for the remaining fraction
       denom *= denominator(double(fraction), deltaup, 1000);
-      val = denom * vals[0];
+      val = denom * HighsCDouble(vals[0]);
       downval = floor(val + deltaup);
       fraction = val - downval;
 
@@ -174,10 +183,10 @@ class HighsIntegers {
       fraction = val - downval;
 
       if (fraction > deltadown) {
-        val = startdenom * vals[i];
+        val = startdenom * HighsCDouble(vals[i]);
         fraction = val - floor(val);
         denom *= denominator(double(fraction), deltaup, 1000);
-        val = denom * vals[i];
+        val = denom * HighsCDouble(vals[i]);
         downval = floor(val + deltaup);
         fraction = val - downval;
 
@@ -191,6 +200,7 @@ class HighsIntegers {
         // unecessary overflows
         if (denom > std::numeric_limits<unsigned int>::max()) {
           denom /= currgcd;
+          if (startdenom != 1) startdenom /= gcd(currgcd, startdenom);
           currgcd = 1;
         }
       }

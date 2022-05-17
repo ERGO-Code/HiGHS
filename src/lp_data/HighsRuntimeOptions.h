@@ -33,7 +33,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         "File of model to solve.",
         cxxopts::value<std::vector<std::string>>())
         (kPresolveString,
-        "Presolve: \"choose\" by default - \"on\"/\"off\"/\"mip\" are alternatives.",
+        "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
         cxxopts::value<std::string>(presolve))
         (kSolverString,
         "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
@@ -42,13 +42,16 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         "Parallel solve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
         cxxopts::value<std::string>(parallel))
         (kTimeLimitString,
-        "Run time limit (double).",
+        "Run time limit (seconds - double).",
         cxxopts::value<double>())
         (kOptionsFileString,
         "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())
         (kSolutionFileString,
         "File for writing out model solution.",
+        cxxopts::value<std::vector<std::string>>())
+        (kWriteModelFileString,
+        "File for writing out model.",
         cxxopts::value<std::vector<std::string>>())
         (kRandomSeedString,
         "Seed to initialize random number generation.",
@@ -140,6 +143,20 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
+    if (result.count(kWriteModelFileString)) {
+      auto& v = result[kWriteModelFileString].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        std::cout << "Multiple write model files not implemented.\n";
+        return false;
+      }
+      if (setLocalOptionValue(report_log_options, kWriteModelFileString,
+                              options.log_options, options.records,
+                              v[0]) != OptionStatus::kOk ||
+          setLocalOptionValue(report_log_options, "write_model_to_file",
+                              options.records, true) != OptionStatus::kOk)
+        return false;
+    }
+
     if (result.count(kRandomSeedString)) {
       HighsInt value = result[kRandomSeedString].as<HighsInt>();
       if (setLocalOptionValue(report_log_options, kRandomSeedString,
@@ -159,6 +176,20 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
     highsLogUser(report_log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());
     return false;
+  }
+
+  const bool horrible_hack_for_windows_visual_studio = false;
+  if (horrible_hack_for_windows_visual_studio) {
+    // Until I know how to debug an executable using command line
+    // arguments in Visual Studio on Windows, this is necessary!
+    HighsInt random_seed = -3;
+    if (random_seed >= 0) {
+      if (setLocalOptionValue(report_log_options, kRandomSeedString,
+                              options.records,
+                              random_seed) != OptionStatus::kOk)
+        return false;
+    }
+    model_file = "ml.mps";
   }
 
   if (model_file.size() == 0) {
