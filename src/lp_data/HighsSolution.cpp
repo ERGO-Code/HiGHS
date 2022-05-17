@@ -313,6 +313,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
     if (iVar < lp.num_col_ && get_residuals) {
       HighsInt iCol = iVar;
+      double check_error;
       if (have_dual_solution) {
 	dual_activities[iCol] = gradient[iCol];
 	if (gradient[iCol] > 0) {
@@ -320,9 +321,9 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 	} else {
 	  dual_negative_sum[iCol] = -gradient[iCol];
 	}
+	check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - dual_activities[iCol]);
+	assert(check_error < 1e-8);
       }
-      double check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - dual_activities[iCol]);
-      assert(check_error < 1e-8);
       for (HighsInt el = lp.a_matrix_.start_[iCol];
            el < lp.a_matrix_.start_[iCol + 1]; el++) {
         HighsInt iRow = lp.a_matrix_.index_[el];
@@ -345,7 +346,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 	  } else {
 	    dual_negative_sum[iCol] -= term; 
 	  }
-	   check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - dual_activities[iCol]);
+	  check_error = std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol] - dual_activities[iCol]);
 	  assert(check_error < 1e-8);
 	}
       }
