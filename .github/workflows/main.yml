@@ -26,7 +26,7 @@ jobs:
       - name: Zip Release
         uses: TheDoctor0/zip-release@0.6.2
         with:
-          filename: HiGHS.zip
+          filename: ternsai.zip
           
       - name: my-artifact 
         uses: actions/upload-artifact@v3.0.0
