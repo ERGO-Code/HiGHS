@@ -18,7 +18,6 @@ jobs:
       matrix:
         msystem: [MINGW64, UCRT64, CLANG64]
         build-type: [Release, Debug]
-        fast-build: [On]
         int64: [On, Off]
         include:
           - msystem: MINGW64
@@ -27,9 +26,6 @@ jobs:
             target-prefix: mingw-w64-ucrt-x86_64
           - msystem: CLANG64
             target-prefix: mingw-w64-clang-x86_64
-        exclude:
-          - fast-build: On
-            int64: On
 
     steps:
     - uses: msys2/setup-msys2@v2
@@ -46,7 +42,7 @@ jobs:
     - name: Configure CMake
       run: |
         mkdir build && cd build
-        cmake .. -DFAST_BUILD=${{ matrix.fast-build }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DHIGHSINT64=${{ matrix.int64 }}
+        cmake .. -DFAST_BUILD=On -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DHIGHSINT64=${{ matrix.int64 }}
 
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
