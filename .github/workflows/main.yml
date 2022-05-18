@@ -28,10 +28,11 @@ jobs:
         with:
           filename: HiGHS.zip
           
-      - name: my-artifact 
-        uses: actions/upload-artifact@v3.0.0
-        with:
-          path: ${{ github.workspace }}/HiGHS.zip
+    ##Useful to download the content of the zip
+      #- name: my-artifact 
+      #  uses: actions/upload-artifact@v3.0.0
+      #  with:
+      #    path: ${{ github.workspace }}/HiGHS.zip
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
