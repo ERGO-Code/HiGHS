@@ -18,7 +18,7 @@ jobs:
       matrix:
         msystem: [MINGW64, UCRT64, CLANG64]
         build-type: [Release, Debug]
-        fast-build: [On, Off]
+        fast-build: [On]
         int64: [On, Off]
         include:
           - msystem: MINGW64
