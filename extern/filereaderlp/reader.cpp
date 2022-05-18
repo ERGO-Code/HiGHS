@@ -269,7 +269,7 @@ void Reader::processnonesec() {
 }
 
 void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj) {
-   if (tokens.size() - i >= 1 && tokens[0]->type == ProcessedTokenType::CONID) {
+   if (tokens.size() - i >= 1 && tokens[i]->type == ProcessedTokenType::CONID) {
       expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
       i++;
    }
@@ -292,7 +292,7 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
 
       // const
       if (tokens.size() - i  >= 1 && tokens[i]->type == ProcessedTokenType::CONST) {
-         expr->offset = ((ProcessedConstantToken*)tokens[i].get())->value;
+         expr->offset += ((ProcessedConstantToken*)tokens[i].get())->value;
          i++;
          continue;
       }
