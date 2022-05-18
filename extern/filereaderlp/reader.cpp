@@ -680,6 +680,18 @@ void Reader::processtokens() {
    while (i < this->rawtokens.size()) {
       fflush(stdout);
 
+      // Slash + asterisk: comment, skip everything up to next asterisk + slash
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::SLASH) && rawtokens[i+1]->istype(RawTokenType::ASTERISK)) {
+         unsigned int j = i+2;
+         while (rawtokens.size() - j >= 2) {
+            if (rawtokens[j]->istype(RawTokenType::ASTERISK) && rawtokens[j+1]->istype(RawTokenType::SLASH)) {
+               i = j + 2;
+               break;
+            }
+            j++;
+         }
+      }
+
       // long section keyword semi-continuous
       if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::MINUS) && rawtokens[i+2]->istype(RawTokenType::STR)) {
          std::string temp = ((RawStringToken*)rawtokens[i].get())->value + "-" + ((RawStringToken*)rawtokens[i+2].get())->value;
