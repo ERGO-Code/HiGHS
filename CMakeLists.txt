@@ -13,6 +13,9 @@ include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
 set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
+# use customizable install directories
+include(GNUInstallDirs)
+
 # set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -60,15 +63,9 @@ set(CMAKE_MACOSX_RPATH ON)
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
 
-if (WIN32)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
-else()
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
-endif()
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 
 include(CheckCXXSourceCompiles)
 
@@ -143,6 +140,7 @@ endif()
 if(MSVC)
     add_definitions(/W4)
     add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
+    add_definitions(/MP)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 endif()
@@ -291,7 +289,7 @@ if(NOT MSVC)
     if (NOT "${OSI_ROOT}" STREQUAL "")
         # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
         message(STATUS "OSI root folder set: " ${OSI_ROOT})
-        set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+        set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/${CMAKE_INSTALL_LIBDIR}/pkgconfig")
     endif ()
     unset(OSI_ROOT CACHE)
     find_package(PkgConfig)
@@ -354,7 +352,7 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 # when building, don't use the install RPATH already
 # (but later on when installing)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 
 # Targets
@@ -373,8 +371,6 @@ message(STATUS "FAST_BUILD set to on.
        experience any issues please let us know via email or on GitHub.")
 
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
-
-# todo: ig branch ipx-m
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
@@ -508,16 +504,11 @@ if (EXP)
 endif()
 
 
-if (UNIX)
-    install(TARGETS libhighs EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            PUBLIC_HEADER DESTINATION include)
-elseif (WIN32)
-    install(TARGETS libhighs EXPORT highs-targets
-            LIBRARY DESTINATION bin
-            PUBLIC_HEADER DESTINATION include)
-endif()
+install(TARGETS libhighs EXPORT highs-targets
+    LIBRARY
+    ARCHIVE
+    RUNTIME
+    PUBLIC_HEADER)
 
 
 endif()

@@ -107,7 +107,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
-                HighsStatusToString(return_status).c_str());
+                highsStatusToString(return_status).c_str());
   return return_status;
 }
 

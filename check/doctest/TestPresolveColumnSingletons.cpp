@@ -243,35 +243,35 @@ HighsStatus twoColSingDoubletonInequality()
 TEST_CASE("zero-cost [presolve-col-sing]") {
   std::cout << "Presolve 1." << std::endl;
   HighsStatus status = zeroCostColSing();
-  std::string str = HighsStatusToString(status);
+  std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
 TEST_CASE("col-sing-doubleton-eq [presolve-col-sing]") {
   std::cout << "Presolve 2." << std::endl;
   HighsStatus status =  colSingDoubletonEquality();
-  std::string str = HighsStatusToString(status);
+  std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
 TEST_CASE("col-sing-doubleton-ineq [presolve-col-sing]") {
   std::cout << "Presolve 3." << std::endl;
   HighsStatus status =  colSingDoubletonInequality();
-  std::string str = HighsStatusToString(status);
+  std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
 TEST_CASE("two-col-sing-doubleton-eq [presolve-col-sing]") {
   std::cout << "Presolve 4." << std::endl;
   HighsStatus status =  twoColSingDoubletonEquality();
-  std::string str = HighsStatusToString(status);
+  std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
 TEST_CASE("two-col-sing-doubleton-ineq [presolve-col-sing]") {
   std::cout << "Presolve 5." << std::endl;
   HighsStatus status =  twoColSingDoubletonInequality();
-  std::string str = HighsStatusToString(status);
+  std::string str = highsStatusToString(status);
   REQUIRE(str == "OK");
 }
 
