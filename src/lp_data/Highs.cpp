@@ -852,10 +852,10 @@ HighsStatus Highs::run() {
       return HighsStatus::kError;
     }
     ICrashOptions icrash_options{
-        options_.icrash_dualize,          strategy,
-        options_.icrash_starting_weight,  (int)options_.icrash_iterations,
-        (int)options_.icrash_approx_iter, options_.icrash_exact,
-        options_.icrash_breakpoints,      options_.log_options};
+        options_.icrash_dualize,         strategy,
+        options_.icrash_starting_weight, options_.icrash_iterations,
+        options_.icrash_approx_iter,     options_.icrash_exact,
+        options_.icrash_breakpoints,     options_.log_options};
 
     HighsStatus icrash_status =
         callICrash(model_.lp_, icrash_options, icrash_info_);
@@ -2721,18 +2721,17 @@ HighsStatus Highs::callSolveQp() {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  model_status_ =
-      runtime.status == ProblemStatus::OPTIMAL
-          ? HighsModelStatus::kOptimal
-          : runtime.status == ProblemStatus::UNBOUNDED
-                ? HighsModelStatus::kUnbounded
-                : runtime.status == ProblemStatus::INFEASIBLE
+  model_status_ = runtime.status == ProblemStatus::OPTIMAL
+                      ? HighsModelStatus::kOptimal
+                  : runtime.status == ProblemStatus::UNBOUNDED
+                      ? HighsModelStatus::kUnbounded
+                  : runtime.status == ProblemStatus::INFEASIBLE
                       ? HighsModelStatus::kInfeasible
-                      : runtime.status == ProblemStatus::ITERATIONLIMIT
-                            ? HighsModelStatus::kIterationLimit
-                            : runtime.status == ProblemStatus::TIMELIMIT
-                                  ? HighsModelStatus::kTimeLimit
-                                  : HighsModelStatus::kNotset;
+                  : runtime.status == ProblemStatus::ITERATIONLIMIT
+                      ? HighsModelStatus::kIterationLimit
+                  : runtime.status == ProblemStatus::TIMELIMIT
+                      ? HighsModelStatus::kTimeLimit
+                      : HighsModelStatus::kNotset;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
   const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;

@@ -62,8 +62,8 @@ struct ICrashOptions {
   bool dualize;
   ICrashStrategy strategy;
   double starting_weight;
-  int iterations;
-  int approximate_minimization_iterations;
+  HighsInt iterations;
+  HighsInt approximate_minimization_iterations;
   bool exact;
   bool breakpoints;  // gets ignored if exact is set to true
   HighsLogOptions log_options;
