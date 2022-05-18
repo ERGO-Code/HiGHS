@@ -28,6 +28,9 @@
 #include "lp_data/HighsSolution.h"
 #include "util/stringutil.h"
 
+const double kHighsDoubleTolerance = 1e-13;
+const double kGlpsolDoubleTolerance = 1e-12;
+ 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper) {
@@ -213,7 +216,6 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     assert((int)solution.row_dual.size() >= lp.num_row_);
     assert(info.dual_solution_status != kSolutionStatusNone);
   }
-  const double double_tolerance = 1e-13;
   fprintf(file, "\n# Primal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
@@ -228,12 +230,12 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     for (HighsInt i = 0; i < lp.num_col_; ++i)
       objective_function_value += lp.col_cost_[i] * solution.col_value[i];
     std::array<char, 32> objStr =
-        highsDoubleToString((double)objective_function_value, double_tolerance);
+        highsDoubleToString((double)objective_function_value, kHighsDoubleTolerance);
     fprintf(file, "Objective %s\n", objStr.data());
     fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.col_value[ix], double_tolerance);
+          highsDoubleToString(solution.col_value[ix], kHighsDoubleTolerance);
       // Create a column name
       ss.str(std::string());
       ss << "C" << ix;
@@ -243,7 +245,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.row_value[ix], double_tolerance);
+          highsDoubleToString(solution.row_value[ix], kHighsDoubleTolerance);
       // Create a row name
       ss.str(std::string());
       ss << "R" << ix;
@@ -264,7 +266,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.col_dual[ix], double_tolerance);
+          highsDoubleToString(solution.col_dual[ix], kHighsDoubleTolerance);
       ss.str(std::string());
       ss << "C" << ix;
       const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
@@ -273,7 +275,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.row_dual[ix], double_tolerance);
+          highsDoubleToString(solution.row_dual[ix], kHighsDoubleTolerance);
       ss.str(std::string());
       ss << "R" << ix;
       const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
@@ -362,7 +364,6 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  const double double_tolerance = 1e-13;
   const HighsLp& lp = model.lp_;
   if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, lp, basis, solution);
@@ -380,7 +381,7 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     fprintf(file, "\nModel status: %s\n",
             utilModelStatusToString(model_status).c_str());
     std::array<char, 32> objStr = highsDoubleToString(
-        (double)info.objective_function_value, double_tolerance);
+        (double)info.objective_function_value, kHighsDoubleTolerance);
     fprintf(file, "\nObjective value: %s\n", objStr.data());
   } else if (style == kSolutionStyleGlpsolRaw ||
              style == kSolutionStyleGlpsolPretty) {
@@ -391,6 +392,36 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
     writeModelSolution(file, lp, solution, info);
+  }
+}
+
+void writeGlpsolCostRow(FILE* file, 
+			const bool raw,
+			const bool is_mip,
+			const HighsInt row_id,
+			const std::string objective_name,
+			const double objective_function_value) {
+  if (raw) {
+    double double_value = objective_function_value;
+    std::array<char, 32> double_string =
+      highsDoubleToString(double_value, kGlpsolDoubleTolerance);
+    // Last term of 0 for dual should (also) be blank when not MIP
+    fprintf(file, "i %d %s%s%s\n", (int)row_id, is_mip ? "" : "b ",
+	    double_string.data(), is_mip ? "" : " 0");
+  } else {
+    fprintf(file, "%6d ", (int)row_id);
+    if (objective_name.length() <= 12) {
+      fprintf(file, "%-12s ", objective_name.c_str());
+    } else {
+      fprintf(file, "%s\n%20s", objective_name.c_str(), "");
+    }
+    if (is_mip) {
+      fprintf(file, "   ");
+    } else {
+      fprintf(file, "B  ");
+    }
+    fprintf(file, "%13.6g %13s %13s \n", objective_function_value, "",
+	    "");
   }
 }
 
@@ -407,7 +438,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const double kGlpsolMediumQuality = 1e-6;
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
-  const double double_tolerance = 1e-12;
   const HighsLp& lp = model.lp_;
   const bool have_col_names = lp.col_names_.size();
   const bool have_row_names = lp.row_names_.size();
@@ -419,11 +449,37 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   bool has_cost_row = num_nz > lp.a_matrix_.numNz();
   bool has_objective = has_cost_row;
   if (model.hessian_.dim_) has_objective = true;
+  // When writing out the row information (and hence the number of
+  // rows and nonzeros), the case of the cost row is tricky
+  // (particularly if it's empty) if HiGHS is to be able to reproduce
+  // the (inconsistent) behaviour of Glpsol, .
+  //
+  // If Glpsol is run from a .mod file then the cost row is reported
+  // unless it is empty. However, its position depends on where the
+  // objecive appears in the .mod file. Sometimes it's first,
+  // sometimes it's last, and (who knows!)  maybe sometimes it's
+  // somewhere inbetween. If Glpsol is run from a .mod file, and reads
+  // a .sol file, it must be in the right format.
+  //
+  // If Glpsol is run from an MPS file then the cost row is not
+  // reported.
+  //
+  // This inconsistent behaviour means that it must be possible to
+  // tell HiGHS to suppress the cost row
+  //
+  bool cost_row_last = false;
+  HighsInt cost_row_option = options.glpsol_cost_row_location;
+  HighsInt cost_row_location = 0;
+  if (cost_row_option < 0 || cost_row_option > lp.num_row_) {
+    cost_row_last = true;
+  } else if (cost_row_option == 0) {
+    if (has_cost_row) cost_row_last = true;
+  } else {
+    cost_row_location = cost_row_option;
+  }
   // Despite being written in C, GLPSOL indexes rows (columns) from
   // 1..m (1..n) with - bizarrely! - m being one more than the number
-  // of constraints if the cost vector has nonzeros. In glpsol output,
-  // the cost vector appears wherever the "N" row was in the MPS file,
-  // but that can't be done in HiGHS
+  // of constraints if the cost vector is reported.
   const HighsInt num_row = lp.num_row_;
   const HighsInt num_col = lp.num_col_;
   const HighsInt delta_num_row = has_cost_row ? 1 : 0;
@@ -541,7 +597,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     }
     double double_value = has_objective ? info.objective_function_value : 0;
     std::array<char, 32> double_string =
-        highsDoubleToString(double_value, double_tolerance);
+        highsDoubleToString(double_value, kHighsDoubleTolerance);
     fprintf(file, " %s\n", double_string.data());
   }
   if (!raw) {
@@ -560,18 +616,24 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     fprintf(file, "\n");
   }
 
+  HighsInt row_id = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    fprintf(file, "i %d ", (int)(iRow + 1));
+    row_id++;
+    if (row_id == cost_row_location) {
+      writeGlpsolCostRow(file, raw, is_mip, row_id, objective_name, info.objective_function_value);
+      row_id++;
+    }
+    fprintf(file, "i %d ", (int)row_id);
     if (raw) {
       if (is_mip) {
         double double_value = solution.row_value[iRow];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, double_tolerance);
+            highsDoubleToString(double_value, kHighsDoubleTolerance);
         fprintf(file, "%s\n", double_string.data());
         continue;
       }
     } else {
-      fprintf(file, "%6d ", (int)(iRow + 1));
+      fprintf(file, "%6d ", (int)row_id);
       std::string row_name = "";
       if (have_row_names) row_name = lp.row_names_[iRow];
       if (row_name.length() <= 12) {
@@ -615,7 +677,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       fprintf(file, "%s ", status_char.c_str());
       double double_value = solution.row_value[iRow];
       std::array<char, 32> double_string =
-          highsDoubleToString(double_value, double_tolerance);
+          highsDoubleToString(double_value, kHighsDoubleTolerance);
       fprintf(file, "%s ", double_string.data());
     } else {
       fprintf(file, "%s ", status_text.c_str());
@@ -633,7 +695,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       if (raw) {
         double double_value = solution.row_dual[iRow];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, double_tolerance);
+            highsDoubleToString(double_value, kHighsDoubleTolerance);
         fprintf(file, "%s", double_string.data());
       } else {
         // If the row is known to be basic, don't print the dual
@@ -652,29 +714,9 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     fprintf(file, "\n");
   }
 
-  if (has_cost_row) {
-    if (raw) {
-      double double_value = info.objective_function_value;
-      std::array<char, 32> double_string =
-          highsDoubleToString(double_value, double_tolerance);
-      // Last term of 0 for dual should (also) be blank when not MIP
-      fprintf(file, "i %d %s%s%s\n", (int)(lp.num_row_ + 1), is_mip ? "" : "b ",
-              double_string.data(), is_mip ? "" : " 0");
-    } else {
-      fprintf(file, "%6d ", (int)(lp.num_row_ + 1));
-      if (objective_name.length() <= 12) {
-        fprintf(file, "%-12s ", objective_name.c_str());
-      } else {
-        fprintf(file, "%s\n%20s", objective_name.c_str(), "");
-      }
-      if (is_mip) {
-        fprintf(file, "   ");
-      } else {
-        fprintf(file, "B  ");
-      }
-      fprintf(file, "%13.6g %13s %13s \n", info.objective_function_value, "",
-              "");
-    }
+  if (cost_row_last) {
+    row_id++;
+    writeGlpsolCostRow(file, raw, is_mip, row_id, objective_name, info.objective_function_value);
   }
   if (!raw) fprintf(file, "\n");
 
@@ -700,7 +742,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       if (is_mip) {
         double double_value = solution.col_value[iCol];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, double_tolerance);
+            highsDoubleToString(double_value, kHighsDoubleTolerance);
         fprintf(file, "%s\n", double_string.data());
         continue;
       }
@@ -751,7 +793,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       fprintf(file, "%s ", status_char.c_str());
       double double_value = solution.col_value[iCol];
       std::array<char, 32> double_string =
-          highsDoubleToString(double_value, double_tolerance);
+          highsDoubleToString(double_value, kHighsDoubleTolerance);
       fprintf(file, "%s ", double_string.data());
     } else {
       fprintf(file, "%s ", status_text.c_str());
@@ -769,7 +811,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       if (raw) {
         double double_value = solution.col_dual[iCol];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, double_tolerance);
+            highsDoubleToString(double_value, kHighsDoubleTolerance);
         fprintf(file, "%s", double_string.data());
       } else {
         // If the column is known to be basic, don't print the dual

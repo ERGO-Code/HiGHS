@@ -302,6 +302,7 @@ struct HighsOptionsStruct {
   bool write_model_to_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
+  HighsInt glpsol_cost_row_location;
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
@@ -636,10 +637,17 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt("write_solution_style",
-                            "Write the solution in style: 0=>Raw "
-                            "(computer-readable); 1=>Pretty (human-readable) ",
+                            "Style of solution file Raw (computer-readable); Pretty (human-readable): "
+                            "0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; ",
                             advanced, &write_solution_style, kSolutionStyleMin,
                             kSolutionStyleRaw, kSolutionStyleMax);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("glpsol_cost_row_location",
+                            "Location of cost row for Glpsol file: "
+                            "-1 => Last; 0 => None if empty; 1 <= n <= num_row => Location n; n > num_row => Last",
+                            advanced, &glpsol_cost_row_location, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_bool =
