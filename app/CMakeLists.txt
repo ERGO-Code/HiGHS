@@ -14,4 +14,4 @@ target_link_libraries(highs libhighs)
 
 # install the binary
 install(TARGETS highs EXPORT highs-targets
-        RUNTIME DESTINATION bin)
+        RUNTIME)

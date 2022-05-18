@@ -20,7 +20,7 @@
 enum class HighsStatus { kError = -1, kOk = 0, kWarning = 1 };
 
 // Return a string representation of HighsStatus.
-std::string HighsStatusToString(HighsStatus status);
+std::string highsStatusToString(HighsStatus status);
 
 // Return the maximum of two HighsStatus and possibly report on
 // call_status not being HighsStatus::kOk

@@ -22,6 +22,7 @@
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "model/HighsModel.h"
+#include "presolve/ICrash.h"
 #include "presolve/PresolveComponent.h"
 
 /**
@@ -290,6 +291,8 @@ class Highs {
    * @brief Return a const reference to the internal HighsSolution instance
    */
   const HighsSolution& getSolution() const { return solution_; }
+
+  const ICrashInfo& getICrashInfo() const { return icrash_info_; };
 
   /**
    * @brief Return a const reference to the internal HighsBasis instance
@@ -1048,6 +1051,8 @@ class Highs {
  private:
   HighsSolution solution_;
   HighsBasis basis_;
+  ICrashInfo icrash_info_;
+
   HighsModel model_;
   HighsModel presolved_model_;
   HighsTimer timer_;

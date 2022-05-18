@@ -16,6 +16,7 @@
 #include <iostream>
 
 #include "HConfig.h"
+#include "io/HighsIO.h"
 #include "ipm/IpxWrapper.h"
 
 HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,

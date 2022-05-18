@@ -21,7 +21,7 @@
 // forward declarations
 class Highs;
 class HighsLp;
-class HighsSolution;
+struct HighsSolution;
 enum class HighsStatus;
 
 /** HiGHS Solver Interface

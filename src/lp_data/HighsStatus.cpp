@@ -14,7 +14,7 @@
 
 #include <cassert>
 
-std::string HighsStatusToString(HighsStatus status) {
+std::string highsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::kOk:
       return "OK";
@@ -37,7 +37,7 @@ HighsStatus interpretCallStatus(const HighsLogOptions log_options,
   if (call_status != HighsStatus::kOk)
     highsLogDev(log_options, HighsLogType::kWarning,
                 "%s return of HighsStatus::%s\n", message.c_str(),
-                HighsStatusToString(call_status).c_str());
+                highsStatusToString(call_status).c_str());
   return to_return_status;
 }
 

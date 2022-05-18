@@ -42,6 +42,7 @@ set(TEST_SOURCES
     TestHighsHessian.cpp
     TestHighsModel.cpp
     TestHSet.cpp
+    TestICrash.cpp
     TestLogging.cpp
     TestLPFileFormat.cpp
     TestLpValidation.cpp
