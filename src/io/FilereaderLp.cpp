@@ -42,6 +42,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     lp.num_col_ = m.variables.size();
     lp.num_row_ = m.constraints.size();
+    lp.row_names_.resize(m.constraints.size());
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     HighsInt num_continuous = 0;
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
@@ -122,6 +123,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     std::map<std::shared_ptr<Variable>, std::vector<double>> consofvarmap_value;
     for (HighsUInt i = 0; i < m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
+      lp.row_names_[i] = con->expr->name;
       for (HighsUInt j = 0; j < con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
         if (consofvarmap_index.count(lt->var) == 0) {
