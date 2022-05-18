@@ -341,6 +341,16 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
 
+  // Options for iCrash
+  bool icrash;
+  bool icrash_dualize;
+  std::string icrash_strategy;
+  double icrash_starting_weight;
+  HighsInt icrash_iterations;
+  HighsInt icrash_approx_iter;
+  bool icrash_exact;
+  bool icrash_breakpoints;
+
   // Options for MIP solver
   bool mip_detect_symmetry;
   HighsInt mip_max_nodes;
@@ -631,6 +641,43 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &write_solution_style, kSolutionStyleMin,
                             kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
+
+    record_bool =
+        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
+                             advanced, &icrash_dualize, false);
+    records.push_back(record_bool);
+
+    record_string =
+        new OptionRecordString("icrash_strategy", "Strategy for iCrash",
+                               advanced, &icrash_strategy, "ICA");
+    records.push_back(record_string);
+
+    record_double = new OptionRecordDouble(
+        "icrash_starting_weight", "iCrash starting weight", advanced,
+        &icrash_starting_weight, 1e-10, 1e-3, 1e50);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
+                                     advanced, &icrash_iterations, 0, 30, 200);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "icrash_approx_iter", "iCrash approximate minimization iterations",
+        advanced, &icrash_approx_iter, 0, 50, 100);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("icrash_exact",
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_exact, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("icrash_breakpoints",
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_breakpoints, false);
 
     record_string = new OptionRecordString(
         kWriteModelFileString, "Write model file", advanced, &write_model_file,

@@ -372,8 +372,6 @@ message(STATUS "FAST_BUILD set to on.
 
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
 
-# todo: ig branch ipx-m
-
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
