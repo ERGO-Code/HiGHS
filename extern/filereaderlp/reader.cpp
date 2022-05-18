@@ -785,6 +785,16 @@ void Reader::processtokens() {
          continue;
       }
 
+      // - [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+         lpassert(false);
+      }
+
+      // constant [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::CONS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+         lpassert(false);
+      }
+
       // +
       if (rawtokens[i]->istype(RawTokenType::PLUS)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(1.0)));
