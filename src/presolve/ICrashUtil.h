@@ -17,6 +17,8 @@
 
 #include <vector>
 
+#include "io/HighsIO.h"
+
 class HighsLp;
 struct HighsSolution;
 

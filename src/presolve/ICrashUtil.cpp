@@ -78,7 +78,7 @@ void printMinorIterationDetails(const double iteration, const double col,
   ss << std::endl;
 
   // std::cout << ss.str();
-  highsLogUser(log_options, HighsLogType::kInfo, ss.str());
+  highsLogUser(options, HighsLogType::kInfo, ss.str().c_str());
 }
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,
