@@ -1462,7 +1462,7 @@ void Highs::clearZeroHessian() {
   }
 }
 
-HighsStatus Highs::checkOptimality(const std::string solver_type,
+HighsStatus Highs::checkOptimality(const std::string& solver_type,
                                    HighsStatus return_status) {
   // Check for infeasibility measures incompatible with optimality
   assert(return_status != HighsStatus::kError);
