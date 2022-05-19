@@ -266,7 +266,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
         double quadratic_objective = getQuadraticObjective(idata);
         printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
                                    delta_x, objective_ica, residual_ica,
-                                   quadratic_objective);
+                                   quadratic_objective, options.log_options);
       }
 
       assert(std::fabs(objective_ica -
@@ -310,7 +310,7 @@ void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
         double quadratic_objective = getQuadraticObjective(idata);
         printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
                                    delta_x, objective, residual,
-                                   quadratic_objective);
+                                   quadratic_objective, options.log_options);
       }
     }
   }

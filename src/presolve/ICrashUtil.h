@@ -17,6 +17,8 @@
 
 #include <vector>
 
+#include "io/HighsIO.h"
+
 class HighsLp;
 struct HighsSolution;
 
@@ -34,7 +36,8 @@ void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
 void printMinorIterationDetails(const double iteration, const double col,
                                 const double old_value, const double update,
                                 const double ctx, const std::vector<double>& r,
-                                const double quadratic_objective);
+                                const double quadratic_objective,
+                                HighsLogOptions options);
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda);

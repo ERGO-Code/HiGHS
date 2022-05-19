@@ -63,7 +63,8 @@ void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
 void printMinorIterationDetails(const double iteration, const double col,
                                 const double old_value, const double update,
                                 const double ctx, const std::vector<double>& r,
-                                const double quadratic_objective) {
+                                const double quadratic_objective,
+                                HighsLogOptions options) {
   double rnorm = getNorm2(r);
   std::stringstream ss;
   ss << "iter " << iteration;
@@ -75,7 +76,9 @@ void printMinorIterationDetails(const double iteration, const double col,
   ss << ", r " << rnorm;
   ss << ", quadratic_objective " << quadratic_objective;
   ss << std::endl;
-  std::cout << ss.str();
+
+  // std::cout << ss.str();
+  highsLogUser(options, HighsLogType::kInfo, ss.str().c_str());
 }
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,
