@@ -246,3 +246,13 @@ HiGHS run time      :          0.00
 >>> print(sol.col_value)
 [-1.0, 1.0]
 ```
+
+Docker
+------
+
+In order to have a docker container with Java and Highs run these commands (if using Apple M1 add --platform linux/amd64 at the end of the command)
+```
+zip -r HiGHS.zip .
+docker build -t highs:latest .
+```
+This image is based on Alpine.
