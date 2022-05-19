@@ -49,16 +49,11 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   if (cutpool.getNumAvailableCuts() > mip.options_mip_->mip_pool_soft_limit)
     return;
-  std::vector<HighsInt> basisinds;
-  HighsInt numrow = lpRelaxation.numRows();
-  basisinds.resize(numrow);
-  lpRelaxation.getLpSolver().getBasicVariables(basisinds.data());
 
-  std::vector<HighsInt> nonzeroWeights;
-  std::vector<double> rowWeights;
-  nonzeroWeights.resize(numrow);
-  rowWeights.resize(numrow);
-  HighsInt numNonzeroWeights;
+  const HighsInt* basisinds =
+      lpRelaxation.getLpSolver().getBasicVariablesArray();
+  HighsInt numRow = lpRelaxation.numRows();
+  HighsInt numCol = lpRelaxation.numCols();
 
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
 
@@ -68,22 +63,22 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
   std::vector<FractionalInteger> fractionalBasisvars;
-  fractionalBasisvars.reserve(basisinds.size());
-  for (HighsInt i = 0; i < numrow; ++i) {
+  fractionalBasisvars.reserve(numRow);
+  for (HighsInt i = 0; i < numRow; ++i) {
     double fractionality;
-    if (basisinds[i] < 0) {
-      HighsInt row = -basisinds[i] - 1;
+    if (basisinds[i] >= numCol) {
+      HighsInt row = basisinds[i] - numCol;
 
       if (!lpRelaxation.isRowIntegral(row)) continue;
 
       double solval = lpSolution.row_value[row];
-      fractionality = std::abs(std::round(solval) - solval);
+      fractionality = std::fabs(std::round(solval) - solval);
     } else {
       HighsInt col = basisinds[i];
       if (mip.variableType(col) == HighsVarType::kContinuous) continue;
 
       double solval = lpSolution.col_value[col];
-      fractionality = std::abs(std::round(solval) - solval);
+      fractionality = std::fabs(std::round(solval) - solval);
     }
 
     if (fractionality < 1000 * mip.mipdata_->feastol) continue;
@@ -102,7 +97,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   maxTries = std::min(
       {maxTries,
        200 + int64_t(0.1 *
-                     std::min(numrow,
+                     std::min(numRow,
                               (HighsInt)mip.mipdata_->integral_cols.size()))});
 
   if (fractionalBasisvars.size() > maxTries) {
@@ -144,25 +139,27 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     fractionalBasisvars.resize(maxTries);
   }
 
+  HVector rowEpBuffer;
+  rowEpBuffer.setup(numRow);
+
   numTries += fractionalBasisvars.size();
 
   for (auto& fracvar : fractionalBasisvars) {
     HighsInt i = fracvar.basisIndex;
-    if (lpSolver.getBasisInverseRow(fracvar.basisIndex, rowWeights.data(),
-                                    &numNonzeroWeights,
-                                    nonzeroWeights.data()) != HighsStatus::kOk)
+    if (lpSolver.getBasisInverseRowSparse(fracvar.basisIndex, rowEpBuffer) !=
+        HighsStatus::kOk)
       continue;
 
     // handled by other separator
-    if (numNonzeroWeights == 1) continue;
+    if (rowEpBuffer.count == 1) continue;
 
     fracvar.row_ep_norm2 = 0.0;
     double minWeight = kHighsInf;
     double maxWeight = 0.0;
-    fracvar.row_ep.reserve(numNonzeroWeights);
-    for (HighsInt j = 0; j < numNonzeroWeights; ++j) {
-      HighsInt row = nonzeroWeights[j];
-      double weight = rowWeights[row];
+    fracvar.row_ep.reserve(rowEpBuffer.count);
+    for (HighsInt j = 0; j < rowEpBuffer.count; ++j) {
+      HighsInt row = rowEpBuffer.index[j];
+      double weight = rowEpBuffer.array[row];
       double maxAbsRowVal = lpRelaxation.getMaxAbsRowVal(row);
 
       double scaledWeight = maxAbsRowVal * std::abs(weight);

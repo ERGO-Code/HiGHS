@@ -206,7 +206,7 @@ void HighsLp::unapplyScale() {
   this->is_scaled_ = false;
 }
 
-void HighsLp::moveBackLpAndUnapplyScaling(HighsLp lp) {
+void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
   assert(this->is_moved_ == true);
   *this = std::move(lp);
   this->unapplyScale();

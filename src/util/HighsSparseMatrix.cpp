@@ -1232,8 +1232,12 @@ void HighsSparseMatrix::priceByRowWithSwitch(
     const double expected_density, const HighsInt from_index,
     const double switch_density, const HighsInt debug_report) const {
   assert(this->isRowwise());
-  HighsInt sum_dim = quad_precision ? num_col_ : 1;
-  HighsSparseVectorSum sum(sum_dim);
+  HighsSparseVectorSum sum;
+  // todo @Julian: Setting up the sparse vector sum is equivalent to calling
+  // HVector::setup() I think there should instead be overloads where the result
+  // vector is of type HVectorQuad for the future and not the boolean parameter
+  // quad_precision. Then the buffer can be maintained similar to row_ap.
+  if (quad_precision) sum.setDimension(num_col_);
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::priceByRowWithSwitch\n");
   // (Continue) hyper-sparse row-wise PRICE with possible switches to

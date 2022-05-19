@@ -339,6 +339,15 @@ class Highs {
    */
 
   /**
+   * @brief Gets the internal basic variable index array in the order
+   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
+   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
+   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
+   * num_col+num_row) are (num_col+row_index).
+   */
+  const HighsInt* getBasicVariablesArray() const;
+
+  /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
    * getBasisTransposeSolve, getReducedRow and
@@ -346,6 +355,15 @@ class Highs {
    * and negative entries are -(row_index+1).
    */
   HighsStatus getBasicVariables(HighsInt* basic_variables);
+
+  /**
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the result in the given HVector buffer which is
+   * expected to be setup with dimension num_row. The buffers
+   * previous contents will be overwritten.
+   */
+  HighsStatus getBasisInverseRowSparse(const HighsInt row,
+                                       HVector& row_ep_buffer);
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,

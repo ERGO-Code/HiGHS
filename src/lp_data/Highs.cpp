@@ -1340,6 +1340,11 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   return return_status;
 }
 
+const HighsInt* Highs::getBasicVariablesArray() const {
+  assert(ekk_instance_.status_.has_invert);
+  return ekk_instance_.basis_.basicIndex_.data();
+}
+
 HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
   if (basic_variables == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -1347,6 +1352,20 @@ HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
     return HighsStatus::kError;
   }
   return getBasicVariablesInterface(basic_variables);
+}
+
+HighsStatus Highs::getBasisInverseRowSparse(const HighsInt row,
+                                            HVector& row_ep_buffer) {
+  ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
+  row_ep_buffer.clear();
+  row_ep_buffer.count = 1;
+  row_ep_buffer.index[0] = row;
+  row_ep_buffer.array[row] = 1;
+  row_ep_buffer.packFlag = true;
+
+  ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
+
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
