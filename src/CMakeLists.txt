@@ -426,7 +426,7 @@ configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 # Configure the config file for the install
-set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
+set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
