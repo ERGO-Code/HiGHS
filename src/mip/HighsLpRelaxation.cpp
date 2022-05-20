@@ -171,6 +171,120 @@ void HighsLpRelaxation::resetToGlobalDomain() {
                             mipsolver.mipdata_->domain.col_upper_.data());
 }
 
+void HighsLpRelaxation::computeBasicDegenerateDuals() {
+  HighsInt k = 0;
+  const HighsLp& lp = lpsolver.getLp();
+  const HighsBasis& basis = lpsolver.getBasis();
+  HighsSolution& solution = const_cast<HighsSolution&>(lpsolver.getSolution());
+  for (HighsInt col : mipsolver.mipdata_->integral_cols) {
+    if (basis.col_status[col] != HighsBasisStatus::kBasic) continue;
+    const double lb = lp.col_lower_[col];
+    const double ub = lp.col_upper_[col];
+    if (ub - lb < mipsolver.mipdata_->feastol) continue;
+
+    if (solution.col_value[col] - lb < ub - solution.col_value[col]) {
+      if (solution.col_value[col] > lb + mipsolver.mipdata_->feastol) continue;
+
+      solution.col_dual[col] = 1.0;
+      ++k;
+    } else {
+      if (solution.col_value[col] < ub - mipsolver.mipdata_->feastol) continue;
+
+      solution.col_dual[col] = -1.0;
+      ++k;
+    }
+  }
+
+  if (k == 0) return;
+
+  const HighsInt num_row = lp.num_row_;
+  const HighsInt num_col = lp.num_col_;
+
+  HVector row_ep;
+  row_ep.setup(num_row);
+  row_ap.setDimension(num_col);
+
+  const HighsInt* basicIndex = lpsolver.getBasicVariablesArray();
+
+  for (HighsInt row = 0; k > 0; row++) {
+    HighsInt var = basicIndex[row];
+    if (var >= num_col) continue;
+    if (std::fabs(solution.col_dual[var]) != 1.0) continue;
+
+    --k;
+    lpsolver.getBasisInverseRowSparse(row, row_ep);
+
+    double sign = solution.col_dual[var];
+    solution.col_dual[var] = 0.0;
+    double degenerateColDual = kHighsInf;
+    for (HighsInt i = 0; i < row_ep.count; ++i) {
+      HighsInt iRow = row_ep.index[i];
+      const double lb = lp.row_lower_[iRow];
+      const double ub = lp.row_upper_[iRow];
+      if (lb == ub) continue;
+      const double dual = solution.row_dual[iRow];
+
+      double val = -sign * row_ep.array[iRow];
+      if (val > mipsolver.mipdata_->epsilon) {
+        if (solution.row_value[iRow] - lb > mipsolver.mipdata_->feastol) {
+          degenerateColDual = std::min(degenerateColDual, -dual / val);
+          if (degenerateColDual < mipsolver.mipdata_->feastol) break;
+        }
+      } else if (val < -mipsolver.mipdata_->epsilon) {
+        if (ub - solution.row_value[iRow] > mipsolver.mipdata_->feastol) {
+          degenerateColDual = std::min(degenerateColDual, -dual / val);
+          if (degenerateColDual < mipsolver.mipdata_->feastol) break;
+        }
+      }
+    }
+
+    if (degenerateColDual < mipsolver.mipdata_->feastol) continue;
+
+    row_ap.clear();
+    for (HighsInt i = 0; i < row_ep.count; ++i) {
+      HighsInt iRow = row_ep.index[i];
+
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      getRow(iRow, len, inds, vals);
+
+      for (HighsInt j = 0; j < len; ++j)
+        row_ap.add(inds[j], row_ep.array[iRow] * vals[j]);
+    }
+
+    double eps = mipsolver.mipdata_->epsilon;
+    row_ap.cleanup(
+        [eps](HighsInt, double val) { return std::fabs(val) <= eps; });
+
+    for (HighsInt iCol : row_ap.nonzeroinds) {
+      if (iCol == var) continue;
+
+      const double lb = lp.col_lower_[iCol];
+      const double ub = lp.col_upper_[iCol];
+      if (lb == ub) continue;
+      const double dual = solution.col_dual[iCol];
+
+      double val = sign * row_ap.getValue(iCol);
+      if (val > mipsolver.mipdata_->epsilon) {
+        if (solution.col_value[iCol] - lb > mipsolver.mipdata_->feastol) {
+          degenerateColDual = std::min(degenerateColDual, -dual / val);
+          if (degenerateColDual < mipsolver.mipdata_->feastol) break;
+        }
+      } else if (val < -mipsolver.mipdata_->epsilon) {
+        if (ub - solution.col_value[iCol] > mipsolver.mipdata_->feastol) {
+          degenerateColDual = std::min(degenerateColDual, -dual / val);
+          if (degenerateColDual < mipsolver.mipdata_->feastol) break;
+        }
+      }
+    }
+
+    if (degenerateColDual < mipsolver.mipdata_->feastol) continue;
+
+    solution.col_dual[var] = sign * double(degenerateColDual);
+  }
+}
+
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   HighsCDouble estimate = objective;
 

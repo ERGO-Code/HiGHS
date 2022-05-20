@@ -71,6 +71,7 @@ class HighsLpRelaxation {
   std::vector<double> dualproofbuffer;
   std::vector<double> colLbBuffer;
   std::vector<double> colUbBuffer;
+  HighsSparseVectorSum row_ap;
   double dualproofrhs;
   bool hasdualproof;
   double objective;
@@ -252,6 +253,8 @@ class HighsLpRelaxation {
   }
 
   void resetToGlobalDomain();
+
+  void computeBasicDegenerateDuals();
 
   double getAvgSolveIters() { return avgSolveIters; }
 

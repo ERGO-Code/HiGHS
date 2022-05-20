@@ -210,6 +210,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   lurkingColLower.resize(mipsolver.numCol());
   lurkingColUpper.resize(mipsolver.numCol());
 
+  mipsolver.mipdata_->lp.computeBasicDegenerateDuals();
+
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
@@ -218,6 +220,14 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       //  lurkub = (cutoffbound - lpobj)/redcost + lb
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
       HighsInt lb = (HighsInt)mipsolver.mipdata_->domain.col_lower_[col];
+
+      if (lpredcost[col] == kHighsInf) {
+        lurkingColUpper[col].clear();
+        lurkingColLower[col].clear();
+        lurkingColUpper[col].emplace(-kHighsInf, lb);
+        continue;
+      }
+
       HighsInt maxub;
       if (mipsolver.mipdata_->domain.col_upper_[col] == kHighsInf)
         maxub = lb + 1024;
@@ -231,6 +241,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       for (HighsInt lurkub = lb; lurkub <= maxub; lurkub += step) {
         double fracbound = (lurkub - lb + 1) - 10 * mipsolver.mipdata_->feastol;
         double requiredcutoffbound = fracbound * lpredcost[col] + lpobjective;
+        if (requiredcutoffbound < mipsolver.mipdata_->lower_bound) continue;
         bool useful = true;
 
         // check if we already have a better lurking bound stored
@@ -267,6 +278,14 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       //  cutoffbound = (lurklb - ub) * redcost + lpobj
 
       HighsInt ub = (HighsInt)mipsolver.mipdata_->domain.col_upper_[col];
+
+      if (lpredcost[col] == -kHighsInf) {
+        lurkingColUpper[col].clear();
+        lurkingColLower[col].clear();
+        lurkingColLower[col].emplace(-kHighsInf, ub);
+        continue;
+      }
+
       HighsInt minlb;
       if (mipsolver.mipdata_->domain.col_lower_[col] == -kHighsInf)
         minlb = ub - 1024;
@@ -280,6 +299,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         double fracbound = (lurklb - ub - 1) + 10 * mipsolver.mipdata_->feastol;
         double requiredcutoffbound = fracbound * lpredcost[col] + lpobjective -
                                      mipsolver.mipdata_->feastol;
+        if (requiredcutoffbound < mipsolver.mipdata_->lower_bound) continue;
         bool useful = true;
 
         // check if we already have a better lurking bound stored
