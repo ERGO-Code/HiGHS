@@ -848,7 +848,9 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      std::cout << "ICrash error: unknown strategy." << std::endl;
+      // std::cout << "ICrash error: unknown strategy." << std::endl;
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "ICrash error: unknown strategy.\n");
       return HighsStatus::kError;
     }
     ICrashOptions icrash_options{
