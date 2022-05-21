@@ -97,20 +97,16 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     // redcost * col <= gap + redcost * bnd
     //   case bnd is upper bound  => redcost < 0 :
     //      col >= gap/redcost + ub
+    //      <=> redcost < gap / (lb - ub)
     //   case bnd is lower bound  => redcost > 0 :
     //      col <= gap/redcost + lb
-    // Therefore for a tightening to be possible we need:
-    //   redcost >= / <=  gap * (ub - lb)
+    //      <=> redcost > gap / (ub - lb)
     if (localdomain.col_upper_[col] == localdomain.col_lower_[col]) continue;
+    if (std::fabs(lpredcost[col]) <= tolerance) continue;
 
-    double threshold = double((HighsCDouble(localdomain.col_upper_[col]) -
-                               localdomain.col_lower_[col]) *
-                                  gap +
-                              tolerance);
-
-    if ((localdomain.col_upper_[col] == kHighsInf &&
-         lpredcost[col] > tolerance) ||
-        lpredcost[col] > threshold) {
+    double maxIncrease = lpredcost[col] * (localdomain.col_upper_[col] -
+                                           localdomain.col_lower_[col]);
+    if (maxIncrease > gap) {
       assert(localdomain.col_lower_[col] != -kHighsInf);
       assert(lpredcost[col] > tolerance);
       double newub =
@@ -127,9 +123,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                 HighsDomain::Reason::unspecified());
         if (localdomain.infeasible()) return;
       }
-    } else if ((localdomain.col_lower_[col] == -kHighsInf &&
-                lpredcost[col] < -tolerance) ||
-               lpredcost[col] < -threshold) {
+    } else if (maxIncrease < -gap) {
       assert(localdomain.col_upper_[col] != kHighsInf);
       assert(lpredcost[col] < -tolerance);
       double newlb =
