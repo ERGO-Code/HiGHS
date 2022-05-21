@@ -30,7 +30,7 @@
 
 const double kHighsDoubleTolerance = 1e-13;
 const double kGlpsolDoubleTolerance = 1e-12;
- 
+
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper) {
@@ -229,8 +229,8 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     HighsCDouble objective_function_value = lp.offset_;
     for (HighsInt i = 0; i < lp.num_col_; ++i)
       objective_function_value += lp.col_cost_[i] * solution.col_value[i];
-    std::array<char, 32> objStr =
-        highsDoubleToString((double)objective_function_value, kHighsDoubleTolerance);
+    std::array<char, 32> objStr = highsDoubleToString(
+        (double)objective_function_value, kHighsDoubleTolerance);
     fprintf(file, "Objective %s\n", objStr.data());
     fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
@@ -395,19 +395,16 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
   }
 }
 
-void writeGlpsolCostRow(FILE* file, 
-			const bool raw,
-			const bool is_mip,
-			const HighsInt row_id,
-			const std::string objective_name,
-			const double objective_function_value) {
+void writeGlpsolCostRow(FILE* file, const bool raw, const bool is_mip,
+                        const HighsInt row_id, const std::string objective_name,
+                        const double objective_function_value) {
   if (raw) {
     double double_value = objective_function_value;
     std::array<char, 32> double_string =
-      highsDoubleToString(double_value, kGlpsolDoubleTolerance);
+        highsDoubleToString(double_value, kGlpsolDoubleTolerance);
     // Last term of 0 for dual should (also) be blank when not MIP
     fprintf(file, "i %d %s%s%s\n", (int)row_id, is_mip ? "" : "b ",
-	    double_string.data(), is_mip ? "" : " 0");
+            double_string.data(), is_mip ? "" : " 0");
   } else {
     fprintf(file, "%6d ", (int)row_id);
     if (objective_name.length() <= 12) {
@@ -420,8 +417,7 @@ void writeGlpsolCostRow(FILE* file,
     } else {
       fprintf(file, "B  ");
     }
-    fprintf(file, "%13.6g %13s %13s \n", objective_function_value, "",
-	    "");
+    fprintf(file, "%13.6g %13s %13s \n", objective_function_value, "", "");
   }
 }
 
@@ -620,7 +616,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     row_id++;
     if (row_id == cost_row_location) {
-      writeGlpsolCostRow(file, raw, is_mip, row_id, objective_name, info.objective_function_value);
+      writeGlpsolCostRow(file, raw, is_mip, row_id, objective_name,
+                         info.objective_function_value);
       row_id++;
     }
     fprintf(file, "i %d ", (int)row_id);
@@ -716,7 +713,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
 
   if (cost_row_last) {
     row_id++;
-    writeGlpsolCostRow(file, raw, is_mip, row_id, objective_name, info.objective_function_value);
+    writeGlpsolCostRow(file, raw, is_mip, row_id, objective_name,
+                       info.objective_function_value);
   }
   if (!raw) fprintf(file, "\n");
 

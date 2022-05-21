@@ -56,12 +56,9 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModelStatus model_status,
                        const HighsInt style);
 
-void writeGlpsolCostRow(FILE* file, 
-			const bool raw,
-			const bool is_mip,
-			const HighsInt row_id,
-			const std::string objective_name,
-			const double objective_function_value);
+void writeGlpsolCostRow(FILE* file, const bool raw, const bool is_mip,
+                        const HighsInt row_id, const std::string objective_name,
+                        const double objective_function_value);
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,
                          const HighsModel& model, const HighsBasis& basis,
