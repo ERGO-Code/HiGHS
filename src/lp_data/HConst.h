@@ -131,6 +131,14 @@ enum SolutionStyle {
   kSolutionStyleMax = kSolutionStyleGlpsolPretty
 };
 
+enum GlpsolCostRowLocation {
+  kGlpsolCostRowLocationLast = -2,
+  kGlpsolCostRowLocationNone,         // -1
+  kGlpsolCostRowLocationNoneIfEmpty,  // 0
+  kGlpsolCostRowLocationMin = kGlpsolCostRowLocationLast,
+  kGlpsolCostRowLocationMax = kHighsIInf
+};
+
 const std::string kHighsFilenameDefault = "";
 
 // Need to allow infinite costs to pass SCIP LPI unit tests

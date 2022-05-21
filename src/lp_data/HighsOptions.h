@@ -648,9 +648,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "glpsol_cost_row_location",
         "Location of cost row for Glpsol file: "
-        "-1 => Last; 0 => None if empty; 1 <= n <= num_row => Location n; n > "
+        "-2 => Last; -1 => None; 0 => None if empty, otherwise data file "
+        "location; 1 <= n <= num_row => Location n; n > "
         "num_row => Last",
-        advanced, &glpsol_cost_row_location, -1, -1, kHighsIInf);
+        advanced, &glpsol_cost_row_location, kGlpsolCostRowLocationMin, 0,
+        kGlpsolCostRowLocationMax);
     records.push_back(record_int);
 
     record_bool =

@@ -577,7 +577,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       if (!hasobj) {
         isobj = true;
         hasobj = true;
-	cost_row_location = num_row;
+        cost_row_location = num_row;
       } else {
         isFreeRow = true;
       }

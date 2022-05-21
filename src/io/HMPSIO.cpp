@@ -44,8 +44,7 @@ FilereaderRetcode readMps(
     vector<HighsVarType>& integerColumn, std::string& objective_name,
     vector<std::string>& col_names, vector<std::string>& row_names,
     HighsInt& Qdim, vector<HighsInt>& Qstart, vector<HighsInt>& Qindex,
-    vector<double>& Qvalue,
-    HighsInt& cost_row_location,
+    vector<double>& Qvalue, HighsInt& cost_row_location,
     const HighsInt keep_n_rows) {
   // MPS file buffer
   numRow = 0;
@@ -123,7 +122,7 @@ FilereaderRetcode readMps(
         objName = data[1];
         std::string name(&line[4], &line[4] + 8);
         objective_name = trim(name);
-	cost_row_location = numRow;
+        cost_row_location = numRow;
       }
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow)
