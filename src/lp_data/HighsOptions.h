@@ -691,6 +691,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("icrash_breakpoints",
                                        "Exact subproblem solution for iCrash",
                                        advanced, &icrash_breakpoints, false);
+    records.push_back(record_bool);
 
     record_string = new OptionRecordString(
         kWriteModelFileString, "Write model file", advanced, &write_model_file,
