@@ -448,16 +448,14 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   // When writing out the row information (and hence the number of
   // rows and nonzeros), the case of the cost row is tricky
   // (particularly if it's empty) if HiGHS is to be able to reproduce
-  // the (inconsistent) behaviour of Glpsol, .
+  // the (inconsistent) behaviour of Glpsol.
   //
   // If Glpsol is run from a .mod file then the cost row is reported
   // unless it is empty. However, its position depends on where the
-  // objecive appears in the .mod file. Sometimes it's first,
-  // sometimes it's last, and (who knows!)  maybe sometimes it's
-  // somewhere inbetween. If Glpsol is run from a .mod file, and reads
-  // a .sol file, it must be in the right format.
+  // objecive appears in the .mod file. If Glpsol is run from a .mod
+  // file, and reads a .sol file, it must be in the right format.
   //
-  // If Glpsol is run from an MPS file then the cost row is not
+  // If Glpsol is run from an LP or MPS file then the cost row is not
   // reported.
   //
   // This inconsistent behaviour means that it must be possible to
@@ -465,13 +463,30 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   //
   bool cost_row_last = false;
   HighsInt cost_row_option = options.glpsol_cost_row_location;
+  // cost_row_location is indexed from 1 so that it matches the index
+  // printed on that row...
+  //
+  // ... hence a location of zero means that the cost row isn't
+  // reported unless cost_row_last is true.
   HighsInt cost_row_location = 0;
-  if (cost_row_option < 0 || cost_row_option > lp.num_row_) {
-    cost_row_last = true;
-  } else if (cost_row_option == 0) {
-    if (has_cost_row) cost_row_last = true;
+  if (lp.cost_row_location_ >= 0) {
+    // The cost row location is known from the MPS file and must be
+    // used. NB To index from zero whenever possible,
+    // lp.cost_row_location_ = 0 if the cost row came first
+    assert(lp.cost_row_location_ <= lp.num_row_);
+    cost_row_location = lp.cost_row_location_ + 1;
   } else {
-    cost_row_location = cost_row_option;
+    if (cost_row_option < 0 || cost_row_option > lp.num_row_) {
+      // Place the cost row last
+      cost_row_last = true;
+    } else if (cost_row_option == 0) {
+      // This option allows the cost row to be omitted if it's empty,
+      // so place the cost row last, so long as it's nontrivial
+      if (has_cost_row) cost_row_last = true;
+    } else {
+      // Place the cost row according to the option value
+      cost_row_location = cost_row_option;
+    }
   }
   // Despite being written in C, GLPSOL indexes rows (columns) from
   // 1..m (1..n) with - bizarrely! - m being one more than the number

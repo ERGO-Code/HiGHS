@@ -66,7 +66,9 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               lp.a_matrix_.value_, lp.col_cost_, lp.col_lower_, lp.col_upper_,
               lp.row_lower_, lp.row_upper_, lp.integrality_, lp.objective_name_,
               lp.col_names_, lp.row_names_, hessian.dim_, hessian.start_,
-              hessian.index_, hessian.value_, options.keep_n_rows);
+              hessian.index_, hessian.value_,
+	      lp.cost_row_location_,
+	      options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) lp.ensureColwise();
   // Comment on existence of names with spaces
   hasNamesWithSpaces(options.log_options, lp.num_col_, lp.col_names_);

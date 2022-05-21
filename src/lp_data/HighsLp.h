@@ -51,6 +51,7 @@ class HighsLp {
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
+  HighsInt cost_row_location_;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp);

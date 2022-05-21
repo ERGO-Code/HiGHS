@@ -138,7 +138,7 @@ void HighsLp::clear() {
   this->clearScale();
   this->is_scaled_ = false;
   this->is_moved_ = false;
-
+  this->cost_row_location_ = -1;
   this->mods_.clear();
 }
 

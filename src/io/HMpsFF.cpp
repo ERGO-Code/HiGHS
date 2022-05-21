@@ -125,6 +125,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
   // Set the objective name, creating one if necessary
   lp.objective_name_ = findModelObjectiveName(&lp, &hessian);
+  lp.cost_row_location_ = cost_row_location;
 
   return FreeFormatParserReturnCode::kSuccess;
 }
@@ -234,6 +235,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
     num_row = 0;
     num_col = 0;
     num_nz = 0;
+    cost_row_location = -1;
     // Indicate that no duplicate rows or columns have been found
     has_duplicate_row_name_ = false;
     has_duplicate_col_name_ = false;
@@ -575,6 +577,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       if (!hasobj) {
         isobj = true;
         hasobj = true;
+	cost_row_location = num_row;
       } else {
         isFreeRow = true;
       }

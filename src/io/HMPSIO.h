@@ -56,7 +56,9 @@ FilereaderRetcode readMps(
     vector<HighsVarType>& integerColumn, std::string& objective_name,
     vector<std::string>& col_names, vector<std::string>& row_names,
     HighsInt& Qdim, vector<HighsInt>& Qstart, vector<HighsInt>& Qindex,
-    vector<double>& Qvalue, const HighsInt keep_n_rows = 0);
+    vector<double>& Qvalue,
+    HighsInt& cost_row_location,
+    const HighsInt keep_n_rows = 0);
 
 HighsStatus writeMps(
     const HighsLogOptions& log_options, const std::string filename,
