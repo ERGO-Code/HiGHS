@@ -360,7 +360,7 @@ if (OSI_FOUND)
         LIBRARY
         ARCHIVE
         RUNTIME
-        INCLUDES)
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
@@ -387,9 +387,9 @@ foreach ( file ${headers} )
     if ( NOT dir STREQUAL "" )
         string( REPLACE ../extern/ "" dir ${dir} )
     endif ()
-    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 if (UNIX)
     #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
@@ -414,7 +414,7 @@ install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
     RUNTIME
-    INCLUDES)
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 # Add library targets to the build-tree export set
 export(TARGETS libhighs
@@ -429,7 +429,7 @@ configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 # Configure the config file for the install
-set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
+set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}/highs")
 configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
@@ -738,9 +738,9 @@ foreach ( file ${headers_fast_build_} )
     if ( NOT dir STREQUAL "" )
         string( REPLACE ../extern/ "" dir ${dir} )
     endif ()
-    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
@@ -772,9 +772,9 @@ if(FORTRAN_FOUND)
         LIBRARY
         ARCHIVE
         RUNTIME
-        INCLUDES
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
         MODULES DESTINATION modules)
-    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/fortran)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
