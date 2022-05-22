@@ -41,6 +41,7 @@ class HighsLp {
   double offset_;
 
   std::string model_name_;
+  std::string objective_name_;
 
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
@@ -50,6 +51,7 @@ class HighsLp {
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
+  HighsInt cost_row_location_;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp);

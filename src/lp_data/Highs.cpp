@@ -1201,17 +1201,22 @@ HighsStatus Highs::run() {
             basis_.col_status = presolve_.data_.recovered_basis_.col_status;
             basis_.row_status = presolve_.data_.recovered_basis_.row_status;
             basis_.debug_origin_name += ": after postsolve";
-            // Possibly force debug to perform KKT check on what's
-            // returned from postsolve
-            const bool force_debug = false;
-            HighsInt save_highs_debug_level = options_.highs_debug_level;
-            if (force_debug)
-              options_.highs_debug_level = kHighsDebugLevelCostly;
-            if (debugHighsSolution("After returning from postsolve", options_,
-                                   model_, solution_,
-                                   basis_) == HighsDebugStatus::kLogicalError)
-              return returnFromRun(HighsStatus::kError);
-            options_.highs_debug_level = save_highs_debug_level;
+            // Basic primal activities are wrong after postsolve, so
+            // possibly skip KKT check
+            const bool perform_kkt_check = true;
+            if (perform_kkt_check) {
+              // Possibly force debug to perform KKT check on what's
+              // returned from postsolve
+              const bool force_debug = false;
+              HighsInt save_highs_debug_level = options_.highs_debug_level;
+              if (force_debug)
+                options_.highs_debug_level = kHighsDebugLevelCostly;
+              if (debugHighsSolution("After returning from postsolve", options_,
+                                     model_, solution_,
+                                     basis_) == HighsDebugStatus::kLogicalError)
+                return returnFromRun(HighsStatus::kError);
+              options_.highs_debug_level = save_highs_debug_level;
+            }
             // Save the options to allow the best simplex strategy to
             // be used
             HighsOptions save_options = options_;
@@ -2390,8 +2395,8 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
-                    style);
+  writeSolutionFile(file, options_, model_, basis_, solution_, info_,
+                    model_status_, style);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
@@ -2560,6 +2565,8 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
+  // Compute the row activities
+  calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
     presolve_.negateReducedLpColDuals(true);
