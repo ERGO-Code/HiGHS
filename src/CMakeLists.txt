@@ -384,6 +384,9 @@ set_target_properties(highs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
+    if ( NOT dir STREQUAL "" )
+        string( REPLACE ../extern/ "" dir ${dir} )
+    endif ()
     install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
@@ -426,7 +429,7 @@ configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 # Configure the config file for the install
-set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
+set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
@@ -732,6 +735,9 @@ set_target_properties(libhighs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
+    if ( NOT dir STREQUAL "" )
+        string( REPLACE ../extern/ "" dir ${dir} )
+    endif ()
     install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
