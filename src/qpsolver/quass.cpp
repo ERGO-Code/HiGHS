@@ -338,10 +338,11 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
           atfsep = false;
         }
       } else {
-        if (stepres.limitingconstraint ==
+        if (stepres.alpha ==
             std::numeric_limits<double>::infinity()) {
           // unbounded
           runtime.status = ProblemStatus::UNBOUNDED;
+          return;
         }
         atfsep = false;
         redgrad.update(stepres.alpha, false);

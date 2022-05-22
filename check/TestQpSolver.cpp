@@ -8,6 +8,26 @@ const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
+TEST_CASE("qp-unbounded", "[qpsolver]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
+
+  Highs highs;
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
+
+TEST_CASE("qp-infeasible", "[qpsolver]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/qpinfeasible.lp";
+
+  Highs highs;
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
 TEST_CASE("qpsolver", "[qpsolver]") {
   double required_objective_function_value;
   double required_x0;

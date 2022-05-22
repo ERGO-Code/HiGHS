@@ -269,7 +269,7 @@ void Reader::processnonesec() {
 }
 
 void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj) {
-   if (tokens.size() - i >= 1 && tokens[0]->type == ProcessedTokenType::CONID) {
+   if (tokens.size() - i >= 1 && tokens[i]->type == ProcessedTokenType::CONID) {
       expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
       i++;
    }
@@ -292,7 +292,7 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
 
       // const
       if (tokens.size() - i  >= 1 && tokens[i]->type == ProcessedTokenType::CONST) {
-         expr->offset = ((ProcessedConstantToken*)tokens[i].get())->value;
+         expr->offset += ((ProcessedConstantToken*)tokens[i].get())->value;
          i++;
          continue;
       }
@@ -680,6 +680,18 @@ void Reader::processtokens() {
    while (i < this->rawtokens.size()) {
       fflush(stdout);
 
+      // Slash + asterisk: comment, skip everything up to next asterisk + slash
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::SLASH) && rawtokens[i+1]->istype(RawTokenType::ASTERISK)) {
+         unsigned int j = i+2;
+         while (rawtokens.size() - j >= 2) {
+            if (rawtokens[j]->istype(RawTokenType::ASTERISK) && rawtokens[j+1]->istype(RawTokenType::SLASH)) {
+               i = j + 2;
+               break;
+            }
+            j++;
+         }
+      }
+
       // long section keyword semi-continuous
       if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::MINUS) && rawtokens[i+2]->istype(RawTokenType::STR)) {
          std::string temp = ((RawStringToken*)rawtokens[i].get())->value + "-" + ((RawStringToken*)rawtokens[i+2].get())->value;
@@ -771,6 +783,16 @@ void Reader::processtokens() {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
          i += 2;
          continue;
+      }
+
+      // - [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+         lpassert(false);
+      }
+
+      // constant [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::CONS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+         lpassert(false);
       }
 
       // +
