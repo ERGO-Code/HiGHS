@@ -652,7 +652,7 @@ class HighsOptions : public HighsOptionsStruct {
         "location; 1 <= n <= num_row => Location n; n > "
         "num_row => Last",
         advanced, &glpsol_cost_row_location, kGlpsolCostRowLocationMin, 0,
-        kGlpsolCostRowLocationMax);
+        kHighsIInf);
     records.push_back(record_int);
 
     record_bool =

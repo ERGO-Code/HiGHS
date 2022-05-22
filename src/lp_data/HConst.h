@@ -135,8 +135,7 @@ enum GlpsolCostRowLocation {
   kGlpsolCostRowLocationLast = -2,
   kGlpsolCostRowLocationNone,         // -1
   kGlpsolCostRowLocationNoneIfEmpty,  // 0
-  kGlpsolCostRowLocationMin = kGlpsolCostRowLocationLast,
-  kGlpsolCostRowLocationMax = kHighsIInf
+  kGlpsolCostRowLocationMin = kGlpsolCostRowLocationLast
 };
 
 const std::string kHighsFilenameDefault = "";
