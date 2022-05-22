@@ -391,6 +391,9 @@ foreach ( file ${headers} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+# install license
+install(FILES ${HIGHS_SOURCE_DIR}/LICENSE DESTINATION share/licenses/highs)
+
 if (UNIX)
     #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
     #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
@@ -741,6 +744,9 @@ foreach ( file ${headers_fast_build_} )
     install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# install license
+install(FILES ${HIGHS_SOURCE_DIR}/LICENSE DESTINATION share/licenses/highs)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
