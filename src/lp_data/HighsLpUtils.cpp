@@ -1952,39 +1952,6 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
                      lp.row_upper_);
 }
 
-void writeSolutionFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                       const HighsSolution& solution, const HighsInfo& info,
-                       const HighsModelStatus model_status,
-                       const HighsInt style) {
-  const bool have_primal = solution.value_valid;
-  const bool have_dual = solution.dual_valid;
-  const bool have_basis = basis.valid;
-  const double double_tolerance = 1e-13;
-  if (style == kSolutionStylePretty) {
-    const HighsVarType* integrality_ptr =
-        lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
-    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
-                            lp.col_upper_, lp.col_names_, have_primal,
-                            solution.col_value, have_dual, solution.col_dual,
-                            have_basis, basis.col_status, integrality_ptr);
-    writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
-                            lp.row_upper_, lp.row_names_, have_primal,
-                            solution.row_value, have_dual, solution.row_dual,
-                            have_basis, basis.row_status);
-    fprintf(file, "\nModel status: %s\n",
-            utilModelStatusToString(model_status).c_str());
-    std::array<char, 32> objStr = highsDoubleToString(
-        (double)info.objective_function_value, double_tolerance);
-    fprintf(file, "\nObjective value: %s\n", objStr.data());
-  } else if (style == kSolutionStyleOldRaw) {
-    writeOldRawSolution(file, lp, basis, solution);
-  } else {
-    fprintf(file, "Model status\n");
-    fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
-    writeModelSolution(file, lp, solution, info);
-  }
-}
-
 HighsStatus readSolutionFile(const std::string filename,
                              const HighsOptions& options, const HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
@@ -2741,69 +2708,4 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
                "Removed %d rows of count 1\n", (int)num_row_count_1);
-}
-
-void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution) {
-  const bool have_value = solution.value_valid;
-  const bool have_dual = solution.dual_valid;
-  const bool have_basis = basis.valid;
-  vector<double> use_col_value;
-  vector<double> use_row_value;
-  vector<double> use_col_dual;
-  vector<double> use_row_dual;
-  vector<HighsBasisStatus> use_col_status;
-  vector<HighsBasisStatus> use_row_status;
-  if (have_value) {
-    use_col_value = solution.col_value;
-    use_row_value = solution.row_value;
-  }
-  if (have_dual) {
-    use_col_dual = solution.col_dual;
-    use_row_dual = solution.row_dual;
-  }
-  if (have_basis) {
-    use_col_status = basis.col_status;
-    use_row_status = basis.row_status;
-  }
-  if (!have_value && !have_dual && !have_basis) return;
-  fprintf(file,
-          "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
-          " : Number of columns and rows for primal or dual solution "
-          "or basis\n",
-          lp.num_col_, lp.num_row_);
-  if (have_value) {
-    fprintf(file, "T");
-  } else {
-    fprintf(file, "F");
-  }
-  fprintf(file, " Primal solution\n");
-  if (have_dual) {
-    fprintf(file, "T");
-  } else {
-    fprintf(file, "F");
-  }
-  fprintf(file, " Dual solution\n");
-  if (have_basis) {
-    fprintf(file, "T");
-  } else {
-    fprintf(file, "F");
-  }
-  fprintf(file, " Basis\n");
-  fprintf(file, "Columns\n");
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (have_value) fprintf(file, "%.15g ", use_col_value[iCol]);
-    if (have_dual) fprintf(file, "%.15g ", use_col_dual[iCol]);
-    if (have_basis)
-      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
-    fprintf(file, "\n");
-  }
-  fprintf(file, "Rows\n");
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (have_value) fprintf(file, "%.15g ", use_row_value[iRow]);
-    if (have_dual) fprintf(file, "%.15g ", use_row_dual[iRow]);
-    if (have_basis)
-      fprintf(file, "%" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
-    fprintf(file, "\n");
-  }
 }

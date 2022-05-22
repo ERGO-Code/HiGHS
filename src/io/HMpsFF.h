@@ -101,6 +101,9 @@ class HMpsFF {
   // any LI or UI flags in the BOUNDS section
   std::vector<bool> col_binary;
 
+  // Record where the cost row is encountered
+  HighsInt cost_row_location;
+
   // Record whether there are duplicate row or column names, and the
   // name and indices of the first duplicates
   bool has_duplicate_row_name_;

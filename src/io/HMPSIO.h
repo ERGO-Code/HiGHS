@@ -53,9 +53,10 @@ FilereaderRetcode readMps(
     vector<HighsInt>& Aindex, vector<double>& Avalue, vector<double>& colCost,
     vector<double>& colLower, vector<double>& colUpper,
     vector<double>& rowLower, vector<double>& rowUpper,
-    vector<HighsVarType>& integerColumn, vector<std::string>& col_names,
-    vector<std::string>& row_names, HighsInt& Qdim, vector<HighsInt>& Qstart,
-    vector<HighsInt>& Qindex, vector<double>& Qvalue,
+    vector<HighsVarType>& integerColumn, std::string& objective_name,
+    vector<std::string>& col_names, vector<std::string>& row_names,
+    HighsInt& Qdim, vector<HighsInt>& Qstart, vector<HighsInt>& Qindex,
+    vector<double>& Qvalue, HighsInt& cost_row_location,
     const HighsInt keep_n_rows = 0);
 
 HighsStatus writeMps(
@@ -68,7 +69,7 @@ HighsStatus writeMps(
     const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
-    const vector<HighsVarType>& integrality,
+    const vector<HighsVarType>& integrality, std::string objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format = true);
 
