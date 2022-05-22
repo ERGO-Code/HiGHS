@@ -139,6 +139,31 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       lp.row_upper_.push_back(con->upperbound);
     }
 
+    // Check for empty row names, giving them a special name if possible
+    bool highs_prefix_ok = true;
+    bool used_highs_prefix = false;
+    std::string highs_prefix = "HiGHS_R";
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      // Look to see whether the name begins HiGHS_R
+      if (strncmp(lp.row_names_[iRow].c_str(), highs_prefix.c_str(), 7) == 0) {
+        printf("Name %s begins with \"HiGHS_R\"\n",
+               lp.row_names_[iRow].c_str());
+        highs_prefix_ok = false;
+      } else if (lp.row_names_[iRow] == "") {
+        // Make up a name beginning HiGHS_R
+        lp.row_names_[iRow] = highs_prefix + std::to_string(iRow);
+        used_highs_prefix = true;
+      }
+    }
+    if (used_highs_prefix && !highs_prefix_ok) {
+      // Have made up a name beginning HiGHS_R, but this occurs with
+      // other "natural" rows, so abandon the row names
+      lp.row_names_.clear();
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Cannot create row name beginning \"HiGHS_R\" due to others "
+                   "with same prefix: row names cleared\n");
+    }
+
     HighsInt nz = 0;
     // lp.a_matrix_ is initialised with start_[0] for fictitious
     // column 0, so have to clear this before pushing back start
