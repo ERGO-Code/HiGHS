@@ -442,16 +442,19 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   HighsInt num_nz = lp.a_matrix_.numNz();
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     if (lp.col_cost_[iCol]) num_nz++;
-  bool empty_cost_row = num_nz == lp.a_matrix_.numNz();
-  bool has_objective = !empty_cost_row;
-  if (model.hessian_.dim_) has_objective = true;
+  const bool empty_cost_row = num_nz == lp.a_matrix_.numNz();
+  const bool has_objective = !empty_cost_row || model.hessian_.dim_;
   // When writing out the row information (and hence the number of
   // rows and nonzeros), the case of the cost row is tricky
   // (particularly if it's empty) if HiGHS is to be able to reproduce
   // the (inconsistent) behaviour of Glpsol.
   //
   // If Glpsol is run from a .mod file then the cost row is reported
-  // unless it is empty. However, its position depends on where the
+  // unless there is no objecive [minimize/maximize "objname"]
+  // statement in the .mod file. In this case, the N-row in the MPS
+  // file is called "R0000000" and referred to below as being artificial.
+  //
+  // However, the position of a defined cost row depends on where the
   // objecive appears in the .mod file. If Glpsol is run from a .mod
   // file, and reads a .sol file, it must be in the right format.
   //
@@ -473,7 +476,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   // This inconsistent behaviour means that it must be possible to
   // tell HiGHS to suppress the cost row
   //
-  HighsInt cost_row_option = options.glpsol_cost_row_location;
+  const HighsInt cost_row_option = options.glpsol_cost_row_location;
   // Define cost_row_location
   //
   // It is indexed from 1 so that it matches the index printed on that
@@ -482,6 +485,14 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   // ... hence a location of zero means that the cost row isn't
   // reported
   HighsInt cost_row_location = 0;
+  std::string artificial_cost_row_name = "R0000000";
+  const bool artificial_cost_row =
+      lp.objective_name_ == artificial_cost_row_name;
+  if (artificial_cost_row)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "The cost row name of \"%s\" is assumed to be artificial and "
+                 "will not be reported in the Glpsol solution file\n",
+                 lp.objective_name_.c_str());
 
   if (cost_row_option <= kGlpsolCostRowLocationLast ||
       cost_row_option > lp.num_row_) {
@@ -492,8 +503,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     assert(cost_row_location == 0);
   } else if (cost_row_option == kGlpsolCostRowLocationNoneIfEmpty) {
     // This option allows the cost row to be omitted if it's empty.
-    if (empty_cost_row) {
-      // The cost row is empty, so don't report it
+    if (empty_cost_row && artificial_cost_row) {
+      // The cost row is empty and artificial, so don't report it
       assert(cost_row_location == 0);
     } else {
       // Place the cost row according to lp.cost_row_location_
