@@ -574,6 +574,10 @@ target_sources(libhighs PRIVATE
   
 target_include_directories(libhighs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+)
+
+target_include_directories(libhighs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
@@ -583,28 +587,28 @@ target_include_directories(libhighs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
-    $<INSTALL_INTERFACE:include/highs>
     )
 
-target_include_directories(libhighs PUBLIC 
+target_include_directories(libhighs PRIVATE 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/src>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/src
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/include>
+    )
 
 #     $<BUILD_INTERFACE: ipm/ipx/src, ipm/ipx/include ipm/basiclu/src ipm/basiclu/include>)
 # target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
 #                            presolve/ util/ test/ interfaces/ ../extern/)
 
-target_include_directories(libhighs PUBLIC
+target_include_directories(libhighs PRIVATE
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
-    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
+    )
 
 if (ZLIB_FOUND)
-    target_include_directories(libhighs PUBLIC 
+    target_include_directories(libhighs PRIVATE
     $<BUILD_INTERFACE:${ZLIB_INCLUDE_DIRS}  
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
     )
