@@ -571,13 +571,43 @@ target_sources(libhighs PRIVATE
     util/HVectorBase.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
+  
+target_include_directories(libhighs PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
+    $<INSTALL_INTERFACE:include/highs>
+    )
 
-target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
-                           presolve/ util/ test/ interfaces/ ../extern/)
-target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+target_include_directories(libhighs PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/src
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/include>)
+
+#     $<BUILD_INTERFACE: ipm/ipx/src, ipm/ipx/include ipm/basiclu/src ipm/basiclu/include>)
+# target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
+#                            presolve/ util/ test/ interfaces/ ../extern/)
+
+target_include_directories(libhighs PUBLIC
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
 if (ZLIB_FOUND)
-    target_include_directories(libhighs PUBLIC ${ZLIB_INCLUDE_DIRS} ../extern/zstr)
+    target_include_directories(libhighs PUBLIC 
+    $<BUILD_INTERFACE:${ZLIB_INCLUDE_DIRS}  
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
+    )
     target_link_libraries(libhighs ${ZLIB_LIBRARIES})
 endif()
 
@@ -746,8 +776,8 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDED
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
-target_include_directories(libhighs PUBLIC ipm/ipx/src
-    ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+# target_include_directories(libhighs PUBLIC 
+#     $<BUILD_INTERFACE: ipm/ipx/src, ipm/ipx/include ipm/basiclu/src ipm/basiclu/include>)
 
 target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
@@ -794,3 +824,37 @@ endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(libhighs Threads::Threads)
+
+if (CMAKE_TARGETS)
+# Add library targets to the build-tree export set
+export(TARGETS libhighs
+    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+
+# Configure the config file for the build tree:
+# Either list all the src/* directories here, or put explicit paths in all the
+# include statements.
+# M reckons that the latter is more transparent, and I'm inclined to agree.
+set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+    "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
+
+# Configure the config file for the install
+set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
+configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+    "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
+
+# Configure the pkg-config file for the install
+configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
+    "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+# Install the targets of the highs export group, the config file so that other
+# cmake-projects can link easily against highs, and the pkg-config flie so that
+# other projects can easily build against highs
+install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+endif()
