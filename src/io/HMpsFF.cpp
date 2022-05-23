@@ -782,7 +782,6 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
         }
         col_count = 0;
       }
-      assert(allZeroed(col_value));
       assert(!col_cost);
       colname = word;
       auto ret = colname2idx.emplace(colname, num_col++);
