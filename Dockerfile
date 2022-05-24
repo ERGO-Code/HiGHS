@@ -21,3 +21,4 @@ RUN mkdir HiGHS/build/bin/input && \
         mkdir HiGHS/build/bin/output && \
         chmod 775 HiGHS/build/bin/input && \
         chmod 775 HiGHS/build/bin/output
+ENTRYPOINT ["tail", "-f", "/dev/null"]
