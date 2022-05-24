@@ -14,8 +14,7 @@ RUN unzip HiGHS.zip -d /HiGHS
 RUN mkdir HiGHS/build && \
         cd HiGHS/build && \
         cmake .. && \
-        cmake --build . && \
-        ctest
+        cmake --build .
 
 # folders should have the 775 permission, which is the minimum allowed permissions to write the files within the API
 RUN mkdir HiGHS/build/bin/input && \
