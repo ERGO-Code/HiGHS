@@ -624,8 +624,13 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   //           nonbasic at lower/upper depending on which bound is violated.
 
   double mergeVal = solution.col_value[col];
+
+  if( colLower != -kHighsInf )
+    solution.col_value[col] = colLower;
+  else
+    solution.col_value[col] = std::min(0.0, colUpper);
   solution.col_value[duplicateCol] =
-      double((HighsCDouble(mergeVal) - colLower) / colScale);
+      double((HighsCDouble(mergeVal) - solution.col_value[col]) / colScale);
 
   bool recomputeCol = false;
 
@@ -665,7 +670,6 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       basis.col_status[duplicateCol] = basis.col_status[col];
       basis.col_status[col] = HighsBasisStatus::kLower;
     }
-    solution.col_value[col] = colLower;
   }
 }
 
