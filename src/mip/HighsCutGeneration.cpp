@@ -543,6 +543,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       }
     } else {
       continuouscontribution += vals[i] * solval[i];
+
+      if (vals[i] > 0 && solval[i] <= feastol) continue;
+      if (vals[i] < 0 && solval[i] >= upper[i] - feastol) continue;
       continuoussqrnorm += vals[i] * vals[i];
     }
   }
@@ -598,6 +601,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double aj = downaj + std::max(0.0, fj - f0);
 
       viol += aj * solval[j];
+
+      if (aj > 0 && solval[j] <= feastol) continue;
+      if (aj < 0 && solval[j] >= upper[j] - feastol) continue;
       sqrnorm += aj * aj;
     }
 
@@ -632,6 +638,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double aj = downaj + std::max(0.0, fj - f0);
 
       viol += aj * solval[j];
+
+      if (aj > 0 && solval[j] <= feastol) continue;
+      if (aj < 0 && solval[j] >= upper[j] - feastol) continue;
       sqrnorm += aj * aj;
     }
 
@@ -642,7 +651,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     }
   }
 
-  if (bestdelta == -1) return false;
+  assert(bestdelta != -1);
 
   // try to flip complementation of integers to increase efficacy
   for (HighsInt k : integerinds) {
@@ -688,6 +697,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double aj = downaj + std::max(0.0, fj - f0);
 
       viol += aj * solval[j];
+
+      if (aj > 0 && solval[j] <= feastol) continue;
+      if (aj < 0 && solval[j] >= upper[j] - feastol) continue;
       sqrnorm += aj * aj;
     }
 
@@ -1181,8 +1193,11 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       double sqrnorm = 0.0;
 
       for (HighsInt i = 0; i < rowlen; ++i) {
-        sqrnorm += vals[i] * vals[i];
         violation += vals[i] * solval[i];
+
+        if (vals[i] > 0 && solval[i] <= feastol) continue;
+        if (vals[i] < 0 && solval[i] >= upper[i] - feastol) continue;
+        sqrnorm += vals[i] * vals[i];
       }
 
       double efficacy = violation / std::sqrt(sqrnorm);
@@ -1314,6 +1329,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   solval.resize(rowlen);
 
   HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
+  double activity = 0.0;
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
 
@@ -1334,6 +1350,13 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
       complementation[i] = 0;
       solval[i] = solval[i] - globaldomain.col_lower_[col];
     }
+
+    activity += solval[i] * vals[i];
+  }
+
+  if (activity > rhs) {
+    double solScale = double(rhs) / activity;
+    for (HighsInt i = 0; i != rowlen; ++i) solval[i] *= solScale;
   }
 
   bool hasUnboundedInts = false;
@@ -1345,7 +1368,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
     return false;
 
   if (hasUnboundedInts) {
-    if (!cmirCutGenerationHeuristic(-kHighsInf)) return false;
+    if (!cmirCutGenerationHeuristic(feastol)) return false;
   } else {
     // 1. Determine a cover, cover does not need to be minimal as neither of
     // the
@@ -1375,13 +1398,16 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
       }
     } while (false);
 
-    double minEfficacy = -kHighsInf;
+    double minEfficacy = feastol;
     if (success) {
       double violation = -double(rhs);
       double sqrnorm = 0.0;
 
       for (HighsInt i = 0; i < rowlen; ++i) {
         violation += vals[i] * solval[i];
+
+        if (vals[i] > 0 && solval[i] <= feastol) continue;
+        if (vals[i] < 0 && solval[i] >= upper[i] - feastol) continue;
         sqrnorm += vals[i] * vals[i];
       }
 

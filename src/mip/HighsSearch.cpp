@@ -1058,13 +1058,51 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             result = NodeResult::kBoundExceeding;
             addBoundExceedingConflict();
           } else if (mipsolver.mipdata_->upper_limit != kHighsInf) {
+            if (!inheuristic) {
+              double gap = mipsolver.mipdata_->upper_limit - lp->getObjective();
+              lp->computeBasicDegenerateDuals(
+                  gap + std::max(10 * mipsolver.mipdata_->feastol,
+                                 mipsolver.mipdata_->epsilon * gap),
+                  &localdom);
+            }
             HighsRedcostFixing::propagateRedCost(mipsolver, localdom, *lp);
+            localdom.propagate();
             if (localdom.infeasible()) {
-              result = NodeResult::kBoundExceeding;
-              addBoundExceedingConflict();
+              result = NodeResult::kDomainInfeasible;
               localdom.clearChangedCols();
+              if (parent != nullptr && parent->lp_objective != -kHighsInf &&
+                  parent->branching_point !=
+                      parent->branchingdecision.boundval) {
+                bool upbranch = parent->branchingdecision.boundtype ==
+                                HighsBoundType::kLower;
+                pseudocost.addCutoffObservation(
+                    parent->branchingdecision.column, upbranch);
+              }
+
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
             } else if (!localdom.getChangedCols().empty()) {
               return evaluateNode();
+            }
+          } else {
+            if (!inheuristic) {
+              lp->computeBasicDegenerateDuals(kHighsInf, &localdom);
+              localdom.propagate();
+              if (localdom.infeasible()) {
+                result = NodeResult::kDomainInfeasible;
+                localdom.clearChangedCols();
+                if (parent != nullptr && parent->lp_objective != -kHighsInf &&
+                    parent->branching_point !=
+                        parent->branchingdecision.boundval) {
+                  bool upbranch = parent->branchingdecision.boundtype ==
+                                  HighsBoundType::kLower;
+                  pseudocost.addCutoffObservation(
+                      parent->branchingdecision.column, upbranch);
+                }
+
+                localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              } else if (!localdom.getChangedCols().empty()) {
+                return evaluateNode();
+              }
             }
           }
         } else if (lp->getObjective() > getCutoffBound()) {

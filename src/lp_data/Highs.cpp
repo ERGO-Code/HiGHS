@@ -1318,6 +1318,24 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
+HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
+                                    HVector& row_ep_buffer) {
+  has_dual_ray = ekk_instance_.status_.has_dual_ray;
+  if (has_dual_ray) {
+    ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
+    row_ep_buffer.clear();
+    row_ep_buffer.count = 1;
+    row_ep_buffer.packFlag = true;
+    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+    row_ep_buffer.index[0] = iRow;
+    row_ep_buffer.array[iRow] = ekk_instance_.info_.dual_ray_sign_;
+
+    ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
+  }
+
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
   if (!ekk_instance_.status_.has_invert)

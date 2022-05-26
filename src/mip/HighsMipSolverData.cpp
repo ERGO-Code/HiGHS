@@ -357,6 +357,7 @@ void HighsMipSolverData::init() {
   rootlpsolobj = -kHighsInf;
   analyticCenterComputed = false;
   analyticCenterStatus = HighsModelStatus::kNotset;
+  maxTreeSizeLog2 = 0;
   numRestarts = 0;
   numRestartsRoot = 0;
   numImprovingSols = 0;
@@ -564,6 +565,7 @@ void HighsMipSolverData::runSetup() {
   firstlpsol.clear();
   HighsInt numBin = 0;
 
+  maxTreeSizeLog2 = 0;
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
       case HighsVarType::kContinuous:
@@ -576,6 +578,9 @@ void HighsMipSolverData::runSetup() {
       case HighsVarType::kInteger:
         integer_cols.push_back(i);
         integral_cols.push_back(i);
+        maxTreeSizeLog2 += (HighsInt)std::ceil(
+            std::log2(std::min(1024.0, 1.0 + mipsolver.model_->col_upper_[i] -
+                                           mipsolver.model_->col_lower_[i])));
         numBin += ((mipsolver.model_->col_lower_[i] == 0.0) &
                    (mipsolver.model_->col_upper_[i] == 1.0));
     }
@@ -621,7 +626,8 @@ void HighsMipSolverData::runSetup() {
   }
 #endif
 
-  if (upper_limit == kHighsInf) analyticCenterComputed = false;
+  if (upper_limit == kHighsInf || maxTreeSizeLog2 <= 200)
+    analyticCenterComputed = false;
   analyticCenterStatus = HighsModelStatus::kNotset;
   analyticCenter.clear();
 
@@ -1218,6 +1224,8 @@ restart:
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
   lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
+  maxSepaRounds =
+      std::min(HighsInt(2 * std::sqrt(maxTreeSizeLog2)), maxSepaRounds);
 
   printDisplayLine();
 
@@ -1290,6 +1298,19 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
   rootlpsolobj = firstlpsolobj;
+  removeFixedIndices();
+  double fixingRate = percentageInactiveIntegers();
+  if (fixingRate >= 10.0) {
+    tg.cancel();
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "\n%.1f%% inactive integer columns, restarting\n", fixingRate);
+    tg.taskWait();
+    performRestart();
+    ++numRestartsRoot;
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
+
+    return;
+  }
 
   // begin separation
   std::vector<double> avgdirection;

@@ -204,7 +204,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   lurkingColLower.resize(mipsolver.numCol());
   lurkingColUpper.resize(mipsolver.numCol());
 
-  mipsolver.mipdata_->lp.computeBasicDegenerateDuals();
+  mipsolver.mipdata_->lp.computeBasicDegenerateDuals(
+      mipsolver.mipdata_->feastol);
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {

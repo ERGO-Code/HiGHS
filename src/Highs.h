@@ -315,6 +315,12 @@ class Highs {
   HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
+   * @brief Indicate whether a dual unbounded ray exists, and gets
+   * it if it does
+   */
+  HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
+
+  /**
    * @brief Indicate whether a primal unbounded ray exists, and gets
    * it if it does and primal_ray is not nullptr
    */
