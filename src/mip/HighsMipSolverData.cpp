@@ -1224,8 +1224,9 @@ restart:
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
   lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
-  maxSepaRounds =
-      std::min(HighsInt(2 * std::sqrt(maxTreeSizeLog2)), maxSepaRounds);
+  if (numRestarts == 0)
+    maxSepaRounds =
+        std::min(HighsInt(2 * std::sqrt(maxTreeSizeLog2)), maxSepaRounds);
 
   printDisplayLine();
 
