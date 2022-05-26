@@ -626,8 +626,7 @@ void HighsMipSolverData::runSetup() {
   }
 #endif
 
-  if (upper_limit == kHighsInf || maxTreeSizeLog2 <= 200)
-    analyticCenterComputed = false;
+  if (upper_limit == kHighsInf) analyticCenterComputed = false;
   analyticCenterStatus = HighsModelStatus::kNotset;
   analyticCenter.clear();
 
