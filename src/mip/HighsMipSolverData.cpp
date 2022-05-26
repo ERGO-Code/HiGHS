@@ -1211,6 +1211,9 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
+  if (numRestarts == 0)
+    maxSepaRounds =
+        std::min(HighsInt(2 * std::sqrt(maxTreeSizeLog2)), maxSepaRounds);
   std::unique_ptr<SymmetryDetectionData> symData;
   highs::parallel::TaskGroup tg;
 restart:
@@ -1224,9 +1227,6 @@ restart:
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
   lower_bound = std::max(lower_bound, domain.getObjectiveLowerBound());
-  if (numRestarts == 0)
-    maxSepaRounds =
-        std::min(HighsInt(2 * std::sqrt(maxTreeSizeLog2)), maxSepaRounds);
 
   printDisplayLine();
 
