@@ -489,9 +489,6 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           HighsInt numInds = inds.size();
 
-          std::vector<double> valueMatrix;
-          valueMatrix.resize(pathLen * numInds, 0.0);
-
           HighsCDouble cutRhs = 0.0;
           std::vector<double> cutVals(numInds);
           std::vector<double> maxFrac(numInds);
