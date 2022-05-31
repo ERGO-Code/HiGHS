@@ -4,3 +4,7 @@ Manifest.toml
 generated/
 build/
 site/
+.vscode/
+*__pycache__*
+*highspy.egg-info
+*.egg
