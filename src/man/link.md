@@ -35,7 +35,7 @@ set(HIGHS_DIR path_to_highs_install/lib/cmake/highs)
 ```
 adds the HiGHS installation path to `HIGHS_DIR`. This is equivalent to building this project with
 ```
-cmake -DHIGHS_DIR=path_to_highs_install/lib/cmake/highs
+cmake -DHIGHS_DIR=path_to_highs_install/lib/cmake/highs ..
 ```
 
 ### Compiling and linking without CMake
