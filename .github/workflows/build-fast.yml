@@ -39,7 +39,7 @@ jobs:
       run: |
         cmake -E make_directory ${{runner.workspace}}/install \
         cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install $GITHUB_WORKSPACE \
-        cmake --build . --parallel
+        cmake --build . --parallel \
         cmake --install
 
  fast-build-debug:
