@@ -1,12 +1,42 @@
 There are several ways the HiGHS library can be used within another C++ project. 
 
 ## Use HiGHS from another CMake Project
-To use the library from a CMake project use
 
-`find_package(HiGHS)`
-`find_package(Threads)`
+Make sure HiGHS is installed locally with the correct CMake flags:
 
-and add the correct path to HIGHS_DIR.
+``` bash
+cd HiGHS
+mkdir build
+cd build
+cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=/path/to/highs_install/ -DCMAKE_TARGETS=ON ..   
+cmake --build . 
+cmake --install .
+```
+
+This installs HiGHS in `/path/to/highs_install/`.
+
+Suppose another C++ CMake project has executable code in some file `main.cpp`, which includes `Highs.h`. To use the HiGHS library, edit the `CMakeLists.txt` as follows:
+
+```
+project(LOAD_HIGHS LANGUAGES CXX)
+
+set(HIGHS_DIR path_to_highs_install/lib/cmake/highs)
+
+find_package(HIGHS REQUIRED)
+find_package(Threads)
+
+add_executable(main main.cpp)
+target_link_libraries(main libhighs)
+```
+
+The line 
+```
+set(HIGHS_DIR path_to_highs_install/lib/cmake/highs)
+```
+adds the HiGHS installation path to `HIGHS_DIR`. This is equivalent to building this project with
+```
+cmake -DHIGHS_DIR=path_to_highs_install/lib/cmake/highs
+```
 
 ### Compiling and linking without CMake
 
