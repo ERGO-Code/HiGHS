@@ -1,6 +1,6 @@
 name: build-windows
 
-on: ["push", "pull_request"]
+on: ["pull_request"]
 
 jobs:
   fast_build_release:

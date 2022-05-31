@@ -1,7 +1,6 @@
 name: test_python_api
 
 on:
-  push:
   pull_request:
 
 jobs:
