@@ -44,7 +44,7 @@ jobs:
         cmake --build . --parallel \
         cmake --install . \
 
- fast-build-debug:
+  fast-build-debug:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
