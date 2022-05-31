@@ -13,7 +13,6 @@ target_link_libraries(highs libhighs)
 
 target_include_directories(highs PRIVATE
         $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>  
-        $<INSTALL_INTERFACE:include/highs>
         )
 
 # install the binary

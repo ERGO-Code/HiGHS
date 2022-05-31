@@ -575,7 +575,8 @@ target_sources(libhighs PRIVATE
 target_include_directories(libhighs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+    )
 
 target_include_directories(libhighs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
