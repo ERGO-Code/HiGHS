@@ -508,7 +508,7 @@ install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
     RUNTIME
-    PUBLIC_HEADER)
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 endif()
