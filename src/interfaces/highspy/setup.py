@@ -14,7 +14,7 @@ try:
         raise RuntimeError('Could not find HiGHS library; Please make sure it is in the LD_LIBRARY_PATH environment variable')
     highs_lib_dir = os.path.dirname(highs_lib)
     highs_build_dir = os.path.dirname(highs_lib_dir)
-    highs_include_dir = os.path.join(highs_build_dir, 'include')
+    highs_include_dir = os.path.join(highs_build_dir, 'include', 'highs')
     if not os.path.exists(os.path.join(highs_include_dir, 'Highs.h')):
         raise RuntimeError('Could not find HiGHS include directory')
     
