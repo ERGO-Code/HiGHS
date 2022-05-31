@@ -8,12 +8,12 @@ Make sure HiGHS is installed locally with the correct CMake flags:
 cd HiGHS
 mkdir build
 cd build
-cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=/path/to/highs_install/ -DCMAKE_TARGETS=ON ..   
+cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=/path_to_highs_install/ -DCMAKE_TARGETS=ON ..   
 cmake --build . 
 cmake --install .
 ```
 
-This installs HiGHS in `/path/to/highs_install/`.
+This installs HiGHS in `/path_to_highs_install/`.
 
 Suppose another C++ CMake project has executable code in some file `main.cpp`, which includes `Highs.h`. To use the HiGHS library, edit the `CMakeLists.txt` as follows:
 
