@@ -17,26 +17,13 @@ Javascript
 
 HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
 
-#### GAMS
+GAMS
+----
 
-Set custom options with `-D<option>=<value>` during the configuration step ( `cmake ..` ):
+- A GAMS interface is available at [GAMSlinks](https://github.com/coin-or/GAMSlinks/), including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
 
-* `GAMS_ROOT` :
-
-    path to GAMS system: enables building of GAMS interface
-
-If build with GAMS interface, then HiGHS can be made available as solver
-in GAMS by adding an entry for HiGHS to the file gmscmpun.txt in the GAMS
-system folder (gmscmpnt.txt on Windows):
-
-``` 
-HIGHS 11 5 0001020304 1 0 2 LP RMIP
-gmsgenus.run
-gmsgenux.out
-/path/to/libhighs.so his 1 1
-```
-
-#### OSI
+OSI
+---
 
 * `OSI_ROOT` :
 
