@@ -133,7 +133,6 @@ set(sources
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
     presolve/PresolveComponent.cpp
-    presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
@@ -269,7 +268,6 @@ set(headers
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/PresolveComponent.h
-    presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
     util/FactorTimer.h
@@ -517,7 +515,6 @@ target_sources(libhighs PRIVATE
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
     presolve/PresolveComponent.cpp
-    presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
@@ -703,7 +700,6 @@ set(headers_fast_build_
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/PresolveComponent.h
-    presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
     util/FactorTimer.h
