@@ -16,10 +16,18 @@
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
+// Not all necessary, but copied from Presolve.h to avoid non-Linux
+// failures
+#include <list>
+#include <map>
+#include <stack>
+#include <string>
+#include <utility>
+
 #include "HighsPostsolveStack.h"
 #include "presolve/HAggregator.h"
-#include "presolve/Presolve.h"
 #include "lp_data/HighsLp.h"
+#include "util/HighsTimer.h"
 #include "util/HighsComponent.h"
 
 // Class defining the Presolve Component to be used in HiGHS.
@@ -27,6 +35,13 @@
 
 // The structure of component is general, of the presolve component - presolve
 // specific.
+
+enum class HighsPostsolveStatus {
+  kNotPresolved = -1,
+  kNoPrimalSolutionError,
+  kSolutionRecovered,
+  kBasisError
+};
 
 struct PresolveComponentData : public HighsComponentData {
   HighsLp reduced_lp_;

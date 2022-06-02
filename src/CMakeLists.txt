@@ -265,14 +265,12 @@ set(headers
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
-    presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/PresolveComponent.h
-    presolve/Presolve.h
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
@@ -678,7 +676,6 @@ set(headers_fast_build_
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/PresolveComponent.h
-    presolve/Presolve.h
     presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
