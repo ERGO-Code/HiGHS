@@ -23,9 +23,7 @@
 #include <utility>
 #include <vector>
 
-#include "presolve/HPreData.h"
 #include "util/HighsTimer.h"
-#include "presolve/PresolveAnalysis.h"
 
 using std::list;
 using std::string;
@@ -39,7 +37,7 @@ enum class HighsPostsolveStatus {
 
 namespace presolve {
 
-class Presolve : public HPreData {
+class Presolve {
  public:
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
   virtual ~Presolve() {}
@@ -47,7 +45,7 @@ class Presolve : public HPreData {
   // todo: clear the public from below.
 
  private:
-  PresolveTimer timer;
+  HighsTimer& timer;
 };
 
 }  // namespace presolve

@@ -273,7 +273,6 @@ set(headers
     presolve/HighsSymmetry.h
     presolve/HPreData.h
     presolve/HPresolve.h
-    presolve/PresolveAnalysis.h
     presolve/PresolveComponent.h
     presolve/Presolve.h
     presolve/PresolveUtils.h
@@ -682,7 +681,6 @@ set(headers_fast_build_
     presolve/HighsSymmetry.h
     presolve/HPreData.h
     presolve/HPresolve.h
-    presolve/PresolveAnalysis.h
     presolve/PresolveComponent.h
     presolve/Presolve.h
     presolve/PresolveUtils.h
