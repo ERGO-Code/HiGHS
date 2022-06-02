@@ -74,26 +74,12 @@ class Presolve : public HPreData {
                                  HighsSolution& recovered_solution,
                                  HighsBasis& recovered_basis);
 
-  HighsPostsolveStatus primalPostsolve(
-      const std::vector<double>& reduced_solution,
-      HighsSolution& recovered_solution);
-
   void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
   string modelName;
 
   // Options
   std::vector<Presolver> order;
-
-  struct AggregatorCall {
-    HAggregator::PostsolveStack postsolveStack;
-    std::vector<double> colCostAtCall;
-    std::vector<double> ARvalueAtCall;
-    std::vector<HighsInt> ARindexAtCall;
-    std::vector<HighsInt> ARstartAtCall;
-  };
-
-  std::vector<AggregatorCall> aggregatorStack;
 
   HighsInt max_iterations = 0;
 
@@ -108,17 +94,10 @@ class Presolve : public HPreData {
 
  private:
   HighsInt iKKTcheck = 0;
-  //  HighsInt presolve(HighsInt print);
 
   const bool report_postsolve = false;
 
-  void initializeVectors();
-  void runAggregator();
-  void runPropagator();
   void detectImpliedIntegers();
-  void applyMipDualFixing();
-  void setProblemStatus(const HighsInt s);
-  void reportTimes();
 
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
@@ -169,48 +148,12 @@ class Presolve : public HPreData {
 
   // functions
   void setPrimalValue(const HighsInt j, const double value);
-  void checkForChanges(HighsInt iteration);
   void resizeProblem();
   void resizeImpliedBounds();
 
   // easy transformations
   void removeFixedCol(HighsInt j);
   void removeEmptyRow(HighsInt i);
-  void removeEmptyColumn(HighsInt j);
-  void removeRow(HighsInt i);
-
-  // singleton rows
-  void removeRowSingletons();
-  HighsInt getSingRowElementIndexInAR(HighsInt i);
-  HighsInt getSingColElementIndexInA(HighsInt j);
-
-  // forcing constraints
-  void removeForcingConstraints();
-  pair<double, double> getImpliedRowBounds(HighsInt row);
-  void setVariablesToBoundForForcingRow(const HighsInt row, const bool isLower);
-  void dominatedConstraintProcedure(const HighsInt i, const double g,
-                                    const double h);
-
-  // dominated columns
-  void removeDominatedColumns();
-  void rowDualBoundsDominatedColumns();
-  pair<double, double> getImpliedColumnBounds(HighsInt j);
-  void removeIfWeaklyDominated(const HighsInt j, const double d,
-                               const double e);
-
-  //    void findDuplicateRows();
-  //    void findDuplicateColumns();
-  //    void removeDuplicateRows(HighsInt i, HighsInt k, double v);
-  //    HighsInt makeCheckForDuplicateRows(HighsInt k, HighsInt i,
-  //    vector<double>& coeff, vector<HighsInt>& colIndex, double v, HighsInt
-  //    whichIsFirst); void removeDuplicateColumns(HighsInt j,HighsInt k, double
-  //    v); bool checkDuplicateRows(HighsInt i, HighsInt k) ;
-  //	  bool checkDuplicateColumns(HighsInt i, HighsInt k) ;
-
-  // old or test
-  // void updateRemovedColRow(HighsInt dim);
-  // void updateRowsByNZ();
-  void testAnAR(HighsInt post);
 
   void countRemovedRows(PresolveRule rule);
   void countRemovedCols(PresolveRule rule);
@@ -228,13 +171,9 @@ class Presolve : public HPreData {
   double dominated_column_tolerance;
   double weakly_dominated_column_tolerance;
 
-  // postsolve
-  bool noPostSolve = false;
-
   void addChange(const PresolveRule type, const HighsInt row,
                  const HighsInt col);
   void fillStackRowBounds(const HighsInt col);
-  void setKKTcheckerData();
 
   void getBoundOnLByZj(const HighsInt row, const HighsInt j, double* lo,
                        double* up, const double colLow, const double colUpp);
