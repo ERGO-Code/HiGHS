@@ -674,4 +674,140 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
   primalSol[col] = primalSol[col] + colScale * primalSol[duplicateCol];
 }
 
+std::string HighsPostsolveStack::reductionTypeToString(
+    const ReductionType reduction_type) {
+  switch (reduction_type) {
+    case ReductionType::kLinearTransform:
+      return "Linear transform";
+    case ReductionType::kFreeColSubstitution:
+      return "Free column singleton";
+    case ReductionType::kDoubletonEquation:
+      return "Doubleton equation";
+    case ReductionType::kEqualityRowAddition:
+      return "Equality row addition";
+    case ReductionType::kEqualityRowAdditions:
+      return "Equality row additions";
+    case ReductionType::kSingletonRow:
+      return "Singleton row";
+    case ReductionType::kFixedCol:
+      return "Fixed column";
+    case ReductionType::kRedundantRow:
+      return "Redundant row";
+    case ReductionType::kForcingRow:
+      return "Forcing row";
+    case ReductionType::kForcingColumn:
+      return "Forcing column";
+    case ReductionType::kForcingColumnRemovedRow:
+      return "Forcing column - removed row";
+    case ReductionType::kDuplicateRow:
+      return "Duplicate row";
+    case ReductionType::kDuplicateColumn:
+      return "Duplicate column";
+    default:
+      return "??";
+  }
+}
+
+void HighsPostsolveStack::reportReductions(const HighsLogOptions& log_options) {
+  highsLogUser(log_options, HighsLogType::kInfo, "\nReporting presolve\n");
+  HighsInt sum_removed_col = 0;
+  HighsInt sum_removed_row = 0;
+  HighsInt sum_removed_nz = 0;
+
+  for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
+    HighsInt num_removed_col = -kHighsIInf;
+    HighsInt num_removed_row = -kHighsIInf;
+    HighsInt num_removed_nz = -kHighsIInf;
+    switch (reductions[i].first) {
+      case ReductionType::kLinearTransform: {
+        LinearTransform reduction;
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kFreeColSubstitution: {
+        FreeColSubstitution reduction;
+        reductionValues.pop(colValues);
+        reductionValues.pop(rowValues);
+        reductionValues.pop(reduction);
+        num_removed_col = 1;
+        num_removed_row = 0;
+        num_removed_nz = rowValues.size();
+        break;
+      }
+      case ReductionType::kDoubletonEquation: {
+        DoubletonEquation reduction;
+        reductionValues.pop(colValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kEqualityRowAddition: {
+        EqualityRowAddition reduction;
+        reductionValues.pop(rowValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kEqualityRowAdditions: {
+        EqualityRowAdditions reduction;
+        reductionValues.pop(colValues);
+        reductionValues.pop(rowValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kSingletonRow: {
+        SingletonRow reduction;
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kFixedCol: {
+        FixedCol reduction;
+        reductionValues.pop(colValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kRedundantRow: {
+        RedundantRow reduction;
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kForcingRow: {
+        ForcingRow reduction;
+        reductionValues.pop(rowValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kForcingColumn: {
+        ForcingColumn reduction;
+        reductionValues.pop(colValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kForcingColumnRemovedRow: {
+        ForcingColumnRemovedRow reduction;
+        reductionValues.pop(rowValues);
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kDuplicateRow: {
+        DuplicateRow reduction;
+        reductionValues.pop(reduction);
+        break;
+      }
+      case ReductionType::kDuplicateColumn: {
+        DuplicateColumn reduction;
+        reductionValues.pop(reduction);
+      }
+    }
+    assert(num_removed_col >= -kHighsIInf);
+    assert(num_removed_row >= -kHighsIInf);
+    assert(num_removed_nz >= -kHighsIInf);
+    sum_removed_col += num_removed_col;
+    sum_removed_row += num_removed_row;
+    sum_removed_nz += num_removed_nz;
+    printf("Reduction %-28s (%3d; %3d; %3d) (%3d; %3d; %3d)\n",
+           reductionTypeToString(reductions[i].first).c_str(),
+           (int)num_removed_col, (int)num_removed_row, (int)num_removed_nz,
+           (int)sum_removed_col, (int)sum_removed_row, (int)sum_removed_nz);
+    fflush(stdout);
+  }
+}
 }  // namespace presolve
