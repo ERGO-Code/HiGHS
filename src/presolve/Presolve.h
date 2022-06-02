@@ -175,12 +175,9 @@ class Presolve : public HPreData {
 
   // easy transformations
   void removeFixedCol(HighsInt j);
-  void removeEmpty();
-  void removeFixed();
   void removeEmptyRow(HighsInt i);
   void removeEmptyColumn(HighsInt j);
   void removeRow(HighsInt i);
-  void checkBoundsAreConsistent();
 
   // singleton rows
   void removeRowSingletons();
@@ -298,10 +295,7 @@ class Presolve : public HPreData {
 
   // Dev presolve
   // April 2020
-  void reportDevMainLoop();
-  void reportDevMidMainLoop();
   PresolveStats stats;
-  HighsInt runPresolvers(const std::vector<Presolver>& order);
 
   void checkKkt(const bool final = false);
   dev_kkt_check::State initState(const bool intermediate = false);
