@@ -25,10 +25,10 @@
 #include <utility>
 
 #include "HighsPostsolveStack.h"
-#include "presolve/HAggregator.h"
 #include "lp_data/HighsLp.h"
-#include "util/HighsTimer.h"
+#include "presolve/HAggregator.h"
 #include "util/HighsComponent.h"
+#include "util/HighsTimer.h"
 
 // Class defining the Presolve Component to be used in HiGHS.
 // What used to be in Presolve.h but allowing for further testing and dev.
