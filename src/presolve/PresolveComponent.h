@@ -67,8 +67,6 @@ struct PresolveComponentInfo : public HighsComponentInfo {
 struct PresolveComponentOptions : public HighsComponentOptions {
   bool is_valid = false;
   // presolve options later when needed.
-  bool presolve_on = true;
-  std::vector<presolve::Presolver> order;
 
   std::string iteration_strategy = "smart";
   HighsInt max_iterations = 0;

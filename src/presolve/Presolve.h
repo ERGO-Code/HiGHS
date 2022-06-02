@@ -43,27 +43,6 @@ enum class HighsPostsolveStatus {
 
 namespace presolve {
 
-enum class Presolver {
-  kMainEmpty,
-  kMainRowSingletons,
-  kMainForcing,
-  kMainColSingletons,
-  kMainDoubletonEq,
-  kMainDominatedCols,
-  kMainSingletonsOnly,
-  kMainMipDualFixing,
-};
-
-const std::map<Presolver, std::string> kPresolverNames{
-    {Presolver::kMainEmpty, "Empty & fixed ()"},
-    {Presolver::kMainRowSingletons, "Row singletons ()"},
-    {Presolver::kMainForcing, "Forcing rows ()"},
-    {Presolver::kMainColSingletons, "Col singletons ()"},
-    {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
-    {Presolver::kMainDominatedCols, "Dominated Cols()"},
-    {Presolver::kMainSingletonsOnly, "Singletons only()"},
-    {Presolver::kMainMipDualFixing, "Dual fixing ()"}};
-
 class Presolve : public HPreData {
  public:
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
@@ -72,18 +51,7 @@ class Presolve : public HPreData {
   // todo: clear the public from below.
 
   // Options
-  std::vector<Presolver> order;
-
-  HighsInt max_iterations = 0;
-
-  void setTimeLimit(const double limit) {
-    assert(limit < inf && limit > 0);
-    timer.time_limit = limit;
-  }
-
-  HighsInt iPrint = 0;
   HighsLogOptions log_options;
-  double objShift;
 
  private:
   HighsInt iKKTcheck = 0;
@@ -134,17 +102,6 @@ class Presolve : public HPreData {
   vector<double> rowUpperOriginal;
   vector<double> colLowerOriginal;
   vector<double> colUpperOriginal;
-
-  // functions
-  void setPrimalValue(const HighsInt j, const double value);
-  void resizeImpliedBounds();
-
-  // easy transformations
-  void removeFixedCol(HighsInt j);
-  void removeEmptyRow(HighsInt i);
-
-  void countRemovedRows(PresolveRule rule);
-  void countRemovedCols(PresolveRule rule);
 
   double tol = 0.0000001;
   const double default_primal_feasiblility_tolerance = 1e-7;
