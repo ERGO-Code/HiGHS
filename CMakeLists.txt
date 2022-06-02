@@ -380,11 +380,11 @@ set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 add_subdirectory(src)
 
 option(JULIA "Build library and executable for Julia" OFF)
+option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
 
 # No changes in app/ apart from a relative path
 add_subdirectory(app)
 
-target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
 
 # check/ not added here, instead define fewer tests:
 # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
@@ -508,7 +508,7 @@ install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
     RUNTIME
-    PUBLIC_HEADER)
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 endif()
