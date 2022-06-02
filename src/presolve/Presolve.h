@@ -191,40 +191,6 @@ class Presolve : public HPreData {
   void dominatedConstraintProcedure(const HighsInt i, const double g,
                                     const double h);
 
-  // doubleton equations
-  void removeDoubletonEquations();
-  pair<HighsInt, HighsInt> getXYDoubletonEquations(const HighsInt row);
-  void processRowDoubletonEquation(const HighsInt row, const HighsInt x,
-                                   const HighsInt y, const double akx,
-                                   const double aky, const double b);
-  pair<double, double> getNewBoundsDoubletonConstraint(HighsInt row,
-                                                       HighsInt col, HighsInt j,
-                                                       double aik, double aij);
-  void UpdateMatrixCoeffDoubletonEquationXzero(
-      const HighsInt i, const HighsInt x, const HighsInt y, const double aiy,
-      const double akx, const double aky);
-  void UpdateMatrixCoeffDoubletonEquationXnonZero(
-      const HighsInt i, const HighsInt x, const HighsInt y, const double aiy,
-      const double akx, const double aky);
-
-  // column singletons
-  void removeColumnSingletons();
-  bool removeIfImpliedFree(HighsInt col, HighsInt i, HighsInt k);
-  void removeFreeColumnSingleton(const HighsInt col, const HighsInt row,
-                                 const HighsInt k);
-  void removeZeroCostColumnSingleton(const HighsInt col, const HighsInt row,
-                                     const HighsInt k);
-  bool removeColumnSingletonInDoubletonInequality(const HighsInt col,
-                                                  const HighsInt i,
-                                                  const HighsInt k);
-  void removeSecondColumnSingletonInDoubletonRow(const HighsInt j,
-                                                 const HighsInt i);
-  pair<double, double> getBoundsImpliedFree(double lowInit, double uppInit,
-                                            const HighsInt col,
-                                            const HighsInt i, const HighsInt k);
-  void removeImpliedFreeColumn(const HighsInt col, const HighsInt i,
-                               const HighsInt k);
-
   // dominated columns
   void removeDominatedColumns();
   void rowDualBoundsDominatedColumns();
@@ -300,13 +266,8 @@ class Presolve : public HPreData {
   void checkKkt(const bool final = false);
   dev_kkt_check::State initState(const bool intermediate = false);
 
-  void caseTwoSingletonsDoubletonInequality(const HighsInt row,
-                                            const HighsInt x, const HighsInt y);
-
   // August 2020
   void removeSingletonsOnly();
-  bool isKnapsack(const HighsInt col) const;
-  void removeKnapsack(const HighsInt col);
 };
 
 }  // namespace presolve
