@@ -134,7 +134,6 @@ set(sources
     presolve/HighsSymmetry.cpp
     presolve/HPreData.cpp
     presolve/HPresolve.cpp
-    presolve/PresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
@@ -526,7 +525,6 @@ target_sources(libhighs PRIVATE
     presolve/HighsSymmetry.cpp
     presolve/HPreData.cpp
     presolve/HPresolve.cpp
-    presolve/PresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp

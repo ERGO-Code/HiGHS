@@ -23,13 +23,9 @@
 #include <utility>
 #include <vector>
 
-#include "io/HighsIO.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsSolution.h"
-#include "presolve/HAggregator.h"
 #include "presolve/HPreData.h"
+#include "util/HighsTimer.h"
 #include "presolve/PresolveAnalysis.h"
-#include "test/DevKkt.h"
 
 using std::list;
 using std::string;
@@ -50,16 +46,8 @@ class Presolve : public HPreData {
 
   // todo: clear the public from below.
 
-  // Options
-  HighsLogOptions log_options;
-
  private:
-  PresolveTimer timer;  // holds enum for main presolve rules
-  //  double tol = 0.0000001;
-  // Dev presolve
-  // April 2020
-  //  PresolveStats stats;
-
+  PresolveTimer timer;
 };
 
 }  // namespace presolve

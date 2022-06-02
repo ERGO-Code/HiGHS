@@ -19,6 +19,7 @@
 #include "HighsPostsolveStack.h"
 #include "presolve/HAggregator.h"
 #include "presolve/Presolve.h"
+#include "lp_data/HighsLp.h"
 #include "util/HighsComponent.h"
 
 // Class defining the Presolve Component to be used in HiGHS.
