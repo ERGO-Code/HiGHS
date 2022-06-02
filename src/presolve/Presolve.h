@@ -69,14 +69,7 @@ class Presolve : public HPreData {
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
   virtual ~Presolve() {}
 
-  HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
-                                 const HighsBasis& reduced_basis,
-                                 HighsSolution& recovered_solution,
-                                 HighsBasis& recovered_basis);
-
-  void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
-  string modelName;
 
   // Options
   std::vector<Presolver> order;
@@ -94,10 +87,6 @@ class Presolve : public HPreData {
 
  private:
   HighsInt iKKTcheck = 0;
-
-  const bool report_postsolve = false;
-
-  void detectImpliedIntegers();
 
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
@@ -148,7 +137,6 @@ class Presolve : public HPreData {
 
   // functions
   void setPrimalValue(const HighsInt j, const double value);
-  void resizeProblem();
   void resizeImpliedBounds();
 
   // easy transformations
@@ -173,30 +161,6 @@ class Presolve : public HPreData {
 
   void addChange(const PresolveRule type, const HighsInt row,
                  const HighsInt col);
-  void fillStackRowBounds(const HighsInt col);
-
-  void getBoundOnLByZj(const HighsInt row, const HighsInt j, double* lo,
-                       double* up, const double colLow, const double colUpp);
-  double getRowDualPost(const HighsInt row, const HighsInt col);
-  double getColumnDualPost(const HighsInt col);
-  void roundIntegerBounds(HighsInt col);
-  string getDualsForcingRow(const HighsInt row, vector<HighsInt>& fRjs);
-  void getDualsSingletonRow(const HighsInt row, const HighsInt col);
-  void getDualsDoubletonEquation(const HighsInt row, const HighsInt col);
-  void recordCounts(const string fileName);
-  void trimA();
-
-  void setBasisElement(const change c);
-
-  // test basis matrix singularity
-  //
-  // public:
-  //	vector<HighsInt> nbffull;
-  //	vector<HighsInt> bindfull;
-  //	void cmpNBF(HighsInt row, HighsInt col);
-  //	void setNBFfullproblem(vector<HighsInt>& nbfFull, vector<HighsInt>&
-  // bnFull); 	HighsInt testBasisMatrixSingularity();
-  //
 
   // Dev presolve
   // April 2020
