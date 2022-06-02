@@ -513,7 +513,6 @@ target_sources(libhighs PRIVATE
     parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
-    presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -669,7 +668,6 @@ set(headers_fast_build_
     presolve/ICrashUtil.h
     presolve/ICrashX.h
     presolve/HAggregator.h
-    presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
