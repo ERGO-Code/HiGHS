@@ -46,38 +46,6 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-void Presolve::addChange(PresolveRule type, HighsInt row, HighsInt col) {
-  change ch;
-  ch.type = type;
-  ch.row = row;
-  ch.col = col;
-  chng.push(ch);
-
-  if (type < kPresolveRulesCount) timer.addChange(type);
-}
-
-void Presolve::checkKkt(bool final) {
-  // final = true or intermediate = true
-  if (!iKKTcheck) return;
-
-  // update row value done in initState below.
-
-  std::cout << "~~~~~~~~ " << std::endl;
-  bool intermediate = !final;
-  dev_kkt_check::State state = initState(intermediate);
-
-  dev_kkt_check::KktInfo info = dev_kkt_check::initInfo();
-
-  bool pass = dev_kkt_check::checkKkt(state, info);
-  if (final) {
-    if (pass)
-      std::cout << "KKT PASS" << std::endl;
-    else
-      std::cout << "KKT FAIL" << std::endl;
-  }
-  std::cout << "~~~~~~~~ " << std::endl;
-}
-
 dev_kkt_check::State Presolve::initState(const bool intermediate) {
   // update row value
   rowValue.assign(numRowOriginal, 0);
