@@ -69,7 +69,6 @@ class Presolve : public HPreData {
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
   virtual ~Presolve() {}
 
-  HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
                                  const HighsBasis& reduced_basis,
                                  HighsSolution& recovered_solution,
@@ -79,7 +78,6 @@ class Presolve : public HPreData {
       const std::vector<double>& reduced_solution,
       HighsSolution& recovered_solution);
 
-  void setNumericalTolerances();
   void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
   string modelName;
@@ -110,7 +108,7 @@ class Presolve : public HPreData {
 
  private:
   HighsInt iKKTcheck = 0;
-  HighsInt presolve(HighsInt print);
+  //  HighsInt presolve(HighsInt print);
 
   const bool report_postsolve = false;
 

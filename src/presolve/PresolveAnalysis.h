@@ -159,82 +159,6 @@ class PresolveTimer {
       rules_[rule].cols_removed++;
   }
 
-  void reportClocks() {
-    std::vector<HighsInt> clocks;
-    for (HighsInt id = 0; id < kPresolveRulesCount - 1; id++) {
-      assert(rules_[id].rule_id == id);
-      if (id == kRunPresolvers) continue;
-      if (id == kRemoveRowSingletons) continue;
-      if (id == kRemoveDoubletonEquations) continue;
-      clocks.push_back(rules_[id].clock_id);
-    }
-    HighsInt ideal_time_rule;
-    double ideal_time;
-    ideal_time_rule = kTotalPresolveTime;
-    ideal_time = getRuleTime(ideal_time_rule);
-    std::cout << std::endl;
-    timer_.reportOnTolerance("grep-Presolve", clocks, ideal_time, 0);
-    std::cout << std::endl;
-
-    clocks.clear();
-    clocks.push_back(rules_[kRunPresolvers].clock_id);
-    clocks.push_back(rules_[kResizeMatrix].clock_id);
-    std::cout << std::endl;
-    timer_.reportOnTolerance("grep-Presolve", clocks, ideal_time, 0);
-    std::cout << std::endl;
-
-    clocks.clear();
-    ideal_time_rule = kRunPresolvers;
-    ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[kRemoveRowSingletons].clock_id);
-    clocks.push_back(rules_[kRemoveForcingConstraints].clock_id);
-    clocks.push_back(rules_[kRemoveColumnSingletons].clock_id);
-    clocks.push_back(rules_[kRemoveDoubletonEquations].clock_id);
-    clocks.push_back(rules_[kRemoveDominatedColumns].clock_id);
-    timer_.reportOnTolerance("grep-Presolve", clocks, ideal_time, 0);
-    std::cout << std::endl;
-
-    clocks.clear();
-    ideal_time_rule = kRemoveForcingConstraints;
-    ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[kForcingRow].clock_id);
-    clocks.push_back(rules_[kRedundantRow].clock_id);
-    timer_.reportOnTolerance("grep--RmFrcCs", clocks, ideal_time, 0);
-    std::cout << std::endl;
-
-    clocks.clear();
-    ideal_time_rule = kRemoveColumnSingletons;
-    ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[kFreeSingCol].clock_id);
-    clocks.push_back(rules_[kSingColDoubletonIneq].clock_id);
-    clocks.push_back(rules_[kImpliedFreeSingCol].clock_id);
-    timer_.reportOnTolerance("grep-RmColSng", clocks, ideal_time, 0);
-    std::cout << std::endl;
-
-    clocks.clear();
-    ideal_time_rule = kRemoveDominatedColumns;
-    ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[kDominatedCols].clock_id);
-    clocks.push_back(rules_[kWeaklyDominatedCols].clock_id);
-    timer_.reportOnTolerance("grep-RmDomCol", clocks, ideal_time, 0);
-    std::cout << std::endl;
-  }
-
-  void initialiseNumericsRecord(HighsInt record, std::string name,
-                                const double tolerance) {
-    // Make sure that the tolerance has been set to a positive value
-    assert(tolerance > 0);
-    numericsRecord& numerics_record = presolve_numerics[record];
-    numerics_record.name = name;
-    numerics_record.tolerance = tolerance;
-    numerics_record.num_test = 0;
-    numerics_record.num_zero_true = 0;
-    numerics_record.num_tol_true = 0;
-    numerics_record.num_10tol_true = 0;
-    numerics_record.num_clear_true = 0;
-    numerics_record.min_positive_true = kHighsInf;
-  }
-
   void updateNumericsRecord(HighsInt record, const double value) {
     numericsRecord& numerics_record = presolve_numerics[record];
     double tolerance = numerics_record.tolerance;
@@ -252,38 +176,6 @@ class PresolveTimer {
     if (value > 0)
       numerics_record.min_positive_true =
           min(value, numerics_record.min_positive_true);
-  }
-
-  void reportNumericsRecord(const numericsRecord& numerics_record) {
-    if (!numerics_record.num_test) return;
-    printf("%-26s: tolerance =%6.1g: Zero =%9" HIGHSINT_FORMAT
-           "; Tol =%9" HIGHSINT_FORMAT "; 10Tol =%9" HIGHSINT_FORMAT
-           "; Clear =%9" HIGHSINT_FORMAT
-           "; "
-           "MinPositive =%7.2g; Tests =%9" HIGHSINT_FORMAT "\n",
-           numerics_record.name.c_str(), numerics_record.tolerance,
-           numerics_record.num_zero_true, numerics_record.num_tol_true,
-           numerics_record.num_10tol_true, numerics_record.num_clear_true,
-           numerics_record.min_positive_true, numerics_record.num_test);
-  }
-
-  void reportNumericsCsvRecord(const numericsRecord& numerics_record) {
-    printf(",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT "",
-           numerics_record.num_zero_true,
-           numerics_record.num_tol_true + numerics_record.num_10tol_true,
-           numerics_record.num_clear_true);
-  }
-
-  void reportNumericsRecords() {
-    assert((HighsInt)presolve_numerics.size() == kPresolveNumericsCount);
-    if (presolve_numerics.size() < kPresolveNumericsCount) return;
-    printf("Presolve numerics analysis for %s:\n\n", model_name.c_str());
-    for (HighsInt record = 0; record < kPresolveNumericsCount; record++)
-      reportNumericsRecord(presolve_numerics[record]);
-    printf("grep_presolveNumerics:,%s", model_name.c_str());
-    for (HighsInt record = 0; record < kPresolveNumericsCount; record++)
-      reportNumericsCsvRecord(presolve_numerics[record]);
-    printf("\n\n");
   }
 
   void updateInfo();
