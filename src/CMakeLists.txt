@@ -136,7 +136,6 @@ set(sources
     presolve/HPresolve.cpp
     presolve/PresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
-    presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
@@ -529,7 +528,6 @@ target_sources(libhighs PRIVATE
     presolve/HPresolve.cpp
     presolve/PresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
-    presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp

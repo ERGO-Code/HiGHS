@@ -54,24 +54,12 @@ class Presolve : public HPreData {
   HighsLogOptions log_options;
 
  private:
-  HighsInt iKKTcheck = 0;
-
   PresolveTimer timer;  // holds enum for main presolve rules
-
- private:
-
-  // original data
-
- private:
-  double tol = 0.0000001;
+  //  double tol = 0.0000001;
   // Dev presolve
   // April 2020
-  PresolveStats stats;
+  //  PresolveStats stats;
 
-  dev_kkt_check::State initState(const bool intermediate = false);
-
-  // August 2020
-  void removeSingletonsOnly();
 };
 
 }  // namespace presolve
