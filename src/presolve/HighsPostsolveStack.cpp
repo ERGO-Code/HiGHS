@@ -674,38 +674,4 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
   primalSol[col] = primalSol[col] + colScale * primalSol[duplicateCol];
 }
 
-std::string HighsPostsolveStack::reductionTypeToString(
-    const ReductionType reduction_type) {
-  switch (reduction_type) {
-    case ReductionType::kLinearTransform:
-      return "Linear transform";
-    case ReductionType::kFreeColSubstitution:
-      return "Free column singleton";
-    case ReductionType::kDoubletonEquation:
-      return "Doubleton equation";
-    case ReductionType::kEqualityRowAddition:
-      return "Equality row addition";
-    case ReductionType::kEqualityRowAdditions:
-      return "Equality row additions";
-    case ReductionType::kSingletonRow:
-      return "Singleton row";
-    case ReductionType::kFixedCol:
-      return "Fixed column";
-    case ReductionType::kRedundantRow:
-      return "Redundant row";
-    case ReductionType::kForcingRow:
-      return "Forcing row";
-    case ReductionType::kForcingColumn:
-      return "Forcing column";
-    case ReductionType::kForcingColumnRemovedRow:
-      return "Forcing column - removed row";
-    case ReductionType::kDuplicateRow:
-      return "Duplicate row";
-    case ReductionType::kDuplicateColumn:
-      return "Duplicate column";
-    default:
-      return "??";
-  }
-}
-
 }  // namespace presolve

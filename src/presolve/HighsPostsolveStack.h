@@ -574,6 +574,7 @@ class HighsPostsolveStack {
         basis.row_status[origRowIndex[i]] = basis.row_status[i];
     }
 
+    // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
       switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
@@ -838,8 +839,6 @@ class HighsPostsolveStack {
   }
 
   size_t numReductions() const { return reductions.size(); }
-
-  std::string reductionTypeToString(const ReductionType reduction_type);
 };
 
 }  // namespace presolve
