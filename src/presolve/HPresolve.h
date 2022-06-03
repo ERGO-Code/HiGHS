@@ -35,6 +35,15 @@
 
 namespace presolve {
 
+enum PresolveRuleType : uint8_t {
+  kPresolveRuleMin = 0,
+  kPresolveRuleEmptyRow = kPresolveRuleMin,
+  kPresolveRuleSingletonRow,
+  kPresolveRuleFixedCol,
+  kPresolveRuleMax = kPresolveRuleFixedCol,
+  kPresolveRuleCount,
+};
+
 class HighsPostsolveStack;
 
 class HPresolve {
@@ -124,7 +133,7 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
-  // store old problem sizes to compute percentage redunctions in presolve loop
+  // store old problem sizes to compute percentage reductions in presolve loop
   HighsInt oldNumCol;
   HighsInt oldNumRow;
   bool probingEarlyAbort;
@@ -136,6 +145,8 @@ class HPresolve {
     kStopped,
   };
 
+  std::vector<HighsInt> col_reduction_;
+  std::vector<HighsInt> row_reduction_;
   // private functions for different shared functionality and matrix
   // modification
 
@@ -334,7 +345,12 @@ class HPresolve {
   void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
-  void reportReductions(const HighsLogOptions& log_options);
+
+  std::string presolveRuleTypeToString(const HighsInt rule_type);
+  void updatePresolveLog(const HighsInt rule_type,
+			 const HighsInt num_removed_col_ = -1,
+			 const HighsInt num_removed_row_ = -1);
+  void reportPresolveLog(const HighsLogOptions& log_options);
 };
 
 }  // namespace presolve

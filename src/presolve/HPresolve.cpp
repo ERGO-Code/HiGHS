@@ -2558,6 +2558,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
             model->row_upper_[row] + primal_feastol &&
         model->col_lower_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
+      updatePresolveLog(kPresolveRuleSingletonRow);
       postsolve_stack.redundantRow(row);
       return checkLimits(postsolve_stack);
     }
@@ -2566,6 +2567,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
             model->row_upper_[row] + primal_feastol &&
         model->col_upper_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
+      updatePresolveLog(kPresolveRuleSingletonRow);
       postsolve_stack.redundantRow(row);
       return checkLimits(postsolve_stack);
     }
@@ -2651,6 +2653,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
     postsolve_stack.removedFixedCol(col, lb, model->col_cost_[col],
                                     getColumnVector(col));
     removeFixedCol(col);
+    updatePresolveLog(kPresolveRuleFixedCol);
   } else if (upperTightened)
     changeColUpper(col, ub);
 
@@ -2815,6 +2818,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           model->row_lower_[row] > primal_feastol)
         // model infeasible
         return Result::kPrimalInfeasible;
+      updatePresolveLog(kPresolveRuleEmptyRow);
       postsolve_stack.redundantRow(row);
       markRowDeleted(row);
       return checkLimits(postsolve_stack);
@@ -3838,6 +3842,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     assert(std::isfinite(model->offset_));
     model->sense_ = ObjSense::kMinimize;
   }
+
+  // Set up logging
+  col_reduction_.assign(kPresolveRuleCount, 0);
+  row_reduction_.assign(kPresolveRuleCount, 0);
 
   if (options->presolve != "off") {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
@@ -6248,7 +6256,49 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
 }
 
-void HPresolve::reportReductions(const HighsLogOptions& log_options) {
+std::string  HPresolve::presolveRuleTypeToString(const HighsInt rule_type) {
+  if (rule_type == kPresolveRuleEmptyRow) {
+    return "Empty row";
+  } else if (rule_type == kPresolveRuleSingletonRow) {
+    return "Singleton row";
+  } else if (rule_type == kPresolveRuleFixedCol) {
+    return "Fixed column";
+  } 
+  assert(1==0);
+  return "????";
+}
+
+void HPresolve::updatePresolveLog(const HighsInt rule_type,
+				  const HighsInt num_removed_col_,
+				  const HighsInt num_removed_row_) {
+  assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
+  HighsInt num_removed_col = num_removed_col_;
+  HighsInt num_removed_row = num_removed_row_;
+  if (rule_type == kPresolveRuleEmptyRow) {
+    num_removed_col = 0;
+    num_removed_row = 1;
+  } else if (rule_type == kPresolveRuleSingletonRow) {
+    num_removed_col = 0;
+    num_removed_row = 1;
+  } else if (rule_type == kPresolveRuleFixedCol) {
+    num_removed_col = 1;
+    num_removed_row = 0;
+  } else {
+    assert(1==0);
+  }
+  assert(num_removed_col >= 0);
+  assert(num_removed_row >= 0);
+  col_reduction_[rule_type] += num_removed_col;
+  row_reduction_[rule_type] += num_removed_row;
+  printf("%-20s (%3d, %3d) (%3d, %3d)\n",
+	 presolveRuleTypeToString(rule_type).c_str(),
+	 (int)num_removed_col, 
+	 (int)num_removed_row, 
+	 (int)col_reduction_[rule_type], 
+	 (int)row_reduction_[rule_type]);
+}
+
+void HPresolve::reportPresolveLog(const HighsLogOptions& log_options) {
   highsLogUser(log_options, HighsLogType::kInfo, "\nReporting presolve\n");
 }
 
