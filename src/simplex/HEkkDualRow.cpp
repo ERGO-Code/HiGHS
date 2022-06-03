@@ -87,9 +87,9 @@ void HEkkDualRow::choosePossible() {
    * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
    */
-  const double Ta = ekk_instance_.info_.update_count < 10   ? 1e-9
-                    : ekk_instance_.info_.update_count < 20 ? 3e-8
-                                                            : 1e-6;
+  const double Ta = ekk_instance_.info_.update_count < 10
+                        ? 1e-9
+                        : ekk_instance_.info_.update_count < 20 ? 3e-8 : 1e-6;
   const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   workTheta = kHighsInf;
@@ -594,9 +594,9 @@ void HEkkDualRow::createFreelist() {
 void HEkkDualRow::createFreemove(HVector* row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
-    double Ta = ekk_instance_.info_.update_count < 10   ? 1e-9
-                : ekk_instance_.info_.update_count < 20 ? 3e-8
-                                                        : 1e-6;
+    double Ta = ekk_instance_.info_.update_count < 10
+                    ? 1e-9
+                    : ekk_instance_.info_.update_count < 20 ? 3e-8 : 1e-6;
     HighsInt move_out = workDelta < 0 ? -1 : 1;
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
