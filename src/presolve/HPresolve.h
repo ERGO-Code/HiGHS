@@ -334,6 +334,7 @@ class HPresolve {
   void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
+  void reportReductions(const HighsLogOptions& log_options);
 };
 
 }  // namespace presolve

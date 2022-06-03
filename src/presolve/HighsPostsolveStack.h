@@ -574,50 +574,30 @@ class HighsPostsolveStack {
         basis.row_status[origRowIndex[i]] = basis.row_status[i];
     }
 
-    // now undo the changes
-    HighsInt sum_removed_col = 0;
-    HighsInt sum_removed_row = 0;
-    HighsInt sum_removed_nz = 0;
-    printf("                                          This     |   Total\n");
-    printf(
-        "Reduction type                         Col Row  Nz | Col Row  Nz\n");
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
-      HighsInt num_removed_col = -kHighsIInf;
-      HighsInt num_removed_row = -kHighsIInf;
-      HighsInt num_removed_nz = -kHighsIInf;
       switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
-          assert(111 == 990);
           LinearTransform reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution);
           break;
         }
         case ReductionType::kFreeColSubstitution: {
-          //      assert(111==991);
           FreeColSubstitution reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
           reduction.undo(options, rowValues, colValues, solution, basis);
-          num_removed_col = 1;
-          num_removed_row = 0;
-          num_removed_nz = rowValues.size() - 1;
           break;
         }
         case ReductionType::kDoubletonEquation: {
-          //      assert(111==992);
           DoubletonEquation reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
           reduction.undo(options, colValues, solution, basis);
-          num_removed_col = 1;
-          num_removed_row = 0;
-          num_removed_nz = 1;
           break;
         }
         case ReductionType::kEqualityRowAddition: {
-          assert(111 == 993);
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
@@ -625,7 +605,6 @@ class HighsPostsolveStack {
           break;
         }
         case ReductionType::kEqualityRowAdditions: {
-          assert(111 == 994);
           EqualityRowAdditions reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
@@ -634,38 +613,25 @@ class HighsPostsolveStack {
           break;
         }
         case ReductionType::kSingletonRow: {
-          //      assert(111==995);
           SingletonRow reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
-          num_removed_col = 0;
-          num_removed_row = 1;
-          num_removed_nz = 0;
           break;
         }
         case ReductionType::kFixedCol: {
-          //      assert(111==996);
           FixedCol reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
           reduction.undo(options, colValues, solution, basis);
-          num_removed_col = 1;
-          num_removed_row = 0;
-          num_removed_nz = 0;
           break;
         }
         case ReductionType::kRedundantRow: {
-          //      assert(111==997);
           RedundantRow reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
-          num_removed_col = 0;
-          num_removed_row = 1;
-          num_removed_nz = 0;
           break;
         }
         case ReductionType::kForcingRow: {
-          assert(111 == 998);
           ForcingRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
@@ -673,7 +639,6 @@ class HighsPostsolveStack {
           break;
         }
         case ReductionType::kForcingColumn: {
-          assert(111 == 999);
           ForcingColumn reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
@@ -681,7 +646,6 @@ class HighsPostsolveStack {
           break;
         }
         case ReductionType::kForcingColumnRemovedRow: {
-          assert(111 == 9910);
           ForcingColumnRemovedRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
@@ -689,30 +653,17 @@ class HighsPostsolveStack {
           break;
         }
         case ReductionType::kDuplicateRow: {
-          assert(111 == 9911);
           DuplicateRow reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kDuplicateColumn: {
-          assert(111 == 9912);
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
         }
       }
-      assert(num_removed_col > -kHighsIInf);
-      assert(num_removed_row > -kHighsIInf);
-      assert(num_removed_nz > -kHighsIInf);
-      sum_removed_col += num_removed_col;
-      sum_removed_row += num_removed_row;
-      sum_removed_nz += num_removed_nz;
-      printf("Reduction %-28s %3d %3d %3d | %3d %3d %3d\n",
-             reductionTypeToString(reductions[i].first).c_str(),
-             (int)num_removed_col, (int)num_removed_row, (int)num_removed_nz,
-             (int)sum_removed_col, (int)sum_removed_row, (int)sum_removed_nz);
-      fflush(stdout);
     }
   }
 
@@ -889,7 +840,6 @@ class HighsPostsolveStack {
   size_t numReductions() const { return reductions.size(); }
 
   std::string reductionTypeToString(const ReductionType reduction_type);
-  void reportReductions(const HighsLogOptions& log_options);
 };
 
 }  // namespace presolve

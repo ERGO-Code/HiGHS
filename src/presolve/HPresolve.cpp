@@ -3998,7 +3998,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   if (mipsolver != nullptr) scaleMIP(postsolve_stack);
 
   //  if (options->log_options.log_dev_level)
-  //    postsolve_stack.reportReductions(options->log_options);
+  //    reportReductions(options->log_options);
 
   return Result::kOk;
 }
@@ -6246,6 +6246,10 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   }
 
   return Result::kOk;
+}
+
+void HPresolve::reportReductions(const HighsLogOptions& log_options) {
+  highsLogUser(log_options, HighsLogType::kInfo, "\nReporting presolve\n");
 }
 
 }  // namespace presolve
