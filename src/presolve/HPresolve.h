@@ -39,8 +39,22 @@ enum PresolveRuleType : uint8_t {
   kPresolveRuleMin = 0,
   kPresolveRuleEmptyRow = kPresolveRuleMin,
   kPresolveRuleSingletonRow,
+  kPresolveRuleRedundantRow,
+  kPresolveRuleForcingRow,
+  kPresolveRuleDuplicateRow,
   kPresolveRuleFixedCol,
-  kPresolveRuleMax = kPresolveRuleFixedCol,
+  kPresolveRuleFixedColAtLower,
+  kPresolveRuleFixedColAtUpper,
+  kPresolveRuleFixedColAtZero,
+  kPresolveRuleFreeColSubstitution,
+  kPresolveRuleForcingCol,
+  kPresolveRuleForcingColRemovedRow,
+  kPresolveRuleDuplicateCol,
+  kPresolveRuleDoubletonEquation,
+  kPresolveRuleDependentEquation,
+  kPresolveRuleEqualityRowAddition,
+  kPresolveRuleLinearTransform,
+  kPresolveRuleMax = kPresolveRuleLinearTransform,
   kPresolveRuleCount,
 };
 
@@ -133,7 +147,12 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
-  // store old problem sizes to compute percentage reductions in presolve loop
+  // store original problem sizes for reference
+  HighsInt original_num_col_;
+  HighsInt original_num_row_;
+
+  // store old problem sizes to compute percentage reductions in
+  // presolve loop
   HighsInt oldNumCol;
   HighsInt oldNumRow;
   bool probingEarlyAbort;
@@ -145,6 +164,7 @@ class HPresolve {
     kStopped,
   };
 
+  std::vector<HighsInt> num_call_;
   std::vector<HighsInt> col_reduction_;
   std::vector<HighsInt> row_reduction_;
   // private functions for different shared functionality and matrix
@@ -348,9 +368,10 @@ class HPresolve {
 
   std::string presolveRuleTypeToString(const HighsInt rule_type);
   void updatePresolveLog(const HighsInt rule_type,
-			 const HighsInt num_removed_col_ = -1,
-			 const HighsInt num_removed_row_ = -1);
-  void reportPresolveLog(const HighsLogOptions& log_options);
+                         const HighsInt num_removed_col_ = -1,
+                         const HighsInt num_removed_row_ = -1);
+  bool analysePresolveLog(const HighsLogOptions& log_options,
+                          const bool report = false);
 };
 
 }  // namespace presolve
