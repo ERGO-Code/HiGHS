@@ -58,6 +58,29 @@ enum PresolveRuleType : uint8_t {
   kPresolveRuleCount,
 };
 
+enum PresolveReductionType : uint8_t {
+  kPresolveReductionMin = 0,
+  kPresolveReductionEmptyRow = kPresolveReductionMin,
+  kPresolveReductionSingletonRow,
+  kPresolveReductionRedundantRow,
+  kPresolveReductionForcingRow,
+  kPresolveReductionDuplicateRow,
+  kPresolveReductionFixedCol,
+  kPresolveReductionFixedColAtLower,
+  kPresolveReductionFixedColAtUpper,
+  kPresolveReductionFixedColAtZero,
+  kPresolveReductionFreeColSubstitution,
+  kPresolveReductionForcingCol,
+  kPresolveReductionForcingColRemovedRow,
+  kPresolveReductionDuplicateCol,
+  kPresolveReductionDoubletonEquation,
+  kPresolveReductionDependentEquation,
+  kPresolveReductionEqualityRowAddition,
+  kPresolveReductionLinearTransform,
+  kPresolveReductionMax = kPresolveReductionLinearTransform,
+  kPresolveReductionCount,
+};
+
 class HighsPostsolveStack;
 
 class HPresolve {
@@ -164,10 +187,10 @@ class HPresolve {
     kStopped,
   };
 
-  std::vector<bool> allow_;
-  std::vector<HighsInt> num_call_;
-  std::vector<HighsInt> col_reduction_;
-  std::vector<HighsInt> row_reduction_;
+  std::vector<bool> allow_rule_;
+  std::vector<HighsInt> reduction_num_call_;
+  std::vector<HighsInt> reduction_num_col_removed_;
+  std::vector<HighsInt> reduction_num_row_removed_;
   // private functions for different shared functionality and matrix
   // modification
 
@@ -367,12 +390,12 @@ class HPresolve {
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
 
-  std::string presolveRuleTypeToString(const HighsInt rule_type);
   void reportPresolveRulesAllowed();
-  void updatePresolveLog(const HighsInt rule_type,
-                         const HighsInt num_removed_col_ = -1,
-                         const HighsInt num_removed_row_ = -1);
-  bool analysePresolveLog(const bool report = false);
+  std::string presolveReductionTypeToString(const HighsInt reduction_type);
+  void updatePresolveReductionLog(const HighsInt reduction_type,
+				  const HighsInt num_removed_col_ = -1,
+				  const HighsInt num_removed_row_ = -1);
+  bool analysePresolveReductionLog(const bool report = false);
 };
 
 }  // namespace presolve

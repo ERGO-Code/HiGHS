@@ -1457,7 +1457,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         postsolve_stack.removedFixedCol(i, model->col_lower_[i], 0.0,
                                         HighsEmptySlice());
         removeFixedCol(i);
-        updatePresolveLog(kPresolveRuleFixedCol);
+        updatePresolveReductionLog(kPresolveReductionFixedCol);
       }
       HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
     }
@@ -1840,7 +1840,7 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
                                       model->col_upper_[substitution.substcol],
                                       0.0, false, false, HighsEmptySlice());
     markColDeleted(substitution.substcol);
-    updatePresolveLog(kPresolveRuleDoubletonEquation, 1, 0);
+    updatePresolveReductionLog(kPresolveReductionDoubletonEquation, 1, 0);
     substitute(substitution.substcol, substitution.staycol, substitution.offset,
                substitution.scale);
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
@@ -1869,7 +1869,7 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
         model->col_lower_[subst.substcol], model->col_upper_[subst.substcol],
         0.0, false, false, HighsEmptySlice());
     markColDeleted(subst.substcol);
-    updatePresolveLog(kPresolveRuleDoubletonEquation, 1, 0);
+    updatePresolveReductionLog(kPresolveReductionDoubletonEquation, 1, 0);
     substitute(subst.substcol, subst.replace.col, offset, scale);
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
@@ -2102,7 +2102,7 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
   }
 
   postsolve_stack.linearTransform(col, scale, constant);
-  updatePresolveLog(kPresolveRuleLinearTransform);
+  updatePresolveReductionLog(kPresolveReductionLinearTransform);
 
   double oldLower = model->col_lower_[col];
   double oldUpper = model->col_upper_[col];
@@ -2522,7 +2522,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   // finally modify matrix
   markColDeleted(substcol);
   removeRow(row);
-  updatePresolveLog(kPresolveRuleDoubletonEquation, 1, 1);
+  updatePresolveReductionLog(kPresolveReductionDoubletonEquation, 1, 1);
   substitute(substcol, staycol, rhs / substcoef, -staycoef / substcoef);
 
   // since a column was deleted we might have new row singletons which we
@@ -2563,7 +2563,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
         model->col_lower_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
-      updatePresolveLog(kPresolveRuleSingletonRow);
+      updatePresolveReductionLog(kPresolveReductionSingletonRow);
       return checkLimits(postsolve_stack);
     }
   } else {
@@ -2572,7 +2572,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
         model->col_upper_[col] * val >=
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
-      updatePresolveLog(kPresolveRuleSingletonRow);
+      updatePresolveReductionLog(kPresolveReductionSingletonRow);
       return checkLimits(postsolve_stack);
     }
   }
@@ -2649,7 +2649,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   // printf("final bounds: [%.15g,%.15g]\n", lb, ub);
 
   postsolve_stack.singletonRow(row, col, val, lowerTightened, upperTightened);
-  updatePresolveLog(kPresolveRuleSingletonRow);
+  updatePresolveReductionLog(kPresolveReductionSingletonRow);
 
   // just update bounds (and row activities)
   if (lowerTightened) changeColLower(col, lb);
@@ -2658,7 +2658,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
     postsolve_stack.removedFixedCol(col, lb, model->col_cost_[col],
                                     getColumnVector(col));
     removeFixedCol(col);
-    updatePresolveLog(kPresolveRuleFixedCol);
+    updatePresolveReductionLog(kPresolveReductionFixedCol);
   } else if (upperTightened)
     changeColUpper(col, ub);
 
@@ -2715,7 +2715,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
                                     model->col_cost_[col],
                                     model->col_lower_[col], true);
       markColDeleted(col);
-      updatePresolveLog(kPresolveRuleForcingCol);
+      updatePresolveReductionLog(kPresolveReductionForcingCol);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
         HighsInt row = Arow[coliter];
@@ -2726,7 +2726,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         postsolve_stack.forcingColumnRemovedRow(col, row, rhs,
                                                 getRowVector(row));
         removeRow(row);
-        updatePresolveLog(kPresolveRuleForcingColRemovedRow);
+        updatePresolveReductionLog(kPresolveReductionForcingColRemovedRow);
       }
     }
     return checkLimits(postsolve_stack);
@@ -2743,7 +2743,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
                                     model->col_cost_[col],
                                     model->col_upper_[col], false);
       markColDeleted(col);
-      updatePresolveLog(kPresolveRuleForcingCol);
+      updatePresolveReductionLog(kPresolveReductionForcingCol);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
         HighsInt row = Arow[coliter];
@@ -2754,7 +2754,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         postsolve_stack.forcingColumnRemovedRow(col, row, rhs,
                                                 getRowVector(row));
         removeRow(row);
-        updatePresolveLog(kPresolveRuleForcingColRemovedRow);
+        updatePresolveReductionLog(kPresolveReductionForcingColRemovedRow);
       }
     }
     return checkLimits(postsolve_stack);
@@ -2806,7 +2806,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
                                         getColumnVector(col));
     // todo, check integrality of coefficients and allow this
     substitute(row, col, rhs);
-    updatePresolveLog(kPresolveRuleFreeColSubstitution);
+    updatePresolveReductionLog(kPresolveReductionFreeColSubstitution);
 
     return checkLimits(postsolve_stack);
   }
@@ -2830,7 +2830,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         return Result::kPrimalInfeasible;
       postsolve_stack.redundantRow(row);
       markRowDeleted(row);
-      updatePresolveLog(kPresolveRuleEmptyRow);
+      updatePresolveReductionLog(kPresolveReductionEmptyRow);
       return checkLimits(postsolve_stack);
     case 1:
       return singletonRow(postsolve_stack, row);
@@ -2852,7 +2852,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     // row is redundant
     postsolve_stack.redundantRow(row);
     removeRow(row);
-    updatePresolveLog(kPresolveRuleRedundantRow);
+    updatePresolveReductionLog(kPresolveReductionRedundantRow);
     return checkLimits(postsolve_stack);
   }
 
@@ -2911,7 +2911,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                                               model->col_lower_[nonz.index()],
                                               0.0, HighsEmptySlice());
               removeFixedCol(nonz.index());
-              updatePresolveLog(kPresolveRuleFixedCol);
+              updatePresolveReductionLog(kPresolveReductionFixedCol);
               continue;
             }
 
@@ -2962,7 +2962,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           }
 
           removeRow(row);
-          updatePresolveLog(kPresolveRuleDoubletonEquation, 0, 1);
+          updatePresolveReductionLog(kPresolveReductionDoubletonEquation, 0, 1);
           HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
           return removeRowSingletons(postsolve_stack);
         }
@@ -3456,7 +3456,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       // as changed/singleton in the process of fixing and removing the
       // contained columns
       markRowDeleted(row);
-      updatePresolveLog(kPresolveRuleForcingRow);
+      updatePresolveReductionLog(kPresolveReductionForcingRow);
       for (const HighsSliceNonzero& nonzero : rowVector) {
         if (nonzero.value() > 0) {
           // the upper bound of the column is as tight as the implied upper
@@ -3471,7 +3471,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               model->col_upper_[nonzero.index()])
             changeColLower(nonzero.index(), model->col_upper_[nonzero.index()]);
           removeFixedCol(nonzero.index());
-          updatePresolveLog(kPresolveRuleFixedColAtUpper);
+          updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
         } else {
           postsolve_stack.fixedColAtLower(nonzero.index(),
                                           model->col_lower_[nonzero.index()],
@@ -3481,7 +3481,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               model->col_lower_[nonzero.index()])
             changeColUpper(nonzero.index(), model->col_lower_[nonzero.index()]);
           removeFixedCol(nonzero.index());
-          updatePresolveLog(kPresolveRuleFixedColAtLower);
+          updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
         }
       }
       // now the row might be empty, but not necessarily because the implied
@@ -3513,7 +3513,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       postsolve_stack.forcingRow(row, rowVector, model->row_upper_[row],
                                  HighsPostsolveStack::RowType::kLeq);
       markRowDeleted(row);
-      updatePresolveLog(kPresolveRuleForcingRow);
+      updatePresolveReductionLog(kPresolveReductionForcingRow);
       for (const HighsSliceNonzero& nonzero : rowVector) {
         if (nonzero.value() < 0) {
           postsolve_stack.fixedColAtUpper(nonzero.index(),
@@ -3525,7 +3525,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             changeColLower(nonzero.index(), model->col_upper_[nonzero.index()]);
 
           removeFixedCol(nonzero.index());
-          updatePresolveLog(kPresolveRuleFixedColAtUpper);
+          updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
         } else {
           postsolve_stack.fixedColAtLower(nonzero.index(),
                                           model->col_lower_[nonzero.index()],
@@ -3536,7 +3536,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             changeColUpper(nonzero.index(), model->col_lower_[nonzero.index()]);
 
           removeFixedCol(nonzero.index());
-          updatePresolveLog(kPresolveRuleFixedColAtLower);
+          updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
         }
       }
 
@@ -3600,7 +3600,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                       model->col_cost_[col],
                                       getColumnVector(col));
       removeFixedCol(col);
-      updatePresolveLog(kPresolveRuleFixedCol);
+      updatePresolveReductionLog(kPresolveReductionFixedCol);
       return checkLimits(postsolve_stack);
     }
   }
@@ -3651,7 +3651,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                     model->col_cost_[col],
                                     model->col_lower_[col], true);
       markColDeleted(col);
-      updatePresolveLog(kPresolveRuleForcingCol);
+      updatePresolveReductionLog(kPresolveReductionForcingCol);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
         HighsInt row = Arow[coliter];
@@ -3661,7 +3661,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
         postsolve_stack.forcingColumnRemovedRow(col, row, rhs,
                                                 getRowVector(row));
         removeRow(row);
-        updatePresolveLog(kPresolveRuleForcingColRemovedRow);
+        updatePresolveReductionLog(kPresolveReductionForcingColRemovedRow);
       }
     }
   } else if (colDualLower >= -options->dual_feasibility_tolerance) {
@@ -3675,7 +3675,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                     model->col_cost_[col],
                                     model->col_upper_[col], false);
       markColDeleted(col);
-      updatePresolveLog(kPresolveRuleForcingCol);
+      updatePresolveReductionLog(kPresolveReductionForcingCol);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
         HighsInt row = Arow[coliter];
@@ -3685,7 +3685,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
         postsolve_stack.forcingColumnRemovedRow(col, row, rhs,
                                                 getRowVector(row));
         removeRow(row);
-        updatePresolveLog(kPresolveRuleForcingColRemovedRow);
+        updatePresolveReductionLog(kPresolveReductionForcingColRemovedRow);
       }
     }
   }
@@ -3868,16 +3868,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   }
 
   // Set up the logic to allow presolve rules
-  allow_.assign(kPresolveRuleCount, true);
+  allow_rule_.assign(kPresolveRuleCount, true);
   HighsInt bit = 1;
   for (HighsInt rule_ix = 0; rule_ix < kPresolveRuleCount; rule_ix++) {
-    allow_[rule_ix] = options->presolve_rule_off & bit;
+    allow_rule_[rule_ix] = options->presolve_rule_off & bit;
     bit *= 2;
   }
   // Set up logging
-  num_call_.assign(kPresolveRuleCount, 0);
-  col_reduction_.assign(kPresolveRuleCount, 0);
-  row_reduction_.assign(kPresolveRuleCount, 0);
+  reduction_num_call_.assign(kPresolveReductionCount, 0);
+  reduction_num_col_removed_.assign(kPresolveReductionCount, 0);
+  reduction_num_row_removed_.assign(kPresolveReductionCount, 0);
   original_num_col_ = model->num_col_;
   original_num_row_ = model->num_row_;
 
@@ -3896,7 +3896,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                      " cols, %" HIGHSINT_FORMAT " nonzeros\n",
                      numRow, numCol, numNonz);
-        const bool ok = analysePresolveLog();
+        const bool ok = analysePresolveReductionLog();
         assert(ok);
       }
     };
@@ -4041,8 +4041,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
   if (mipsolver != nullptr) scaleMIP(postsolve_stack);
 
-  assert(analysePresolveLog());
-  if (options->log_dev_level) analysePresolveLog(true);
+  assert(analysePresolveReductionLog());
+  if (options->log_dev_level) analysePresolveReductionLog(true);
   return Result::kOk;
 }
 
@@ -4226,7 +4226,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
       num_removed_nz += rowsize[redundant_row];
       postsolve_stack.redundantRow(redundant_row);
       removeRow(redundant_row);
-      updatePresolveLog(kPresolveRuleDependentEquation);
+      updatePresolveReductionLog(kPresolveReductionDependentEquation);
     } else {
       num_fictitious_rows_skipped++;
     }
@@ -4412,7 +4412,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
       substitutionOpportunities[i].first = -1;
 
       substitute(row, col, rhs);
-      updatePresolveLog(kPresolveRuleFreeColSubstitution);
+      updatePresolveReductionLog(kPresolveReductionFreeColSubstitution);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
       continue;
@@ -4472,7 +4472,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
                                         getColumnVector(col));
     substitutionOpportunities[i].first = -1;
     substitute(row, col, rhs);
-    updatePresolveLog(kPresolveRuleFreeColSubstitution);
+    updatePresolveReductionLog(kPresolveReductionFreeColSubstitution);
     HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
@@ -4547,7 +4547,7 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
   postsolve_stack.fixedColAtLower(col, fixval, model->col_cost_[col],
                                   getColumnVector(col));
   markColDeleted(col);
-  updatePresolveLog(kPresolveRuleFixedColAtLower);
+  updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
 
   for (HighsInt coliter = colhead[col]; coliter != -1;) {
     HighsInt colrow = Arow[coliter];
@@ -4591,7 +4591,7 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
   postsolve_stack.fixedColAtUpper(col, fixval, model->col_cost_[col],
                                   getColumnVector(col));
   markColDeleted(col);
-  updatePresolveLog(kPresolveRuleFixedColAtUpper);
+  updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
 
   for (HighsInt coliter = colhead[col]; coliter != -1;) {
     HighsInt colrow = Arow[coliter];
@@ -4631,7 +4631,7 @@ void HPresolve::fixColToZero(HighsPostsolveStack& postsolve_stack,
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its nonzeros
   markColDeleted(col);
-  updatePresolveLog(kPresolveRuleFixedColAtZero);
+  updatePresolveReductionLog(kPresolveReductionFixedColAtZero);
 
   for (HighsInt coliter = colhead[col]; coliter != -1;) {
     HighsInt colrow = Arow[coliter];
@@ -5516,7 +5516,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           // mark duplicate column as deleted
           markColDeleted(duplicateCol);
-          updatePresolveLog(kPresolveRuleDuplicateCol);
+          updatePresolveReductionLog(kPresolveReductionDuplicateCol);
           // remove all nonzeros of duplicateCol
           for (HighsInt coliter = colhead[duplicateCol]; coliter != -1;) {
             assert(Acol[coliter] == duplicateCol);
@@ -5747,7 +5747,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                                      rowLowerTightened, i, rowScale);
         delRow = i;
         markRowDeleted(i);
-        updatePresolveLog(kPresolveRuleDuplicateRow);
+        updatePresolveReductionLog(kPresolveReductionDuplicateRow);
         for (HighsInt rowiter : rowpositions) unlink(rowiter);
         break;
       } else if (model->row_lower_[i] == model->row_upper_[i]) {
@@ -5761,7 +5761,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //        model->row_upper_[parallelRowCand]);
         postsolve_stack.equalityRowAddition(parallelRowCand, i, -rowScale,
                                             getStoredRow());
-        updatePresolveLog(kPresolveRuleEqualityRowAddition);
+        updatePresolveReductionLog(kPresolveReductionEqualityRowAddition);
         for (const HighsSliceNonzero& rowNz : getStoredRow()) {
           HighsInt pos = findNonzero(parallelRowCand, rowNz.index());
           if (pos != -1)
@@ -5796,7 +5796,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         double scale = -rowMax[i].first / rowMax[parallelRowCand].first;
         postsolve_stack.equalityRowAddition(i, parallelRowCand, scale,
                                             getRowVector(parallelRowCand));
-        updatePresolveLog(kPresolveRuleEqualityRowAddition);
+        updatePresolveReductionLog(kPresolveReductionEqualityRowAddition);
         for (const HighsSliceNonzero& rowNz : getRowVector(parallelRowCand)) {
           HighsInt pos = findNonzero(i, rowNz.index());
           if (pos != -1)
@@ -6269,7 +6269,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
     if (sparsifyRows.empty()) continue;
 
     postsolve_stack.equalityRowAdditions(eqrow, getStoredRow(), sparsifyRows);
-    updatePresolveLog(kPresolveRuleEqualityRowAddition);
+    updatePresolveReductionLog(kPresolveReductionEqualityRowAddition);
     double rhs = model->row_lower_[eqrow];
     for (const auto& sparsifyRow : sparsifyRows) {
       HighsInt row = sparsifyRow.index;
@@ -6302,40 +6302,40 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
 }
 
-std::string HPresolve::presolveRuleTypeToString(const HighsInt rule_type) {
-  if (rule_type == kPresolveRuleEmptyRow) {
+std::string HPresolve::presolveReductionTypeToString(const HighsInt reduction_type) {
+  if (reduction_type == kPresolveReductionEmptyRow) {
     return "Empty row";
-  } else if (rule_type == kPresolveRuleSingletonRow) {
+  } else if (reduction_type == kPresolveReductionSingletonRow) {
     return "Singleton row";
-  } else if (rule_type == kPresolveRuleRedundantRow) {
+  } else if (reduction_type == kPresolveReductionRedundantRow) {
     return "Redundant row";
-  } else if (rule_type == kPresolveRuleForcingRow) {
+  } else if (reduction_type == kPresolveReductionForcingRow) {
     return "Forcing row";
-  } else if (rule_type == kPresolveRuleDuplicateRow) {
+  } else if (reduction_type == kPresolveReductionDuplicateRow) {
     return "Duplicate row";
-  } else if (rule_type == kPresolveRuleFixedCol) {
+  } else if (reduction_type == kPresolveReductionFixedCol) {
     return "Fixed column";
-  } else if (rule_type == kPresolveRuleFixedColAtUpper) {
+  } else if (reduction_type == kPresolveReductionFixedColAtUpper) {
     return "Fixed column at upper";
-  } else if (rule_type == kPresolveRuleFixedColAtLower) {
+  } else if (reduction_type == kPresolveReductionFixedColAtLower) {
     return "Fixed column at lower";
-  } else if (rule_type == kPresolveRuleFixedColAtZero) {
+  } else if (reduction_type == kPresolveReductionFixedColAtZero) {
     return "Fixed column at zero";
-  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
+  } else if (reduction_type == kPresolveReductionFreeColSubstitution) {
     return "Free col substitution";
-  } else if (rule_type == kPresolveRuleForcingCol) {
+  } else if (reduction_type == kPresolveReductionForcingCol) {
     return "Forcing col";
-  } else if (rule_type == kPresolveRuleForcingColRemovedRow) {
+  } else if (reduction_type == kPresolveReductionForcingColRemovedRow) {
     return "Forcing col removed row";
-  } else if (rule_type == kPresolveRuleDuplicateCol) {
+  } else if (reduction_type == kPresolveReductionDuplicateCol) {
     return "Duplicate col";
-  } else if (rule_type == kPresolveRuleDoubletonEquation) {
+  } else if (reduction_type == kPresolveReductionDoubletonEquation) {
     return "Doubleton equation";
-  } else if (rule_type == kPresolveRuleDependentEquation) {
+  } else if (reduction_type == kPresolveReductionDependentEquation) {
     return "Dependent equation";
-  } else if (rule_type == kPresolveRuleEqualityRowAddition) {
+  } else if (reduction_type == kPresolveReductionEqualityRowAddition) {
     return "Equality row addition";
-  } else if (rule_type == kPresolveRuleLinearTransform) {
+  } else if (reduction_type == kPresolveReductionLinearTransform) {
     return "Linear transform";
   }
   assert(1 == 0);
@@ -6352,108 +6352,108 @@ void HPresolve::reportPresolveRulesAllowed() {
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo, "\n");
   }
-  if (allow_[kPresolveRuleEmptyRow]) 
+  if (allow_rule_[kPresolveRuleEmptyRow]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Empty row\n");
-  if (allow_[kPresolveRuleSingletonRow]) 
+  if (allow_rule_[kPresolveRuleSingletonRow]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Singleton row\n");
-  if (allow_[kPresolveRuleRedundantRow]) 
+  if (allow_rule_[kPresolveRuleRedundantRow]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Redundant row\n");
-  if (allow_[kPresolveRuleForcingRow]) 
+  if (allow_rule_[kPresolveRuleForcingRow]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Forcing row\n");
-  if (allow_[kPresolveRuleDuplicateRow]) 
+  if (allow_rule_[kPresolveRuleDuplicateRow]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Duplicate row\n");
-  if (allow_[kPresolveRuleFixedCol]) 
+  if (allow_rule_[kPresolveRuleFixedCol]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Fixed column\n");
-  if (allow_[kPresolveRuleFixedColAtUpper]) 
+  if (allow_rule_[kPresolveRuleFixedColAtUpper]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Fixed column at upper\n");
-  if (allow_[kPresolveRuleFixedColAtLower]) 
+  if (allow_rule_[kPresolveRuleFixedColAtLower]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Fixed column at lower\n");
-  if (allow_[kPresolveRuleFixedColAtZero]) 
+  if (allow_rule_[kPresolveRuleFixedColAtZero]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Fixed column at zero\n");
-  if (allow_[kPresolveRuleFreeColSubstitution]) 
+  if (allow_rule_[kPresolveRuleFreeColSubstitution]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Free col substitution\n");
-  if (allow_[kPresolveRuleForcingCol]) 
+  if (allow_rule_[kPresolveRuleForcingCol]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Forcing col\n");
-  if (allow_[kPresolveRuleForcingColRemovedRow]) 
+  if (allow_rule_[kPresolveRuleForcingColRemovedRow]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Forcing col removed row\n");
-  if (allow_[kPresolveRuleDuplicateCol]) 
+  if (allow_rule_[kPresolveRuleDuplicateCol]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Duplicate col\n");
-  if (allow_[kPresolveRuleDoubletonEquation]) 
+  if (allow_rule_[kPresolveRuleDoubletonEquation]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Doubleton equation\n");
-  if (allow_[kPresolveRuleDependentEquation]) 
+  if (allow_rule_[kPresolveRuleDependentEquation]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Dependent equation\n");
-  if (allow_[kPresolveRuleEqualityRowAddition]) 
+  if (allow_rule_[kPresolveRuleEqualityRowAddition]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Equality row addition\n");
-  if (allow_[kPresolveRuleLinearTransform]) 
+  if (allow_rule_[kPresolveRuleLinearTransform]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Linear transform\n");
 }
 
-void HPresolve::updatePresolveLog(const HighsInt rule_type,
-                                  const HighsInt num_removed_col_,
-                                  const HighsInt num_removed_row_) {
-  assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
+void HPresolve::updatePresolveReductionLog(const HighsInt reduction_type,
+					   const HighsInt num_removed_col_,
+					   const HighsInt num_removed_row_) {
+  assert(reduction_type >= kPresolveReductionMin && reduction_type <= kPresolveReductionMax);
   HighsInt num_removed_col = num_removed_col_;
   HighsInt num_removed_row = num_removed_row_;
-  if (rule_type == kPresolveRuleEmptyRow) {
+  if (reduction_type == kPresolveReductionEmptyRow) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleSingletonRow) {
+  } else if (reduction_type == kPresolveReductionSingletonRow) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleRedundantRow) {
+  } else if (reduction_type == kPresolveReductionRedundantRow) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleForcingRow) {
+  } else if (reduction_type == kPresolveReductionForcingRow) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleDuplicateRow) {
+  } else if (reduction_type == kPresolveReductionDuplicateRow) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleFixedCol ||
-             rule_type == kPresolveRuleFixedColAtLower ||
-             rule_type == kPresolveRuleFixedColAtUpper ||
-             rule_type == kPresolveRuleFixedColAtZero) {
+  } else if (reduction_type == kPresolveReductionFixedCol ||
+             reduction_type == kPresolveReductionFixedColAtLower ||
+             reduction_type == kPresolveReductionFixedColAtUpper ||
+             reduction_type == kPresolveReductionFixedColAtZero) {
     num_removed_col = 1;
     num_removed_row = 0;
-  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
+  } else if (reduction_type == kPresolveReductionFreeColSubstitution) {
     // ToDo Understand this
     num_removed_col = 1;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleForcingCol) {
+  } else if (reduction_type == kPresolveReductionForcingCol) {
     num_removed_col = 1;
     num_removed_row = 0;
-  } else if (rule_type == kPresolveRuleForcingColRemovedRow) {
+  } else if (reduction_type == kPresolveReductionForcingColRemovedRow) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleDuplicateCol) {
+  } else if (reduction_type == kPresolveReductionDuplicateCol) {
     num_removed_col = 1;
     num_removed_row = 0;
-  } else if (rule_type == kPresolveRuleDoubletonEquation) {
+  } else if (reduction_type == kPresolveReductionDoubletonEquation) {
     // Different reductions are passed
-  } else if (rule_type == kPresolveRuleDependentEquation) {
+  } else if (reduction_type == kPresolveReductionDependentEquation) {
     num_removed_col = 0;
     num_removed_row = 1;
-  } else if (rule_type == kPresolveRuleEqualityRowAddition) {
+  } else if (reduction_type == kPresolveReductionEqualityRowAddition) {
     num_removed_col = 0;
     num_removed_row = 0;
-  } else if (rule_type == kPresolveRuleLinearTransform) {
+  } else if (reduction_type == kPresolveReductionLinearTransform) {
     num_removed_col = 0;
     num_removed_row = 0;
   } else {
@@ -6461,27 +6461,27 @@ void HPresolve::updatePresolveLog(const HighsInt rule_type,
   }
   assert(num_removed_col >= 0);
   assert(num_removed_row >= 0);
-  num_call_[rule_type]++;
-  col_reduction_[rule_type] += num_removed_col;
-  row_reduction_[rule_type] += num_removed_row;
+  reduction_num_call_[reduction_type]++;
+  reduction_num_col_removed_[reduction_type] += num_removed_col;
+  reduction_num_row_removed_[reduction_type] += num_removed_row;
   const bool report = false;
   if (report)
     printf("%-25s Call %3d: (%3d, %3d) (%3d, %3d)\n",
-           presolveRuleTypeToString(rule_type).c_str(),
-           (int)num_call_[rule_type], (int)num_removed_col,
-           (int)num_removed_row, (int)col_reduction_[rule_type],
-           (int)row_reduction_[rule_type]);
-  analysePresolveLog();
+           presolveReductionTypeToString(reduction_type).c_str(),
+           (int)reduction_num_call_[reduction_type], (int)num_removed_col,
+           (int)num_removed_row, (int)reduction_num_col_removed_[reduction_type],
+           (int)reduction_num_row_removed_[reduction_type]);
+  analysePresolveReductionLog();
 }
 
-bool HPresolve::analysePresolveLog(const bool report) {
+bool HPresolve::analysePresolveReductionLog(const bool report) {
   const HighsLogOptions& log_options = options->log_options;
   HighsInt sum_removed_row = 0;
   HighsInt sum_removed_col = 0;
-  for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-       rule_type++) {
-    sum_removed_row += row_reduction_[rule_type];
-    sum_removed_col += col_reduction_[rule_type];
+  for (HighsInt reduction_type = kPresolveReductionMin; reduction_type < kPresolveReductionCount;
+       reduction_type++) {
+    sum_removed_row += reduction_num_row_removed_[reduction_type];
+    sum_removed_col += reduction_num_col_removed_[reduction_type];
   }
   if (report && sum_removed_row + sum_removed_col) {
     const std::string rule =
@@ -6491,14 +6491,15 @@ bool HPresolve::analysePresolveLog(const bool report) {
                  "%-25s      Rows      Cols     Calls\n",
                  "Presolve rule removed");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++)
-      if (num_call_[rule_type] || row_reduction_[rule_type] ||
-          col_reduction_[rule_type])
+    for (HighsInt reduction_type = kPresolveReductionMin; reduction_type < kPresolveReductionCount;
+         reduction_type++)
+      if (reduction_num_call_[reduction_type] || reduction_num_row_removed_[reduction_type] ||
+          reduction_num_col_removed_[reduction_type])
         highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d %9d\n",
-                     presolveRuleTypeToString(rule_type).c_str(),
-                     (int)row_reduction_[rule_type],
-                     (int)col_reduction_[rule_type], (int)num_call_[rule_type]);
+                     presolveReductionTypeToString(reduction_type).c_str(),
+                     (int)reduction_num_row_removed_[reduction_type],
+                     (int)reduction_num_col_removed_[reduction_type],
+		     (int)reduction_num_call_[reduction_type]);
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
     highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
                  "Total reductions", (int)sum_removed_row,
