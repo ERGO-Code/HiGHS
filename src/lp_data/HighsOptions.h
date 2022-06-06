@@ -325,6 +325,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_substitution_maxfillin;
+  HighsInt presolve_rule_off;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
@@ -972,7 +973,13 @@ class HighsOptions : public HighsOptionsStruct {
         kMaxPivotThreshold);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt(
+  record_int = new OptionRecordInt(
+        "presolve_rule_off",
+        "Bit mask of presolve rules that are not allowed", advanced,
+        &presolve_rule_off, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+  record_int = new OptionRecordInt(
         "presolve_substitution_maxfillin",
         "Maximal fillin allowed for substitutions in presolve", advanced,
         &presolve_substitution_maxfillin, 0, 10, kHighsIInf);

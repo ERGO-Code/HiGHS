@@ -164,6 +164,7 @@ class HPresolve {
     kStopped,
   };
 
+  std::vector<bool> allow_;
   std::vector<HighsInt> num_call_;
   std::vector<HighsInt> col_reduction_;
   std::vector<HighsInt> row_reduction_;
@@ -367,11 +368,11 @@ class HPresolve {
   static void debug(const HighsLp& lp, const HighsOptions& options);
 
   std::string presolveRuleTypeToString(const HighsInt rule_type);
+  void reportPresolveRulesAllowed();
   void updatePresolveLog(const HighsInt rule_type,
                          const HighsInt num_removed_col_ = -1,
                          const HighsInt num_removed_row_ = -1);
-  bool analysePresolveLog(const HighsLogOptions& log_options,
-                          const bool report = false);
+  bool analysePresolveLog(const bool report = false);
 };
 
 }  // namespace presolve
