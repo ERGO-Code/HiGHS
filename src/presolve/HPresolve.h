@@ -393,7 +393,7 @@ class HPresolve {
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
 
-  void reportPresolveRulesAllowed();
+  void reportPresolveRulesAllowed(const bool report_allowed=true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
   std::string presolveRuleTypeToString(const HighsInt rule_type);
   void updatePresolveRuleLog(const HighsInt rule_type,
@@ -403,6 +403,7 @@ class HPresolve {
 				  const HighsInt num_removed_col_ = -1,
 				  const HighsInt num_removed_row_ = -1);
   bool analysePresolveReductionLog(const bool report = false);
+  bool analysePresolveRuleLog(const bool report = false);
 };
 
 }  // namespace presolve
