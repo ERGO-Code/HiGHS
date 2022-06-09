@@ -188,6 +188,9 @@ class HPresolve {
   };
 
   std::vector<bool> allow_rule_;
+  std::vector<uint64_t> rule_num_call_;
+  std::vector<HighsInt> rule_num_col_removed_;
+  std::vector<HighsInt> rule_num_row_removed_;
   std::vector<HighsInt> reduction_num_call_;
   std::vector<HighsInt> reduction_num_col_removed_;
   std::vector<HighsInt> reduction_num_row_removed_;
@@ -392,6 +395,10 @@ class HPresolve {
 
   void reportPresolveRulesAllowed();
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
+  std::string presolveRuleTypeToString(const HighsInt rule_type);
+  void updatePresolveRuleLog(const HighsInt rule_type,
+			     const HighsInt num_removed_col,
+			     const HighsInt num_removed_row);
   void updatePresolveReductionLog(const HighsInt reduction_type,
 				  const HighsInt num_removed_col_ = -1,
 				  const HighsInt num_removed_row_ = -1);

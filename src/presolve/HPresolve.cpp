@@ -3867,14 +3867,18 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     model->sense_ = ObjSense::kMinimize;
   }
 
-  // Set up the logic to allow presolve rules
+  // Set up the logic to allow presolve rules, and logging for their
+  // effectiveness
   allow_rule_.assign(kPresolveRuleCount, true);
   HighsInt bit = 1;
   for (HighsInt rule_ix = 0; rule_ix < kPresolveRuleCount; rule_ix++) {
     allow_rule_[rule_ix] = options->presolve_rule_off & bit;
     bit *= 2;
   }
-  // Set up logging
+  rule_num_call_.assign(kPresolveRuleCount, 0);
+  rule_num_col_removed_.assign(kPresolveRuleCount, 0);
+  rule_num_row_removed_.assign(kPresolveRuleCount, 0);
+  // Set up logging for reductions
   reduction_num_call_.assign(kPresolveReductionCount, 0);
   reduction_num_col_removed_.assign(kPresolveReductionCount, 0);
   reduction_num_row_removed_.assign(kPresolveReductionCount, 0);
@@ -6302,6 +6306,46 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
 }
 
+std::string HPresolve::presolveRuleTypeToString(const HighsInt rule_type) {
+  if (rule_type == kPresolveRuleEmptyRow) {
+    return "Empty row";
+  } else if (rule_type == kPresolveRuleSingletonRow) {
+    return "Singleton row";
+  } else if (rule_type == kPresolveRuleRedundantRow) {
+    return "Redundant row";
+  } else if (rule_type == kPresolveRuleForcingRow) {
+    return "Forcing row";
+  } else if (rule_type == kPresolveRuleDuplicateRow) {
+    return "Duplicate row";
+  } else if (rule_type == kPresolveRuleFixedCol) {
+    return "Fixed column";
+  } else if (rule_type == kPresolveRuleFixedColAtUpper) {
+    return "Fixed column at upper";
+  } else if (rule_type == kPresolveRuleFixedColAtLower) {
+    return "Fixed column at lower";
+  } else if (rule_type == kPresolveRuleFixedColAtZero) {
+    return "Fixed column at zero";
+  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
+    return "Free col substitution";
+  } else if (rule_type == kPresolveRuleForcingCol) {
+    return "Forcing col";
+  } else if (rule_type == kPresolveRuleForcingColRemovedRow) {
+    return "Forcing col removed row";
+  } else if (rule_type == kPresolveRuleDuplicateCol) {
+    return "Duplicate col";
+  } else if (rule_type == kPresolveRuleDoubletonEquation) {
+    return "Doubleton equation";
+  } else if (rule_type == kPresolveRuleDependentEquation) {
+    return "Dependent equation";
+  } else if (rule_type == kPresolveRuleEqualityRowAddition) {
+    return "Equality row addition";
+  } else if (rule_type == kPresolveRuleLinearTransform) {
+    return "Linear transform";
+  }
+  assert(1 == 0);
+  return "????";
+}
+
 std::string HPresolve::presolveReductionTypeToString(const HighsInt reduction_type) {
   if (reduction_type == kPresolveReductionEmptyRow) {
     return "Empty row";
@@ -6403,6 +6447,25 @@ void HPresolve::reportPresolveRulesAllowed() {
   if (allow_rule_[kPresolveRuleLinearTransform]) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Linear transform\n");
+}
+
+void HPresolve::updatePresolveRuleLog(const HighsInt rule_type,
+				      const HighsInt num_removed_col,
+				      const HighsInt num_removed_row) {
+  assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
+  assert(allow_rule_[rule_type]);
+  assert(num_removed_col >= 0);
+  assert(num_removed_row >= 0);
+  rule_num_col_removed_[rule_type] += num_removed_col;
+  rule_num_row_removed_[rule_type] += num_removed_row;
+  const bool report = false;
+  if (report)
+    printf("%-25s Call %9d: (%3d, %3d) (%3d, %3d)\n",
+           presolveRuleTypeToString(rule_type).c_str(),
+           (int)rule_num_call_[rule_type], (int)num_removed_col,
+           (int)num_removed_row, (int)rule_num_col_removed_[rule_type],
+           (int)rule_num_row_removed_[rule_type]);
+  //  analysePresolveRuleLog();
 }
 
 void HPresolve::updatePresolveReductionLog(const HighsInt reduction_type,
