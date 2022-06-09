@@ -463,6 +463,14 @@ elseif(MINGW)
     target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
+if(${BUILD_SHARED_LIBS})
+    # put version information into shared library file
+    set_target_properties(libhighs PROPERTIES
+        VERSION
+        ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
+        SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
+endif()
+
 target_sources(libhighs PRIVATE
     ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
