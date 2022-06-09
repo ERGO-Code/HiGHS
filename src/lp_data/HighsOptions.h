@@ -973,13 +973,12 @@ class HighsOptions : public HighsOptionsStruct {
         kMaxPivotThreshold);
     records.push_back(record_double);
 
-  record_int = new OptionRecordInt(
-        "presolve_rule_off",
-        "Bit mask of presolve rules that are not allowed", advanced,
-        &presolve_rule_off, 0, 0, kHighsIInf);
+    record_int = new OptionRecordInt(
+        "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
+        advanced, &presolve_rule_off, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
-  record_int = new OptionRecordInt(
+    record_int = new OptionRecordInt(
         "presolve_substitution_maxfillin",
         "Maximal fillin allowed for substitutions in presolve", advanced,
         &presolve_substitution_maxfillin, 0, 10, kHighsIInf);

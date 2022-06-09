@@ -2829,25 +2829,25 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         // model infeasible
         return Result::kPrimalInfeasible;
       if (allow_rule_[kPresolveRuleEmptyRow]) {
-	// Allow removal of empty row
-	rule_num_call_[kPresolveRuleEmptyRow]++;
-	postsolve_stack.redundantRow(row);
-	markRowDeleted(row);
-	updatePresolveReductionLog(kPresolveReductionEmptyRow);
-	updatePresolveRuleLog(kPresolveRuleEmptyRow, 0, 1);
+        // Allow removal of empty row
+        rule_num_call_[kPresolveRuleEmptyRow]++;
+        postsolve_stack.redundantRow(row);
+        markRowDeleted(row);
+        updatePresolveReductionLog(kPresolveReductionEmptyRow);
+        updatePresolveRuleLog(kPresolveRuleEmptyRow, 0, 1);
       }
       return checkLimits(postsolve_stack);
     case 1:
       if (allow_rule_[kPresolveRuleSingletonRow]) {
-	// Allow removal of singleton row
-	rule_num_call_[kPresolveRuleSingletonRow]++;
-	const HighsInt num_deleted_rows0 = numDeletedRows;
-	const HighsInt num_deleted_cols0 = numDeletedCols;
-	const Result result = singletonRow(postsolve_stack, row);
-	updatePresolveRuleLog(kPresolveRuleSingletonRow,
-			      numDeletedCols-num_deleted_cols0,
-			      numDeletedRows-num_deleted_rows0);
-	return result;
+        // Allow removal of singleton row
+        rule_num_call_[kPresolveRuleSingletonRow]++;
+        const HighsInt num_deleted_rows0 = numDeletedRows;
+        const HighsInt num_deleted_cols0 = numDeletedCols;
+        const Result result = singletonRow(postsolve_stack, row);
+        updatePresolveRuleLog(kPresolveRuleSingletonRow,
+                              numDeletedCols - num_deleted_cols0,
+                              numDeletedRows - num_deleted_rows0);
+        return result;
       }
   }
 
@@ -2861,13 +2861,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     rule_num_call_[kPresolveRuleRedundantRow]++;
 
     if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
-	impliedRowUpper < model->row_lower_[row] - primal_feastol) {
+        impliedRowUpper < model->row_lower_[row] - primal_feastol) {
       // model infeasible
       return Result::kPrimalInfeasible;
     }
 
     if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
-	impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
+        impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
       // row is redundant
       const HighsInt num_deleted_rows0 = numDeletedRows;
       const HighsInt num_deleted_cols0 = numDeletedCols;
@@ -2875,18 +2875,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       removeRow(row);
       updatePresolveReductionLog(kPresolveReductionRedundantRow);
       updatePresolveRuleLog(kPresolveRuleRedundantRow,
-			    numDeletedCols-num_deleted_cols0,
-			    numDeletedRows-num_deleted_rows0);
+                            numDeletedCols - num_deleted_cols0,
+                            numDeletedRows - num_deleted_rows0);
       return checkLimits(postsolve_stack);
     }
   }
 
   double rowUpper = implRowDualLower[row] > options->dual_feasibility_tolerance
-    ? model->row_lower_[row]
-    : model->row_upper_[row];
+                        ? model->row_lower_[row]
+                        : model->row_upper_[row];
   double rowLower = implRowDualUpper[row] < -options->dual_feasibility_tolerance
-    ? model->row_upper_[row]
-    : model->row_lower_[row];
+                        ? model->row_upper_[row]
+                        : model->row_lower_[row];
 
   if (rowsize[row] == 2 && rowLower == rowUpper) {
     if (allow_rule_[kPresolveRuleDoubletonEquation]) {
@@ -2898,8 +2898,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       const HighsInt num_deleted_cols0 = numDeletedCols;
       Result result = doubletonEq(postsolve_stack, row);
       updatePresolveRuleLog(kPresolveRuleDoubletonEquation,
-			    numDeletedCols-num_deleted_cols0,
-			    numDeletedRows-num_deleted_rows0);
+                            numDeletedCols - num_deleted_cols0,
+                            numDeletedRows - num_deleted_rows0);
       return result;
     }
   }
@@ -3452,7 +3452,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         model->row_lower_[row] = double(rhs);
       }
     }
-  } // if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
+  }  // if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
 
   impliedRowUpper = impliedRowBounds.getSumUpperOrig(row);
   impliedRowLower = impliedRowBounds.getSumLowerOrig(row);
@@ -3463,7 +3463,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   if (allow_rule_[kPresolveRuleForcingRow]) {
     // Allow rule to consider forcing rows
     if (impliedRowUpper <=  // check for forcing row on the row lower bound
-	model->row_lower_[row] + primal_feastol) {
+        model->row_lower_[row] + primal_feastol) {
       // the row upper bound that is implied by the column bounds is equal to
       // the row lower bound there for we can fix all columns at their bound
       // as this is the only feasible assignment for this row and then find a
@@ -3478,65 +3478,69 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
       HighsInt nfixings = 0;
       for (const HighsSliceNonzero& nonzero : rowVector) {
-	if (nonzero.value() > 0) {
-	  if (model->col_upper_[nonzero.index()] <= implColUpper[nonzero.index()])
-	    ++nfixings;
-	} else {
-	  if (model->col_lower_[nonzero.index()] >= implColLower[nonzero.index()])
-	    ++nfixings;
-	}
+        if (nonzero.value() > 0) {
+          if (model->col_upper_[nonzero.index()] <=
+              implColUpper[nonzero.index()])
+            ++nfixings;
+        } else {
+          if (model->col_lower_[nonzero.index()] >=
+              implColLower[nonzero.index()])
+            ++nfixings;
+        }
       }
 
       if (nfixings == rowsize[row]) {
-	rule_num_call_[kPresolveRuleForcingRow]++;
-	const HighsInt num_deleted_rows0 = numDeletedRows;
-	const HighsInt num_deleted_cols0 = numDeletedCols;
-	postsolve_stack.forcingRow(row, rowVector, model->row_lower_[row],
-				   HighsPostsolveStack::RowType::kGeq);
-	// already mark the row as deleted, since otherwise it would be registered
-	// as changed/singleton in the process of fixing and removing the
-	// contained columns
-	markRowDeleted(row);
-	updatePresolveReductionLog(kPresolveReductionForcingRow);
-	for (const HighsSliceNonzero& nonzero : rowVector) {
-	  if (nonzero.value() > 0) {
-	    // the upper bound of the column is as tight as the implied upper
-	    // bound or comes from this row, which means it is not used in the
-	    // rows implied bounds. Therefore we can fix the variable at its
-	    // upper bound.
-	    postsolve_stack.fixedColAtUpper(nonzero.index(),
-					    model->col_upper_[nonzero.index()],
-					    model->col_cost_[nonzero.index()],
-					    getColumnVector(nonzero.index()));
-	    if (model->col_lower_[nonzero.index()] <
-		model->col_upper_[nonzero.index()])
-	      changeColLower(nonzero.index(), model->col_upper_[nonzero.index()]);
-	    removeFixedCol(nonzero.index());
-	    updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
-	  } else {
-	    postsolve_stack.fixedColAtLower(nonzero.index(),
-					    model->col_lower_[nonzero.index()],
-					    model->col_cost_[nonzero.index()],
-					    getColumnVector(nonzero.index()));
-	    if (model->col_upper_[nonzero.index()] >
-		model->col_lower_[nonzero.index()])
-            changeColUpper(nonzero.index(), model->col_lower_[nonzero.index()]);
-	    removeFixedCol(nonzero.index());
-	    updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
-	  }
-	}
-	// now the row might be empty, but not necessarily because the implied
-	// column bounds might be implied by other rows in which case we cannot
-	// fix the column
-	postsolve_stack.redundantRow(row);
-	// Row removal accounted for above
-	
-	// if there are any new row singletons, also remove them immediately
-	HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-	updatePresolveRuleLog(kPresolveRuleForcingRow,
-			      numDeletedCols-num_deleted_cols0,
-			      numDeletedRows-num_deleted_rows0);
-	return checkLimits(postsolve_stack);
+        rule_num_call_[kPresolveRuleForcingRow]++;
+        const HighsInt num_deleted_rows0 = numDeletedRows;
+        const HighsInt num_deleted_cols0 = numDeletedCols;
+        postsolve_stack.forcingRow(row, rowVector, model->row_lower_[row],
+                                   HighsPostsolveStack::RowType::kGeq);
+        // already mark the row as deleted, since otherwise it would be
+        // registered as changed/singleton in the process of fixing and removing
+        // the contained columns
+        markRowDeleted(row);
+        updatePresolveReductionLog(kPresolveReductionForcingRow);
+        for (const HighsSliceNonzero& nonzero : rowVector) {
+          if (nonzero.value() > 0) {
+            // the upper bound of the column is as tight as the implied upper
+            // bound or comes from this row, which means it is not used in the
+            // rows implied bounds. Therefore we can fix the variable at its
+            // upper bound.
+            postsolve_stack.fixedColAtUpper(nonzero.index(),
+                                            model->col_upper_[nonzero.index()],
+                                            model->col_cost_[nonzero.index()],
+                                            getColumnVector(nonzero.index()));
+            if (model->col_lower_[nonzero.index()] <
+                model->col_upper_[nonzero.index()])
+              changeColLower(nonzero.index(),
+                             model->col_upper_[nonzero.index()]);
+            removeFixedCol(nonzero.index());
+            updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
+          } else {
+            postsolve_stack.fixedColAtLower(nonzero.index(),
+                                            model->col_lower_[nonzero.index()],
+                                            model->col_cost_[nonzero.index()],
+                                            getColumnVector(nonzero.index()));
+            if (model->col_upper_[nonzero.index()] >
+                model->col_lower_[nonzero.index()])
+              changeColUpper(nonzero.index(),
+                             model->col_lower_[nonzero.index()]);
+            removeFixedCol(nonzero.index());
+            updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
+          }
+        }
+        // now the row might be empty, but not necessarily because the implied
+        // column bounds might be implied by other rows in which case we cannot
+        // fix the column
+        postsolve_stack.redundantRow(row);
+        // Row removal accounted for above
+
+        // if there are any new row singletons, also remove them immediately
+        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+        updatePresolveRuleLog(kPresolveRuleForcingRow,
+                              numDeletedCols - num_deleted_cols0,
+                              numDeletedRows - num_deleted_rows0);
+        return checkLimits(postsolve_stack);
       }
     } else if (impliedRowLower >= model->row_upper_[row] - primal_feastol) {
       // forcing row in the other direction
@@ -3545,57 +3549,61 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
       HighsInt nfixings = 0;
       for (const HighsSliceNonzero& nonzero : rowVector) {
-	if (nonzero.value() < 0) {
-	  if (model->col_upper_[nonzero.index()] <= implColUpper[nonzero.index()])
-	    ++nfixings;
-	} else {
-	  if (model->col_lower_[nonzero.index()] >= implColLower[nonzero.index()])
-	    ++nfixings;
-	}
+        if (nonzero.value() < 0) {
+          if (model->col_upper_[nonzero.index()] <=
+              implColUpper[nonzero.index()])
+            ++nfixings;
+        } else {
+          if (model->col_lower_[nonzero.index()] >=
+              implColLower[nonzero.index()])
+            ++nfixings;
+        }
       }
       if (nfixings == rowsize[row]) {
-	rule_num_call_[kPresolveRuleForcingRow]++;
-	const HighsInt num_deleted_rows0 = numDeletedRows;
-	const HighsInt num_deleted_cols0 = numDeletedCols;
-	postsolve_stack.forcingRow(row, rowVector, model->row_upper_[row],
-				   HighsPostsolveStack::RowType::kLeq);
-	markRowDeleted(row);
-	updatePresolveReductionLog(kPresolveReductionForcingRow);
-	for (const HighsSliceNonzero& nonzero : rowVector) {
-	  if (nonzero.value() < 0) {
-	    postsolve_stack.fixedColAtUpper(nonzero.index(),
-					    model->col_upper_[nonzero.index()],
-					    model->col_cost_[nonzero.index()],
-					    getColumnVector(nonzero.index()));
-	    if (model->col_lower_[nonzero.index()] <
-		model->col_upper_[nonzero.index()])
-	      changeColLower(nonzero.index(), model->col_upper_[nonzero.index()]);
-	    
-	    removeFixedCol(nonzero.index());
-	    updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
-	  } else {
-	    postsolve_stack.fixedColAtLower(nonzero.index(),
-					    model->col_lower_[nonzero.index()],
-					    model->col_cost_[nonzero.index()],
-					    getColumnVector(nonzero.index()));
-	    if (model->col_upper_[nonzero.index()] >
-		model->col_lower_[nonzero.index()])
-	      changeColUpper(nonzero.index(), model->col_lower_[nonzero.index()]);
-	    
-	    removeFixedCol(nonzero.index());
-	    updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
-	  }
-	}
-	
-	postsolve_stack.redundantRow(row);
-	// Row removal accounted for above
+        rule_num_call_[kPresolveRuleForcingRow]++;
+        const HighsInt num_deleted_rows0 = numDeletedRows;
+        const HighsInt num_deleted_cols0 = numDeletedCols;
+        postsolve_stack.forcingRow(row, rowVector, model->row_upper_[row],
+                                   HighsPostsolveStack::RowType::kLeq);
+        markRowDeleted(row);
+        updatePresolveReductionLog(kPresolveReductionForcingRow);
+        for (const HighsSliceNonzero& nonzero : rowVector) {
+          if (nonzero.value() < 0) {
+            postsolve_stack.fixedColAtUpper(nonzero.index(),
+                                            model->col_upper_[nonzero.index()],
+                                            model->col_cost_[nonzero.index()],
+                                            getColumnVector(nonzero.index()));
+            if (model->col_lower_[nonzero.index()] <
+                model->col_upper_[nonzero.index()])
+              changeColLower(nonzero.index(),
+                             model->col_upper_[nonzero.index()]);
 
-	// if there are any new row singletons, also remove them immediately
-	HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-	updatePresolveRuleLog(kPresolveRuleForcingRow,
-			      numDeletedCols-num_deleted_cols0,
-			      numDeletedRows-num_deleted_rows0);
-	return checkLimits(postsolve_stack);
+            removeFixedCol(nonzero.index());
+            updatePresolveReductionLog(kPresolveReductionFixedColAtUpper);
+          } else {
+            postsolve_stack.fixedColAtLower(nonzero.index(),
+                                            model->col_lower_[nonzero.index()],
+                                            model->col_cost_[nonzero.index()],
+                                            getColumnVector(nonzero.index()));
+            if (model->col_upper_[nonzero.index()] >
+                model->col_lower_[nonzero.index()])
+              changeColUpper(nonzero.index(),
+                             model->col_lower_[nonzero.index()]);
+
+            removeFixedCol(nonzero.index());
+            updatePresolveReductionLog(kPresolveReductionFixedColAtLower);
+          }
+        }
+
+        postsolve_stack.redundantRow(row);
+        // Row removal accounted for above
+
+        // if there are any new row singletons, also remove them immediately
+        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+        updatePresolveRuleLog(kPresolveRuleForcingRow,
+                              numDeletedCols - num_deleted_cols0,
+                              numDeletedRows - num_deleted_rows0);
+        return checkLimits(postsolve_stack);
       }
     }
   }
@@ -4239,7 +4247,7 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
 
 HPresolve::Result HPresolve::removeDependentEquations(
     HighsPostsolveStack& postsolve_stack) {
-  if (!allow_rule_[kPresolveRuleDependentEquations]) return Result::kOk; 
+  if (!allow_rule_[kPresolveRuleDependentEquations]) return Result::kOk;
   if (equations.empty()) return Result::kOk;
 
   rule_num_call_[kPresolveRuleDependentEquations]++;
@@ -4309,15 +4317,15 @@ HPresolve::Result HPresolve::removeDependentEquations(
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
   updatePresolveRuleLog(kPresolveRuleDependentEquations,
-			numDeletedCols-num_deleted_cols0,
-			numDeletedRows-num_deleted_rows0);
+                        numDeletedCols - num_deleted_cols0,
+                        numDeletedRows - num_deleted_rows0);
   return Result::kOk;
 }
 
 HPresolve::Result HPresolve::removeDependentFreeCols(
     HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
-  if (!allow_rule_[kPresolveRuleDependentFreeCols]) return Result::kOk; 
+  if (!allow_rule_[kPresolveRuleDependentFreeCols]) return Result::kOk;
 
   // todo the postsolve step does not work properly
   std::vector<HighsInt> freeCols;
@@ -6412,7 +6420,8 @@ std::string HPresolve::presolveRuleTypeToString(const HighsInt rule_type) {
   return "????";
 }
 
-std::string HPresolve::presolveReductionTypeToString(const HighsInt reduction_type) {
+std::string HPresolve::presolveReductionTypeToString(
+    const HighsInt reduction_type) {
   if (reduction_type == kPresolveReductionEmptyRow) {
     return "Empty row";
   } else if (reduction_type == kPresolveReductionSingletonRow) {
@@ -6454,77 +6463,70 @@ std::string HPresolve::presolveReductionTypeToString(const HighsInt reduction_ty
 
 void HPresolve::reportPresolveRulesAllowed(const bool report_allowed) {
   highsLogUser(options->log_options, HighsLogType::kInfo,
-	       "Presolving rules %sallowed: ", report_allowed ? "" : "not ");
-  
+               "Presolving rules %sallowed: ", report_allowed ? "" : "not ");
+
   if (!options->presolve_rule_off) {
-    highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n", report_allowed ? "All " : "None ");
-      return;
+    highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n",
+                 report_allowed ? "All " : "None ");
+    return;
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo, "\n");
   }
-  if (allow_rule_[kPresolveRuleEmptyRow] == report_allowed) 
+  if (allow_rule_[kPresolveRuleEmptyRow] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Empty row\n");
+  if (allow_rule_[kPresolveRuleSingletonRow] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Singleton row\n");
+  if (allow_rule_[kPresolveRuleRedundantRow] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Redundant row\n");
+  if (allow_rule_[kPresolveRuleForcingRow] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Forcing row\n");
+  if (allow_rule_[kPresolveRuleDuplicateRow] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Duplicate row\n");
+  if (allow_rule_[kPresolveRuleFixedCol] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Fixed column\n");
+  if (allow_rule_[kPresolveRuleFixedColAtUpper] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Empty row\n");
-  if (allow_rule_[kPresolveRuleSingletonRow] == report_allowed) 
+                 "Fixed column at upper\n");
+  if (allow_rule_[kPresolveRuleFixedColAtLower] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Singleton row\n");
-  if (allow_rule_[kPresolveRuleRedundantRow] == report_allowed) 
+                 "Fixed column at lower\n");
+  if (allow_rule_[kPresolveRuleFixedColAtZero] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Redundant row\n");
-  if (allow_rule_[kPresolveRuleForcingRow] == report_allowed) 
+                 "Fixed column at zero\n");
+  if (allow_rule_[kPresolveRuleFreeColSubstitution] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Forcing row\n");
-  if (allow_rule_[kPresolveRuleDuplicateRow] == report_allowed) 
+                 "Free col substitution\n");
+  if (allow_rule_[kPresolveRuleForcingCol] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Forcing col\n");
+  if (allow_rule_[kPresolveRuleForcingColRemovedRow] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Duplicate row\n");
-  if (allow_rule_[kPresolveRuleFixedCol] == report_allowed) 
+                 "Forcing col removed row\n");
+  if (allow_rule_[kPresolveRuleDuplicateCol] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Duplicate col\n");
+  if (allow_rule_[kPresolveRuleDoubletonEquation] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Fixed column\n");
-  if (allow_rule_[kPresolveRuleFixedColAtUpper] == report_allowed) 
+                 "Doubleton equation\n");
+  if (allow_rule_[kPresolveRuleDependentEquations] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Fixed column at upper\n");
-  if (allow_rule_[kPresolveRuleFixedColAtLower] == report_allowed) 
+                 "Dependent equations\n");
+  if (allow_rule_[kPresolveRuleEqualityRowAddition] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Fixed column at lower\n");
-  if (allow_rule_[kPresolveRuleFixedColAtZero] == report_allowed) 
+                 "Equality row addition\n");
+  if (allow_rule_[kPresolveRuleLinearTransform] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Fixed column at zero\n");
-  if (allow_rule_[kPresolveRuleFreeColSubstitution] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Free col substitution\n");
-  if (allow_rule_[kPresolveRuleForcingCol] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Forcing col\n");
-  if (allow_rule_[kPresolveRuleForcingColRemovedRow] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Forcing col removed row\n");
-  if (allow_rule_[kPresolveRuleDuplicateCol] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Duplicate col\n");
-  if (allow_rule_[kPresolveRuleDoubletonEquation] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Doubleton equation\n");
-  if (allow_rule_[kPresolveRuleDependentEquations] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Dependent equations\n");
-  if (allow_rule_[kPresolveRuleEqualityRowAddition] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Equality row addition\n");
-  if (allow_rule_[kPresolveRuleLinearTransform] == report_allowed) 
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Linear transform\n");
+                 "Linear transform\n");
 }
 
 void HPresolve::updatePresolveRuleLog(const HighsInt rule_type,
-				      const HighsInt num_removed_col,
-				      const HighsInt num_removed_row) {
+                                      const HighsInt num_removed_col,
+                                      const HighsInt num_removed_row) {
   assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
   assert(allow_rule_[rule_type]);
   assert(num_removed_col >= 0);
   assert(num_removed_row >= 0);
   rule_num_col_removed_[rule_type] += num_removed_col;
   rule_num_row_removed_[rule_type] += num_removed_row;
-   const bool report = true;
+  const bool report = true;
   if (report)
     printf("%-25s Call %9d: (%3d, %3d) (%3d, %3d)\n",
            presolveRuleTypeToString(rule_type).c_str(),
@@ -6559,7 +6561,7 @@ bool HPresolve::analysePresolveRuleLog(const bool report) {
                      presolveRuleTypeToString(rule_type).c_str(),
                      (int)rule_num_row_removed_[rule_type],
                      (int)rule_num_col_removed_[rule_type],
-		     (int)rule_num_call_[rule_type]);
+                     (int)rule_num_call_[rule_type]);
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
     highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
                  "Total reductions", (int)sum_removed_row,
@@ -6598,9 +6600,10 @@ bool HPresolve::analysePresolveRuleLog(const bool report) {
 }
 
 void HPresolve::updatePresolveReductionLog(const HighsInt reduction_type,
-					   const HighsInt num_removed_col_,
-					   const HighsInt num_removed_row_) {
-  assert(reduction_type >= kPresolveReductionMin && reduction_type <= kPresolveReductionMax);
+                                           const HighsInt num_removed_col_,
+                                           const HighsInt num_removed_row_) {
+  assert(reduction_type >= kPresolveReductionMin &&
+         reduction_type <= kPresolveReductionMax);
   HighsInt num_removed_col = num_removed_col_;
   HighsInt num_removed_row = num_removed_row_;
   if (reduction_type == kPresolveReductionEmptyRow) {
@@ -6661,7 +6664,8 @@ void HPresolve::updatePresolveReductionLog(const HighsInt reduction_type,
     printf("%-25s Call %3d: (%3d, %3d) (%3d, %3d)\n",
            presolveReductionTypeToString(reduction_type).c_str(),
            (int)reduction_num_call_[reduction_type], (int)num_removed_col,
-           (int)num_removed_row, (int)reduction_num_col_removed_[reduction_type],
+           (int)num_removed_row,
+           (int)reduction_num_col_removed_[reduction_type],
            (int)reduction_num_row_removed_[reduction_type]);
   analysePresolveReductionLog();
 }
@@ -6670,8 +6674,8 @@ bool HPresolve::analysePresolveReductionLog(const bool report) {
   const HighsLogOptions& log_options = options->log_options;
   HighsInt sum_removed_row = 0;
   HighsInt sum_removed_col = 0;
-  for (HighsInt reduction_type = kPresolveReductionMin; reduction_type < kPresolveReductionCount;
-       reduction_type++) {
+  for (HighsInt reduction_type = kPresolveReductionMin;
+       reduction_type < kPresolveReductionCount; reduction_type++) {
     sum_removed_row += reduction_num_row_removed_[reduction_type];
     sum_removed_col += reduction_num_col_removed_[reduction_type];
   }
@@ -6683,15 +6687,16 @@ bool HPresolve::analysePresolveReductionLog(const bool report) {
                  "%-25s      Rows      Cols     Calls\n",
                  "Presolve rule removed");
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
-    for (HighsInt reduction_type = kPresolveReductionMin; reduction_type < kPresolveReductionCount;
-         reduction_type++)
-      if (reduction_num_call_[reduction_type] || reduction_num_row_removed_[reduction_type] ||
+    for (HighsInt reduction_type = kPresolveReductionMin;
+         reduction_type < kPresolveReductionCount; reduction_type++)
+      if (reduction_num_call_[reduction_type] ||
+          reduction_num_row_removed_[reduction_type] ||
           reduction_num_col_removed_[reduction_type])
         highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d %9d\n",
                      presolveReductionTypeToString(reduction_type).c_str(),
                      (int)reduction_num_row_removed_[reduction_type],
                      (int)reduction_num_col_removed_[reduction_type],
-		     (int)reduction_num_call_[reduction_type]);
+                     (int)reduction_num_call_[reduction_type]);
     highsLogUser(log_options, HighsLogType::kInfo, "%s\n", rule.c_str());
     highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d\n",
                  "Total reductions", (int)sum_removed_row,
