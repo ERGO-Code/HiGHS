@@ -14,13 +14,9 @@
  * @brief Class-independent utilities for HiGHS
  */
 
+#include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HApp.h"
-#ifdef IPX_ON
-#include "ipm/IpxWrapper.h"
-#else
-#include "ipm/IpxWrapperEmpty.h"
-#endif
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
@@ -51,7 +47,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
   } else if (options.solver == kIpmString) {
     // Use IPM
-#ifdef IPX_ON
     bool imprecise_solution;
     // Use IPX to solve the LP
     try {
@@ -105,11 +100,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         return HighsStatus::kError;
       }
     }
-#else
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Model cannot be solved with IPM\n");
-    return HighsStatus::kError;
-#endif
   } else {
     // Use Simplex
     call_status = solveLpSimplex(solver_object);

@@ -2,14 +2,15 @@
 #define __SRC_LIB_FEASIBILITYHIGHS_HPP__
 
 #include "Highs.h"
-#include "feasibility.hpp"
+#include "crashsolution.hpp"
 
-void computestartingpoint(Runtime& runtime, CrashSolution& result) {
+void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) {
   // compute initial feasible point
   Highs highs;
 
   // set HiGHS to be silent
   highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("presolve", "on");
   highs.setOptionValue("time_limit", runtime.settings.timelimit -
                                          runtime.timer.readRunHighsClock());
 
@@ -28,6 +29,17 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
   lp.row_upper_ = runtime.instance.con_up;
   lp.num_col_ = runtime.instance.num_var;
   lp.num_row_ = runtime.instance.num_con;
+
+  // create artificial bounds for free variables
+  if (runtime.settings.phase1boundfreevars) {
+    for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+      if (isfreevar(runtime, i)) {
+        lp.col_lower_[i] = -1E5;
+        lp.col_upper_[i] = 1E5;
+      }
+    }
+  }
+
   highs.passModel(lp);
 
   if (runtime.settings.phase1movefreevarsbasic) {
@@ -62,7 +74,7 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
     return;
   }
 
-  runtime.statistics.phase1_iterations = highs.getSimplexIterationCount();
+  runtime.statistics.phase1_iterations = highs.getInfo().simplex_iteration_count;
 
   HighsModelStatus phase1stat = highs.getModelStatus();
   if (phase1stat == HighsModelStatus::kInfeasible) {
@@ -109,11 +121,21 @@ void computestartingpoint(Runtime& runtime, CrashSolution& result) {
 
   for (HighsInt i = 0; i < bas.col_status.size(); i++) {
     if (bas.col_status[i] == HighsBasisStatus::kLower) {
-      initialactive.push_back(i + runtime.instance.num_con);
-      atlower.push_back(BasisStatus::ActiveAtLower);
+      if (isfreevar(runtime, i)) {
+        initialinactive.push_back(runtime.instance.num_con + i);
+      } else {
+        initialactive.push_back(i + runtime.instance.num_con);
+        atlower.push_back(BasisStatus::ActiveAtLower);
+      }
+      
     } else if (bas.col_status[i] == HighsBasisStatus::kUpper) {
-      initialactive.push_back(i + runtime.instance.num_con);
-      atlower.push_back(BasisStatus::ActiveAtUpper);
+      if (isfreevar(runtime, i)) {
+        initialinactive.push_back(runtime.instance.num_con + i);
+      } else {
+        initialactive.push_back(i + runtime.instance.num_con);
+        atlower.push_back(BasisStatus::ActiveAtUpper);
+      }
+      
     } else if (bas.col_status[i] == HighsBasisStatus::kZero) {
       // printf("col %" HIGHSINT_FORMAT " free and set to 0 %" HIGHSINT_FORMAT
       // "\n", i, (HighsInt)bas.col_status[i]);

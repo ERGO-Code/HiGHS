@@ -1396,7 +1396,7 @@ void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
   if (!dev_run) return;
   highsLogUser(log_options, HighsLogType::kInfo,
                "%s: HighsStatus = %" HIGHSINT_FORMAT " - %s\n", message.c_str(),
-               (int)status, HighsStatusToString(status).c_str());
+               (int)status, highsStatusToString(status).c_str());
 }
 
 void callRun(Highs& highs, const HighsLogOptions& log_options,

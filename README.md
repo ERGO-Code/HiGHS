@@ -98,15 +98,25 @@ HiGHS options
 -------------
 Usage:
     highs [OPTION...] [file]
-
-      --model_file arg       File of model to solve.
-      --presolve arg         Presolve: "choose" by default - "on"/"off" are alternatives.
-      --solver arg           Solver: "choose" by default - "simplex"/"ipm"/"mip" are alternatives.
-      --parallel arg         Parallel solve: "choose" by default - "on"/"off" are alternatives.
-      --time_limit arg       Run time limit (double).
-      --options_file arg     File containing HiGHS options.
-
+    
+      --model_file arg        File of model to solve.
+      --presolve arg          Presolve: "choose" by default - "on"/"off" are alternatives.
+      --solver arg            Solver: "choose" by default - "simplex"/"ipm" are alternatives.
+      --parallel arg          Parallel solve: "choose" by default - "on"/"off" are alternatives.
+      --time_limit arg        Run time limit (seconds - double).
+      --options_file arg      File containing HiGHS options.
+      --solution_file arg     File for writing out model solution.
+      --write_model_file arg  File for writing out model.
+      --random_seed arg       Seed to initialize random number generation.
+      --ranging arg           Compute cost, bound, RHS and basic solution ranging.
+      
   -h, --help                 Print help.
+  
+  Note:
+  
+  * If the file constrains some variables to take integer values (so the problem is a MIP) and "simplex" or "ipm" is selected for the solver option, then the integrality constraint will be ignored.
+  * If the file defines a quadratic term in the objective (so the problem is a QP or MIQP) and "simplex" or "ipm" is selected for the solver option, then the quadratic term will be ignored.
+  * If the file constrains some variables to take integer values and defines a quadratic term in the objective, then the problem is MIQP and cannot be solved by HiGHS
 
 Language interfaces and further documentation
 ---------------------------------------------

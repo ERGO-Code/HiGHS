@@ -277,6 +277,8 @@ class HighsSymmetryDetection {
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);
 
+  bool initializeDetection();
+
   void run(HighsSymmetries& symmetries);
 };
 

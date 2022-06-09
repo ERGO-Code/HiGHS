@@ -1041,6 +1041,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
               inheuristic ? 'H' : 'T');
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+
+          if (lp->unscaledDualFeasible(status)) {
+            addBoundExceedingConflict();
+            result = NodeResult::kBoundExceeding;
+          }
         }
       }
 
@@ -1405,6 +1410,15 @@ HighsSearch::NodeResult HighsSearch::branch() {
   }
 
   if (currnode.branchingdecision.column == -1) {
+    if (lp->getStatus() == HighsLpRelaxation::Status::kOptimal) {
+      // if the LP was solved to optimality and all columns are fixed, then this
+      // particular assignment is not feasible or has a worse objective in the
+      // original space, otherwise the node would not be open. Hence we prune
+      // this particular assignment
+      currnode.opensubtrees = 0;
+      result = NodeResult::kLpInfeasible;
+      return result;
+    }
     lp->setIterationLimit();
 
     // create a fresh LP only with model rows since all integer columns are

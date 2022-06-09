@@ -302,6 +302,7 @@ struct HighsOptionsStruct {
   bool write_model_to_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
+  HighsInt glpsol_cost_row_location;
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
@@ -340,6 +341,16 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
+
+  // Options for iCrash
+  bool icrash;
+  bool icrash_dualize;
+  std::string icrash_strategy;
+  double icrash_starting_weight;
+  HighsInt icrash_iterations;
+  HighsInt icrash_approx_iter;
+  bool icrash_exact;
+  bool icrash_breakpoints;
 
   // Options for MIP solver
   bool mip_detect_symmetry;
@@ -626,11 +637,61 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt("write_solution_style",
-                            "Write the solution in style: 0=>Raw "
-                            "(computer-readable); 1=>Pretty (human-readable) ",
+                            "Style of solution file Raw (computer-readable); "
+                            "Pretty (human-readable): "
+                            "0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol "
+                            "raw; 3 => Glpsol pretty; ",
                             advanced, &write_solution_style, kSolutionStyleMin,
                             kSolutionStyleRaw, kSolutionStyleMax);
     records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "glpsol_cost_row_location",
+        "Location of cost row for Glpsol file: "
+        "-2 => Last; -1 => None; 0 => None if empty, otherwise data file "
+        "location; 1 <= n <= num_row => Location n; n > "
+        "num_row => Last",
+        advanced, &glpsol_cost_row_location, kGlpsolCostRowLocationMin, 0,
+        kHighsIInf);
+    records.push_back(record_int);
+
+    record_bool =
+        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
+                             advanced, &icrash_dualize, false);
+    records.push_back(record_bool);
+
+    record_string =
+        new OptionRecordString("icrash_strategy", "Strategy for iCrash",
+                               advanced, &icrash_strategy, "ICA");
+    records.push_back(record_string);
+
+    record_double = new OptionRecordDouble(
+        "icrash_starting_weight", "iCrash starting weight", advanced,
+        &icrash_starting_weight, 1e-10, 1e-3, 1e50);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
+                                     advanced, &icrash_iterations, 0, 30, 200);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "icrash_approx_iter", "iCrash approximate minimization iterations",
+        advanced, &icrash_approx_iter, 0, 50, 100);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("icrash_exact",
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_exact, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("icrash_breakpoints",
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_breakpoints, false);
+    records.push_back(record_bool);
 
     record_string = new OptionRecordString(
         kWriteModelFileString, "Write model file", advanced, &write_model_file,

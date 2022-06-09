@@ -16,18 +16,7 @@
 #include <iostream>
 
 #include "HConfig.h"
-#include "ipm/IpxWrapper.h"
-
-#ifndef IPX_ON
-HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
-                          HighsBasis& highs_basis,
-                          HighsSolution& highs_solution,
-                          HighsModelStatus& model_status,
-                          HighsInfo& highs_info) {
-  return HighsStatus::kError;
-}
-#else
-
+#include "io/HighsIO.h"
 #include "ipm/IpxWrapper.h"
 
 HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
@@ -179,5 +168,3 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   }
   return return_status;
 }
-
-#endif

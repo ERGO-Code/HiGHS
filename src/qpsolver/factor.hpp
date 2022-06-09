@@ -23,7 +23,7 @@ class CholeskyFactor {
   HighsInt current_k_max;
   std::vector<double> L;
 
-  bool has_negative_eigenvalue;
+  bool has_negative_eigenvalue = false;
   std::vector<double> a;
 
   void recompute() {

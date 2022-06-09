@@ -34,6 +34,7 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
+  void invalidate();
   void clear();
 };
 
@@ -62,6 +63,7 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  void invalidate();
   void clear();
 };
 

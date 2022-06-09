@@ -397,6 +397,10 @@ restart:
         ++mipdata_->num_nodes;
         search.flushStatistics();
 
+        mipdata_->domain.propagate();
+        mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
+            mipdata_->domain, mipdata_->feastol);
+
         if (mipdata_->domain.infeasible()) {
           mipdata_->nodequeue.clear();
           mipdata_->pruned_treeweight = 1.0;
@@ -413,6 +417,23 @@ restart:
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
 
         mipdata_->printDisplayLine();
+
+        if (!mipdata_->domain.getChangedCols().empty()) {
+          highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
+                      "added %" HIGHSINT_FORMAT " global bound changes\n",
+                      (HighsInt)mipdata_->domain.getChangedCols().size());
+          mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
+          for (HighsInt col : mipdata_->domain.getChangedCols())
+            mipdata_->implications.cleanupVarbounds(col);
+
+          mipdata_->domain.setDomainChangeStack(
+              std::vector<HighsDomainChange>());
+          search.resetLocalDomain();
+
+          mipdata_->domain.clearChangedCols();
+          mipdata_->removeFixedIndices();
+        }
+
         continue;
       }
 

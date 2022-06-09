@@ -8,6 +8,26 @@ const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
+TEST_CASE("qp-unbounded", "[qpsolver]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
+
+  Highs highs;
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
+
+TEST_CASE("qp-infeasible", "[qpsolver]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/qpinfeasible.lp";
+
+  Highs highs;
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
 TEST_CASE("qpsolver", "[qpsolver]") {
   double required_objective_function_value;
   double required_x0;
@@ -346,6 +366,27 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   }
 }
 
+TEST_CASE("test-min-negative-definite", "[qpsolver]") {
+  HighsModel model;
+  model.lp_.model_name_ = "min-negative-definite";
+  model.lp_.num_col_ = 1;
+  model.lp_.num_row_ = 0;
+  model.lp_.col_cost_ = {0};
+  model.lp_.col_lower_ = {0};
+  model.lp_.col_upper_ = {inf};
+  model.hessian_.dim_ = model.lp_.num_col_;
+  model.hessian_.start_ = {0, 1};
+  model.hessian_.index_ = {0};
+  model.hessian_.value_ = {-0.5};
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+
+  // Should load OK
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  // Run should fail since objective is non-convex
+  REQUIRE(highs.run() == HighsStatus::kError);
+}
+
 TEST_CASE("test-max-negative-definite", "[qpsolver]") {
   HighsLp lp;
   HighsHessian hessian;
@@ -370,7 +411,6 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   hessian.dim_ = lp.num_col_;
   hessian.start_ = {0, 2, 3, 4};
   hessian.index_ = {0, 2, 1, 2};
@@ -379,8 +419,10 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
     printf("\nNegative definite Hessian\n");
     hessian.print();
   }
-  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+  // Should load OK
   REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
+  // Make the problem a maximization
+  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 

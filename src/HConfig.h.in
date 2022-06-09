@@ -8,7 +8,6 @@
 #cmakedefine ZLIB_FOUND
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HiGHSRELEASE
-#cmakedefine IPX_ON
 #cmakedefine HIGHSINT64
 #cmakedefine HIGHS_HAVE_MM_PAUSE
 #cmakedefine HIGHS_HAVE_BUILTIN_CLZ

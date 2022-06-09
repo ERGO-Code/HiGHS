@@ -1,10 +1,6 @@
 # Define library.
 # Outdated CMake approach: update in progress
-if (NOT FAST_BUILD)
-  set(IPX_ON ON)
-endif()
 
-if (IPX_ON)
 set(basiclu_sources
     ipm/basiclu/src/basiclu_factorize.c
     ipm/basiclu/src/basiclu_solve_dense.c
@@ -67,7 +63,6 @@ set(ipx_sources
     ipm/ipx/src/symbolic_invert.cc
     ipm/ipx/src/timer.cc
     ipm/ipx/src/utils.cc)
-endif()
 
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
@@ -130,6 +125,8 @@ set(sources
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
+    presolve/ICrash.cpp
+    presolve/ICrashUtil.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -144,6 +141,8 @@ set(sources
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
+    qpsolver/scaling.cpp
+    qpsolver/perturbation.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -243,12 +242,15 @@ set(headers
     parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
+    parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
     qpsolver/quass.hpp
     qpsolver/vector.hpp
+    qpsolver/scaling.hpp
+    qpsolver/perturbation.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h
@@ -263,6 +265,9 @@ set(headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
+    presolve/ICrash.h
+    presolve/ICrashUtil.h
+    presolve/ICrashX.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -307,27 +312,16 @@ set(headers
     interfaces/highs_c_api.h
 )
 
-if (IPX_ON)
-    set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
-        ${ipx_headers})
-    set(sources ${sources} ipm/IpxWrapper.cpp)
-    add_library(libbasiclu ${basiclu_sources})
-    add_library(libipx ${ipx_sources})
-    target_link_libraries(libipx libbasiclu)
-else ()
-    set(headers ${headers} ipm/IpxWrapperEmpty.h)
-endif()
+set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
+    ${ipx_headers})
+set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
 
 add_library(libhighs ${sources})
-
-if (IPX_ON)
-    target_link_libraries(libhighs libipx)
-endif()
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
-        VERSION 
+        VERSION
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     if(MINGW)
@@ -343,16 +337,7 @@ endif()
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
-if (IPX_ON)
-    set_target_properties(libipx PROPERTIES
-        OUTPUT_NAME "ipx"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-    set_target_properties(libbasiclu PROPERTIES
-        OUTPUT_NAME "basiclu"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
@@ -364,7 +349,7 @@ if (OSI_FOUND)
 
     if(${BUILD_SHARED_LIBS})
         set_target_properties(OsiHighs PROPERTIES
-           VERSION 
+           VERSION
            ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
            SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     else()
@@ -372,18 +357,19 @@ if (OSI_FOUND)
     endif()
 
     install(TARGETS OsiHighs
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
+        LIBRARY
+        ARCHIVE
+        RUNTIME
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
     #configure and install the pkg-config file
     configure_file(${HIGHS_SOURCE_DIR}/osi-highs.pc.in
         "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
     install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc"
-        DESTINATION lib/pkgconfig)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
 
 if (ZLIB_FOUND)
@@ -393,69 +379,46 @@ endif()
 
 # set the install rpath to the installed destination
 set_target_properties(highs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/lib")
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
 foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/${dir} )
+    if ( NOT dir STREQUAL "" )
+        string( REPLACE ../extern/ "" dir ${dir} )
+    endif ()
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
-install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-if (IPX_ON)
-    if (UNIX)
-        #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-        #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
-        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+if (UNIX)
+    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
-        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-        #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
-        #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
-        #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
-        target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
+    #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-        target_compile_options(libipx PRIVATE "-Wno-unused-variable")
-        target_compile_options(libipx PRIVATE "-Wno-sign-compare")
-        #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
-    endif()
-
-    if (WIN32)
-        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
-            LIBRARY DESTINATION bin
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
-    else()
-        install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
-    endif()
-
-    # Add library targets to the build-tree export set
-    export(TARGETS libhighs libipx libbasiclu
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-else()
-    if (WIN32)
-        install(TARGETS libhighs EXPORT highs-targets
-                LIBRARY DESTINATION bin
-                ARCHIVE DESTINATION lib
-                INCLUDES DESTINATION include)
-    else()
-        install(TARGETS libhighs EXPORT highs-targets
-                LIBRARY DESTINATION lib
-                ARCHIVE DESTINATION lib
-                INCLUDES DESTINATION include)
-    endif()
-
-    # Add library targets to the build-tree export set
-    export(TARGETS libhighs 
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+    #target_compile_options(libipx PRIVATE "-Wno-unused-variable")
+    #target_compile_options(libipx PRIVATE "-Wno-sign-compare")
+    #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
 endif()
 
+install(TARGETS libhighs EXPORT highs-targets
+    LIBRARY
+    ARCHIVE
+    RUNTIME
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+
+# Add library targets to the build-tree export set
+export(TARGETS libhighs
+    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 # Configure the config file for the build tree:
 # Either list all the src/* directories here, or put explicit paths in all the
@@ -466,7 +429,7 @@ configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 # Configure the config file for the install
-set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
+set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}/highs")
 configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
@@ -477,14 +440,14 @@ configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
 # Install the targets of the highs export group, the config file so that other
 # cmake-projects can link easily against highs, and the pkg-config flie so that
 # other projects can easily build against highs
-install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION 
-    lib/cmake/highs)
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" 
-    DESTINATION lib/cmake/highs)
-install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
-    DESTINATION lib/pkgconfig)
+install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-else() 
+else()
 
 # FAST_BUILD is set to on.
 # At the moment used only for gradually updating the CMake targets build and
@@ -525,6 +488,9 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    presolve/ICrash.cpp
+    presolve/ICrashUtil.cpp
+    presolve/ICrashX.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
     mip/HighsDomain.cpp
@@ -568,6 +534,8 @@ target_sources(libhighs PRIVATE
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
+    qpsolver/scaling.cpp
+    qpsolver/perturbation.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -603,24 +571,55 @@ target_sources(libhighs PRIVATE
     util/HVectorBase.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
+  
+target_include_directories(libhighs PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+    )
 
-target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
-                           presolve/ util/ test/ interfaces/ ../extern/)
-target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+target_include_directories(libhighs PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
+    )
+
+target_include_directories(libhighs PRIVATE 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/src
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/include>
+    )
+
+target_include_directories(libhighs PRIVATE
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
+    )
 
 if (ZLIB_FOUND)
-    target_include_directories(libhighs PUBLIC ${ZLIB_INCLUDE_DIRS} ../extern/zstr)
+    target_include_directories(libhighs PRIVATE
+    $<BUILD_INTERFACE:${ZLIB_INCLUDE_DIRS}  
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
+    )
     target_link_libraries(libhighs ${ZLIB_LIBRARIES})
 endif()
 
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 if (UNIX)
     set_target_properties(libhighs PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/lib")
+        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
 endif()
 
 set(headers_fast_build_
@@ -686,12 +685,15 @@ set(headers_fast_build_
     parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
+    parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
     qpsolver/quass.hpp
     qpsolver/vector.hpp
+    qpsolver/scaling.hpp
+    qpsolver/perturbation.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h
@@ -706,6 +708,8 @@ set(headers_fast_build_
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
+    presolve/ICrash.h
+    presolve/ICrashUtil.h
     presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
@@ -750,48 +754,40 @@ set(headers_fast_build_
     interfaces/highs_c_api.h
 )
 
-if(IPX_ON)
-    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
-        ${ipx_headers})
-else()
-    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
-endif()
+set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
+    ${ipx_headers})
 
 #set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
 # set the install rpath to the installed destination
 set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/lib")
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/${dir} )
+    if ( NOT dir STREQUAL "" )
+        string( REPLACE ../extern/ "" dir ${dir} )
+    endif ()
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
-install(FILES ${HIGHS_BINARY_DIR}/libhighs_export.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
-target_include_directories(libhighs PUBLIC ipm/ipx/src
-    ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
-if (IPX_ON)
-    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
-
-    if (UNIX)
-        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
-        target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-        target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
-    endif()
-
+if (UNIX)
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
 endif()
 
-    set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
+set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 endif()
 
@@ -801,13 +797,14 @@ if(FORTRAN_FOUND)
     add_library(FortranHighs interfaces/highs_fortran_api.f90)
     target_link_libraries(FortranHighs PUBLIC libhighs)
     install(TARGETS FortranHighs
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include
+        LIBRARY
+        ARCHIVE
+        RUNTIME
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
         MODULES DESTINATION modules)
-    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION include/fortran)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
 
 if(CSHARP_FOUND)
@@ -825,3 +822,37 @@ endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(libhighs Threads::Threads)
+
+if (CMAKE_TARGETS)
+    # Add library targets to the build-tree export set
+    export(TARGETS libhighs
+        FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+
+    # Configure the config file for the build tree:
+    # Either list all the src/* directories here, or put explicit paths in all the
+    # include statements.
+    # M reckons that the latter is more transparent, and I'm inclined to agree.
+    set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+    configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+        "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
+
+    # Configure the config file for the install
+    set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
+    configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+        "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
+
+    # Configure the pkg-config file for the install
+    configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
+        "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+    # Install the targets of the highs export group, the config file so that other
+    # cmake-projects can link easily against highs, and the pkg-config flie so that
+    # other projects can easily build against highs
+    install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+endif()

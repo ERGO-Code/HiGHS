@@ -145,13 +145,13 @@ class HFactor {
              const HighsInt update_method = kUpdateMethodFt);
 
   void setupGeneral(
-      const HighsInt num_col,  //!< Number of columns
-      const HighsInt num_row,  //!< Number of rows
-      const HighsInt num_basic,
-      const HighsInt* a_start,  //!< Column starts of constraint matrix
-      const HighsInt* a_index,  //!< Row indices of constraint matrix
-      const double* a_value,    //!< Row values of constraint matrix
-      HighsInt* basic_index,    //!< Indices of basic variables
+      const HighsInt num_col,    //!< Number of columns
+      const HighsInt num_row,    //!< Number of rows
+      const HighsInt num_basic,  //!< Number of indices in basic_index
+      const HighsInt* a_start,   //!< Column starts of constraint matrix
+      const HighsInt* a_index,   //!< Row indices of constraint matrix
+      const double* a_value,     //!< Row values of constraint matrix
+      HighsInt* basic_index,     //!< Indices of "basic" variables
       const double pivot_threshold =
           kDefaultPivotThreshold,  //!< Pivoting threshold
       const double pivot_tolerance =
@@ -183,6 +183,9 @@ class HFactor {
       const double expected_density,  //!< Expected density of the result
       HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
+  void ftranCall(std::vector<double>& vector,
+                 HighsTimerClock* factor_timer_clock_pointer = NULL);
+
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
@@ -190,6 +193,9 @@ class HFactor {
       HVector& vector,                //!< RHS vector \f$\mathbf{b}\f$
       const double expected_density,  //!< Expected density of the result
       HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+
+  void btranCall(std::vector<double>& vector,
+                 HighsTimerClock* factor_timer_clock_pointer = NULL);
 
   /**
    * @brief Update according to
@@ -415,6 +421,8 @@ class HFactor {
   vector<HighsInt> pf_start;
   vector<HighsInt> pf_index;
   vector<double> pf_value;
+
+  HVector rhs_;
 
   // Implementation
   void buildSimple();

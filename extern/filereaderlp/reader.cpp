@@ -144,7 +144,7 @@ private:
    Builder builder;
 
    void tokenize();
-   void readnexttoken(bool& done);
+   void readnexttoken();
    void processtokens();
    void splittokens();
    void processsections();
@@ -269,7 +269,7 @@ void Reader::processnonesec() {
 }
 
 void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj) {
-   if (tokens.size() - i >= 1 && tokens[0]->type == ProcessedTokenType::CONID) {
+   if (tokens.size() - i >= 1 && tokens[i]->type == ProcessedTokenType::CONID) {
       expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
       i++;
    }
@@ -292,7 +292,7 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
 
       // const
       if (tokens.size() - i  >= 1 && tokens[i]->type == ProcessedTokenType::CONST) {
-         expr->offset = ((ProcessedConstantToken*)tokens[i].get())->value;
+         expr->offset += ((ProcessedConstantToken*)tokens[i].get())->value;
          i++;
          continue;
       }
@@ -680,6 +680,18 @@ void Reader::processtokens() {
    while (i < this->rawtokens.size()) {
       fflush(stdout);
 
+      // Slash + asterisk: comment, skip everything up to next asterisk + slash
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::SLASH) && rawtokens[i+1]->istype(RawTokenType::ASTERISK)) {
+         unsigned int j = i+2;
+         while (rawtokens.size() - j >= 2) {
+            if (rawtokens[j]->istype(RawTokenType::ASTERISK) && rawtokens[j+1]->istype(RawTokenType::SLASH)) {
+               i = j + 2;
+               break;
+            }
+            j++;
+         }
+      }
+
       // long section keyword semi-continuous
       if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::MINUS) && rawtokens[i+2]->istype(RawTokenType::STR)) {
          std::string temp = ((RawStringToken*)rawtokens[i].get())->value + "-" + ((RawStringToken*)rawtokens[i+2].get())->value;
@@ -771,6 +783,16 @@ void Reader::processtokens() {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
          i += 2;
          continue;
+      }
+
+      // - [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+         lpassert(false);
+      }
+
+      // constant [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::CONS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+         lpassert(false);
       }
 
       // +
@@ -879,20 +901,21 @@ void Reader::processtokens() {
 // reads the entire file and separates 
 void Reader::tokenize() {
    this->linebufferpos = 0;
-   bool done = false;
    while(true) {
-      this->readnexttoken(done);
+      this->readnexttoken();
       if (this->rawtokens.size() >= 1 && this->rawtokens.back()->type == RawTokenType::FLEND) {
          break;
       }
    }
 }
 
-void Reader::readnexttoken(bool& done) {
-   done = false;
-
+void Reader::readnexttoken() {
    if (this->linebufferpos == this->linebuffer.size()) {
-     // read next line
+     // read next line if any are left. 
+     if (this->file.eof()) {
+         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
+         return;
+     }
      std::getline(this->file, linebuffer);
 
      // drop \r
@@ -901,13 +924,6 @@ void Reader::readnexttoken(bool& done) {
 
      // reset linebufferpos
      this->linebufferpos = 0;
-   }
-
-   // if all line has been read and we are at end of file, then stop
-   if (this->linebufferpos == this->linebuffer.size() && this->file.eof()) {
-     this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-     done = true;
-     return;
    }
 
    // check single character tokens
@@ -968,7 +984,7 @@ void Reader::readnexttoken(bool& done) {
          this->linebufferpos++;
          return;
 
-      // check for hat
+      // check for slash
       case '/':
          this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::SLASH)));
          this->linebufferpos++;
@@ -1014,7 +1030,7 @@ void Reader::readnexttoken(bool& done) {
    }
 
    // assume it's an (section/variable/constraint) identifier
-   auto endpos = this->linebuffer.find_first_of("\t\n\\:+<>^= /-", this->linebufferpos);
+   auto endpos = this->linebuffer.find_first_of("\t\n\\:+<>^= /-*", this->linebufferpos);
    if( endpos == std::string::npos )
       endpos = this->linebuffer.size();  // take complete rest of string
    if( endpos > this->linebufferpos ) {

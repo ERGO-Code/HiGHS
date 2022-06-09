@@ -229,16 +229,20 @@ class HighsPostsolveStack {
   };
 
   HighsDataStack reductionValues;
-  std::vector<ReductionType> reductions;
+  std::vector<std::pair<ReductionType, HighsInt>> reductions;
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
-  std::vector<std::pair<ReductionType, HighsInt>> primalColTransformations;
   std::vector<uint8_t> linearlyTransformable;
 
   std::vector<Nonzero> rowValues;
   std::vector<Nonzero> colValues;
   HighsInt origNumCol = -1;
   HighsInt origNumRow = -1;
+
+  void reductionAdded(ReductionType type) {
+    HighsInt position = reductionValues.getCurrentDataSize();
+    reductions.emplace_back(type, position);
+  }
 
  public:
   HighsInt getOrigRowIndex(HighsInt row) const {
@@ -284,10 +288,7 @@ class HighsPostsolveStack {
   /// I.e. substitute x = scale * x' + constant
   void linearTransform(HighsInt col, double scale, double constant) {
     reductionValues.push(LinearTransform{scale, constant, origColIndex[col]});
-    reductions.push_back(ReductionType::kLinearTransform);
-    HighsInt position = reductionValues.getCurrentDataSize();
-    primalColTransformations.emplace_back(ReductionType::kLinearTransform,
-                                          position);
+    reductionAdded(ReductionType::kLinearTransform);
   }
 
   template <typename RowStorageFormat, typename ColStorageFormat>
@@ -307,7 +308,7 @@ class HighsPostsolveStack {
                                              origColIndex[col], rowType});
     reductionValues.push(rowValues);
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kFreeColSubstitution);
+    reductionAdded(ReductionType::kFreeColSubstitution);
   }
 
   template <typename ColStorageFormat>
@@ -325,7 +326,7 @@ class HighsPostsolveStack {
         row == -1 ? -1 : origRowIndex[row], origColIndex[colSubst],
         origColIndex[col], lowerTightened, upperTightened});
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kDoubletonEquation);
+    reductionAdded(ReductionType::kDoubletonEquation);
   }
 
   template <typename RowStorageFormat>
@@ -338,7 +339,7 @@ class HighsPostsolveStack {
     reductionValues.push(EqualityRowAddition{
         origRowIndex[row], origRowIndex[addedEqRow], eqRowScale});
     reductionValues.push(rowValues);
-    reductions.push_back(ReductionType::kEqualityRowAddition);
+    reductionAdded(ReductionType::kEqualityRowAddition);
   }
 
   template <typename RowStorageFormat>
@@ -352,7 +353,7 @@ class HighsPostsolveStack {
     reductionValues.push(EqualityRowAdditions{origRowIndex[addedEqRow]});
     reductionValues.push(rowValues);
     reductionValues.push(targetRows);
-    reductions.push_back(ReductionType::kEqualityRowAdditions);
+    reductionAdded(ReductionType::kEqualityRowAdditions);
   }
 
   void singletonRow(HighsInt row, HighsInt col, double coef,
@@ -360,7 +361,7 @@ class HighsPostsolveStack {
     reductionValues.push(SingletonRow{coef, origRowIndex[row],
                                       origColIndex[col], tightenedColLower,
                                       tightenedColUpper});
-    reductions.push_back(ReductionType::kSingletonRow);
+    reductionAdded(ReductionType::kSingletonRow);
   }
 
   template <typename ColStorageFormat>
@@ -374,7 +375,7 @@ class HighsPostsolveStack {
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
                                   HighsBasisStatus::kLower});
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kFixedCol);
+    reductionAdded(ReductionType::kFixedCol);
   }
 
   template <typename ColStorageFormat>
@@ -388,7 +389,7 @@ class HighsPostsolveStack {
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
                                   HighsBasisStatus::kUpper});
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kFixedCol);
+    reductionAdded(ReductionType::kFixedCol);
   }
 
   template <typename ColStorageFormat>
@@ -401,7 +402,7 @@ class HighsPostsolveStack {
     reductionValues.push(
         FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::kZero});
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kFixedCol);
+    reductionAdded(ReductionType::kFixedCol);
   }
 
   template <typename ColStorageFormat>
@@ -415,12 +416,12 @@ class HighsPostsolveStack {
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
                                   HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kFixedCol);
+    reductionAdded(ReductionType::kFixedCol);
   }
 
   void redundantRow(HighsInt row) {
     reductionValues.push(RedundantRow{origRowIndex[row]});
-    reductions.push_back(ReductionType::kRedundantRow);
+    reductionAdded(ReductionType::kRedundantRow);
   }
 
   template <typename RowStorageFormat>
@@ -433,7 +434,7 @@ class HighsPostsolveStack {
 
     reductionValues.push(ForcingRow{side, origRowIndex[row], rowType});
     reductionValues.push(rowValues);
-    reductions.push_back(ReductionType::kForcingRow);
+    reductionAdded(ReductionType::kForcingRow);
   }
 
   template <typename ColStorageFormat>
@@ -447,7 +448,7 @@ class HighsPostsolveStack {
     reductionValues.push(
         ForcingColumn{cost, boundVal, origColIndex[col], atInfiniteUpper});
     reductionValues.push(colValues);
-    reductions.push_back(ReductionType::kForcingColumn);
+    reductionAdded(ReductionType::kForcingColumn);
   }
 
   template <typename RowStorageFormat>
@@ -461,7 +462,7 @@ class HighsPostsolveStack {
 
     reductionValues.push(ForcingColumnRemovedRow{rhs, origRowIndex[row]});
     reductionValues.push(rowValues);
-    reductions.push_back(ReductionType::kForcingColumnRemovedRow);
+    reductionAdded(ReductionType::kForcingColumnRemovedRow);
   }
 
   void duplicateRow(HighsInt row, bool rowUpperTightened,
@@ -470,7 +471,7 @@ class HighsPostsolveStack {
     reductionValues.push(
         DuplicateRow{duplicateRowScale, origRowIndex[duplicateRow],
                      origRowIndex[row], rowLowerTightened, rowUpperTightened});
-    reductions.push_back(ReductionType::kDuplicateRow);
+    reductionAdded(ReductionType::kDuplicateRow);
   }
 
   void duplicateColumn(double colScale, double colLower, double colUpper,
@@ -482,10 +483,8 @@ class HighsPostsolveStack {
     reductionValues.push(DuplicateColumn{
         colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
         origCol, origDuplicateCol, colIntegral, duplicateColIntegral});
-    reductions.push_back(ReductionType::kDuplicateColumn);
-    HighsInt position = reductionValues.getCurrentDataSize();
-    primalColTransformations.emplace_back(ReductionType::kDuplicateColumn,
-                                          position);
+    reductionAdded(ReductionType::kDuplicateColumn);
+
     // mark columns as not linearly transformable
     linearlyTransformable[origCol] = false;
     linearlyTransformable[origDuplicateCol] = false;
@@ -496,7 +495,7 @@ class HighsPostsolveStack {
     std::vector<double> reducedSolution = origPrimalSolution;
 
     for (const std::pair<ReductionType, HighsInt>& primalColTransformation :
-         primalColTransformations) {
+         reductions) {
       switch (primalColTransformation.first) {
         case ReductionType::kDuplicateColumn: {
           DuplicateColumn duplicateColReduction;
@@ -513,7 +512,7 @@ class HighsPostsolveStack {
           break;
         }
         default:
-          assert(false);
+          continue;
       }
     }
 
@@ -577,7 +576,7 @@ class HighsPostsolveStack {
 
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
-      switch (reductions[i]) {
+      switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
           reductionValues.pop(reduction);
@@ -747,7 +746,7 @@ class HighsPostsolveStack {
 
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= numReductions; --i) {
-      switch (reductions[i]) {
+      switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
           reductionValues.pop(reduction);

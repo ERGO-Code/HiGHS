@@ -433,7 +433,10 @@ public:
            | std::ios_base::binary
 #endif
            );
-        std::istream::operator=(std::istream(new istreambuf(_fs.rdbuf())));
+        // make sure the previous buffer is deleted by putting it into a unique_ptr and set a new one after opening file
+        std::unique_ptr<std::streambuf> oldbuf(rdbuf(new istreambuf(_fs.rdbuf())));
+        // call move assignment operator on istream which does not alter the stream buffer
+        std::istream::operator=(std::istream(rdbuf()));
     }
     bool is_open() const {
         return _fs.is_open();

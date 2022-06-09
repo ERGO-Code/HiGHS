@@ -24,12 +24,10 @@ TEST_CASE("highs-info", "[highs_info]") {
   return_status = highs.writeInfo("");
   REQUIRE(return_status == HighsStatus::kWarning);
 
-  // Only use IPX if IPX_ON and using 32-bit arithmetic
+  // Only use IPX if and using 32-bit arithmetic
   bool use_ipx = false;
-#ifdef IPX_ON
 #ifndef HIGHSINT64
   use_ipx = true;
-#endif
 #endif
   if (use_ipx) {
     return_status = highs.setOptionValue("solver", "ipm");

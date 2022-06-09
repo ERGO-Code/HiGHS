@@ -27,8 +27,7 @@
 
 using std::vector;
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
-                          const ObjSense sense = ObjSense::kMinimize);
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
 HighsStatus assessHessianDimensions(const HighsOptions& options,
                                     HighsHessian& hessian);
 void completeHessianDiagonal(const HighsOptions& options,

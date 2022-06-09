@@ -1024,9 +1024,9 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
 }
 
 void Presolve::trimA() {
-  HighsInt cntEl = 0;
-  for (HighsInt j = 0; j < numCol; ++j)
-    if (flagCol.at(j)) cntEl += nzCol.at(j);
+  //  HighsInt cntEl = 0;
+  //  for (HighsInt j = 0; j < numCol; ++j)
+  //    if (flagCol.at(j)) cntEl += nzCol.at(j);
 
   vector<pair<HighsInt, size_t>> vp;
   vp.reserve(numCol);

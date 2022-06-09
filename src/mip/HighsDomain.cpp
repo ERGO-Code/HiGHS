@@ -2579,8 +2579,10 @@ void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool) {
   if (&mipsolver->mipdata_->domain == this) return;
   if (mipsolver->mipdata_->domain.infeasible() || !infeasible_) return;
 
+  mipsolver->mipdata_->domain.propagate();
+  if (mipsolver->mipdata_->domain.infeasible()) return;
+
   ConflictSet conflictSet(*this);
-  // if (!conflictSet.resolvable(infeasible_pos)) return;
 
   conflictSet.conflictAnalysis(conflictPool);
 }
@@ -2590,6 +2592,10 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
                                    double proofrhs,
                                    HighsConflictPool& conflictPool) {
   if (&mipsolver->mipdata_->domain == this) return;
+
+  if (mipsolver->mipdata_->domain.infeasible()) return;
+
+  mipsolver->mipdata_->domain.propagate();
   if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
@@ -2602,6 +2608,12 @@ void HighsDomain::conflictAnalyzeReconvergence(
     const double* proofvals, HighsInt prooflen, double proofrhs,
     HighsConflictPool& conflictPool) {
   if (&mipsolver->mipdata_->domain == this) return;
+
+  if (mipsolver->mipdata_->domain.infeasible()) return;
+
+  mipsolver->mipdata_->domain.propagate();
+  if (mipsolver->mipdata_->domain.infeasible()) return;
+
   ConflictSet conflictSet(*this);
 
   HighsInt ninfmin;
