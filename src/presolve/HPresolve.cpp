@@ -2843,7 +2843,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 	rule_num_call_[kPresolveRuleSingletonRow]++;
 	const HighsInt num_deleted_rows0 = numDeletedRows;
 	const HighsInt num_deleted_cols0 = numDeletedCols;
-	const HPresolve::Result result = singletonRow(postsolve_stack, row);
+	const Result result = singletonRow(postsolve_stack, row);
 	updatePresolveRuleLog(kPresolveRuleSingletonRow,
 			      numDeletedCols-num_deleted_cols0,
 			      numDeletedRows-num_deleted_rows0);
@@ -2896,7 +2896,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       rule_num_call_[kPresolveRuleDoubletonEquation]++;
       const HighsInt num_deleted_rows0 = numDeletedRows;
       const HighsInt num_deleted_cols0 = numDeletedCols;
-      HPresolve::Result result = doubletonEq(postsolve_stack, row);
+      Result result = doubletonEq(postsolve_stack, row);
       updatePresolveRuleLog(kPresolveRuleDoubletonEquation,
 			    numDeletedCols-num_deleted_cols0,
 			    numDeletedRows-num_deleted_rows0);
@@ -4239,7 +4239,12 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
 
 HPresolve::Result HPresolve::removeDependentEquations(
     HighsPostsolveStack& postsolve_stack) {
+  if (!allow_rule_[kPresolveRuleDependentEquations]) return Result::kOk; 
   if (equations.empty()) return Result::kOk;
+
+  rule_num_call_[kPresolveRuleDependentEquations]++;
+  const HighsInt num_deleted_rows0 = numDeletedRows;
+  const HighsInt num_deleted_cols0 = numDeletedCols;
 
   HighsSparseMatrix matrix;
   matrix.num_col_ = equations.size();
@@ -4303,12 +4308,16 @@ HPresolve::Result HPresolve::removeDependentEquations(
                 (int)num_fictitious_rows_skipped);
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
+  updatePresolveRuleLog(kPresolveRuleDependentEquations,
+			numDeletedCols-num_deleted_cols0,
+			numDeletedRows-num_deleted_rows0);
   return Result::kOk;
 }
 
 HPresolve::Result HPresolve::removeDependentFreeCols(
     HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
+  if (!allow_rule_[kPresolveRuleDependentFreeCols]) return Result::kOk; 
 
   // todo the postsolve step does not work properly
   std::vector<HighsInt> freeCols;
@@ -6392,8 +6401,8 @@ std::string HPresolve::presolveRuleTypeToString(const HighsInt rule_type) {
     return "Duplicate col";
   } else if (rule_type == kPresolveRuleDoubletonEquation) {
     return "Doubleton equation";
-  } else if (rule_type == kPresolveRuleDependentEquation) {
-    return "Dependent equation";
+  } else if (rule_type == kPresolveRuleDependentEquations) {
+    return "Dependent equations";
   } else if (rule_type == kPresolveRuleEqualityRowAddition) {
     return "Equality row addition";
   } else if (rule_type == kPresolveRuleLinearTransform) {
@@ -6495,9 +6504,9 @@ void HPresolve::reportPresolveRulesAllowed(const bool report_allowed) {
   if (allow_rule_[kPresolveRuleDoubletonEquation] == report_allowed) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Doubleton equation\n");
-  if (allow_rule_[kPresolveRuleDependentEquation] == report_allowed) 
+  if (allow_rule_[kPresolveRuleDependentEquations] == report_allowed) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
-		 "Dependent equation\n");
+		 "Dependent equations\n");
   if (allow_rule_[kPresolveRuleEqualityRowAddition] == report_allowed) 
     highsLogUser(options->log_options, HighsLogType::kInfo,
 		 "Equality row addition\n");
