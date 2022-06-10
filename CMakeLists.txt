@@ -188,8 +188,6 @@ endif()
 # if zlib is found, then we can enable reading zlib-compressed input
 find_package(ZLIB 1.2.3)
 
-if (NOT FAST_BUILD)
-
 include(CPack)
 set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
@@ -211,6 +209,8 @@ message(STATUS "Git hash: " ${GITHASH})
 
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
+
+if (NOT FAST_BUILD)
 
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)

@@ -28,6 +28,26 @@ class TestHighsPy(unittest.TestCase):
         h.setOptionValue('log_to_console', False)
         return h
     
+    def get_infeasible_model(self):
+        inf = highspy.kHighsInf
+        lp = highspy.HighsLp()
+        lp.num_col_ = 2;
+        lp.num_row_ = 2;
+        lp.col_cost_ = np.array([10, 15], dtype=np.double)
+        lp.col_lower_ = np.array([0, 0], dtype=np.double)
+        lp.col_upper_ = np.array([inf, inf], dtype=np.double)
+        lp.row_lower_ = np.array([3, 1], dtype=np.double)
+        lp.row_upper_ = np.array([3, 1], dtype=np.double)
+        lp.a_matrix_.start_ = np.array([0, 2, 4])
+        lp.a_matrix_.index_ = np.array([0, 1, 0, 1])
+        lp.a_matrix_.value_ = np.array([2, 1, 1, 3], dtype=np.double)
+        lp.offset_ = 0;
+        h = highspy.Highs()
+        h.passModel(lp)
+        h.setOptionValue('log_to_console', False)
+        h.setOptionValue('presolve', 'off')
+        return h
+    
     def test_basics(self):
         inf = highspy.kHighsInf
         h = self.get_basic_model()
@@ -175,6 +195,14 @@ class TestHighsPy(unittest.TestCase):
         h.resetOptions()
         self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), orig_feas_tol)
 
+    def test_dual_ray(self):
+        h = self.get_infeasible_model()
+        h.setOptionValue('log_to_console', True)
+        h.run()
+        has_dual_ray = h.getDualRay()
+        print('has_dual_ray = ', has_dual_ray)
+        self.assertTrue(has_dual_ray)
+ 
     def test_check_solution_feasibility(self):
         h = self.get_basic_model()
         h.setOptionValue('log_to_console', True)
@@ -202,3 +230,4 @@ class TestHighsPy(unittest.TestCase):
             h.run()
         out = out.getvalue()
         self.assertIn('got a log message:  HighsLogType.kInfo an instance of Foo Presolving model', out)
+
