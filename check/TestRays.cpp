@@ -226,7 +226,7 @@ void testInfeasibleMps(const std::string model,
 
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
-  // Test dual ray for unbounded LP
+  // Test dual ray for infeasible LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kInfeasible;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);

@@ -1294,6 +1294,9 @@ std::string findModelObjectiveName(const HighsLp* lp,
     } else {
       objective_name = "NoObj";
     }
+    // If there are no row names, then the objective name is certainly
+    // OK
+    if (lp->row_names_.size() == 0) break;
     if (pass) objective_name += pass;
     // Ensure that the objective name doesn't clash with any row names
     bool ok_objective_name = true;
