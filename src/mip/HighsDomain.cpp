@@ -2197,7 +2197,7 @@ void HighsDomain::setDomainChangeStack(
     // For redundant branching bound changes we need to be more careful due to
     // symmetry handling. If these boundchanges are redundant simply because the
     // corresponding subtree was enumerated and hence the global bound updated,
-    // then we stiil need to keep their status as branching variables for
+    // then we still need to keep their status as branching variables for
     // computing correct stabilizers.
     // They can, however, be safely dropped if they are either strictly
     // redundant in the global domain, or if there is already a local bound

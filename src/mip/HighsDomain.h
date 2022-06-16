@@ -536,14 +536,25 @@ class HighsDomain {
     reducedstack.reserve(domchgstack_.size());
     branchingPositions.reserve(branchPos_.size());
     for (HighsInt i = 0; i < (HighsInt)domchgstack_.size(); ++i) {
+      // keep only the tightest bound change for each variable
+      if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
+           colLowerPos_[domchgstack_[i].column] != i) ||
+          (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
+           colUpperPos_[domchgstack_[i].column] != i))
+        continue;
+
       if (domchgreason_[i].type == Reason::kBranching)
         branchingPositions.push_back(reducedstack.size());
-      else if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
-                // keep only the tightest bound change for each variable
-                colLowerPos_[domchgstack_[i].column] != i) ||
-               (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
-                colUpperPos_[domchgstack_[i].column] != i))
-        continue;
+      else {
+        HighsInt k = i;
+        while (prevboundval_[k].second != -1) {
+          k = prevboundval_[k].second;
+          if (domchgreason_[k].type == Reason::kBranching) {
+            branchingPositions.push_back(reducedstack.size());
+            break;
+          }
+        }
+      }
 
       reducedstack.push_back(domchgstack_[i]);
     }
