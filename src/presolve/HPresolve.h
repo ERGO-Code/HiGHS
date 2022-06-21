@@ -10,7 +10,7 @@
 /*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file presolve/HAggregator.h
+/**@file presolve/HPresolve.h
  * @brief
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_

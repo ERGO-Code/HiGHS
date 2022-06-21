@@ -128,7 +128,6 @@ set(sources
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
     presolve/ICrashX.cpp
-    presolve/HAggregator.cpp
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -263,7 +262,6 @@ set(headers
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
-    presolve/HAggregator.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
@@ -510,7 +508,6 @@ target_sources(libhighs PRIVATE
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
-    presolve/HAggregator.cpp
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
@@ -695,7 +692,6 @@ set(headers_fast_build_
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
-    presolve/HAggregator.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
