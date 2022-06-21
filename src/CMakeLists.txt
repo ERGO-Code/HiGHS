@@ -128,16 +128,10 @@ set(sources
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
     presolve/ICrashX.cpp
-    presolve/HAggregator.cpp
-    presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
-    presolve/HPreData.cpp
     presolve/HPresolve.cpp
-    presolve/PresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
-    presolve/Presolve.cpp
-    presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
@@ -268,17 +262,10 @@ set(headers
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
-    presolve/ICrashX.h
-    presolve/HAggregator.h
-    presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
-    presolve/HPreData.h
     presolve/HPresolve.h
-    presolve/PresolveAnalysis.h
     presolve/PresolveComponent.h
-    presolve/Presolve.h
-    presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
     util/FactorTimer.h
@@ -529,16 +516,10 @@ target_sources(libhighs PRIVATE
     model/HighsModel.cpp
     parallel/HighsTaskExecutor.cpp
     presolve/ICrashX.cpp
-    presolve/HAggregator.cpp
-    presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
-    presolve/HPreData.cpp
     presolve/HPresolve.cpp
-    presolve/PresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
-    presolve/Presolve.cpp
-    presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
@@ -719,16 +700,10 @@ set(headers_fast_build_
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
-    presolve/HAggregator.h
-    presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
-    presolve/HPreData.h
     presolve/HPresolve.h
-    presolve/PresolveAnalysis.h
     presolve/PresolveComponent.h
-    presolve/Presolve.h
-    presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
     util/FactorTimer.h
