@@ -142,6 +142,9 @@ class HPresolve {
     kStopped,
   };
 
+  HPresolveAnalysis analysis_;
+
+  /*
   std::vector<bool> allow_rule_;
   std::vector<uint64_t> rule_num_call_;
   std::vector<HighsInt> rule_num_col_removed_;
@@ -149,6 +152,7 @@ class HPresolve {
   std::vector<HighsInt> reduction_num_call_;
   std::vector<HighsInt> reduction_num_col_removed_;
   std::vector<HighsInt> reduction_num_row_removed_;
+  */
   // private functions for different shared functionality and matrix
   // modification
 
@@ -348,6 +352,7 @@ class HPresolve {
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
 
+  /*
   void reportPresolveRulesAllowed(const bool report_allowed = true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
   std::string presolveRuleTypeToString(const HighsInt rule_type);
@@ -359,6 +364,7 @@ class HPresolve {
                                   const HighsInt num_removed_row_ = -1);
   bool analysePresolveReductionLog(const bool report = false);
   bool analysePresolveRuleLog(const bool report = false);
+  */
 };
 
 }  // namespace presolve
