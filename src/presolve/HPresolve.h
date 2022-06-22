@@ -125,10 +125,6 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
-  // store original problem sizes for reference
-  HighsInt original_num_col_;
-  HighsInt original_num_row_;
-
   // store old problem sizes to compute percentage reductions in
   // presolve loop
   HighsInt oldNumCol;
@@ -144,15 +140,6 @@ class HPresolve {
 
   HPresolveAnalysis analysis_;
 
-  /*
-  std::vector<bool> allow_rule_;
-  std::vector<uint64_t> rule_num_call_;
-  std::vector<HighsInt> rule_num_col_removed_;
-  std::vector<HighsInt> rule_num_row_removed_;
-  std::vector<HighsInt> reduction_num_call_;
-  std::vector<HighsInt> reduction_num_col_removed_;
-  std::vector<HighsInt> reduction_num_row_removed_;
-  */
   // private functions for different shared functionality and matrix
   // modification
 
@@ -351,20 +338,6 @@ class HPresolve {
   void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
-
-  /*
-  void reportPresolveRulesAllowed(const bool report_allowed = true);
-  std::string presolveReductionTypeToString(const HighsInt reduction_type);
-  std::string presolveRuleTypeToString(const HighsInt rule_type);
-  void updatePresolveRuleLog(const HighsInt rule_type,
-                             const HighsInt num_removed_col,
-                             const HighsInt num_removed_row);
-  void updatePresolveReductionLog(const HighsInt reduction_type,
-                                  const HighsInt num_removed_col_ = -1,
-                                  const HighsInt num_removed_row_ = -1);
-  bool analysePresolveReductionLog(const bool report = false);
-  bool analysePresolveRuleLog(const bool report = false);
-  */
 };
 
 }  // namespace presolve
