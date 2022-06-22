@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "mip/HighsDomainChange.h"
