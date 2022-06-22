@@ -28,59 +28,13 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipSolver.h"
+#include "presolve/HPresolveAnalysis.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsMatrixSlice.h"
 
 namespace presolve {
-
-enum PresolveRuleType : uint8_t {
-  kPresolveRuleMin = 0,
-  kPresolveRuleEmptyRow = kPresolveRuleMin,
-  kPresolveRuleSingletonRow,
-  kPresolveRuleRedundantRow,
-  kPresolveRuleForcingRow,
-  kPresolveRuleDuplicateRow,
-  kPresolveRuleFixedCol,
-  kPresolveRuleFixedColAtLower,
-  kPresolveRuleFixedColAtUpper,
-  kPresolveRuleFixedColAtZero,
-  kPresolveRuleFreeColSubstitution,
-  kPresolveRuleForcingCol,
-  kPresolveRuleForcingColRemovedRow,
-  kPresolveRuleDuplicateCol,
-  kPresolveRuleDoubletonEquation,
-  kPresolveRuleDependentEquations,
-  kPresolveRuleDependentFreeCols,
-  kPresolveRuleEqualityRowAddition,
-  kPresolveRuleLinearTransform,
-  kPresolveRuleMax = kPresolveRuleLinearTransform,
-  kPresolveRuleCount,
-};
-
-enum PresolveReductionType : uint8_t {
-  kPresolveReductionMin = 0,
-  kPresolveReductionEmptyRow = kPresolveReductionMin,
-  kPresolveReductionSingletonRow,
-  kPresolveReductionRedundantRow,
-  kPresolveReductionForcingRow,
-  kPresolveReductionDuplicateRow,
-  kPresolveReductionFixedCol,
-  kPresolveReductionFixedColAtLower,
-  kPresolveReductionFixedColAtUpper,
-  kPresolveReductionFixedColAtZero,
-  kPresolveReductionFreeColSubstitution,
-  kPresolveReductionForcingCol,
-  kPresolveReductionForcingColRemovedRow,
-  kPresolveReductionDuplicateCol,
-  kPresolveReductionDoubletonEquation,
-  kPresolveReductionDependentEquation,
-  kPresolveReductionEqualityRowAddition,
-  kPresolveReductionLinearTransform,
-  kPresolveReductionMax = kPresolveReductionLinearTransform,
-  kPresolveReductionCount,
-};
 
 class HighsPostsolveStack;
 

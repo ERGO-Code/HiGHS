@@ -6731,5 +6731,4 @@ bool HPresolve::analysePresolveReductionLog(const bool report) {
   }
   return true;
 }
-
 }  // namespace presolve
