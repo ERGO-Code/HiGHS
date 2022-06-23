@@ -2366,6 +2366,7 @@ void HPresolve::toCSR(std::vector<double>& ARval,
 
 HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
                                          HighsInt row) {
+  analysis_.startPresolveRuleLog(kPresolveRuleDoubletonEquation);
   assert(!rowDeleted[row]);
   assert(rowsize[row] == 2);
   assert(model->row_lower_[row] == model->row_upper_[row]);
@@ -2527,6 +2528,8 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   analysis_.updatePresolveReductionLog(kPresolveReductionDoubletonEquation, 1,
                                        1);
   substitute(substcol, staycol, rhs / substcoef, -staycoef / substcoef);
+
+  analysis_.stopPresolveRuleLog(kPresolveRuleDoubletonEquation);
 
   // since a column was deleted we might have new row singletons which we
   // immediately remove
@@ -2835,23 +2838,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         return Result::kPrimalInfeasible;
       if (analysis_.allow_rule_[kPresolveRuleEmptyRow]) {
         // Allow removal of empty row
-        analysis_.rule_num_call_[kPresolveRuleEmptyRow]++;
+        analysis_.startPresolveRuleLog(kPresolveRuleEmptyRow);
         postsolve_stack.redundantRow(row);
         markRowDeleted(row);
         analysis_.updatePresolveReductionLog(kPresolveReductionEmptyRow);
-        analysis_.updatePresolveRuleLog(kPresolveRuleEmptyRow, 0, 1);
+        analysis_.stopPresolveRuleLog(kPresolveRuleEmptyRow);
       }
       return checkLimits(postsolve_stack);
     case 1:
       if (analysis_.allow_rule_[kPresolveRuleSingletonRow]) {
         // Allow removal of singleton row
-        analysis_.rule_num_call_[kPresolveRuleSingletonRow]++;
-        const HighsInt num_deleted_rows0 = numDeletedRows;
-        const HighsInt num_deleted_cols0 = numDeletedCols;
+        analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
         const Result result = singletonRow(postsolve_stack, row);
-        analysis_.updatePresolveRuleLog(kPresolveRuleSingletonRow,
-                                        numDeletedCols - num_deleted_cols0,
-                                        numDeletedRows - num_deleted_rows0);
+        analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
         return result;
       }
   }
@@ -2863,8 +2862,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   if (analysis_.allow_rule_[kPresolveRuleRedundantRow]) {
     // Allow removal of redundant rows
-    analysis_.rule_num_call_[kPresolveRuleRedundantRow]++;
-
     if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
         impliedRowUpper < model->row_lower_[row] - primal_feastol) {
       // model infeasible
@@ -2874,14 +2871,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
         impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
       // row is redundant
-      const HighsInt num_deleted_rows0 = numDeletedRows;
-      const HighsInt num_deleted_cols0 = numDeletedCols;
+      analysis_.startPresolveRuleLog(kPresolveRuleRedundantRow);
       postsolve_stack.redundantRow(row);
       removeRow(row);
       analysis_.updatePresolveReductionLog(kPresolveReductionRedundantRow);
-      analysis_.updatePresolveRuleLog(kPresolveRuleRedundantRow,
-                                      numDeletedCols - num_deleted_cols0,
-                                      numDeletedRows - num_deleted_rows0);
+      analysis_.stopPresolveRuleLog(kPresolveRuleRedundantRow);
       return checkLimits(postsolve_stack);
     }
   }
@@ -2898,14 +2892,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       model->row_lower_[row] = rowLower;
       model->row_upper_[row] = rowUpper;
       // Allow rule to consider doubleton equations
-      analysis_.rule_num_call_[kPresolveRuleDoubletonEquation]++;
-      const HighsInt num_deleted_rows0 = numDeletedRows;
-      const HighsInt num_deleted_cols0 = numDeletedCols;
-      Result result = doubletonEq(postsolve_stack, row);
-      analysis_.updatePresolveRuleLog(kPresolveRuleDoubletonEquation,
-                                      numDeletedCols - num_deleted_cols0,
-                                      numDeletedRows - num_deleted_rows0);
-      return result;
+      return doubletonEq(postsolve_stack, row);
     }
   }
 
@@ -3496,9 +3483,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       }
 
       if (nfixings == rowsize[row]) {
-        analysis_.rule_num_call_[kPresolveRuleForcingRow]++;
-        const HighsInt num_deleted_rows0 = numDeletedRows;
-        const HighsInt num_deleted_cols0 = numDeletedCols;
+        analysis_.startPresolveRuleLog(kPresolveRuleForcingRow);
         postsolve_stack.forcingRow(row, rowVector, model->row_lower_[row],
                                    HighsPostsolveStack::RowType::kGeq);
         // already mark the row as deleted, since otherwise it would be
@@ -3537,6 +3522,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 kPresolveReductionFixedColAtLower);
           }
         }
+        analysis_.stopPresolveRuleLog(kPresolveRuleForcingRow);
         // now the row might be empty, but not necessarily because the implied
         // column bounds might be implied by other rows in which case we cannot
         // fix the column
@@ -3545,9 +3531,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
         // if there are any new row singletons, also remove them immediately
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        analysis_.updatePresolveRuleLog(kPresolveRuleForcingRow,
-                                        numDeletedCols - num_deleted_cols0,
-                                        numDeletedRows - num_deleted_rows0);
         return checkLimits(postsolve_stack);
       }
     } else if (impliedRowLower >= model->row_upper_[row] - primal_feastol) {
@@ -3568,9 +3551,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         }
       }
       if (nfixings == rowsize[row]) {
-        analysis_.rule_num_call_[kPresolveRuleForcingRow]++;
-        const HighsInt num_deleted_rows0 = numDeletedRows;
-        const HighsInt num_deleted_cols0 = numDeletedCols;
+        analysis_.startPresolveRuleLog(kPresolveRuleForcingRow);
         postsolve_stack.forcingRow(row, rowVector, model->row_upper_[row],
                                    HighsPostsolveStack::RowType::kLeq);
         markRowDeleted(row);
@@ -3604,15 +3585,12 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 kPresolveReductionFixedColAtLower);
           }
         }
-
+        analysis_.stopPresolveRuleLog(kPresolveRuleForcingRow);
         postsolve_stack.redundantRow(row);
         // Row removal accounted for above
 
         // if there are any new row singletons, also remove them immediately
         HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        analysis_.updatePresolveRuleLog(kPresolveRuleForcingRow,
-                                        numDeletedCols - num_deleted_cols0,
-                                        numDeletedRows - num_deleted_rows0);
         return checkLimits(postsolve_stack);
       }
     }
@@ -4250,9 +4228,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
     return Result::kOk;
   if (equations.empty()) return Result::kOk;
 
-  analysis_.rule_num_call_[kPresolveRuleDependentEquations]++;
-  const HighsInt num_deleted_rows0 = numDeletedRows;
-  const HighsInt num_deleted_cols0 = numDeletedCols;
+  analysis_.startPresolveRuleLog(kPresolveRuleDependentEquations);
 
   HighsSparseMatrix matrix;
   matrix.num_col_ = equations.size();
@@ -4316,9 +4292,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
                 (int)num_fictitious_rows_skipped);
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
-  analysis_.updatePresolveRuleLog(kPresolveRuleDependentEquations,
-                                  numDeletedCols - num_deleted_cols0,
-                                  numDeletedRows - num_deleted_rows0);
+  analysis_.stopPresolveRuleLog(kPresolveRuleDependentEquations);
   return Result::kOk;
 }
 

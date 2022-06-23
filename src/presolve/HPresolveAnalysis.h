@@ -16,7 +16,8 @@
 #ifndef PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
 
-enum PresolveRuleType : uint8_t {
+enum PresolveRuleType : int {
+  kPresolveRuleIllegal = -1,
   kPresolveRuleMin = 0,
   kPresolveRuleEmptyRow = kPresolveRuleMin,
   kPresolveRuleSingletonRow,
@@ -76,6 +77,11 @@ class HPresolveAnalysis {
 
  public:
   std::vector<bool> allow_rule_;
+
+  int log_rule_type_;
+  HighsInt num_deleted_rows0_;
+  HighsInt num_deleted_cols0_;
+
   std::vector<uint64_t> rule_num_call_;
   std::vector<HighsInt> rule_num_col_removed_;
   std::vector<HighsInt> rule_num_row_removed_;
@@ -89,9 +95,8 @@ class HPresolveAnalysis {
   void reportPresolveRulesAllowed(const bool report_allowed = true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
   std::string presolveRuleTypeToString(const HighsInt rule_type);
-  void updatePresolveRuleLog(const HighsInt rule_type,
-                             const HighsInt num_removed_col,
-                             const HighsInt num_removed_row);
+  void startPresolveRuleLog(const HighsInt rule_type);
+  void stopPresolveRuleLog(const HighsInt rule_type);
   void updatePresolveReductionLog(const HighsInt reduction_type,
                                   const HighsInt num_removed_col_ = -1,
                                   const HighsInt num_removed_row_ = -1);

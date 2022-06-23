@@ -27,6 +27,9 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     allow_rule_[rule_ix] = !(options->presolve_rule_off & bit);
     bit *= 2;
   }
+  log_rule_type_ = kPresolveRuleIllegal;
+  num_deleted_rows0_ = 0;
+  num_deleted_cols0_ = 0;
   rule_num_call_.assign(kPresolveRuleCount, 0);
   rule_num_col_removed_.assign(kPresolveRuleCount, 0);
   rule_num_row_removed_.assign(kPresolveRuleCount, 0);
@@ -176,23 +179,46 @@ void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
                  "Linear transform\n");
 }
 
-void HPresolveAnalysis::updatePresolveRuleLog(const HighsInt rule_type,
-                                              const HighsInt num_removed_col,
-                                              const HighsInt num_removed_row) {
+void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
   assert(allow_rule_[rule_type]);
-  assert(num_removed_col >= 0);
+  rule_num_call_[rule_type]++;
+  // Check that stop has been called since the last start
+  assert(log_rule_type_ == kPresolveRuleIllegal);
+  log_rule_type_ = rule_type;
+  // Check that no un-logged reducitons have been performed
+  assert(num_deleted_rows0_ == *numDeletedRows);
+  assert(num_deleted_cols0_ == *numDeletedCols);
+  num_deleted_rows0_ = *numDeletedRows;
+  num_deleted_cols0_ = *numDeletedCols;
+}
+
+void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
+  assert(rule_type == log_rule_type_);
+  const HighsInt num_removed_row = *numDeletedRows - num_deleted_rows0_;
+  const HighsInt num_removed_col = *numDeletedCols - num_deleted_cols0_;
   assert(num_removed_row >= 0);
+  assert(num_removed_col >= 0);
   rule_num_col_removed_[rule_type] += num_removed_col;
   rule_num_row_removed_[rule_type] += num_removed_row;
+
+  // Set the rule type to be illegal to idicate that stop has been
+  // called, and update the record of num_deleted_rows/cols
+  log_rule_type_ = kPresolveRuleIllegal;
+  num_deleted_rows0_ = *numDeletedRows;
+  num_deleted_cols0_ = *numDeletedCols;
+
   const bool report = true;
+  const int check_num_deleted_cols0_ = 637;
   if (report)
     printf("%-25s Call %9d: (%3d, %3d) (%3d, %3d)\n",
            presolveRuleTypeToString(rule_type).c_str(),
            (int)rule_num_call_[rule_type], (int)num_removed_col,
            (int)num_removed_row, (int)rule_num_col_removed_[rule_type],
            (int)rule_num_row_removed_[rule_type]);
-  //  analysePresolveRuleLog();
+  if (num_deleted_cols0_ == check_num_deleted_cols0_) {
+    printf("num_deleted_cols0_ = %d\n", check_num_deleted_cols0_);
+  }
 }
 
 bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
