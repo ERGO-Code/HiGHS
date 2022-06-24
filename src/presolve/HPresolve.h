@@ -10,7 +10,7 @@
 /*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file presolve/HAggregator.h
+/**@file presolve/HPresolve.h
  * @brief
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
@@ -28,59 +28,13 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipSolver.h"
+#include "presolve/HPresolveAnalysis.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsMatrixSlice.h"
 
 namespace presolve {
-
-enum PresolveRuleType : uint8_t {
-  kPresolveRuleMin = 0,
-  kPresolveRuleEmptyRow = kPresolveRuleMin,
-  kPresolveRuleSingletonRow,
-  kPresolveRuleRedundantRow,
-  kPresolveRuleForcingRow,
-  kPresolveRuleDuplicateRow,
-  kPresolveRuleFixedCol,
-  kPresolveRuleFixedColAtLower,
-  kPresolveRuleFixedColAtUpper,
-  kPresolveRuleFixedColAtZero,
-  kPresolveRuleFreeColSubstitution,
-  kPresolveRuleForcingCol,
-  kPresolveRuleForcingColRemovedRow,
-  kPresolveRuleDuplicateCol,
-  kPresolveRuleDoubletonEquation,
-  kPresolveRuleDependentEquations,
-  kPresolveRuleDependentFreeCols,
-  kPresolveRuleEqualityRowAddition,
-  kPresolveRuleLinearTransform,
-  kPresolveRuleMax = kPresolveRuleLinearTransform,
-  kPresolveRuleCount,
-};
-
-enum PresolveReductionType : uint8_t {
-  kPresolveReductionMin = 0,
-  kPresolveReductionEmptyRow = kPresolveReductionMin,
-  kPresolveReductionSingletonRow,
-  kPresolveReductionRedundantRow,
-  kPresolveReductionForcingRow,
-  kPresolveReductionDuplicateRow,
-  kPresolveReductionFixedCol,
-  kPresolveReductionFixedColAtLower,
-  kPresolveReductionFixedColAtUpper,
-  kPresolveReductionFixedColAtZero,
-  kPresolveReductionFreeColSubstitution,
-  kPresolveReductionForcingCol,
-  kPresolveReductionForcingColRemovedRow,
-  kPresolveReductionDuplicateCol,
-  kPresolveReductionDoubletonEquation,
-  kPresolveReductionDependentEquation,
-  kPresolveReductionEqualityRowAddition,
-  kPresolveReductionLinearTransform,
-  kPresolveReductionMax = kPresolveReductionLinearTransform,
-  kPresolveReductionCount,
-};
 
 class HighsPostsolveStack;
 
@@ -171,10 +125,6 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
-  // store original problem sizes for reference
-  HighsInt original_num_col_;
-  HighsInt original_num_row_;
-
   // store old problem sizes to compute percentage reductions in
   // presolve loop
   HighsInt oldNumCol;
@@ -188,13 +138,8 @@ class HPresolve {
     kStopped,
   };
 
-  std::vector<bool> allow_rule_;
-  std::vector<uint64_t> rule_num_call_;
-  std::vector<HighsInt> rule_num_col_removed_;
-  std::vector<HighsInt> rule_num_row_removed_;
-  std::vector<HighsInt> reduction_num_call_;
-  std::vector<HighsInt> reduction_num_col_removed_;
-  std::vector<HighsInt> reduction_num_row_removed_;
+  HPresolveAnalysis analysis_;
+
   // private functions for different shared functionality and matrix
   // modification
 
@@ -393,18 +338,6 @@ class HPresolve {
   void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
-
-  void reportPresolveRulesAllowed(const bool report_allowed = true);
-  std::string presolveReductionTypeToString(const HighsInt reduction_type);
-  std::string presolveRuleTypeToString(const HighsInt rule_type);
-  void updatePresolveRuleLog(const HighsInt rule_type,
-                             const HighsInt num_removed_col,
-                             const HighsInt num_removed_row);
-  void updatePresolveReductionLog(const HighsInt reduction_type,
-                                  const HighsInt num_removed_col_ = -1,
-                                  const HighsInt num_removed_row_ = -1);
-  bool analysePresolveReductionLog(const bool report = false);
-  bool analysePresolveRuleLog(const bool report = false);
 };
 
 }  // namespace presolve

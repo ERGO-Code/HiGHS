@@ -26,7 +26,6 @@
 
 #include "HighsPostsolveStack.h"
 #include "lp_data/HighsLp.h"
-#include "presolve/HAggregator.h"
 #include "util/HighsComponent.h"
 #include "util/HighsTimer.h"
 
