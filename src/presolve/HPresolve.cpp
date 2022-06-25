@@ -2540,6 +2540,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
 
 HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
                                           HighsInt row) {
+        analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
   assert(!rowDeleted[row]);
   assert(rowsize[row] == 1);
 
@@ -2668,9 +2669,14 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   } else if (upperTightened)
     changeColUpper(col, ub);
 
-  if (!colDeleted[col] && colsize[col] == 0)
-    return emptyCol(postsolve_stack, col);
+  analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
 
+  if (!colDeleted[col] && colsize[col] == 0) {
+    analysis_.startPresolveRuleLog(kPresolveRuleEmptyCol);
+    Result result = emptyCol(postsolve_stack, col);
+    analysis_.stopPresolveRuleLog(kPresolveRuleEmptyCol);
+    return result;
+  }
   return checkLimits(postsolve_stack);
 }
 
@@ -2689,26 +2695,32 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // check for dominated column
   if (colDualLower > options->dual_feasibility_tolerance) {
-    if (model->col_lower_[col] == -kHighsInf)
+    if (model->col_lower_[col] == -kHighsInf) {
       return Result::kDualInfeasible;
-    else
-      fixColToLower(postsolve_stack, col);
+    }
+    analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
+    fixColToLower(postsolve_stack, col);
+    analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
     return checkLimits(postsolve_stack);
   }
 
   if (colDualUpper < -options->dual_feasibility_tolerance) {
-    if (model->col_upper_[col] == kHighsInf)
+    if (model->col_upper_[col] == kHighsInf) {
       return Result::kDualInfeasible;
-    else
-      fixColToUpper(postsolve_stack, col);
+    }
+    analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
+    fixColToUpper(postsolve_stack, col);
+    analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
     return checkLimits(postsolve_stack);
   }
 
   // check for weakly dominated column
   if (colDualUpper <= options->dual_feasibility_tolerance) {
-    if (model->col_upper_[col] != kHighsInf)
+    if (model->col_upper_[col] != kHighsInf) {
+      analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
       fixColToUpper(postsolve_stack, col);
-    else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
+      analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
+    } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
       // todo: forcing column, since this implies colDual >= 0 and we
       // already checked that colDual <= 0 and since the cost are 0.0
       // all the rows are at a dual multiplier of zero and we can determine
@@ -2717,6 +2729,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       // which is chosen such that the values of all rows are primal feasible
       // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
       // colsize[col]);
+      analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
       postsolve_stack.forcingColumn(col, getColumnVector(col),
                                     model->col_cost_[col],
                                     model->col_lower_[col], true);
@@ -2735,17 +2748,21 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         analysis_.updatePresolveReductionLog(
             kPresolveReductionForcingColRemovedRow);
       }
+      analysis_.stopPresolveRuleLog(kPresolveRuleForcingCol);
     }
     return checkLimits(postsolve_stack);
   }
   if (colDualLower >= -options->dual_feasibility_tolerance) {
-    if (model->col_lower_[col] != -kHighsInf)
+    if (model->col_lower_[col] != -kHighsInf) {
+      analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
       fixColToLower(postsolve_stack, col);
-    else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
+      analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
+    } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
       // forcing column, since this implies colDual <= 0 and we already checked
       // that colDual >= 0
       // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
       // colsize[col]);
+      analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
       postsolve_stack.forcingColumn(col, getColumnVector(col),
                                     model->col_cost_[col],
                                     model->col_upper_[col], false);
@@ -2764,6 +2781,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         analysis_.updatePresolveReductionLog(
             kPresolveReductionForcingColRemovedRow);
       }
+      analysis_.stopPresolveRuleLog(kPresolveRuleForcingCol);
     }
     return checkLimits(postsolve_stack);
   }
@@ -2848,10 +2866,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     case 1:
       if (analysis_.allow_rule_[kPresolveRuleSingletonRow]) {
         // Allow removal of singleton row
-        analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
-        const Result result = singletonRow(postsolve_stack, row);
-        analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
-        return result;
+        return singletonRow(postsolve_stack, row);
       }
   }
 
@@ -3647,19 +3662,25 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       postsolve_stack.removedFixedCol(col, model->col_lower_[col],
                                       model->col_cost_[col],
                                       getColumnVector(col));
+      analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
       removeFixedCol(col);
+      analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
       analysis_.updatePresolveReductionLog(kPresolveReductionFixedCol);
       return checkLimits(postsolve_stack);
     }
   }
 
   switch (colsize[col]) {
-    case 0:
-      return emptyCol(postsolve_stack, col);
-    case 1:
-      return singletonCol(postsolve_stack, col);
-    default:
-      break;
+  case 0: {
+    analysis_.startPresolveRuleLog(kPresolveRuleEmptyCol);
+    Result result = emptyCol(postsolve_stack, col);
+    analysis_.stopPresolveRuleLog(kPresolveRuleEmptyCol);
+    return result;
+  }
+  case 1:
+    return singletonCol(postsolve_stack, col);
+  default:
+    break;
   }
 
   double colDualUpper =
