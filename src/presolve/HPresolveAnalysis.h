@@ -42,29 +42,6 @@ enum PresolveRuleType : int {
   kPresolveRuleCount,
 };
 
-enum PresolveReductionType : uint8_t {
-  kPresolveReductionMin = 0,
-  kPresolveReductionEmptyRow = kPresolveReductionMin,
-  kPresolveReductionSingletonRow,
-  kPresolveReductionRedundantRow,
-  kPresolveReductionForcingRow,
-  kPresolveReductionDuplicateRow,
-  kPresolveReductionFixedCol,
-  kPresolveReductionFixedColAtLower,
-  kPresolveReductionFixedColAtUpper,
-  kPresolveReductionFixedColAtZero,
-  kPresolveReductionFreeColSubstitution,
-  kPresolveReductionForcingCol,
-  kPresolveReductionForcingColRemovedRow,
-  kPresolveReductionDuplicateCol,
-  kPresolveReductionDoubletonEquation,
-  kPresolveReductionDependentEquation,
-  kPresolveReductionEqualityRowAddition,
-  kPresolveReductionLinearTransform,
-  kPresolveReductionMax = kPresolveReductionLinearTransform,
-  kPresolveReductionCount,
-};
-
 class HPresolveAnalysis {
   const HighsLp* model;
   const HighsOptions* options;
@@ -89,9 +66,6 @@ class HPresolveAnalysis {
   std::vector<uint64_t> rule_num_call_;
   std::vector<HighsInt> rule_num_col_removed_;
   std::vector<HighsInt> rule_num_row_removed_;
-  std::vector<HighsInt> reduction_num_call_;
-  std::vector<HighsInt> reduction_num_col_removed_;
-  std::vector<HighsInt> reduction_num_row_removed_;
   // for LP presolve
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);
@@ -101,10 +75,6 @@ class HPresolveAnalysis {
   std::string presolveRuleTypeToString(const HighsInt rule_type);
   void startPresolveRuleLog(const HighsInt rule_type);
   void stopPresolveRuleLog(const HighsInt rule_type);
-  void updatePresolveReductionLog(const HighsInt reduction_type,
-                                  const HighsInt num_removed_col_ = -1,
-                                  const HighsInt num_removed_row_ = -1);
-  bool analysePresolveReductionLog(const bool report = false);
   bool analysePresolveRuleLog(const bool report = false);
   friend class HPresolve;
 };
