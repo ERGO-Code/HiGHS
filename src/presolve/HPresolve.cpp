@@ -2571,6 +2571,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
       analysis_.updatePresolveReductionLog(kPresolveReductionSingletonRow);
+      analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
       return checkLimits(postsolve_stack);
     }
   } else {
@@ -2580,6 +2581,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
             model->row_lower_[row] - primal_feastol) {
       postsolve_stack.redundantRow(row);
       analysis_.updatePresolveReductionLog(kPresolveReductionSingletonRow);
+      analysis_.stopPresolveRuleLog(kPresolveRuleSingletonRow);
       return checkLimits(postsolve_stack);
     }
   }

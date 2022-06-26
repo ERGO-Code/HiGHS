@@ -180,8 +180,8 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
   assert(allow_rule_[rule_type]);
   const int check_rule = kPresolveRuleDominatedCol;
-  printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", rule_type,
-	 *numDeletedRows, *numDeletedCols,
+  printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", 
+	 *numDeletedRows, *numDeletedCols, rule_type,
 	 presolveRuleTypeToString(rule_type).c_str());
   if (rule_type == check_rule) {
     printf(">> startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
@@ -203,12 +203,18 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   assert(num_deleted_cols0_ == *numDeletedCols);
   num_deleted_rows0_ = *numDeletedRows;
   num_deleted_cols0_ = *numDeletedCols;
+  const int check_num_deleted_rows0_ = 255;
+  const int check_num_deleted_cols0_ = 688;
+  if (num_deleted_rows0_ == check_num_deleted_rows0_ &&
+      num_deleted_cols0_ == check_num_deleted_cols0_) {
+    printf("num_deleted (%d, %d)\n", num_deleted_rows0_, num_deleted_cols0_);
+  }
 }
 
 void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
   assert(rule_type == log_rule_type_);
-  printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", rule_type,
-	 *numDeletedRows, *numDeletedCols,
+  printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", 
+	 *numDeletedRows, *numDeletedCols, rule_type,
 	 presolveRuleTypeToString(rule_type).c_str());
   const int check_rule = kPresolveRuleDominatedCol;
   if (rule_type == check_rule) {
