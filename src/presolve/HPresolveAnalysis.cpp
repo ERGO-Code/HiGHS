@@ -27,6 +27,8 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     allow_rule_[rule_ix] = !(options->presolve_rule_off & bit);
     bit *= 2;
   }
+  allow_logging_ = true;
+  logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
   num_deleted_rows0_ = 0;
   num_deleted_cols0_ = 0;
@@ -75,6 +77,8 @@ std::string HPresolveAnalysis::presolveRuleTypeToString(
     return "Dependent equations";
   } else if (rule_type == kPresolveRuleEqualityRowAddition) {
     return "Equality row addition";
+  } else if (rule_type == kPresolveRuleAggregator) {
+    return "Aggregator";
   } else if (rule_type == kPresolveRuleLinearTransform) {
     return "Linear transform";
   }
@@ -149,7 +153,8 @@ void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
   if (allow_rule_[kPresolveRuleFixedCol] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo, "Fixed column\n");
   if (allow_rule_[kPresolveRuleSingletonCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Singleton column\n");
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Singleton column\n");
   if (allow_rule_[kPresolveRuleFreeColSubstitution] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Free col substitution\n");
@@ -171,22 +176,27 @@ void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
   if (allow_rule_[kPresolveRuleEqualityRowAddition] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Equality row addition\n");
+  if (allow_rule_[kPresolveRuleAggregator] == report_allowed)
+    highsLogUser(options->log_options, HighsLogType::kInfo, "Aggregator\n");
   if (allow_rule_[kPresolveRuleLinearTransform] == report_allowed)
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Linear transform\n");
 }
 
 void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
+  assert(logging_on_);
   assert(rule_type >= kPresolveRuleMin && rule_type <= kPresolveRuleMax);
   assert(allow_rule_[rule_type]);
+  // Prevent any future calls to "start" until logging is on again
+  logging_on_ = false;
   const int check_rule = kPresolveRuleDominatedCol;
-  printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", 
-	 *numDeletedRows, *numDeletedCols, rule_type,
-	 presolveRuleTypeToString(rule_type).c_str());
+  printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
+         *numDeletedCols, rule_type,
+         presolveRuleTypeToString(rule_type).c_str());
   if (rule_type == check_rule) {
     printf(">> startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
-	   *numDeletedRows, *numDeletedCols,
-	   presolveRuleTypeToString(check_rule).c_str());
+           *numDeletedRows, *numDeletedCols,
+           presolveRuleTypeToString(check_rule).c_str());
   }
   rule_num_call_[rule_type]++;
   // Check that stop has been called since the last start
@@ -195,10 +205,10 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   // Check that no un-logged reductions have been performed
   if (num_deleted_rows0_ != *numDeletedRows)
     printf("%d = num_deleted_rows0_ != *numDeletedRows = %d\n",
-	   num_deleted_rows0_, *numDeletedRows);
+           num_deleted_rows0_, *numDeletedRows);
   if (num_deleted_cols0_ != *numDeletedCols)
     printf("%d = num_deleted_cols0_ != *numDeletedCols = %d\n",
-	   num_deleted_cols0_, *numDeletedCols);
+           num_deleted_cols0_, *numDeletedCols);
   assert(num_deleted_rows0_ == *numDeletedRows);
   assert(num_deleted_cols0_ == *numDeletedCols);
   num_deleted_rows0_ = *numDeletedRows;
@@ -212,15 +222,16 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
 }
 
 void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
+  assert(logging_on_);
   assert(rule_type == log_rule_type_);
-  printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", 
-	 *numDeletedRows, *numDeletedCols, rule_type,
-	 presolveRuleTypeToString(rule_type).c_str());
+  printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
+         *numDeletedCols, rule_type,
+         presolveRuleTypeToString(rule_type).c_str());
   const int check_rule = kPresolveRuleDominatedCol;
   if (rule_type == check_rule) {
     printf(">>  stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
-	   *numDeletedRows, *numDeletedCols,
-	   presolveRuleTypeToString(check_rule).c_str());
+           *numDeletedRows, *numDeletedCols,
+           presolveRuleTypeToString(check_rule).c_str());
   }
   const HighsInt num_removed_row = *numDeletedRows - num_deleted_rows0_;
   const HighsInt num_removed_col = *numDeletedCols - num_deleted_cols0_;
@@ -251,6 +262,7 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
 }
 
 bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
+  if (!allow_logging_) return true;
   const HighsLogOptions& log_options = options->log_options;
   HighsInt sum_removed_row = 0;
   HighsInt sum_removed_col = 0;

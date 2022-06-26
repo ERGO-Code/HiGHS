@@ -36,6 +36,7 @@ enum PresolveRuleType : int {
   kPresolveRuleDependentEquations,
   kPresolveRuleDependentFreeCols,
   kPresolveRuleEqualityRowAddition,
+  kPresolveRuleAggregator,
   kPresolveRuleLinearTransform,
   kPresolveRuleMax = kPresolveRuleLinearTransform,
   kPresolveRuleCount,
@@ -77,6 +78,9 @@ class HPresolveAnalysis {
 
  public:
   std::vector<bool> allow_rule_;
+
+  bool allow_logging_;
+  bool logging_on_;
 
   int log_rule_type_;
   HighsInt num_deleted_rows0_;
