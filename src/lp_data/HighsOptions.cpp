@@ -42,7 +42,7 @@ void highsOpenLogFile(HighsLogOptions& log_options,
   option.assignvalue(log_file);
 }
 
-std::string optionEntryTypeToString(const HighsOptionType type) {
+static std::string optionEntryTypeToString(const HighsOptionType type) {
   if (type == HighsOptionType::kBool) {
     return "bool";
   } else if (type == HighsOptionType::kInt) {

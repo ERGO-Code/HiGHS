@@ -566,6 +566,7 @@ void HighsMipSolverData::runSetup() {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
       case HighsVarType::kContinuous:
+      case HighsVarType::kSemiContinuous:  //FIXME
         continuous_cols.push_back(i);
         break;
       case HighsVarType::kImplicitInteger:
@@ -573,6 +574,7 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
         break;
       case HighsVarType::kInteger:
+      case HighsVarType::kSemiInteger:  //FIXME
         integer_cols.push_back(i);
         integral_cols.push_back(i);
         numBin += ((mipsolver.model_->col_lower_[i] == 0.0) &

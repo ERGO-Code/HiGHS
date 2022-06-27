@@ -13,7 +13,7 @@
 /**@file io/HighsIO.cpp
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-#include "HighsIO.h"
+#include "io/HighsIO.h"
 
 #include <cmath>
 #include <cstdarg>

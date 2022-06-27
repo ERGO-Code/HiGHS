@@ -1,6 +1,6 @@
 #include "ratiotest.hpp"
 
-double step(double x, double p, double l, double u, double t) {
+static double step(double x, double p, double l, double u, double t) {
   if (p < -t && l > -std::numeric_limits<double>::infinity()) {
     return (l - x) / p;
   } else if (p > t && u < std::numeric_limits<double>::infinity()) {
@@ -10,7 +10,7 @@ double step(double x, double p, double l, double u, double t) {
   }
 }
 
-RatiotestResult ratiotest_textbook(Runtime& rt, const Vector& p,
+static RatiotestResult ratiotest_textbook(Runtime& rt, const Vector& p,
                                    const Vector& rowmove, Instance& instance,
                                    const double alphastart) {
   RatiotestResult result;
@@ -45,7 +45,7 @@ RatiotestResult ratiotest_textbook(Runtime& rt, const Vector& p,
   return result;
 }
 
-RatiotestResult ratiotest_twopass(Runtime& runtime, const Vector& p,
+static RatiotestResult ratiotest_twopass(Runtime& runtime, const Vector& p,
                                   const Vector& rowmove, Instance& relaxed,
                                   const double alphastart) {
   RatiotestResult res1 =
@@ -98,6 +98,7 @@ RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
                           const Vector& rowmove, double alphastart) {
   switch (runtime.settings.ratiotest) {
     case RatiotestStrategy::Textbook:
+    default:  // to fix -Wreturn-type warning
       return ratiotest_textbook(runtime, p, rowmove, runtime.instance,
                                 alphastart);
     case RatiotestStrategy::TwoPass:

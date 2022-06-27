@@ -152,13 +152,13 @@ OptionStatus checkOption(const HighsLogOptions& report_log_options,
                          const OptionRecordDouble& option);
 
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
-                              std::vector<OptionRecord*>& option_records,
+                              OptionRecordInt& option_records,
                               const HighsInt value);
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
-                              std::vector<OptionRecord*>& option_records,
+                              OptionRecordDouble& option_records,
                               const double value);
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
-                              std::vector<OptionRecord*>& option_records,
+                              OptionRecordString& option_records,
                               const std::string value);
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
