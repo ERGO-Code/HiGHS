@@ -30,13 +30,17 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   allow_logging_ = true;
   logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
-  num_deleted_rows0_ = 0;
-  num_deleted_cols0_ = 0;
+  resetNumDeleted();
   rule_num_call_.assign(kPresolveRuleCount, 0);
   rule_num_col_removed_.assign(kPresolveRuleCount, 0);
   rule_num_row_removed_.assign(kPresolveRuleCount, 0);
   original_num_col_ = model->num_col_;
   original_num_row_ = model->num_row_;
+}
+
+void HPresolveAnalysis::resetNumDeleted() {
+  num_deleted_rows0_ = 0;
+  num_deleted_cols0_ = 0;
 }
 
 std::string HPresolveAnalysis::presolveRuleTypeToString(
@@ -49,24 +53,20 @@ std::string HPresolveAnalysis::presolveRuleTypeToString(
     return "Redundant row";
   } else if (rule_type == kPresolveRuleForcingRow) {
     return "Forcing row";
-  } else if (rule_type == kPresolveRuleDuplicateRow) {
-    return "Duplicate row";
   } else if (rule_type == kPresolveRuleEmptyCol) {
     return "Empty column";
   } else if (rule_type == kPresolveRuleFixedCol) {
     return "Fixed column";
-  } else if (rule_type == kPresolveRuleSingletonCol) {
-    return "Singleton column";
+    //  } else if (rule_type == kPresolveRuleSingletonCol) {
+    //    return "Singleton column";
   } else if (rule_type == kPresolveRuleFreeColSubstitution) {
     return "Free col substitution";
   } else if (rule_type == kPresolveRuleForcingCol) {
     return "Forcing col";
-  } else if (rule_type == kPresolveRuleForcingColRemovedRow) {
-    return "Forcing col removed row";
+    //  } else if (rule_type == kPresolveRuleForcingColRemovedRow) {
+    //    return "Forcing col removed row";
   } else if (rule_type == kPresolveRuleDominatedCol) {
     return "Dominated col";
-  } else if (rule_type == kPresolveRuleDuplicateCol) {
-    return "Duplicate col";
   } else if (rule_type == kPresolveRuleDoubletonEquation) {
     return "Doubleton equation";
   } else if (rule_type == kPresolveRuleDependentEquations) {
@@ -75,6 +75,8 @@ std::string HPresolveAnalysis::presolveRuleTypeToString(
     return "Equality row addition";
   } else if (rule_type == kPresolveRuleAggregator) {
     return "Aggregator";
+  } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
+    return "Parallel rows and columns";
   } else if (rule_type == kPresolveRuleLinearTransform) {
     return "Linear transform";
   }
@@ -93,49 +95,10 @@ void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo, "\n");
   }
-  if (allow_rule_[kPresolveRuleEmptyRow] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Empty row\n");
-  if (allow_rule_[kPresolveRuleSingletonRow] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Singleton row\n");
-  if (allow_rule_[kPresolveRuleRedundantRow] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Redundant row\n");
-  if (allow_rule_[kPresolveRuleForcingRow] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Forcing row\n");
-  if (allow_rule_[kPresolveRuleDuplicateRow] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Duplicate row\n");
-  if (allow_rule_[kPresolveRuleEmptyCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Empty column\n");
-  if (allow_rule_[kPresolveRuleFixedCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Fixed column\n");
-  if (allow_rule_[kPresolveRuleSingletonCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Singleton column\n");
-  if (allow_rule_[kPresolveRuleFreeColSubstitution] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Free col substitution\n");
-  if (allow_rule_[kPresolveRuleForcingCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Forcing col\n");
-  if (allow_rule_[kPresolveRuleForcingColRemovedRow] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Forcing col removed row\n");
-  if (allow_rule_[kPresolveRuleDominatedCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Dominated col\n");
-  if (allow_rule_[kPresolveRuleDuplicateCol] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Duplicate col\n");
-  if (allow_rule_[kPresolveRuleDoubletonEquation] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Doubleton equation\n");
-  if (allow_rule_[kPresolveRuleDependentEquations] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Dependent equations\n");
-  if (allow_rule_[kPresolveRuleEqualityRowAddition] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Equality row addition\n");
-  if (allow_rule_[kPresolveRuleAggregator] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo, "Aggregator\n");
-  if (allow_rule_[kPresolveRuleLinearTransform] == report_allowed)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Linear transform\n");
+  for (int rule_type = kPresolveRuleMin; rule_type < kPresolveRuleMax; rule_type++) {
+    if (allow_rule_[rule_type] == report_allowed)
+      highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n", presolveRuleTypeToString(rule_type).c_str());
+  }
 }
 
 void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {

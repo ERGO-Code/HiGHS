@@ -20,23 +20,22 @@ enum PresolveRuleType : int {
   kPresolveRuleIllegal = -1,
   kPresolveRuleMin = 0,
   kPresolveRuleEmptyRow = kPresolveRuleMin,
-  kPresolveRuleSingletonRow,
-  kPresolveRuleRedundantRow,
-  kPresolveRuleForcingRow,
-  kPresolveRuleDuplicateRow,
+  kPresolveRuleSingletonRow, // Allow
+  kPresolveRuleRedundantRow, // Allow
+  kPresolveRuleForcingRow, // Allow
   kPresolveRuleEmptyCol,
   kPresolveRuleFixedCol,
-  kPresolveRuleSingletonCol,
-  kPresolveRuleFreeColSubstitution,
-  kPresolveRuleForcingCol,
-  kPresolveRuleForcingColRemovedRow,
+  //  kPresolveRuleSingletonCol,
   kPresolveRuleDominatedCol,
-  kPresolveRuleDuplicateCol,
+  kPresolveRuleForcingCol, // Allow
+  //  kPresolveRuleForcingColRemovedRow,
+  kPresolveRuleFreeColSubstitution, // Allow
   kPresolveRuleDoubletonEquation,
   kPresolveRuleDependentEquations,
   kPresolveRuleDependentFreeCols,
   kPresolveRuleEqualityRowAddition,
   kPresolveRuleAggregator,
+  kPresolveRuleParallelRowsAndCols,
   kPresolveRuleLinearTransform,
   kPresolveRuleMax = kPresolveRuleLinearTransform,
   kPresolveRuleCount,
@@ -69,6 +68,7 @@ class HPresolveAnalysis {
   // for LP presolve
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);
+  void resetNumDeleted();
 
   void reportPresolveRulesAllowed(const bool report_allowed = true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);

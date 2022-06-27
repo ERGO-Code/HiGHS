@@ -832,6 +832,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   }
   // Need to set the constraint matrix dimensions
   model->setMatrixDimensions();
+  // Need to reset current number of deleted rows and columns in logging
+  analysis_.resetNumDeleted();
 }
 
 HPresolve::Result HPresolve::dominatedColumns(
@@ -2722,7 +2724,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       fixColToUpper(postsolve_stack, col);
       analysis_.logging_on_ = logging_on;
       if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
-    } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
+    } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0 &&
+	       analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // todo: forcing column, since this implies colDual >= 0 and we
       // already checked that colDual <= 0 and since the cost are 0.0
       // all the rows are at a dual multiplier of zero and we can determine
@@ -2758,7 +2761,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       fixColToLower(postsolve_stack, col);
       analysis_.logging_on_ = logging_on;
       if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
-    } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
+    } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0 &&
+	       analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // forcing column, since this implies colDual <= 0 and we already checked
       // that colDual >= 0
       // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
@@ -2804,10 +2808,13 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // now check if column is implied free within an equation and substitute the
   // column if that is the case
-  if (isDualImpliedFree(row) && isImpliedFree(col)) {
+  if (isDualImpliedFree(row) && isImpliedFree(col) &&
+      analysis_.allow_rule_[kPresolveRuleFreeColSubstitution]) {
     if (model->integrality_[col] == HighsVarType::kInteger &&
         !isImpliedIntegral(col))
       return Result::kOk;
+
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFreeColSubstitution);
     // todo, store which side of an implied free dual variable needs to be used
     // for substitution
     storeRow(row);
@@ -2832,6 +2839,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     // todo, check integrality of coefficients and allow this
     substitute(row, col, rhs);
 
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFreeColSubstitution);
     return checkLimits(postsolve_stack);
   }
 
@@ -3994,7 +4003,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         trySparsify = false;
       }
 
-      if (numParallelRowColCalls < 5) {
+      if (analysis_.allow_rule_[kPresolveRuleParallelRowsAndCols] &&
+	  numParallelRowColCalls < 5) {
         if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
                                      numDeletedRows >= 0.5 * model->num_row_)) {
           shrinkProblem(postsolve_stack);
@@ -4005,8 +4015,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                   model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
-        HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
-        ++numParallelRowColCalls;
+	HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
+	++numParallelRowColCalls;
         if (problemSizeReduction() > 0.05) continue;
       }
 
@@ -5100,6 +5110,11 @@ HighsInt HPresolve::detectImpliedIntegers() {
 
 HPresolve::Result HPresolve::detectParallelRowsAndCols(
     HighsPostsolveStack& postsolve_stack) {
+  assert(analysis_.allow_rule_[kPresolveRuleParallelRowsAndCols]);
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on)
+    analysis_.startPresolveRuleLog(kPresolveRuleParallelRowsAndCols);
+
   std::vector<std::uint64_t> rowHashes;
   std::vector<std::uint64_t> colHashes;
   std::vector<std::pair<double, HighsInt>> rowMax(rowsize.size());
@@ -5912,6 +5927,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       buckets.emplace_hint(last, rowHashes[i], i);
   }
 
+  analysis_.logging_on_ = logging_on;
+  if (logging_on)
+    analysis_.stopPresolveRuleLog(kPresolveRuleParallelRowsAndCols);
+  
   return Result::kOk;
 }
 
