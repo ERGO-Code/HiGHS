@@ -3,7 +3,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
@@ -79,12 +79,13 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
+  // Ensure that a user solution is handled properly
   HighsSolution sol;
   sol.col_value = {0, 0, 0.5, 0};
   highs.setSolution(sol);
   REQUIRE(highs.run() == HighsStatus::kOk);
-
- 
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {

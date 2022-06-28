@@ -2799,7 +2799,10 @@ HighsStatus Highs::callSolveMip() {
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
   HighsLp use_lp;
   if (has_semi_variables) {
-    use_lp = withoutSemiVariables(model_.lp_);
+    // Replace any semi-variables by a continuous/integer variable and
+    // a (temporary) binary. Any initial solution must accommodate this.
+    use_lp = withoutSemiVariables(model_.lp_, solution_,
+				  options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(options_, lp, solution_);
