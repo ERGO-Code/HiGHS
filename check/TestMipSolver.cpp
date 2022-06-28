@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void solve(Highs& highs, std::string presolve,
@@ -404,6 +404,11 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
           double_equal_tolerance);
 }
 
+TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
+  Highs highs;
+
+}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
                  const bool dev_run = false) {
@@ -469,3 +474,4 @@ void rowlessMIP(Highs& highs) {
   solve(highs, "on", require_model_status, optimal_objective);
   solve(highs, "off", require_model_status, optimal_objective);
 }
+
