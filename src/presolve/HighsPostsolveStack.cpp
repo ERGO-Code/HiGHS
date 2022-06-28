@@ -625,7 +625,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
 
   double mergeVal = solution.col_value[col];
 
-  if( colLower != -kHighsInf )
+  if (colLower != -kHighsInf)
     solution.col_value[col] = colLower;
   else
     solution.col_value[col] = std::min(0.0, colUpper);
