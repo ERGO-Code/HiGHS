@@ -98,10 +98,10 @@ RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
                           const Vector& rowmove, double alphastart) {
   switch (runtime.settings.ratiotest) {
     case RatiotestStrategy::Textbook:
-    default:  // to fix -Wreturn-type warning
       return ratiotest_textbook(runtime, p, rowmove, runtime.instance,
                                 alphastart);
     case RatiotestStrategy::TwoPass:
+    default:  // to fix -Wreturn-type warning
       Instance relaxed_instance = runtime.instance;
       for (double& bound : relaxed_instance.con_lo) {
         if (bound != -std::numeric_limits<double>::infinity()) {
