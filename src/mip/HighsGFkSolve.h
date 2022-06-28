@@ -352,7 +352,7 @@ class HighsGFkSolve {
     // create vector for swapping different columns into the basis
     // For each column we want to iterate one basic solution where the
     // column is basic
-    std::vector<std::pair<HighsInt, int>> basisSwaps;
+    std::vector<std::pair<HighsInt, HighsInt>> basisSwaps;
     assert(iterstack.empty());
     for (HighsInt i = numFactorRows - 1; i >= 0; --i) {
       HighsInt row = factorRowPerm[i];

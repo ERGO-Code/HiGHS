@@ -19,6 +19,7 @@
 #ifndef MIP_HIGHS_PATH_SEPARATOR_H_
 #define MIP_HIGHS_PATH_SEPARATOR_H_
 
+#include "mip/HighsMipSolver.h"
 #include "mip/HighsSeparator.h"
 #include "util/HighsRandom.h"
 
@@ -35,7 +36,9 @@ class HighsPathSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsPathSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "PathAggr sepa", "Agg") {}
+      : HighsSeparator(mipsolver, "PathAggr sepa", "Agg") {
+    randgen.initialise(mipsolver.options_mip_->random_seed);
+  }
 };
 
 #endif
