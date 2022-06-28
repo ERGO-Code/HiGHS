@@ -406,7 +406,27 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
 
 TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
   Highs highs;
+  HighsLp lp;
+  lp.num_col_ = 2;  
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1.5, 1.5};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  const double rhs = 4.0;
+  const double delta = 0.99;
+  lp.row_lower_ = {rhs-delta, rhs+delta};
+  lp.row_upper_ = {rhs-delta, rhs+delta};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 1};
+  HighsSolution sol;
 
+  sol.col_value = {1, 1};
+  highs.setSolution(sol);
+  highs.passModel(lp);
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) == HighsStatus::kOk);
+  highs.run();
 }
 
 bool objectiveOk(const double optimal_objective,
