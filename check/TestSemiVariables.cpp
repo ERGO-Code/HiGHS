@@ -78,6 +78,14 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   optimal_objective_function_value = 8.13333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+
+  // Ensure that a user solution is handled properly
+  HighsSolution sol;
+  sol.col_value = {0, 0, 0.5, 0};
+  highs.setSolution(sol);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
