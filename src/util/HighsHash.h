@@ -677,10 +677,6 @@ struct HighsHashHelpers {
     return vector_hash(val.data(), val.size());
   }
 
-  static u64 hash(const std::string& val) {
-    return vector_hash(val.data(), val.size());
-  }
-
   template <typename T, typename std::enable_if<
                             std::is_same<decltype(*reinterpret_cast<T*>(0) ==
                                                   *reinterpret_cast<T*>(0)),
