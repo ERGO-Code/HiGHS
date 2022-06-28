@@ -2840,7 +2840,7 @@ HighsStatus Highs::callSolveMip() {
     // Replace any semi-variables by a continuous/integer variable and
     // a (temporary) binary. Any initial solution must accommodate this.
     use_lp = withoutSemiVariables(model_.lp_, solution_,
-				  options_.primal_feasibility_tolerance);
+                                  options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(options_, lp, solution_);
