@@ -1,7 +1,6 @@
 name: test_python_api
 
 on:
-  push:
   pull_request:
 
 jobs:
@@ -13,7 +12,7 @@ jobs:
         python: [3.7, 3.8, 3.9]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -38,7 +37,7 @@ jobs:
          echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
 
     - name: Install correct python version
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python }}
 

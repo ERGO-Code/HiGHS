@@ -42,6 +42,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     lp.num_col_ = m.variables.size();
     lp.num_row_ = m.constraints.size();
+    lp.row_names_.resize(m.constraints.size());
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     HighsInt num_continuous = 0;
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
@@ -64,6 +65,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // Clear lp.integrality_ if problem is pure LP
     if (num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
+    lp.objective_name_ = m.objective->name;
     lp.offset_ = m.objective->offset;
     lp.col_cost_.resize(lp.num_col_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
@@ -122,6 +124,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     std::map<std::shared_ptr<Variable>, std::vector<double>> consofvarmap_value;
     for (HighsUInt i = 0; i < m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
+      lp.row_names_[i] = con->expr->name;
       for (HighsUInt j = 0; j < con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
         if (consofvarmap_index.count(lt->var) == 0) {
@@ -134,6 +137,31 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
       lp.row_lower_.push_back(con->lowerbound);
       lp.row_upper_.push_back(con->upperbound);
+    }
+
+    // Check for empty row names, giving them a special name if possible
+    bool highs_prefix_ok = true;
+    bool used_highs_prefix = false;
+    std::string highs_prefix = "HiGHS_R";
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      // Look to see whether the name begins HiGHS_R
+      if (strncmp(lp.row_names_[iRow].c_str(), highs_prefix.c_str(), 7) == 0) {
+        printf("Name %s begins with \"HiGHS_R\"\n",
+               lp.row_names_[iRow].c_str());
+        highs_prefix_ok = false;
+      } else if (lp.row_names_[iRow] == "") {
+        // Make up a name beginning HiGHS_R
+        lp.row_names_[iRow] = highs_prefix + std::to_string(iRow);
+        used_highs_prefix = true;
+      }
+    }
+    if (used_highs_prefix && !highs_prefix_ok) {
+      // Have made up a name beginning HiGHS_R, but this occurs with
+      // other "natural" rows, so abandon the row names
+      lp.row_names_.clear();
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Cannot create row name beginning \"HiGHS_R\" due to others "
+                   "with same prefix: row names cleared\n");
     }
 
     HighsInt nz = 0;

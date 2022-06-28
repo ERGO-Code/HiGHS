@@ -844,6 +844,58 @@ HighsStatus Highs::run() {
   const bool ipx_no_crossover =
       options_.solver == kIpmString && !options_.run_crossover;
 
+  if (options_.icrash) {
+    ICrashStrategy strategy = ICrashStrategy::kICA;
+    bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
+    if (!strategy_ok) {
+      // std::cout << "ICrash error: unknown strategy." << std::endl;
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "ICrash error: unknown strategy.\n");
+      return HighsStatus::kError;
+    }
+    ICrashOptions icrash_options{
+        options_.icrash_dualize,         strategy,
+        options_.icrash_starting_weight, options_.icrash_iterations,
+        options_.icrash_approx_iter,     options_.icrash_exact,
+        options_.icrash_breakpoints,     options_.log_options};
+
+    HighsStatus icrash_status =
+        callICrash(model_.lp_, icrash_options, icrash_info_);
+
+    if (icrash_status != HighsStatus::kOk) return returnFromRun(icrash_status);
+
+    // for now set the solution_.col_value
+    solution_.col_value = icrash_info_.x_values;
+    // Better not to use Highs::crossover
+    const bool use_highs_crossover = false;
+    if (use_highs_crossover) {
+      crossover(solution_);
+      // loops:
+      called_return_from_run = true;
+
+      options_.icrash = false;  // to avoid loop
+    } else {
+      HighsStatus crossover_status = callCrossover(
+          options_, model_.lp_, basis_, solution_, model_status_, info_);
+      // callCrossover can return HighsStatus::kWarning due to
+      // imprecise dual values. Ignore this since primal simplex will
+      // be called to clean up duals
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Crossover following iCrash has return status of %s, and "
+                   "problem status is %s\n",
+                   highsStatusToString(crossover_status).c_str(),
+                   modelStatusToString(model_status_).c_str());
+      if (crossover_status == HighsStatus::kError)
+        return returnFromRun(crossover_status);
+      assert(options_.simplex_strategy == kSimplexStrategyPrimal);
+    }
+    // timer_.stopRunHighsClock();
+    // run();
+
+    // todo: add "dual" values
+    // return HighsStatus::kOk;
+  }
+
   if (!basis_.valid && solution_.value_valid) {
     // There is no valid basis, but there is a valid solution, so use
     // it to construct a basis
@@ -1149,17 +1201,22 @@ HighsStatus Highs::run() {
             basis_.col_status = presolve_.data_.recovered_basis_.col_status;
             basis_.row_status = presolve_.data_.recovered_basis_.row_status;
             basis_.debug_origin_name += ": after postsolve";
-            // Possibly force debug to perform KKT check on what's
-            // returned from postsolve
-            const bool force_debug = false;
-            HighsInt save_highs_debug_level = options_.highs_debug_level;
-            if (force_debug)
-              options_.highs_debug_level = kHighsDebugLevelCostly;
-            if (debugHighsSolution("After returning from postsolve", options_,
-                                   model_, solution_,
-                                   basis_) == HighsDebugStatus::kLogicalError)
-              return returnFromRun(HighsStatus::kError);
-            options_.highs_debug_level = save_highs_debug_level;
+            // Basic primal activities are wrong after postsolve, so
+            // possibly skip KKT check
+            const bool perform_kkt_check = true;
+            if (perform_kkt_check) {
+              // Possibly force debug to perform KKT check on what's
+              // returned from postsolve
+              const bool force_debug = false;
+              HighsInt save_highs_debug_level = options_.highs_debug_level;
+              if (force_debug)
+                options_.highs_debug_level = kHighsDebugLevelCostly;
+              if (debugHighsSolution("After returning from postsolve", options_,
+                                     model_, solution_,
+                                     basis_) == HighsDebugStatus::kLogicalError)
+                return returnFromRun(HighsStatus::kError);
+              options_.highs_debug_level = save_highs_debug_level;
+            }
             // Save the options to allow the best simplex strategy to
             // be used
             HighsOptions save_options = options_;
@@ -2376,8 +2433,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
-                    style);
+  writeSolutionFile(file, options_, model_, basis_, solution_, info_,
+                    model_status_, style);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
@@ -2546,6 +2603,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
+  // Compute the row activities
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)

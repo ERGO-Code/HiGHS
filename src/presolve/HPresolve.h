@@ -10,7 +10,7 @@
 /*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file presolve/HAggregator.h
+/**@file presolve/HPresolve.h
  * @brief
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
@@ -175,7 +175,7 @@ class HPresolve {
                    HighsInt row, HighsInt col);
 
 #ifndef NDEBUG
-  void debugPrintRow(HighsPostsolveStack& postSolveStack, HighsInt row);
+  void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 #endif
 
   HighsInt findNonzero(HighsInt row, HighsInt col);
@@ -208,13 +208,13 @@ class HPresolve {
 
   void markColDeleted(HighsInt col);
 
-  void fixColToLower(HighsPostsolveStack& postsolveStack, HighsInt col);
+  void fixColToLower(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void fixColToUpper(HighsPostsolveStack& postsolveStack, HighsInt col);
+  void fixColToUpper(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void fixColToZero(HighsPostsolveStack& postsolveStack, HighsInt col);
+  void fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void transformColumn(HighsPostsolveStack& postSolveStack, HighsInt col,
+  void transformColumn(HighsPostsolveStack& postsolve_stack, HighsInt col,
                        double scale, double constant);
 
   void scaleRow(HighsInt row, double scale, bool integral = false);
@@ -241,15 +241,15 @@ class HPresolve {
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
 
-  void scaleMIP(HighsPostsolveStack& postSolveStack);
+  void scaleMIP(HighsPostsolveStack& postsolve_stack);
 
-  Result applyConflictGraphSubstitutions(HighsPostsolveStack& postSolveStack);
+  Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack);
 
-  Result fastPresolveLoop(HighsPostsolveStack& postsolveStack);
+  Result fastPresolveLoop(HighsPostsolveStack& postsolve_stack);
 
-  Result presolve(HighsPostsolveStack& postsolveStack);
+  Result presolve(HighsPostsolveStack& postsolve_stack);
 
-  Result checkLimits(HighsPostsolveStack& postsolveStack);
+  Result checkLimits(HighsPostsolveStack& postsolve_stack);
 
   void storeCurrentProblemSize();
 
@@ -269,32 +269,32 @@ class HPresolve {
 
   HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
 
-  void shrinkProblem(HighsPostsolveStack& postSolveStack);
+  void shrinkProblem(HighsPostsolveStack& postsolve_stack);
 
   void addToMatrix(HighsInt row, HighsInt col, double val);
 
-  Result runProbing(HighsPostsolveStack& postSolveStack);
+  Result runProbing(HighsPostsolveStack& postsolve_stack);
 
-  Result dominatedColumns(HighsPostsolveStack& postSolveStack);
+  Result dominatedColumns(HighsPostsolveStack& postsolve_stack);
 
-  Result doubletonEq(HighsPostsolveStack& postSolveStack, HighsInt row);
+  Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
-  Result singletonRow(HighsPostsolveStack& postSolveStack, HighsInt row);
+  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
-  Result emptyCol(HighsPostsolveStack& postSolveStack, HighsInt col);
+  Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  Result singletonCol(HighsPostsolveStack& postSolveStack, HighsInt col);
+  Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  Result rowPresolve(HighsPostsolveStack& postSolveStack, HighsInt row);
+  Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
-  Result colPresolve(HighsPostsolveStack& postSolveStack, HighsInt col);
+  Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  Result solveOneRowComponent(HighsPostsolveStack& postsolveStack,
+  Result solveOneRowComponent(HighsPostsolveStack& postsolve_stack,
                               HighsInt row);
 
-  Result initialRowAndColPresolve(HighsPostsolveStack& postSolveStack);
+  Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
-  HighsModelStatus run(HighsPostsolveStack& postSolveStack);
+  HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
 
   void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
                                  std::vector<HighsInt>& flagCol,
@@ -307,33 +307,34 @@ class HPresolve {
 
   void removeRow(HighsInt row);
 
-  Result removeDependentEquations(HighsPostsolveStack& postSolveStack);
+  Result removeDependentEquations(HighsPostsolveStack& postsolve_stack);
 
-  Result removeDependentFreeCols(HighsPostsolveStack& postSolveStack);
+  Result removeDependentFreeCols(HighsPostsolveStack& postsolve_stack);
 
-  Result aggregator(HighsPostsolveStack& postSolveStack);
+  Result aggregator(HighsPostsolveStack& postsolve_stack);
 
-  Result removeRowSingletons(HighsPostsolveStack& postSolveStack);
+  Result removeRowSingletons(HighsPostsolveStack& postsolve_stack);
 
-  Result presolveColSingletons(HighsPostsolveStack& postSolveStack);
+  Result presolveColSingletons(HighsPostsolveStack& postsolve_stack);
 
-  Result presolveChangedRows(HighsPostsolveStack& postSolveStack);
+  Result presolveChangedRows(HighsPostsolveStack& postsolve_stack);
 
-  Result presolveChangedCols(HighsPostsolveStack& postSolveStack);
+  Result presolveChangedCols(HighsPostsolveStack& postsolve_stack);
 
-  Result removeDoubletonEquations(HighsPostsolveStack& postSolveStack);
+  Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
   HighsInt strengthenInequalities();
 
   HighsInt detectImpliedIntegers();
 
-  Result detectParallelRowsAndCols(HighsPostsolveStack& postsolveStack);
+  Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
 
-  Result sparsify(HighsPostsolveStack& postsolveStack);
+  Result sparsify(HighsPostsolveStack& postsolve_stack);
 
   void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
+  void reportReductions(const HighsLogOptions& log_options);
 };
 
 }  // namespace presolve

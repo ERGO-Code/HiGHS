@@ -18,6 +18,78 @@ void reportColSet(const std::string message,
                   const std::vector<HighsInt>& col_set);
 void reportDependentCols(const std::vector<HighsInt>& dependent_col_set);
 
+// Generally HFactor is initialised with a rectangular constraint
+// matrix, and a subset of basic columns defined by
+// basic_index.
+//
+// In these examples, an instance of HighsSparseMatrix is used to
+// define the coefficient matrix, and col_set is used to generalise
+// the name of the identifier basic_index, where col_set.size()
+// defines the number of entries in the set.
+//
+// The examples use
+//
+// factor.setup(matrix, col_set);
+//
+// HighsInt rank_deficiency = factor.build();
+//
+// However, the traditional pointer-based HFactor::setup is still
+// available for a rectangular constraint matrix, and a subset of
+// basic columns defined by basic_index.
+//
+//  void setup(const HighsInt num_col,
+//             const HighsInt num_row,
+//             const HighsInt* a_start,
+//             const HighsInt* a_index,
+//             const double* a_value,
+//             HighsInt* basic_index);
+//
+// Also, for rank-detection of rectangular matrices, and completion of
+// tall rectangular matrices into an LU factorization, there is
+//
+//  void setupGeneral(const HighsInt num_col,
+//                    const HighsInt num_row,
+//                    const HighsInt num_basic,
+//                    const HighsInt* a_start,
+//                    const HighsInt* a_index,
+//                    const double* a_value,
+//                    HighsInt* basic_index);
+//
+
+TEST_CASE("Hessian-rank-detection", "[highs_test_alien_basis]") {
+  // To find the rank and corresponding rows/columns in a square
+  // symmetric matrix
+  //
+  // [1     2      ]
+  // [  0          ]
+  // [    1       1]
+  // [2     4      ]
+  // [        1   2]
+  // [          0  ]
+  // [    1   2   8]
+  //
+  // NB HFactor has no facility to handle symmetric matrices
+  // efficiently
+  //
+  // The matrix must not contain explicit zero values, and there is no
+  // check in HFactor::setup
+  //
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 7;
+  matrix.num_row_ = 7;
+  matrix.start_ = {0, 2, 2, 4, 6, 8, 8, 11};
+  matrix.index_ = {0, 3, 2, 6, 0, 3, 4, 6, 2, 4, 6};
+  matrix.value_ = {1, 2, 1, 1, 2, 4, 1, 2, 1, 2, 8};
+  std::vector<HighsInt> col_set = {0, 1, 2, 3, 4, 5, 6};
+  std::vector<HighsInt> dependent_col_set;
+  const HighsInt required_rank_deficiency = 3;
+  if (dev_run) reportColSet("\nOriginal", col_set);
+  getDependentCols(matrix, col_set, dependent_col_set,
+                   required_rank_deficiency);
+  if (dev_run) reportColSet("Returned", col_set);
+  if (dev_run) reportDependentCols(dependent_col_set);
+}
+
 TEST_CASE("AlienBasis-rank-detection", "[highs_test_alien_basis]") {
   // To find the dependent rows in
   //

@@ -18,10 +18,12 @@
 
 //#include "Highs.h"
 //#include "lp_data/HighsStatus.h"
-#include "lp_data/HStruct.h"
 #include "lp_data/HighsInfo.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
+#include "model/HighsModel.h"
+//#include "lp_data/HStruct.h"
+//#include "lp_data/HighsInfo.h"
+//#include "lp_data/HighsLp.h"
+//#include "lp_data/HighsOptions.h"
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
@@ -48,6 +50,25 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
                            std::vector<std::string>& names,
                            HighsInt& max_name_length);
 
+void writeSolutionFile(FILE* file, const HighsOptions& options,
+                       const HighsModel& model, const HighsBasis& basis,
+                       const HighsSolution& solution, const HighsInfo& info,
+                       const HighsModelStatus model_status,
+                       const HighsInt style);
+
+void writeGlpsolCostRow(FILE* file, const bool raw, const bool is_mip,
+                        const HighsInt row_id, const std::string objective_name,
+                        const double objective_function_value);
+
+void writeGlpsolSolution(FILE* file, const HighsOptions& options,
+                         const HighsModel& model, const HighsBasis& basis,
+                         const HighsSolution& solution,
+                         const HighsModelStatus model_status,
+                         const HighsInfo& info, const bool raw);
+
+void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution);
+
 HighsBasisStatus checkedVarHighsNonbasicStatus(
     const HighsBasisStatus ideal_status, const double lower,
     const double upper);
@@ -65,4 +86,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 std::string statusToString(const HighsBasisStatus status, const double lower,
                            const double upper);
 std::string typeToString(const HighsVarType type);
+
+std::string findModelObjectiveName(const HighsLp* lp,
+                                   const HighsHessian* hessian = nullptr);
+
 #endif

@@ -19,7 +19,6 @@
 #include "mip/HighsRedcostFixing.h"
 #include "parallel/HighsParallel.h"
 #include "pdqsort/pdqsort.h"
-#include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 

@@ -20,7 +20,6 @@
 #include <iostream>
 
 #include "HighsCDouble.h"
-#include "presolve/PresolveUtils.h"
 
 namespace presolve {
 namespace dev_kkt_check {

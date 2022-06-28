@@ -57,6 +57,5 @@ TEST_CASE("presolve-issue-425") {
   std::cout << std::endl;
   std::cout << "Presolve issue 425." << std::endl;
   HighsStatus status = issue425();
-  std::string str = HighsStatusToString(status);
-  REQUIRE(str == "OK");
+  REQUIRE(status == HighsStatus::kOk);
 }

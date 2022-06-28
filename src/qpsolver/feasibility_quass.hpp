@@ -28,7 +28,7 @@ void computestartingpoint_quass(Runtime& runtime, CrashSolution& result) {
     RATIOTEST
     UPDATE (BTRAN)
   */
- Basis basis();
+ //Basis basis();
 
 
 
