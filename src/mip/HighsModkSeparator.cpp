@@ -223,6 +223,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     pdqsort(weights.begin(), weights.end());
     if (!usedWeights.insert(weights)) return;
 
+    lpAggregator.clear();
     for (const auto& w : weights) {
       HighsInt row = integralScales[w.index].first;
       double weight = (integralScales[w.index].second * w.weight) / k;
