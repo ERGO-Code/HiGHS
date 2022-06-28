@@ -47,6 +47,9 @@ class HighsLpAggregator {
 
   /// clear the current aggregation
   void clear();
+
+  /// checks whether the current aggregation is empty
+  bool isEmpty() { return vectorsum.nonzeroinds.empty(); }
 };
 
 #endif

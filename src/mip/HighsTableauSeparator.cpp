@@ -201,6 +201,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         bestScoreFac[cutpool.getNumCuts() - numCuts >= 50] * bestScore)
       break;
 
+    assert(lpAggregator.isEmpty());
     for (std::pair<HighsInt, double> rowWeight : fracvar.row_ep)
       lpAggregator.addRow(rowWeight.first, rowWeight.second);
 
@@ -222,7 +223,10 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           minAbsVal = std::min(std::abs(baseRowVals[i]), minAbsVal);
         }
       }
-      if (maxAbsVal / minAbsVal > 1e6) continue;
+      if (maxAbsVal / minAbsVal > 1e6) {
+        lpAggregator.clear();
+        continue;
+      }
     }
 
     mip.mipdata_->debugSolution.checkRowAggregation(

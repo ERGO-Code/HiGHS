@@ -223,7 +223,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     pdqsort(weights.begin(), weights.end());
     if (!usedWeights.insert(weights)) return;
 
-    lpAggregator.clear();
+    assert(lpAggregator.isEmpty());
     for (const auto& w : weights) {
       HighsInt row = integralScales[w.index].first;
       double weight = (integralScales[w.index].second * w.weight) / k;
@@ -245,6 +245,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       rhs = 0.0;
       cutGen.generateCut(transLp, inds, vals, rhs, true);
     }
+
+    lpAggregator.clear();
   };
 
   k = 2;

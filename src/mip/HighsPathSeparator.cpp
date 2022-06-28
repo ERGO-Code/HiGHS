@@ -207,6 +207,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     bool success = false;
 
     for (HighsInt s = 0; s != 2; ++s) {
+      assert(lpAggregator.isEmpty());
       lpAggregator.addRow(i, scales[s]);
 
       currentPath[0] = i;
