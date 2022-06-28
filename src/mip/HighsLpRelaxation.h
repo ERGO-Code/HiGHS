@@ -255,7 +255,8 @@ class HighsLpRelaxation {
 
   void resetToGlobalDomain();
 
-  void computeBasicDegenerateDuals(double threshold, HighsDomain* localdom = nullptr);
+  void computeBasicDegenerateDuals(double threshold,
+                                   HighsDomain* localdom = nullptr);
 
   double getAvgSolveIters() { return avgSolveIters; }
 
