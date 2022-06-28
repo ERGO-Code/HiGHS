@@ -425,7 +425,10 @@ void HighsMipSolverData::runSetup() {
 
   if (mipsolver.solution_objective_ != kHighsInf) {
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
-    double solobj = mipsolver.solution_objective_ - mipsolver.model_->offset_;
+    // return the objective value in the transformed space
+    double solobj =
+        mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
+        mipsolver.model_->offset_;
     bool feasible = mipsolver.bound_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.integrality_violation_ <=
@@ -853,6 +856,7 @@ void HighsMipSolverData::performRestart() {
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     // transform the objective limit to the current model
     upper_limit -= mipsolver.model_->offset_;
+    optimality_limit -= mipsolver.model_->offset_;
     upper_bound -= mipsolver.model_->offset_;
     lower_bound = upper_bound;
     return;
@@ -1298,17 +1302,20 @@ restart:
 
   rootlpsolobj = firstlpsolobj;
   removeFixedIndices();
-  double fixingRate = percentageInactiveIntegers();
-  if (fixingRate >= 10.0) {
-    tg.cancel();
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\n%.1f%% inactive integer columns, restarting\n", fixingRate);
-    tg.taskWait();
-    performRestart();
-    ++numRestartsRoot;
-    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
+  if (mipsolver.options_mip_->presolve != kHighsOffString) {
+    double fixingRate = percentageInactiveIntegers();
+    if (fixingRate >= 10.0) {
+      tg.cancel();
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "\n%.1f%% inactive integer columns, restarting\n",
+                   fixingRate);
+      tg.taskWait();
+      performRestart();
+      ++numRestartsRoot;
+      if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
-    return;
+      return;
+    }
   }
 
   // begin separation
