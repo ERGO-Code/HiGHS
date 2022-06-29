@@ -15,6 +15,7 @@
  */
 #include "lp_data/HighsOptions.h"
 
+#include <algorithm>
 #include <cassert>
 
 // void setLogOptions();
@@ -78,12 +79,13 @@ bool commandLineSolverOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
-bool boolFromString(const std::string value, bool& bool_value) {
-  if (value == "t" || value == "true" || value == "T" || value == "True" ||
-      value == "TRUE") {
+bool boolFromString(std::string value, bool& bool_value) {
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  if (value == "t" || value == "true" || value == "1" || value == "on") {
     bool_value = true;
-  } else if (value == "f" || value == "false" || value == "F" ||
-             value == "False" || value == "FALSE") {
+  } else if (value == "f" || value == "false" || value == "0" ||
+             value == "off") {
     bool_value = false;
   } else {
     return false;

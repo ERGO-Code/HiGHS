@@ -137,7 +137,7 @@ bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
 bool commandLineSolverOk(const HighsLogOptions& report_log_options,
                          const string& value);
 
-bool boolFromString(const std::string value, bool& bool_value);
+bool boolFromString(std::string value, bool& bool_value);
 
 OptionStatus getOptionIndex(const HighsLogOptions& report_log_options,
                             const std::string& name,
