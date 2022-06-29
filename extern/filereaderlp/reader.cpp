@@ -38,20 +38,31 @@ enum class RawTokenType {
 
 struct RawToken {
    RawTokenType type;
+   union {
+      char* svalue;
+      double dvalue = 0.0;
+   };
    inline bool istype(RawTokenType t) {
       return this->type == t;
    }
-   RawToken(RawTokenType t) : type(t) {} ;
-};
-
-struct RawStringToken : RawToken {
-   std::string value;
-   RawStringToken(std::string v) : RawToken(RawTokenType::STR), value(v) {};
-};
-
-struct RawConstantToken : RawToken {
-   double value;
-   RawConstantToken(double v) : RawToken(RawTokenType::CONS), value(v) {};
+   RawToken(const RawToken& t) = delete;
+   RawToken(RawToken&& t) : type(t.type) {
+      if( type == RawTokenType::STR )
+      {
+         svalue = t.svalue;
+         t.type = RawTokenType::NONE;
+      }
+      else
+         dvalue = t.dvalue;
+   }
+   RawToken(RawTokenType t) : type(t), dvalue(0.0) {} ;
+   RawToken(const std::string& v) : type(RawTokenType::STR), svalue(strdup(v.c_str())) {} ;
+   RawToken(const double v) : type(RawTokenType::CONS), dvalue(std::move(v)) {} ;
+   ~RawToken()
+   {
+      if( type == RawTokenType::STR )
+         free(svalue);
+   }
 };
 
 enum class ProcessedTokenType {
@@ -134,7 +145,7 @@ private:
 #else
    std::ifstream file;
 #endif
-   std::vector<std::unique_ptr<RawToken>> rawtokens;
+   std::vector<RawToken> rawtokens;
    std::vector<std::unique_ptr<ProcessedToken>> processedtokens;
    std::map<LpSectionKeyword, std::vector<std::unique_ptr<ProcessedToken>>> sectiontokens;
    
@@ -681,10 +692,10 @@ void Reader::processtokens() {
       fflush(stdout);
 
       // Slash + asterisk: comment, skip everything up to next asterisk + slash
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::SLASH) && rawtokens[i+1]->istype(RawTokenType::ASTERISK)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::SLASH) && rawtokens[i+1].istype(RawTokenType::ASTERISK)) {
          unsigned int j = i+2;
          while (rawtokens.size() - j >= 2) {
-            if (rawtokens[j]->istype(RawTokenType::ASTERISK) && rawtokens[j+1]->istype(RawTokenType::SLASH)) {
+            if (rawtokens[j].istype(RawTokenType::ASTERISK) && rawtokens[j+1].istype(RawTokenType::SLASH)) {
                i = j + 2;
                break;
             }
@@ -693,8 +704,8 @@ void Reader::processtokens() {
       }
 
       // long section keyword semi-continuous
-      if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::MINUS) && rawtokens[i+2]->istype(RawTokenType::STR)) {
-         std::string temp = ((RawStringToken*)rawtokens[i].get())->value + "-" + ((RawStringToken*)rawtokens[i+2].get())->value;
+      if (rawtokens.size() - i >= 3 && rawtokens[i].istype(RawTokenType::STR) && rawtokens[i+1].istype(RawTokenType::MINUS) && rawtokens[i+2].istype(RawTokenType::STR)) {
+         std::string temp = std::string(rawtokens[i].svalue) + "-" + rawtokens[i+2].svalue;
          LpSectionKeyword keyword = parsesectionkeyword(temp);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenSectionKeyword(keyword)));
@@ -704,8 +715,8 @@ void Reader::processtokens() {
       }
 
       // long section keyword subject to/such that
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::STR)) {
-         std::string temp = ((RawStringToken*)rawtokens[i].get())->value + " " + ((RawStringToken*)rawtokens[i+1].get())->value;
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::STR) && rawtokens[i+1].istype(RawTokenType::STR)) {
+         std::string temp = std::string(rawtokens[i].svalue) + " " + rawtokens[i+1].svalue;
          LpSectionKeyword keyword = parsesectionkeyword(temp);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenSectionKeyword(keyword)));
@@ -715,11 +726,11 @@ void Reader::processtokens() {
       }
 
       // other section keyword
-      if (rawtokens[i]->istype(RawTokenType::STR)) {
-         LpSectionKeyword keyword = parsesectionkeyword(((RawStringToken*)rawtokens[i].get())->value);
+      if (rawtokens[i].istype(RawTokenType::STR)) {
+         LpSectionKeyword keyword = parsesectionkeyword(rawtokens[i].svalue);
          if (keyword != LpSectionKeyword::NONE) {
             if (keyword == LpSectionKeyword::OBJ) {
-               LpObjectiveSectionKeywordType kw = parseobjectivesectionkeyword(((RawStringToken*)rawtokens[i].get())->value);
+               LpObjectiveSectionKeywordType kw = parseobjectivesectionkeyword(rawtokens[i].svalue);
                processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenObjectiveSectionKeyword(kw)));
             } else {
                processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenSectionKeyword(keyword)));
@@ -730,164 +741,164 @@ void Reader::processtokens() {
       }
 
       // sos type identifier? "S1 ::" or "S2 ::"
-      if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::COLON) && rawtokens[i+2]->istype(RawTokenType::COLON)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedSOSTypeToken(((RawStringToken*)rawtokens[i].get())->value)));
+      if (rawtokens.size() - i >= 3 && rawtokens[i].istype(RawTokenType::STR) && rawtokens[i+1].istype(RawTokenType::COLON) && rawtokens[i+2].istype(RawTokenType::COLON)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedSOSTypeToken(rawtokens[i].svalue)));
          i += 3;
          continue;
       }
 
       // constraint identifier?
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::COLON)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConsIdToken(((RawStringToken*)rawtokens[i].get())->value)));
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::STR) && rawtokens[i+1].istype(RawTokenType::COLON)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConsIdToken(rawtokens[i].svalue)));
          i += 2;
          continue;
       }
 
       // check if free
-      if (rawtokens[i]->istype(RawTokenType::STR) && iskeyword(((RawStringToken*)rawtokens[i].get())->value, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
+      if (rawtokens[i].istype(RawTokenType::STR) && iskeyword(rawtokens[i].svalue, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::FREE)));
          i++;
          continue;
       }
 
       // check if infinity
-      if (rawtokens[i]->istype(RawTokenType::STR) && iskeyword(((RawStringToken*)rawtokens[i].get())->value, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
+      if (rawtokens[i].istype(RawTokenType::STR) && iskeyword(rawtokens[i].svalue, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(std::numeric_limits<double>::infinity())));
          i++;
          continue;
       }
 
       // assume var identifier
-      if (rawtokens[i]->istype(RawTokenType::STR)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedVarIdToken(((RawStringToken*)rawtokens[i].get())->value)));
+      if (rawtokens[i].istype(RawTokenType::STR)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedVarIdToken(rawtokens[i].svalue)));
          i++;
          continue;
       }
 
       // + Constant
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) && rawtokens[i+1]->istype(RawTokenType::CONS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(((RawConstantToken*)rawtokens[i+1].get())->value)));
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::PLUS) && rawtokens[i+1].istype(RawTokenType::CONS)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(rawtokens[i+1].dvalue)));
          i += 2;
          continue;
       }
 
       // - constant
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::CONS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(-((RawConstantToken*)rawtokens[i+1].get())->value)));
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::MINUS) && rawtokens[i+1].istype(RawTokenType::CONS)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(-rawtokens[i+1].dvalue)));
          i += 2;
          continue;
       }
 
       // + [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::PLUS) && rawtokens[i+1].istype(RawTokenType::BRKOP)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
          i += 2;
          continue;
       }
 
       // - [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::MINUS) && rawtokens[i+1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
       }
 
       // constant [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::CONS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::CONS) && rawtokens[i+1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
       }
 
       // +
-      if (rawtokens[i]->istype(RawTokenType::PLUS)) {
+      if (rawtokens[i].istype(RawTokenType::PLUS)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(1.0)));
          i++;
          continue;
       }
 
       // -
-      if (rawtokens[i]->istype(RawTokenType::MINUS)) {
+      if (rawtokens[i].istype(RawTokenType::MINUS)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(-1.0)));
          i++;
          continue;
       }
 
       // constant
-      if (rawtokens[i]->istype(RawTokenType::CONS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(((RawConstantToken*)rawtokens[i].get())->value)));
+      if (rawtokens[i].istype(RawTokenType::CONS)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(rawtokens[i].dvalue)));
          i++;
          continue;
       }
 
       // [
-      if (rawtokens[i]->istype(RawTokenType::BRKOP)) {
+      if (rawtokens[i].istype(RawTokenType::BRKOP)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
          i++;
          continue;
       }
 
       // ]
-      if (rawtokens[i]->istype(RawTokenType::BRKCL)) {
+      if (rawtokens[i].istype(RawTokenType::BRKCL)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKCL)));
          i++;
          continue;
       }
 
       // /
-      if (rawtokens[i]->istype(RawTokenType::SLASH)) {
+      if (rawtokens[i].istype(RawTokenType::SLASH)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::SLASH)));
          i++;
          continue;
       }
 
       // *
-      if (rawtokens[i]->istype(RawTokenType::ASTERISK)) {
+      if (rawtokens[i].istype(RawTokenType::ASTERISK)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::ASTERISK)));
          i++;
          continue;
       }
 
       // ^
-      if (rawtokens[i]->istype(RawTokenType::HAT)) {
+      if (rawtokens[i].istype(RawTokenType::HAT)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::HAT)));
          i++;
          continue;
       }
 
       // <=
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::LESS) && rawtokens[i+1]->istype(RawTokenType::EQUAL)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::LESS) && rawtokens[i+1].istype(RawTokenType::EQUAL)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::LEQ)));
          i += 2;
          continue;
       }
 
       // <
-      if (rawtokens[i]->istype(RawTokenType::LESS)) {
+      if (rawtokens[i].istype(RawTokenType::LESS)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::L)));
          i++;
          continue;
       }
 
       // >=
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::GREATER) && rawtokens[i+1]->istype(RawTokenType::EQUAL)) {
+      if (rawtokens.size() - i >= 2 && rawtokens[i].istype(RawTokenType::GREATER) && rawtokens[i+1].istype(RawTokenType::EQUAL)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::GEQ)));
          i += 2;
          continue;
       }
 
       // >
-      if (rawtokens[i]->istype(RawTokenType::GREATER)) {
+      if (rawtokens[i].istype(RawTokenType::GREATER)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::G)));
          i++;
          continue;
       }
 
       // =
-      if (rawtokens[i]->istype(RawTokenType::EQUAL)) {
+      if (rawtokens[i].istype(RawTokenType::EQUAL)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::EQ)));
          i++;
          continue;
       }
 
       // FILEEND
-      if (rawtokens[i]->istype(RawTokenType::FLEND)) {
+      if (rawtokens[i].istype(RawTokenType::FLEND)) {
          i++;
          continue;
       }
@@ -903,7 +914,7 @@ void Reader::tokenize() {
    this->linebufferpos = 0;
    while(true) {
       this->readnexttoken();
-      if (this->rawtokens.size() >= 1 && this->rawtokens.back()->type == RawTokenType::FLEND) {
+      if (this->rawtokens.size() >= 1 && this->rawtokens.back().type == RawTokenType::FLEND) {
          break;
       }
    }
@@ -913,7 +924,7 @@ void Reader::readnexttoken() {
    if (this->linebufferpos == this->linebuffer.size()) {
      // read next line if any are left. 
      if (this->file.eof()) {
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
+         this->rawtokens.emplace_back(RawTokenType::FLEND);
          return;
      }
      std::getline(this->file, linebuffer);
@@ -938,67 +949,67 @@ void Reader::readnexttoken() {
       
       // check for bracket opening
       case '[':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::BRKOP)));
+         this->rawtokens.emplace_back(RawTokenType::BRKOP);
          this->linebufferpos++;
          return;
 
       // check for bracket closing
       case ']':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::BRKCL)));
+         this->rawtokens.emplace_back(RawTokenType::BRKCL);
          this->linebufferpos++;
          return;
 
       // check for less sign
       case '<':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::LESS)));
+         this->rawtokens.emplace_back(RawTokenType::LESS);
          this->linebufferpos++;
          return;
 
       // check for greater sign
       case '>':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::GREATER)));
+         this->rawtokens.emplace_back(RawTokenType::GREATER);
          this->linebufferpos++;
          return;
 
       // check for equal sign
       case '=':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::EQUAL)));
+         this->rawtokens.emplace_back(RawTokenType::EQUAL);
          this->linebufferpos++;
          return;
       
       // check for colon
       case ':':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::COLON)));
+         this->rawtokens.emplace_back(RawTokenType::COLON);
          this->linebufferpos++;
          return;
 
       // check for plus
       case '+':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::PLUS)));
+         this->rawtokens.emplace_back(RawTokenType::PLUS);
          this->linebufferpos++;
          return;
 
       // check for hat
       case '^':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::HAT)));
+         this->rawtokens.emplace_back(RawTokenType::HAT);
          this->linebufferpos++;
          return;
 
       // check for slash
       case '/':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::SLASH)));
+         this->rawtokens.emplace_back(RawTokenType::SLASH);
          this->linebufferpos++;
          return;
 
       // check for asterisk
       case '*':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::ASTERISK)));
+         this->rawtokens.emplace_back(RawTokenType::ASTERISK);
          this->linebufferpos++;
          return;
       
       // check for minus
       case '-':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::MINUS)));
+         this->rawtokens.emplace_back(RawTokenType::MINUS);
          this->linebufferpos++;
          return;
 
@@ -1024,7 +1035,7 @@ void Reader::readnexttoken() {
    char* endptr;
    double constant = strtod(startptr, &endptr);
    if (endptr != startptr) {
-      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawConstantToken(constant)));
+      this->rawtokens.emplace_back(constant);
       this->linebufferpos += endptr - startptr;
       return;
    }
@@ -1034,7 +1045,7 @@ void Reader::readnexttoken() {
    if( endpos == std::string::npos )
       endpos = this->linebuffer.size();  // take complete rest of string
    if( endpos > this->linebufferpos ) {
-      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(std::string(this->linebuffer, this->linebufferpos, endpos - this->linebufferpos))));
+      this->rawtokens.emplace_back(std::string(this->linebuffer, this->linebufferpos, endpos - this->linebufferpos));
       this->linebufferpos = endpos;
       return;
    }
