@@ -84,10 +84,8 @@ enum class ProcessedTokenType {
 
 enum class LpSectionKeyword {
   NONE,
-  OBJUNDEF,
   OBJMIN,
   OBJMAX,
-  OBJNONE,
   CON,
   BOUNDS,
   GEN,
@@ -242,22 +240,13 @@ bool iskeyword(const std::string str, const std::string* keywords, const int nke
 }
 
 static
-LpSectionKeyword parseobjectivesectionkeyword(const std::string str) {
+LpSectionKeyword parsesectionkeyword(const std::string& str) {
    if (iskeyword(str, LP_KEYWORD_MIN, LP_KEYWORD_MIN_N)) {
       return LpSectionKeyword::OBJMIN;
    }
 
    if (iskeyword(str, LP_KEYWORD_MAX, LP_KEYWORD_MAX_N)) {
       return LpSectionKeyword::OBJMAX;
-   }
-   
-   return LpSectionKeyword::OBJNONE;
-}
-
-static
-LpSectionKeyword parsesectionkeyword(const std::string& str) {
-   if (parseobjectivesectionkeyword(str) != LpSectionKeyword::OBJNONE) {
-      return LpSectionKeyword::OBJUNDEF;
    }
 
    if (iskeyword(str, LP_KEYWORD_ST, LP_KEYWORD_ST_N)) {
@@ -453,18 +442,15 @@ void Reader::processobjsec() {
    unsigned int i = 0;   
    if( sectiontokens.count(LpSectionKeyword::OBJMIN) )
    {
+      builder.model.sense = ObjectiveSense::MIN;
       parseexpression(sectiontokens[LpSectionKeyword::OBJMIN], builder.model.objective, i, true);
       lpassert(i == sectiontokens[LpSectionKeyword::OBJMIN].size());
    }
    else if( sectiontokens.count(LpSectionKeyword::OBJMAX) )
    {
+      builder.model.sense = ObjectiveSense::MAX;
       parseexpression(sectiontokens[LpSectionKeyword::OBJMAX], builder.model.objective, i, true);
       lpassert(i == sectiontokens[LpSectionKeyword::OBJMAX].size());
-   }
-   else
-   {
-      parseexpression(sectiontokens[LpSectionKeyword::OBJNONE], builder.model.objective, i, true);
-      lpassert(i == sectiontokens[LpSectionKeyword::OBJNONE].size());
    }
 }
 
@@ -697,12 +683,6 @@ void Reader::splittokens() {
    for (unsigned int i=0; i < processedtokens.size(); ++i) {
       if (processedtokens[i].type == ProcessedTokenType::SECID) {
          currentsection = processedtokens[i].keyword;
-         
-         if (currentsection == LpSectionKeyword::OBJMIN)
-            builder.model.sense = ObjectiveSense::MIN;
-         else if (currentsection == LpSectionKeyword::OBJMAX)
-            builder.model.sense = ObjectiveSense::MAX;
-         assert(currentsection != LpSectionKeyword::OBJUNDEF);  // should have been changed to OBJMIN or OBJMAX before
 
          // make sure this section did not yet occur
          lpassert(sectiontokens[currentsection].empty());
@@ -756,11 +736,7 @@ void Reader::processtokens() {
       if (rawtokens[i].istype(RawTokenType::STR)) {
          LpSectionKeyword keyword = parsesectionkeyword(rawtokens[i].svalue);
          if (keyword != LpSectionKeyword::NONE) {
-            if (keyword == LpSectionKeyword::OBJUNDEF) {
-               processedtokens.emplace_back(parseobjectivesectionkeyword(rawtokens[i].svalue));
-            } else {
-               processedtokens.emplace_back(keyword);
-            }
+            processedtokens.emplace_back(keyword);
             i++;
             continue;
          }
