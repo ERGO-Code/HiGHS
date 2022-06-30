@@ -1,8 +1,6 @@
 name: build-fast
 
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   release:
@@ -56,7 +54,7 @@ jobs:
 
     - name: Build wheels
       working-directory: ${{runner.workspace}}/src/interfaces/highspy
-        run: python -m cibuildwheel --output-dir wheelhouse
+      run: python -m cibuildwheel --output-dir wheelhouse
         # to supply options, put them in 'env', like:
         env:
           CIBW_ENVIRONMENT: LD_LIBRARY_PATH=$LD_LIRBARY_PATH:${{runner.workspace}}/install 
