@@ -97,13 +97,18 @@ enum class LpSectionKeyword {
   END
 };
 
+enum class SosType {
+   SOS1,
+   SOS2
+};
+
 enum class LpComparisonType { LEQ, L, EQ, G, GEQ };
 
 struct ProcessedToken {
    ProcessedTokenType type;
    union {
       LpSectionKeyword keyword;
-      char* sostype;  // S1 or S2
+      SosType sostype;
       char* name;
       double value;
       LpComparisonType dir;
@@ -140,11 +145,11 @@ struct ProcessedToken {
 
    ProcessedToken(LpSectionKeyword kw) : type(ProcessedTokenType::SECID), keyword(kw) {};
 
+   ProcessedToken(SosType sos) : type(ProcessedTokenType::SOSTYPE), sostype(sos) {};
+
    ProcessedToken(ProcessedTokenType t, const std::string& s) : type(t) {
-      if( t == ProcessedTokenType::SOSTYPE )
-         sostype = strdup(s.c_str());
-      else
-         name = strdup(s.c_str());
+      assert(t == ProcessedTokenType::CONID || t == ProcessedTokenType::VARID);
+      name = strdup(s.c_str());
    };
 
    ProcessedToken(double v) : type(ProcessedTokenType::CONST), value(v) {};
@@ -153,16 +158,8 @@ struct ProcessedToken {
 
    ~ProcessedToken()
    {
-      switch(type)
-      {
-         case ProcessedTokenType::SOSTYPE:
-            free(sostype);
-            break;
-         case ProcessedTokenType::CONID :
-         case ProcessedTokenType::VARID :
-            free(name);
-            break;
-      }
+      if( type == ProcessedTokenType::CONID || type == ProcessedTokenType::VARID )
+         free(name);
    }
 };
 
@@ -651,11 +648,7 @@ void Reader::processsossec() {
       // SOS type
       lpassert(i < tokens.size());
       lpassert(tokens[i]->type == ProcessedTokenType::SOSTYPE);
-      std::string sostype = tokens[i]->sostype;   // should be S1 or S2
-      lpassert(sostype.size() == 2);
-      lpassert(sostype[0] == 'S' || sostype[0] == 's');
-      lpassert(sostype[1] == '1' || sostype[1] == '2');
-      sos->type = sostype[1] - '0';
+      sos->type = tokens[i]->sostype == SosType::SOS1 ? 1 : 2;
       i++;
 
       while (i<tokens.size()) {
@@ -775,7 +768,10 @@ void Reader::processtokens() {
 
       // sos type identifier? "S1 ::" or "S2 ::"
       if (rawtokens.size() - i >= 3 && rawtokens[i].istype(RawTokenType::STR) && rawtokens[i+1].istype(RawTokenType::COLON) && rawtokens[i+2].istype(RawTokenType::COLON)) {
-         processedtokens.emplace_back(ProcessedTokenType::SOSTYPE, rawtokens[i].svalue);
+         lpassert(strlen(rawtokens[i].svalue) == 2);
+         lpassert(rawtokens[i].svalue[0] == 'S' || rawtokens[i].svalue[0] == 's');
+         lpassert(rawtokens[i].svalue[1] == '1' || rawtokens[i].svalue[1] == '2');
+         processedtokens.emplace_back(rawtokens[i].svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
          i += 3;
          continue;
       }
