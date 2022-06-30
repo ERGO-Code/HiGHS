@@ -168,13 +168,12 @@ private:
 #else
    std::ifstream file;
 #endif
+   std::string linebuffer;
+   std::size_t linebufferpos;
    std::vector<RawToken> rawtokens;
    std::vector<ProcessedToken> processedtokens;
    // store for each section a pointer to its begin and end (pointer to element after last)
    std::map<LpSectionKeyword, std::pair<std::vector<ProcessedToken>::iterator, std::vector<ProcessedToken>::iterator> > sectiontokens;
-   
-   std::string linebuffer;
-   std::size_t linebufferpos;
 
    Builder builder;
 
@@ -282,10 +281,23 @@ LpSectionKeyword parsesectionkeyword(const std::string& str) {
 }
 
 Model Reader::read() {
+   //std::clog << "Reading input, tokenizing..." << std::endl;
    tokenize();
+   linebuffer.clear();
+   linebuffer.shrink_to_fit();
+
+   //std::clog << "Processing tokens..." << std::endl;
    processtokens();
+   rawtokens.clear();
+   rawtokens.shrink_to_fit();
+
+   //std::clog << "Splitting tokens..." << std::endl;
    splittokens();
+
+   //std::clog << "Setting up model..." << std::endl;
    processsections();
+   processedtokens.clear();
+   processedtokens.shrink_to_fit();
 
    return builder.model;
 }
