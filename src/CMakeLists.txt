@@ -446,8 +446,6 @@ add_library(libhighs)
 if (NOT ${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
-elseif(MINGW)
-    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 if(${BUILD_SHARED_LIBS})
