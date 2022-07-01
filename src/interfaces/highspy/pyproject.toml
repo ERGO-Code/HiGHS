@@ -1,0 +1,3 @@
+[build-system]
+# Minimum requirements for the build system to execute.
+requires = ["setuptools", "pybind11", "pyomo", "wheel"]  # PEP 508 specifications.
