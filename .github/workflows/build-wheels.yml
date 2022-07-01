@@ -55,9 +55,8 @@ jobs:
            
         # to supply options, put them in 'env', like:
         env:
-          LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs
-          DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs
-          CIWB_BEFORE_BUILD: echo ${LD_LIBRARY_PATH}
+          CIBW_ENVIRONMENT:  LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{{runner.workspace}}/installs/highs  
+          CIBW_ENVIRONMENT:  DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:${{runner.workspace}}/installs/highs
 
       - uses: actions/upload-artifact@v2
         with:
