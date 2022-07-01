@@ -49,8 +49,10 @@ jobs:
         run: ctest --parallel 2 --timeout 300 --output-on-failure 
 
       - name: Build wheels
-        working-directory: ${{runner.workspace}}/src/interfaces/highspy
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: |
+           cd ${{runner.workspace}}/src/interfaces/highspy
+           python -m cibuildwheel --output-dir wheelhouse
+           
         # to supply options, put them in 'env', like:
         env:
           LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs
