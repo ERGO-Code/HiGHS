@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macOS-10.15] #  windows-2019
+        os: [macOS-10.15] #  windows-2019 ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v3
@@ -57,11 +57,11 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs
           DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs
-          CIWB_BEFORE_BUILD: [
-            'pip install pybind11 pyomo',
-            'export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs',
-            'export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs'
-          ]
+          CIWB_BEFORE_BUILD: >
+            pip install pybind11 pyomo &&
+            export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs' &&
+            export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${{runner.workspace}}/installs/highs'
+
 
       - uses: actions/upload-artifact@v2
         with:
