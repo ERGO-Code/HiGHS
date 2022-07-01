@@ -50,7 +50,7 @@ jobs:
 
       - name: Build wheels
         run: |
-           cd ${{runner.workspace}}/src/interfaces/highspy
+           cd  $GITHUB_WORKSPACE/src/interfaces/highspy
            python -m cibuildwheel --output-dir wheelhouse
            
         # to supply options, put them in 'env', like:
