@@ -16,51 +16,29 @@
 #ifndef PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
 
-enum PresolveRuleType : uint8_t {
+enum PresolveRuleType : int {
+  kPresolveRuleIllegal = -1,
   kPresolveRuleMin = 0,
   kPresolveRuleEmptyRow = kPresolveRuleMin,
-  kPresolveRuleSingletonRow,
-  kPresolveRuleRedundantRow,
-  kPresolveRuleForcingRow,
-  kPresolveRuleDuplicateRow,
+  kPresolveRuleSingletonRow, // Allow
+  kPresolveRuleRedundantRow, // Allow
+  kPresolveRuleForcingRow, // Allow
+  kPresolveRuleEmptyCol,
   kPresolveRuleFixedCol,
-  kPresolveRuleFixedColAtLower,
-  kPresolveRuleFixedColAtUpper,
-  kPresolveRuleFixedColAtZero,
-  kPresolveRuleFreeColSubstitution,
-  kPresolveRuleForcingCol,
-  kPresolveRuleForcingColRemovedRow,
-  kPresolveRuleDuplicateCol,
+  //  kPresolveRuleSingletonCol,
+  kPresolveRuleDominatedCol,
+  kPresolveRuleForcingCol, // Allow
+  //  kPresolveRuleForcingColRemovedRow,
+  kPresolveRuleFreeColSubstitution, // Allow
   kPresolveRuleDoubletonEquation,
   kPresolveRuleDependentEquations,
   kPresolveRuleDependentFreeCols,
   kPresolveRuleEqualityRowAddition,
+  kPresolveRuleAggregator,
+  kPresolveRuleParallelRowsAndCols,
   kPresolveRuleLinearTransform,
   kPresolveRuleMax = kPresolveRuleLinearTransform,
   kPresolveRuleCount,
-};
-
-enum PresolveReductionType : uint8_t {
-  kPresolveReductionMin = 0,
-  kPresolveReductionEmptyRow = kPresolveReductionMin,
-  kPresolveReductionSingletonRow,
-  kPresolveReductionRedundantRow,
-  kPresolveReductionForcingRow,
-  kPresolveReductionDuplicateRow,
-  kPresolveReductionFixedCol,
-  kPresolveReductionFixedColAtLower,
-  kPresolveReductionFixedColAtUpper,
-  kPresolveReductionFixedColAtZero,
-  kPresolveReductionFreeColSubstitution,
-  kPresolveReductionForcingCol,
-  kPresolveReductionForcingColRemovedRow,
-  kPresolveReductionDuplicateCol,
-  kPresolveReductionDoubletonEquation,
-  kPresolveReductionDependentEquation,
-  kPresolveReductionEqualityRowAddition,
-  kPresolveReductionLinearTransform,
-  kPresolveReductionMax = kPresolveReductionLinearTransform,
-  kPresolveReductionCount,
 };
 
 class HPresolveAnalysis {
@@ -76,26 +54,27 @@ class HPresolveAnalysis {
 
  public:
   std::vector<bool> allow_rule_;
+
+  bool allow_logging_;
+  bool logging_on_;
+
+  int log_rule_type_;
+  HighsInt num_deleted_rows0_;
+  HighsInt num_deleted_cols0_;
+
   std::vector<uint64_t> rule_num_call_;
   std::vector<HighsInt> rule_num_col_removed_;
   std::vector<HighsInt> rule_num_row_removed_;
-  std::vector<HighsInt> reduction_num_call_;
-  std::vector<HighsInt> reduction_num_col_removed_;
-  std::vector<HighsInt> reduction_num_row_removed_;
   // for LP presolve
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);
+  void resetNumDeleted();
 
   void reportPresolveRulesAllowed(const bool report_allowed = true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
   std::string presolveRuleTypeToString(const HighsInt rule_type);
-  void updatePresolveRuleLog(const HighsInt rule_type,
-                             const HighsInt num_removed_col,
-                             const HighsInt num_removed_row);
-  void updatePresolveReductionLog(const HighsInt reduction_type,
-                                  const HighsInt num_removed_col_ = -1,
-                                  const HighsInt num_removed_row_ = -1);
-  bool analysePresolveReductionLog(const bool report = false);
+  void startPresolveRuleLog(const HighsInt rule_type);
+  void stopPresolveRuleLog(const HighsInt rule_type);
   bool analysePresolveRuleLog(const bool report = false);
   friend class HPresolve;
 };
