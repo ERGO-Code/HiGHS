@@ -39,7 +39,7 @@ static bool separateModKCuts(const std::vector<int64_t>& intSystemValue,
 
   GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
                       numCol + 1);
-  GFkSolve.setRhs<k>(numCol, 1, 0);
+  GFkSolve.setRhs<k>(numCol, 1);
   GFkSolve.solve<k>(foundModKCut);
 
   return cutpool.getNumCuts() != numCuts;
