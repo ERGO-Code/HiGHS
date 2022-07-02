@@ -31,7 +31,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install/highs -DFAST_BUILD=ON
+        run: cmake $GITHUB_WORKSPACE -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install/highs -DFAST_BUILD=ON
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
