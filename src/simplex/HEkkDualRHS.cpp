@@ -13,7 +13,7 @@
 /**@file simplex/HEkkDualRHS.cpp
  * @brief
  */
-#include "HEkkDualRHS.h"
+#include "simplex/HEkkDualRHS.h"
 
 #include <algorithm>
 #include <fstream>

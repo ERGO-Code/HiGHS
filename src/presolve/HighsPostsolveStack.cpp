@@ -14,9 +14,9 @@
 
 #include <numeric>
 
-#include "HighsCDouble.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsOptions.h"
+#include "util/HighsCDouble.h"
 
 namespace presolve {
 
@@ -597,6 +597,8 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
         // nothing else to do
         return;
       }
+      case HighsBasisStatus::kBasic:
+      case HighsBasisStatus::kNonbasic:;
     }
 
     assert(basis.col_status[col] == HighsBasisStatus::kBasic);

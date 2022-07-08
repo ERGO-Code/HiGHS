@@ -1,6 +1,6 @@
 name: build-clang
 
-on: ["pull_request"]
+on: [push, pull_request]
 
 jobs:
   debug:
@@ -28,7 +28,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --parallel 4 --config Debug
+         cmake --build . --parallel --config Debug
 
 
     - name: Test
@@ -62,7 +62,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --parallel 4 --config RELEASE
+         cmake --build . --parallel --config RELEASE
 
 
     - name: Test
@@ -96,7 +96,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --parallel 4 --config Debug
+         cmake --build . --parallel --config Debug
 
 
     - name: Test
@@ -130,7 +130,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --parallel 4 --config RELEASE
+         cmake --build . --parallel --config RELEASE
 
 
     - name: Test

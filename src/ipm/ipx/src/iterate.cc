@@ -428,6 +428,7 @@ void Iterate::ResidualsFromDropping(double* pres, double* dres) const {
                     zdrop = zl_[j]-zu_[j]; // inactive
             }
             break;
+        default: ;
         }
         double amax = 0.0;
         for (Int p = AI.begin(j); p < AI.begin(j+1); p++)

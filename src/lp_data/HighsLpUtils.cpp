@@ -1754,7 +1754,7 @@ void reportLpObjSense(const HighsLogOptions& log_options, const HighsLp& lp) {
                  lp.sense_);
 }
 
-std::string getBoundType(const double lower, const double upper) {
+static std::string getBoundType(const double lower, const double upper) {
   std::string type;
   if (highs_isInfinity(-lower)) {
     if (highs_isInfinity(upper)) {
