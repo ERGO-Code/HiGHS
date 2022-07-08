@@ -54,7 +54,7 @@ void HighsRanging::clear() {
   this->row_bound_dn.ou_var_.clear();
 }
 
-double infProduct(double value) {
+static double infProduct(double value) {
   // Multiplying value and kHighsInf
   if (value == 0) {
     return 0;
@@ -63,7 +63,7 @@ double infProduct(double value) {
   }
 }
 
-double possInfProduct(double poss_inf, double value) {
+static double possInfProduct(double poss_inf, double value) {
   // Multiplying something that could be infinite and value
   if (value == 0) {
     return 0;

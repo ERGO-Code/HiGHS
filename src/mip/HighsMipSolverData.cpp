@@ -577,6 +577,14 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
         numBin += ((mipsolver.model_->col_lower_[i] == 0.0) &
                    (mipsolver.model_->col_upper_[i] == 1.0));
+        break;
+      case HighsVarType::kSemiContinuous:
+      case HighsVarType::kSemiInteger:
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
+                     "Semicontinuous or semiinteger variables should have been "
+                     "reformulated away before HighsMipSolverData::runSetup() "
+                     "is called.");
+        throw std::logic_error("Unexpected variable type");
     }
   }
 

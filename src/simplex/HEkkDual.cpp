@@ -13,7 +13,7 @@
 /**@file simplex/HEkkDual.cpp
  * @brief
  */
-#include "HEkkDual.h"
+#include "simplex/HEkkDual.h"
 
 #include <algorithm>
 #include <cassert>

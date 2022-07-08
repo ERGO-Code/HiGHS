@@ -494,7 +494,7 @@ static int CheckVectors(Int m, Int n, const double* rhs,const char* constr_type,
 
 // Checks if A is a valid m-by-n matrix in CSC format. Returns 0 if OK and a
 // negative value otherwise.
-Int CheckMatrix(Int m, Int n, const Int *Ap, const Int *Ai, const double *Ax) {
+static Int CheckMatrix(Int m, Int n, const Int *Ap, const Int *Ai, const double *Ax) {
     if (Ap[0] != 0)
         return -5;
     for (Int j = 0; j < n; j++)
