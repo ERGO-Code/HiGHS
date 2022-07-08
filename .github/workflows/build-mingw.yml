@@ -1,6 +1,6 @@
 name: build-mingw
 
-on: [pull_request]
+on: [push]
 
 jobs:
   mingw:
