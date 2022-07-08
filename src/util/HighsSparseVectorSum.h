@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include <vector>
 
 #include "util/HighsCDouble.h"
