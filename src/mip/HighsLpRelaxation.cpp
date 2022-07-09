@@ -601,6 +601,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
                                          std::vector<HighsInt>& inds,
                                          std::vector<double>& vals, double& rhs,
                                          bool extractCliques) const {
+#if 0
   const HighsBasis& basis = lpsolver.getBasis();
   const HighsSolution& sol = lpsolver.getSolution();
   HighsCDouble proofRhs = upperbound;
@@ -699,9 +700,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
         mipsolver, inds.data(), vals.data(), inds.size(), rhs);
 
   return true;
-#if 0
+#else
   std::vector<double> row_dual = lpsolver.getSolution().row_dual;
-
 
   const HighsLp& lp = lpsolver.getLp();
 
@@ -744,7 +744,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     double val = double(sum);
 
-    if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
+    if (std::fabs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
     bool removeValue = std::fabs(val) <= mipsolver.mipdata_->feastol;
 
