@@ -356,6 +356,7 @@ void HighsMipSolverData::init() {
   rootlpsolobj = -kHighsInf;
   analyticCenterComputed = false;
   analyticCenterStatus = HighsModelStatus::kNotset;
+  maxTreeSizeLog2 = 0;
   numRestarts = 0;
   numRestartsRoot = 0;
   numImprovingSols = 0;
@@ -424,7 +425,10 @@ void HighsMipSolverData::runSetup() {
 
   if (mipsolver.solution_objective_ != kHighsInf) {
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
-    double solobj = mipsolver.solution_objective_ - mipsolver.model_->offset_;
+    // return the objective value in the transformed space
+    double solobj =
+        mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
+        mipsolver.model_->offset_;
     bool feasible = mipsolver.bound_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.integrality_violation_ <=
@@ -563,6 +567,7 @@ void HighsMipSolverData::runSetup() {
   firstlpsol.clear();
   HighsInt numBin = 0;
 
+  maxTreeSizeLog2 = 0;
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
       case HighsVarType::kContinuous:
@@ -575,6 +580,9 @@ void HighsMipSolverData::runSetup() {
       case HighsVarType::kInteger:
         integer_cols.push_back(i);
         integral_cols.push_back(i);
+        maxTreeSizeLog2 += (HighsInt)std::ceil(
+            std::log2(std::min(1024.0, 1.0 + mipsolver.model_->col_upper_[i] -
+                                           mipsolver.model_->col_lower_[i])));
         numBin += ((mipsolver.model_->col_lower_[i] == 0.0) &
                    (mipsolver.model_->col_upper_[i] == 1.0));
         break;
@@ -856,6 +864,7 @@ void HighsMipSolverData::performRestart() {
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     // transform the objective limit to the current model
     upper_limit -= mipsolver.model_->offset_;
+    optimality_limit -= mipsolver.model_->offset_;
     upper_bound -= mipsolver.model_->offset_;
     lower_bound = upper_bound;
     return;
@@ -1212,6 +1221,9 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
+  if (numRestarts == 0)
+    maxSepaRounds =
+        std::min(HighsInt(2 * std::sqrt(maxTreeSizeLog2)), maxSepaRounds);
   std::unique_ptr<SymmetryDetectionData> symData;
   highs::parallel::TaskGroup tg;
 restart:
@@ -1297,6 +1309,22 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
   rootlpsolobj = firstlpsolobj;
+  removeFixedIndices();
+  if (mipsolver.options_mip_->presolve != kHighsOffString) {
+    double fixingRate = percentageInactiveIntegers();
+    if (fixingRate >= 10.0) {
+      tg.cancel();
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "\n%.1f%% inactive integer columns, restarting\n",
+                   fixingRate);
+      tg.taskWait();
+      performRestart();
+      ++numRestartsRoot;
+      if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
+
+      return;
+    }
+  }
 
   // begin separation
   std::vector<double> avgdirection;

@@ -546,6 +546,17 @@ class HighsDomain {
 
       if (domchgreason_[i].type == Reason::kBranching)
         branchingPositions.push_back(reducedstack.size());
+      else {
+        HighsInt k = i;
+        while (prevboundval_[k].second != -1) {
+          k = prevboundval_[k].second;
+          if (domchgreason_[k].type == Reason::kBranching) {
+            branchingPositions.push_back(reducedstack.size());
+            break;
+          }
+        }
+      }
+
       reducedstack.push_back(domchgstack_[i]);
     }
 

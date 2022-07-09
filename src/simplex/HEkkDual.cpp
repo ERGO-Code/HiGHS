@@ -2778,7 +2778,10 @@ bool HEkkDual::reachedExactObjectiveBound() {
         ekk_instance_.info_.updated_dual_objective_value;
     const double perturbed_value_residual =
         perturbed_dual_objective_value - objective_bound;
-    const double exact_dual_objective_value = computeExactDualObjectiveValue();
+    HVector dual_col;
+    HVector dual_row;
+    const double exact_dual_objective_value =
+        computeExactDualObjectiveValue(dual_col, dual_row);
     const double exact_value_residual =
         exact_dual_objective_value - objective_bound;
     std::string action;
@@ -2788,6 +2791,26 @@ bool HEkkDual::reachedExactObjectiveBound() {
                   ekk_instance_.info_.updated_dual_objective_value,
                   objective_bound);
       action = "Have DualUB bailout";
+      if (ekk_instance_.info_.costs_perturbed ||
+          ekk_instance_.info_.costs_shifted) {
+        // Remove cost perturbation/shifting
+        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
+      }
+
+      // Set the duals as computed in the computeExactDualObjective call
+      for (HighsInt i = 0; i < solver_num_col; i++)
+        ekk_instance_.info_.workDual_[i] =
+            ekk_instance_.info_.workCost_[i] - dual_row.array[i];
+      for (HighsInt i = solver_num_col; i < solver_num_tot; i++)
+        ekk_instance_.info_.workDual_[i] = -dual_col.array[i - solver_num_col];
+
+      // Since the computeExactDualObjectiveValue() call succeeded, if there are
+      // any dual infeasibilities they can be removed by a bound flip
+      force_phase2 = false;
+      correctDualInfeasibilities(dualInfeasCount);
+
+      // no shifts should have occurred
+      assert(!ekk_instance_.info_.costs_shifted);
       reached_exact_objective_bound = true;
       ekk_instance_.model_status_ = HighsModelStatus::kObjectiveBound;
     } else {
@@ -2805,12 +2828,12 @@ bool HEkkDual::reachedExactObjectiveBound() {
   return reached_exact_objective_bound;
 }
 
-double HEkkDual::computeExactDualObjectiveValue() {
+double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
+                                                HVector& dual_row) {
   const HighsLp& lp = ekk_instance_.lp_;
   const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
   // Create a local buffer for the pi vector
-  HVector dual_col;
   dual_col.setup(lp.num_row_);
   dual_col.clear();
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
@@ -2825,7 +2848,6 @@ double HEkkDual::computeExactDualObjectiveValue() {
   }
   // Create a local buffer for the dual vector
   const HighsInt numTot = lp.num_col_ + lp.num_row_;
-  HVector dual_row;
   dual_row.setup(lp.num_col_);
   dual_row.clear();
   if (dual_col.count) {

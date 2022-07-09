@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void solve(Highs& highs, std::string presolve,
@@ -404,6 +404,46 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
           double_equal_tolerance);
 }
 
+TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
+  HighsSolution sol;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsModelStatus& model_status = highs.getModelStatus();
+  HighsLp lp;
+  lp.num_col_ = 2;  
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1.5, 1.5};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  const double rhs = 4.0;
+  const double delta = 0.99;
+  lp.row_lower_ = {rhs-delta, rhs+delta};
+  lp.row_upper_ = {rhs-delta, rhs+delta};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 1};
+
+  highs.passModel(lp);
+
+  sol.col_value = {1, 1};
+  highs.setSolution(sol);
+  //  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) == HighsStatus::kOk);
+  highs.run();
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
+
+  // Stefan's example
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/infeasible.mps";
+
+  highs.readModel(filename);
+  sol.col_value = {75, 0, 275, 300, 300, 0, 0, 0, 50, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0};
+  highs.setSolution(sol);
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) == HighsStatus::kOk);
+  highs.run();
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
+}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
                  const bool dev_run = false) {
@@ -469,3 +509,4 @@ void rowlessMIP(Highs& highs) {
   solve(highs, "on", require_model_status, optimal_objective);
   solve(highs, "off", require_model_status, optimal_objective);
 }
+

@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include <vector>
 
 #include "util/HighsCDouble.h"
@@ -22,7 +23,6 @@
 
 class HighsSparseVectorSum {
  public:
-  std::vector<uint8_t> nonzeroflag;
   std::vector<HighsCDouble> values;
   std::vector<HighsInt> nonzeroinds;
   HighsSparseVectorSum() = default;
@@ -31,50 +31,43 @@ class HighsSparseVectorSum {
 
   void setDimension(HighsInt dimension) {
     values.resize(dimension);
-    nonzeroflag.resize(dimension);
     nonzeroinds.reserve(dimension);
   }
 
   void add(HighsInt index, double value) {
-    assert(index >= 0 && index < (HighsInt)nonzeroflag.size());
-    if (nonzeroflag[index]) {
+    assert(index >= 0 && index < (HighsInt)values.size());
+    if (values[index] != 0.0) {
       values[index] += value;
     } else {
       values[index] = value;
-      nonzeroflag[index] = true;
       nonzeroinds.push_back(index);
     }
+
+    if (values[index] == 0.0)
+      values[index] = std::numeric_limits<double>::min();
   }
 
   void add(HighsInt index, HighsCDouble value) {
-    if (nonzeroflag[index]) {
+    if (values[index] != 0.0) {
       values[index] += value;
     } else {
       values[index] = value;
-      nonzeroflag[index] = true;
       nonzeroinds.push_back(index);
     }
-  }
 
-  void set(HighsInt index, double value) {
-    values[index] = value;
-    nonzeroinds.push_back(index);
+    if (values[index] == 0.0)
+      values[index] = std::numeric_limits<double>::min();
   }
-
-  void set(HighsInt index, HighsCDouble value) {
-    values[index] = value;
-    nonzeroinds.push_back(index);
-  }
-
-  void chgValue(HighsInt index, double val) { values[index] = val; }
-  void chgValue(HighsInt index, HighsCDouble val) { values[index] = val; }
 
   const std::vector<HighsInt>& getNonzeros() const { return nonzeroinds; }
 
   double getValue(HighsInt index) const { return double(values[index]); }
 
   void clear() {
-    for (HighsInt i : nonzeroinds) nonzeroflag[i] = false;
+    if (nonzeroinds.size() < 0.3 * values.size())
+      for (HighsInt i : nonzeroinds) values[i] = 0.0;
+    else
+      values.assign(values.size(), false);
 
     nonzeroinds.clear();
   }
@@ -95,7 +88,6 @@ class HighsSparseVectorSum {
 
       if (isZero(pos, val)) {
         values[pos] = 0.0;
-        nonzeroflag[pos] = 0;
         --numNz;
         std::swap(nonzeroinds[numNz], nonzeroinds[i]);
       }

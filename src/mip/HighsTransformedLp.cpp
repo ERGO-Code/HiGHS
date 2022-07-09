@@ -135,13 +135,13 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
         simpleUbDist[col] = 0.0;
 
       double minbestub = bestub;
-      size_t bestvubnodes = 0;
+      int64_t bestvubnodes = 0;
 
       simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
       if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
         simpleLbDist[col] = 0.0;
       double maxbestlb = bestlb;
-      size_t bestvlbnodes = 0;
+      int64_t bestvlbnodes = 0;
 
       for (const auto& vub : implications.getVUBs(col)) {
         if (vub.second.coef == kHighsInf) continue;
@@ -152,7 +152,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
 
         assert(vub.first >= 0 && vub.first < mipsolver.numCol());
         if (vubval <= lpSolution.col_value[col] + mipsolver.mipdata_->feastol) {
-          size_t vubnodes =
+          int64_t vubnodes =
               vub.second.coef > 0
                   ? mipsolver.mipdata_->nodequeue.numNodesDown(vub.first)
                   : mipsolver.mipdata_->nodequeue.numNodesUp(vub.first);

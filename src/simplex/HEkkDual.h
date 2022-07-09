@@ -265,7 +265,7 @@ class HEkkDual {
       const HighsInt simplex_dual_edge_weight_strategy);
 
   bool reachedExactObjectiveBound();
-  double computeExactDualObjectiveValue();
+  double computeExactDualObjectiveValue(HVector& dual_col, HVector& dual_row);
 
   /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the

@@ -115,12 +115,12 @@ class Highs {
   /**
    * @brief Read in a model
    */
-  HighsStatus readModel(const std::string filename);
+  HighsStatus readModel(const std::string& filename);
 
   /**
    * @brief Read in a basis
    */
-  HighsStatus readBasis(const std::string filename);
+  HighsStatus readBasis(const std::string& filename);
 
   /**
    * @brief Presolve the incumbent model
@@ -140,12 +140,12 @@ class Highs {
   /**
    * @brief Write the current solution to a file in a given style
    */
-  HighsStatus writeSolution(const std::string filename, const HighsInt style);
+  HighsStatus writeSolution(const std::string& filename, const HighsInt style);
 
   /**
    * @brief Read a HiGHS solution file in a given style
    */
-  HighsStatus readSolution(const std::string filename, const HighsInt style);
+  HighsStatus readSolution(const std::string& filename, const HighsInt style);
 
   /**
    * @brief Check the feasibility of the current solution. Of value
@@ -175,14 +175,14 @@ class Highs {
   HighsStatus setOptionValue(const std::string& option, const double value);
 
   HighsStatus setOptionValue(const std::string& option,
-                             const std::string value);
+                             const std::string& value);
 
   HighsStatus setOptionValue(const std::string& option, const char* value);
 
   /**
    * @brief Read option values from a file
    */
-  HighsStatus readOptions(const std::string filename);
+  HighsStatus readOptions(const std::string& filename);
 
   /**
    * @brief Pass a HighsOptions instance to Highs
@@ -223,7 +223,7 @@ class Highs {
    * file, with the extension ".html" producing HTML, otherwise using
    * the standard format used to read options from a file.
    */
-  HighsStatus writeOptions(const std::string filename,  //!< The filename
+  HighsStatus writeOptions(const std::string& filename,  //!< The filename
                            const bool report_only_deviations = false) const;
 
   /**
@@ -250,7 +250,7 @@ class Highs {
    * producing HTML, otherwise using the standard format used to read
    * options from a file.
    */
-  HighsStatus writeInfo(const std::string filename) const;
+  HighsStatus writeInfo(const std::string& filename) const;
 
   /**
    * @brief Get the value of infinity used by HiGHS
@@ -318,6 +318,12 @@ class Highs {
   HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
+   * @brief Indicate whether a dual unbounded ray exists, and gets
+   * it if it does
+   */
+  HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
+
+  /**
    * @brief Indicate whether a primal unbounded ray exists, and gets
    * it if it does and primal_ray is not nullptr
    */
@@ -342,6 +348,15 @@ class Highs {
    */
 
   /**
+   * @brief Gets the internal basic variable index array in the order
+   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
+   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
+   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
+   * num_col+num_row) are (num_col+row_index).
+   */
+  const HighsInt* getBasicVariablesArray() const;
+
+  /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
    * getBasisTransposeSolve, getReducedRow and
@@ -349,6 +364,15 @@ class Highs {
    * and negative entries are -(row_index+1).
    */
   HighsStatus getBasicVariables(HighsInt* basic_variables);
+
+  /**
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the result in the given HVector buffer which is
+   * expected to be setup with dimension num_row. The buffers
+   * previous contents will be overwritten.
+   */
+  HighsStatus getBasisInverseRowSparse(const HighsInt row,
+                                       HVector& row_ep_buffer);
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -554,12 +578,12 @@ class Highs {
   /**
    * @brief Write out the incumbent model to a file
    */
-  HighsStatus writeModel(const std::string filename);
+  HighsStatus writeModel(const std::string& filename);
 
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string filename);
+  HighsStatus writeBasis(const std::string& filename);
 
   /**
    * Methods for incumbent model modification
@@ -845,7 +869,7 @@ class Highs {
    * instance. The origin string is used to identify the source of the
    * HighsBasis instance.
    */
-  HighsStatus setBasis(const HighsBasis& basis, const std::string origin = "");
+  HighsStatus setBasis(const HighsBasis& basis, const std::string& origin = "");
 
   /**
    * @brief Clear the internal HighsBasis instance
@@ -862,7 +886,7 @@ class Highs {
   /**
    * @brief Open a named log file
    */
-  HighsStatus openLogFile(const std::string log_file = "");
+  HighsStatus openLogFile(const std::string& log_file = "");
 
   /**
    * @brief Interpret common qualifiers to string values
@@ -981,13 +1005,14 @@ class Highs {
   HighsStatus setHighsOptionValue(const std::string& option,
                                   const double value);
 
-  HighsStatus setHighsOptionValue(const std::string& option,
-                                  const std::string value  //!< The option value
+  HighsStatus setHighsOptionValue(
+      const std::string& option,
+      const std::string& value  //!< The option value
   );
 
   HighsStatus setHighsOptionValue(const std::string& option, const char* value);
 
-  HighsStatus readHighsOptions(const std::string filename  //!< The filename
+  HighsStatus readHighsOptions(const std::string& filename  //!< The filename
   );
 
   HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
@@ -1011,7 +1036,7 @@ class Highs {
   HighsStatus resetHighsOptions();
 
   HighsStatus writeHighsOptions(
-      const std::string filename,  //!< The filename
+      const std::string& filename,  //!< The filename
       const bool report_only_non_default_values = true);
 
   HighsInt getSimplexIterationCount() {
@@ -1030,22 +1055,19 @@ class Highs {
   HighsStatus getHighsInfoValue(const std::string& info,
                                 double& value) const;  //!< The info value
 
-  HighsStatus writeHighsInfo(const std::string filename  //!< The filename
+  HighsStatus writeHighsInfo(const std::string& filename  //!< The filename
   );
 
   double getHighsInfinity();
 
   double getHighsRunTime();
 
-  HighsStatus writeSolution(const std::string filename,
-                            const bool pretty = false) const;
-
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
   void logHeader();
 
-  void deprecationMessage(const std::string method_name,
-                          const std::string alt_method_name) const;
+  void deprecationMessage(const std::string& method_name,
+                          const std::string& alt_method_name) const;
 
   // End of deprecated methods
  private:
@@ -1146,7 +1168,7 @@ class Highs {
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
-  void underDevelopmentLogMessage(const std::string method_name);
+  void underDevelopmentLogMessage(const std::string& method_name);
 
   // Interface methods
   HighsStatus basisForSolution();
@@ -1222,7 +1244,7 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimality(const std::string solver_type,
+  HighsStatus checkOptimality(const std::string& solver_type,
                               HighsStatus return_status);
   HighsStatus invertRequirementError(std::string method_name);
 };
