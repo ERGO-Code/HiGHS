@@ -2794,8 +2794,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
       if (ekk_instance_.info_.costs_perturbed ||
           ekk_instance_.info_.costs_shifted) {
         // Remove cost perturbation/shifting
-        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual,
-                                     kSolvePhase2);
+        ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
       }
 
       // Set the duals as computed in the computeExactDualObjective call
