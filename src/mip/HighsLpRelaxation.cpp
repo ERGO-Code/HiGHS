@@ -604,6 +604,9 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   const HighsBasis& basis = lpsolver.getBasis();
   const HighsSolution& sol = lpsolver.getSolution();
   HighsCDouble proofRhs = upperbound;
+  assert(lpsolver.getInfo().max_dual_infeasibility <=
+         mipsolver.mipdata_->feastol);
+
   proofRhs -= lpsolver.getInfo().objective_function_value;
   inds.clear();
   vals.clear();

@@ -599,21 +599,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
             return -1;
           }
-        } else if (solobj > getCutoffBound()) {
-          addBoundExceedingConflict();
-          localdom.propagate();
-          bool infeas = localdom.infeasible();
-          if (infeas) {
-            localdom.backtrack();
-            lp->flushDomain(localdom);
-
-            branchUpwards(col, upval, fracval);
-            nodestack[nodestack.size() - 2].opensubtrees = 0;
-            nodestack[nodestack.size() - 2].skipDepthCount = 1;
-            depthoffset -= 1;
-
-            return -1;
-          }
         }
       } else if (status == HighsLpRelaxation::Status::kInfeasible) {
         mipsolver.mipdata_->debugSolution.nodePruned(localdom);
@@ -727,21 +712,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = pruned ? 0 : 1;
             nodestack[nodestack.size() - 2].other_child_lb = solobj;
-            nodestack[nodestack.size() - 2].skipDepthCount = 1;
-            depthoffset -= 1;
-
-            return -1;
-          }
-        } else if (solobj > getCutoffBound()) {
-          addBoundExceedingConflict();
-          localdom.propagate();
-          bool infeas = localdom.infeasible();
-          if (infeas) {
-            localdom.backtrack();
-            lp->flushDomain(localdom);
-
-            branchDownwards(col, downval, fracval);
-            nodestack[nodestack.size() - 2].opensubtrees = 0;
             nodestack[nodestack.size() - 2].skipDepthCount = 1;
             depthoffset -= 1;
 
@@ -1104,18 +1074,6 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                 return evaluateNode();
               }
             }
-          }
-        } else if (lp->getObjective() > getCutoffBound()) {
-          // the LP is not solved to dual feasibilty due to scaling/numerics
-          // therefore we compute a conflict constraint as if the LP was bound
-          // exceeding and propagate the local domain again. The lp relaxation
-          // class will take care to consider the dual multipliers with an
-          // increased zero tolerance due to the dual infeasibility when
-          // computing the proof conBoundExceedingstraint.
-          addBoundExceedingConflict();
-          localdom.propagate();
-          if (localdom.infeasible()) {
-            result = NodeResult::kBoundExceeding;
           }
         }
       }
