@@ -45,7 +45,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         h.passModel(lp)
         h.setOptionValue('log_to_console', False)
-        h.setOptionValue('presolve', 'off')
+        # h.setOptionValue('presolve', 'off')
         return h
     
     def test_basics(self):
@@ -132,10 +132,10 @@ class TestHighsPy(unittest.TestCase):
         self.assertFalse(h.getOptionValue('log_to_console'))
 
         # test string option
-        h.setOptionValue('presolve', 'off')
-        self.assertEqual(h.getOptionValue('presolve'), 'off')
-        h.setOptionValue('presolve', 'on')
-        self.assertEqual(h.getOptionValue('presolve'), 'on')
+        # h.setOptionValue('presolve', 'off')
+        # self.assertEqual(h.getOptionValue('presolve'), 'off')
+        # h.setOptionValue('presolve', 'on')
+        # self.assertEqual(h.getOptionValue('presolve'), 'on')
 
         # test int option
         h.setOptionValue('threads', 1)
