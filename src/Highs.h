@@ -971,9 +971,9 @@ class Highs {
    * the basic indices or nullptr when they are not available.
    */
   const double* getDualEdgeWeights() const {
-    return ekk_instance_.dual_edge_weight_.empty()
-               ? nullptr
-               : ekk_instance_.dual_edge_weight_.data();
+    return ekk_instance_.status_.has_dual_steepest_edge_weights
+               ? ekk_instance_.dual_edge_weight_.data()
+               : nullptr;
   }
 
 #ifdef OSI_FOUND
