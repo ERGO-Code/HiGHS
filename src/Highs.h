@@ -348,6 +348,12 @@ class Highs {
    */
 
   /**
+   * @brief Returns true if an invertible representation of the
+   * current basis matrix is available
+   */
+  bool hasInvert() const;
+
+  /**
    * @brief Gets the internal basic variable index array in the order
    * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
    * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
