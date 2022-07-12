@@ -46,6 +46,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                                HighsTransformedLp& transLp,
                                                HighsCutPool& cutpool) {
   Highs& lpSolver = lpRelaxation.getLpSolver();
+  if (!lpSolver.hasInvert()) return;
+
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   if (cutpool.getNumAvailableCuts() > mip.options_mip_->mip_pool_soft_limit)
     return;

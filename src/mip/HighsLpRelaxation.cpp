@@ -175,6 +175,8 @@ void HighsLpRelaxation::resetToGlobalDomain() {
 
 void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
                                                     HighsDomain* localdom) {
+  if (!lpsolver.hasInvert()) return;
+
   HighsInt k = 0;
   const HighsLp& lp = lpsolver.getLp();
   const HighsBasis& basis = lpsolver.getBasis();
