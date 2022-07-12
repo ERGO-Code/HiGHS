@@ -1415,9 +1415,7 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   return return_status;
 }
 
-bool Highs::hasInvert() const {
-  return ekk_instance_.status_.has_invert;
-}
+bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
 
 const HighsInt* Highs::getBasicVariablesArray() const {
   assert(ekk_instance_.status_.has_invert);
