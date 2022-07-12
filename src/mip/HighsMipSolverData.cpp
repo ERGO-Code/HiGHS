@@ -859,14 +859,20 @@ void HighsMipSolverData::performRestart() {
   runPresolve();
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
-    if (mipsolver.solution_objective_ != kHighsInf &&
-        mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
-      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     // transform the objective limit to the current model
     upper_limit -= mipsolver.model_->offset_;
     optimality_limit -= mipsolver.model_->offset_;
-    upper_bound -= mipsolver.model_->offset_;
+
+    if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
+      mipsolver.mipdata_->upper_bound = 0;
+      mipsolver.mipdata_->transformNewIncumbent(std::vector<double>());
+    } else
+      upper_bound -= mipsolver.model_->offset_;
+
     lower_bound = upper_bound;
+    if (mipsolver.solution_objective_ != kHighsInf &&
+        mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
+      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     return;
   }
   runSetup();
