@@ -2725,7 +2725,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       analysis_.logging_on_ = logging_on;
       if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
     } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0 &&
-	       analysis_.allow_rule_[kPresolveRuleForcingCol]) {
+               analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // todo: forcing column, since this implies colDual >= 0 and we
       // already checked that colDual <= 0 and since the cost are 0.0
       // all the rows are at a dual multiplier of zero and we can determine
@@ -2762,7 +2762,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       analysis_.logging_on_ = logging_on;
       if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
     } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0 &&
-	       analysis_.allow_rule_[kPresolveRuleForcingCol]) {
+               analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // forcing column, since this implies colDual <= 0 and we already checked
       // that colDual >= 0
       // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
@@ -2814,7 +2814,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
         !isImpliedIntegral(col))
       return Result::kOk;
 
-    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFreeColSubstitution);
+    if (logging_on)
+      analysis_.startPresolveRuleLog(kPresolveRuleFreeColSubstitution);
     // todo, store which side of an implied free dual variable needs to be used
     // for substitution
     storeRow(row);
@@ -2840,7 +2841,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     substitute(row, col, rhs);
 
     analysis_.logging_on_ = logging_on;
-    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFreeColSubstitution);
+    if (logging_on)
+      analysis_.stopPresolveRuleLog(kPresolveRuleFreeColSubstitution);
     return checkLimits(postsolve_stack);
   }
 
@@ -3669,7 +3671,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   }
 
   switch (colsize[col]) {
-    case 0: 
+    case 0:
       return emptyCol(postsolve_stack, col);
     case 1:
       return singletonCol(postsolve_stack, col);
@@ -3710,6 +3712,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
     } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
+      if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
       postsolve_stack.forcingColumn(col, getColumnVector(col),
                                     model->col_cost_[col],
                                     model->col_lower_[col], true);
@@ -3724,6 +3727,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
                                                 getRowVector(row));
         removeRow(row);
       }
+      analysis_.logging_on_ = logging_on;
+      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleForcingCol);
     }
   } else if (colDualLower >= -options->dual_feasibility_tolerance) {
     // symmetric case for fixing to the lower bound
@@ -3985,7 +3990,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
-	HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
 
       if (problemSizeReduction() > 0.05) continue;
 
@@ -4004,7 +4009,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       if (analysis_.allow_rule_[kPresolveRuleParallelRowsAndCols] &&
-	  numParallelRowColCalls < 5) {
+          numParallelRowColCalls < 5) {
         if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
                                      numDeletedRows >= 0.5 * model->num_row_)) {
           shrinkProblem(postsolve_stack);
@@ -4015,8 +4020,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                   model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
-	HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
-	++numParallelRowColCalls;
+        HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
+        ++numParallelRowColCalls;
         if (problemSizeReduction() > 0.05) continue;
       }
 
@@ -4063,12 +4068,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                   model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
-	if (analysis_.allow_rule_[kPresolveRuleDependentEquations]) {
-	  HPRESOLVE_CHECKED_CALL(removeDependentEquations(postsolve_stack));
-	  dependentEquationsCalled = true;
-	}
-	if (analysis_.allow_rule_[kPresolveRuleDependentFreeCols])
-	  HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postsolve_stack));
+        if (analysis_.allow_rule_[kPresolveRuleDependentEquations]) {
+          HPRESOLVE_CHECKED_CALL(removeDependentEquations(postsolve_stack));
+          dependentEquationsCalled = true;
+        }
+        if (analysis_.allow_rule_[kPresolveRuleDependentFreeCols])
+          HPRESOLVE_CHECKED_CALL(removeDependentFreeCols(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
 
@@ -4384,8 +4389,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
   analysis_.logging_on_ = logging_on;
-  if (logging_on)
-    analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
 
   return Result::kOk;
 }
@@ -4610,6 +4614,8 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
 
 void HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
                               HighsInt col) {
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   double fixval = model->col_lower_[col];
   assert(fixval != -kHighsInf);
 
@@ -4650,10 +4656,14 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
   model->offset_ += model->col_cost_[col] * fixval;
   assert(std::isfinite(model->offset_));
   model->col_cost_[col] = 0;
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
 }
 
 void HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
                               HighsInt col) {
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   double fixval = model->col_upper_[col];
   assert(fixval != kHighsInf);
   // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
@@ -4693,10 +4703,14 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
   model->offset_ += model->col_cost_[col] * fixval;
   assert(std::isfinite(model->offset_));
   model->col_cost_[col] = 0;
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
 }
 
 void HPresolve::fixColToZero(HighsPostsolveStack& postsolve_stack,
                              HighsInt col) {
+  const bool logging_on = analysis_.logging_on_;
+  if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
   postsolve_stack.fixedColAtZero(col, model->col_cost_[col],
                                  getColumnVector(col));
   // mark the column as deleted first so that it is not registered as singleton
@@ -4723,6 +4737,8 @@ void HPresolve::fixColToZero(HighsPostsolveStack& postsolve_stack,
   }
 
   model->col_cost_[col] = 0;
+  analysis_.logging_on_ = logging_on;
+  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleFixedCol);
 }
 
 void HPresolve::removeRow(HighsInt row) {
@@ -5930,7 +5946,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   analysis_.logging_on_ = logging_on;
   if (logging_on)
     analysis_.stopPresolveRuleLog(kPresolveRuleParallelRowsAndCols);
-  
+
   return Result::kOk;
 }
 

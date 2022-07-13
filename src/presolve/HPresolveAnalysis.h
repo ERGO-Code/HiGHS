@@ -20,17 +20,18 @@ enum PresolveRuleType : int {
   kPresolveRuleIllegal = -1,
   kPresolveRuleMin = 0,
   kPresolveRuleEmptyRow = kPresolveRuleMin,
-  kPresolveRuleSingletonRow, // Allow
-  kPresolveRuleRedundantRow, // Allow
-  kPresolveRuleForcingRow, // Allow
+  kPresolveRuleSingletonRow,  // Allow
+  kPresolveRuleRedundantRow,  // Allow
+  kPresolveRuleForcingRow,    // Allow
   kPresolveRuleEmptyCol,
   kPresolveRuleFixedCol,
   //  kPresolveRuleSingletonCol,
   kPresolveRuleDominatedCol,
-  kPresolveRuleForcingCol, // Allow
+  kPresolveRuleForcingCol,  // Allow
   //  kPresolveRuleForcingColRemovedRow,
-  kPresolveRuleFreeColSubstitution, // Allow
+  kPresolveRuleFreeColSubstitution,  // Allow
   kPresolveRuleDoubletonEquation,
+  kPresolveRuleBinaryInEquation,
   kPresolveRuleDependentEquations,
   kPresolveRuleDependentFreeCols,
   kPresolveRuleEqualityRowAddition,

@@ -69,6 +69,8 @@ std::string HPresolveAnalysis::presolveRuleTypeToString(
     return "Dominated col";
   } else if (rule_type == kPresolveRuleDoubletonEquation) {
     return "Doubleton equation";
+  } else if (rule_type == kPresolveRuleBinaryInEquation) {
+    return "Binary in equation";
   } else if (rule_type == kPresolveRuleDependentEquations) {
     return "Dependent equations";
   } else if (rule_type == kPresolveRuleEqualityRowAddition) {
@@ -95,9 +97,11 @@ void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo, "\n");
   }
-  for (int rule_type = kPresolveRuleMin; rule_type < kPresolveRuleMax; rule_type++) {
+  for (int rule_type = kPresolveRuleMin; rule_type < kPresolveRuleMax;
+       rule_type++) {
     if (allow_rule_[rule_type] == report_allowed)
-      highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n", presolveRuleTypeToString(rule_type).c_str());
+      highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n",
+                   presolveRuleTypeToString(rule_type).c_str());
   }
 }
 
@@ -109,9 +113,10 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   // Prevent any future calls to "start" until logging is on again
   logging_on_ = false;
   const int check_rule = kPresolveRuleIllegal;
-  if (debug_print) printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
-         *numDeletedCols, rule_type,
-         presolveRuleTypeToString(rule_type).c_str());
+  if (debug_print)
+    printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
+           *numDeletedCols, rule_type,
+           presolveRuleTypeToString(rule_type).c_str());
   if (rule_type == check_rule) {
     printf(">> startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
            *numDeletedRows, *numDeletedCols,
@@ -144,9 +149,10 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
   const bool debug_print = false;
   assert(logging_on_);
   assert(rule_type == log_rule_type_);
-  if (debug_print) printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
-         *numDeletedCols, rule_type,
-         presolveRuleTypeToString(rule_type).c_str());
+  if (debug_print)
+    printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
+           *numDeletedCols, rule_type,
+           presolveRuleTypeToString(rule_type).c_str());
   const int check_rule = kPresolveRuleIllegal;
   if (rule_type == check_rule) {
     printf(">>  stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
