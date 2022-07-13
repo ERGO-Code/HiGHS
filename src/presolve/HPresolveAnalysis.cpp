@@ -27,7 +27,8 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     allow_rule_[rule_ix] = !(options->presolve_rule_off & bit);
     bit *= 2;
   }
-  allow_logging_ = true;
+  // Allow logging if option is set and model is not a MIP
+  allow_logging_ = options_->presolve_rule_logging && !model_->isMip();
   logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
   resetNumDeleted();

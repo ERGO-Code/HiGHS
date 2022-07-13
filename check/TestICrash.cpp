@@ -23,8 +23,9 @@ TEST_CASE("icrash-qap04", "[highs_presolve]") {
   options.icrash_starting_weight = 10;
   options.icrash_approx_iter = 100;
   options.simplex_strategy = kSimplexStrategyPrimal;
+  options.output_flag = dev_run;
 
-  highs_status = highs.passHighsOptions(options);
+  highs_status = highs.passOptions(options);
   REQUIRE(highs_status == HighsStatus::kOk);
 
   HighsStatus run_status = highs.run();
