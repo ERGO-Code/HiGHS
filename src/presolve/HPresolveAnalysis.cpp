@@ -69,8 +69,6 @@ std::string HPresolveAnalysis::presolveRuleTypeToString(
     return "Dominated col";
   } else if (rule_type == kPresolveRuleDoubletonEquation) {
     return "Doubleton equation";
-  } else if (rule_type == kPresolveRuleBinaryInEquation) {
-    return "Binary in equation";
   } else if (rule_type == kPresolveRuleDependentEquations) {
     return "Dependent equations";
   } else if (rule_type == kPresolveRuleEqualityRowAddition) {

@@ -31,7 +31,6 @@ enum PresolveRuleType : int {
   //  kPresolveRuleForcingColRemovedRow,
   kPresolveRuleFreeColSubstitution,  // Allow
   kPresolveRuleDoubletonEquation,
-  kPresolveRuleBinaryInEquation,
   kPresolveRuleDependentEquations,
   kPresolveRuleDependentFreeCols,
   kPresolveRuleEqualityRowAddition,
