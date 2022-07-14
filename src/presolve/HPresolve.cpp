@@ -2538,7 +2538,6 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
 
 HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
                                           HighsInt row) {
-  assert(analysis_.allow_rule_[kPresolveRuleSingletonRow]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleSingletonRow);
   assert(!rowDeleted[row]);
@@ -2864,20 +2863,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           model->row_lower_[row] > primal_feastol)
         // model infeasible
         return Result::kPrimalInfeasible;
-      if (analysis_.allow_rule_[kPresolveRuleEmptyRow]) {
-        // Allow removal of empty row
-        if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleEmptyRow);
-        postsolve_stack.redundantRow(row);
-        markRowDeleted(row);
-        analysis_.logging_on_ = logging_on;
-        if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleEmptyRow);
-      }
+      if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleEmptyRow);
+      postsolve_stack.redundantRow(row);
+      markRowDeleted(row);
+      analysis_.logging_on_ = logging_on;
+      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleEmptyRow);
       return checkLimits(postsolve_stack);
     case 1:
-      if (analysis_.allow_rule_[kPresolveRuleSingletonRow]) {
-        // Allow removal of singleton row
-        return singletonRow(postsolve_stack, row);
-      }
+      return singletonRow(postsolve_stack, row);
   }
 
   // printf("row presolve: ");
@@ -2885,24 +2878,22 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   double impliedRowUpper = impliedRowBounds.getSumUpper(row);
   double impliedRowLower = impliedRowBounds.getSumLower(row);
 
-  if (analysis_.allow_rule_[kPresolveRuleRedundantRow]) {
-    // Allow removal of redundant rows
-    if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
-        impliedRowUpper < model->row_lower_[row] - primal_feastol) {
-      // model infeasible
-      return Result::kPrimalInfeasible;
-    }
-
-    if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
-        impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
-      // row is redundant
-      if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleRedundantRow);
-      postsolve_stack.redundantRow(row);
-      removeRow(row);
-      analysis_.logging_on_ = logging_on;
-      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleRedundantRow);
-      return checkLimits(postsolve_stack);
-    }
+  // Allow removal of redundant rows
+  if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
+      impliedRowUpper < model->row_lower_[row] - primal_feastol) {
+    // model infeasible
+    return Result::kPrimalInfeasible;
+  }
+  
+  if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
+      impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
+    // row is redundant
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleRedundantRow);
+    postsolve_stack.redundantRow(row);
+    removeRow(row);
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleRedundantRow);
+    return checkLimits(postsolve_stack);
   }
 
   double rowUpper = implRowDualLower[row] > options->dual_feasibility_tolerance

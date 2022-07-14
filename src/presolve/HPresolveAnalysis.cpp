@@ -53,34 +53,26 @@ std::string HPresolveAnalysis::presolveRuleTypeToString(
     return "Singleton row";
   } else if (rule_type == kPresolveRuleRedundantRow) {
     return "Redundant row";
-  } else if (rule_type == kPresolveRuleForcingRow) {
-    return "Forcing row";
   } else if (rule_type == kPresolveRuleEmptyCol) {
     return "Empty column";
   } else if (rule_type == kPresolveRuleFixedCol) {
     return "Fixed column";
-    //  } else if (rule_type == kPresolveRuleSingletonCol) {
-    //    return "Singleton column";
-  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
-    return "Free col substitution";
-  } else if (rule_type == kPresolveRuleForcingCol) {
-    return "Forcing col";
-    //  } else if (rule_type == kPresolveRuleForcingColRemovedRow) {
-    //    return "Forcing col removed row";
   } else if (rule_type == kPresolveRuleDominatedCol) {
     return "Dominated col";
+  } else if (rule_type == kPresolveRuleForcingRow) {
+    return "Forcing row";
+  } else if (rule_type == kPresolveRuleForcingCol) {
+    return "Forcing col";
+  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
+    return "Free col substitution";
   } else if (rule_type == kPresolveRuleDoubletonEquation) {
     return "Doubleton equation";
   } else if (rule_type == kPresolveRuleDependentEquations) {
     return "Dependent equations";
-  } else if (rule_type == kPresolveRuleEqualityRowAddition) {
-    return "Equality row addition";
   } else if (rule_type == kPresolveRuleAggregator) {
     return "Aggregator";
   } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
     return "Parallel rows and columns";
-  } else if (rule_type == kPresolveRuleLinearTransform) {
-    return "Linear transform";
   }
   assert(1 == 0);
   return "????";
