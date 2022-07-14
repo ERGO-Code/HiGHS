@@ -29,6 +29,7 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   }
   // Allow logging if option is set and model is not a MIP
   allow_logging_ = options_->presolve_rule_logging && !model_->isMip();
+  if (allow_logging_) printf("HPresolveAnalysis::setup Allowing logging");
   logging_on_ = allow_logging_;
   log_rule_type_ = kPresolveRuleIllegal;
   resetNumDeleted();
@@ -126,12 +127,16 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   assert(log_rule_type_ == kPresolveRuleIllegal);
   log_rule_type_ = rule_type;
   // Check that no un-logged reductions have been performed
-  if (num_deleted_rows0_ != *numDeletedRows)
-    printf("%d = num_deleted_rows0_ != *numDeletedRows = %d\n",
-           num_deleted_rows0_, *numDeletedRows);
-  if (num_deleted_cols0_ != *numDeletedCols)
-    printf("%d = num_deleted_cols0_ != *numDeletedCols = %d\n",
+  if (num_deleted_rows0_ != *numDeletedRows ||
+      num_deleted_cols0_ != *numDeletedCols) {
+    printf("ERROR: Model %s: "
+	   "%d = num_deleted_rows0_ != *numDeletedRows = %d ||"
+	   "%d = num_deleted_cols0_ != *numDeletedCols = %d\n",
+	   model->model_name_.c_str(),
+           num_deleted_rows0_, *numDeletedRows,
            num_deleted_cols0_, *numDeletedCols);
+    fflush(stdout);
+  }
   assert(num_deleted_rows0_ == *numDeletedRows);
   assert(num_deleted_cols0_ == *numDeletedCols);
   num_deleted_rows0_ = *numDeletedRows;
