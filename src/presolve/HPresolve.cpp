@@ -2884,7 +2884,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     // model infeasible
     return Result::kPrimalInfeasible;
   }
-  
+
   if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
       impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
     // row is redundant

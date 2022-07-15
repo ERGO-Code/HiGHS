@@ -121,12 +121,12 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   // Check that no un-logged reductions have been performed
   if (num_deleted_rows0_ != *numDeletedRows ||
       num_deleted_cols0_ != *numDeletedCols) {
-    printf("ERROR: Model %s: "
-	   "%d = num_deleted_rows0_ != *numDeletedRows = %d ||"
-	   "%d = num_deleted_cols0_ != *numDeletedCols = %d\n",
-	   model->model_name_.c_str(),
-           num_deleted_rows0_, *numDeletedRows,
-           num_deleted_cols0_, *numDeletedCols);
+    printf(
+        "ERROR: Model %s: "
+        "%d = num_deleted_rows0_ != *numDeletedRows = %d ||"
+        "%d = num_deleted_cols0_ != *numDeletedCols = %d\n",
+        model->model_name_.c_str(), num_deleted_rows0_, *numDeletedRows,
+        num_deleted_cols0_, *numDeletedCols);
     fflush(stdout);
   }
   assert(num_deleted_rows0_ == *numDeletedRows);
