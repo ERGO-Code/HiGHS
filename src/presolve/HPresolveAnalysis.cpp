@@ -10,6 +10,7 @@
 /*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#include "lp_data/HighsModelUtils.h"
 #include "presolve/HPresolve.h"
 
 void HPresolveAnalysis::setup(const HighsLp* model_,
@@ -52,39 +53,6 @@ void HPresolveAnalysis::resetNumDeleted() {
   num_deleted_cols0_ = 0;
 }
 
-std::string HPresolveAnalysis::presolveRuleTypeToString(
-    const HighsInt rule_type) {
-  if (rule_type == kPresolveRuleEmptyRow) {
-    return "Empty row";
-  } else if (rule_type == kPresolveRuleSingletonRow) {
-    return "Singleton row";
-  } else if (rule_type == kPresolveRuleRedundantRow) {
-    return "Redundant row";
-  } else if (rule_type == kPresolveRuleEmptyCol) {
-    return "Empty column";
-  } else if (rule_type == kPresolveRuleFixedCol) {
-    return "Fixed column";
-  } else if (rule_type == kPresolveRuleDominatedCol) {
-    return "Dominated col";
-  } else if (rule_type == kPresolveRuleForcingRow) {
-    return "Forcing row";
-  } else if (rule_type == kPresolveRuleForcingCol) {
-    return "Forcing col";
-  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
-    return "Free col substitution";
-  } else if (rule_type == kPresolveRuleDoubletonEquation) {
-    return "Doubleton equation";
-  } else if (rule_type == kPresolveRuleDependentEquations) {
-    return "Dependent equations";
-  } else if (rule_type == kPresolveRuleAggregator) {
-    return "Aggregator";
-  } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
-    return "Parallel rows and columns";
-  }
-  assert(1 == 0);
-  return "????";
-}
-
 void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "Presolving rules %sallowed: ", report_allowed ? "" : "not ");
@@ -100,7 +68,7 @@ void HPresolveAnalysis::reportPresolveRulesAllowed(const bool report_allowed) {
        rule_type++) {
     if (allow_rule_[rule_type] == report_allowed)
       highsLogUser(options->log_options, HighsLogType::kInfo, "%s\n",
-                   presolveRuleTypeToString(rule_type).c_str());
+                   utilPresolveRuleTypeToString(rule_type).c_str());
   }
 }
 
@@ -115,11 +83,11 @@ void HPresolveAnalysis::startPresolveRuleLog(const HighsInt rule_type) {
   if (debug_print)
     printf("   startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
            *numDeletedCols, rule_type,
-           presolveRuleTypeToString(rule_type).c_str());
+           utilPresolveRuleTypeToString(rule_type).c_str());
   if (rule_type == check_rule) {
     printf(">> startPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
            *numDeletedRows, *numDeletedCols,
-           presolveRuleTypeToString(check_rule).c_str());
+           utilPresolveRuleTypeToString(check_rule).c_str());
   }
   presolve_log_.rule[rule_type].call++;
   // Check that stop has been called since the last start
@@ -155,12 +123,12 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
   if (debug_print)
     printf("    stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", *numDeletedRows,
            *numDeletedCols, rule_type,
-           presolveRuleTypeToString(rule_type).c_str());
+           utilPresolveRuleTypeToString(rule_type).c_str());
   const int check_rule = kPresolveRuleIllegal;
   if (rule_type == check_rule) {
     printf(">>  stopPresolveRuleLog [%6d, %6d] for (%2d) %s\n", check_rule,
            *numDeletedRows, *numDeletedCols,
-           presolveRuleTypeToString(check_rule).c_str());
+           utilPresolveRuleTypeToString(check_rule).c_str());
   }
   const HighsInt num_removed_row = *numDeletedRows - num_deleted_rows0_;
   const HighsInt num_removed_col = *numDeletedCols - num_deleted_cols0_;
@@ -178,7 +146,7 @@ void HPresolveAnalysis::stopPresolveRuleLog(const HighsInt rule_type) {
   const bool report = false;
   if (report)
     printf("%-25s Call %9d: (%3d, %3d) (%3d, %3d)\n",
-           presolveRuleTypeToString(rule_type).c_str(),
+           utilPresolveRuleTypeToString(rule_type).c_str(),
            (int)presolve_log_.rule[rule_type].call, (int)num_removed_col,
            (int)num_removed_row, (int)presolve_log_.rule[rule_type].col_removed,
            (int)presolve_log_.rule[rule_type].row_removed);
@@ -213,7 +181,7 @@ bool HPresolveAnalysis::analysePresolveRuleLog(const bool report) {
       if (presolve_log_.rule[rule_type].call || presolve_log_.rule[rule_type].row_removed ||
           presolve_log_.rule[rule_type].col_removed)
         highsLogUser(log_options, HighsLogType::kInfo, "%-25s %9d %9d %9d\n",
-                     presolveRuleTypeToString(rule_type).c_str(),
+                     utilPresolveRuleTypeToString(rule_type).c_str(),
                      (int)presolve_log_.rule[rule_type].row_removed,
                      (int)presolve_log_.rule[rule_type].col_removed,
                      (int)presolve_log_.rule[rule_type].call);

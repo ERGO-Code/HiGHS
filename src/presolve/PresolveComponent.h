@@ -47,6 +47,7 @@ struct PresolveComponentData : public HighsComponentData {
   presolve::HighsPostsolveStack postSolveStack;
   HighsSolution recovered_solution_;
   HighsBasis recovered_basis_;
+  HighsPresolveLog presolve_log_;
 
   void clear() {
     is_valid = false;
@@ -101,6 +102,7 @@ class PresolveComponent : public HighsComponent {
   HighsPresolveStatus run();
 
   HighsLp& getReducedProblem() { return data_.reduced_lp_; }
+  HighsPresolveLog& getPresolveLog() { return data_.presolve_log_; }
 
   HighsStatus setOptions(const HighsOptions& options);
   std::string presolveStatusToString(const HighsPresolveStatus presolve_status);

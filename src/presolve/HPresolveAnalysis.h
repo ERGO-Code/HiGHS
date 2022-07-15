@@ -45,7 +45,6 @@ class HPresolveAnalysis {
 
   void reportPresolveRulesAllowed(const bool report_allowed = true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
-  std::string presolveRuleTypeToString(const HighsInt rule_type);
   void startPresolveRuleLog(const HighsInt rule_type);
   void stopPresolveRuleLog(const HighsInt rule_type);
   bool analysePresolveRuleLog(const bool report = false);
