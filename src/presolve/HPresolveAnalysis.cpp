@@ -38,6 +38,17 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
   rule_num_row_removed_.assign(kPresolveRuleCount, 0);
   original_num_col_ = model->num_col_;
   original_num_row_ = model->num_row_;
+  HighsPresolveLog local_presolve_log;
+  local_presolve_log.clear();
+}
+
+void HighsPresolveLog::clear() {
+  this->log.resize(kPresolveRuleCount);
+  for (HighsInt rule_ix = 0; rule_ix < kPresolveRuleCount; rule_ix++) {
+    this->log[rule_ix].call = 0;
+    this->log[rule_ix].col_removed = 0;
+    this->log[rule_ix].row_removed = 0;
+  }
 }
 
 void HPresolveAnalysis::resetNumDeleted() {

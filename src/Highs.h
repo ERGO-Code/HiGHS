@@ -1067,6 +1067,8 @@ class Highs {
 
   HEkk ekk_instance_;
 
+  HighsPresolveLog presolve_log_;
+
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
   // returnFromRun() was called after the previous call to

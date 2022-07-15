@@ -16,30 +16,6 @@
 #ifndef PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_HIGHS_PRESOLVE_ANALYSIS_H_
 
-enum PresolveRuleType : int {
-  kPresolveRuleIllegal = -1,
-  kPresolveRuleMin = 0,
-  kPresolveRuleEmptyRow = kPresolveRuleMin,
-  kPresolveRuleSingletonRow,
-  kPresolveRuleRedundantRow,
-  kPresolveRuleEmptyCol,
-  kPresolveRuleFixedCol,
-  kPresolveRuleDominatedCol,
-  // The remaining rules can be switched off
-  kPresolveRuleFirstAllow,
-  kPresolveRuleForcingRow = kPresolveRuleFirstAllow,
-  kPresolveRuleForcingCol,
-  kPresolveRuleFreeColSubstitution,
-  kPresolveRuleDoubletonEquation,
-  kPresolveRuleDependentEquations,
-  kPresolveRuleDependentFreeCols,
-  kPresolveRuleAggregator,
-  kPresolveRuleParallelRowsAndCols,
-  kPresolveRuleMax = kPresolveRuleParallelRowsAndCols,
-  kPresolveRuleLastAllow = kPresolveRuleMax,
-  kPresolveRuleCount,
-};
-
 class HPresolveAnalysis {
   const HighsLp* model;
   const HighsOptions* options;
@@ -61,7 +37,7 @@ class HPresolveAnalysis {
   HighsInt num_deleted_rows0_;
   HighsInt num_deleted_cols0_;
 
-  std::vector<uint64_t> rule_num_call_;
+  std::vector<HighsInt> rule_num_call_;
   std::vector<HighsInt> rule_num_col_removed_;
   std::vector<HighsInt> rule_num_row_removed_;
   // for LP presolve
