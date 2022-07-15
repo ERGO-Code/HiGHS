@@ -36,10 +36,8 @@ class HPresolveAnalysis {
   int log_rule_type_;
   HighsInt num_deleted_rows0_;
   HighsInt num_deleted_cols0_;
+  HighsPresolveLog presolve_log_;
 
-  std::vector<HighsInt> rule_num_call_;
-  std::vector<HighsInt> rule_num_col_removed_;
-  std::vector<HighsInt> rule_num_row_removed_;
   // for LP presolve
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);

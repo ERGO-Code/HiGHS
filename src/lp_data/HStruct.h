@@ -91,7 +91,7 @@ struct HighsPresolveRuleLog {
 };
 
 struct HighsPresolveLog {
-  std::vector<HighsPresolveRuleLog> log;
+  std::vector<HighsPresolveRuleLog> rule;
   void clear();
 };
 
