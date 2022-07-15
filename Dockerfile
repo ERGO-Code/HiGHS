@@ -3,7 +3,7 @@ FROM eclipse-temurin:17-alpine
 RUN apk update && \
         apk upgrade && \
         apk add --no-cache \
-            cmake=3.21.3-r0 \
+            cmake>3.21.3-r0 \
             make \
             g++ \
             gcc \
