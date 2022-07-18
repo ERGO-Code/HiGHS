@@ -2706,8 +2706,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   const bool logging_on = analysis_.logging_on_;
   // check for dominated column
   if (colDualLower > options->dual_feasibility_tolerance) {
-    if (model->col_lower_[col] == -kHighsInf) 
-      return Result::kDualInfeasible;
+    if (model->col_lower_[col] == -kHighsInf) return Result::kDualInfeasible;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
     fixColToLower(postsolve_stack, col);
     analysis_.logging_on_ = logging_on;
@@ -2716,8 +2715,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   }
 
   if (colDualUpper < -options->dual_feasibility_tolerance) {
-    if (model->col_upper_[col] == kHighsInf)
-      return Result::kDualInfeasible;
+    if (model->col_upper_[col] == kHighsInf) return Result::kDualInfeasible;
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
     fixColToUpper(postsolve_stack, col);
     analysis_.logging_on_ = logging_on;
