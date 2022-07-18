@@ -47,6 +47,33 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt* index, const double* value);
 
 // No commas in test case name.
+TEST_CASE("LP-917", "[highs_data]") {
+  using namespace std::chrono;
+
+  Highs highs;
+  // highs.setOptionValue("output_flag", dev_run);
+  const HighsLp& lp = highs.getLp();
+  high_resolution_clock::time_point t0 = high_resolution_clock::now();
+  const HighsInt dim = 200;//200;
+  std::vector<HighsInt> index(2);
+  std::vector<double> value(2);
+  value[0] = 1;
+  value[1] = -1;
+  for (HighsInt k = 0; k < dim*dim; k++)
+    highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    for (HighsInt jCol = 1; jCol < dim; jCol++) {
+      index[1] = dim * iCol + jCol;
+      index[0] = index[1] - 1;
+      highs.addRow(-inf, 0.0, 2, &index[0], &value[0]);
+    }
+  }
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+  duration<double> time_span = duration_cast<duration<double>>(t1-t0);
+  printf("LP has %d rows and %d columns\n", (int)lp.num_row_, (int)lp.num_col_);
+  printf("For dim = %d, time is %g\n", (int)dim, (double)time_span.count());
+}
+
 TEST_CASE("LP-717-od", "[highs_data]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
