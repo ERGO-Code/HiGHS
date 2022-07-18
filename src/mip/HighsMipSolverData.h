@@ -85,6 +85,7 @@ struct HighsMipSolverData {
   HighsBasis firstrootbasis;
   double rootlpsolobj;
   HighsInt numintegercols;
+  HighsInt maxTreeSizeLog2;
 
   HighsCDouble pruned_treeweight;
   double avgrootlpiters;

@@ -1,6 +1,6 @@
 name: build-mingw
 
-on: ["pull_request"]
+on: [push]
 
 jobs:
   mingw:
@@ -50,7 +50,7 @@ jobs:
 
     - name: Build
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cd build && cmake --build . --config ${{ matrix.build-type }} --parallel 4
+      run: cd build && cmake --build . --config ${{ matrix.build-type }} --parallel
 
     - name: Test
       # Execute tests defined by the CMake configuration.

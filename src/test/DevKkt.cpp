@@ -19,7 +19,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "HighsCDouble.h"
+#include "util/HighsCDouble.h"
 
 namespace presolve {
 namespace dev_kkt_check {
@@ -197,18 +197,6 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
       double infeas = 0;
       // L = Ax < U
       if (fabs(state.rowLower[i] - rowV) < tol && rowV < state.rowUpper[i]) {
-        if (state.rowDual[i] > tol) {
-          if (dev_print == 1)
-            std::cout << "Dual feasibility fail for row " << i
-                      << ": L= " << state.rowLower[i] << ", Ax=" << rowV
-                      << ", U=" << state.rowUpper[i]
-                      << ", y=" << state.rowDual[i] << std::endl;
-          infeas = state.rowDual[i];
-        }
-      }
-      // L < Ax = U
-      else if (state.rowLower[i] < rowV &&
-               fabs(rowV - state.rowUpper[i]) < tol) {
         if (state.rowDual[i] < -tol) {
           if (dev_print == 1)
             std::cout << "Dual feasibility fail for row " << i
@@ -216,6 +204,18 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
                       << ", U=" << state.rowUpper[i]
                       << ", y=" << state.rowDual[i] << std::endl;
           infeas = -state.rowDual[i];
+        }
+      }
+      // L < Ax = U
+      else if (state.rowLower[i] < rowV &&
+               fabs(rowV - state.rowUpper[i]) < tol) {
+        if (state.rowDual[i] > tol) {
+          if (dev_print == 1)
+            std::cout << "Dual feasibility fail for row " << i
+                      << ": L= " << state.rowLower[i] << ", Ax=" << rowV
+                      << ", U=" << state.rowUpper[i]
+                      << ", y=" << state.rowDual[i] << std::endl;
+          infeas = state.rowDual[i];
         }
       }
       // L < Ax < U

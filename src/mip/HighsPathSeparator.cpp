@@ -36,8 +36,6 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsLp& lp = lpRelaxation.getLp();
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
-  randgen.initialise(mip.options_mip_->random_seed +
-                     lpRelaxation.getNumLpIterations());
   std::vector<RowType> rowtype;
   rowtype.resize(lp.num_row_);
   for (HighsInt i = 0; i != lp.num_row_; ++i) {
@@ -207,6 +205,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     bool success = false;
 
     for (HighsInt s = 0; s != 2; ++s) {
+      assert(lpAggregator.isEmpty());
       lpAggregator.addRow(i, scales[s]);
 
       currentPath[0] = i;
@@ -488,9 +487,6 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           delta = std::exp2(std::ceil(std::log2(delta + 1.0)));
 
           HighsInt numInds = inds.size();
-
-          std::vector<double> valueMatrix;
-          valueMatrix.resize(pathLen * numInds, 0.0);
 
           HighsCDouble cutRhs = 0.0;
           std::vector<double> cutVals(numInds);

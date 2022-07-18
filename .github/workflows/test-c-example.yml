@@ -2,12 +2,12 @@
 # by JuMP when building HiGHS:
 # https://github.com/JuliaPackaging/Yggdrasil/blob/master/H/HiGHS/build_tarballs.jl
 name: test-c-example
-on: ["push", "pull_request"]
+on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Create Build Environment
       run: |
         mkdir build

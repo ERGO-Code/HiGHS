@@ -35,15 +35,12 @@ static bool separateModKCuts(const std::vector<int64_t>& intSystemValue,
                              FoundModKCut&& foundModKCut) {
   HighsGFkSolve GFkSolve;
 
-  constexpr int kNumRhs = k == 2 ? 1 : 2;
-
   HighsInt numCuts = cutpool.getNumCuts();
 
-  GFkSolve.fromCSC<k, kNumRhs>(intSystemValue, intSystemIndex, intSystemStart,
-                               numCol + 1);
-  GFkSolve.setRhs<k, kNumRhs>(numCol, k - 1, 0);
-  if (kNumRhs != 1) GFkSolve.setRhs<k, kNumRhs>(numCol, 1, 1);
-  GFkSolve.solve<k, kNumRhs>(foundModKCut);
+  GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
+                      numCol + 1);
+  GFkSolve.setRhs<k>(numCol, 1);
+  GFkSolve.solve<k>(foundModKCut);
 
   return cutpool.getNumCuts() != numCuts;
 }
@@ -223,27 +220,34 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     pdqsort(weights.begin(), weights.end());
     if (!usedWeights.insert(weights)) return;
 
+    assert(lpAggregator.isEmpty());
     for (const auto& w : weights) {
+      double weight = integralScales[w.index].second *
+                      (double((w.weight * (k - 1)) % k) / k);
       HighsInt row = integralScales[w.index].first;
-      double weight = (integralScales[w.index].second * w.weight) / k;
       lpAggregator.addRow(row, weight);
     }
 
-    int rhsModulus = rhsIndex == 0 ? k - 1 : 1;
+    lpAggregator.getCurrentAggregation(inds, vals, false);
 
-    if (rhsModulus == k - 1) {
-      lpAggregator.getCurrentAggregation(inds, vals, false);
+    rhs = 0.0;
+    cutGen.generateCut(transLp, inds, vals, rhs, true);
 
-      rhs = 0.0;
-      cutGen.generateCut(transLp, inds, vals, rhs, true);
+    if (k != 2) {
+      lpAggregator.clear();
+      for (const auto& w : weights) {
+        double weight = integralScales[w.index].second * (double(w.weight) / k);
+        HighsInt row = integralScales[w.index].first;
+        lpAggregator.addRow(row, weight);
+      }
     }
 
-    if (rhsModulus == 1) {
-      lpAggregator.getCurrentAggregation(inds, vals, true);
+    lpAggregator.getCurrentAggregation(inds, vals, true);
 
-      rhs = 0.0;
-      cutGen.generateCut(transLp, inds, vals, rhs, true);
-    }
+    rhs = 0.0;
+    cutGen.generateCut(transLp, inds, vals, rhs, true);
+
+    lpAggregator.clear();
   };
 
   k = 2;

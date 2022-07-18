@@ -37,8 +37,8 @@
 //
 // If possible, it sets the HiGHS basis and solution
 
-HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
-                                     HighsStatus return_status) {
+inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
+                                            HighsStatus return_status) {
   HighsOptions& options = solver_object.options_;
   HEkk& ekk_instance = solver_object.ekk_instance_;
   HighsLp& incumbent_lp = solver_object.lp_;
@@ -75,7 +75,7 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   return return_status;
 }
 
-HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
+inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = solver_object.options_;

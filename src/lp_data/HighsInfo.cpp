@@ -41,7 +41,7 @@ void HighsInfo::invalidate() {
   sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 }
 
-std::string infoEntryTypeToString(const HighsInfoType type) {
+static std::string infoEntryTypeToString(const HighsInfoType type) {
   if (type == HighsInfoType::kInt64) {
     return "int64_t";
   } else if (type == HighsInfoType::kInt) {

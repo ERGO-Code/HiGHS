@@ -79,7 +79,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
-                                  const std::string value) {
+                                  const std::string& value) {
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
@@ -96,7 +96,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::readOptions(const std::string filename) {
+HighsStatus Highs::readOptions(const std::string& filename) {
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Empty file name so not reading options\n");
@@ -160,7 +160,7 @@ HighsStatus Highs::resetOptions() {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::writeOptions(const std::string filename,
+HighsStatus Highs::writeOptions(const std::string& filename,
                                 const bool report_only_deviations) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
@@ -217,7 +217,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   }
 }
 
-HighsStatus Highs::writeInfo(const std::string filename) const {
+HighsStatus Highs::writeInfo(const std::string& filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -484,7 +484,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
-HighsStatus Highs::readModel(const std::string filename) {
+HighsStatus Highs::readModel(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   Filereader* reader =
@@ -524,7 +524,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::readBasis(const std::string filename) {
+HighsStatus Highs::readBasis(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   // Try to read basis file into read_basis
@@ -549,7 +549,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::writeModel(const std::string filename) {
+HighsStatus Highs::writeModel(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
@@ -575,7 +575,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeBasis(const std::string filename) {
+HighsStatus Highs::writeBasis(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -1375,6 +1375,24 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
+HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
+                                    HVector& row_ep_buffer) {
+  has_dual_ray = ekk_instance_.status_.has_dual_ray;
+  if (has_dual_ray) {
+    ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
+    row_ep_buffer.clear();
+    row_ep_buffer.count = 1;
+    row_ep_buffer.packFlag = true;
+    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+    row_ep_buffer.index[0] = iRow;
+    row_ep_buffer.array[iRow] = ekk_instance_.info_.dual_ray_sign_;
+
+    ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
+  }
+
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
   if (!ekk_instance_.status_.has_invert)
@@ -1397,6 +1415,13 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   return return_status;
 }
 
+bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
+
+const HighsInt* Highs::getBasicVariablesArray() const {
+  assert(ekk_instance_.status_.has_invert);
+  return ekk_instance_.basis_.basicIndex_.data();
+}
+
 HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
   if (basic_variables == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -1404,6 +1429,20 @@ HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
     return HighsStatus::kError;
   }
   return getBasicVariablesInterface(basic_variables);
+}
+
+HighsStatus Highs::getBasisInverseRowSparse(const HighsInt row,
+                                            HVector& row_ep_buffer) {
+  ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
+  row_ep_buffer.clear();
+  row_ep_buffer.count = 1;
+  row_ep_buffer.index[0] = row;
+  row_ep_buffer.array[row] = 1;
+  row_ep_buffer.packFlag = true;
+
+  ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
+
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
@@ -1655,7 +1694,8 @@ HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
+HighsStatus Highs::setBasis(const HighsBasis& basis,
+                            const std::string& origin) {
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
@@ -2385,7 +2425,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeSolution(const std::string filename,
+HighsStatus Highs::writeSolution(const std::string& filename,
                                  const HighsInt style) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -2418,7 +2458,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::readSolution(const std::string filename,
+HighsStatus Highs::readSolution(const std::string& filename,
                                 const HighsInt style) {
   return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
                           style);
@@ -2454,8 +2494,8 @@ std::string Highs::presolveRuleTypeToString(
 }
 
 // Private methods
-void Highs::deprecationMessage(const std::string method_name,
-                               const std::string alt_method_name) const {
+void Highs::deprecationMessage(const std::string& method_name,
+                               const std::string& alt_method_name) const {
   if (alt_method_name.compare("None") == 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Method %s is deprecated: no alternative method\n",
@@ -2805,7 +2845,10 @@ HighsStatus Highs::callSolveMip() {
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
   HighsLp use_lp;
   if (has_semi_variables) {
-    use_lp = withoutSemiVariables(model_.lp_);
+    // Replace any semi-variables by a continuous/integer variable and
+    // a (temporary) binary. Any initial solution must accommodate this.
+    use_lp = withoutSemiVariables(model_.lp_, solution_,
+                                  options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(options_, lp, solution_);
@@ -3292,7 +3335,7 @@ void Highs::reportSolvedLpQpStats() {
                "HiGHS run time      : %13.2f\n", run_time);
 }
 
-void Highs::underDevelopmentLogMessage(const std::string method_name) {
+void Highs::underDevelopmentLogMessage(const std::string& method_name) {
   highsLogUser(options_.log_options, HighsLogType::kWarning,
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
@@ -3326,7 +3369,7 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::openLogFile(const std::string log_file) {
+HighsStatus Highs::openLogFile(const std::string& log_file) {
   highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }

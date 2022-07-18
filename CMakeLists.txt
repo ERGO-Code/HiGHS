@@ -15,7 +15,7 @@ set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 # set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE RELEASE)
 endif()
 
 project(HIGHS VERSION 1.2 LANGUAGES CXX C)
@@ -309,7 +309,7 @@ option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
 
-if(CMAKE_BUILD_TYPE STREQUAL Release)
+if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -371,6 +371,11 @@ message(STATUS "FAST_BUILD set to on.
        experience any issues please let us know via email or on GitHub.")
 
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
+
+if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
+    set(HiGHSRELEASE ON)
+endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 

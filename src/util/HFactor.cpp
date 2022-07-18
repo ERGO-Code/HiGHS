@@ -36,11 +36,11 @@ using std::make_pair;
 using std::min;
 using std::pair;
 
-void solveMatrixT(const HighsInt X_Start, const HighsInt x_end,
-                  const HighsInt y_start, const HighsInt y_end,
-                  const HighsInt* t_index, const double* t_value,
-                  const double t_pivot, HighsInt* rhs_count,
-                  HighsInt* rhs_index, double* rhs_array) {
+static void solveMatrixT(const HighsInt X_Start, const HighsInt x_end,
+                         const HighsInt y_start, const HighsInt y_end,
+                         const HighsInt* t_index, const double* t_value,
+                         const double t_pivot, HighsInt* rhs_count,
+                         HighsInt* rhs_index, double* rhs_array) {
   // Collect by X
   double pivot_multiplier = 0;
   for (HighsInt k = X_Start; k < x_end; k++)
@@ -63,10 +63,11 @@ void solveMatrixT(const HighsInt X_Start, const HighsInt x_end,
   }
 }
 
-void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
-                const HighsInt* h_pivot_index, const double* h_pivot_value,
-                const HighsInt* h_start, const HighsInt* h_end,
-                const HighsInt* h_index, const double* h_value, HVector* rhs) {
+static void solveHyper(const HighsInt h_size, const HighsInt* h_lookup,
+                       const HighsInt* h_pivot_index,
+                       const double* h_pivot_value, const HighsInt* h_start,
+                       const HighsInt* h_end, const HighsInt* h_index,
+                       const double* h_value, HVector* rhs) {
   HighsInt rhs_count = rhs->count;
   HighsInt* rhs_index = &rhs->index[0];
   double* rhs_array = &rhs->array[0];

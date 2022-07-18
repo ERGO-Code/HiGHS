@@ -14,6 +14,8 @@
 
 #ifdef HIGHS_DEBUGSOL
 
+#include <fstream>
+
 #include "io/FilereaderMps.h"
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsDomain.h"

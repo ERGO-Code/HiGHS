@@ -17,6 +17,7 @@
 #define SIMPLEX_HSIMPLEXREPORT_H_
 
 #include "lp_data/HighsOptions.h"
+#include "simplex/HSimplex.h"
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
                                   const HighsInt iteration_count,

@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "crashsolution.hpp"
 
-void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) {
+static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) {
   // compute initial feasible point
   Highs highs;
 

@@ -1,6 +1,6 @@
 name: build-unix
 
-on: ["pull_request"]
+on: [push]
 
 jobs:
   debug:
@@ -11,7 +11,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -26,7 +26,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --parallel 4 --config Debug
+         cmake --build . --parallel --config Debug
 
 
     - name: Test
@@ -43,7 +43,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -58,7 +58,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --parallel 4 --config Release
+         cmake --build . --parallel --config Release
 
 
     - name: Test
@@ -75,7 +75,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -90,7 +90,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --parallel 4 --config Release
+         cmake --build . --parallel --config Release
 
 
     - name: Test
@@ -107,7 +107,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -122,7 +122,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --parallel 4 --config Release
+         cmake --build . --parallel --config Release
 
 
     - name: Test

@@ -362,8 +362,8 @@ if (OSI_FOUND)
 endif()
 
 if (ZLIB_FOUND)
-  target_include_directories(libhighs PUBLIC ${ZLIB_INCLUDE_DIRS})
-  target_link_libraries(libhighs ${ZLIB_LIBRARIES})
+  target_link_libraries(libhighs ZLIB::ZLIB)
+  set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
 endif()
 
 # set the install rpath to the installed destination
@@ -447,8 +447,6 @@ add_library(libhighs)
 
 if (NOT ${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
-elseif(MINGW)
     target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
@@ -598,10 +596,10 @@ target_include_directories(libhighs PRIVATE
 
 if (ZLIB_FOUND)
     target_include_directories(libhighs PRIVATE
-    $<BUILD_INTERFACE:${ZLIB_INCLUDE_DIRS}  
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
     )
-    target_link_libraries(libhighs ${ZLIB_LIBRARIES})
+    target_link_libraries(libhighs ZLIB::ZLIB)
+    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
 endif()
 
 # on UNIX system the 'lib' prefix is automatically added

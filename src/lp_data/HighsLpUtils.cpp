@@ -1754,7 +1754,7 @@ void reportLpObjSense(const HighsLogOptions& log_options, const HighsLp& lp) {
                  lp.sense_);
 }
 
-std::string getBoundType(const double lower, const double upper) {
+static std::string getBoundType(const double lower, const double upper) {
   std::string type;
   if (highs_isInfinity(-lower)) {
     if (highs_isInfinity(upper)) {
@@ -2491,7 +2491,8 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-HighsLp withoutSemiVariables(const HighsLp& lp_) {
+HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
+                             const double primal_feasibility_tolerance) {
   HighsLp lp = lp_;
   HighsInt num_col = lp.num_col_;
   HighsInt num_row = lp.num_row_;
@@ -2547,6 +2548,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
   std::stringstream ss;
   const bool has_col_names = lp.col_names_.size();
   const bool has_row_names = lp.row_names_.size();
+  const bool has_solution = solution.value_valid;
+  if (has_solution) assert(solution.col_value.size() == lp_.num_col_);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -2571,6 +2574,20 @@ HighsLp withoutSemiVariables(const HighsLp& lp_) {
       }
       index.push_back(row_num++);
       value.push_back(-lp.col_lower_[iCol]);
+      // Accommodate any primal solution
+      if (has_solution) {
+        if (solution.col_value[iCol] <= primal_feasibility_tolerance) {
+          // Currently at or below zero, so binary is 0
+          solution.col_value[iCol] = 0;
+          solution.col_value.push_back(0);
+        } else {
+          // Otherwise, solution is at least lower bound, and binary
+          // is 1
+          solution.col_value[iCol] =
+              std::max(lp.col_lower_[iCol], solution.col_value[iCol]);
+          solution.col_value.push_back(1);
+        }
+      }
       // Complete x - u*y <= 0
       lp.row_lower_.push_back(-kHighsInf);
       lp.row_upper_.push_back(0);
