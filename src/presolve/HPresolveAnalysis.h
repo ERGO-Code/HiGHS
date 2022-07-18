@@ -43,7 +43,6 @@ class HPresolveAnalysis {
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);
   void resetNumDeleted();
 
-  void reportPresolveRulesAllowed(const bool report_allowed = true);
   std::string presolveReductionTypeToString(const HighsInt reduction_type);
   void startPresolveRuleLog(const HighsInt rule_type);
   void stopPresolveRuleLog(const HighsInt rule_type);

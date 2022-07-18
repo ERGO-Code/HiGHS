@@ -876,7 +876,7 @@ class Highs {
   std::string solutionStatusToString(const HighsInt solution_status) const;
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
   std::string basisValidityToString(const HighsInt basis_validity) const;
-  std::string presolveLogToString(const HighsInt presolve_rule) const;
+  std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is

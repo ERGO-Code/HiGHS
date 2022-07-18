@@ -2448,7 +2448,8 @@ std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
   return utilBasisValidityToString(basis_validity);
 }
 
-std::string Highs::presolveLogToString(const HighsInt presolve_rule) const {
+std::string Highs::presolveRuleTypeToString(
+    const HighsInt presolve_rule) const {
   return utilPresolveRuleTypeToString(presolve_rule);
 }
 

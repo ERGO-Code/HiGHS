@@ -95,6 +95,4 @@ struct HighsPresolveLog {
   void clear();
 };
 
-
-
 #endif /* LP_DATA_HSTRUCT_H_ */

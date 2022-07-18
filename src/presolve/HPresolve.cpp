@@ -3926,7 +3926,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   // effectiveness
   analysis_.setup(this->model, this->options, this->numDeletedRows,
                   this->numDeletedCols);
-  analysis_.reportPresolveRulesAllowed(false);
 
   if (options->presolve != "off") {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
@@ -4091,8 +4090,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
   if (mipsolver != nullptr) scaleMIP(postsolve_stack);
 
+  // analysePresolveRuleLog() should return true - no errors
   assert(analysis_.analysePresolveRuleLog());
-  if (options->log_dev_level) analysis_.analysePresolveRuleLog(true);
+  // Possibly report presolve log
+  analysis_.analysePresolveRuleLog(true);
   return Result::kOk;
 }
 

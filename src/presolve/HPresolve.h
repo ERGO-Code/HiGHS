@@ -337,6 +337,10 @@ class HPresolve {
 
   void setRelaxedImpliedBounds();
 
+  const HighsPresolveLog& getPresolveLog() const {
+    return analysis_.presolve_log_;
+  }
+
   static void debug(const HighsLp& lp, const HighsOptions& options);
 };
 

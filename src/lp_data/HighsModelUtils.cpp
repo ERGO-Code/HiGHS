@@ -1246,6 +1246,8 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Doubleton equation";
   } else if (rule_type == kPresolveRuleDependentEquations) {
     return "Dependent equations";
+  } else if (rule_type == kPresolveRuleDependentFreeCols) {
+    return "Dependent free columns";
   } else if (rule_type == kPresolveRuleAggregator) {
     return "Aggregator";
   } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
