@@ -32,11 +32,17 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
       const bool allow = !(options->presolve_rule_off & bit);
-      allow_rule_[rule_type] = allow;
-      if (!allow)
-        highsLogUser(options->log_options, HighsLogType::kInfo,
-                     "   Rule %2d (bit %4d): %s\n", (int)rule_type, (int)bit,
-                     utilPresolveRuleTypeToString(rule_type).c_str());
+      if (rule_type >= kPresolveRuleFirstAllowOff) {
+        allow_rule_[rule_type] = allow;
+        if (!allow)
+          highsLogUser(options->log_options, HighsLogType::kInfo,
+                       "   Rule %2d (bit %4d): %s\n", (int)rule_type, (int)bit,
+                       utilPresolveRuleTypeToString(rule_type).c_str());
+      } else {
+        highsLogUser(options->log_options, HighsLogType::kWarning,
+                     "Cannot disallow rule %2d (bit %4d): %s\n", (int)rule_type,
+                     (int)bit, utilPresolveRuleTypeToString(rule_type).c_str());
+      }
       bit *= 2;
     }
   }
