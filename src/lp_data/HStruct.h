@@ -84,4 +84,15 @@ struct HighsLpMods {
   bool isClear();
 };
 
+struct HighsPresolveRuleLog {
+  HighsInt call;
+  HighsInt col_removed;
+  HighsInt row_removed;
+};
+
+struct HighsPresolveLog {
+  std::vector<HighsPresolveRuleLog> rule;
+  void clear();
+};
+
 #endif /* LP_DATA_HSTRUCT_H_ */

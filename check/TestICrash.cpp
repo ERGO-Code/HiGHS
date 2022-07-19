@@ -5,6 +5,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
+const bool dev_run = false;
 const double kOptimalQap04 = 32;
 
 // No commas in test case name.
@@ -12,6 +13,7 @@ TEST_CASE("icrash-qap04", "[highs_presolve]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus highs_status = highs.readModel(filename);
   REQUIRE(highs_status == HighsStatus::kOk);
 
@@ -21,8 +23,9 @@ TEST_CASE("icrash-qap04", "[highs_presolve]") {
   options.icrash_starting_weight = 10;
   options.icrash_approx_iter = 100;
   options.simplex_strategy = kSimplexStrategyPrimal;
+  options.output_flag = dev_run;
 
-  highs_status = highs.passHighsOptions(options);
+  highs_status = highs.passOptions(options);
   REQUIRE(highs_status == HighsStatus::kOk);
 
   HighsStatus run_status = highs.run();

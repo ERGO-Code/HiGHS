@@ -131,6 +131,7 @@ set(sources
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
+    presolve/HPresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
@@ -265,6 +266,7 @@ set(headers
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
+    presolve/HPresolveAnalysis.h
     presolve/PresolveComponent.h
     test/DevKkt.h
     test/KktCh2.h
@@ -517,6 +519,7 @@ target_sources(libhighs PRIVATE
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
+    presolve/HPresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
@@ -701,6 +704,7 @@ set(headers_fast_build_
     presolve/HighsPostsolveStack.h
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
+    presolve/HPresolveAnalysis.h
     presolve/PresolveComponent.h
     test/DevKkt.h
     test/KktCh2.h

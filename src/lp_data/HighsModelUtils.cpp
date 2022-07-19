@@ -1223,6 +1223,40 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
   }
 }
 
+std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
+  if (rule_type == kPresolveRuleEmptyRow) {
+    return "Empty row";
+  } else if (rule_type == kPresolveRuleSingletonRow) {
+    return "Singleton row";
+  } else if (rule_type == kPresolveRuleRedundantRow) {
+    return "Redundant row";
+  } else if (rule_type == kPresolveRuleEmptyCol) {
+    return "Empty column";
+  } else if (rule_type == kPresolveRuleFixedCol) {
+    return "Fixed column";
+  } else if (rule_type == kPresolveRuleDominatedCol) {
+    return "Dominated col";
+  } else if (rule_type == kPresolveRuleForcingRow) {
+    return "Forcing row";
+  } else if (rule_type == kPresolveRuleForcingCol) {
+    return "Forcing col";
+  } else if (rule_type == kPresolveRuleFreeColSubstitution) {
+    return "Free col substitution";
+  } else if (rule_type == kPresolveRuleDoubletonEquation) {
+    return "Doubleton equation";
+  } else if (rule_type == kPresolveRuleDependentEquations) {
+    return "Dependent equations";
+  } else if (rule_type == kPresolveRuleDependentFreeCols) {
+    return "Dependent free columns";
+  } else if (rule_type == kPresolveRuleAggregator) {
+    return "Aggregator";
+  } else if (rule_type == kPresolveRuleParallelRowsAndCols) {
+    return "Parallel rows and columns";
+  }
+  assert(1 == 0);
+  return "????";
+}
+
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {

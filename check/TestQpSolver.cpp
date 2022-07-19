@@ -13,6 +13,7 @@ TEST_CASE("qp-unbounded", "[qpsolver]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
@@ -23,6 +24,7 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/qpinfeasible.lp";
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
@@ -41,12 +43,11 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   required_x1 = 1.7;
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   const HighsModel& model = highs.getModel();
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
   const double& objective_function_value = info.objective_function_value;
-
-  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   HighsStatus return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -145,12 +146,12 @@ TEST_CASE("test-qod", "[qpsolver]") {
   hessian.value_ = {2.0};
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   const HighsModel& model = highs.getModel();
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
   const double& objective_function_value = info.objective_function_value;
 
-  if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
@@ -293,9 +294,9 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   hessian.value_ = {2.0, -1.0, 0.2, 2.0};
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
   const double& objective_function_value = info.objective_function_value;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
@@ -379,7 +380,7 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
   model.hessian_.index_ = {0};
   model.hessian_.value_ = {-0.5};
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   // Should load OK
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
@@ -408,7 +409,7 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
   lp.a_matrix_.index_ = {0, 1, 2};
   lp.a_matrix_.value_ = {1.0, 1.0, 1.0};
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   hessian.dim_ = lp.num_col_;
@@ -467,7 +468,7 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
   hessian.value_ = {2.0, -1.0, 1.0};
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -502,7 +503,7 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
   lp.a_matrix_.value_ = {1.0, 1.0};
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   hessian.dim_ = lp.num_col_;
