@@ -187,6 +187,10 @@ struct ProcessedToken {
    }
 };
 
+// how many raw tokens to cache
+// set to how many tokens we may need to look ahead
+#define NRAWTOKEN 3
+
 class Reader {
 private:
 #ifdef ZLIB_FOUND
@@ -196,8 +200,7 @@ private:
 #endif
    std::string linebuffer;
    std::size_t linebufferpos;
-   std::array<RawToken, 5> rawtokens;
-   size_t rawtokenpos;
+   std::array<RawToken, NRAWTOKEN> rawtokens;
    std::vector<ProcessedToken> processedtokens;
    // store for each section a pointer to its begin and end (pointer to element after last)
    std::map<LpSectionKeyword, std::pair<std::vector<ProcessedToken>::iterator, std::vector<ProcessedToken>::iterator> > sectiontokens;
@@ -205,9 +208,9 @@ private:
    Builder builder;
 
    bool readnexttoken(RawToken&);
-   const RawToken& rawtoken(size_t offset = 0) const {
-      assert(offset < 5);
-      return rawtokens[(rawtokenpos + offset) % 5];
+   inline const RawToken& rawtoken(size_t offset = 0) const {
+      assert(offset < NRAWTOKEN);
+      return rawtokens[offset];
    }
    void nextrawtoken(size_t howmany = 1);
    void processtokens();
@@ -279,10 +282,9 @@ LpSectionKeyword parsesectionkeyword(const std::string& str) {
 Model Reader::read() {
    //std::clog << "Reading input, tokenizing..." << std::endl;
    this->linebufferpos = 0;
-   this->rawtokenpos = 0;
-   // read first 5 token
+   // read first NRAWTOKEN token
    // if file ends early, then all remaining tokens are set to FLEND
-   for(size_t i = 0; i < 5; ++i )
+   for(size_t i = 0; i < NRAWTOKEN; ++i )
       while( !readnexttoken(rawtokens[i]) ) ;;
 
    processtokens();
@@ -991,13 +993,16 @@ void Reader::processtokens() {
 
 void Reader::nextrawtoken(size_t howmany) {
    assert(howmany > 0);
-   while( howmany-- )
-   {
+   assert(howmany <= NRAWTOKEN);
+   size_t i = 0;
+   // move tokens up
+   for( ; i < NRAWTOKEN - howmany; ++i )
+      rawtokens[i] = std::move(rawtokens[i+howmany]);
+   // read new tokens at end positions
+   for( ; i < NRAWTOKEN ; ++i )
       // call readnexttoken() to overwrite current token
       // if it didn't actually read a token (returns false), then call again
-      while( !readnexttoken(rawtokens[rawtokenpos % 5]) ) ;;
-      ++rawtokenpos;
-   }
+      while( !readnexttoken(rawtokens[i]) ) ;;
 }
 
 // return true, if token has been set; return false if skipped over whitespace only
