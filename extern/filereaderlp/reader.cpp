@@ -257,8 +257,7 @@ void tolower(std::string& s) {
 }
 
 static
-bool iskeyword(std::string str, const std::string* keywords, const int nkeywords) {
-   tolower(str);
+bool iskeyword(const std::string& str, const std::string* keywords, const int nkeywords) {
    for (int i=0; i<nkeywords; i++) {
       if (str == keywords[i]) {
          return true;
@@ -268,9 +267,8 @@ bool iskeyword(std::string str, const std::string* keywords, const int nkeywords
 }
 
 static
-LpSectionKeyword parsesectionkeyword(std::string str) {
+LpSectionKeyword parsesectionkeyword(const std::string& str) {
    // look up lower case
-   tolower(str);
    auto it(sectionkeywordmap.find(str));
    if( it != sectionkeywordmap.end() )
       return it->second;
@@ -767,6 +765,7 @@ void Reader::splittokens() {
 }
 
 void Reader::processtokens() {
+   std::string svalue_lc;
    while(!rawtoken().istype(RawTokenType::FLEND)) {
       fflush(stdout);
 
@@ -781,10 +780,17 @@ void Reader::processtokens() {
          continue;
       }
 
+      if (rawtoken().istype(RawTokenType::STR))
+      {
+         svalue_lc = rawtoken().svalue;
+         tolower(svalue_lc);
+      }
+
       // long section keyword semi-continuous
       if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::MINUS) && rawtoken(2).istype(RawTokenType::STR)) {
-         std::string temp = rawtoken().svalue + "-" + rawtoken(2).svalue;
-         LpSectionKeyword keyword = parsesectionkeyword(temp);
+         std::string temp = rawtoken(2).svalue;
+         tolower(temp);
+         LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + "-" + temp);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.emplace_back(keyword);
             nextrawtoken(3);
@@ -794,8 +800,9 @@ void Reader::processtokens() {
 
       // long section keyword subject to/such that
       if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::STR)) {
-         std::string temp = rawtoken().svalue + " " + rawtoken(1).svalue;
-         LpSectionKeyword keyword = parsesectionkeyword(temp);
+         std::string temp = rawtoken(1).svalue;
+         tolower(temp);
+         LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + " " + temp);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.emplace_back(keyword);
             nextrawtoken(2);
@@ -805,7 +812,7 @@ void Reader::processtokens() {
 
       // other section keyword
       if (rawtoken().istype(RawTokenType::STR)) {
-         LpSectionKeyword keyword = parsesectionkeyword(rawtoken().svalue);
+         LpSectionKeyword keyword = parsesectionkeyword(svalue_lc);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.emplace_back(keyword);
             nextrawtoken();
@@ -831,14 +838,14 @@ void Reader::processtokens() {
       }
 
       // check if free
-      if (rawtoken().istype(RawTokenType::STR) && iskeyword(rawtoken().svalue, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
+      if (rawtoken().istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
          processedtokens.emplace_back(ProcessedTokenType::FREE);
          nextrawtoken();
          continue;
       }
 
       // check if infinity
-      if (rawtoken().istype(RawTokenType::STR) && iskeyword(rawtoken().svalue, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
+      if (rawtoken().istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
          processedtokens.emplace_back(std::numeric_limits<double>::infinity());
          nextrawtoken();
          continue;
