@@ -38,54 +38,27 @@ enum class RawTokenType {
 };
 
 struct RawToken {
-private:
-   void clear() {
-      if( type == RawTokenType::STR )
-         free(svalue);
-      type = RawTokenType::NONE;
-   }
-public:
-   RawTokenType type;
-   union {
-      char* svalue;
-      double dvalue = 0.0;
-   };
+   RawTokenType type = RawTokenType::NONE;
+   std::string svalue;
+   double dvalue = 0.0;
 
    inline bool istype(RawTokenType t) const {
       return this->type == t;
    }
 
-   RawToken(const RawToken&) = delete;
-   RawToken() : type(RawTokenType::NONE), dvalue(0.0) {}
-//   RawToken(RawToken&& t) : type(t.type) {
-//      if( type == RawTokenType::STR )
-//      {
-//         svalue = t.svalue;
-//         t.type = RawTokenType::NONE;
-//      }
-//      else
-//         dvalue = t.dvalue;
-//   }
    RawToken& operator=(RawTokenType t) {
-      clear();
       type = t;
       return *this;
    }
    RawToken& operator=(const std::string& v) {
-      clear();
-      svalue = strdup(v.c_str());
+      svalue = v;
       type = RawTokenType::STR;
       return *this;
    }
    RawToken& operator=(const double v) {
-      clear();
       dvalue = v;
       type = RawTokenType::CONS;
       return *this;
-   }
-
-   ~RawToken() {
-      clear();
    }
 };
 
@@ -815,7 +788,7 @@ void Reader::processtokens() {
 
       // long section keyword semi-continuous
       if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::MINUS) && rawtoken(2).istype(RawTokenType::STR)) {
-         std::string temp = std::string(rawtoken().svalue) + "-" + rawtoken(2).svalue;
+         std::string temp = rawtoken().svalue + "-" + rawtoken(2).svalue;
          LpSectionKeyword keyword = parsesectionkeyword(temp);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.emplace_back(keyword);
@@ -826,7 +799,7 @@ void Reader::processtokens() {
 
       // long section keyword subject to/such that
       if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::STR)) {
-         std::string temp = std::string(rawtoken().svalue) + " " + rawtoken(1).svalue;
+         std::string temp = rawtoken().svalue + " " + rawtoken(1).svalue;
          LpSectionKeyword keyword = parsesectionkeyword(temp);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.emplace_back(keyword);
@@ -847,7 +820,7 @@ void Reader::processtokens() {
 
       // sos type identifier? "S1 ::" or "S2 ::"
       if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::COLON) && rawtoken(2).istype(RawTokenType::COLON)) {
-         lpassert(strlen(rawtoken().svalue) == 2);
+         lpassert(rawtoken().svalue.length() == 2);
          lpassert(rawtoken().svalue[0] == 'S' || rawtoken().svalue[0] == 's');
          lpassert(rawtoken().svalue[1] == '1' || rawtoken().svalue[1] == '2');
          processedtokens.emplace_back(rawtoken().svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
