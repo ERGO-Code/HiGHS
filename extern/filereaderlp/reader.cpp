@@ -250,13 +250,13 @@ Model readinstance(std::string filename) {
 }
 
 // convert string to lower-case, modifies string
-static
+static inline
 void tolower(std::string& s) {
    std::transform(s.begin(), s.end(), s.begin(),
       [](unsigned char c) { return std::tolower(c); });
 }
 
-static
+static inline
 bool iskeyword(const std::string& str, const std::string* keywords, const int nkeywords) {
    for (int i=0; i<nkeywords; i++) {
       if (str == keywords[i]) {
@@ -266,7 +266,7 @@ bool iskeyword(const std::string& str, const std::string* keywords, const int nk
    return false;
 }
 
-static
+static inline
 LpSectionKeyword parsesectionkeyword(const std::string& str) {
    // look up lower case
    auto it(sectionkeywordmap.find(str));
