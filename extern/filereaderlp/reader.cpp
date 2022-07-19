@@ -7,6 +7,7 @@
 #include <fstream>
 #include <limits>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <vector>
 #include <array>
@@ -91,6 +92,33 @@ enum class LpSectionKeyword {
   SEMI,
   SOS,
   END
+};
+
+static const
+std::unordered_map<std::string, LpSectionKeyword> sectionkeywordmap {
+   { "minimize", LpSectionKeyword::OBJMIN },
+   { "min", LpSectionKeyword::OBJMIN },
+   { "minimum", LpSectionKeyword::OBJMIN },
+   { "maximize", LpSectionKeyword::OBJMAX },
+   { "max", LpSectionKeyword::OBJMAX },
+   { "maximum", LpSectionKeyword::OBJMAX },
+   { "subject to", LpSectionKeyword::CON },
+   { "such that", LpSectionKeyword::CON },
+   { "st", LpSectionKeyword::CON },
+   { "s.t.", LpSectionKeyword::CON },
+   { "bounds", LpSectionKeyword::BOUNDS },
+   { "bound", LpSectionKeyword::BOUNDS },
+   { "binary", LpSectionKeyword::BIN },
+   { "binaries", LpSectionKeyword::BIN },
+   { "bin", LpSectionKeyword::BIN },
+   { "general", LpSectionKeyword::GEN },
+   { "generals", LpSectionKeyword::GEN },
+   { "gen", LpSectionKeyword::GEN },
+   { "semi-continuous", LpSectionKeyword::SEMI },
+   { "semi", LpSectionKeyword::SEMI },
+   { "semis", LpSectionKeyword::SEMI },
+   { "sos", LpSectionKeyword::SOS },
+   { "end", LpSectionKeyword::END }
 };
 
 enum class SosType {
@@ -221,8 +249,16 @@ Model readinstance(std::string filename) {
    return reader.read();
 }
 
+// convert string to lower-case, modifies string
 static
-bool iskeyword(const std::string str, const std::string* keywords, const int nkeywords) {
+void tolower(std::string& s) {
+   std::transform(s.begin(), s.end(), s.begin(),
+      [](unsigned char c) { return std::tolower(c); });
+}
+
+static
+bool iskeyword(std::string str, const std::string* keywords, const int nkeywords) {
+   tolower(str);
    for (int i=0; i<nkeywords; i++) {
       if (str == keywords[i]) {
          return true;
@@ -233,44 +269,11 @@ bool iskeyword(const std::string str, const std::string* keywords, const int nke
 
 static
 LpSectionKeyword parsesectionkeyword(std::string str) {
-   std::transform(str.begin(), str.end(), str.begin(),
-      [](unsigned char c) { return std::tolower(c); });
-
-   if (iskeyword(str, LP_KEYWORD_MIN, LP_KEYWORD_MIN_N)) {
-      return LpSectionKeyword::OBJMIN;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_MAX, LP_KEYWORD_MAX_N)) {
-      return LpSectionKeyword::OBJMAX;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_ST, LP_KEYWORD_ST_N)) {
-      return LpSectionKeyword::CON;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_BOUNDS, LP_KEYWORD_BOUNDS_N)) {
-      return LpSectionKeyword::BOUNDS;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_BIN, LP_KEYWORD_BIN_N)) {
-      return LpSectionKeyword::BIN;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_GEN, LP_KEYWORD_GEN_N)) {
-      return LpSectionKeyword::GEN;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_SEMI, LP_KEYWORD_SEMI_N)) {
-      return LpSectionKeyword::SEMI;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_SOS, LP_KEYWORD_SOS_N)) {
-      return LpSectionKeyword::SOS;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_END, LP_KEYWORD_END_N)) {
-      return LpSectionKeyword::END;
-   }
+   // look up lower case
+   tolower(str);
+   auto it(sectionkeywordmap.find(str));
+   if( it != sectionkeywordmap.end() )
+      return it->second;
 
    return LpSectionKeyword::NONE;
 }
@@ -284,7 +287,6 @@ Model Reader::read() {
    for(size_t i = 0; i < 5; ++i )
       while( !readnexttoken(rawtokens[i]) ) ;;
 
-   //std::clog << "Processing tokens..." << std::endl;
    processtokens();
 
    linebuffer.clear();
