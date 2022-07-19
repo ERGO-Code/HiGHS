@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <algorithm>
 
 #include "def.hpp"
 
@@ -221,20 +222,9 @@ Model readinstance(std::string filename) {
 }
 
 static
-bool isstrequalnocase(const std::string str1, const std::string str2) {
-   size_t len = str1.size();
-    if (str2.size() != len)
-        return false;
-    for (size_t i = 0; i < len; ++i)
-        if (tolower(str1[i]) != tolower(str2[i]))
-            return false;
-    return true;
-}
-
-static
 bool iskeyword(const std::string str, const std::string* keywords, const int nkeywords) {
    for (int i=0; i<nkeywords; i++) {
-      if (isstrequalnocase(str, keywords[i])) {
+      if (str == keywords[i]) {
          return true;
       }
    }
@@ -242,7 +232,10 @@ bool iskeyword(const std::string str, const std::string* keywords, const int nke
 }
 
 static
-LpSectionKeyword parsesectionkeyword(const std::string& str) {
+LpSectionKeyword parsesectionkeyword(std::string str) {
+   std::transform(str.begin(), str.end(), str.begin(),
+      [](unsigned char c) { return std::tolower(c); });
+
    if (iskeyword(str, LP_KEYWORD_MIN, LP_KEYWORD_MIN_N)) {
       return LpSectionKeyword::OBJMIN;
    }
