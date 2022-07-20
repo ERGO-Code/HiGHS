@@ -208,10 +208,6 @@ private:
    Builder builder;
 
    bool readnexttoken(RawToken&);
-   inline const RawToken& rawtoken(size_t offset = 0) const {
-      assert(offset < NRAWTOKEN);
-      return rawtokens[offset];
-   }
    void nextrawtoken(size_t howmany = 1);
    void processtokens();
    void splittokens();
@@ -768,29 +764,29 @@ void Reader::splittokens() {
 
 void Reader::processtokens() {
    std::string svalue_lc;
-   while(!rawtoken().istype(RawTokenType::FLEND)) {
+   while(!rawtokens[0].istype(RawTokenType::FLEND)) {
       fflush(stdout);
 
       // Slash + asterisk: comment, skip everything up to next asterisk + slash
-      if (rawtoken().istype(RawTokenType::SLASH) && rawtoken(1).istype(RawTokenType::ASTERISK)) {
+      if (rawtokens[0].istype(RawTokenType::SLASH) && rawtokens[1].istype(RawTokenType::ASTERISK)) {
          do
          {
             nextrawtoken(2);
          }
-         while( !(rawtoken().istype(RawTokenType::ASTERISK) && rawtoken(1).istype(RawTokenType::SLASH)) && !rawtoken().istype(RawTokenType::FLEND) );
+         while( !(rawtokens[0].istype(RawTokenType::ASTERISK) && rawtokens[1].istype(RawTokenType::SLASH)) && !rawtokens[0].istype(RawTokenType::FLEND) );
          nextrawtoken(2);
          continue;
       }
 
-      if (rawtoken().istype(RawTokenType::STR))
+      if (rawtokens[0].istype(RawTokenType::STR))
       {
-         svalue_lc = rawtoken().svalue;
+         svalue_lc = rawtokens[0].svalue;
          tolower(svalue_lc);
       }
 
       // long section keyword semi-continuous
-      if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::MINUS) && rawtoken(2).istype(RawTokenType::STR)) {
-         std::string temp = rawtoken(2).svalue;
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::MINUS) && rawtokens[2].istype(RawTokenType::STR)) {
+         std::string temp = rawtokens[2].svalue;
          tolower(temp);
          LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + "-" + temp);
          if (keyword != LpSectionKeyword::NONE) {
@@ -801,8 +797,8 @@ void Reader::processtokens() {
       }
 
       // long section keyword subject to/such that
-      if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::STR)) {
-         std::string temp = rawtoken(1).svalue;
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::STR)) {
+         std::string temp = rawtokens[1].svalue;
          tolower(temp);
          LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + " " + temp);
          if (keyword != LpSectionKeyword::NONE) {
@@ -813,7 +809,7 @@ void Reader::processtokens() {
       }
 
       // other section keyword
-      if (rawtoken().istype(RawTokenType::STR)) {
+      if (rawtokens[0].istype(RawTokenType::STR)) {
          LpSectionKeyword keyword = parsesectionkeyword(svalue_lc);
          if (keyword != LpSectionKeyword::NONE) {
             processedtokens.emplace_back(keyword);
@@ -823,167 +819,167 @@ void Reader::processtokens() {
       }
 
       // sos type identifier? "S1 ::" or "S2 ::"
-      if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::COLON) && rawtoken(2).istype(RawTokenType::COLON)) {
-         lpassert(rawtoken().svalue.length() == 2);
-         lpassert(rawtoken().svalue[0] == 'S' || rawtoken().svalue[0] == 's');
-         lpassert(rawtoken().svalue[1] == '1' || rawtoken().svalue[1] == '2');
-         processedtokens.emplace_back(rawtoken().svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::COLON) && rawtokens[2].istype(RawTokenType::COLON)) {
+         lpassert(rawtokens[0].svalue.length() == 2);
+         lpassert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's');
+         lpassert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2');
+         processedtokens.emplace_back(rawtokens[0].svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
          nextrawtoken(3);
          continue;
       }
 
       // constraint identifier?
-      if (rawtoken().istype(RawTokenType::STR) && rawtoken(1).istype(RawTokenType::COLON)) {
-         processedtokens.emplace_back(ProcessedTokenType::CONID, rawtoken().svalue);
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::COLON)) {
+         processedtokens.emplace_back(ProcessedTokenType::CONID, rawtokens[0].svalue);
          nextrawtoken(2);
          continue;
       }
 
       // check if free
-      if (rawtoken().istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
+      if (rawtokens[0].istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
          processedtokens.emplace_back(ProcessedTokenType::FREE);
          nextrawtoken();
          continue;
       }
 
       // check if infinity
-      if (rawtoken().istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
+      if (rawtokens[0].istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
          processedtokens.emplace_back(std::numeric_limits<double>::infinity());
          nextrawtoken();
          continue;
       }
 
       // assume var identifier
-      if (rawtoken().istype(RawTokenType::STR)) {
-         processedtokens.emplace_back(ProcessedTokenType::VARID, rawtoken().svalue);
+      if (rawtokens[0].istype(RawTokenType::STR)) {
+         processedtokens.emplace_back(ProcessedTokenType::VARID, rawtokens[0].svalue);
          nextrawtoken();
          continue;
       }
 
       // + Constant
-      if (rawtoken().istype(RawTokenType::PLUS) && rawtoken(1).istype(RawTokenType::CONS)) {
-         processedtokens.emplace_back(rawtoken(1).dvalue);
+      if (rawtokens[0].istype(RawTokenType::PLUS) && rawtokens[1].istype(RawTokenType::CONS)) {
+         processedtokens.emplace_back(rawtokens[1].dvalue);
          nextrawtoken(2);
          continue;
       }
 
       // - constant
-      if (rawtoken().istype(RawTokenType::MINUS) && rawtoken(1).istype(RawTokenType::CONS)) {
-         processedtokens.emplace_back(-rawtoken(1).dvalue);
+      if (rawtokens[0].istype(RawTokenType::MINUS) && rawtokens[1].istype(RawTokenType::CONS)) {
+         processedtokens.emplace_back(-rawtokens[1].dvalue);
          nextrawtoken(2);
          continue;
       }
 
       // + [
-      if (rawtoken().istype(RawTokenType::PLUS) && rawtoken(1).istype(RawTokenType::BRKOP)) {
+      if (rawtokens[0].istype(RawTokenType::PLUS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
          processedtokens.emplace_back(ProcessedTokenType::BRKOP);
          nextrawtoken(2);
          continue;
       }
 
       // - [
-      if (rawtoken().istype(RawTokenType::MINUS) && rawtoken(1).istype(RawTokenType::BRKOP)) {
+      if (rawtokens[0].istype(RawTokenType::MINUS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
       }
 
       // constant [
-      if (rawtoken().istype(RawTokenType::CONS) && rawtoken(1).istype(RawTokenType::BRKOP)) {
+      if (rawtokens[0].istype(RawTokenType::CONS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
       }
 
       // +
-      if (rawtoken().istype(RawTokenType::PLUS)) {
+      if (rawtokens[0].istype(RawTokenType::PLUS)) {
          processedtokens.emplace_back(1.0);
          nextrawtoken();
          continue;
       }
 
       // -
-      if (rawtoken().istype(RawTokenType::MINUS)) {
+      if (rawtokens[0].istype(RawTokenType::MINUS)) {
          processedtokens.emplace_back(-1.0);
          nextrawtoken();
          continue;
       }
 
       // constant
-      if (rawtoken().istype(RawTokenType::CONS)) {
-         processedtokens.emplace_back(rawtoken().dvalue);
+      if (rawtokens[0].istype(RawTokenType::CONS)) {
+         processedtokens.emplace_back(rawtokens[0].dvalue);
          nextrawtoken();
          continue;
       }
 
       // [
-      if (rawtoken().istype(RawTokenType::BRKOP)) {
+      if (rawtokens[0].istype(RawTokenType::BRKOP)) {
          processedtokens.emplace_back(ProcessedTokenType::BRKOP);
          nextrawtoken();
          continue;
       }
 
       // ]
-      if (rawtoken().istype(RawTokenType::BRKCL)) {
+      if (rawtokens[0].istype(RawTokenType::BRKCL)) {
          processedtokens.emplace_back(ProcessedTokenType::BRKCL);
          nextrawtoken();
          continue;
       }
 
       // /
-      if (rawtoken().istype(RawTokenType::SLASH)) {
+      if (rawtokens[0].istype(RawTokenType::SLASH)) {
          processedtokens.emplace_back(ProcessedTokenType::SLASH);
          nextrawtoken();
          continue;
       }
 
       // *
-      if (rawtoken().istype(RawTokenType::ASTERISK)) {
+      if (rawtokens[0].istype(RawTokenType::ASTERISK)) {
          processedtokens.emplace_back(ProcessedTokenType::ASTERISK);
          nextrawtoken();
          continue;
       }
 
       // ^
-      if (rawtoken().istype(RawTokenType::HAT)) {
+      if (rawtokens[0].istype(RawTokenType::HAT)) {
          processedtokens.emplace_back(ProcessedTokenType::HAT);
          nextrawtoken();
          continue;
       }
 
       // <=
-      if (rawtoken().istype(RawTokenType::LESS) && rawtoken(1).istype(RawTokenType::EQUAL)) {
+      if (rawtokens[0].istype(RawTokenType::LESS) && rawtokens[1].istype(RawTokenType::EQUAL)) {
          processedtokens.emplace_back(LpComparisonType::LEQ);
          nextrawtoken(2);
          continue;
       }
 
       // <
-      if (rawtoken().istype(RawTokenType::LESS)) {
+      if (rawtokens[0].istype(RawTokenType::LESS)) {
          processedtokens.emplace_back(LpComparisonType::L);
          nextrawtoken();
          continue;
       }
 
       // >=
-      if (rawtoken().istype(RawTokenType::GREATER) && rawtoken(1).istype(RawTokenType::EQUAL)) {
+      if (rawtokens[0].istype(RawTokenType::GREATER) && rawtokens[1].istype(RawTokenType::EQUAL)) {
          processedtokens.emplace_back(LpComparisonType::GEQ);
          nextrawtoken(2);
          continue;
       }
 
       // >
-      if (rawtoken().istype(RawTokenType::GREATER)) {
+      if (rawtokens[0].istype(RawTokenType::GREATER)) {
          processedtokens.emplace_back(LpComparisonType::G);
          nextrawtoken();
          continue;
       }
 
       // =
-      if (rawtoken().istype(RawTokenType::EQUAL)) {
+      if (rawtokens[0].istype(RawTokenType::EQUAL)) {
          processedtokens.emplace_back(LpComparisonType::EQ);
          nextrawtoken();
          continue;
       }
 
       // FILEEND should have been handled in condition of while()
-      assert(!rawtoken().istype(RawTokenType::FLEND));
+      assert(!rawtokens[0].istype(RawTokenType::FLEND));
 
       // catch all unknown symbols
       lpassert(false);
