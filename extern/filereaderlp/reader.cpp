@@ -994,15 +994,38 @@ void Reader::processtokens() {
 void Reader::nextrawtoken(size_t howmany) {
    assert(howmany > 0);
    assert(howmany <= NRAWTOKEN);
-   size_t i = 0;
-   // move tokens up
-   for( ; i < NRAWTOKEN - howmany; ++i )
-      rawtokens[i] = std::move(rawtokens[i+howmany]);
-   // read new tokens at end positions
-   for( ; i < NRAWTOKEN ; ++i )
-      // call readnexttoken() to overwrite current token
-      // if it didn't actually read a token (returns false), then call again
-      while( !readnexttoken(rawtokens[i]) ) ;;
+   static_assert(NRAWTOKEN == 3, "code below need to be adjusted if NRAWTOKEN changes");
+   switch( howmany ) {
+      case 1: {
+         rawtokens[0] = std::move(rawtokens[1]);
+         rawtokens[1] = std::move(rawtokens[2]);
+         while( !readnexttoken(rawtokens[2]) ) ;;
+         break;
+      }
+      case 2: {
+         rawtokens[0] = std::move(rawtokens[2]);
+         while( !readnexttoken(rawtokens[1]) ) ;;
+         while( !readnexttoken(rawtokens[2]) ) ;;
+         break;
+      }
+      case 3: {
+         while( !readnexttoken(rawtokens[0]) ) ;;
+         while( !readnexttoken(rawtokens[1]) ) ;;
+         while( !readnexttoken(rawtokens[2]) ) ;;
+         break;
+      }
+      default: {
+         size_t i = 0;
+         // move tokens up
+         for( ; i < NRAWTOKEN - howmany; ++i )
+            rawtokens[i] = std::move(rawtokens[i+howmany]);
+         // read new tokens at end positions
+         for( ; i < NRAWTOKEN ; ++i )
+            // call readnexttoken() to overwrite current token
+            // if it didn't actually read a token (returns false), then call again
+            while( !readnexttoken(rawtokens[i]) ) ;;
+      }
+   }
 }
 
 // return true, if token has been set; return false if skipped over whitespace only
