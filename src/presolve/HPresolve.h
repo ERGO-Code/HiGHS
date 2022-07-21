@@ -28,6 +28,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipSolver.h"
+#include "presolve/HPresolveAnalysis.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsLinearSumBounds.h"
@@ -124,7 +125,8 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
-  // store old problem sizes to compute percentage redunctions in presolve loop
+  // store old problem sizes to compute percentage reductions in
+  // presolve loop
   HighsInt oldNumCol;
   HighsInt oldNumRow;
   bool probingEarlyAbort;
@@ -135,6 +137,8 @@ class HPresolve {
     kDualInfeasible,
     kStopped,
   };
+
+  HPresolveAnalysis analysis_;
 
   // private functions for different shared functionality and matrix
   // modification
@@ -333,8 +337,11 @@ class HPresolve {
 
   void setRelaxedImpliedBounds();
 
+  const HighsPresolveLog& getPresolveLog() const {
+    return analysis_.presolve_log_;
+  }
+
   static void debug(const HighsLp& lp, const HighsOptions& options);
-  void reportReductions(const HighsLogOptions& log_options);
 };
 
 }  // namespace presolve

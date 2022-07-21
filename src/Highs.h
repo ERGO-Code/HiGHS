@@ -278,6 +278,11 @@ class Highs {
   const HighsModel& getPresolvedModel() const { return presolved_model_; }
 
   /**
+   * @brief Return a const reference to the logging data for presolve
+   */
+  const HighsPresolveLog& getPresolveLog() const { return presolve_log_; }
+
+  /**
    * @brief Return a const reference to the incumbent LP
    */
   const HighsLp& getLp() const { return model_.lp_; }
@@ -901,6 +906,7 @@ class Highs {
   std::string solutionStatusToString(const HighsInt solution_status) const;
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
   std::string basisValidityToString(const HighsInt basis_validity) const;
+  std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
    * @brief Releases all resources held by the global scheduler instance. It is
@@ -1094,6 +1100,8 @@ class Highs {
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
   HEkk ekk_instance_;
+
+  HighsPresolveLog presolve_log_;
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether

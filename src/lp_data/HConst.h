@@ -190,6 +190,31 @@ enum class HighsBasisStatus : uint8_t {
              // and postsolve
 };
 
+// Types of LP presolve rules
+enum PresolveRuleType : int {
+  kPresolveRuleIllegal = -1,
+  kPresolveRuleMin = 0,
+  kPresolveRuleEmptyRow = kPresolveRuleMin,
+  kPresolveRuleSingletonRow,
+  kPresolveRuleRedundantRow,
+  kPresolveRuleEmptyCol,
+  kPresolveRuleFixedCol,
+  kPresolveRuleDominatedCol,
+  // The remaining rules can be switched off
+  kPresolveRuleFirstAllowOff,
+  kPresolveRuleForcingRow = kPresolveRuleFirstAllowOff,
+  kPresolveRuleForcingCol,
+  kPresolveRuleFreeColSubstitution,
+  kPresolveRuleDoubletonEquation,
+  kPresolveRuleDependentEquations,
+  kPresolveRuleDependentFreeCols,
+  kPresolveRuleAggregator,
+  kPresolveRuleParallelRowsAndCols,
+  kPresolveRuleMax = kPresolveRuleParallelRowsAndCols,
+  kPresolveRuleLastAllowOff = kPresolveRuleMax,
+  kPresolveRuleCount,
+};
+
 // Default and max allowed power-of-two matrix scale factor
 const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
 const HighsInt kMaxAllowedMatrixPow2Scale = 30;

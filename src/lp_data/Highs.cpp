@@ -2488,6 +2488,11 @@ std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
   return utilBasisValidityToString(basis_validity);
 }
 
+std::string Highs::presolveRuleTypeToString(
+    const HighsInt presolve_rule) const {
+  return utilPresolveRuleTypeToString(presolve_rule);
+}
+
 // Private methods
 void Highs::deprecationMessage(const std::string& method_name,
                                const std::string& alt_method_name) const {
@@ -2566,6 +2571,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
 
   // Update reduction counts.
   assert(presolve_return_status == presolve_.presolve_status_);
+  presolve_log_ = presolve_.getPresolveLog();
   switch (presolve_.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
