@@ -5,7 +5,7 @@
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
@@ -45,44 +45,6 @@ void messageReportLp(const char* message, const HighsLp& lp);
 void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt num_nz, const HighsInt* start,
                          const HighsInt* index, const double* value);
-
-void test_917(const HighsInt& dim);
-
-void test_917(const HighsInt& dim) {
-  using namespace std::chrono;
-
-  Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
-  const HighsLp& lp = highs.getLp();
-  high_resolution_clock::time_point t0 = high_resolution_clock::now();
-  std::vector<HighsInt> index(2);
-  std::vector<double> value(2);
-  value[0] = 1;
-  value[1] = -1;
-  for (HighsInt k = 0; k < dim * dim; k++)
-    highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr);
-  for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    for (HighsInt jCol = 1; jCol < dim; jCol++) {
-      index[1] = dim * iCol + jCol;
-      index[0] = index[1] - 1;
-      highs.addRow(-inf, 0.0, 2, &index[0], &value[0]);
-    }
-  }
-  high_resolution_clock::time_point t1 = high_resolution_clock::now();
-  duration<double> time_span = duration_cast<duration<double>>(t1 - t0);
-  printf("LP has %d rows and %d columns\n", (int)lp.num_row_, (int)lp.num_col_);
-  double time = time_span.count();
-  printf("For dim = %5d, time is %11.4g: time/row = %11.4g \n", (int)dim, time, time / lp.num_row_);
-}
-
-// No commas in test case name.
-TEST_CASE("LP-917", "[highs_data]") {
-  HighsInt dim = 100;
-  for (HighsInt k = 0; k < 4; k++) {
-    test_917(dim);
-    dim *= 2;
-  }
-}
 
 TEST_CASE("LP-717-od", "[highs_data]") {
   Highs highs;
