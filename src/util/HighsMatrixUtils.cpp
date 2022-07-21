@@ -49,12 +49,6 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                       small_matrix_value, large_matrix_value);
 }
 
-void print_map(std::string comment, const std::map<HighsInt, HighsInt>& m) {
-  std::cout << comment;
-  for (const auto& n : m) std::cout << n.first << " = " << n.second << "; ";
-  std::cout << '\n';
-}
-
 HighsStatus assessMatrix(
     const HighsLogOptions& log_options, const std::string matrix_name,
     const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,

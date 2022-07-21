@@ -365,6 +365,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {
   HighsStatus return_status;
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsInt num_col = 10;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) highs.addVar(0, 1);
   std::vector<HighsInt> start = {0, 6, 8};
