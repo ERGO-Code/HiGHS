@@ -49,6 +49,13 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                       small_matrix_value, large_matrix_value);
 }
 
+void print_map(std::string comment, const std::map<HighsInt, HighsInt>& m) {
+  std::cout << comment ;
+  for (const auto& n : m)
+    std::cout << n.first << " = " << n.second << "; ";
+  std::cout << '\n';
+}
+
 HighsStatus assessMatrix(
     const HighsLogOptions& log_options, const std::string matrix_name,
     const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,
@@ -144,14 +151,13 @@ HighsStatus assessMatrix(
   HighsInt num_large_values = 0;
   double max_large_value = 0;
   double min_large_value = kHighsInf;
-  const bool use_check_vector = true;
-  vector<HighsInt> check_vector;
-  std::map<HighsInt, HighsInt> index_location;
+  // Use index_map to identify duplicates.
+  //
+  // Note that operator[] with non-existent key returns 0 and always
+  // performs an insert. Hence value associated with the key has to be
+  // positive: use el+1.
+  std::map<HighsInt, HighsInt> index_map;
   
-  if (use_check_vector) {
-    // Set up a zeroed vector to detect duplicate indices
-    if (vec_dim > 0) check_vector.assign(vec_dim, 0);
-  }
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     HighsInt from_el = matrix_start[ix];
     HighsInt to_el = matrix_start[ix + 1];
@@ -182,22 +188,22 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component, vec_dim);
         return HighsStatus::kError;
       }
-      // Check that the index has not already ocurred
-      if (use_check_vector) {
-	legal_component = check_vector[component] == 0;
-	// Indicate that the index has occurred
-	check_vector[component] = 1;
-      } else {
-	legal_component = index_location[component] == 0;
+      // Check that the index has not already ocurred. 
+      print_map("index_map: ", index_map);
+      auto search = index_map.find(component);
+      legal_component = search == index_map.end();
+      printf("index_map.find(%d) yields (%d, %d) so legal_component = %d\n", (int)component,
+	     search->first,
+	     search->second,
+	     legal_component);
+      if (!legal_component) {
+	highsLogUser(log_options, HighsLogType::kError,
+		     "%s matrix packed vector %" HIGHSINT_FORMAT
+		     ", entry %" HIGHSINT_FORMAT
+		     ", is duplicate index %" HIGHSINT_FORMAT "\n",
+		     matrix_name.c_str(), ix, el, component);
+	return HighsStatus::kError;
       }
-	if (!legal_component) {
-	  highsLogUser(log_options, HighsLogType::kError,
-		       "%s matrix packed vector %" HIGHSINT_FORMAT
-		       ", entry %" HIGHSINT_FORMAT
-		       ", is duplicate index %" HIGHSINT_FORMAT "\n",
-		       matrix_name.c_str(), ix, el, component);
-	  return HighsStatus::kError;
-	}
       // Check the value
       double abs_value = fabs(matrix_value[el]);
       // Check that the value is not too large
@@ -214,45 +220,24 @@ HighsStatus assessMatrix(
         num_small_values++;
       }
       if (ok_value) {
-	index_location[component] = num_new_nz;
+	// Record where the index has occurred
+	index_map[component] = num_new_nz;
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
         matrix_index[num_new_nz] = matrix_index[el];
         matrix_value[num_new_nz] = matrix_value[el];
         num_new_nz++;
-      } else {
-	if (use_check_vector) {
-	  // Zero the check_vector entry since the small value
-	  // _hasn't_ occurred
-	  check_vector[component] = 0;
-	}
       }
     } // Loop from_el; to_el
-    if (use_check_vector) {
-      // Zero check_vector
-      for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++)
-	check_vector[matrix_index[el]] = 0;
-      // NB This is very expensive so shouldn't be true
-      const bool check_check_vector = false;
-      if (check_check_vector) {
-	// Check zeroing of check vector
-	for (HighsInt component = 0; component < vec_dim; component++) {
-	  if (check_vector[component]) error_found = true;
-	}
-	if (error_found)
-	  highsLogUser(log_options, HighsLogType::kError,
-		       "assessMatrix: check_vector not zeroed\n");
-      }
-    } else {
-      //      printf("index_location.size() = %d\n", (int)index_location.size());
-      for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++) {
-	HighsInt location = index_location[matrix_index[el]];
-	//	printf("index_location[%d] = %d\n", (int)matrix_index[el], (int)location);
-	assert(location == el);
-      }
-      index_location.clear();
+    for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++) {
+      HighsInt iX = matrix_index[el];
+      auto search = index_map.find(iX);
+      assert(search != index_map.end());
+      assert(search->first == iX);
+      assert(search->second == el);
     }
+    index_map.clear();
   } // Loop 0; num_vec
   if (num_large_values) {
     highsLogUser(log_options, HighsLogType::kError,
