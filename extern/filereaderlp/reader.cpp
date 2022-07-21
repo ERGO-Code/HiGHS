@@ -518,6 +518,7 @@ void Reader::processboundssec() {
    std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::BOUNDS].second);
    while (begin != end) {
       std::vector<ProcessedToken>::iterator next1 = begin;  // token after begin
+      ++next1;
 
       // VAR free
       if (next1 != end
@@ -531,10 +532,9 @@ void Reader::processboundssec() {
 		 continue;
       }
 
-      std::vector<ProcessedToken>::iterator next2 = begin;  // token 2nd-after begin
-      std::vector<ProcessedToken>::iterator next3 = begin;  // token 3rd-after begin
-      std::vector<ProcessedToken>::iterator next4 = begin;  // token 4th-after begin
-      ++next1; ++next2; ++next3; ++next4;
+      std::vector<ProcessedToken>::iterator next2 = next1;  // token 2nd-after begin
+      std::vector<ProcessedToken>::iterator next3 = next1;  // token 3rd-after begin
+      std::vector<ProcessedToken>::iterator next4 = next1;  // token 4th-after begin
       if( next1 != end ) { ++next2; ++next3; ++next4; }
       if( next2 != end ) { ++next3; ++next4; }
       if( next3 != end ) ++next4;
