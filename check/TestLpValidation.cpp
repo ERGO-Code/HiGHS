@@ -3,7 +3,7 @@
 #include "HighsLpUtils.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 // No commas in test case name.
