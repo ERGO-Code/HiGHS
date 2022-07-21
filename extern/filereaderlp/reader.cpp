@@ -7,8 +7,11 @@
 #include <fstream>
 #include <limits>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <vector>
+#include <array>
+#include <algorithm>
 
 #include "def.hpp"
 
@@ -37,21 +40,28 @@ enum class RawTokenType {
 };
 
 struct RawToken {
-   RawTokenType type;
-   inline bool istype(RawTokenType t) {
+   RawTokenType type = RawTokenType::NONE;
+   std::string svalue;
+   double dvalue = 0.0;
+
+   inline bool istype(RawTokenType t) const {
       return this->type == t;
    }
-   RawToken(RawTokenType t) : type(t) {} ;
-};
 
-struct RawStringToken : RawToken {
-   std::string value;
-   RawStringToken(std::string v) : RawToken(RawTokenType::STR), value(v) {};
-};
-
-struct RawConstantToken : RawToken {
-   double value;
-   RawConstantToken(double v) : RawToken(RawTokenType::CONS), value(v) {};
+   RawToken& operator=(RawTokenType t) {
+      type = t;
+      return *this;
+   }
+   RawToken& operator=(const std::string& v) {
+      svalue = v;
+      type = RawTokenType::STR;
+      return *this;
+   }
+   RawToken& operator=(const double v) {
+      dvalue = v;
+      type = RawTokenType::CONS;
+      return *this;
+   }
 };
 
 enum class ProcessedTokenType {
@@ -73,7 +83,8 @@ enum class ProcessedTokenType {
 
 enum class LpSectionKeyword {
   NONE,
-  OBJ,
+  OBJMIN,
+  OBJMAX,
   CON,
   BOUNDS,
   GEN,
@@ -83,49 +94,102 @@ enum class LpSectionKeyword {
   END
 };
 
-enum class LpObjectiveSectionKeywordType { NONE, MIN, MAX };
+static const
+std::unordered_map<std::string, LpSectionKeyword> sectionkeywordmap {
+   { "minimize", LpSectionKeyword::OBJMIN },
+   { "min", LpSectionKeyword::OBJMIN },
+   { "minimum", LpSectionKeyword::OBJMIN },
+   { "maximize", LpSectionKeyword::OBJMAX },
+   { "max", LpSectionKeyword::OBJMAX },
+   { "maximum", LpSectionKeyword::OBJMAX },
+   { "subject to", LpSectionKeyword::CON },
+   { "such that", LpSectionKeyword::CON },
+   { "st", LpSectionKeyword::CON },
+   { "s.t.", LpSectionKeyword::CON },
+   { "bounds", LpSectionKeyword::BOUNDS },
+   { "bound", LpSectionKeyword::BOUNDS },
+   { "binary", LpSectionKeyword::BIN },
+   { "binaries", LpSectionKeyword::BIN },
+   { "bin", LpSectionKeyword::BIN },
+   { "general", LpSectionKeyword::GEN },
+   { "generals", LpSectionKeyword::GEN },
+   { "gen", LpSectionKeyword::GEN },
+   { "semi-continuous", LpSectionKeyword::SEMI },
+   { "semi", LpSectionKeyword::SEMI },
+   { "semis", LpSectionKeyword::SEMI },
+   { "sos", LpSectionKeyword::SOS },
+   { "end", LpSectionKeyword::END }
+};
+
+enum class SosType {
+   SOS1,
+   SOS2
+};
 
 enum class LpComparisonType { LEQ, L, EQ, G, GEQ };
 
 struct ProcessedToken {
    ProcessedTokenType type;
+   union {
+      LpSectionKeyword keyword;
+      SosType sostype;
+      char* name;
+      double value;
+      LpComparisonType dir;
+   };
+
+   ProcessedToken(const ProcessedToken&) = delete;
+   ProcessedToken(ProcessedToken&& t)
+   : type(t.type)
+   {
+      switch( type )
+      {
+         case ProcessedTokenType::SECID :
+            keyword = t.keyword;
+            break;
+         case ProcessedTokenType::SOSTYPE :
+            sostype = t.sostype;
+            break;
+         case ProcessedTokenType::CONID :
+         case ProcessedTokenType::VARID :
+            name = t.name;
+            break;
+         case ProcessedTokenType::CONST :
+            value = t.value;
+            break;
+         case ProcessedTokenType::COMP :
+            dir = t.dir;
+            break;
+         default: ;
+      }
+      t.type = ProcessedTokenType::NONE;
+   }
+
    ProcessedToken(ProcessedTokenType t) : type(t) {};
+
+   ProcessedToken(LpSectionKeyword kw) : type(ProcessedTokenType::SECID), keyword(kw) {};
+
+   ProcessedToken(SosType sos) : type(ProcessedTokenType::SOSTYPE), sostype(sos) {};
+
+   ProcessedToken(ProcessedTokenType t, const std::string& s) : type(t) {
+      assert(t == ProcessedTokenType::CONID || t == ProcessedTokenType::VARID);
+      name = strdup(s.c_str());
+   };
+
+   ProcessedToken(double v) : type(ProcessedTokenType::CONST), value(v) {};
+
+   ProcessedToken(LpComparisonType comp) : type(ProcessedTokenType::COMP), dir(comp) {};
+
+   ~ProcessedToken()
+   {
+      if( type == ProcessedTokenType::CONID || type == ProcessedTokenType::VARID )
+         free(name);
+   }
 };
 
-struct ProcessedTokenSectionKeyword : ProcessedToken {
-   LpSectionKeyword keyword;
-   ProcessedTokenSectionKeyword(LpSectionKeyword k) : ProcessedToken(ProcessedTokenType::SECID), keyword(k) {};
-};
-
-struct ProcessedTokenObjectiveSectionKeyword : ProcessedTokenSectionKeyword {
-   LpObjectiveSectionKeywordType objsense;
-   ProcessedTokenObjectiveSectionKeyword(LpObjectiveSectionKeywordType os) : ProcessedTokenSectionKeyword(LpSectionKeyword::OBJ), objsense(os) {};
-};
-
-struct ProcessedSOSTypeToken : ProcessedToken {
-   std::string type;  // S1 or S2
-   ProcessedSOSTypeToken(std::string t) : ProcessedToken(ProcessedTokenType::SOSTYPE), type(t) {};
-};
-
-struct ProcessedConsIdToken : ProcessedToken {
-   std::string name;
-   ProcessedConsIdToken(std::string n) : ProcessedToken(ProcessedTokenType::CONID), name(n) {};
-};
-
-struct ProcessedVarIdToken : ProcessedToken {
-   std::string name;
-   ProcessedVarIdToken(std::string n) : ProcessedToken(ProcessedTokenType::VARID), name(n) {};
-};
-
-struct ProcessedConstantToken : ProcessedToken {
-   double value;
-   ProcessedConstantToken(double v) : ProcessedToken(ProcessedTokenType::CONST), value(v) {};
-};
-
-struct ProcessedComparisonToken : ProcessedToken {
-   LpComparisonType dir;
-   ProcessedComparisonToken(LpComparisonType d) : ProcessedToken(ProcessedTokenType::COMP), dir(d) {};
-};
+// how many raw tokens to cache
+// set to how many tokens we may need to look ahead
+#define NRAWTOKEN 3
 
 class Reader {
 private:
@@ -134,17 +198,17 @@ private:
 #else
    std::ifstream file;
 #endif
-   std::vector<std::unique_ptr<RawToken>> rawtokens;
-   std::vector<std::unique_ptr<ProcessedToken>> processedtokens;
-   std::map<LpSectionKeyword, std::vector<std::unique_ptr<ProcessedToken>>> sectiontokens;
-   
    std::string linebuffer;
    std::size_t linebufferpos;
+   std::array<RawToken, NRAWTOKEN> rawtokens;
+   std::vector<ProcessedToken> processedtokens;
+   // store for each section a pointer to its begin and end (pointer to element after last)
+   std::map<LpSectionKeyword, std::pair<std::vector<ProcessedToken>::iterator, std::vector<ProcessedToken>::iterator> > sectiontokens;
 
    Builder builder;
 
-   void tokenize();
-   void readnexttoken();
+   bool readnexttoken(RawToken&);
+   void nextrawtoken(size_t howmany = 1);
    void processtokens();
    void splittokens();
    void processsections();
@@ -157,7 +221,7 @@ private:
    void processsemisec();
    void processsossec();
    void processendsec();
-   void parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj);
+   void parseexpression(std::vector<ProcessedToken>::iterator& it, std::vector<ProcessedToken>::iterator end, std::shared_ptr<Expression> expr, bool isobj);
 
 public:
    Reader(std::string filename) {
@@ -184,164 +248,143 @@ Model readinstance(std::string filename) {
    return reader.read();
 }
 
-static
-bool isstrequalnocase(const std::string str1, const std::string str2) {
-   size_t len = str1.size();
-    if (str2.size() != len)
-        return false;
-    for (size_t i = 0; i < len; ++i)
-        if (tolower(str1[i]) != tolower(str2[i]))
-            return false;
-    return true;
+// convert string to lower-case, modifies string
+static inline
+void tolower(std::string& s) {
+   std::transform(s.begin(), s.end(), s.begin(),
+      [](unsigned char c) { return std::tolower(c); });
 }
 
-static
-bool iskeyword(const std::string str, const std::string* keywords, const int nkeywords) {
+static inline
+bool iskeyword(const std::string& str, const std::string* keywords, const int nkeywords) {
    for (int i=0; i<nkeywords; i++) {
-      if (isstrequalnocase(str, keywords[i])) {
+      if (str == keywords[i]) {
          return true;
       }
    }
    return false;
 }
 
-static
-LpObjectiveSectionKeywordType parseobjectivesectionkeyword(const std::string str) {
-   if (iskeyword(str, LP_KEYWORD_MIN, LP_KEYWORD_MIN_N)) {
-      return LpObjectiveSectionKeywordType::MIN;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_MAX, LP_KEYWORD_MAX_N)) {
-      return LpObjectiveSectionKeywordType::MAX;
-   }
-   
-   return LpObjectiveSectionKeywordType::NONE;
-}
-
-static
+static inline
 LpSectionKeyword parsesectionkeyword(const std::string& str) {
-   if (parseobjectivesectionkeyword(str) != LpObjectiveSectionKeywordType::NONE) {
-      return LpSectionKeyword::OBJ;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_ST, LP_KEYWORD_ST_N)) {
-      return LpSectionKeyword::CON;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_BOUNDS, LP_KEYWORD_BOUNDS_N)) {
-      return LpSectionKeyword::BOUNDS;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_BIN, LP_KEYWORD_BIN_N)) {
-      return LpSectionKeyword::BIN;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_GEN, LP_KEYWORD_GEN_N)) {
-      return LpSectionKeyword::GEN;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_SEMI, LP_KEYWORD_SEMI_N)) {
-      return LpSectionKeyword::SEMI;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_SOS, LP_KEYWORD_SOS_N)) {
-      return LpSectionKeyword::SOS;
-   }
-
-   if (iskeyword(str, LP_KEYWORD_END, LP_KEYWORD_END_N)) {
-      return LpSectionKeyword::END;
-   }
+   // look up lower case
+   auto it(sectionkeywordmap.find(str));
+   if( it != sectionkeywordmap.end() )
+      return it->second;
 
    return LpSectionKeyword::NONE;
 }
 
 Model Reader::read() {
-   tokenize();
+   //std::clog << "Reading input, tokenizing..." << std::endl;
+   this->linebufferpos = 0;
+   // read first NRAWTOKEN token
+   // if file ends early, then all remaining tokens are set to FLEND
+   for(size_t i = 0; i < NRAWTOKEN; ++i )
+      while( !readnexttoken(rawtokens[i]) ) ;;
+
    processtokens();
+
+   linebuffer.clear();
+   linebuffer.shrink_to_fit();
+
+   //std::clog << "Splitting tokens..." << std::endl;
    splittokens();
+
+   //std::clog << "Setting up model..." << std::endl;
    processsections();
+   processedtokens.clear();
+   processedtokens.shrink_to_fit();
 
    return builder.model;
 }
 
 void Reader::processnonesec() {
-   lpassert(sectiontokens[LpSectionKeyword::NONE].empty());
+   lpassert(sectiontokens.count(LpSectionKeyword::NONE) == 0);
 }
 
-void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i, bool isobj) {
-   if (tokens.size() - i >= 1 && tokens[i]->type == ProcessedTokenType::CONID) {
-      expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
-      i++;
+void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vector<ProcessedToken>::iterator end, std::shared_ptr<Expression> expr, bool isobj) {
+   if(it != end && it->type == ProcessedTokenType::CONID) {
+      expr->name = it->name;
+      ++it;
    }
 
-   while (i<tokens.size()) {
+   while (it != end) {
+      std::vector<ProcessedToken>::iterator next = it;
+      ++next;
       // const var
-      if (tokens.size() - i >= 2
-      && tokens[i]->type == ProcessedTokenType::CONST
-      && tokens[i+1]->type == ProcessedTokenType::VARID) {
-         std::string name = ((ProcessedVarIdToken*)tokens[i+1].get())->name;
+      if (next != end && it->type == ProcessedTokenType::CONST  && next->type == ProcessedTokenType::VARID) {
+         std::string name = next->name;
          
          std::shared_ptr<LinTerm> linterm = std::shared_ptr<LinTerm>(new LinTerm());
-         linterm->coef = ((ProcessedConstantToken*)tokens[i].get())->value;
+         linterm->coef = it->value;
          linterm->var = builder.getvarbyname(name);
          expr->linterms.push_back(linterm);
 
-         i += 2;
+         ++it;
+         ++it;
          continue;
       }
 
       // const
-      if (tokens.size() - i  >= 1 && tokens[i]->type == ProcessedTokenType::CONST) {
-         expr->offset += ((ProcessedConstantToken*)tokens[i].get())->value;
-         i++;
+      if (it->type == ProcessedTokenType::CONST) {
+         expr->offset += it->value;
+         ++it;
          continue;
       }
       
       // var
-      if (tokens.size() - i  >= 1 && tokens[i]->type == ProcessedTokenType::VARID) {
-         std::string name = ((ProcessedVarIdToken*)tokens[i].get())->name;
+      if (it->type == ProcessedTokenType::VARID) {
+         std::string name = it->name;
          
          std::shared_ptr<LinTerm> linterm = std::shared_ptr<LinTerm>(new LinTerm());
          linterm->coef = 1.0;
          linterm->var = builder.getvarbyname(name);
          expr->linterms.push_back(linterm);
 
-         i++;
+         ++it;
          continue;
       }
 
       // quadratic expression
-      if (tokens.size() - i >= 2 && tokens[i]->type == ProcessedTokenType::BRKOP) {
-         i++;
-         while (i < tokens.size() && tokens[i]->type != ProcessedTokenType::BRKCL) {
+      if (next != end && it->type == ProcessedTokenType::BRKOP) {
+         ++it;
+         while (it != end && it->type != ProcessedTokenType::BRKCL) {
             // const var hat const
-            if (tokens.size() - i >= 4
-            && tokens[i]->type == ProcessedTokenType::CONST
-            && tokens[i+1]->type == ProcessedTokenType::VARID
-            && tokens[i+2]->type == ProcessedTokenType::HAT
-            && tokens[i+3]->type == ProcessedTokenType::CONST) {
-               std::string name = ((ProcessedVarIdToken*)tokens[i+1].get())->name;
+            std::vector<ProcessedToken>::iterator next1 = it;  // token after it
+            std::vector<ProcessedToken>::iterator next2 = it;  // token 2nd-after it
+            std::vector<ProcessedToken>::iterator next3 = it;  // token 3rd-after it
+            ++next1; ++next2; ++next3;
+            if( next1 != end ) { ++next2; ++next3; }
+            if( next2 != end ) ++next3;
 
-               lpassert (((ProcessedConstantToken*)tokens[i+3].get())->value == 2.0);
+            if (next3 != end
+            && it->type == ProcessedTokenType::CONST
+            && next1->type == ProcessedTokenType::VARID
+            && next2->type == ProcessedTokenType::HAT
+            && next3->type == ProcessedTokenType::CONST) {
+               std::string name = next1->name;
+
+               lpassert (next3->value == 2.0);
 
                std::shared_ptr<QuadTerm> quadterm = std::shared_ptr<QuadTerm>(new QuadTerm());
-               quadterm->coef = ((ProcessedConstantToken*)tokens[i].get())->value;
+               quadterm->coef = it->value;
                quadterm->var1 = builder.getvarbyname(name);
                quadterm->var2 = builder.getvarbyname(name);
                expr->quadterms.push_back(quadterm);
 
-               i += 4;
+               it = ++next3;
                continue;
             }
 
             // var hat const
-            if (tokens.size() - i >= 3
-            && tokens[i]->type == ProcessedTokenType::VARID
-            && tokens[i+1]->type == ProcessedTokenType::HAT
-            && tokens[i+2]->type == ProcessedTokenType::CONST) {
-               std::string name = ((ProcessedVarIdToken*)tokens[i].get())->name;
+            if (next2 != end
+            && it->type == ProcessedTokenType::VARID
+            && next1->type == ProcessedTokenType::HAT
+            && next2->type == ProcessedTokenType::CONST) {
+               std::string name = it->name;
 
-               lpassert (((ProcessedConstantToken*)tokens[i+2].get())->value == 2.0);
+               lpassert (next2->value == 2.0);
 
                std::shared_ptr<QuadTerm> quadterm = std::shared_ptr<QuadTerm>(new QuadTerm());
                quadterm->coef = 1.0;
@@ -349,36 +392,36 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
                quadterm->var2 = builder.getvarbyname(name);
                expr->quadterms.push_back(quadterm);
 
-               i += 3;
+               it = next3;
                continue;
             }
 
             // const var asterisk var
-            if (tokens.size() - i >= 4
-            && tokens[i]->type == ProcessedTokenType::CONST
-            && tokens[i+1]->type == ProcessedTokenType::VARID
-            && tokens[i+2]->type == ProcessedTokenType::ASTERISK
-            && tokens[i+3]->type == ProcessedTokenType::VARID) {
-               std::string name1 = ((ProcessedVarIdToken*)tokens[i+1].get())->name;
-               std::string name2 = ((ProcessedVarIdToken*)tokens[i+3].get())->name;
+            if (next3 != end
+            && it->type == ProcessedTokenType::CONST
+            && next1->type == ProcessedTokenType::VARID
+            && next2->type == ProcessedTokenType::ASTERISK
+            && next3->type == ProcessedTokenType::VARID) {
+               std::string name1 = next1->name;
+               std::string name2 = next3->name;
 
                std::shared_ptr<QuadTerm> quadterm = std::shared_ptr<QuadTerm>(new QuadTerm());
-               quadterm->coef = ((ProcessedConstantToken*)tokens[i].get())->value;
+               quadterm->coef = it->value;
                quadterm->var1 = builder.getvarbyname(name1);
                quadterm->var2 = builder.getvarbyname(name2);
                expr->quadterms.push_back(quadterm);
 
-               i += 4;
+               it = ++next3;
                continue;
             }
 
             // var asterisk var
-            if (tokens.size() - i >= 3
-            && tokens[i]->type == ProcessedTokenType::VARID
-            && tokens[i+1]->type == ProcessedTokenType::ASTERISK
-            && tokens[i+2]->type == ProcessedTokenType::VARID) {
-               std::string name1 = ((ProcessedVarIdToken*)tokens[i].get())->name;
-               std::string name2 = ((ProcessedVarIdToken*)tokens[i+2].get())->name;
+            if (next2 != end
+            && it->type == ProcessedTokenType::VARID
+            && next1->type == ProcessedTokenType::ASTERISK
+            && next2->type == ProcessedTokenType::VARID) {
+               std::string name1 = it->name;
+               std::string name2 = next2->name;
 
                std::shared_ptr<QuadTerm> quadterm = std::shared_ptr<QuadTerm>(new QuadTerm());
                quadterm->coef = 1.0;
@@ -386,24 +429,29 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
                quadterm->var2 = builder.getvarbyname(name2);
                expr->quadterms.push_back(quadterm);
 
-               i += 3;
+               it = next3;
                continue;
             }
             break;
          }
          if (isobj) {
            // only in the objective function, a quadratic term is followed by "/2.0"
-           lpassert(tokens.size() - i >= 3);
-           lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
-           lpassert(tokens[i+1]->type == ProcessedTokenType::SLASH);
-           lpassert(tokens[i+2]->type == ProcessedTokenType::CONST);
-           lpassert(((ProcessedConstantToken*)tokens[i+2].get())->value == 2.0);
-           i += 3;
+           std::vector<ProcessedToken>::iterator next1 = it;  // token after it
+           std::vector<ProcessedToken>::iterator next2 = it;  // token 2nd-after it
+           ++next1; ++next2;
+           if( next1 != end ) ++next2;
+
+           lpassert(next2 != end);
+           lpassert(it->type == ProcessedTokenType::BRKCL);
+           lpassert(next1->type == ProcessedTokenType::SLASH);
+           lpassert(next2->type == ProcessedTokenType::CONST);
+           lpassert(next2->value == 2.0);
+           it = ++next2;
          }
          else {
-           lpassert(tokens.size() - i >= 1);
-           lpassert(tokens[i]->type == ProcessedTokenType::BRKCL);
-           i += 1;
+           lpassert(it != end);
+           lpassert(it->type == ProcessedTokenType::BRKCL);
+           ++it;
          }
          continue;
       }
@@ -414,85 +462,115 @@ void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& token
 
 void Reader::processobjsec() {
    builder.model.objective = std::shared_ptr<Expression>(new Expression);
-   unsigned int i = 0;   
-   parseexpression(sectiontokens[LpSectionKeyword::OBJ], builder.model.objective, i, true);
-   lpassert(i == sectiontokens[LpSectionKeyword::OBJ].size());
+   if( sectiontokens.count(LpSectionKeyword::OBJMIN) )
+   {
+      builder.model.sense = ObjectiveSense::MIN;
+      parseexpression(sectiontokens[LpSectionKeyword::OBJMIN].first, sectiontokens[LpSectionKeyword::OBJMIN].second, builder.model.objective, true);
+      lpassert(sectiontokens[LpSectionKeyword::OBJMIN].first == sectiontokens[LpSectionKeyword::OBJMIN].second); // all section tokens should have been processed
+   }
+   else if( sectiontokens.count(LpSectionKeyword::OBJMAX) )
+   {
+      builder.model.sense = ObjectiveSense::MAX;
+      parseexpression(sectiontokens[LpSectionKeyword::OBJMAX].first, sectiontokens[LpSectionKeyword::OBJMAX].second, builder.model.objective, true);
+      lpassert(sectiontokens[LpSectionKeyword::OBJMAX].first == sectiontokens[LpSectionKeyword::OBJMAX].second); // all section tokens should have been processed
+   }
 }
 
 void Reader::processconsec() {
-   unsigned int i=0;
-   while (i<sectiontokens[LpSectionKeyword::CON].size()) {
+   if(!sectiontokens.count(LpSectionKeyword::CON))
+      return;
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::CON].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::CON].second);
+   while (begin != end) {
       std::shared_ptr<Constraint> con = std::shared_ptr<Constraint>(new Constraint);
-      parseexpression(sectiontokens[LpSectionKeyword::CON], con->expr, i, false);
-      lpassert(sectiontokens[LpSectionKeyword::CON].size() - i >= 2);
-	  lpassert(sectiontokens[LpSectionKeyword::CON][i]->type == ProcessedTokenType::COMP);
-      lpassert(sectiontokens[LpSectionKeyword::CON][i+1]->type == ProcessedTokenType::CONST);
-      double value = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::CON][i+1].get())->value;
-      switch (((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::CON][i].get())->dir) {
+      parseexpression(begin, end, con->expr, false);
+      // should not be at end of section yet, but a comparison operator should be next
+      lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
+      lpassert(begin->type == ProcessedTokenType::COMP);
+      LpComparisonType dir = begin->dir;
+      ++begin;
+
+      // should still not be at end of section yet, but a right-hand-side value should be next
+      lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
+      lpassert(begin->type == ProcessedTokenType::CONST);
+      switch (dir) {
          case LpComparisonType::EQ:
-            con->lowerbound = con->upperbound = value;
+            con->lowerbound = con->upperbound = begin->value;
             break;
          case LpComparisonType::LEQ:
-            con->upperbound = value;
+            con->upperbound = begin->value;
             break;
          case LpComparisonType::GEQ:
-            con->lowerbound = value;
+            con->lowerbound = begin->value;
             break;
          default:
             lpassert(false);
       }
-      i += 2;
       builder.model.constraints.push_back(con);
+      ++begin;
    }
 }
 
 void Reader::processboundssec() {
-   unsigned int i=0;
-   while (i<sectiontokens[LpSectionKeyword::BOUNDS].size()) {
+   if(!sectiontokens.count(LpSectionKeyword::BOUNDS))
+      return;
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::BOUNDS].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::BOUNDS].second);
+   while (begin != end) {
+      std::vector<ProcessedToken>::iterator next1 = begin;  // token after begin
+      ++next1;
+
       // VAR free
-      if (sectiontokens[LpSectionKeyword::BOUNDS].size() - i >= 2
-         && sectiontokens[LpSectionKeyword::BOUNDS][i]->type == ProcessedTokenType::VARID
-         && sectiontokens[LpSectionKeyword::BOUNDS][i+1]->type == ProcessedTokenType::FREE) {
-         std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BOUNDS][i].get())->name;
+      if (next1 != end
+         && begin->type == ProcessedTokenType::VARID
+         && next1->type == ProcessedTokenType::FREE) {
+         std::string name = begin->name;
          std::shared_ptr<Variable> var = builder.getvarbyname(name);
          var->lowerbound = -std::numeric_limits<double>::infinity(); 
          var->upperbound = std::numeric_limits<double>::infinity();
-         i += 2;
+         begin = ++next1;
 		 continue;
       }
 
+      std::vector<ProcessedToken>::iterator next2 = next1;  // token 2nd-after begin
+      std::vector<ProcessedToken>::iterator next3 = next1;  // token 3rd-after begin
+      std::vector<ProcessedToken>::iterator next4 = next1;  // token 4th-after begin
+      if( next1 != end ) { ++next2; ++next3; ++next4; }
+      if( next2 != end ) { ++next3; ++next4; }
+      if( next3 != end ) ++next4;
+
 	  // CONST COMP VAR COMP CONST
-	  if (sectiontokens[LpSectionKeyword::BOUNDS].size() - i >= 5
-		  && sectiontokens[LpSectionKeyword::BOUNDS][i]->type == ProcessedTokenType::CONST
-		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 1]->type == ProcessedTokenType::COMP
-		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 2]->type == ProcessedTokenType::VARID
-		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 3]->type == ProcessedTokenType::COMP
-		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 4]->type == ProcessedTokenType::CONST) {
-		  lpassert(((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 1].get())->dir == LpComparisonType::LEQ);
-		  lpassert(((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 3].get())->dir == LpComparisonType::LEQ);
+	  if (next4 != end
+		  && begin->type == ProcessedTokenType::CONST
+		  && next1->type == ProcessedTokenType::COMP
+		  && next2->type == ProcessedTokenType::VARID
+		  && next3->type == ProcessedTokenType::COMP
+		  && next4->type == ProcessedTokenType::CONST) {
+		  lpassert(next1->dir == LpComparisonType::LEQ);
+		  lpassert(next3->dir == LpComparisonType::LEQ);
 
-		  double lb = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i].get())->value;
-		  double ub = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 4].get())->value;
+		  double lb = begin->value;
+		  double ub = next4->value;
 
-		  std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 2].get())->name;
+		  std::string name = next2->name;
 		  std::shared_ptr<Variable> var = builder.getvarbyname(name);
 
 		  var->lowerbound = lb;
 		  var->upperbound = ub;
 
-		  i += 5;
+		  begin = ++next4;
 		  continue;
 	  }
 
       // CONST COMP VAR
-      if (sectiontokens[LpSectionKeyword::BOUNDS].size() - i >= 3
-      && sectiontokens[LpSectionKeyword::BOUNDS][i]->type == ProcessedTokenType::CONST
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+1]->type == ProcessedTokenType::COMP
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+2]->type == ProcessedTokenType::VARID) {
-         double value = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i].get())->value;
-         std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+2].get())->name;
+      if (next2 != end
+      && begin->type == ProcessedTokenType::CONST
+      && next1->type == ProcessedTokenType::COMP
+      && next2->type == ProcessedTokenType::VARID) {
+         double value = begin->value;
+         std::string name = next2->name;
          std::shared_ptr<Variable> var = builder.getvarbyname(name);
-         LpComparisonType dir = ((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+1].get())->dir;
+         LpComparisonType dir = next1->dir;
 
          lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G);
 
@@ -509,19 +587,19 @@ void Reader::processboundssec() {
             default:
                lpassert(false);
          }
-         i += 3;
+         begin = next3;
          continue;
       }
 
       // VAR COMP CONST
-      if (sectiontokens[LpSectionKeyword::BOUNDS].size() -i >= 3
-      && sectiontokens[LpSectionKeyword::BOUNDS][i]->type == ProcessedTokenType::VARID
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+1]->type == ProcessedTokenType::COMP
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+2]->type == ProcessedTokenType::CONST) {
-         double value = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+2].get())->value;
-         std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BOUNDS][i].get())->name;
+      if (next2 != end
+      && begin->type == ProcessedTokenType::VARID
+      && next1->type == ProcessedTokenType::COMP
+      && next2->type == ProcessedTokenType::CONST) {
+         double value = next2->value;
+         std::string name = begin->name;
          std::shared_ptr<Variable> var = builder.getvarbyname(name);
-         LpComparisonType dir = ((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+1].get())->dir;
+         LpComparisonType dir = next1->dir;
 
          lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G);
 
@@ -538,7 +616,7 @@ void Reader::processboundssec() {
             default:
                lpassert(false);
          }
-         i += 3;
+         begin = next3;
          continue;
       }
       
@@ -547,9 +625,13 @@ void Reader::processboundssec() {
 }
 
 void Reader::processbinsec() {
-   for (unsigned int i=0; i<sectiontokens[LpSectionKeyword::BIN].size(); i++) {
-      lpassert(sectiontokens[LpSectionKeyword::BIN][i]->type == ProcessedTokenType::VARID);
-      std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BIN][i].get())->name;
+   if(!sectiontokens.count(LpSectionKeyword::BIN))
+      return;
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::BIN].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::BIN].second);
+   for (; begin != end; ++begin) {
+      lpassert(begin->type == ProcessedTokenType::VARID);
+      std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       var->type = VariableType::BINARY;
       var->lowerbound = 0.0;
@@ -558,68 +640,76 @@ void Reader::processbinsec() {
 }
 
 void Reader::processgensec() {
-   for (unsigned int i=0; i<sectiontokens[LpSectionKeyword::GEN].size(); i++) {
-      lpassert(sectiontokens[LpSectionKeyword::GEN][i]->type == ProcessedTokenType::VARID);
-      std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::GEN][i].get())->name;
+   if(!sectiontokens.count(LpSectionKeyword::GEN))
+      return;
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::GEN].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::GEN].second);
+   for (; begin != end; ++begin) {
+      lpassert(begin->type == ProcessedTokenType::VARID);
+      std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       if (var->type == VariableType::SEMICONTINUOUS) {
-	var->type = VariableType::SEMIINTEGER;
+         var->type = VariableType::SEMIINTEGER;
       } else {
-	var->type = VariableType::GENERAL;
-      };
+         var->type = VariableType::GENERAL;
+      }
    }
 }
 
 void Reader::processsemisec() {
-   for (unsigned int i=0; i<sectiontokens[LpSectionKeyword::SEMI].size(); i++) {
-      lpassert(sectiontokens[LpSectionKeyword::SEMI][i]->type == ProcessedTokenType::VARID);
-      std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::SEMI][i].get())->name;
+   if(!sectiontokens.count(LpSectionKeyword::GEN))
+      return;
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::SEMI].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::SEMI].second);
+   for (; begin != end; ++begin) {
+      lpassert(begin->type == ProcessedTokenType::VARID);
+      std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       if (var->type == VariableType::GENERAL) {
-	var->type = VariableType::SEMIINTEGER;
+         var->type = VariableType::SEMIINTEGER;
       } else {
-	var->type = VariableType::SEMICONTINUOUS;
-      };
+         var->type = VariableType::SEMICONTINUOUS;
+      }
    }
 }
 
 void Reader::processsossec() {
-   unsigned int i=0;
-   auto& tokens = sectiontokens[LpSectionKeyword::SOS];
-   while (i<tokens.size()) {
+   if(!sectiontokens.count(LpSectionKeyword::SOS))
+      return;
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::SOS].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::SOS].second);
+   while (begin != end) {
       std::shared_ptr<SOS> sos = std::shared_ptr<SOS>(new SOS);
 
       // sos1: S1 :: x1 : 1  x2 : 2  x3 : 3
 
       // name of SOS is mandatory
-      lpassert(tokens[i]->type == ProcessedTokenType::CONID);
-      sos->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
-      i++;
+      lpassert(begin->type == ProcessedTokenType::CONID);
+      sos->name = begin->name;
+      ++begin;
 
       // SOS type
-      lpassert(i < tokens.size());
-      lpassert(tokens[i]->type == ProcessedTokenType::SOSTYPE);
-      std::string sostype = ((ProcessedSOSTypeToken*)tokens[i].get())->type;   // should be S1 or S2
-      lpassert(sostype.size() == 2);
-      lpassert(sostype[0] == 'S' || sostype[0] == 's');
-      lpassert(sostype[1] == '1' || sostype[1] == '2');
-      sos->type = sostype[1] - '0';
-      i++;
+      lpassert(begin != end);
+      lpassert(begin->type == ProcessedTokenType::SOSTYPE);
+      sos->type = begin->sostype == SosType::SOS1 ? 1 : 2;
+      ++begin;
 
-      while (i<tokens.size()) {
+      while (begin != end) {
          // process all "var : weight" entries
          // when processtokens() sees a string followed by a colon, it classifies this as a CONID
          // but in a SOS section, this is actually a variable identifier
-         if (tokens.size() - i >= 2
-         && tokens[i]->type == ProcessedTokenType::CONID
-         && tokens[i+1]->type == ProcessedTokenType::CONST) {
-            std::string name = ((ProcessedConsIdToken*)tokens[i].get())->name;
+         if (begin->type != ProcessedTokenType::CONID)
+            break;
+         std::string name = begin->name;
+         std::vector<ProcessedToken>::iterator next = begin;
+         ++next;
+         if (next != end && next->type == ProcessedTokenType::CONST) {
             auto var = builder.getvarbyname(name);
-            double weight = ((ProcessedConstantToken*)tokens[i+1].get())->value;
+            double weight = next->value;
 
             sos->entries.push_back({var, weight});
 
-            i += 2;
+            begin = ++next;
             continue;
          }
 
@@ -631,7 +721,7 @@ void Reader::processsossec() {
 }
 
 void Reader::processendsec() {
-   lpassert(sectiontokens[LpSectionKeyword::END].empty());
+   lpassert(sectiontokens.count(LpSectionKeyword::END) == 0);
 }
 
 void Reader::processsections() {
@@ -649,248 +739,248 @@ void Reader::processsections() {
 void Reader::splittokens() {
    LpSectionKeyword currentsection = LpSectionKeyword::NONE;
    
-   for (unsigned int i=0; i < processedtokens.size(); ++i) {
-      if (processedtokens[i]->type == ProcessedTokenType::SECID) {
-         currentsection = ((ProcessedTokenSectionKeyword*)processedtokens[i].get())->keyword;
-         
-         if (currentsection == LpSectionKeyword::OBJ) {
-            switch(((ProcessedTokenObjectiveSectionKeyword*)processedtokens[i].get())->objsense) {
-               case LpObjectiveSectionKeywordType::MIN:
-                  builder.model.sense = ObjectiveSense::MIN;
-                  break;
-               case LpObjectiveSectionKeywordType::MAX:
-                  builder.model.sense = ObjectiveSense::MAX;
-                  break;
-               default:
-                  lpassert(false);
-            }
-         }
+   for (std::vector<ProcessedToken>::iterator it(processedtokens.begin()); it != processedtokens.end(); ++it)
+      if (it->type == ProcessedTokenType::SECID) {
+         if(currentsection != LpSectionKeyword::NONE)
+            sectiontokens[currentsection].second = it;  // mark end of previous section
+         currentsection = it->keyword;
 
          // make sure this section did not yet occur
-         lpassert(sectiontokens[currentsection].empty());
-      } else {
-         sectiontokens[currentsection].push_back(std::move(processedtokens[i]));
+         lpassert(sectiontokens.count(currentsection) == 0);
+
+         std::vector<ProcessedToken>::iterator next = it;
+         ++next;
+         // skip empty section
+         if( next == processedtokens.end() || next->type == ProcessedTokenType::SECID ) {
+            currentsection = LpSectionKeyword::NONE;
+            continue;
+         }
+         // remember begin of new section: its the token following the current one
+         sectiontokens[currentsection].first = next;
       }
-   }
+
+   if(currentsection != LpSectionKeyword::NONE)
+      sectiontokens[currentsection].second = processedtokens.end();  // mark end of last section
 }
 
 void Reader::processtokens() {
-   unsigned int i = 0;
-   
-   while (i < this->rawtokens.size()) {
+   std::string svalue_lc;
+   while(!rawtokens[0].istype(RawTokenType::FLEND)) {
       fflush(stdout);
 
       // Slash + asterisk: comment, skip everything up to next asterisk + slash
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::SLASH) && rawtokens[i+1]->istype(RawTokenType::ASTERISK)) {
-         unsigned int j = i+2;
-         while (rawtokens.size() - j >= 2) {
-            if (rawtokens[j]->istype(RawTokenType::ASTERISK) && rawtokens[j+1]->istype(RawTokenType::SLASH)) {
-               i = j + 2;
-               break;
-            }
-            j++;
+      if (rawtokens[0].istype(RawTokenType::SLASH) && rawtokens[1].istype(RawTokenType::ASTERISK)) {
+         do
+         {
+            nextrawtoken(2);
          }
+         while( !(rawtokens[0].istype(RawTokenType::ASTERISK) && rawtokens[1].istype(RawTokenType::SLASH)) && !rawtokens[0].istype(RawTokenType::FLEND) );
+         nextrawtoken(2);
+         continue;
+      }
+
+      if (rawtokens[0].istype(RawTokenType::STR))
+      {
+         svalue_lc = rawtokens[0].svalue;
+         tolower(svalue_lc);
       }
 
       // long section keyword semi-continuous
-      if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::MINUS) && rawtokens[i+2]->istype(RawTokenType::STR)) {
-         std::string temp = ((RawStringToken*)rawtokens[i].get())->value + "-" + ((RawStringToken*)rawtokens[i+2].get())->value;
-         LpSectionKeyword keyword = parsesectionkeyword(temp);
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::MINUS) && rawtokens[2].istype(RawTokenType::STR)) {
+         std::string temp = rawtokens[2].svalue;
+         tolower(temp);
+         LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + "-" + temp);
          if (keyword != LpSectionKeyword::NONE) {
-            processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenSectionKeyword(keyword)));
-            i += 3;
+            processedtokens.emplace_back(keyword);
+            nextrawtoken(3);
             continue;
          }
       }
 
       // long section keyword subject to/such that
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::STR)) {
-         std::string temp = ((RawStringToken*)rawtokens[i].get())->value + " " + ((RawStringToken*)rawtokens[i+1].get())->value;
-         LpSectionKeyword keyword = parsesectionkeyword(temp);
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::STR)) {
+         std::string temp = rawtokens[1].svalue;
+         tolower(temp);
+         LpSectionKeyword keyword = parsesectionkeyword(svalue_lc + " " + temp);
          if (keyword != LpSectionKeyword::NONE) {
-            processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenSectionKeyword(keyword)));
-            i += 2;
+            processedtokens.emplace_back(keyword);
+            nextrawtoken(2);
             continue;
          }
       }
 
       // other section keyword
-      if (rawtokens[i]->istype(RawTokenType::STR)) {
-         LpSectionKeyword keyword = parsesectionkeyword(((RawStringToken*)rawtokens[i].get())->value);
+      if (rawtokens[0].istype(RawTokenType::STR)) {
+         LpSectionKeyword keyword = parsesectionkeyword(svalue_lc);
          if (keyword != LpSectionKeyword::NONE) {
-            if (keyword == LpSectionKeyword::OBJ) {
-               LpObjectiveSectionKeywordType kw = parseobjectivesectionkeyword(((RawStringToken*)rawtokens[i].get())->value);
-               processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenObjectiveSectionKeyword(kw)));
-            } else {
-               processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedTokenSectionKeyword(keyword)));
-            }
-            i++;
+            processedtokens.emplace_back(keyword);
+            nextrawtoken();
             continue;
          }
       }
 
       // sos type identifier? "S1 ::" or "S2 ::"
-      if (rawtokens.size() - i >= 3 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::COLON) && rawtokens[i+2]->istype(RawTokenType::COLON)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedSOSTypeToken(((RawStringToken*)rawtokens[i].get())->value)));
-         i += 3;
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::COLON) && rawtokens[2].istype(RawTokenType::COLON)) {
+         lpassert(rawtokens[0].svalue.length() == 2);
+         lpassert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's');
+         lpassert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2');
+         processedtokens.emplace_back(rawtokens[0].svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
+         nextrawtoken(3);
          continue;
       }
 
       // constraint identifier?
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::STR) && rawtokens[i+1]->istype(RawTokenType::COLON)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConsIdToken(((RawStringToken*)rawtokens[i].get())->value)));
-         i += 2;
+      if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::COLON)) {
+         processedtokens.emplace_back(ProcessedTokenType::CONID, rawtokens[0].svalue);
+         nextrawtoken(2);
          continue;
       }
 
       // check if free
-      if (rawtokens[i]->istype(RawTokenType::STR) && iskeyword(((RawStringToken*)rawtokens[i].get())->value, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::FREE)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
+         processedtokens.emplace_back(ProcessedTokenType::FREE);
+         nextrawtoken();
          continue;
       }
 
       // check if infinity
-      if (rawtokens[i]->istype(RawTokenType::STR) && iskeyword(((RawStringToken*)rawtokens[i].get())->value, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(std::numeric_limits<double>::infinity())));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
+         processedtokens.emplace_back(std::numeric_limits<double>::infinity());
+         nextrawtoken();
          continue;
       }
 
       // assume var identifier
-      if (rawtokens[i]->istype(RawTokenType::STR)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedVarIdToken(((RawStringToken*)rawtokens[i].get())->value)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::STR)) {
+         processedtokens.emplace_back(ProcessedTokenType::VARID, rawtokens[0].svalue);
+         nextrawtoken();
          continue;
       }
 
       // + Constant
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) && rawtokens[i+1]->istype(RawTokenType::CONS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(((RawConstantToken*)rawtokens[i+1].get())->value)));
-         i += 2;
+      if (rawtokens[0].istype(RawTokenType::PLUS) && rawtokens[1].istype(RawTokenType::CONS)) {
+         processedtokens.emplace_back(rawtokens[1].dvalue);
+         nextrawtoken(2);
          continue;
       }
 
       // - constant
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::CONS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(-((RawConstantToken*)rawtokens[i+1].get())->value)));
-         i += 2;
+      if (rawtokens[0].istype(RawTokenType::MINUS) && rawtokens[1].istype(RawTokenType::CONS)) {
+         processedtokens.emplace_back(-rawtokens[1].dvalue);
+         nextrawtoken(2);
          continue;
       }
 
       // + [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
-         i += 2;
+      if (rawtokens[0].istype(RawTokenType::PLUS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
+         processedtokens.emplace_back(ProcessedTokenType::BRKOP);
+         nextrawtoken(2);
          continue;
       }
 
       // - [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::MINUS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+      if (rawtokens[0].istype(RawTokenType::MINUS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
       }
 
       // constant [
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::CONS) && rawtokens[i+1]->istype(RawTokenType::BRKOP)) {
+      if (rawtokens[0].istype(RawTokenType::CONS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
       }
 
       // +
-      if (rawtokens[i]->istype(RawTokenType::PLUS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(1.0)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::PLUS)) {
+         processedtokens.emplace_back(1.0);
+         nextrawtoken();
          continue;
       }
 
       // -
-      if (rawtokens[i]->istype(RawTokenType::MINUS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(-1.0)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::MINUS)) {
+         processedtokens.emplace_back(-1.0);
+         nextrawtoken();
          continue;
       }
 
       // constant
-      if (rawtokens[i]->istype(RawTokenType::CONS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(((RawConstantToken*)rawtokens[i].get())->value)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::CONS)) {
+         processedtokens.emplace_back(rawtokens[0].dvalue);
+         nextrawtoken();
          continue;
       }
 
       // [
-      if (rawtokens[i]->istype(RawTokenType::BRKOP)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::BRKOP)) {
+         processedtokens.emplace_back(ProcessedTokenType::BRKOP);
+         nextrawtoken();
          continue;
       }
 
       // ]
-      if (rawtokens[i]->istype(RawTokenType::BRKCL)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKCL)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::BRKCL)) {
+         processedtokens.emplace_back(ProcessedTokenType::BRKCL);
+         nextrawtoken();
          continue;
       }
 
       // /
-      if (rawtokens[i]->istype(RawTokenType::SLASH)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::SLASH)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::SLASH)) {
+         processedtokens.emplace_back(ProcessedTokenType::SLASH);
+         nextrawtoken();
          continue;
       }
 
       // *
-      if (rawtokens[i]->istype(RawTokenType::ASTERISK)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::ASTERISK)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::ASTERISK)) {
+         processedtokens.emplace_back(ProcessedTokenType::ASTERISK);
+         nextrawtoken();
          continue;
       }
 
       // ^
-      if (rawtokens[i]->istype(RawTokenType::HAT)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::HAT)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::HAT)) {
+         processedtokens.emplace_back(ProcessedTokenType::HAT);
+         nextrawtoken();
          continue;
       }
 
       // <=
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::LESS) && rawtokens[i+1]->istype(RawTokenType::EQUAL)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::LEQ)));
-         i += 2;
+      if (rawtokens[0].istype(RawTokenType::LESS) && rawtokens[1].istype(RawTokenType::EQUAL)) {
+         processedtokens.emplace_back(LpComparisonType::LEQ);
+         nextrawtoken(2);
          continue;
       }
 
       // <
-      if (rawtokens[i]->istype(RawTokenType::LESS)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::L)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::LESS)) {
+         processedtokens.emplace_back(LpComparisonType::L);
+         nextrawtoken();
          continue;
       }
 
       // >=
-      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::GREATER) && rawtokens[i+1]->istype(RawTokenType::EQUAL)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::GEQ)));
-         i += 2;
+      if (rawtokens[0].istype(RawTokenType::GREATER) && rawtokens[1].istype(RawTokenType::EQUAL)) {
+         processedtokens.emplace_back(LpComparisonType::GEQ);
+         nextrawtoken(2);
          continue;
       }
 
       // >
-      if (rawtokens[i]->istype(RawTokenType::GREATER)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::G)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::GREATER)) {
+         processedtokens.emplace_back(LpComparisonType::G);
+         nextrawtoken();
          continue;
       }
 
       // =
-      if (rawtokens[i]->istype(RawTokenType::EQUAL)) {
-         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedComparisonToken(LpComparisonType::EQ)));
-         i++;
+      if (rawtokens[0].istype(RawTokenType::EQUAL)) {
+         processedtokens.emplace_back(LpComparisonType::EQ);
+         nextrawtoken();
          continue;
       }
 
-      // FILEEND
-      if (rawtokens[i]->istype(RawTokenType::FLEND)) {
-         i++;
-         continue;
-      }
+      // FILEEND should have been handled in condition of while()
+      assert(!rawtokens[0].istype(RawTokenType::FLEND));
 
       // catch all unknown symbols
       lpassert(false);
@@ -898,23 +988,50 @@ void Reader::processtokens() {
    }
 }
 
-// reads the entire file and separates 
-void Reader::tokenize() {
-   this->linebufferpos = 0;
-   while(true) {
-      this->readnexttoken();
-      if (this->rawtokens.size() >= 1 && this->rawtokens.back()->type == RawTokenType::FLEND) {
+void Reader::nextrawtoken(size_t howmany) {
+   assert(howmany > 0);
+   assert(howmany <= NRAWTOKEN);
+   static_assert(NRAWTOKEN == 3, "code below need to be adjusted if NRAWTOKEN changes");
+   switch( howmany ) {
+      case 1: {
+         rawtokens[0] = std::move(rawtokens[1]);
+         rawtokens[1] = std::move(rawtokens[2]);
+         while( !readnexttoken(rawtokens[2]) ) ;;
          break;
+      }
+      case 2: {
+         rawtokens[0] = std::move(rawtokens[2]);
+         while( !readnexttoken(rawtokens[1]) ) ;;
+         while( !readnexttoken(rawtokens[2]) ) ;;
+         break;
+      }
+      case 3: {
+         while( !readnexttoken(rawtokens[0]) ) ;;
+         while( !readnexttoken(rawtokens[1]) ) ;;
+         while( !readnexttoken(rawtokens[2]) ) ;;
+         break;
+      }
+      default: {
+         size_t i = 0;
+         // move tokens up
+         for( ; i < NRAWTOKEN - howmany; ++i )
+            rawtokens[i] = std::move(rawtokens[i+howmany]);
+         // read new tokens at end positions
+         for( ; i < NRAWTOKEN ; ++i )
+            // call readnexttoken() to overwrite current token
+            // if it didn't actually read a token (returns false), then call again
+            while( !readnexttoken(rawtokens[i]) ) ;;
       }
    }
 }
 
-void Reader::readnexttoken() {
+// return true, if token has been set; return false if skipped over whitespace only
+bool Reader::readnexttoken(RawToken& t) {
    if (this->linebufferpos == this->linebuffer.size()) {
      // read next line if any are left. 
      if (this->file.eof()) {
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
-         return;
+         t = RawTokenType::FLEND;
+         return true;
      }
      std::getline(this->file, linebuffer);
 
@@ -934,89 +1051,89 @@ void Reader::readnexttoken() {
       case '\\':
          // skip rest of line
          this->linebufferpos = this->linebuffer.size();
-         return;
+         return false;
       
       // check for bracket opening
       case '[':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::BRKOP)));
+         t = RawTokenType::BRKOP;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for bracket closing
       case ']':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::BRKCL)));
+         t = RawTokenType::BRKCL;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for less sign
       case '<':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::LESS)));
+         t = RawTokenType::LESS;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for greater sign
       case '>':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::GREATER)));
+         t = RawTokenType::GREATER;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for equal sign
       case '=':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::EQUAL)));
+         t = RawTokenType::EQUAL;
          this->linebufferpos++;
-         return;
+         return true;
       
       // check for colon
       case ':':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::COLON)));
+         t = RawTokenType::COLON;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for plus
       case '+':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::PLUS)));
+         t = RawTokenType::PLUS;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for hat
       case '^':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::HAT)));
+         t = RawTokenType::HAT;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for slash
       case '/':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::SLASH)));
+         t = RawTokenType::SLASH;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for asterisk
       case '*':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::ASTERISK)));
+         t = RawTokenType::ASTERISK;
          this->linebufferpos++;
-         return;
+         return true;
       
       // check for minus
       case '-':
-         this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::MINUS)));
+         t = RawTokenType::MINUS;
          this->linebufferpos++;
-         return;
+         return true;
 
       // check for whitespace
       case ' ':
       case '\t':
          this->linebufferpos++;
-         return;
+         return false;
 
       // check for line end
       case ';':
       case '\n':  // \n should not happen due to using getline()
          this->linebufferpos = this->linebuffer.size();
-         return;
+         return false;
 
       case '\0':  // empty line
          assert(this->linebufferpos == this->linebuffer.size());
-         return;
+         return false;
    }
 
    // check for double value
@@ -1024,9 +1141,9 @@ void Reader::readnexttoken() {
    char* endptr;
    double constant = strtod(startptr, &endptr);
    if (endptr != startptr) {
-      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawConstantToken(constant)));
+      t = constant;
       this->linebufferpos += endptr - startptr;
-      return;
+      return true;
    }
 
    // assume it's an (section/variable/constraint) identifier
@@ -1034,10 +1151,11 @@ void Reader::readnexttoken() {
    if( endpos == std::string::npos )
       endpos = this->linebuffer.size();  // take complete rest of string
    if( endpos > this->linebufferpos ) {
-      this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawStringToken(std::string(this->linebuffer, this->linebufferpos, endpos - this->linebufferpos))));
+      t = std::string(this->linebuffer, this->linebufferpos, endpos - this->linebufferpos);
       this->linebufferpos = endpos;
-      return;
+      return true;
    }
    
    lpassert(false);
+   return false;
 }
