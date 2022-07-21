@@ -701,14 +701,15 @@ void Reader::processsossec() {
          if (begin->type != ProcessedTokenType::CONID)
             break;
          std::string name = begin->name;
-         ++begin;
-         if (begin != end && begin->type == ProcessedTokenType::CONST) {
+         std::vector<ProcessedToken>::iterator next = begin;
+         ++next;
+         if (next != end && next->type == ProcessedTokenType::CONST) {
             auto var = builder.getvarbyname(name);
-            double weight = begin->value;
+            double weight = next->value;
 
             sos->entries.push_back({var, weight});
 
-            ++begin;
+            begin = ++next;
             continue;
          }
 
