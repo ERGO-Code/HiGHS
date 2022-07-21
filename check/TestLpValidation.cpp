@@ -3,7 +3,7 @@
 #include "HighsLpUtils.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 
 // No commas in test case name.
@@ -362,6 +362,22 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(check_value == to_value);
 }
 
+TEST_CASE("LP-row-index-duplication", "[highs_data]") {
+  HighsStatus return_status;
+  Highs highs;
+  HighsInt num_col = 10;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    highs.addVar(0, 1);
+  std::vector<HighsInt> start = {0, 6, 8};
+  std::vector<HighsInt> index = {0, 1, 4, 5, 6, 7, 0, 1, 0, 1, 4, 5, 6, 7, 4};
+  std::vector<double> value =   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  std::vector<double> lower = {0, 0, 0};
+  std::vector<double> upper = {inf, inf, inf};
+  HighsInt num_nz = index.size();
+  REQUIRE(highs.addRows(3, &lower[0], &upper[0], num_nz, &start[0], &index[0], &value[0]) ==
+          HighsStatus::kError);
+}
+
 TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   HighsStatus return_status;
   std::string filename;
@@ -446,3 +462,4 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
 }
+

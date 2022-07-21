@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <map>
 
 HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          const std::string matrix_name, const HighsInt vec_dim,
@@ -145,6 +146,8 @@ HighsStatus assessMatrix(
   double min_large_value = kHighsInf;
   const bool use_check_vector = true;
   vector<HighsInt> check_vector;
+  std::map<HighsInt, HighsInt> index_location;
+  
   if (use_check_vector) {
     // Set up a zeroed vector to detect duplicate indices
     if (vec_dim > 0) check_vector.assign(vec_dim, 0);
@@ -182,6 +185,11 @@ HighsStatus assessMatrix(
       // Check that the index has not already ocurred
       if (use_check_vector) {
 	legal_component = check_vector[component] == 0;
+	// Indicate that the index has occurred
+	check_vector[component] = 1;
+      } else {
+	legal_component = index_location[component] == 0;
+      }
 	if (!legal_component) {
 	  highsLogUser(log_options, HighsLogType::kError,
 		       "%s matrix packed vector %" HIGHSINT_FORMAT
@@ -190,9 +198,6 @@ HighsStatus assessMatrix(
 		       matrix_name.c_str(), ix, el, component);
 	  return HighsStatus::kError;
 	}
-	// Indicate that the index has occurred
-	check_vector[component] = 1;
-      }
       // Check the value
       double abs_value = fabs(matrix_value[el]);
       // Check that the value is not too large
@@ -209,6 +214,7 @@ HighsStatus assessMatrix(
         num_small_values++;
       }
       if (ok_value) {
+	index_location[component] = num_new_nz;
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
@@ -238,6 +244,14 @@ HighsStatus assessMatrix(
 	  highsLogUser(log_options, HighsLogType::kError,
 		       "assessMatrix: check_vector not zeroed\n");
       }
+    } else {
+      //      printf("index_location.size() = %d\n", (int)index_location.size());
+      for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++) {
+	HighsInt location = index_location[matrix_index[el]];
+	//	printf("index_location[%d] = %d\n", (int)matrix_index[el], (int)location);
+	assert(location == el);
+      }
+      index_location.clear();
     }
   } // Loop 0; num_vec
   if (num_large_values) {
