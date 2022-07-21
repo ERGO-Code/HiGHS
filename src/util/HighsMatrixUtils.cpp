@@ -50,9 +50,8 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
 }
 
 void print_map(std::string comment, const std::map<HighsInt, HighsInt>& m) {
-  std::cout << comment ;
-  for (const auto& n : m)
-    std::cout << n.first << " = " << n.second << "; ";
+  std::cout << comment;
+  for (const auto& n : m) std::cout << n.first << " = " << n.second << "; ";
   std::cout << '\n';
 }
 
@@ -152,12 +151,8 @@ HighsStatus assessMatrix(
   double max_large_value = 0;
   double min_large_value = kHighsInf;
   // Use index_map to identify duplicates.
-  //
-  // Note that operator[] with non-existent key returns 0 and always
-  // performs an insert. Hence value associated with the key has to be
-  // positive: use el+1.
   std::map<HighsInt, HighsInt> index_map;
-  
+
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     HighsInt from_el = matrix_start[ix];
     HighsInt to_el = matrix_start[ix + 1];
@@ -188,21 +183,15 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component, vec_dim);
         return HighsStatus::kError;
       }
-      // Check that the index has not already ocurred. 
-      print_map("index_map: ", index_map);
-      auto search = index_map.find(component);
-      legal_component = search == index_map.end();
-      printf("index_map.find(%d) yields (%d, %d) so legal_component = %d\n", (int)component,
-	     search->first,
-	     search->second,
-	     legal_component);
+      // Check that the index has not already ocurred.
+      legal_component = index_map.find(component) == index_map.end();
       if (!legal_component) {
-	highsLogUser(log_options, HighsLogType::kError,
-		     "%s matrix packed vector %" HIGHSINT_FORMAT
-		     ", entry %" HIGHSINT_FORMAT
-		     ", is duplicate index %" HIGHSINT_FORMAT "\n",
-		     matrix_name.c_str(), ix, el, component);
-	return HighsStatus::kError;
+        highsLogUser(log_options, HighsLogType::kError,
+                     "%s matrix packed vector %" HIGHSINT_FORMAT
+                     ", entry %" HIGHSINT_FORMAT
+                     ", is duplicate index %" HIGHSINT_FORMAT "\n",
+                     matrix_name.c_str(), ix, el, component);
+        return HighsStatus::kError;
       }
       // Check the value
       double abs_value = fabs(matrix_value[el]);
@@ -220,8 +209,8 @@ HighsStatus assessMatrix(
         num_small_values++;
       }
       if (ok_value) {
-	// Record where the index has occurred
-	index_map[component] = num_new_nz;
+        // Record where the index has occurred
+        index_map[component] = num_new_nz;
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
@@ -229,16 +218,9 @@ HighsStatus assessMatrix(
         matrix_value[num_new_nz] = matrix_value[el];
         num_new_nz++;
       }
-    } // Loop from_el; to_el
-    for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++) {
-      HighsInt iX = matrix_index[el];
-      auto search = index_map.find(iX);
-      assert(search != index_map.end());
-      assert(search->first == iX);
-      assert(search->second == el);
-    }
+    }  // Loop from_el; to_el
     index_map.clear();
-  } // Loop 0; num_vec
+  }  // Loop 0; num_vec
   if (num_large_values) {
     highsLogUser(log_options, HighsLogType::kError,
                  "%s matrix packed vector contains %" HIGHSINT_FORMAT

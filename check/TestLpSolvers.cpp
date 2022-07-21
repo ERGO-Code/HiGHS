@@ -1,6 +1,7 @@
+#include <chrono>
+
 #include "Highs.h"
 #include "catch.hpp"
-#include <chrono>
 
 const bool dev_run = false;
 
