@@ -17,9 +17,9 @@ url: "https://github.com/ERGO-Code/HiGHS/releases/tag/v1.2.2"
 preferred-citation:
   type: article
   authors:
-    - given-names: Qi
+    - given-names: Q.
       family-names: Huangfu
-    - given-names: Julian
+    - given-names: J.~A.~J.
       family-names: Hall
       email: jajhall@ed.ac.uk
       affiliation: University of Edinburgh
