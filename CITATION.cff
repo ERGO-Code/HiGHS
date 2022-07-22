@@ -1,18 +1,18 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
-preferred-citation:
-  type: article
-  authors:
-  - family-names: "Huangfu"
-    given-names: "Qi"
-  - family-names: "Hall"
-    given-names: "Julian"
-    doi: 10.1007/s12532-017-0130-5
-    journal: "Mathematical Programming Computation"
-    start: 119 # First page number
-    end: 142 # Last page number
-    title: "Parallelizing the dual revised simplex method"
-    issue: 1
-    volume: 10
-    year: 2018
-
+message: 'If you use this software, please cite it as below'
+type: article
+authors:
+  - given-names: Qi
+    family-names: Huangfu
+  - given-names: Julian
+    family-names: Hall
+    email: jajhall@ed.ac.uk
+    affiliation: University of Edinburgh
+doi: 10.1007/s12532-017-0130-5
+journal: "Mathematical Programming Computation"
+start: 119 # First page number
+end: 142 # Last page number
+title: "Parallelizing the dual revised simplex method"
+issue: 1
+volume: 10
+year: 2018
