@@ -997,9 +997,14 @@ class HighsHashTable {
   void clear() {
     if (numElements) {
       u64 capacity = tableSizeMask + 1;
-      for (u64 i = 0; i < capacity; ++i)
-        if (occupied(metadata[i])) entries.get()[i].~Entry();
-      makeEmptyTable(128);
+      if (!std::is_trivially_destructible<Entry>::value) {
+        for (u64 i = 0; i < capacity; ++i)
+          if (occupied(metadata[i])) entries.get()[i].~Entry();
+      }
+      if (capacity == 128)
+        std::memset(metadata.get(), 0, 128);
+      else
+        makeEmptyTable(128);
     }
   }
 
@@ -1144,7 +1149,7 @@ class HighsHashTable {
   HighsHashTable<K, V>& operator=(HighsHashTable<K, V>&&) = default;
 
   ~HighsHashTable() {
-    if (metadata) {
+    if (!std::is_trivially_destructible<Entry>::value && metadata) {
       u64 capacity = tableSizeMask + 1;
       for (u64 i = 0; i < capacity; ++i) {
         if (occupied(metadata[i])) entries.get()[i].~Entry();

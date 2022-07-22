@@ -20,6 +20,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "util/HighsHash.h"
+
 HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          const std::string matrix_name, const HighsInt vec_dim,
                          const HighsInt num_vec, vector<HighsInt>& matrix_start,
@@ -143,9 +145,9 @@ HighsStatus assessMatrix(
   HighsInt num_large_values = 0;
   double max_large_value = 0;
   double min_large_value = kHighsInf;
-  // Set up a zeroed vector to detect duplicate indices
-  vector<HighsInt> check_vector;
-  if (vec_dim > 0) check_vector.assign(vec_dim, 0);
+  // Use index_map to identify duplicates.
+  HighsHashTable<HighsInt> index_set;
+
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     HighsInt from_el = matrix_start[ix];
     HighsInt to_el = matrix_start[ix + 1];
@@ -176,8 +178,8 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component, vec_dim);
         return HighsStatus::kError;
       }
-      // Check that the index has not already ocurred
-      legal_component = check_vector[component] == 0;
+      // Check that the index has not already ocurred.
+      legal_component = index_set.find(component) == nullptr;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,
                      "%s matrix packed vector %" HIGHSINT_FORMAT
@@ -186,8 +188,6 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component);
         return HighsStatus::kError;
       }
-      // Indicate that the index has occurred
-      check_vector[component] = 1;
       // Check the value
       double abs_value = fabs(matrix_value[el]);
       // Check that the value is not too large
@@ -204,33 +204,18 @@ HighsStatus assessMatrix(
         num_small_values++;
       }
       if (ok_value) {
+        // Record where the index has occurred
+        index_set.insert(component);
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
         matrix_index[num_new_nz] = matrix_index[el];
         matrix_value[num_new_nz] = matrix_value[el];
         num_new_nz++;
-      } else {
-        // Zero the check_vector entry since the small value
-        // _hasn't_ occurred
-        check_vector[component] = 0;
       }
-    }
-    // Zero check_vector
-    for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++)
-      check_vector[matrix_index[el]] = 0;
-    // NB This is very expensive so shouldn't be true
-    const bool check_check_vector = false;
-    if (check_check_vector) {
-      // Check zeroing of check vector
-      for (HighsInt component = 0; component < vec_dim; component++) {
-        if (check_vector[component]) error_found = true;
-      }
-      if (error_found)
-        highsLogUser(log_options, HighsLogType::kError,
-                     "assessMatrix: check_vector not zeroed\n");
-    }
-  }
+    }  // Loop from_el; to_el
+    index_set.clear();
+  }  // Loop 0; num_vec
   if (num_large_values) {
     highsLogUser(log_options, HighsLogType::kError,
                  "%s matrix packed vector contains %" HIGHSINT_FORMAT

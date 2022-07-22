@@ -46,7 +46,6 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt num_nz, const HighsInt* start,
                          const HighsInt* index, const double* value);
 
-// No commas in test case name.
 TEST_CASE("LP-717-od", "[highs_data]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
