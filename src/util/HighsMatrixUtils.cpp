@@ -19,7 +19,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <map>
+
+#include "util/HighsHash.h"
 
 HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          const std::string matrix_name, const HighsInt vec_dim,
@@ -145,7 +146,7 @@ HighsStatus assessMatrix(
   double max_large_value = 0;
   double min_large_value = kHighsInf;
   // Use index_map to identify duplicates.
-  std::map<HighsInt, HighsInt> index_map;
+  HighsHashTable<HighsInt> index_set;
 
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     HighsInt from_el = matrix_start[ix];
@@ -178,7 +179,7 @@ HighsStatus assessMatrix(
         return HighsStatus::kError;
       }
       // Check that the index has not already ocurred.
-      legal_component = index_map.find(component) == index_map.end();
+      legal_component = index_set.find(component) == nullptr;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,
                      "%s matrix packed vector %" HIGHSINT_FORMAT
@@ -204,7 +205,7 @@ HighsStatus assessMatrix(
       }
       if (ok_value) {
         // Record where the index has occurred
-        index_map[component] = num_new_nz;
+        index_set.insert(component);
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
@@ -213,7 +214,7 @@ HighsStatus assessMatrix(
         num_new_nz++;
       }
     }  // Loop from_el; to_el
-    index_map.clear();
+    index_set.clear();
   }  // Loop 0; num_vec
   if (num_large_values) {
     highsLogUser(log_options, HighsLogType::kError,
