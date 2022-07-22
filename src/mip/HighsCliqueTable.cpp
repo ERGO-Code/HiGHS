@@ -1208,7 +1208,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   // constraint:
   // todo@ evaluate performance impact, seems to cause slowdown on some
   // instances
-  if (false && nbin < len) {
+  if (nbin < len) {
     for (HighsInt i = 0; i != nbin; ++i) {
       HighsInt bincol = inds[perm[i]];
       HighsCDouble impliedActivity = rhs - minact - std::abs(vals[perm[i]]);

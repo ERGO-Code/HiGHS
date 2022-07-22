@@ -47,14 +47,16 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       simpleUbDist[col] = 0.0;
 
     double minbestub = bestub;
-    size_t bestvubnodes = 0;
+    double bestUbCmp = kHighsInf;
+    int64_t bestvubnodes = 0;
 
     double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
     simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
     if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
       simpleLbDist[col] = 0.0;
     double maxbestlb = bestlb;
-    size_t bestvlbnodes = 0;
+    double bestLbCmp = kHighsInf;
+    int64_t bestvlbnodes = 0;
 
     for (const auto& vub : implications.getVUBs(col)) {
       if (vub.second.coef == kHighsInf) continue;
@@ -62,21 +64,28 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       assert(mipsolver.mipdata_->domain.isBinary(vub.first));
       double vubval = lpSolution.col_value[vub.first] * vub.second.coef +
                       vub.second.constant;
+      double minvubval = vub.second.minValue();
+      double ubCmp =
+          std::min(0.0, mipsolver.mipdata_->feastol + vubval -
+                            mipsolver.mipdata_->domain.col_upper_[col]) /
+          std::sqrt(1.0 + vub.second.coef * vub.second.coef);
 
       assert(vub.first >= 0 && vub.first < mipsolver.numCol());
-      if (vubval <= bestub + mipsolver.mipdata_->feastol) {
-        size_t vubnodes =
+      if (ubCmp <= bestUbCmp + mipsolver.mipdata_->feastol) {
+        int64_t vubnodes =
             vub.second.coef > 0
                 ? mipsolver.mipdata_->nodequeue.numNodesDown(vub.first)
                 : mipsolver.mipdata_->nodequeue.numNodesUp(vub.first);
-        double minvubval = vub.second.minValue();
-        if (bestVub[col] == nullptr || vubnodes > bestvubnodes ||
+
+        if (ubCmp < bestUbCmp - mipsolver.mipdata_->feastol ||
+            vubnodes > bestvubnodes ||
             (vubnodes == bestvubnodes &&
              minvubval < minbestub - mipsolver.mipdata_->feastol)) {
           bestub = vubval;
           minbestub = minvubval;
           bestVub[col] = &vub;
           bestvubnodes = vubnodes;
+          bestUbCmp = ubCmp;
         }
       }
     }
@@ -88,20 +97,28 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       assert(vlb.first >= 0 && vlb.first < mipsolver.numCol());
       double vlbval = lpSolution.col_value[vlb.first] * vlb.second.coef +
                       vlb.second.constant;
+      double maxvlbval = vlb.second.maxValue();
+      double lbCmp =
+          std::min(0.0, mipsolver.mipdata_->feastol +
+                            mipsolver.mipdata_->domain.col_lower_[col] -
+                            vlbval) /
+          std::sqrt(1.0 + vlb.second.coef * vlb.second.coef);
 
-      if (vlbval >= bestlb - mipsolver.mipdata_->feastol) {
-        size_t vlbnodes =
+      if (lbCmp <= bestLbCmp + mipsolver.mipdata_->feastol) {
+        int64_t vlbnodes =
             vlb.second.coef > 0
                 ? mipsolver.mipdata_->nodequeue.numNodesUp(vlb.first)
                 : mipsolver.mipdata_->nodequeue.numNodesDown(vlb.first);
-        double maxvlbval = vlb.second.maxValue();
-        if (bestVlb[col] == nullptr || vlbnodes > bestvlbnodes ||
+
+        if (lbCmp < bestLbCmp - mipsolver.mipdata_->feastol ||
+            vlbnodes > bestvlbnodes ||
             (vlbnodes == bestvlbnodes &&
              maxvlbval > maxbestlb + mipsolver.mipdata_->feastol)) {
           bestlb = vlbval;
           maxbestlb = maxvlbval;
           bestVlb[col] = &vlb;
           bestvlbnodes = vlbnodes;
+          bestLbCmp = lbCmp;
         }
       }
     }

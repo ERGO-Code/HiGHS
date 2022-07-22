@@ -343,8 +343,6 @@ void HighsImplications::rebuild(HighsInt ncols,
 }
 
 void HighsImplications::buildFrom(const HighsImplications& init) {
-  return;
-#if 0
   // todo check if this should be done
   HighsInt numcol = mipsolver.numCol();
 
@@ -364,7 +362,6 @@ void HighsImplications::buildFrom(const HighsImplications& init) {
     // weaker then newly computed ones and adding them would block computation
     // of new implications
   }
-#endif
 }
 
 void HighsImplications::separateImpliedBounds(

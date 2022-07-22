@@ -340,6 +340,8 @@ void HighsMipSolverData::init() {
   postSolveStack.initializeIndexMaps(mipsolver.model_->num_row_,
                                      mipsolver.model_->num_col_);
   mipsolver.orig_model_ = mipsolver.model_;
+  feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
+  epsilon = mipsolver.options_mip_->small_matrix_value;
   if (mipsolver.clqtableinit)
     cliquetable.buildFrom(mipsolver.orig_model_, *mipsolver.clqtableinit);
   cliquetable.setMinEntriesForParallelism(
@@ -347,8 +349,6 @@ void HighsMipSolverData::init() {
           ? mipsolver.options_mip_->mip_min_cliquetable_entries_for_parallelism
           : kHighsIInf);
   if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
-  feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
-  epsilon = mipsolver.options_mip_->small_matrix_value;
   heuristic_effort = mipsolver.options_mip_->mip_heuristic_effort;
   detectSymmetries = mipsolver.options_mip_->mip_detect_symmetry;
 
