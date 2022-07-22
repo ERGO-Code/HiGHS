@@ -1,5 +1,3 @@
-#include <chrono>
-
 #include "Highs.h"
 #include "catch.hpp"
 
