@@ -1002,7 +1002,10 @@ class HighsHashTable {
           if (occupied(metadata[i])) entries.get()[i].~Entry();
       }
       if (capacity == 128)
+      {
         std::memset(metadata.get(), 0, 128);
+        numElements = 0;
+      }
       else
         makeEmptyTable(128);
     }
