@@ -767,10 +767,10 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
             infeasvertexstack.push_back(cliquevars[k]);
           }
         }
-      }
 
-      processInfeasibleVertices(globaldom);
-      return;
+        processInfeasibleVertices(globaldom);
+        return;
+      }
     }
   }
 
