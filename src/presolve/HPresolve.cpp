@@ -1335,8 +1335,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                       cliquetable.getSubstitutions().size();
     int64_t splayContingent =
         cliquetable.numNeighborhoodQueries +
-        std::max(mipsolver->submip ? HighsInt{0} : HighsInt{1000000},
-                 100 * numNonzeros());
+        std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
+                 10 * numNonzeros());
     HighsInt numFail = 0;
     for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
          binaries) {
@@ -1365,8 +1365,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
         // if (numProbed % 10 == 0)
         //   printf(
-        //       "numprobed=%d  numDel=%d  newcliques=%d
-        //       numNeighborhoodQueries=%ld  " "splayContingent=%ld\n",
+        //       "numprobed=%d  numDel=%d  newcliques=%d "
+        //       "numNeighborhoodQueries=%ld  "
+        //       "splayContingent=%ld\n",
         //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
         //       cliquetable.numNeighborhoodQueries, splayContingent);
         if (cliquetable.numNeighborhoodQueries > splayContingent) break;
@@ -1390,16 +1391,16 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         if (newNumDel > numDel) {
           probingContingent += numDel;
           if (!mipsolver->submip) {
-            splayContingent += 1000 * (newNumDel + numDelStart);
-            splayContingent += 10000 * numNewCliques;
+            splayContingent += 100 * (newNumDel + numDelStart);
+            splayContingent += 1000 * numNewCliques;
           }
           numDel = newNumDel;
           numFail = 0;
         } else if (mipsolver->submip || numNewCliques == 0) {
-          splayContingent -= 1000 * numFail;
+          splayContingent -= 100 * numFail;
           ++numFail;
         } else {
-          splayContingent += 10000 * numNewCliques;
+          splayContingent += 1000 * numNewCliques;
           numFail = 0;
         }
 

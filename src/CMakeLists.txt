@@ -279,6 +279,7 @@ set(headers
     util/HighsDataStack.h
     util/HighsDisjointSets.h
     util/HighsHash.h
+    util/HighsHashTree.h
     util/HighsInt.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
@@ -717,6 +718,7 @@ set(headers_fast_build_
     util/HighsDataStack.h
     util/HighsDisjointSets.h
     util/HighsHash.h
+    util/HighsHashTree.h
     util/HighsInt.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h

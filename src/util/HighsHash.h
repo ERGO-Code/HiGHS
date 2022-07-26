@@ -101,7 +101,7 @@ struct HighsHashHelpers {
 #ifdef HIGHS_HAVE_BUILTIN_CLZ
   static int log2i(uint64_t n) { return 63 - __builtin_clzll(n); }
 
-  static int log2i(unsigned int n) { return 31 - __builtin_clz(n); }
+  static int log2i(uint32_t n) { return 31 - __builtin_clz(n); }
 
 #elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
   static int log2i(uint64_t n) {
@@ -110,9 +110,9 @@ struct HighsHashHelpers {
     return result;
   }
 
-  static int log2i(unsigned int n) {
+  static int log2i(uint32_t n) {
     unsigned long result;
-    _BitScanReverse64(&result, (unsigned long)n);
+    _BitScanReverse(&result, (unsigned long)n);
     return result;
   }
 #else
@@ -158,6 +158,22 @@ struct HighsHashHelpers {
   }
 
 #endif
+
+  static int popcnt(uint64_t x) {
+    return __builtin_popcountll(x);
+#if 0
+    constexpr uint64_t m1  = 0x5555555555555555ull; //binary: 0101...
+    constexpr uint64_t m2  = 0x3333333333333333ull; //binary: 00110011..
+    constexpr uint64_t m4  = 0x0f0f0f0f0f0f0f0full; //binary:  4 zeros,  4 ones ...
+    constexpr uint64_t h01 = 0x0101010101010101ull;
+
+    x -= (x >> 1) & m1;             //put count of each 2 bits into those 2 bits
+    x = (x & m2) + ((x >> 2) & m2); //put count of each 4 bits into those 4 bits 
+    x = (x + (x >> 4)) & m4;        //put count of each 8 bits into those 8 bits 
+
+    return (x * h01) >> 56;
+#endif
+  }
 
   /// compute a * b mod 2^61-1
   static u64 multiply_modM61(u64 a, u64 b) {
@@ -761,7 +777,7 @@ struct HighsVectorEqual {
   }
 };
 
-template <typename K, typename V>
+template <typename K, typename V = void>
 struct HighsHashTableEntry {
  private:
   K key_;
@@ -1001,12 +1017,10 @@ class HighsHashTable {
         for (u64 i = 0; i < capacity; ++i)
           if (occupied(metadata[i])) entries.get()[i].~Entry();
       }
-      if (capacity == 128)
-      {
+      if (capacity == 128) {
         std::memset(metadata.get(), 0, 128);
         numElements = 0;
-      }
-      else
+      } else
         makeEmptyTable(128);
     }
   }
