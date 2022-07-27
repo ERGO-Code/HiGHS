@@ -83,7 +83,6 @@ TEST_CASE("Highs_HashTree", "[util]") {
   std::sort(test.begin(), test.end());
   REQUIRE(std::equal(test.begin(), test.end(), testReference.begin()));
 
-
   HighsHashTree<int> htree2;
   for (int i = 0; i < NUM_CHECK; ++i) {
     if (htree.contains(i)) {

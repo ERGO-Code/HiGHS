@@ -15,18 +15,25 @@
 
 #include "util/HighsHash.h"
 
+using std::memcpy;
+using std::memmove;
+
 template <typename K, typename V = void>
 class HighsHashTree {
   using Entry = HighsHashTableEntry<K, V>;
   using ValueType = typename std::remove_reference<
       decltype(reinterpret_cast<Entry*>(0x1)->value())>::type;
-
   enum Type {
     kEmpty = 0,
     kSingleLeaf = 1,
     kMultiLeaf = 2,
     kForwardingNode = 3,
     kBranchNode = 4,
+  };
+
+  enum Constants {
+    kBitsPerLevel = 6,
+    kBranchFactor = 1 << kBitsPerLevel,
   };
 
   struct SingleLeaf {
@@ -104,17 +111,177 @@ class HighsHashTree {
   struct ForwardingNode {
     NodePtr targetNode;
     uint64_t hash;
-    int numLevels;
+    int targetLevel;
   };
 
   struct BranchNode {
     uint64_t occupation;
     NodePtr child[1];
+
+    void set_occupation(uint8_t pos) { occupation |= uint64_t{1} << (pos); }
+
+    void flip_occupation(uint8_t pos) { occupation ^= uint64_t{1} << (pos); }
+
+    bool test_occupation(uint8_t pos) const {
+      return occupation & (uint64_t{1} << pos);
+    }
+
+    int get_child_position(uint8_t pos) const {
+      return HighsHashHelpers::popcnt(occupation >> pos);
+    }
+
+    int get_num_children_after(uint8_t pos) const {
+      return HighsHashHelpers::popcnt(occupation << (63 - (pos)));
+    }
+
+    int get_num_children() const {
+      return HighsHashHelpers::popcnt(occupation);
+    }
   };
+
+  // allocate branch nodes in multiples of 64 bytes to reduce allocator stress
+  // with different sizes and reduce reallocations of nodes
+  static constexpr size_t getBranchNodeSize(int numChilds) {
+    return (sizeof(BranchNode) + size_t(numChilds - 1) * sizeof(NodePtr) + 63) &
+           ~63;
+  };
+
+  static ForwardingNode* createForwardingNode(uint64_t hash, int targetLevel) {
+    ForwardingNode* forward =
+        (ForwardingNode*)::operator new(getBranchNodeSize(2));
+    forward->hash = hash;
+    forward->targetLevel = targetLevel;
+    return forward;
+  }
+  static BranchNode* createBranchingNode(int numChilds) {
+    BranchNode* branch =
+        (BranchNode*)::operator new(getBranchNodeSize(numChilds));
+    branch->occupation = 0;
+    return branch;
+  }
+
+  static BranchNode* convertForwardingNodeToBinaryBranch(void* forward) {
+    BranchNode* branch = (BranchNode*)forward;
+    branch->occupation = 0;
+    return branch;
+  }
+
+  static ForwardingNode* convertUnaryBranchToForwardingNode(
+      void* branch, NodePtr singleChild, uint64_t hash, int branchNodeLevel) {
+    ForwardingNode* forward = (ForwardingNode*)branch;
+
+    forward->hash = hash;
+    forward->targetNode = singleChild;
+    forward->targetLevel = branchNodeLevel;
+
+    return forward;
+  }
+
+  static void destroyInnerNode(void* innerNode) {
+    ::operator delete(innerNode);
+  }
+
+  static BranchNode* addChildToBranchNode(BranchNode* branch, uint8_t hashValue,
+                                          int location) {
+    int rightChilds = branch->get_num_children_after(hashValue);
+    assert(rightChilds + location == branch->get_num_children());
+
+    size_t newSize = getBranchNodeSize(location + rightChilds + 1);
+    size_t rightSize = rightChilds * sizeof(NodePtr);
+
+    if (newSize == getBranchNodeSize(location + rightChilds)) {
+      memmove(&branch->child[location + 1], &branch->child[location],
+              rightSize);
+
+      return branch;
+    }
+
+    BranchNode* newBranch = (BranchNode*)::operator new(newSize);
+    // sizeof(Branch) already contains the size for 1 pointer. So we just
+    // need to add the left and right sizes up for the number of
+    // additional pointers
+    size_t leftSize = sizeof(BranchNode) + (location - 1) * sizeof(NodePtr);
+
+    memcpy(newBranch, branch, leftSize);
+    memcpy(&newBranch->child[location + 1], &branch->child[location],
+           rightSize);
+
+    destroyInnerNode(branch);
+
+    return newBranch;
+  }
+
+  static NodePtr removeChildFromBranchNode(BranchNode* branch, int location,
+                                           uint64_t hash, int hashPos) {
+    NodePtr newNode;
+    int newNumChild = branch->get_num_children();
+
+    if (newNumChild == 1) {
+      // there is one other entry so its index must be 1-location
+      int pos = 1 - location;
+      switch (branch->child[pos].getType()) {
+        case kSingleLeaf:
+        case kMultiLeaf:
+        case kForwardingNode:
+          newNode = branch->child[pos];
+          destroyInnerNode(branch);
+          break;
+        case kBranchNode: {
+          uint8_t childHash = HighsHashHelpers::log2i(branch->occupation);
+
+          assert(branch->get_child_position(childHash) == 1);
+          assert(branch->test_occupation(childHash));
+
+          ForwardingNode* forward = convertUnaryBranchToForwardingNode(
+              branch, branch->child[pos], hash, hashPos + 1);
+
+          set_hash_chunk(forward->hash, childHash, hashPos);
+          newNode = forward;
+        }
+      }
+    } else {
+      size_t newSize = getBranchNodeSize(newNumChild);
+      size_t rightSize = (newNumChild - location) * sizeof(NodePtr);
+      if (newSize == getBranchNodeSize(newNumChild + 1)) {
+        // allocated size class is the same, so we do not allocate a new node
+        memmove(&branch->child[location], &branch->child[location + 1],
+                rightSize);
+        newNode = branch;
+      } else {
+        // allocated size class changed, so we allocate a smaller branch node
+        BranchNode* compressedBranch = (BranchNode*)::operator new(newSize);
+        newNode = compressedBranch;
+
+        size_t leftSize =
+            offsetof(BranchNode, child) + location * sizeof(NodePtr);
+        memcpy(compressedBranch, branch, leftSize);
+        memcpy(&compressedBranch->child[location], &branch->child[location + 1],
+               rightSize);
+
+        destroyInnerNode(branch);
+      }
+    }
+
+    return newNode;
+  }
 
   NodePtr root;
 
-  bool insert_recurse(NodePtr* insertNode, uint64_t hash,
+  static uint8_t get_hash_chunk(uint64_t hash, int pos) {
+    return (hash >> (pos * kBitsPerLevel)) & (kBranchFactor - 1);
+  }
+
+  static void set_hash_chunk(uint64_t& hash, uint64_t chunk, int chunkPos) {
+    const int shiftAmount = chunkPos * kBitsPerLevel;
+    chunk ^= (hash >> shiftAmount) & (kBranchFactor - 1);
+    hash ^= chunk << shiftAmount;
+  }
+
+  static uint64_t get_first_n_hash_chunks(uint64_t hash, int n) {
+    return hash & ((uint64_t{1} << (n * kBitsPerLevel)) - 1);
+  }
+
+  bool insert_recurse(NodePtr* insertNode, uint64_t hash, int hashPos,
                       HighsHashTableEntry<K, V>& entry) {
     switch (insertNode->getType()) {
       case kEmpty: {
@@ -135,40 +302,30 @@ class HighsHashTree {
           return true;
         }
 
-        int numMatchingLevels = 0;
-        uint64_t leafHash = leaf->hash;
-        uint64_t currentHashBits = hash & 63;
-        uint64_t leafHashBits = leaf->hash & 63;
+        int diffPos = hashPos;
+        while (get_hash_chunk(hash, diffPos) ==
+               get_hash_chunk(leaf->hash, diffPos))
+          ++diffPos;
 
-        while (currentHashBits == leafHashBits) {
-          ++numMatchingLevels;
-          hash = hash >> 6;
-          leafHash = leafHash >> 6;
-          currentHashBits = hash & 63;
-          leafHashBits = leafHash & 63;
-        }
-
-        BranchNode* newBranch =
-            (BranchNode*)::operator new(sizeof(BranchNode) + sizeof(NodePtr));
-        if (numMatchingLevels != 0) {
-          ForwardingNode* forward = new ForwardingNode;
+        if (diffPos > hashPos) {
+          ForwardingNode* forward = createForwardingNode(leaf->hash, diffPos);
           *insertNode = forward;
           insertNode = &forward->targetNode;
-          forward->numLevels = numMatchingLevels;
-          forward->hash = leaf->hash;
+          hashPos = diffPos;
         }
 
-        leaf->hash = leafHash >> 6;
-        int pos;
-        newBranch->occupation =
-            (uint64_t{1} << currentHashBits) | (uint64_t{1} << leafHashBits);
-        pos = currentHashBits < leafHashBits;
+        BranchNode* newBranch = createBranchingNode(2);
+        newBranch->set_occupation(get_hash_chunk(hash, hashPos));
+        newBranch->set_occupation(get_hash_chunk(leaf->hash, hashPos));
+
+        int pos =
+            get_hash_chunk(hash, hashPos) < get_hash_chunk(leaf->hash, hashPos);
         newBranch->child[pos] = nullptr;
         newBranch->child[1 - pos] = leaf;
 
         *insertNode = newBranch;
         insertNode = &newBranch->child[pos];
-        hash = hash >> 6;
+        ++hashPos;
         break;
       }
       case kMultiLeaf: {
@@ -189,117 +346,103 @@ class HighsHashTree {
           }
         }
 
-        int numMatchingLevels = 0;
-        uint64_t leafHash = leaf->hash;
-        uint64_t currentHashBits = hash & 63;
-        uint64_t leafHashBits = leaf->hash & 63;
+        int diffPos = hashPos;
+        while (get_hash_chunk(hash, diffPos) ==
+               get_hash_chunk(leaf->hash, diffPos))
+          ++diffPos;
 
-        while (currentHashBits == leafHashBits) {
-          ++numMatchingLevels;
-          hash = hash >> 6;
-          leafHash = leafHash >> 6;
-          currentHashBits = hash & 63;
-          leafHashBits = leafHash & 63;
-        }
-
-        BranchNode* newBranch =
-            (BranchNode*)::operator new(sizeof(BranchNode) + sizeof(NodePtr));
-        if (numMatchingLevels != 0) {
-          ForwardingNode* forward = new ForwardingNode;
+        if (diffPos > hashPos) {
+          ForwardingNode* forward = createForwardingNode(leaf->hash, diffPos);
           *insertNode = forward;
           insertNode = &forward->targetNode;
-          forward->numLevels = numMatchingLevels;
-          forward->hash = leaf->hash;
+          hashPos = diffPos;
         }
 
-        leaf->hash = leafHash >> 6;
-        int pos;
-        newBranch->occupation =
-            (uint64_t{1} << currentHashBits) | (uint64_t{1} << leafHashBits);
-        pos = currentHashBits < leafHashBits;
+        BranchNode* newBranch = createBranchingNode(2);
+        newBranch->set_occupation(get_hash_chunk(hash, hashPos));
+        newBranch->set_occupation(get_hash_chunk(leaf->hash, hashPos));
+
+        int pos =
+            get_hash_chunk(hash, hashPos) < get_hash_chunk(leaf->hash, hashPos);
         newBranch->child[pos] = nullptr;
         newBranch->child[1 - pos] = leaf;
 
         *insertNode = newBranch;
         insertNode = &newBranch->child[pos];
-        hash = hash >> 6;
+        ++hashPos;
         break;
       }
       case kForwardingNode: {
         ForwardingNode* forward = insertNode->getForwardingNode();
 
-        int matchingLevels = 0;
-        uint64_t unmatchedHash = forward->hash;
+        int diffPos = hashPos;
         do {
-          if ((unmatchedHash & 63) != (hash & 63)) break;
+          if (get_hash_chunk(hash, diffPos) !=
+              get_hash_chunk(forward->hash, diffPos))
+            break;
+          ++diffPos;
+        } while (diffPos < forward->targetLevel);
 
-          unmatchedHash = unmatchedHash >> 6;
-          hash = hash >> 6;
-          ++matchingLevels;
-        } while (matchingLevels < forward->numLevels);
-
-        if (matchingLevels == 0) {
+        if (diffPos == hashPos) {
           // we have an immediate mismatch, which means we create a new
           // branching node in front of the forwarding node and reduce the
           // forwarding nodes number of levels by one. If the forwarding node
           // only has a single level it's targetNode becomes a direct child of
           // the new branching node and the forwarding node is deleted.
 
-          // the new branch node gets 2 children
-          BranchNode* branch =
-              (BranchNode*)::operator new(sizeof(BranchNode) + sizeof(NodePtr));
-          int currentHashBits = hash & 63;
-          int forwardHashBits = forward->hash & 63;
-          branch->occupation = (uintptr_t{1} << currentHashBits) |
-                               (uintptr_t{1} << forwardHashBits);
-          int pos = currentHashBits < forwardHashBits;
+          BranchNode* branch;
+          uint8_t forwardDiffHash = get_hash_chunk(forward->hash, diffPos);
+          int pos = get_hash_chunk(hash, diffPos) < forwardDiffHash;
+
+          if (forward->targetLevel - diffPos == 1) {
+            NodePtr targetNode = forward->targetNode;
+            // forwarding node can be converted to branch node without new
+            // allocation
+            branch = convertForwardingNodeToBinaryBranch(forward);
+            branch->child[1 - pos] = targetNode;
+          } else {
+            branch = createBranchingNode(2);
+            branch->child[1 - pos] = forward;
+          }
+
+          branch->set_occupation(forwardDiffHash);
+          branch->set_occupation(get_hash_chunk(hash, diffPos));
           branch->child[pos] = nullptr;
           *insertNode = branch;
           insertNode = &branch->child[pos];
-          hash = hash >> 6;
-          --forward->numLevels;
-          if (forward->numLevels == 0) {
-            branch->child[1 - pos] = forward->targetNode;
-            delete forward;
-          } else {
-            forward->hash = forward->hash >> 6;
-            branch->child[1 - pos] = forward;
-          }
-        } else if (matchingLevels == forward->numLevels) {
+          hashPos = diffPos + 1;
+        } else if (diffPos == forward->targetLevel) {
           // we match all levels of the forwarding node, meaning we can simply
           // continue recursion and leave it untouched
+          hashPos = diffPos;
           insertNode = &forward->targetNode;
         } else {
           // we need a new additional branching node and possibly a new
           // forwarding node to split the forwarded path with a branching in
           // between essentially replacing one of the previously forwarded
           // levels with a branching node
-          int remainingLevels = forward->numLevels - matchingLevels - 1;
-          forward->numLevels = matchingLevels;
+          int oldSplit = forward->targetLevel;
+          forward->targetLevel = diffPos;
           NodePtr oldTarget = forward->targetNode;
 
-          BranchNode* branch =
-              (BranchNode*)::operator new(sizeof(BranchNode) + sizeof(NodePtr));
+          BranchNode* branch = createBranchingNode(2);
           forward->targetNode = branch;
+          branch->set_occupation(get_hash_chunk(hash, diffPos));
+          branch->set_occupation(get_hash_chunk(forward->hash, diffPos));
 
-          int currentHashBits = hash & 63;
-          int forwardHashBits = unmatchedHash & 63;
-          branch->occupation = (uintptr_t{1} << currentHashBits) |
-                               (uintptr_t{1} << forwardHashBits);
-
-          int pos = currentHashBits < forwardHashBits;
+          int pos = get_hash_chunk(hash, diffPos) <
+                    get_hash_chunk(forward->hash, diffPos);
           branch->child[pos] = nullptr;
           insertNode = &branch->child[pos];
-          hash = hash >> 6;
+          hashPos = diffPos + 1;
 
-          if (remainingLevels == 0) {
+          if (hashPos == oldSplit) {
             branch->child[1 - pos] = oldTarget;
           } else {
-            ForwardingNode* newForward = new ForwardingNode;
+            ForwardingNode* newForward =
+                createForwardingNode(forward->hash, oldSplit);
             branch->child[1 - pos] = newForward;
-            newForward->numLevels = remainingLevels;
             newForward->targetNode = oldTarget;
-            newForward->hash = unmatchedHash >> 6;
           }
         }
 
@@ -308,44 +451,30 @@ class HighsHashTree {
       case kBranchNode: {
         BranchNode* branch = insertNode->getBranchNode();
 
-        int bitPos = hash & 63;
-        uint64_t bitMask = branch->occupation >> bitPos;
-        int location = HighsHashHelpers::popcnt(bitMask);
-        if (bitMask & 1) {
+        int location =
+            branch->get_child_position(get_hash_chunk(hash, hashPos));
+
+        if (branch->test_occupation(get_hash_chunk(hash, hashPos))) {
           --location;
         } else {
-          int rightChilds =
-              HighsHashHelpers::popcnt(branch->occupation << (63 - bitPos));
-          assert(rightChilds + location ==
-                 HighsHashHelpers::popcnt(branch->occupation));
+          branch = addChildToBranchNode(branch, get_hash_chunk(hash, hashPos),
+                                        location);
 
-          // sizeof(Branch) already contains the size for 1 pointer. So we just
-          // need to add the left and right sizes up for the number of
-          // additional pointers
-          size_t leftSize = sizeof(BranchNode) + location * sizeof(NodePtr);
-          size_t rightSize = rightChilds * sizeof(NodePtr);
-
-          BranchNode* newBranch =
-              (BranchNode*)::operator new(leftSize + rightSize);
-          std::memcpy(newBranch, branch, leftSize - sizeof(NodePtr));
-          std::memcpy(&newBranch->child[location + 1], &branch->child[location],
-                      rightSize);
-          newBranch->child[location] = nullptr;
-          newBranch->occupation |= (uint64_t{1} << bitPos);
-          *insertNode = newBranch;
-          ::operator delete(branch);
-          branch = newBranch;
+          branch->child[location] = nullptr;
+          branch->set_occupation(get_hash_chunk(hash, hashPos));
         }
 
+        *insertNode = branch;
         insertNode = &branch->child[location];
-        hash = hash >> 6;
+        ++hashPos;
       }
     }
 
-    return insert_recurse(insertNode, hash, entry);
+    return insert_recurse(insertNode, hash, hashPos, entry);
   }
 
-  void erase_recurse(NodePtr* erase_node, uint64_t hash, const K& key) {
+  void erase_recurse(NodePtr* erase_node, uint64_t hash, int hashPos,
+                     const K& key) {
     switch (erase_node->getType()) {
       case kEmpty: {
         return;
@@ -391,117 +520,47 @@ class HighsHashTree {
       }
       case kForwardingNode: {
         ForwardingNode* forward = erase_node->getForwardingNode();
-        uint64_t mask = ((uint64_t{1} << (6 * forward->numLevels)) - 1);
-        uint64_t forwardHash = forward->hash & mask;
-        if (forwardHash != (hash & mask)) return;
+        if (get_first_n_hash_chunks(forward->hash, forward->targetLevel) !=
+            get_first_n_hash_chunks(hash, forward->targetLevel))
+          return;
 
-        erase_recurse(&forward->targetNode, hash >> (6 * forward->numLevels),
-                      key);
+        erase_recurse(&forward->targetNode, hash, forward->targetLevel, key);
         switch (forward->targetNode.getType()) {
           case kEmpty:
             *erase_node = nullptr;
-            delete forward;
+            destroyInnerNode(forward);
             break;
-          case kSingleLeaf: {
+          case kSingleLeaf:
+          case kMultiLeaf:
+          case kForwardingNode:
             *erase_node = forward->targetNode;
-            SingleLeaf* leaf = erase_node->getSingleLeaf();
-            leaf->hash = (leaf->hash << (6 * forward->numLevels)) | forwardHash;
-            delete forward;
-            break;
-          }
-          case kMultiLeaf: {
-            *erase_node = forward->targetNode;
-            MultiLeaf* leaf = erase_node->getMultiLeaf();
-            leaf->hash = (leaf->hash << (6 * forward->numLevels)) | forwardHash;
-            delete forward;
-            break;
-          }
-          case kForwardingNode: {
-            *erase_node = forward->targetNode;
-            ForwardingNode* newForward = erase_node->getForwardingNode();
-            newForward->hash =
-                (newForward->hash << (6 * forward->numLevels)) | forwardHash;
-            newForward->numLevels += forward->numLevels;
-            delete forward;
-          }
+            destroyInnerNode(forward);
         }
         break;
       }
       case kBranchNode: {
         BranchNode* branch = erase_node->getBranchNode();
 
-        int bitPos = hash & 63;
-        uint64_t bitMask = branch->occupation >> bitPos;
-        if ((bitMask & 1) == 0) return;
+        if (!branch->test_occupation(get_hash_chunk(hash, hashPos))) return;
 
-        int location = HighsHashHelpers::popcnt(bitMask) - 1;
-        erase_recurse(&branch->child[location], hash >> 6, key);
+        int location =
+            branch->get_child_position(get_hash_chunk(hash, hashPos)) - 1;
+        erase_recurse(&branch->child[location], hash, hashPos + 1, key);
+
         if (branch->child[location].getType() != kEmpty) return;
 
-        branch->occupation = branch->occupation & (~(uint64_t{1} << bitPos));
-        if (branch->occupation == 0) {
-          *erase_node = nullptr;
-          ::operator delete(branch);
-          return;
-        }
+        branch->flip_occupation(get_hash_chunk(hash, hashPos));
 
-        int newSize = HighsHashHelpers::popcnt(branch->occupation);
-        if (newSize == 1) {
-          // there is one other entry so its index must be 1-location
-          int pos = 1 - location;
-          switch (branch->child[pos].getType()) {
-            case kSingleLeaf: {
-              SingleLeaf* leaf = branch->child[pos].getSingleLeaf();
-              leaf->hash = (leaf->hash << 6) |
-                           HighsHashHelpers::log2i(branch->occupation);
-              *erase_node = leaf;
-              break;
-            }
-            case kMultiLeaf: {
-              MultiLeaf* leaf = branch->child[pos].getMultiLeaf();
-              leaf->hash = (leaf->hash << 6) |
-                           HighsHashHelpers::log2i(branch->occupation);
-              *erase_node = leaf;
-              break;
-            }
-            case kForwardingNode: {
-              ForwardingNode* forward = branch->child[pos].getForwardingNode();
-              ++forward->numLevels;
-              forward->hash = (forward->hash << 6) |
-                              HighsHashHelpers::log2i(branch->occupation);
-              *erase_node = forward;
-              break;
-            }
-            case kBranchNode: {
-              ForwardingNode* forward = new ForwardingNode;
-              forward->hash = HighsHashHelpers::log2i(branch->occupation);
-              forward->targetNode = branch->child[pos];
-              forward->numLevels = 1;
-              *erase_node = forward;
-              break;
-            }
-          }
-        } else {
-          BranchNode* compressedBranch = (BranchNode*)::operator new(
-              sizeof(BranchNode) + (newSize - 1) * sizeof(NodePtr));
-          *erase_node = compressedBranch;
-          compressedBranch->occupation = branch->occupation;
-
-          std::memcpy(&compressedBranch->child[0], &branch->child[0],
-                      location * sizeof(NodePtr));
-          std::memcpy(&compressedBranch->child[location],
-                      &branch->child[location + 1],
-                      (newSize - location) * sizeof(NodePtr));
-        }
-
-        ::operator delete(branch);
+        *erase_node =
+            removeChildFromBranchNode(branch, location, hash, hashPos);
         break;
       }
     }
   }
 
-  const ValueType* find_recurse(NodePtr node, uint64_t hash,
+  const ValueType* find_recurse(NodePtr node, uint64_t hash, int hashPos,
                                 const K& key) const {
+    int startPos = hashPos;
     switch (node.getType()) {
       case kEmpty:
         return nullptr;
@@ -521,28 +580,33 @@ class HighsHashTree {
       }
       case kForwardingNode: {
         ForwardingNode* forward = node.getForwardingNode();
+        if (get_first_n_hash_chunks(hash, forward->targetLevel) !=
+            get_first_n_hash_chunks(forward->hash, forward->targetLevel))
+          return nullptr;
 
-        uint64_t mask = (uint64_t{1} << (forward->numLevels * 6)) - 1;
-        if (((hash ^ forward->hash) & mask) != 0) return nullptr;
         node = forward->targetNode;
-        hash = hash >> (forward->numLevels * 6);
+        assert(forward->targetLevel > hashPos);
+        hashPos = forward->targetLevel;
         break;
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int bitPos = hash & 63;
-        uint64_t bitMask = branch->occupation >> bitPos;
-        if ((bitMask & 1) == 0) return nullptr;
-        int location = HighsHashHelpers::popcnt(bitMask) - 1;
+        if (!branch->test_occupation(get_hash_chunk(hash, hashPos)))
+          return nullptr;
+        int location =
+            branch->get_child_position(get_hash_chunk(hash, hashPos)) - 1;
         node = branch->child[location];
-        hash = hash >> 6;
+        ++hashPos;
       }
     }
 
-    return find_recurse(node, hash, key);
+    assert(hashPos > startPos);
+
+    return find_recurse(node, hash, hashPos, key);
   }
 
-  const HighsHashTableEntry<K,V>* find_common_recurse(NodePtr n1, NodePtr n2) const {
+  const HighsHashTableEntry<K, V>* find_common_recurse(NodePtr n1, NodePtr n2,
+                                                       int hashPos) const {
     if (n1.getType() > n2.getType()) std::swap(n1, n2);
 
     switch (n1.getType()) {
@@ -550,7 +614,7 @@ class HighsHashTree {
         return nullptr;
       case kSingleLeaf: {
         SingleLeaf* leaf = n1.getSingleLeaf();
-        if(find_recurse(n2, leaf->hash, leaf->entry.key()))
+        if (find_recurse(n2, leaf->hash, hashPos, leaf->entry.key()))
           return &leaf->entry;
         return nullptr;
       }
@@ -558,7 +622,8 @@ class HighsHashTree {
         MultiLeaf* leaf = n1.getMultiLeaf();
         ListNode* iter = &leaf->head;
         do {
-          if (find_recurse(n2, leaf->hash, iter->entry.key())) return &iter->entry;
+          if (find_recurse(n2, leaf->hash, hashPos, iter->entry.key()))
+            return &iter->entry;
           iter = iter->next;
         } while (iter != nullptr);
         return nullptr;
@@ -569,41 +634,34 @@ class HighsHashTree {
         if (n2.getType() == kForwardingNode) {
           ForwardingNode* forward2 = n2.getForwardingNode();
 
-          if (forward->numLevels > forward2->numLevels)
+          if (forward->targetLevel > forward2->targetLevel)
             std::swap(forward, forward2);
 
-          uint64_t mask = (uint64_t{1} << (6 * forward->numLevels)) - 1;
+          if (get_first_n_hash_chunks(forward->hash, forward->targetLevel) !=
+              get_first_n_hash_chunks(forward2->hash, forward->targetLevel))
+            return nullptr;
 
-          if ((forward->hash & mask) != (forward2->hash & mask)) return nullptr;
-
-          if (forward2->numLevels == forward->numLevels) {
-            return find_common_recurse(forward->targetNode,
-                                       forward2->targetNode);
-          }
-
-          ForwardingNode tmpForward = *forward2;
-          tmpForward.numLevels -= forward->numLevels;
-          tmpForward.hash = tmpForward.hash >> (6 * forward->numLevels);
-
-          return find_common_recurse(forward->targetNode, &tmpForward);
+          return find_common_recurse(
+              forward->targetNode,
+              forward2->targetLevel == forward->targetLevel
+                  ? forward2->targetNode
+                  : n2,
+              forward->targetLevel);
         }
 
         assert(n2.getType() == kBranchNode);
 
         BranchNode* branch = n2.getBranchNode();
-        int bitPos = forward->hash & 63;
-        uint64_t mask = branch->occupation >> bitPos;
-        if ((mask & 1) == 0) return nullptr;
-        int location = HighsHashHelpers::popcnt(mask) - 1;
-        if (forward->numLevels == 1)
-          return find_common_recurse(forward->targetNode,
-                                     branch->child[location]);
+        if (!branch->test_occupation(get_hash_chunk(forward->hash, hashPos)))
+          return nullptr;
+        int location =
+            branch->get_child_position(get_hash_chunk(forward->hash, hashPos)) -
+            1;
 
-        ForwardingNode tmpForward = *forward;
-        --tmpForward.numLevels;
-        tmpForward.hash = tmpForward.hash >> 6;
-
-        return find_common_recurse(&tmpForward, branch->child[location]);
+        ++hashPos;
+        return find_common_recurse(
+            forward->targetLevel == hashPos ? forward->targetNode : n1,
+            branch->child[location], hashPos);
       }
       case kBranchNode: {
         BranchNode* branch1 = n1.getBranchNode();
@@ -621,13 +679,12 @@ class HighsHashTree {
 
           assert(((matchMask >> pos) & 1) == 0);
 
-          int location1 =
-              HighsHashHelpers::popcnt(branch1->occupation >> pos) - 1;
-          int location2 =
-              HighsHashHelpers::popcnt(branch2->occupation >> pos) - 1;
+          int location1 = branch1->get_child_position(pos) - 1;
+          int location2 = branch2->get_child_position(pos) - 1;
 
-          const HighsHashTableEntry<K,V>* match = find_common_recurse(
-              branch1->child[location1], branch2->child[location2]);
+          const HighsHashTableEntry<K, V>* match =
+              find_common_recurse(branch1->child[location1],
+                                  branch2->child[location2], hashPos + 1);
           if (match != nullptr) return match;
         }
 
@@ -656,16 +713,16 @@ class HighsHashTree {
       case kForwardingNode: {
         ForwardingNode* forward = node.getForwardingNode();
         destroy_recurse(forward->targetNode);
-        delete forward;
+        destroyInnerNode(forward);
         break;
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int size = HighsHashHelpers::popcnt(branch->occupation);
+        int size = branch->get_num_children();
 
         for (int i = 0; i < size; ++i) destroy_recurse(branch->child[i]);
 
-        ::operator delete(branch);
+        destroyInnerNode(branch);
       }
     }
   }
@@ -696,9 +753,9 @@ class HighsHashTree {
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int size = HighsHashHelpers::popcnt(branch->occupation);
-        BranchNode* newBranch = (BranchNode*)::operator new(
-            sizeof(BranchNode) + (size - 1) * sizeof(NodePtr));
+        int size = branch->get_num_children();
+        BranchNode* newBranch =
+            (BranchNode*)::operator new(getBranchNodeSize(size));
         newBranch->occupation = branch->occupation;
         for (int i = 0; i < size; ++i)
           newBranch->child[i] = copy_recurse(branch->child[i]);
@@ -712,7 +769,6 @@ class HighsHashTree {
   bool for_each_recurse(NodePtr node, F&& f) const {
     switch (node.getType()) {
       case kEmpty:
-        //abort();
         break;
       case kSingleLeaf: {
         SingleLeaf* leaf = node.getSingleLeaf();
@@ -734,7 +790,7 @@ class HighsHashTree {
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int size = HighsHashHelpers::popcnt(branch->occupation);
+        int size = branch->get_num_children();
 
         for (int i = 0; i < size; ++i)
           if (for_each_recurse(branch->child[i], f)) return true;
@@ -749,29 +805,29 @@ class HighsHashTree {
   bool insert(Args&&... args) {
     HighsHashTableEntry<K, V> entry(std::forward<Args>(args)...);
     uint64_t hash = HighsHashHelpers::hash(entry.key());
-    return insert_recurse(&root, hash, entry);
+    return insert_recurse(&root, hash, 0, entry);
   }
 
   void erase(const K& key) {
     uint64_t hash = HighsHashHelpers::hash(key);
 
-    erase_recurse(&root, hash, key);
+    erase_recurse(&root, hash, 0, key);
   }
 
   bool contains(const K& key) const {
     uint64_t hash = HighsHashHelpers::hash(key);
-
-    return find_recurse(root, hash, key) != nullptr;
+    return find_recurse(root, hash, 0, key) != nullptr;
   }
 
   const ValueType* find(const K& key) const {
     uint64_t hash = HighsHashHelpers::hash(key);
 
-    return find_recurse(root, hash, key);
+    return find_recurse(root, hash, 0, key);
   }
 
-  const HighsHashTableEntry<K,V>* find_common(const HighsHashTree<K, V>& other) const {
-    return find_common_recurse(root, other.root);
+  const HighsHashTableEntry<K, V>* find_common(
+      const HighsHashTree<K, V>& other) const {
+    return find_common_recurse(root, other.root, 0);
   }
 
   bool empty() const { return root.getType() == kEmpty; }
