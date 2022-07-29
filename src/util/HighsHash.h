@@ -784,6 +784,7 @@ struct HighsHashTableEntry {
   V value_;
 
  public:
+  HighsHashTableEntry() = default;
   template <typename K_>
   HighsHashTableEntry(K_&& k) : key_(k), value_() {}
   template <typename K_, typename V_>

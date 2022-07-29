@@ -23,61 +23,202 @@ class HighsHashTree {
   using Entry = HighsHashTableEntry<K, V>;
   using ValueType = typename std::remove_reference<
       decltype(reinterpret_cast<Entry*>(0x1)->value())>::type;
+
   enum Type {
     kEmpty = 0,
-    kSingleLeaf = 1,
-    kMultiLeaf = 2,
-    kForwardingNode = 3,
-    kBranchNode = 4,
+    kListLeaf = 1,
+    kInnerLeafSizeClass1 = 2,
+    kInnerLeafSizeClass2 = 3,
+    kInnerLeafSizeClass3 = 4,
+    kInnerLeafSizeClass4 = 5,
+    kBranchNode = 6,
   };
 
   enum Constants {
     kBitsPerLevel = 6,
     kBranchFactor = 1 << kBitsPerLevel,
+    kMaxDepth = (64 + (kBitsPerLevel - 1)) / kBitsPerLevel,
+    kMinLeafSize = 6,
+    kLeafBurstThreshold = 30,
   };
 
-  struct SingleLeaf {
-    uint64_t hash;
-    HighsHashTableEntry<K, V> entry;
+  static uint8_t get_hash_chunk(uint64_t hash, int pos) {
+    return (hash >> (pos * kBitsPerLevel)) & (kBranchFactor - 1);
+  }
 
-    template <typename... Args>
-    SingleLeaf(uint64_t hash, Args&&... args)
-        : hash(hash), entry(std::forward<Args>(args)...) {}
+  static void set_hash_chunk(uint64_t& hash, uint64_t chunk, int chunkPos) {
+    const int shiftAmount = chunkPos * kBitsPerLevel;
+    chunk ^= (hash >> shiftAmount) & (kBranchFactor - 1);
+    hash ^= chunk << shiftAmount;
+  }
+
+  static uint64_t get_first_n_hash_chunks(uint64_t hash, int n) {
+    return hash & ((uint64_t{1} << (n * kBitsPerLevel)) - 1);
+  }
+
+  struct Occupation {
+    uint64_t occupation;
+
+    Occupation(uint64_t occupation) : occupation(occupation) {}
+    operator uint64_t() const { return occupation; }
+
+    void set(uint8_t pos) { occupation |= uint64_t{1} << (pos); }
+
+    void flip(uint8_t pos) { occupation ^= uint64_t{1} << (pos); }
+
+    bool test(uint8_t pos) const { return occupation & (uint64_t{1} << pos); }
+
+    int num_set_until(uint8_t pos) const {
+      return HighsHashHelpers::popcnt(occupation >> pos);
+    }
+
+    int num_set_after(uint8_t pos) const {
+      return HighsHashHelpers::popcnt(occupation << (63 - (pos)));
+    }
+
+    int num_set() const { return HighsHashHelpers::popcnt(occupation); }
+  };
+
+  template <int kSizeClass>
+  struct InnerLeaf {
+    static constexpr int capacity() {
+      return kMinLeafSize +
+             (kSizeClass - 1) * (kLeafBurstThreshold - kMinLeafSize) / 3;
+    }
+    // the leaf stores entries the same way as inner nodes
+    // but handles collisions on the occupation flag like a
+    // linear probing hash table.
+    // Since the occupation flag has 64 bits and we only use
+    // 15 collisions should be rare and most often we won't need
+    // to do a linear scan and key comparisons at all
+    Occupation occupation;
+    int size;
+
+    HighsHashTableEntry<K, V> entries[capacity()];
+
+    InnerLeaf() : occupation(0), size(0) {}
+
+    int get_num_entries() const { return size; }
+
+    bool insert_entry(uint64_t hash, int hashPos,
+                      HighsHashTableEntry<K, V>& entry) {
+      assert(size < capacity());
+      uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+
+      if (occupation.test(hashChunk)) {
+        // check if item already contained first
+        int i = 0;
+        while (true) {
+          if (entry.key() <= entries[i].key()) break;
+          if (++i == size) {
+            entries[i] = std::move(entry);
+            ++size;
+            return true;
+          }
+        }
+
+        if (entry.key() == entries[i].key()) return false;
+
+        std::move_backward(&entries[i], &entries[size], &entries[size + 1]);
+        entries[i] = std::move(entry);
+        ++size;
+      } else {
+        occupation.set(hashChunk);
+
+        int i = 0;
+        if (size) {
+          do {
+            if (entry.key() < entries[i].key()) break;
+          } while (++i < size);
+
+          std::move_backward(&entries[i], &entries[size], &entries[size + 1]);
+        }
+        entries[i] = std::move(entry);
+        ++size;
+      }
+
+      return true;
+    }
+
+    const ValueType* find_entry(uint64_t hash, int hashPos,
+                                const K& key) const {
+      uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+      if (!occupation.test(hashChunk)) return nullptr;
+
+      int i = 0;
+      while (true) {
+        if (key <= entries[i].key()) break;
+        if (++i == size) return nullptr;
+      }
+
+      if (key == entries[i].key()) return &entries[i].value();
+
+      return nullptr;
+    }
+
+    bool erase_entry(uint64_t hash, int hashPos, const K& key) {
+      uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+      if (!occupation.test(hashChunk)) return false;
+
+      int i = 0;
+      int foundElement = 0;
+      int foundHashChunk = 0;
+      do {
+        uint8_t chunk =
+            get_hash_chunk(HighsHashHelpers::hash(entries[i].key()), hashPos);
+        foundHashChunk += chunk == hashChunk;
+        if (foundHashChunk) {
+          if (foundElement) {
+            entries[i - 1] = std::move(entries[i]);
+          } else
+            foundElement = key == entries[i].key();
+        }
+      } while (++i < size);
+
+      // if there are other elements remaining with the same hash chunk we need
+      // to keep the occupation flag set
+      if (foundElement) {
+        if (foundHashChunk == 1) occupation.flip(hashChunk);
+
+        // reduce size by 1 if the element has been erased
+        size -= 1;
+      }
+
+      return foundElement;
+    }
   };
 
   struct ListNode {
     ListNode* next;
     HighsHashTableEntry<K, V> entry;
-
     ListNode(HighsHashTableEntry<K, V>&& entry)
         : next(nullptr), entry(std::move(entry)) {}
   };
+  struct ListLeaf {
+    ListNode first;
+    int count;
 
-  struct MultiLeaf {
-    uint64_t hash;
-    ListNode head;
-
-    template <typename... Args>
-    MultiLeaf(uint64_t hash, Args&&... args)
-        : hash(hash),
-          head(HighsHashTableEntry<K, V>(std::forward<Args>(args)...)) {}
+    ListLeaf(HighsHashTableEntry<K, V>&& entry)
+        : first(std::move(entry)), count(1) {}
   };
 
   struct BranchNode;
-
-  struct ForwardingNode;
 
   struct NodePtr {
     uintptr_t ptrAndType;
 
     NodePtr() : ptrAndType(kEmpty) {}
     NodePtr(std::nullptr_t) : ptrAndType(kEmpty) {}
-    NodePtr(SingleLeaf* ptr)
-        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kSingleLeaf) {}
-    NodePtr(MultiLeaf* ptr)
-        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kMultiLeaf) {}
-    NodePtr(ForwardingNode* ptr)
-        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kForwardingNode) {}
+    NodePtr(ListLeaf* ptr)
+        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kListLeaf) {}
+    NodePtr(InnerLeaf<1>* ptr)
+        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kInnerLeafSizeClass1) {}
+    NodePtr(InnerLeaf<2>* ptr)
+        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kInnerLeafSizeClass2) {}
+    NodePtr(InnerLeaf<3>* ptr)
+        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kInnerLeafSizeClass3) {}
+    NodePtr(InnerLeaf<4>* ptr)
+        : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kInnerLeafSizeClass4) {}
     NodePtr(BranchNode* ptr)
         : ptrAndType(reinterpret_cast<uintptr_t>(ptr) | kBranchNode) {
       assert(ptr != nullptr);
@@ -85,19 +226,72 @@ class HighsHashTree {
 
     Type getType() const { return Type(ptrAndType & 7u); }
 
-    SingleLeaf* getSingleLeaf() const {
-      assert(getType() == kSingleLeaf);
-      return reinterpret_cast<SingleLeaf*>(ptrAndType & ~uintptr_t{7});
+    int numEntriesEstimate() const {
+      switch (getType()) {
+        case kEmpty:
+          return 0;
+        case kListLeaf:
+          return 1;
+        case kInnerLeafSizeClass1:
+          return InnerLeaf<1>::capacity();
+        case kInnerLeafSizeClass2:
+          return InnerLeaf<2>::capacity();
+        case kInnerLeafSizeClass3:
+          return InnerLeaf<3>::capacity();
+        case kInnerLeafSizeClass4:
+          return InnerLeaf<4>::capacity();
+        case kBranchNode:
+          // something large should be returned so that the number of entries
+          // is estimated above the threshold to merge when the parent checks
+          // its children after deletion
+          return kBranchFactor;
+      }
     }
 
-    MultiLeaf* getMultiLeaf() const {
-      assert(getType() == kMultiLeaf);
-      return reinterpret_cast<MultiLeaf*>(ptrAndType & ~uintptr_t{7});
+    int numEntries() const {
+      switch (getType()) {
+        case kEmpty:
+          return 0;
+        case kListLeaf:
+          return getListLeaf()->count;
+        case kInnerLeafSizeClass1:
+          return getInnerLeafSizeClass1()->size;
+        case kInnerLeafSizeClass2:
+          return getInnerLeafSizeClass2()->size;
+        case kInnerLeafSizeClass3:
+          return getInnerLeafSizeClass3()->size;
+        case kInnerLeafSizeClass4:
+          return getInnerLeafSizeClass4()->size;
+        case kBranchNode:
+          // something large should be returned so that the number of entries
+          // is estimated above the threshold to merge when the parent checks
+          // its children after deletion
+          return kBranchFactor;
+      }
     }
 
-    ForwardingNode* getForwardingNode() const {
-      assert(getType() == kForwardingNode);
-      return reinterpret_cast<ForwardingNode*>(ptrAndType & ~uintptr_t{7});
+    ListLeaf* getListLeaf() const {
+      assert(getType() == kListLeaf);
+      return reinterpret_cast<ListLeaf*>(ptrAndType & ~uintptr_t{7});
+    }
+
+    InnerLeaf<1>* getInnerLeafSizeClass1() const {
+      assert(getType() == kInnerLeafSizeClass1);
+      return reinterpret_cast<InnerLeaf<1>*>(ptrAndType & ~uintptr_t{7});
+    }
+    InnerLeaf<2>* getInnerLeafSizeClass2() const {
+      assert(getType() == kInnerLeafSizeClass2);
+      return reinterpret_cast<InnerLeaf<2>*>(ptrAndType & ~uintptr_t{7});
+    }
+
+    InnerLeaf<3>* getInnerLeafSizeClass3() const {
+      assert(getType() == kInnerLeafSizeClass3);
+      return reinterpret_cast<InnerLeaf<3>*>(ptrAndType & ~uintptr_t{7});
+    }
+
+    InnerLeaf<4>* getInnerLeafSizeClass4() const {
+      assert(getType() == kInnerLeafSizeClass4);
+      return reinterpret_cast<InnerLeaf<4>*>(ptrAndType & ~uintptr_t{7});
     }
 
     BranchNode* getBranchNode() const {
@@ -106,37 +300,9 @@ class HighsHashTree {
     }
   };
 
-  // node type to skip ahead several levels to avoid needing to create a longer
-  // chain of branching nodes between levels where the hash bits collide
-  struct ForwardingNode {
-    NodePtr targetNode;
-    uint64_t hash;
-    int targetLevel;
-  };
-
   struct BranchNode {
-    uint64_t occupation;
+    Occupation occupation;
     NodePtr child[1];
-
-    void set_occupation(uint8_t pos) { occupation |= uint64_t{1} << (pos); }
-
-    void flip_occupation(uint8_t pos) { occupation ^= uint64_t{1} << (pos); }
-
-    bool test_occupation(uint8_t pos) const {
-      return occupation & (uint64_t{1} << pos);
-    }
-
-    int get_child_position(uint8_t pos) const {
-      return HighsHashHelpers::popcnt(occupation >> pos);
-    }
-
-    int get_num_children_after(uint8_t pos) const {
-      return HighsHashHelpers::popcnt(occupation << (63 - (pos)));
-    }
-
-    int get_num_children() const {
-      return HighsHashHelpers::popcnt(occupation);
-    }
   };
 
   // allocate branch nodes in multiples of 64 bytes to reduce allocator stress
@@ -146,13 +312,6 @@ class HighsHashTree {
            ~63;
   };
 
-  static ForwardingNode* createForwardingNode(uint64_t hash, int targetLevel) {
-    ForwardingNode* forward =
-        (ForwardingNode*)::operator new(getBranchNodeSize(2));
-    forward->hash = hash;
-    forward->targetLevel = targetLevel;
-    return forward;
-  }
   static BranchNode* createBranchingNode(int numChilds) {
     BranchNode* branch =
         (BranchNode*)::operator new(getBranchNodeSize(numChilds));
@@ -160,31 +319,14 @@ class HighsHashTree {
     return branch;
   }
 
-  static BranchNode* convertForwardingNodeToBinaryBranch(void* forward) {
-    BranchNode* branch = (BranchNode*)forward;
-    branch->occupation = 0;
-    return branch;
-  }
-
-  static ForwardingNode* convertUnaryBranchToForwardingNode(
-      void* branch, NodePtr singleChild, uint64_t hash, int branchNodeLevel) {
-    ForwardingNode* forward = (ForwardingNode*)branch;
-
-    forward->hash = hash;
-    forward->targetNode = singleChild;
-    forward->targetLevel = branchNodeLevel;
-
-    return forward;
-  }
-
-  static void destroyInnerNode(void* innerNode) {
+  static void destroyBranchingNode(void* innerNode) {
     ::operator delete(innerNode);
   }
 
   static BranchNode* addChildToBranchNode(BranchNode* branch, uint8_t hashValue,
                                           int location) {
-    int rightChilds = branch->get_num_children_after(hashValue);
-    assert(rightChilds + location == branch->get_num_children());
+    int rightChilds = branch->occupation.num_set_after(hashValue);
+    assert(rightChilds + location == branch->occupation.num_set());
 
     size_t newSize = getBranchNodeSize(location + rightChilds + 1);
     size_t rightSize = rightChilds * sizeof(NodePtr);
@@ -206,60 +348,192 @@ class HighsHashTree {
     memcpy(&newBranch->child[location + 1], &branch->child[location],
            rightSize);
 
-    destroyInnerNode(branch);
+    destroyBranchingNode(branch);
 
     return newBranch;
+  }
+
+  template <int SizeClass1, int SizeClass2>
+  static void mergeIntoLeaf(InnerLeaf<SizeClass1>* leaf,
+                            InnerLeaf<SizeClass2>* mergeLeaf, int hashPos) {
+    for (int i = 0; i < mergeLeaf->size; ++i)
+      leaf->insert_entry(HighsHashHelpers::hash(mergeLeaf->entries[i].key()),
+                         hashPos, mergeLeaf->entries[i]);
+  }
+
+  template <int SizeClass>
+  static void mergeIntoLeaf(InnerLeaf<SizeClass>* leaf, int hashPos,
+                            NodePtr mergeNode) {
+    switch (mergeNode.getType()) {
+      case kListLeaf: {
+        ListLeaf* mergeLeaf = mergeNode.getListLeaf();
+        leaf->insert_entry(HighsHashHelpers::hash(mergeLeaf->first.entry.key()),
+                           hashPos, mergeLeaf->first.entry);
+        ListNode* iter = mergeLeaf->first.next;
+        while (iter != nullptr) {
+          ListNode* next = iter->next;
+          leaf->insert_entry(HighsHashHelpers::hash(iter->entry.key()), hashPos,
+                             iter->entry);
+          delete iter;
+          iter = next;
+        }
+        break;
+      }
+      case kInnerLeafSizeClass1:
+        mergeIntoLeaf(leaf, mergeNode.getInnerLeafSizeClass1(), hashPos);
+        delete mergeNode.getInnerLeafSizeClass1();
+        break;
+      case kInnerLeafSizeClass2:
+        mergeIntoLeaf(leaf, mergeNode.getInnerLeafSizeClass2(), hashPos);
+        delete mergeNode.getInnerLeafSizeClass2();
+        break;
+      case kInnerLeafSizeClass3:
+        mergeIntoLeaf(leaf, mergeNode.getInnerLeafSizeClass3(), hashPos);
+        delete mergeNode.getInnerLeafSizeClass3();
+        break;
+      case kInnerLeafSizeClass4:
+        mergeIntoLeaf(leaf, mergeNode.getInnerLeafSizeClass4(), hashPos);
+        delete mergeNode.getInnerLeafSizeClass4();
+    }
+  }
+
+  template <int SizeClass1, int SizeClass2>
+  static HighsHashTableEntry<K, V>* findCommonInLeaf(
+      InnerLeaf<SizeClass1>* leaf1, InnerLeaf<SizeClass2>* leaf2) {
+    if ((leaf1->occupation & leaf2->occupation) == 0) return nullptr;
+
+    if (leaf1->entries[leaf1->size - 1].key() < leaf2->entries[0].key() ||
+        leaf2->entries[leaf2->size - 1].key() < leaf1->entries[0].key())
+      return nullptr;
+
+    int i = 0;
+    int j = 0;
+
+    do {
+      if (leaf1->entries[i].key() < leaf2->entries[j].key())
+        ++i;
+      else if (leaf2->entries[j].key() < leaf1->entries[i].key())
+        ++j;
+      else
+        return &leaf1->entries[i];
+    } while (i < leaf1->size && j < leaf2->size);
+
+    return nullptr;
+  }
+
+  template <int SizeClass>
+  static HighsHashTableEntry<K, V>* findCommonInLeaf(InnerLeaf<SizeClass>* leaf,
+                                                     NodePtr n2, int hashPos) {
+    switch (n2.getType()) {
+      case kInnerLeafSizeClass1:
+        return findCommonInLeaf(leaf, n2.getInnerLeafSizeClass1());
+      case kInnerLeafSizeClass2:
+        return findCommonInLeaf(leaf, n2.getInnerLeafSizeClass2());
+      case kInnerLeafSizeClass3:
+        return findCommonInLeaf(leaf, n2.getInnerLeafSizeClass3());
+      case kInnerLeafSizeClass4:
+        return findCommonInLeaf(leaf, n2.getInnerLeafSizeClass4());
+      case kBranchNode: {
+        for (int i = 0; i < leaf->size; ++i) {
+          if (find_recurse(n2, HighsHashHelpers::hash(leaf->entries[i].key()),
+                           hashPos, leaf->entries[i].key()))
+            return &leaf->entries[i];
+        }
+      }
+    }
+
+    return nullptr;
   }
 
   static NodePtr removeChildFromBranchNode(BranchNode* branch, int location,
                                            uint64_t hash, int hashPos) {
     NodePtr newNode;
-    int newNumChild = branch->get_num_children();
+    int newNumChild = branch->occupation.num_set();
 
-    if (newNumChild == 1) {
-      // there is one other entry so its index must be 1-location
-      int pos = 1 - location;
-      switch (branch->child[pos].getType()) {
-        case kSingleLeaf:
-        case kMultiLeaf:
-        case kForwardingNode:
-          newNode = branch->child[pos];
-          destroyInnerNode(branch);
-          break;
-        case kBranchNode: {
-          uint8_t childHash = HighsHashHelpers::log2i(branch->occupation);
+    // first check if we might be able to merge all children into one new leaf
+    // based on the node numbers and assuming all of them might be in the
+    // smallest size class
+    if (newNumChild * InnerLeaf<1>::capacity() <= kLeafBurstThreshold) {
+      // since we have a good chance of merging we now check the actual size
+      // classes to see if that yields a number of entries at most the burst
+      // threshold
+      int childEntries = 0;
+      for (int i = 0; i <= newNumChild; ++i) {
+        childEntries += branch->child[i].numEntriesEstimate();
+        if (childEntries > kLeafBurstThreshold) break;
+      }
 
-          assert(branch->get_child_position(childHash) == 1);
-          assert(branch->test_occupation(childHash));
+      if (childEntries < kLeafBurstThreshold) {
+        // create a new merged inner leaf node containing all entries of
+        // children first recompute the number of entries, but this time access
+        // each child to get the actual number of entries needed and determine
+        // this nodes size class since before we estimated the number of child
+        // entries from the capacities of our child leaf node types which are
+        // stored in the branch nodes pointers directly and avoid unnecessary
+        // accesses of nodes that are not in cache.
+        childEntries = 0;
+        for (int i = 0; i <= newNumChild; ++i)
+          childEntries += branch->child[i].numEntries();
 
-          ForwardingNode* forward = convertUnaryBranchToForwardingNode(
-              branch, branch->child[pos], hash, hashPos + 1);
+        // check again if we exceed due to the extremely unlikely case
+        // of having less than 5 list nodes with together more than 30 entries
+        // as list nodes are only created in the last depth level
+        if (childEntries < kLeafBurstThreshold) {
+          switch ((childEntries + 1) / 8) {
+            case 0: {
+              InnerLeaf<1>* newLeafSize1 = new InnerLeaf<1>;
+              newNode = newLeafSize1;
+              for (int i = 0; i <= newNumChild; ++i)
+                mergeIntoLeaf(newLeafSize1, hashPos, branch->child[i]);
+              break;
+            }
+            case 1: {
+              InnerLeaf<2>* newLeafSize2 = new InnerLeaf<2>;
+              newNode = newLeafSize2;
+              for (int i = 0; i <= newNumChild; ++i)
+                mergeIntoLeaf(newLeafSize2, hashPos, branch->child[i]);
+              break;
+            }
+            case 2: {
+              InnerLeaf<3>* newLeafSize3 = new InnerLeaf<3>;
+              newNode = newLeafSize3;
+              for (int i = 0; i <= newNumChild; ++i)
+                mergeIntoLeaf(newLeafSize3, hashPos, branch->child[i]);
+              break;
+            }
+            case 3: {
+              InnerLeaf<4>* newLeafSize4 = new InnerLeaf<4>;
+              newNode = newLeafSize4;
+              for (int i = 0; i <= newNumChild; ++i)
+                mergeIntoLeaf(newLeafSize4, hashPos, branch->child[i]);
+            }
+          }
 
-          set_hash_chunk(forward->hash, childHash, hashPos);
-          newNode = forward;
+          destroyBranchingNode(branch);
+          return newNode;
         }
       }
+    }
+
+    size_t newSize = getBranchNodeSize(newNumChild);
+    size_t rightSize = (newNumChild - location) * sizeof(NodePtr);
+    if (newSize == getBranchNodeSize(newNumChild + 1)) {
+      // allocated size class is the same, so we do not allocate a new node
+      memmove(&branch->child[location], &branch->child[location + 1],
+              rightSize);
+      newNode = branch;
     } else {
-      size_t newSize = getBranchNodeSize(newNumChild);
-      size_t rightSize = (newNumChild - location) * sizeof(NodePtr);
-      if (newSize == getBranchNodeSize(newNumChild + 1)) {
-        // allocated size class is the same, so we do not allocate a new node
-        memmove(&branch->child[location], &branch->child[location + 1],
-                rightSize);
-        newNode = branch;
-      } else {
-        // allocated size class changed, so we allocate a smaller branch node
-        BranchNode* compressedBranch = (BranchNode*)::operator new(newSize);
-        newNode = compressedBranch;
+      // allocated size class changed, so we allocate a smaller branch node
+      BranchNode* compressedBranch = (BranchNode*)::operator new(newSize);
+      newNode = compressedBranch;
 
-        size_t leftSize =
-            offsetof(BranchNode, child) + location * sizeof(NodePtr);
-        memcpy(compressedBranch, branch, leftSize);
-        memcpy(&compressedBranch->child[location], &branch->child[location + 1],
-               rightSize);
+      size_t leftSize =
+          offsetof(BranchNode, child) + location * sizeof(NodePtr);
+      memcpy(compressedBranch, branch, leftSize);
+      memcpy(&compressedBranch->child[location], &branch->child[location + 1],
+             rightSize);
 
-        destroyInnerNode(branch);
-      }
+      destroyBranchingNode(branch);
     }
 
     return newNode;
@@ -267,183 +541,205 @@ class HighsHashTree {
 
   NodePtr root;
 
-  static uint8_t get_hash_chunk(uint64_t hash, int pos) {
-    return (hash >> (pos * kBitsPerLevel)) & (kBranchFactor - 1);
-  }
+  template <int SizeClass>
+  bool insert_into_leaf(NodePtr* insertNode, InnerLeaf<SizeClass>* leaf,
+                        uint64_t hash, int hashPos,
+                        HighsHashTableEntry<K, V>& entry) {
+    if (leaf->size == InnerLeaf<SizeClass>::capacity()) {
+      if (leaf->find_entry(hash, hashPos, entry.key())) return false;
 
-  static void set_hash_chunk(uint64_t& hash, uint64_t chunk, int chunkPos) {
-    const int shiftAmount = chunkPos * kBitsPerLevel;
-    chunk ^= (hash >> shiftAmount) & (kBranchFactor - 1);
-    hash ^= chunk << shiftAmount;
-  }
+      InnerLeaf<SizeClass + 1>* newLeaf = new InnerLeaf<SizeClass + 1>;
+      mergeIntoLeaf(newLeaf, leaf, hashPos);
+      *insertNode = newLeaf;
+      delete leaf;
+      return newLeaf->insert_entry(hash, hashPos, entry);
+    }
 
-  static uint64_t get_first_n_hash_chunks(uint64_t hash, int n) {
-    return hash & ((uint64_t{1} << (n * kBitsPerLevel)) - 1);
+    return leaf->insert_entry(hash, hashPos, entry);
   }
 
   bool insert_recurse(NodePtr* insertNode, uint64_t hash, int hashPos,
                       HighsHashTableEntry<K, V>& entry) {
     switch (insertNode->getType()) {
       case kEmpty: {
-        *insertNode = new SingleLeaf(hash, std::move(entry));
+        if (hashPos == kMaxDepth) {
+          *insertNode = new ListLeaf(std::move(entry));
+        } else {
+          InnerLeaf<1>* leaf = new InnerLeaf<1>;
+          *insertNode = leaf;
+          leaf->insert_entry(hash, hashPos, entry);
+        }
         return true;
       }
-      case kSingleLeaf: {
-        SingleLeaf* leaf = insertNode->getSingleLeaf();
-        if (leaf->hash == hash) {
+      case kListLeaf: {
+        ListLeaf* leaf = insertNode->getListLeaf();
+        ListNode* iter = &leaf->first;
+        while (true) {
           // check for existing key
-          if (leaf->entry.key() == entry.key()) return false;
-          // collision, turn single leaf into multi leaf
-          MultiLeaf* newLeaf = new MultiLeaf(hash, std::move(entry));
-          newLeaf->head.next = new ListNode(std::move(leaf->entry));
-          *insertNode = newLeaf;
-          // delete old leaf
+          if (iter->entry.key() == entry.key()) return false;
+
+          if (iter->next == nullptr) {
+            // reached the end of the list and key is not duplicate, so insert
+            iter->next = new ListNode(std::move(entry));
+            ++leaf->count;
+            return true;
+          }
+          iter = iter->next;
+        }
+
+        break;
+      }
+      case kInnerLeafSizeClass1:
+        return insert_into_leaf(insertNode,
+                                insertNode->getInnerLeafSizeClass1(), hash,
+                                hashPos, entry);
+        break;
+      case kInnerLeafSizeClass2:
+        return insert_into_leaf(insertNode,
+                                insertNode->getInnerLeafSizeClass2(), hash,
+                                hashPos, entry);
+        break;
+      case kInnerLeafSizeClass3:
+        return insert_into_leaf(insertNode,
+                                insertNode->getInnerLeafSizeClass3(), hash,
+                                hashPos, entry);
+        break;
+      case kInnerLeafSizeClass4: {
+        InnerLeaf<4>* leaf = insertNode->getInnerLeafSizeClass4();
+        if (leaf->size < InnerLeaf<4>::capacity())
+          return leaf->insert_entry(hash, hashPos, entry);
+
+        if (leaf->find_entry(hash, hashPos, entry.key())) return false;
+        Occupation occupation = leaf->occupation;
+
+        uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+        occupation.set(hashChunk);
+
+        int branchSize = occupation.num_set();
+
+        BranchNode* branch = createBranchingNode(branchSize);
+        *insertNode = branch;
+        branch->occupation = occupation;
+
+        if (hashPos + 1 == kMaxDepth) {
+          for (int i = 0; i < branchSize; ++i) branch->child[i] = nullptr;
+
+          int pos = occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
+          branch->child[pos] = new ListLeaf(std::move(entry));
+
+          for (int i = 0; i < leaf->size; ++i) {
+            if (branch->child[pos].getType() == kEmpty)
+              branch->child[pos] = new ListLeaf(std::move(leaf->entries[i]));
+            else {
+              ListLeaf* listLeaf = branch->child[pos].getListLeaf();
+              ListNode* newNode = new ListNode(std::move(listLeaf->first));
+              listLeaf->first.next = newNode;
+              listLeaf->first.entry = std::move(std::move(leaf->entries[i]));
+              ++listLeaf->count;
+            }
+          }
+
           delete leaf;
+
           return true;
         }
 
-        int diffPos = hashPos;
-        while (get_hash_chunk(hash, diffPos) ==
-               get_hash_chunk(leaf->hash, diffPos))
-          ++diffPos;
+        if (branchSize > 1) {
+          uint64_t leafHashes[InnerLeaf<4>::capacity()];
+          for (int i = 0; i < leaf->size; ++i)
+            leafHashes[i] = HighsHashHelpers::hash(leaf->entries[i].key());
 
-        if (diffPos > hashPos) {
-          ForwardingNode* forward = createForwardingNode(leaf->hash, diffPos);
-          *insertNode = forward;
-          insertNode = &forward->targetNode;
-          hashPos = diffPos;
-        }
+          // maxsize in one bucket = number of items - (num buckets-1)
+          // since each bucket has at least 1 item the largest one can only
+          // have all remaining ones After adding the item: If it does not
+          // collid
+          int maxEntriesPerLeaf = 2 + leaf->size - branchSize;
 
-        BranchNode* newBranch = createBranchingNode(2);
-        newBranch->set_occupation(get_hash_chunk(hash, hashPos));
-        newBranch->set_occupation(get_hash_chunk(leaf->hash, hashPos));
+          if (maxEntriesPerLeaf <= InnerLeaf<1>::capacity()) {
+            // all items can go into the smalles leaf size
+            for (int i = 0; i < branchSize; ++i)
+              branch->child[i] = new InnerLeaf<1>;
 
-        int pos =
-            get_hash_chunk(hash, hashPos) < get_hash_chunk(leaf->hash, hashPos);
-        newBranch->child[pos] = nullptr;
-        newBranch->child[1 - pos] = leaf;
-
-        *insertNode = newBranch;
-        insertNode = &newBranch->child[pos];
-        ++hashPos;
-        break;
-      }
-      case kMultiLeaf: {
-        MultiLeaf* leaf = insertNode->getMultiLeaf();
-        if (leaf->hash == hash) {
-          ListNode* iter = &leaf->head;
-
-          while (true) {
-            // check for existing key
-            if (iter->entry.key() == entry.key()) return false;
-
-            if (iter->next == nullptr) {
-              // reached the end of the list and key is not duplicate, so insert
-              iter->next = new ListNode(std::move(entry));
-              return true;
+            int pos =
+                occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
+            branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+                hash, hashPos + 1, entry);
+            for (int i = 0; i < leaf->size; ++i) {
+              pos = occupation.num_set_until(
+                        get_hash_chunk(leafHashes[i], hashPos)) -
+                    1;
+              branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+                  leafHashes[i], hashPos + 1, leaf->entries[i]);
             }
-            iter = iter->next;
-          }
-        }
 
-        int diffPos = hashPos;
-        while (get_hash_chunk(hash, diffPos) ==
-               get_hash_chunk(leaf->hash, diffPos))
-          ++diffPos;
-
-        if (diffPos > hashPos) {
-          ForwardingNode* forward = createForwardingNode(leaf->hash, diffPos);
-          *insertNode = forward;
-          insertNode = &forward->targetNode;
-          hashPos = diffPos;
-        }
-
-        BranchNode* newBranch = createBranchingNode(2);
-        newBranch->set_occupation(get_hash_chunk(hash, hashPos));
-        newBranch->set_occupation(get_hash_chunk(leaf->hash, hashPos));
-
-        int pos =
-            get_hash_chunk(hash, hashPos) < get_hash_chunk(leaf->hash, hashPos);
-        newBranch->child[pos] = nullptr;
-        newBranch->child[1 - pos] = leaf;
-
-        *insertNode = newBranch;
-        insertNode = &newBranch->child[pos];
-        ++hashPos;
-        break;
-      }
-      case kForwardingNode: {
-        ForwardingNode* forward = insertNode->getForwardingNode();
-
-        int diffPos = hashPos;
-        do {
-          if (get_hash_chunk(hash, diffPos) !=
-              get_hash_chunk(forward->hash, diffPos))
-            break;
-          ++diffPos;
-        } while (diffPos < forward->targetLevel);
-
-        if (diffPos == hashPos) {
-          // we have an immediate mismatch, which means we create a new
-          // branching node in front of the forwarding node and reduce the
-          // forwarding nodes number of levels by one. If the forwarding node
-          // only has a single level it's targetNode becomes a direct child of
-          // the new branching node and the forwarding node is deleted.
-
-          BranchNode* branch;
-          uint8_t forwardDiffHash = get_hash_chunk(forward->hash, diffPos);
-          int pos = get_hash_chunk(hash, diffPos) < forwardDiffHash;
-
-          if (forward->targetLevel - diffPos == 1) {
-            NodePtr targetNode = forward->targetNode;
-            // forwarding node can be converted to branch node without new
-            // allocation
-            branch = convertForwardingNodeToBinaryBranch(forward);
-            branch->child[1 - pos] = targetNode;
+            delete leaf;
+            return true;
           } else {
-            branch = createBranchingNode(2);
-            branch->child[1 - pos] = forward;
+            // there are many collisions, determine the exact sizes first
+            int8_t sizes[InnerLeaf<4>::capacity() + 1];
+            memset(sizes, 0, branchSize);
+            sizes[occupation.num_set_until(hashChunk) - 1] += 1;
+            for (int i = 0; i < leaf->size; ++i) {
+              int pos = occupation.num_set_until(
+                            get_hash_chunk(leafHashes[i], hashPos)) -
+                        1;
+              sizes[pos] += 1;
+            }
+
+            for (int i = 0; i < branchSize; ++i) {
+              switch ((sizes[i] + 1) / 8) {
+                case 0:
+                  branch->child[i] = new InnerLeaf<1>;
+                  break;
+                case 1:
+                  branch->child[i] = new InnerLeaf<2>;
+                  break;
+                case 2:
+                  branch->child[i] = new InnerLeaf<3>;
+                  break;
+                case 3:
+                  branch->child[i] = new InnerLeaf<4>;
+                  break;
+              }
+            }
+
+            for (int i = 0; i < leaf->size; ++i) {
+              int pos = occupation.num_set_until(
+                            get_hash_chunk(leafHashes[i], hashPos)) -
+                        1;
+
+              switch (branch->child[pos].getType()) {
+                case kInnerLeafSizeClass1:
+                  branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+                      leafHashes[i], hashPos + 1, leaf->entries[i]);
+                  break;
+                case kInnerLeafSizeClass2:
+                  branch->child[pos].getInnerLeafSizeClass2()->insert_entry(
+                      leafHashes[i], hashPos + 1, leaf->entries[i]);
+                  break;
+                case kInnerLeafSizeClass3:
+                  branch->child[pos].getInnerLeafSizeClass3()->insert_entry(
+                      leafHashes[i], hashPos + 1, leaf->entries[i]);
+                  break;
+                case kInnerLeafSizeClass4:
+                  branch->child[pos].getInnerLeafSizeClass4()->insert_entry(
+                      leafHashes[i], hashPos + 1, leaf->entries[i]);
+              }
+            }
           }
 
-          branch->set_occupation(forwardDiffHash);
-          branch->set_occupation(get_hash_chunk(hash, diffPos));
-          branch->child[pos] = nullptr;
-          *insertNode = branch;
+          delete leaf;
+
+          int pos = occupation.num_set_until(hashChunk) - 1;
           insertNode = &branch->child[pos];
-          hashPos = diffPos + 1;
-        } else if (diffPos == forward->targetLevel) {
-          // we match all levels of the forwarding node, meaning we can simply
-          // continue recursion and leave it untouched
-          hashPos = diffPos;
-          insertNode = &forward->targetNode;
+          ++hashPos;
         } else {
-          // we need a new additional branching node and possibly a new
-          // forwarding node to split the forwarded path with a branching in
-          // between essentially replacing one of the previously forwarded
-          // levels with a branching node
-          int oldSplit = forward->targetLevel;
-          forward->targetLevel = diffPos;
-          NodePtr oldTarget = forward->targetNode;
-
-          BranchNode* branch = createBranchingNode(2);
-          forward->targetNode = branch;
-          branch->set_occupation(get_hash_chunk(hash, diffPos));
-          branch->set_occupation(get_hash_chunk(forward->hash, diffPos));
-
-          int pos = get_hash_chunk(hash, diffPos) <
-                    get_hash_chunk(forward->hash, diffPos);
-          branch->child[pos] = nullptr;
-          insertNode = &branch->child[pos];
-          hashPos = diffPos + 1;
-
-          if (hashPos == oldSplit) {
-            branch->child[1 - pos] = oldTarget;
-          } else {
-            ForwardingNode* newForward =
-                createForwardingNode(forward->hash, oldSplit);
-            branch->child[1 - pos] = newForward;
-            newForward->targetNode = oldTarget;
-          }
+          // extremely unlikely that the new branch node only gets one
+          // child in that case create it and defer the insertion into
+          // another step
+          branch->child[0] = leaf;
+          insertNode = &branch->child[0];
+          ++hashPos;
         }
 
         break;
@@ -452,16 +748,16 @@ class HighsHashTree {
         BranchNode* branch = insertNode->getBranchNode();
 
         int location =
-            branch->get_child_position(get_hash_chunk(hash, hashPos));
+            branch->occupation.num_set_until(get_hash_chunk(hash, hashPos));
 
-        if (branch->test_occupation(get_hash_chunk(hash, hashPos))) {
+        if (branch->occupation.test(get_hash_chunk(hash, hashPos))) {
           --location;
         } else {
           branch = addChildToBranchNode(branch, get_hash_chunk(hash, hashPos),
                                         location);
 
           branch->child[location] = nullptr;
-          branch->set_occupation(get_hash_chunk(hash, hashPos));
+          branch->occupation.set(get_hash_chunk(hash, hashPos));
         }
 
         *insertNode = branch;
@@ -479,77 +775,103 @@ class HighsHashTree {
       case kEmpty: {
         return;
       }
-      case kSingleLeaf: {
-        SingleLeaf* leaf = erase_node->getSingleLeaf();
-        if (leaf->hash == hash) {
-          // check for existing key
-          if (leaf->entry.key() == key) {
-            delete leaf;
-            *erase_node = nullptr;
-          }
-        }
-        return;
-      }
-      case kMultiLeaf: {
-        MultiLeaf* leaf = erase_node->getMultiLeaf();
-        if (leaf->hash == hash) {
-          // check for existing key
-          ListNode* iter = &leaf->head;
+      case kListLeaf: {
+        ListLeaf* leaf = erase_node->getListLeaf();
 
-          do {
-            ListNode* next = iter->next;
-            if (iter->entry.key() == key) {
-              if (next != nullptr) {
-                *iter = std::move(*next);
-                delete next;
-                break;
-              }
+        // check for existing key
+        ListNode* iter = &leaf->first;
+
+        do {
+          ListNode* next = iter->next;
+          if (iter->entry.key() == key) {
+            // key found, decrease count
+            --leaf->count;
+            if (next != nullptr) {
+              // if we have a next node after replace the entry in iter by
+              // moving that node into it
+              *iter = std::move(*next);
+              // delete memory of that node
+              delete next;
             }
 
-            iter = next;
-          } while (iter != nullptr);
+            break;
+          }
 
-          if (leaf->head.next == nullptr) {
-            *erase_node =
-                new SingleLeaf(leaf->hash, std::move(leaf->head.entry));
+          iter = next;
+        } while (iter != nullptr);
+
+        if (leaf->count == 0) {
+          delete leaf;
+          *erase_node = nullptr;
+        }
+
+        return;
+      }
+      case kInnerLeafSizeClass1: {
+        InnerLeaf<1>* leaf = erase_node->getInnerLeafSizeClass1();
+        if (leaf->erase_entry(hash, hashPos, key)) {
+          if (leaf->size == 0) {
+            delete leaf;
+            *erase_node = nullptr;
+          }
+        }
+
+        return;
+      }
+      case kInnerLeafSizeClass2: {
+        InnerLeaf<2>* leaf = erase_node->getInnerLeafSizeClass2();
+
+        if (leaf->erase_entry(hash, hashPos, key)) {
+          if (leaf->size == InnerLeaf<1>::capacity()) {
+            InnerLeaf<1>* newLeaf = new InnerLeaf<1>;
+            *erase_node = newLeaf;
+            mergeIntoLeaf(newLeaf, leaf, hashPos);
             delete leaf;
           }
         }
 
-        break;
+        return;
       }
-      case kForwardingNode: {
-        ForwardingNode* forward = erase_node->getForwardingNode();
-        if (get_first_n_hash_chunks(forward->hash, forward->targetLevel) !=
-            get_first_n_hash_chunks(hash, forward->targetLevel))
-          return;
+      case kInnerLeafSizeClass3: {
+        InnerLeaf<3>* leaf = erase_node->getInnerLeafSizeClass3();
 
-        erase_recurse(&forward->targetNode, hash, forward->targetLevel, key);
-        switch (forward->targetNode.getType()) {
-          case kEmpty:
-            *erase_node = nullptr;
-            destroyInnerNode(forward);
-            break;
-          case kSingleLeaf:
-          case kMultiLeaf:
-          case kForwardingNode:
-            *erase_node = forward->targetNode;
-            destroyInnerNode(forward);
+        if (leaf->erase_entry(hash, hashPos, key)) {
+          if (leaf->size == InnerLeaf<2>::capacity()) {
+            InnerLeaf<2>* newLeaf = new InnerLeaf<2>;
+            *erase_node = newLeaf;
+            mergeIntoLeaf(newLeaf, leaf, hashPos);
+            delete leaf;
+          }
         }
-        break;
+
+        return;
+      }
+      case kInnerLeafSizeClass4: {
+        InnerLeaf<4>* leaf = erase_node->getInnerLeafSizeClass4();
+
+        if (leaf->erase_entry(hash, hashPos, key)) {
+          if (leaf->size == InnerLeaf<3>::capacity()) {
+            InnerLeaf<3>* newLeaf = new InnerLeaf<3>;
+            *erase_node = newLeaf;
+            mergeIntoLeaf(newLeaf, leaf, hashPos);
+            delete leaf;
+          }
+        }
+
+        return;
       }
       case kBranchNode: {
         BranchNode* branch = erase_node->getBranchNode();
 
-        if (!branch->test_occupation(get_hash_chunk(hash, hashPos))) return;
+        if (!branch->occupation.test(get_hash_chunk(hash, hashPos))) return;
 
         int location =
-            branch->get_child_position(get_hash_chunk(hash, hashPos)) - 1;
+            branch->occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
         erase_recurse(&branch->child[location], hash, hashPos + 1, key);
 
         if (branch->child[location].getType() != kEmpty) return;
 
-        branch->flip_occupation(get_hash_chunk(hash, hashPos));
+        branch->occupation.flip(get_hash_chunk(hash, hashPos));
 
         *erase_node =
             removeChildFromBranchNode(branch, location, hash, hashPos);
@@ -558,43 +880,43 @@ class HighsHashTree {
     }
   }
 
-  const ValueType* find_recurse(NodePtr node, uint64_t hash, int hashPos,
-                                const K& key) const {
+  static const ValueType* find_recurse(NodePtr node, uint64_t hash, int hashPos,
+                                       const K& key) {
     int startPos = hashPos;
     switch (node.getType()) {
       case kEmpty:
         return nullptr;
-      case kSingleLeaf:
-        if (key == node.getSingleLeaf()->entry.key())
-          return &node.getSingleLeaf()->entry.value();
-        return nullptr;
-      case kMultiLeaf: {
-        MultiLeaf* leaf = node.getMultiLeaf();
-        if (hash != leaf->hash) return nullptr;
-        ListNode* iter = &leaf->head;
+      case kListLeaf: {
+        ListLeaf* leaf = node.getListLeaf();
+        ListNode* iter = &leaf->first;
         do {
           if (iter->entry.key() == key) return &iter->entry.value();
           iter = iter->next;
         } while (iter != nullptr);
         return nullptr;
       }
-      case kForwardingNode: {
-        ForwardingNode* forward = node.getForwardingNode();
-        if (get_first_n_hash_chunks(hash, forward->targetLevel) !=
-            get_first_n_hash_chunks(forward->hash, forward->targetLevel))
-          return nullptr;
-
-        node = forward->targetNode;
-        assert(forward->targetLevel > hashPos);
-        hashPos = forward->targetLevel;
-        break;
+      case kInnerLeafSizeClass1: {
+        InnerLeaf<1>* leaf = node.getInnerLeafSizeClass1();
+        return leaf->find_entry(hash, hashPos, key);
+      }
+      case kInnerLeafSizeClass2: {
+        InnerLeaf<2>* leaf = node.getInnerLeafSizeClass2();
+        return leaf->find_entry(hash, hashPos, key);
+      }
+      case kInnerLeafSizeClass3: {
+        InnerLeaf<3>* leaf = node.getInnerLeafSizeClass3();
+        return leaf->find_entry(hash, hashPos, key);
+      }
+      case kInnerLeafSizeClass4: {
+        InnerLeaf<4>* leaf = node.getInnerLeafSizeClass4();
+        return leaf->find_entry(hash, hashPos, key);
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        if (!branch->test_occupation(get_hash_chunk(hash, hashPos)))
+        if (!branch->occupation.test(get_hash_chunk(hash, hashPos)))
           return nullptr;
         int location =
-            branch->get_child_position(get_hash_chunk(hash, hashPos)) - 1;
+            branch->occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
         node = branch->child[location];
         ++hashPos;
       }
@@ -605,64 +927,33 @@ class HighsHashTree {
     return find_recurse(node, hash, hashPos, key);
   }
 
-  const HighsHashTableEntry<K, V>* find_common_recurse(NodePtr n1, NodePtr n2,
-                                                       int hashPos) const {
+  static const HighsHashTableEntry<K, V>* find_common_recurse(NodePtr n1,
+                                                              NodePtr n2,
+                                                              int hashPos) {
     if (n1.getType() > n2.getType()) std::swap(n1, n2);
 
     switch (n1.getType()) {
       case kEmpty:
         return nullptr;
-      case kSingleLeaf: {
-        SingleLeaf* leaf = n1.getSingleLeaf();
-        if (find_recurse(n2, leaf->hash, hashPos, leaf->entry.key()))
-          return &leaf->entry;
-        return nullptr;
-      }
-      case kMultiLeaf: {
-        MultiLeaf* leaf = n1.getMultiLeaf();
-        ListNode* iter = &leaf->head;
+      case kListLeaf: {
+        ListLeaf* leaf = n1.getListLeaf();
+        ListNode* iter = &leaf->first;
         do {
-          if (find_recurse(n2, leaf->hash, hashPos, iter->entry.key()))
+          if (find_recurse(n2, HighsHashHelpers::hash(iter->entry.key()),
+                           hashPos, iter->entry.key()))
             return &iter->entry;
           iter = iter->next;
         } while (iter != nullptr);
         return nullptr;
       }
-      case kForwardingNode: {
-        ForwardingNode* forward = n1.getForwardingNode();
-
-        if (n2.getType() == kForwardingNode) {
-          ForwardingNode* forward2 = n2.getForwardingNode();
-
-          if (forward->targetLevel > forward2->targetLevel)
-            std::swap(forward, forward2);
-
-          if (get_first_n_hash_chunks(forward->hash, forward->targetLevel) !=
-              get_first_n_hash_chunks(forward2->hash, forward->targetLevel))
-            return nullptr;
-
-          return find_common_recurse(
-              forward->targetNode,
-              forward2->targetLevel == forward->targetLevel
-                  ? forward2->targetNode
-                  : n2,
-              forward->targetLevel);
-        }
-
-        assert(n2.getType() == kBranchNode);
-
-        BranchNode* branch = n2.getBranchNode();
-        if (!branch->test_occupation(get_hash_chunk(forward->hash, hashPos)))
-          return nullptr;
-        int location =
-            branch->get_child_position(get_hash_chunk(forward->hash, hashPos)) -
-            1;
-
-        ++hashPos;
-        return find_common_recurse(
-            forward->targetLevel == hashPos ? forward->targetNode : n1,
-            branch->child[location], hashPos);
-      }
+      case kInnerLeafSizeClass1:
+        return findCommonInLeaf(n1.getInnerLeafSizeClass1(), n2, hashPos);
+      case kInnerLeafSizeClass2:
+        return findCommonInLeaf(n1.getInnerLeafSizeClass2(), n2, hashPos);
+      case kInnerLeafSizeClass3:
+        return findCommonInLeaf(n1.getInnerLeafSizeClass3(), n2, hashPos);
+      case kInnerLeafSizeClass4:
+        return findCommonInLeaf(n1.getInnerLeafSizeClass4(), n2, hashPos);
       case kBranchNode: {
         BranchNode* branch1 = n1.getBranchNode();
         BranchNode* branch2 = n2.getBranchNode();
@@ -679,8 +970,8 @@ class HighsHashTree {
 
           assert(((matchMask >> pos) & 1) == 0);
 
-          int location1 = branch1->get_child_position(pos) - 1;
-          int location2 = branch2->get_child_position(pos) - 1;
+          int location1 = branch1->occupation.num_set_until(pos) - 1;
+          int location2 = branch2->occupation.num_set_until(pos) - 1;
 
           const HighsHashTableEntry<K, V>* match =
               find_common_recurse(branch1->child[location1],
@@ -693,15 +984,12 @@ class HighsHashTree {
     }
   }
 
-  void destroy_recurse(NodePtr node) {
+  static void destroy_recurse(NodePtr node) {
     switch (node.getType()) {
-      case kSingleLeaf:
-        delete node.getSingleLeaf();
-        break;
-      case kMultiLeaf: {
-        MultiLeaf* leaf = node.getMultiLeaf();
+      case kListLeaf: {
+        ListLeaf* leaf = node.getListLeaf();
+        ListNode* iter = leaf->first.next;
         delete leaf;
-        ListNode* iter = leaf->head.next;
         while (iter != nullptr) {
           ListNode* next = iter->next;
           delete iter;
@@ -710,34 +998,41 @@ class HighsHashTree {
 
         break;
       }
-      case kForwardingNode: {
-        ForwardingNode* forward = node.getForwardingNode();
-        destroy_recurse(forward->targetNode);
-        destroyInnerNode(forward);
+      case kInnerLeafSizeClass1:
+        delete node.getInnerLeafSizeClass1();
         break;
-      }
+      case kInnerLeafSizeClass2:
+        delete node.getInnerLeafSizeClass2();
+        break;
+      case kInnerLeafSizeClass3:
+        delete node.getInnerLeafSizeClass3();
+        break;
+      case kInnerLeafSizeClass4:
+        delete node.getInnerLeafSizeClass4();
+        break;
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int size = branch->get_num_children();
+        int size = branch->occupation.num_set();
 
         for (int i = 0; i < size; ++i) destroy_recurse(branch->child[i]);
 
-        destroyInnerNode(branch);
+        destroyBranchingNode(branch);
       }
     }
   }
 
-  NodePtr copy_recurse(NodePtr node) {
+  static NodePtr copy_recurse(NodePtr node) {
     switch (node.getType()) {
-      case kSingleLeaf:
-        return new SingleLeaf(*node.getSingleLeaf());
-      case kMultiLeaf: {
-        MultiLeaf* leaf = node.getMultiLeaf();
+      case kEmpty:
+        assert(false);
+        break;
+      case kListLeaf: {
+        ListLeaf* leaf = node.getListLeaf();
 
-        MultiLeaf* copyLeaf = new MultiLeaf(*leaf);
+        ListLeaf* copyLeaf = new ListLeaf(*leaf);
 
-        ListNode* iter = &leaf->head;
-        ListNode* copyIter = &copyLeaf->head;
+        ListNode* iter = &leaf->first;
+        ListNode* copyIter = &copyLeaf->first;
         do {
           copyIter->next = new ListNode(*iter->next);
           iter = iter->next;
@@ -746,14 +1041,25 @@ class HighsHashTree {
 
         return copyLeaf;
       }
-      case kForwardingNode: {
-        ForwardingNode* forward = new ForwardingNode(*node.getForwardingNode());
-        forward->targetNode = copy_recurse(forward->targetNode);
-        return forward;
+      case kInnerLeafSizeClass1: {
+        InnerLeaf<1>* leaf = node.getInnerLeafSizeClass1();
+        return new InnerLeaf<1>(*leaf);
+      }
+      case kInnerLeafSizeClass2: {
+        InnerLeaf<2>* leaf = node.getInnerLeafSizeClass2();
+        return new InnerLeaf<2>(*leaf);
+      }
+      case kInnerLeafSizeClass3: {
+        InnerLeaf<3>* leaf = node.getInnerLeafSizeClass3();
+        return new InnerLeaf<3>(*leaf);
+      }
+      case kInnerLeafSizeClass4: {
+        InnerLeaf<4>* leaf = node.getInnerLeafSizeClass4();
+        return new InnerLeaf<4>(*leaf);
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int size = branch->get_num_children();
+        int size = branch->occupation.num_set();
         BranchNode* newBranch =
             (BranchNode*)::operator new(getBranchNodeSize(size));
         newBranch->occupation = branch->occupation;
@@ -766,31 +1072,50 @@ class HighsHashTree {
   }
 
   template <typename F>
-  bool for_each_recurse(NodePtr node, F&& f) const {
+  static bool for_each_recurse(NodePtr node, F&& f) {
     switch (node.getType()) {
       case kEmpty:
         break;
-      case kSingleLeaf: {
-        SingleLeaf* leaf = node.getSingleLeaf();
-        assert(leaf != nullptr);
-        return f(leaf->entry);
-      }
-      case kMultiLeaf: {
-        MultiLeaf* leaf = node.getMultiLeaf();
-        ListNode* iter = &leaf->head;
+      case kListLeaf: {
+        ListLeaf* leaf = node.getListLeaf();
+        ListNode* iter = &leaf->first;
         do {
           if (f(iter->entry)) return true;
           iter = iter->next;
         } while (iter != nullptr);
         break;
       }
-      case kForwardingNode: {
-        ForwardingNode* forward = node.getForwardingNode();
-        return for_each_recurse(forward->targetNode, f);
+      case kInnerLeafSizeClass1: {
+        InnerLeaf<1>* leaf = node.getInnerLeafSizeClass1();
+        for (int i = 0; i < leaf->size; ++i)
+          if (f(leaf->entries[i])) return true;
+
+        break;
+      }
+      case kInnerLeafSizeClass2: {
+        InnerLeaf<2>* leaf = node.getInnerLeafSizeClass2();
+        for (int i = 0; i < leaf->size; ++i)
+          if (f(leaf->entries[i])) return true;
+
+        break;
+      }
+      case kInnerLeafSizeClass3: {
+        InnerLeaf<3>* leaf = node.getInnerLeafSizeClass3();
+        for (int i = 0; i < leaf->size; ++i)
+          if (f(leaf->entries[i])) return true;
+
+        break;
+      }
+      case kInnerLeafSizeClass4: {
+        InnerLeaf<4>* leaf = node.getInnerLeafSizeClass4();
+        for (int i = 0; i < leaf->size; ++i)
+          if (f(leaf->entries[i])) return true;
+
+        break;
       }
       case kBranchNode: {
         BranchNode* branch = node.getBranchNode();
-        int size = branch->get_num_children();
+        int size = branch->occupation.num_set();
 
         for (int i = 0; i < size; ++i)
           if (for_each_recurse(branch->child[i], f)) return true;
