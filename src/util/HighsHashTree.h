@@ -167,12 +167,9 @@ class HighsHashTree {
       int pos = occupation.num_set_until(hashChunk) - 1;
       while (hashes[pos] > hash) ++pos;
 
-      if (pos != size) {
-        while (true) {
-          if (key == entries[pos].key()) return &entries[pos].value();
-          if (++pos == size) break;
-          if (hashes[pos] != hash) break;
-        }
+      while (pos != size && hashes[pos] == hash) {
+        if (key == entries[pos].key()) return &entries[pos].value();
+        ++pos;
       }
 
       return nullptr;
@@ -188,7 +185,7 @@ class HighsHashTree {
       int pos = startPos;
       while (hashes[pos] > hash) ++pos;
 
-      while (true) {
+      while (pos != size && hashes[pos] == hash) {
         if (key == entries[pos].key()) {
           --size;
           if (pos < size) {
@@ -204,8 +201,7 @@ class HighsHashTree {
           return true;
         }
 
-        if (++pos == size) break;
-        if (hashes[pos] != hash) break;
+        ++pos;
       }
 
       return false;
