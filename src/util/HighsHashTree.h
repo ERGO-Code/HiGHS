@@ -47,6 +47,14 @@ class HighsHashTree {
            (kBranchFactor - 1);
   }
 
+  static uint16_t get_hash_chunks16(uint64_t hash, int pos) {
+    return (hash >> (48 - pos * kBitsPerLevel));
+  }
+
+  static uint8_t get_first_chunk16(uint16_t chunks) {
+    return chunks >> (16 - kBitsPerLevel);
+  }
+
   static void set_hash_chunk(uint64_t& hash, uint64_t chunk, int chunkPos) {
     const int shiftAmount = (64 - kBitsPerLevel - chunkPos * kBitsPerLevel);
     chunk ^= (hash >> shiftAmount) & (kBranchFactor - 1);
@@ -77,9 +85,9 @@ class HighsHashTree {
     int num_set() const { return HighsHashHelpers::popcnt(occupation); }
   };
 
-  static constexpr int entries_to_size_class(int numEntries) {
-    return 1 + (numEntries +
-                ((kLeafBurstThreshold - kMinLeafSize) / 3 - kMinLeafSize - 1)) /
+  static constexpr int entries_to_size_class(unsigned int numEntries) {
+    return 1 + unsigned(numEntries + ((kLeafBurstThreshold - kMinLeafSize) / 3 -
+                                      kMinLeafSize - 1)) /
                    ((kLeafBurstThreshold - kMinLeafSize) / 3);
   }
 
@@ -102,20 +110,21 @@ class HighsHashTree {
 
     InnerLeaf() : occupation(0), size(0) { hashes[0] = 0; }
 
-    template <int kOtherSize,
-              typename std::enable_if<kOtherSize<kSizeClass, int>::type = 0>
-                  InnerLeaf(InnerLeaf<kOtherSize>&& other) {
-      memcpy(this, &other,
+    template <int kOtherSize>
+    InnerLeaf(InnerLeaf<kOtherSize>&& other) {
+      assert(other.size <= capacity());
+      memcpy((void*)this, (void*)&other,
              (char*)&other.hashes[other.size + 1] - (char*)&other);
       std::move(&other.entries[0], &other.entries[size], &entries[0]);
     }
 
     int get_num_entries() const { return size; }
 
-    bool insert_entry(uint64_t hash, int hashPos,
+    bool insert_entry(uint64_t fullHash, int hashPos,
                       HighsHashTableEntry<K, V>& entry) {
       assert(size < capacity());
-      uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+      uint16_t hash = get_hash_chunks16(fullHash, hashPos);
+      uint8_t hashChunk = get_first_chunk16(hash);
 
       int pos = occupation.num_set_until(hashChunk);
 
@@ -133,7 +142,7 @@ class HighsHashTree {
         if (pos < size) {
           std::move_backward(&entries[pos], &entries[size], &entries[size + 1]);
           memmove(&hashes[pos + 1], &hashes[pos],
-                  sizeof(uint64_t) * (size - pos));
+                  sizeof(hashes[0]) * (size - pos));
         }
 
         entries[pos] = std::move(entry);
@@ -147,7 +156,7 @@ class HighsHashTree {
           while (hashes[pos] > hash) ++pos;
           std::move_backward(&entries[pos], &entries[size], &entries[size + 1]);
           memmove(&hashes[pos + 1], &hashes[pos],
-                  sizeof(uint64_t) * (size - pos));
+                  sizeof(hashes[0]) * (size - pos));
         }
 
         entries[pos] = std::move(entry);
@@ -159,9 +168,10 @@ class HighsHashTree {
       return true;
     }
 
-    const ValueType* find_entry(uint64_t hash, int hashPos,
+    const ValueType* find_entry(uint64_t fullHash, int hashPos,
                                 const K& key) const {
-      uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+      uint16_t hash = get_hash_chunks16(fullHash, hashPos);
+      uint8_t hashChunk = get_first_chunk16(hash);
       if (!occupation.test(hashChunk)) return nullptr;
 
       int pos = occupation.num_set_until(hashChunk) - 1;
@@ -175,12 +185,13 @@ class HighsHashTree {
       return nullptr;
     }
 
-    bool erase_entry(uint64_t hash, int hashPos, const K& key) {
-      uint8_t hashChunk = get_hash_chunk(hash, hashPos);
+    bool erase_entry(uint64_t fullHash, int hashPos, const K& key) {
+      uint16_t hash = get_hash_chunks16(fullHash, hashPos);
+      uint8_t hashChunk = get_first_chunk16(hash);
       if (!occupation.test(hashChunk)) return false;
 
       int startPos = occupation.num_set_until(hashChunk) - 1;
-      while (get_hash_chunk(hashes[startPos], hashPos) > hashChunk) ++startPos;
+      while (get_first_chunk16(hashes[startPos]) > hashChunk) ++startPos;
 
       int pos = startPos;
       while (hashes[pos] > hash) ++pos;
@@ -191,8 +202,8 @@ class HighsHashTree {
           if (pos < size) {
             std::move(&entries[pos + 1], &entries[size + 1], &entries[pos]);
             memmove(&hashes[pos], &hashes[pos + 1],
-                    sizeof(uint64_t) * (size - pos));
-            if (get_hash_chunk(hashes[startPos], hashPos) != hashChunk)
+                    sizeof(hashes[0]) * (size - pos));
+            if (get_first_chunk16(hashes[startPos]) != hashChunk)
               occupation.flip(hashChunk);
           } else if (startPos == pos)
             occupation.flip(hashChunk);
@@ -208,9 +219,56 @@ class HighsHashTree {
     }
 
     void rehash(int hashPos) {
+      // function needs to possibly reorder elements by a different hash value
+      // chances are very high we are already ordered correctly as we use 16
+      // bits of the hash and one level is uses 6 bits, so the new values
+      // are guaranteed to be ordered correctly by their 10 most significant
+      // bits if increasing the hash position by 1 and only if the 10 bits of
+      // the hash had a collision the new 6 bits might break a tie differently.
+      // It is, however, important to maintain the exact ordering as otherwise
+      // elements may not be found.
       occupation = 0;
-      for (int i = 0; i < size; ++i)
-        occupation.set(get_hash_chunk(hashes[i], hashPos));
+      for (int i = 0; i < size; ++i) {
+        hashes[i] = get_hash_chunks16(HighsHashHelpers::hash(entries[i].key()),
+                                      hashPos);
+        occupation.set(get_first_chunk16(hashes[i]));
+      }
+
+      int i = 0;
+      while (i < size) {
+        uint8_t hashChunk = get_first_chunk16(hashes[i]);
+        int pos = occupation.num_set_until(hashChunk) - 1;
+
+        // if the position is after i the element definitely comes later, so we
+        // swap it to that position and proceed without increasing i until
+        // eventually an element appears that comes at position i or before
+        if (pos > i) {
+          std::swap(hashes[pos], hashes[i]);
+          std::swap(entries[pos], entries[i]);
+          continue;
+        }
+
+        // the position is before or at i, now check where the exact location
+        // should be for the ordering by hash so that the invariant is that all
+        // elements up to i are properly sorted. Essentially insertion sort but
+        // with the modification of having a high chance to guess the correct
+        // position already using the occupation flags.
+        while (pos < i && hashes[pos] >= hashes[i]) ++pos;
+
+        // if the final position is before i we need to move elements to
+        // make space at that position, otherwise nothing needs to be done but
+        // incrementing i increasing the sorted range by 1.
+        if (pos < i) {
+          uint16_t hash = hashes[i];
+          auto entry = std::move(entries[i]);
+          std::move_backward(&entries[pos], &entries[i], &entries[i + 1]);
+          memmove(&hashes[pos + 1], &hashes[pos],
+                  sizeof(hashes[0]) * (size - pos));
+          hashes[pos] = hash;
+          entries[pos] = std::move(entry);
+        }
+        ++i;
+      }
     }
   };
 
@@ -383,7 +441,8 @@ class HighsHashTree {
   static void mergeIntoLeaf(InnerLeaf<SizeClass1>* leaf,
                             InnerLeaf<SizeClass2>* mergeLeaf, int hashPos) {
     for (int i = 0; i < mergeLeaf->size; ++i)
-      leaf->insert_entry(mergeLeaf->hashes[i], hashPos, mergeLeaf->entries[i]);
+      leaf->insert_entry(HighsHashHelpers::hash(mergeLeaf->entries[i].key()),
+                         hashPos, mergeLeaf->entries[i]);
   }
 
   template <int SizeClass>
@@ -435,29 +494,38 @@ class HighsHashTree {
       matchMask ^= (uint64_t{1} << pos);
 
       int i = leaf1->occupation.num_set_until(pos) + offset1;
-      while (get_hash_chunk(leaf1->hashes[i], hashPos) != pos) {
+      while (get_first_chunk16(leaf1->hashes[i]) != pos) {
         ++i;
         ++offset1;
       }
 
       int j = leaf2->occupation.num_set_until(pos) + offset2;
-      while (get_hash_chunk(leaf2->hashes[j], hashPos) != pos) {
+      while (get_first_chunk16(leaf2->hashes[j]) != pos) {
         ++j;
         ++offset2;
       }
 
-      do {
-        int k = j;
-        do {
-          if (leaf1->entries[i].key() == leaf2->entries[k].key())
+      while (true) {
+        if (leaf1->hashes[i] > leaf2->hashes[j]) {
+          ++i;
+          if (i == leaf1->size || get_first_chunk16(leaf1->hashes[i]) != pos)
+            break;
+        } else if (leaf2->hashes[j] > leaf1->hashes[i]) {
+          ++j;
+          if (j == leaf2->size || get_first_chunk16(leaf2->hashes[j]) != pos)
+            break;
+        } else {
+          if (leaf1->entries[i].key() == leaf2->entries[j].key())
             return &leaf1->entries[i];
-          ++k;
-        } while (k < leaf2->size &&
-                 get_hash_chunk(leaf2->hashes[k], hashPos) == pos);
 
-        ++i;
-      } while (i < leaf1->size &&
-               get_hash_chunk(leaf1->hashes[i], hashPos) == pos);
+          ++i;
+          if (i == leaf1->size || get_first_chunk16(leaf1->hashes[i]) != pos)
+            break;
+          ++j;
+          if (j == leaf2->size || get_first_chunk16(leaf2->hashes[j]) != pos)
+            break;
+        }
+      };
     }
 
     return nullptr;
@@ -476,10 +544,29 @@ class HighsHashTree {
       case kInnerLeafSizeClass4:
         return findCommonInLeaf(leaf, n2.getInnerLeafSizeClass4(), hashPos);
       case kBranchNode: {
-        for (int i = 0; i < leaf->size; ++i) {
-          if (find_recurse(n2, leaf->hashes[i], hashPos,
-                           leaf->entries[i].key()))
-            return &leaf->entries[i];
+        BranchNode* branch = n2.getBranchNode();
+        uint64_t matchMask = branch->occupation & leaf->occupation;
+
+        int offset = -1;
+        while (matchMask) {
+          int pos = HighsHashHelpers::log2i(matchMask);
+          matchMask ^= (uint64_t{1} << pos);
+
+          int i = leaf->occupation.num_set_until(pos) + offset;
+          while (get_first_chunk16(leaf->hashes[i]) != pos) {
+            ++i;
+            ++offset;
+          }
+
+          int j = branch->occupation.num_set_until(pos) - 1;
+
+          do {
+            if (find_recurse(branch->child[j],
+                             HighsHashHelpers::hash(leaf->entries[i].key()),
+                             hashPos + 1, leaf->entries[i].key()))
+              return &leaf->entries[i];
+            ++i;
+          } while (i < leaf->size && get_first_chunk16(leaf->hashes[i]) == pos);
         }
       }
     }
@@ -703,24 +790,25 @@ class HighsHashTree {
             branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
                 hash, hashPos + 1, entry);
             for (int i = 0; i < leaf->size; ++i) {
-              pos = occupation.num_set_until(
-                        get_hash_chunk(leaf->hashes[i], hashPos)) -
-                    1;
+              pos =
+                  occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
+                  1;
               branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
-                  leaf->hashes[i], hashPos + 1, leaf->entries[i]);
+                  HighsHashHelpers::hash(leaf->entries[i].key()), hashPos + 1,
+                  leaf->entries[i]);
             }
 
             delete leaf;
             return true;
           } else {
             // there are many collisions, determine the exact sizes first
-            int8_t sizes[InnerLeaf<4>::capacity() + 1];
+            uint8_t sizes[InnerLeaf<4>::capacity() + 1];
             memset(sizes, 0, branchSize);
             sizes[occupation.num_set_until(hashChunk) - 1] += 1;
             for (int i = 0; i < leaf->size; ++i) {
-              int pos = occupation.num_set_until(
-                            get_hash_chunk(leaf->hashes[i], hashPos)) -
-                        1;
+              int pos =
+                  occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
+                  1;
               sizes[pos] += 1;
             }
 
@@ -742,26 +830,30 @@ class HighsHashTree {
             }
 
             for (int i = 0; i < leaf->size; ++i) {
-              int pos = occupation.num_set_until(
-                            get_hash_chunk(leaf->hashes[i], hashPos)) -
-                        1;
+              int pos =
+                  occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
+                  1;
 
               switch (branch->child[pos].getType()) {
                 case kInnerLeafSizeClass1:
                   branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
-                      leaf->hashes[i], hashPos + 1, leaf->entries[i]);
+                      HighsHashHelpers::hash(leaf->entries[i].key()),
+                      hashPos + 1, leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass2:
                   branch->child[pos].getInnerLeafSizeClass2()->insert_entry(
-                      leaf->hashes[i], hashPos + 1, leaf->entries[i]);
+                      HighsHashHelpers::hash(leaf->entries[i].key()),
+                      hashPos + 1, leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass3:
                   branch->child[pos].getInnerLeafSizeClass3()->insert_entry(
-                      leaf->hashes[i], hashPos + 1, leaf->entries[i]);
+                      HighsHashHelpers::hash(leaf->entries[i].key()),
+                      hashPos + 1, leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass4:
                   branch->child[pos].getInnerLeafSizeClass4()->insert_entry(
-                      leaf->hashes[i], hashPos + 1, leaf->entries[i]);
+                      HighsHashHelpers::hash(leaf->entries[i].key()),
+                      hashPos + 1, leaf->entries[i]);
               }
             }
           }
@@ -778,6 +870,7 @@ class HighsHashTree {
           branch->child[0] = leaf;
           insertNode = &branch->child[0];
           ++hashPos;
+          leaf->rehash(hashPos);
         }
 
         break;
@@ -861,9 +954,8 @@ class HighsHashTree {
 
         if (leaf->erase_entry(hash, hashPos, key)) {
           if (leaf->size == InnerLeaf<1>::capacity()) {
-            InnerLeaf<1>* newLeaf = new InnerLeaf<1>;
+            InnerLeaf<1>* newLeaf = new InnerLeaf<1>(std::move(*leaf));
             *erase_node = newLeaf;
-            mergeIntoLeaf(newLeaf, leaf, hashPos);
             delete leaf;
           }
         }
@@ -875,9 +967,8 @@ class HighsHashTree {
 
         if (leaf->erase_entry(hash, hashPos, key)) {
           if (leaf->size == InnerLeaf<2>::capacity()) {
-            InnerLeaf<2>* newLeaf = new InnerLeaf<2>;
+            InnerLeaf<2>* newLeaf = new InnerLeaf<2>(std::move(*leaf));
             *erase_node = newLeaf;
-            mergeIntoLeaf(newLeaf, leaf, hashPos);
             delete leaf;
           }
         }
@@ -889,9 +980,8 @@ class HighsHashTree {
 
         if (leaf->erase_entry(hash, hashPos, key)) {
           if (leaf->size == InnerLeaf<3>::capacity()) {
-            InnerLeaf<3>* newLeaf = new InnerLeaf<3>;
+            InnerLeaf<3>* newLeaf = new InnerLeaf<3>(std::move(*leaf));
             *erase_node = newLeaf;
-            mergeIntoLeaf(newLeaf, leaf, hashPos);
             delete leaf;
           }
         }
