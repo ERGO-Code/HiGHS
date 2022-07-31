@@ -21,8 +21,8 @@ using std::memmove;
 template <typename K, typename V = void>
 class HighsHashTree {
   using Entry = HighsHashTableEntry<K, V>;
-  using ValueType = typename std::remove_reference<
-      decltype(reinterpret_cast<Entry*>(0x1)->value())>::type;
+  using ValueType = typename std::remove_reference<decltype(
+      reinterpret_cast<Entry*>(0x1)->value())>::type;
 
   enum Type {
     kEmpty = 0,

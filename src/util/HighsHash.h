@@ -32,6 +32,7 @@
 #include <intrin.h>
 #pragma intrinsic(_BitScanReverse)
 #pragma intrinsic(_BitScanReverse64)
+#pragma intrinsic(__popcnt64)
 #endif
 
 #if __GNUG__ && __GNUC__ < 5
@@ -103,6 +104,8 @@ struct HighsHashHelpers {
 
   static int log2i(uint32_t n) { return 31 - __builtin_clz(n); }
 
+  static int popcnt(uint64_t x) { return __builtin_popcountll(x); }
+
 #elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
   static int log2i(uint64_t n) {
     unsigned long result;
@@ -115,6 +118,8 @@ struct HighsHashHelpers {
     _BitScanReverse(&result, (unsigned long)n);
     return result;
   }
+
+  static int popcnt(uint64_t x) { return __popcnt64(x); }
 #else
   // integer log2 algorithm without floating point arithmetic. It uses an
   // unrolled loop and requires few instructions that can be well optimized.
@@ -157,23 +162,22 @@ struct HighsHashHelpers {
     return x;
   }
 
-#endif
-
   static int popcnt(uint64_t x) {
-    return __builtin_popcountll(x);
-#if 0
-    constexpr uint64_t m1  = 0x5555555555555555ull; //binary: 0101...
-    constexpr uint64_t m2  = 0x3333333333333333ull; //binary: 00110011..
-    constexpr uint64_t m4  = 0x0f0f0f0f0f0f0f0full; //binary:  4 zeros,  4 ones ...
+    constexpr uint64_t m1 = 0x5555555555555555ull;
+    constexpr uint64_t m2 = 0x3333333333333333ull;
+    constexpr uint64_t m4 =
+        0x0f0f0f0f0f0f0f0full;
     constexpr uint64_t h01 = 0x0101010101010101ull;
 
-    x -= (x >> 1) & m1;             //put count of each 2 bits into those 2 bits
-    x = (x & m2) + ((x >> 2) & m2); //put count of each 4 bits into those 4 bits 
-    x = (x + (x >> 4)) & m4;        //put count of each 8 bits into those 8 bits 
+    x -= (x >> 1) & m1;
+    x = (x & m2) +
+        ((x >> 2) & m2);
+    x = (x + (x >> 4)) & m4;
 
     return (x * h01) >> 56;
-#endif
   }
+
+#endif
 
   /// compute a * b mod 2^61-1
   static u64 multiply_modM61(u64 a, u64 b) {

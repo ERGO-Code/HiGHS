@@ -310,12 +310,10 @@ class HighsCliqueTable {
 
   HighsInt numCliques() const { return cliques.size() - freeslots.size(); }
 
-  HighsInt numCliques(CliqueVar v) const {
-    return numcliquesvar[v.index()];
-  }
+  HighsInt numCliques(CliqueVar v) const { return numcliquesvar[v.index()]; }
 
   HighsInt numCliques(HighsInt col, bool val) const {
-     return numcliquesvar[CliqueVar(col, val).index()];
+    return numcliquesvar[CliqueVar(col, val).index()];
   }
 };
 
