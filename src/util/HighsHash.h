@@ -165,13 +165,11 @@ struct HighsHashHelpers {
   static int popcnt(uint64_t x) {
     constexpr uint64_t m1 = 0x5555555555555555ull;
     constexpr uint64_t m2 = 0x3333333333333333ull;
-    constexpr uint64_t m4 =
-        0x0f0f0f0f0f0f0f0full;
+    constexpr uint64_t m4 = 0x0f0f0f0f0f0f0f0full;
     constexpr uint64_t h01 = 0x0101010101010101ull;
 
     x -= (x >> 1) & m1;
-    x = (x & m2) +
-        ((x >> 2) & m2);
+    x = (x & m2) + ((x >> 2) & m2);
     x = (x + (x >> 4)) & m4;
 
     return (x * h01) >> 56;
