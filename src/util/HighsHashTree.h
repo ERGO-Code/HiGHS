@@ -1199,8 +1199,9 @@ class HighsHashTree {
     }
   }
 
-  template <typename F>
-  static bool for_each_recurse(NodePtr node, F&& f) {
+  template <typename R, typename F,
+            typename std::enable_if<std::is_void<R>::value, int>::type = 0>
+  static void for_each_recurse(NodePtr node, F&& f) {
     switch (node.getType()) {
       case kEmpty:
         break;
@@ -1208,7 +1209,7 @@ class HighsHashTree {
         ListLeaf* leaf = node.getListLeaf();
         ListNode* iter = &leaf->first;
         do {
-          if (f(iter->entry)) return true;
+          iter->entry.forward(f);
           iter = iter->next;
         } while (iter != nullptr);
         break;
@@ -1216,28 +1217,28 @@ class HighsHashTree {
       case kInnerLeafSizeClass1: {
         InnerLeaf<1>* leaf = node.getInnerLeafSizeClass1();
         for (int i = 0; i < leaf->size; ++i)
-          if (f(leaf->entries[i])) return true;
+          leaf->entries[i].forward(f);
 
         break;
       }
       case kInnerLeafSizeClass2: {
         InnerLeaf<2>* leaf = node.getInnerLeafSizeClass2();
         for (int i = 0; i < leaf->size; ++i)
-          if (f(leaf->entries[i])) return true;
+          leaf->entries[i].forward(f);
 
         break;
       }
       case kInnerLeafSizeClass3: {
         InnerLeaf<3>* leaf = node.getInnerLeafSizeClass3();
         for (int i = 0; i < leaf->size; ++i)
-          if (f(leaf->entries[i])) return true;
+          leaf->entries[i].forward(f);
 
         break;
       }
       case kInnerLeafSizeClass4: {
         InnerLeaf<4>* leaf = node.getInnerLeafSizeClass4();
         for (int i = 0; i < leaf->size; ++i)
-          if (f(leaf->entries[i])) return true;
+          leaf->entries[i].forward(f);
 
         break;
       }
@@ -1246,11 +1247,75 @@ class HighsHashTree {
         int size = branch->occupation.num_set();
 
         for (int i = 0; i < size; ++i)
-          if (for_each_recurse(branch->child[i], f)) return true;
+          for_each_recurse<R>(branch->child[i], f);
+      }
+    }
+  }
+
+  template <typename R, typename F,
+            typename std::enable_if<!std::is_void<R>::value, int>::type = 0>
+  static R for_each_recurse(NodePtr node, F&& f) {
+    switch (node.getType()) {
+      case kEmpty:
+        break;
+      case kListLeaf: {
+        ListLeaf* leaf = node.getListLeaf();
+        ListNode* iter = &leaf->first;
+        do {
+          auto x = iter->entry.forward(f);
+          if (x) return x;
+          iter = iter->next;
+        } while (iter != nullptr);
+        break;
+      }
+      case kInnerLeafSizeClass1: {
+        InnerLeaf<1>* leaf = node.getInnerLeafSizeClass1();
+        for (int i = 0; i < leaf->size; ++i) {
+          auto x = leaf->entries[i].forward(f);
+          if (x) return x;
+        }
+
+        break;
+      }
+      case kInnerLeafSizeClass2: {
+        InnerLeaf<2>* leaf = node.getInnerLeafSizeClass2();
+        for (int i = 0; i < leaf->size; ++i) {
+          auto x = leaf->entries[i].forward(f);
+          if (x) return x;
+        }
+
+        break;
+      }
+      case kInnerLeafSizeClass3: {
+        InnerLeaf<3>* leaf = node.getInnerLeafSizeClass3();
+        for (int i = 0; i < leaf->size; ++i) {
+          auto x = leaf->entries[i].forward(f);
+          if (x) return x;
+        }
+
+        break;
+      }
+      case kInnerLeafSizeClass4: {
+        InnerLeaf<4>* leaf = node.getInnerLeafSizeClass4();
+        for (int i = 0; i < leaf->size; ++i) {
+          auto x = leaf->entries[i].forward(f);
+          if (x) return x;
+        }
+
+        break;
+      }
+      case kBranchNode: {
+        BranchNode* branch = node.getBranchNode();
+        int size = branch->occupation.num_set();
+
+        for (int i = 0; i < size; ++i) {
+          auto x = for_each_recurse<R>(branch->child[i], f);
+          if (x) return x;
+        }
       }
     }
 
-    return false;
+    return R();
   }
 
  public:
@@ -1291,8 +1356,10 @@ class HighsHashTree {
   }
 
   template <typename F>
-  bool for_each(F&& f) const {
-    return for_each_recurse(root, f);
+  auto for_each(F&& f) const
+      -> decltype(HighsHashTableEntry<K, V>().forward(f)) {
+    using R = decltype(for_each(f));
+    return for_each_recurse<R>(root, f);
   }
 
   HighsHashTree() = default;

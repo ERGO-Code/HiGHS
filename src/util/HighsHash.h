@@ -795,6 +795,23 @@ struct HighsHashTableEntry {
   const K& key() const { return key_; }
   const V& value() const { return value_; }
   V& value() { return value_; }
+
+  template <typename Func>
+  auto forward(Func&& f) -> decltype(f(key_, value_)) {
+    const K& keyRef = key_;
+    return f(keyRef, value_);
+  }
+
+  template <typename Func>
+  auto forward(Func&& f) const -> decltype(f(key_)) {
+    const K& keyRef = key_;
+    return f(keyRef);
+  }
+
+  template <typename Func>
+  auto forward(Func&& f) const -> decltype(f(key_, value_)) {
+    return f(key_, value_);
+  }
 };
 
 template <typename T>
@@ -808,6 +825,16 @@ struct HighsHashTableEntry<T, void> {
 
   const T& key() const { return value_; }
   const T& value() const { return value_; }
+
+  template <typename Func>
+  auto forward(Func&& f) -> decltype(f(value_)) {
+    return f(value_);
+  }
+
+  template <typename Func>
+  auto forward(Func&& f) const -> decltype(f(value_)) {
+    return f(value_);
+  }
 };
 
 template <typename K, typename V = void>

@@ -110,26 +110,18 @@ HighsInt HighsCliqueTable::runCliqueSubsumption(
       clique.end());
 
   for (CliqueVar v : clique) {
-    invertedHashList[v.index()].for_each(
-        [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-          HighsInt cliqueid = entry.key();
-          if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
+    invertedHashList[v.index()].for_each([&](HighsInt cliqueid) {
+      if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
-          ++cliquehits[cliqueid];
-
-          return false;
-        });
+      ++cliquehits[cliqueid];
+    });
 
     // for (const auto& entry : invertedHashListSizeTwo[v.index()])
-    invertedHashListSizeTwo[v.index()].for_each(
-        [&](const HighsHashTableEntry<HighsInt>& entry) {
-          HighsInt cliqueid = entry.key();
-          if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
+    invertedHashListSizeTwo[v.index()].for_each([&](HighsInt cliqueid) {
+      if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
-          ++cliquehits[cliqueid];
-
-          return false;
-        });
+      ++cliquehits[cliqueid];
+    });
   }
 
   for (HighsInt cliqueid : cliquehitinds) {
@@ -634,13 +626,10 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
           numcliquesvar[substitutedVar.index()];
       numcliquesvar[substitutedVar.index()] = 0;
 
-      substList.for_each(
-          [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-            replaceList.insert(entry.key(), entry.value());
-            cliqueentries[entry.value()] = replacementVar;
-
-            return false;
-          });
+      substList.for_each([&](HighsInt cliqueid, HighsInt location) {
+        replaceList.insert(cliqueid, location);
+        cliqueentries[location] = replacementVar;
+      });
 
       substList.clear();
 
@@ -649,26 +638,20 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
       HighsHashTree<HighsInt>& replaceListSizeTwo =
           invertedHashListSizeTwo[replacementVar.index()];
 
-      substListSizeTwo.for_each(
-          [&](const HighsHashTableEntry<HighsInt>& entry) {
-            HighsInt cliqueid = entry.key();
+      substListSizeTwo.for_each([&](HighsInt cliqueid) {
+        HighsInt pos = cliques[cliqueid].start;
+        HighsInt otherPos = pos + 1;
 
-            HighsInt pos = cliques[cliqueid].start;
-            HighsInt otherPos = pos + 1;
+        if (cliqueentries[otherPos] == substitutedVar) std::swap(pos, otherPos);
 
-            if (cliqueentries[otherPos] == substitutedVar)
-              std::swap(pos, otherPos);
+        replaceListSizeTwo.insert(cliqueid);
+        cliqueentries[pos] = replacementVar;
 
-            replaceListSizeTwo.insert(cliqueid);
-            cliqueentries[pos] = replacementVar;
-
-            sizeTwoCliques.erase(
-                sortedEdge(substitutedVar, cliqueentries[otherPos]));
-            sizeTwoCliques.insert(
-                sortedEdge(replacementVar, cliqueentries[otherPos]), cliqueid);
-
-            return false;
-          });
+        sizeTwoCliques.erase(
+            sortedEdge(substitutedVar, cliqueentries[otherPos]));
+        sizeTwoCliques.insert(
+            sortedEdge(replacementVar, cliqueentries[otherPos]), cliqueid);
+      });
 
       substListSizeTwo.clear();
     };
@@ -1541,56 +1524,49 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
     HighsHashTree<HighsInt> vHashListsSizeTwo =
         std::move(invertedHashListSizeTwo[v.index()]);
 
-    bool infeas = vHashLists.for_each(
-        [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-          HighsInt cliqueid = entry.key();
+    bool infeas = vHashLists.for_each([&](HighsInt cliqueid) {
+      HighsInt start = cliques[cliqueid].start;
+      HighsInt end = cliques[cliqueid].end;
 
-          HighsInt start = cliques[cliqueid].start;
-          HighsInt end = cliques[cliqueid].end;
+      for (HighsInt i = start; i != end; ++i) {
+        if (cliqueentries[i].col == v.col) continue;
 
-          for (HighsInt i = start; i != end; ++i) {
-            if (cliqueentries[i].col == v.col) continue;
+        bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
+        globaldom.fixCol(cliqueentries[i].col,
+                         double(1 - cliqueentries[i].val));
+        if (globaldom.infeasible()) return true;
+        if (!wasfixed) {
+          ++nfixings;
+          infeasvertexstack.push_back(cliqueentries[i]);
+        }
+      }
 
-            bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
-            globaldom.fixCol(cliqueentries[i].col,
-                             double(1 - cliqueentries[i].val));
-            if (globaldom.infeasible()) return true;
-            if (!wasfixed) {
-              ++nfixings;
-              infeasvertexstack.push_back(cliqueentries[i]);
-            }
-          }
-
-          removeClique(cliqueid);
-
-          return false;
-        });
+      removeClique(cliqueid);
+      return false;
+    });
 
     if (infeas) return;
 
-    infeas = vHashListsSizeTwo.for_each(
-        [&](const HighsHashTableEntry<HighsInt>& entry) {
-          HighsInt cliqueid = entry.key();
+    infeas = vHashListsSizeTwo.for_each([&](HighsInt cliqueid) {
+      HighsInt start = cliques[cliqueid].start;
+      HighsInt end = cliques[cliqueid].end;
 
-          HighsInt start = cliques[cliqueid].start;
-          HighsInt end = cliques[cliqueid].end;
+      for (HighsInt i = start; i != end; ++i) {
+        if (cliqueentries[i].col == v.col) continue;
 
-          for (HighsInt i = start; i != end; ++i) {
-            if (cliqueentries[i].col == v.col) continue;
+        bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
+        globaldom.fixCol(cliqueentries[i].col,
+                         double(1 - cliqueentries[i].val));
+        if (globaldom.infeasible()) return true;
+        if (!wasfixed) {
+          ++nfixings;
+          infeasvertexstack.push_back(cliqueentries[i]);
+        }
+      }
 
-            bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
-            globaldom.fixCol(cliqueentries[i].col,
-                             double(1 - cliqueentries[i].val));
-            if (globaldom.infeasible()) return true;
-            if (!wasfixed) {
-              ++nfixings;
-              infeasvertexstack.push_back(cliqueentries[i]);
-            }
-          }
-
-          removeClique(cliqueid);
-          return false;
-        });
+      removeClique(cliqueid);
+      return false;
+    });
 
     if (infeas) return;
 
@@ -1603,64 +1579,52 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
       // and only remove fully redundant cliques that are larger than two
       // in the process since during presolve a lot of cliques of size two
       // may be found by probing and will be deleted upon rebuild anyways
-      vHashLists.for_each(
-          [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-            HighsInt cliqueid = entry.key();
-
-            cliques[cliqueid].numZeroFixed += 1;
-            if (cliques[cliqueid].end - cliques[cliqueid].start -
-                    cliques[cliqueid].numZeroFixed <=
-                1)
-              removeClique(cliqueid);
-
-            return false;
-          });
+      vHashLists.for_each([&](HighsInt cliqueid) {
+        cliques[cliqueid].numZeroFixed += 1;
+        if (cliques[cliqueid].end - cliques[cliqueid].start -
+                cliques[cliqueid].numZeroFixed <=
+            1)
+          removeClique(cliqueid);
+      });
       continue;
     }
 
-    vHashListsSizeTwo.for_each([&](const HighsHashTableEntry<HighsInt>& entry) {
-      HighsInt cliqueid = entry.key();
-      removeClique(cliqueid);
-      return false;
-    });
+    vHashListsSizeTwo.for_each(
+        [&](HighsInt cliqueid) { removeClique(cliqueid); });
 
     assert(cliquehitinds.empty());
     std::vector<CliqueVar> clq;
-    vHashLists.for_each(
-        [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-          HighsInt cliqueid = entry.key();
-          // assert(cliqueentries[entry.value()].val == 1 - v.val);
+    vHashLists.for_each([&](HighsInt cliqueid) {
+      // assert(cliqueentries[entry.value()].val == 1 - v.val);
 
-          cliques[cliqueid].numZeroFixed += 1;
-          if (cliques[cliqueid].end - cliques[cliqueid].start -
-                  cliques[cliqueid].numZeroFixed <=
-              1) {
-            removeClique(cliqueid);
-          } else if (cliques[cliqueid].numZeroFixed >=
-                     std::max(HighsInt{10}, (cliques[cliqueid].end -
-                                             cliques[cliqueid].start) >>
-                                                1)) {
-            HighsInt initSize = cliques[cliqueid].end - cliques[cliqueid].start;
-            clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
-                       cliqueentries.begin() + cliques[cliqueid].end);
-            HighsInt numDel = 0;
-            for (CliqueVar x : clq) numDel += colDeleted[x.col];
+      cliques[cliqueid].numZeroFixed += 1;
+      if (cliques[cliqueid].end - cliques[cliqueid].start -
+              cliques[cliqueid].numZeroFixed <=
+          1) {
+        removeClique(cliqueid);
+      } else if (cliques[cliqueid].numZeroFixed >=
+                 std::max(
+                     HighsInt{10},
+                     (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
+        HighsInt initSize = cliques[cliqueid].end - cliques[cliqueid].start;
+        clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
+                   cliqueentries.begin() + cliques[cliqueid].end);
+        HighsInt numDel = 0;
+        for (CliqueVar x : clq) numDel += colDeleted[x.col];
 
-            assert(numDel == cliques[cliqueid].numZeroFixed);
+        assert(numDel == cliques[cliqueid].numZeroFixed);
 
-            removeClique(cliqueid);
-            clq.erase(std::remove_if(clq.begin(), clq.end(),
-                                     [&](CliqueVar x) {
-                                       return globaldom.isFixed(x.col) &&
-                                              globaldom.col_lower_[x.col] ==
-                                                  1 - x.val;
-                                     }),
-                      clq.end());
-            if (clq.size() > 1) doAddClique(clq.data(), clq.size());
-          }
-
-          return false;
-        });
+        removeClique(cliqueid);
+        clq.erase(std::remove_if(clq.begin(), clq.end(),
+                                 [&](CliqueVar x) {
+                                   return globaldom.isFixed(x.col) &&
+                                          globaldom.col_lower_[x.col] ==
+                                              1 - x.val;
+                                 }),
+                  clq.end());
+        if (clq.size() > 1) doAddClique(clq.data(), clq.size());
+      }
+    });
   }
 
   propagateAndCleanup(globaldom);
@@ -1889,17 +1853,11 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
     return false;
   };
 
-  bool infeas = invertedHashList[v.index()].for_each(
-      [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-        return doFixings(entry.key());
-      });
+  bool infeas = invertedHashList[v.index()].for_each(doFixings);
 
   if (infeas) return;
 
-  invertedHashListSizeTwo[v.index()].for_each(
-      [&](const HighsHashTableEntry<HighsInt>& entry) {
-        return doFixings(entry.key());
-      });
+  invertedHashListSizeTwo[v.index()].for_each(doFixings);
 }
 
 void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
@@ -1930,14 +1888,11 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
 
   // now loop over cliques larger than size two and add the cliquelength - 1 as
   // additional implications
-  auto countImplics =
-      [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-        HighsInt cliqueid = entry.key();
-        HighsInt nimplics = cliques[cliqueid].end - cliques[cliqueid].start - 1;
-        nimplics *= (1 + cliques[cliqueid].equality);
-        numimplics += nimplics - 1;
-        return false;
-      };
+  auto countImplics = [&](HighsInt cliqueid) {
+    HighsInt nimplics = cliques[cliqueid].end - cliques[cliqueid].start - 1;
+    nimplics *= (1 + cliques[cliqueid].equality);
+    numimplics += nimplics - 1;
+  };
   invertedHashList[i0].for_each(countImplics);
   invertedHashList[i1].for_each(countImplics);
   return numimplics;
@@ -1951,14 +1906,11 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
 
   // now loop over cliques larger than size two and add the cliquelength - 1 as
   // additional implications
-  invertedHashList[iVal].for_each(
-      [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-        HighsInt cliqueid = entry.key();
-        HighsInt nimplics = cliques[cliqueid].end - cliques[cliqueid].start - 1;
-        nimplics *= (1 + cliques[cliqueid].equality);
-        numimplics += nimplics - 1;
-        return false;
-      });
+  invertedHashList[iVal].for_each([&](HighsInt cliqueid) {
+    HighsInt nimplics = cliques[cliqueid].end - cliques[cliqueid].start - 1;
+    nimplics *= (1 + cliques[cliqueid].equality);
+    numimplics += nimplics - 1;
+  });
 
   return numimplics;
 }
@@ -2007,16 +1959,10 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
   };
 
   invertedHashList[extensionstart.index()].for_each(
-      [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-        addCands(entry.key());
-        return false;
-      });
+      [&](HighsInt cliqueid) { addCands(cliqueid); });
 
   invertedHashListSizeTwo[extensionstart.index()].for_each(
-      [&](const HighsHashTableEntry<HighsInt>& entry) {
-        addCands(entry.key());
-        return false;
-      });
+      [&](HighsInt cliqueid) { addCands(cliqueid); });
 
   HighsInt sizeWithCandidates = clique.size();
   for (HighsInt i = 0; i != sizeWithCandidates; ++i)
@@ -2125,16 +2071,10 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     };
 
     invertedHashList[extensionstart.index()].for_each(
-        [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-          addCands(entry.key());
-          return false;
-        });
+        [&](HighsInt cliqueid) { addCands(cliqueid); });
 
     invertedHashListSizeTwo[extensionstart.index()].for_each(
-        [&](const HighsHashTableEntry<HighsInt>& entry) {
-          addCands(entry.key());
-          return false;
-        });
+        [&](HighsInt cliqueid) { addCands(cliqueid); });
 
     for (HighsInt i = 0; i != numclqvars; ++i)
       iscandidate[clqvars[i].index()] = false;
@@ -2185,23 +2125,17 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       removeClique(k);
 
       for (CliqueVar v : extensionvars) {
-        invertedHashList[v.index()].for_each(
-            [&](const HighsHashTableEntry<HighsInt, HighsInt>& entry) {
-              HighsInt cliqueid = entry.key();
-              if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
+        invertedHashList[v.index()].for_each([&](HighsInt cliqueid) {
+          if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
-              ++cliquehits[cliqueid];
-              return false;
-            });
+          ++cliquehits[cliqueid];
+        });
 
-        invertedHashListSizeTwo[v.index()].for_each(
-            [&](const HighsHashTableEntry<HighsInt>& entry) {
-              HighsInt cliqueid = entry.key();
-              if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
+        invertedHashListSizeTwo[v.index()].for_each([&](HighsInt cliqueid) {
+          if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
-              ++cliquehits[cliqueid];
-              return false;
-            });
+          ++cliquehits[cliqueid];
+        });
       }
 
       bool redundant = false;
