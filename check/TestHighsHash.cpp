@@ -1,4 +1,6 @@
 
+#include <numeric>
+
 #include "catch.hpp"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
