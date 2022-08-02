@@ -2082,25 +2082,8 @@ bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
 
 void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
                                 HighsInt col, double scale, double constant) {
-  if (mipsolver != nullptr) {
-    for (std::pair<const HighsInt, HighsImplications::VarBound>& vbd :
-         mipsolver->mipdata_->implications.getVLBs(col)) {
-      vbd.second.constant -= constant;
-      vbd.second.constant /= scale;
-      vbd.second.coef /= scale;
-    }
-
-    for (std::pair<const HighsInt, HighsImplications::VarBound>& vbd :
-         mipsolver->mipdata_->implications.getVUBs(col)) {
-      vbd.second.constant -= constant;
-      vbd.second.constant /= scale;
-      vbd.second.coef /= scale;
-    }
-
-    if (scale < 0)
-      mipsolver->mipdata_->implications.getVLBs(col).swap(
-          mipsolver->mipdata_->implications.getVUBs(col));
-  }
+  if (mipsolver != nullptr)
+    mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
 
   postsolve_stack.linearTransform(col, scale, constant);
 

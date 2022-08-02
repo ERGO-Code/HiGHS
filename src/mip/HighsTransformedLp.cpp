@@ -30,8 +30,10 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   simpleUbDist.resize(numTransformedCol);
   lbDist.resize(numTransformedCol);
   ubDist.resize(numTransformedCol);
-  bestVlb.resize(numTransformedCol);
-  bestVub.resize(numTransformedCol);
+  bestVlb.resize(numTransformedCol,
+                 std::make_pair(-1, HighsImplications::VarBound()));
+  bestVub.resize(numTransformedCol,
+                 std::make_pair(-1, HighsImplications::VarBound()));
   boundTypes.resize(numTransformedCol);
   vectorsum.setDimension(numTransformedCol);
 
@@ -45,83 +47,13 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
-
-    double minbestub = bestub;
-    double bestUbCmp = kHighsInf;
-    int64_t bestvubnodes = 0;
+    bestVub[col] = implications.getBestVub(col, lpSolution, bestub);
 
     double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
     simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
     if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
       simpleLbDist[col] = 0.0;
-    double maxbestlb = bestlb;
-    double bestLbCmp = kHighsInf;
-    int64_t bestvlbnodes = 0;
-
-    for (const auto& vub : implications.getVUBs(col)) {
-      if (vub.second.coef == kHighsInf) continue;
-      if (mipsolver.mipdata_->domain.isFixed(vub.first)) continue;
-      assert(mipsolver.mipdata_->domain.isBinary(vub.first));
-      double vubval = lpSolution.col_value[vub.first] * vub.second.coef +
-                      vub.second.constant;
-      double minvubval = vub.second.minValue();
-      double ubCmp =
-          std::min(0.0, mipsolver.mipdata_->feastol + vubval -
-                            mipsolver.mipdata_->domain.col_upper_[col]) /
-          std::sqrt(1.0 + vub.second.coef * vub.second.coef);
-
-      assert(vub.first >= 0 && vub.first < mipsolver.numCol());
-      if (ubCmp <= bestUbCmp + mipsolver.mipdata_->feastol) {
-        int64_t vubnodes =
-            vub.second.coef > 0
-                ? mipsolver.mipdata_->nodequeue.numNodesDown(vub.first)
-                : mipsolver.mipdata_->nodequeue.numNodesUp(vub.first);
-
-        if (ubCmp < bestUbCmp - mipsolver.mipdata_->feastol ||
-            vubnodes > bestvubnodes ||
-            (vubnodes == bestvubnodes &&
-             minvubval < minbestub - mipsolver.mipdata_->feastol)) {
-          bestub = vubval;
-          minbestub = minvubval;
-          bestVub[col] = &vub;
-          bestvubnodes = vubnodes;
-          bestUbCmp = ubCmp;
-        }
-      }
-    }
-
-    for (const auto& vlb : implications.getVLBs(col)) {
-      if (vlb.second.coef == -kHighsInf) continue;
-      if (mipsolver.mipdata_->domain.isFixed(vlb.first)) continue;
-      assert(mipsolver.mipdata_->domain.isBinary(vlb.first));
-      assert(vlb.first >= 0 && vlb.first < mipsolver.numCol());
-      double vlbval = lpSolution.col_value[vlb.first] * vlb.second.coef +
-                      vlb.second.constant;
-      double maxvlbval = vlb.second.maxValue();
-      double lbCmp =
-          std::min(0.0, mipsolver.mipdata_->feastol +
-                            mipsolver.mipdata_->domain.col_lower_[col] -
-                            vlbval) /
-          std::sqrt(1.0 + vlb.second.coef * vlb.second.coef);
-
-      if (lbCmp <= bestLbCmp + mipsolver.mipdata_->feastol) {
-        int64_t vlbnodes =
-            vlb.second.coef > 0
-                ? mipsolver.mipdata_->nodequeue.numNodesUp(vlb.first)
-                : mipsolver.mipdata_->nodequeue.numNodesDown(vlb.first);
-
-        if (lbCmp < bestLbCmp - mipsolver.mipdata_->feastol ||
-            vlbnodes > bestvlbnodes ||
-            (vlbnodes == bestvlbnodes &&
-             maxvlbval > maxbestlb + mipsolver.mipdata_->feastol)) {
-          bestlb = vlbval;
-          maxbestlb = maxvlbval;
-          bestVlb[col] = &vlb;
-          bestvlbnodes = vlbnodes;
-          bestLbCmp = lbCmp;
-        }
-      }
-    }
+    bestVlb[col] = implications.getBestVlb(col, lpSolution, bestlb);
 
     lbDist[col] = lpSolution.col_value[col] - bestlb;
     if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -150,65 +82,14 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       simpleUbDist[col] = bestub - lpSolution.col_value[col];
       if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
         simpleUbDist[col] = 0.0;
-
-      double minbestub = bestub;
-      int64_t bestvubnodes = 0;
+      bestVub[col] =
+          mipsolver.mipdata_->implications.getBestVub(col, lpSolution, bestub);
 
       simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
       if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
         simpleLbDist[col] = 0.0;
-      double maxbestlb = bestlb;
-      int64_t bestvlbnodes = 0;
-
-      for (const auto& vub : implications.getVUBs(col)) {
-        if (vub.second.coef == kHighsInf) continue;
-        if (mipsolver.mipdata_->domain.isFixed(vub.first)) continue;
-        assert(mipsolver.mipdata_->domain.isBinary(vub.first));
-        double vubval = lpSolution.col_value[vub.first] * vub.second.coef +
-                        vub.second.constant;
-
-        assert(vub.first >= 0 && vub.first < mipsolver.numCol());
-        if (vubval <= lpSolution.col_value[col] + mipsolver.mipdata_->feastol) {
-          int64_t vubnodes =
-              vub.second.coef > 0
-                  ? mipsolver.mipdata_->nodequeue.numNodesDown(vub.first)
-                  : mipsolver.mipdata_->nodequeue.numNodesUp(vub.first);
-          double minvubval = vub.second.minValue();
-          if (bestVub[col] == nullptr || vubnodes > bestvubnodes ||
-              (vubnodes == bestvubnodes &&
-               minvubval < minbestub - mipsolver.mipdata_->feastol)) {
-            bestub = vubval;
-            minbestub = minvubval;
-            bestVub[col] = &vub;
-            bestvubnodes = vubnodes;
-          }
-        }
-      }
-
-      for (const auto& vlb : implications.getVLBs(col)) {
-        if (vlb.second.coef == -kHighsInf) continue;
-        if (mipsolver.mipdata_->domain.isFixed(vlb.first)) continue;
-        assert(mipsolver.mipdata_->domain.isBinary(vlb.first));
-        assert(vlb.first >= 0 && vlb.first < mipsolver.numCol());
-        double vlbval = lpSolution.col_value[vlb.first] * vlb.second.coef +
-                        vlb.second.constant;
-
-        if (vlbval >= lpSolution.col_value[col] - mipsolver.mipdata_->feastol) {
-          size_t vlbnodes =
-              vlb.second.coef > 0
-                  ? mipsolver.mipdata_->nodequeue.numNodesUp(vlb.first)
-                  : mipsolver.mipdata_->nodequeue.numNodesDown(vlb.first);
-          double maxvlbval = vlb.second.maxValue();
-          if (bestVlb[col] == nullptr || vlbnodes > bestvlbnodes ||
-              (vlbnodes == bestvlbnodes &&
-               maxvlbval > maxbestlb + mipsolver.mipdata_->feastol)) {
-            bestlb = vlbval;
-            maxbestlb = maxvlbval;
-            bestVlb[col] = &vlb;
-            bestvlbnodes = vlbnodes;
-          }
-        }
-      }
+      bestVlb[col] =
+          mipsolver.mipdata_->implications.getBestVlb(col, lpSolution, bestlb);
 
       lbDist[col] = lpSolution.col_value[col] - bestlb;
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -312,7 +193,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       if (!useVbd) continue;
     } else {
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
-        if (!bestVlb[col])
+        if (bestVlb[col].first == -1)
           boundTypes[col] = BoundType::kSimpleLb;
         else if (preferVbds || vals[i] > 0 ||
                  simpleLbDist[col] > lbDist[col] + mip.mipdata_->feastol)
@@ -320,7 +201,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         else
           boundTypes[col] = BoundType::kSimpleLb;
       } else if (ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
-        if (!bestVub[col])
+        if (bestVub[col].first == -1)
           boundTypes[col] = BoundType::kSimpleUb;
         else if (preferVbds || vals[i] < 0 ||
                  simpleUbDist[col] > ubDist[col] + mip.mipdata_->feastol)
@@ -328,16 +209,16 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         else
           boundTypes[col] = BoundType::kSimpleUb;
       } else if (vals[i] > 0) {
-        if (bestVlb[col])
+        if (bestVlb[col].first != -1)
           boundTypes[col] = BoundType::kVariableLb;
-        else if (preferVbds && bestVub[col])
+        else if (preferVbds && bestVub[col].first != -1)
           boundTypes[col] = BoundType::kVariableUb;
         else
           boundTypes[col] = BoundType::kSimpleLb;
       } else {
-        if (bestVub[col])
+        if (bestVub[col].first != -1)
           boundTypes[col] = BoundType::kVariableUb;
-        else if (preferVbds && bestVlb[col])
+        else if (preferVbds && bestVlb[col].first != -1)
           boundTypes[col] = BoundType::kVariableLb;
         else
           boundTypes[col] = BoundType::kSimpleUb;
@@ -362,16 +243,16 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         }
         break;
       case BoundType::kVariableLb:
-        tmpRhs -= bestVlb[col]->second.constant * vals[i];
-        vectorsum.add(bestVlb[col]->first, vals[i] * bestVlb[col]->second.coef);
+        tmpRhs -= bestVlb[col].second.constant * vals[i];
+        vectorsum.add(bestVlb[col].first, vals[i] * bestVlb[col].second.coef);
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
           vals[i] = 0;
         }
         break;
       case BoundType::kVariableUb:
-        tmpRhs -= bestVub[col]->second.constant * vals[i];
-        vectorsum.add(bestVub[col]->first, vals[i] * bestVub[col]->second.coef);
+        tmpRhs -= bestVub[col].second.constant * vals[i];
+        vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
         vals[i] = -vals[i];
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
@@ -512,15 +393,14 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
     switch (boundTypes[col]) {
       case BoundType::kVariableLb: {
-        tmpRhs += bestVlb[col]->second.constant * vals[i];
-        vectorsum.add(bestVlb[col]->first,
-                      -vals[i] * bestVlb[col]->second.coef);
+        tmpRhs += bestVlb[col].second.constant * vals[i];
+        vectorsum.add(bestVlb[col].first, -vals[i] * bestVlb[col].second.coef);
         vectorsum.add(col, vals[i]);
         break;
       }
       case BoundType::kVariableUb: {
-        tmpRhs -= bestVub[col]->second.constant * vals[i];
-        vectorsum.add(bestVub[col]->first, vals[i] * bestVub[col]->second.coef);
+        tmpRhs -= bestVub[col].second.constant * vals[i];
+        vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
         vectorsum.add(col, -vals[i]);
         break;
       }

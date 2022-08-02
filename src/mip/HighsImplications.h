@@ -109,17 +109,29 @@ class HighsImplications {
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
               double vlbconstant);
 
-  const std::map<HighsInt, VarBound>& getVUBs(HighsInt col) const {
-    return vubs[col];
+  void columnTransformed(HighsInt col, double scale, double constant) {
+    if (scale < 0) std::swap(vubs[col], vlbs[col]);
+
+    for (auto& vlb : vlbs[col]) {
+      vlb.second.constant -= constant;
+      vlb.second.constant /= scale;
+      vlb.second.coef /= scale;
+    }
+
+    for (auto& vub : vubs[col]) {
+      vub.second.constant -= constant;
+      vub.second.constant /= scale;
+      vub.second.coef /= scale;
+    }
   }
 
-  const std::map<HighsInt, VarBound>& getVLBs(HighsInt col) const {
-    return vlbs[col];
-  }
+  std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
+                                           const HighsSolution& lpSolution,
+                                           double& bestUb) const;
 
-  std::map<HighsInt, VarBound>& getVUBs(HighsInt col) { return vubs[col]; }
-
-  std::map<HighsInt, VarBound>& getVLBs(HighsInt col) { return vlbs[col]; }
+  std::pair<HighsInt, VarBound> getBestVlb(HighsInt col,
+                                           const HighsSolution& lpSolution,
+                                           double& bestLb) const;
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
 

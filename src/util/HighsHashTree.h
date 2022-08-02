@@ -21,8 +21,8 @@ using std::memmove;
 template <typename K, typename V = void>
 class HighsHashTree {
   using Entry = HighsHashTableEntry<K, V>;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0x1)->value())>::type;
+  using ValueType =
+      typename std::remove_reference<decltype(Entry().value())>::type;
 
   enum Type {
     kEmpty = 0,
@@ -37,18 +37,51 @@ class HighsHashTree {
   enum Constants {
     kBitsPerLevel = 6,
     kBranchFactor = 1 << kBitsPerLevel,
-    kMaxDepth = (64 + (kBitsPerLevel - 1)) / kBitsPerLevel,
+    kMaxDepth = 64 / kBitsPerLevel,
     kMinLeafSize = 6,
     kLeafBurstThreshold = 54,
   };
 
+  static uint64_t compute_hash(const K& key) {
+    // discard 4 bits so that the total number of bits, 60, is divisible
+    // by 6, the number of bits used per level of the hash array mapped trie
+    // If we don't discard the bits the get_hash_chunk function below would
+    // need to check for being on the last level to avoid a negative shift value
+    // in that case even though it practically will never occur to reach that
+    // level. Therefore we rather discard the unused bits in the first place
+    // than using the additional branch in the get_hash_chunk() function which
+    // is called for each level during a lookup.
+    return HighsHashHelpers::hash(key) >> 4;
+  }
+
   static uint8_t get_hash_chunk(uint64_t hash, int pos) {
-    return (hash >> (64 - kBitsPerLevel - pos * kBitsPerLevel)) &
+    return (hash >> (60 - kBitsPerLevel - pos * kBitsPerLevel)) &
            (kBranchFactor - 1);
   }
 
   static uint16_t get_hash_chunks16(uint64_t hash, int pos) {
-    return (hash >> (48 - pos * kBitsPerLevel));
+    // use a switch and only handle possible cases. Since the function
+    // does not handle a default case and has a return type the compiler
+    // knows that the listed cases are all for which defined behavior is
+    // required and may perform optimizations based on the knowledge that
+    // the no return case cannot be reached.
+    switch (pos) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        return (hash >> (44 - pos * kBitsPerLevel));
+      case 8:
+      case 9:
+        // The distinction is needed to avoid a negative right shift in the last
+        // two levels, even though they are highly unlikely to be reached
+        // correctness could be compromised if they are and this is not handled.
+        return (hash << (pos * kBitsPerLevel - 44));
+    }
   }
 
   static uint8_t get_first_chunk16(uint16_t chunks) {
@@ -56,7 +89,7 @@ class HighsHashTree {
   }
 
   static void set_hash_chunk(uint64_t& hash, uint64_t chunk, int chunkPos) {
-    const int shiftAmount = (64 - kBitsPerLevel - chunkPos * kBitsPerLevel);
+    const int shiftAmount = (60 - kBitsPerLevel - chunkPos * kBitsPerLevel);
     chunk ^= (hash >> shiftAmount) & (kBranchFactor - 1);
     hash ^= chunk << shiftAmount;
   }
@@ -106,7 +139,7 @@ class HighsHashTree {
     Occupation occupation;
     int size;
     uint64_t hashes[capacity() + 1];
-    HighsHashTableEntry<K, V> entries[capacity()];
+    Entry entries[capacity()];
 
     InnerLeaf() : occupation(0), size(0) { hashes[0] = 0; }
 
@@ -120,8 +153,8 @@ class HighsHashTree {
 
     int get_num_entries() const { return size; }
 
-    bool insert_entry(uint64_t fullHash, int hashPos,
-                      HighsHashTableEntry<K, V>& entry) {
+    std::pair<ValueType*, bool> insert_entry(uint64_t fullHash, int hashPos,
+                                             Entry& entry) {
       assert(size < capacity());
       uint16_t hash = get_hash_chunks16(fullHash, hashPos);
       uint8_t hashChunk = get_first_chunk16(hash);
@@ -136,7 +169,10 @@ class HighsHashTree {
         while (hashes[pos] > hash) ++pos;
 
         while (pos != size && hashes[pos] == hash) {
-          if (entry.key() == entries[pos++].key()) return false;
+          if (entry.key() == entries[pos].key())
+            return std::make_pair(&entries[pos].value(), false);
+
+          ++pos;
         }
 
         if (pos < size) {
@@ -165,11 +201,10 @@ class HighsHashTree {
         hashes[size] = 0;
       }
 
-      return true;
+      return std::make_pair(&entries[pos].value(), true);
     }
 
-    const ValueType* find_entry(uint64_t fullHash, int hashPos,
-                                const K& key) const {
+    ValueType* find_entry(uint64_t fullHash, int hashPos, const K& key) {
       uint16_t hash = get_hash_chunks16(fullHash, hashPos);
       uint8_t hashChunk = get_first_chunk16(hash);
       if (!occupation.test(hashChunk)) return nullptr;
@@ -229,8 +264,7 @@ class HighsHashTree {
       // elements may not be found.
       occupation = 0;
       for (int i = 0; i < size; ++i) {
-        hashes[i] = get_hash_chunks16(HighsHashHelpers::hash(entries[i].key()),
-                                      hashPos);
+        hashes[i] = get_hash_chunks16(compute_hash(entries[i].key()), hashPos);
         occupation.set(get_first_chunk16(hashes[i]));
       }
 
@@ -441,8 +475,8 @@ class HighsHashTree {
   static void mergeIntoLeaf(InnerLeaf<SizeClass1>* leaf,
                             InnerLeaf<SizeClass2>* mergeLeaf, int hashPos) {
     for (int i = 0; i < mergeLeaf->size; ++i)
-      leaf->insert_entry(HighsHashHelpers::hash(mergeLeaf->entries[i].key()),
-                         hashPos, mergeLeaf->entries[i]);
+      leaf->insert_entry(compute_hash(mergeLeaf->entries[i].key()), hashPos,
+                         mergeLeaf->entries[i]);
   }
 
   template <int SizeClass>
@@ -451,12 +485,12 @@ class HighsHashTree {
     switch (mergeNode.getType()) {
       case kListLeaf: {
         ListLeaf* mergeLeaf = mergeNode.getListLeaf();
-        leaf->insert_entry(HighsHashHelpers::hash(mergeLeaf->first.entry.key()),
-                           hashPos, mergeLeaf->first.entry);
+        leaf->insert_entry(compute_hash(mergeLeaf->first.entry.key()), hashPos,
+                           mergeLeaf->first.entry);
         ListNode* iter = mergeLeaf->first.next;
         while (iter != nullptr) {
           ListNode* next = iter->next;
-          leaf->insert_entry(HighsHashHelpers::hash(iter->entry.key()), hashPos,
+          leaf->insert_entry(compute_hash(iter->entry.key()), hashPos,
                              iter->entry);
           delete iter;
           iter = next;
@@ -562,8 +596,8 @@ class HighsHashTree {
 
           do {
             if (find_recurse(branch->child[j],
-                             HighsHashHelpers::hash(leaf->entries[i].key()),
-                             hashPos + 1, leaf->entries[i].key()))
+                             compute_hash(leaf->entries[i].key()), hashPos + 1,
+                             leaf->entries[i].key()))
               return &leaf->entries[i];
             ++i;
           } while (i < leaf->size && get_first_chunk16(leaf->hashes[i]) == pos);
@@ -671,11 +705,12 @@ class HighsHashTree {
   NodePtr root;
 
   template <int SizeClass>
-  bool insert_into_leaf(NodePtr* insertNode, InnerLeaf<SizeClass>* leaf,
-                        uint64_t hash, int hashPos,
-                        HighsHashTableEntry<K, V>& entry) {
+  static std::pair<ValueType*, bool> insert_into_leaf(
+      NodePtr* insertNode, InnerLeaf<SizeClass>* leaf, uint64_t hash,
+      int hashPos, HighsHashTableEntry<K, V>& entry) {
     if (leaf->size == InnerLeaf<SizeClass>::capacity()) {
-      if (leaf->find_entry(hash, hashPos, entry.key())) return false;
+      auto existingEntry = leaf->find_entry(hash, hashPos, entry.key());
+      if (existingEntry) return std::make_pair(existingEntry, false);
 
       InnerLeaf<SizeClass + 1>* newLeaf =
           new InnerLeaf<SizeClass + 1>(std::move(*leaf));
@@ -687,31 +722,34 @@ class HighsHashTree {
     return leaf->insert_entry(hash, hashPos, entry);
   }
 
-  bool insert_recurse(NodePtr* insertNode, uint64_t hash, int hashPos,
-                      HighsHashTableEntry<K, V>& entry) {
+  static std::pair<ValueType*, bool> insert_recurse(
+      NodePtr* insertNode, uint64_t hash, int hashPos,
+      HighsHashTableEntry<K, V>& entry) {
     switch (insertNode->getType()) {
       case kEmpty: {
         if (hashPos == kMaxDepth) {
-          *insertNode = new ListLeaf(std::move(entry));
+          ListLeaf* leaf = new ListLeaf(std::move(entry));
+          *insertNode = leaf;
+          return std::make_pair(&leaf->first.entry.value(), true);
         } else {
           InnerLeaf<1>* leaf = new InnerLeaf<1>;
           *insertNode = leaf;
-          leaf->insert_entry(hash, hashPos, entry);
+          return leaf->insert_entry(hash, hashPos, entry);
         }
-        return true;
       }
       case kListLeaf: {
         ListLeaf* leaf = insertNode->getListLeaf();
         ListNode* iter = &leaf->first;
         while (true) {
           // check for existing key
-          if (iter->entry.key() == entry.key()) return false;
+          if (iter->entry.key() == entry.key())
+            return std::make_pair(&iter->entry.value(), false);
 
           if (iter->next == nullptr) {
             // reached the end of the list and key is not duplicate, so insert
             iter->next = new ListNode(std::move(entry));
             ++leaf->count;
-            return true;
+            return std::make_pair(&iter->next->entry.value(), true);
           }
           iter = iter->next;
         }
@@ -738,7 +776,8 @@ class HighsHashTree {
         if (leaf->size < InnerLeaf<4>::capacity())
           return leaf->insert_entry(hash, hashPos, entry);
 
-        if (leaf->find_entry(hash, hashPos, entry.key())) return false;
+        auto existingEntry = leaf->find_entry(hash, hashPos, entry.key());
+        if (existingEntry) return std::make_pair(existingEntry, false);
         Occupation occupation = leaf->occupation;
 
         uint8_t hashChunk = get_hash_chunk(hash, hashPos);
@@ -753,24 +792,38 @@ class HighsHashTree {
         if (hashPos + 1 == kMaxDepth) {
           for (int i = 0; i < branchSize; ++i) branch->child[i] = nullptr;
 
-          int pos = occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
-          branch->child[pos] = new ListLeaf(std::move(entry));
-
           for (int i = 0; i < leaf->size; ++i) {
+            int pos =
+                occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
+                1;
             if (branch->child[pos].getType() == kEmpty)
               branch->child[pos] = new ListLeaf(std::move(leaf->entries[i]));
             else {
               ListLeaf* listLeaf = branch->child[pos].getListLeaf();
               ListNode* newNode = new ListNode(std::move(listLeaf->first));
               listLeaf->first.next = newNode;
-              listLeaf->first.entry = std::move(std::move(leaf->entries[i]));
+              listLeaf->first.entry = std::move(leaf->entries[i]);
               ++listLeaf->count;
             }
           }
 
           delete leaf;
 
-          return true;
+          ListLeaf* listLeaf;
+
+          int pos = occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
+          if (branch->child[pos].getType() == kEmpty) {
+            listLeaf = new ListLeaf(std::move(entry));
+            branch->child[pos] = listLeaf;
+          } else {
+            listLeaf = branch->child[pos].getListLeaf();
+            ListNode* newNode = new ListNode(std::move(listLeaf->first));
+            listLeaf->first.next = newNode;
+            listLeaf->first.entry = std::move(entry);
+            ++listLeaf->count;
+          }
+
+          return std::make_pair(&listLeaf->first.entry.value(), true);
         }
 
         if (branchSize > 1) {
@@ -785,21 +838,21 @@ class HighsHashTree {
             for (int i = 0; i < branchSize; ++i)
               branch->child[i] = new InnerLeaf<1>;
 
-            int pos =
-                occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
-            branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
-                hash, hashPos + 1, entry);
             for (int i = 0; i < leaf->size; ++i) {
-              pos =
+              int pos =
                   occupation.num_set_until(get_first_chunk16(leaf->hashes[i])) -
                   1;
               branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
-                  HighsHashHelpers::hash(leaf->entries[i].key()), hashPos + 1,
+                  compute_hash(leaf->entries[i].key()), hashPos + 1,
                   leaf->entries[i]);
             }
 
             delete leaf;
-            return true;
+
+            int pos =
+                occupation.num_set_until(get_hash_chunk(hash, hashPos)) - 1;
+            return branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
+                hash, hashPos + 1, entry);
           } else {
             // there are many collisions, determine the exact sizes first
             uint8_t sizes[InnerLeaf<4>::capacity() + 1];
@@ -837,23 +890,23 @@ class HighsHashTree {
               switch (branch->child[pos].getType()) {
                 case kInnerLeafSizeClass1:
                   branch->child[pos].getInnerLeafSizeClass1()->insert_entry(
-                      HighsHashHelpers::hash(leaf->entries[i].key()),
-                      hashPos + 1, leaf->entries[i]);
+                      compute_hash(leaf->entries[i].key()), hashPos + 1,
+                      leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass2:
                   branch->child[pos].getInnerLeafSizeClass2()->insert_entry(
-                      HighsHashHelpers::hash(leaf->entries[i].key()),
-                      hashPos + 1, leaf->entries[i]);
+                      compute_hash(leaf->entries[i].key()), hashPos + 1,
+                      leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass3:
                   branch->child[pos].getInnerLeafSizeClass3()->insert_entry(
-                      HighsHashHelpers::hash(leaf->entries[i].key()),
-                      hashPos + 1, leaf->entries[i]);
+                      compute_hash(leaf->entries[i].key()), hashPos + 1,
+                      leaf->entries[i]);
                   break;
                 case kInnerLeafSizeClass4:
                   branch->child[pos].getInnerLeafSizeClass4()->insert_entry(
-                      HighsHashHelpers::hash(leaf->entries[i].key()),
-                      hashPos + 1, leaf->entries[i]);
+                      compute_hash(leaf->entries[i].key()), hashPos + 1,
+                      leaf->entries[i]);
               }
             }
           }
@@ -900,8 +953,8 @@ class HighsHashTree {
     return insert_recurse(insertNode, hash, hashPos, entry);
   }
 
-  void erase_recurse(NodePtr* erase_node, uint64_t hash, int hashPos,
-                     const K& key) {
+  static void erase_recurse(NodePtr* erase_node, uint64_t hash, int hashPos,
+                            const K& key) {
     switch (erase_node->getType()) {
       case kEmpty: {
         return;
@@ -1067,8 +1120,8 @@ class HighsHashTree {
         ListLeaf* leaf = n1.getListLeaf();
         ListNode* iter = &leaf->first;
         do {
-          if (find_recurse(n2, HighsHashHelpers::hash(iter->entry.key()),
-                           hashPos, iter->entry.key()))
+          if (find_recurse(n2, compute_hash(iter->entry.key()), hashPos,
+                           iter->entry.key()))
             return &iter->entry;
           iter = iter->next;
         } while (iter != nullptr);
@@ -1317,23 +1370,36 @@ class HighsHashTree {
   template <typename... Args>
   bool insert(Args&&... args) {
     HighsHashTableEntry<K, V> entry(std::forward<Args>(args)...);
-    uint64_t hash = HighsHashHelpers::hash(entry.key());
+    uint64_t hash = compute_hash(entry.key());
+    return insert_recurse(&root, hash, 0, entry).second;
+  }
+
+  template <typename... Args>
+  std::pair<ValueType*, bool> insert_or_get(Args&&... args) {
+    HighsHashTableEntry<K, V> entry(std::forward<Args>(args)...);
+    uint64_t hash = compute_hash(entry.key());
     return insert_recurse(&root, hash, 0, entry);
   }
 
   void erase(const K& key) {
-    uint64_t hash = HighsHashHelpers::hash(key);
+    uint64_t hash = compute_hash(key);
 
     erase_recurse(&root, hash, 0, key);
   }
 
   bool contains(const K& key) const {
-    uint64_t hash = HighsHashHelpers::hash(key);
+    uint64_t hash = compute_hash(key);
     return find_recurse(root, hash, 0, key) != nullptr;
   }
 
   const ValueType* find(const K& key) const {
-    uint64_t hash = HighsHashHelpers::hash(key);
+    uint64_t hash = compute_hash(key);
+
+    return find_recurse(root, hash, 0, key);
+  }
+
+  ValueType* find(const K& key) {
+    uint64_t hash = compute_hash(key);
 
     return find_recurse(root, hash, 0, key);
   }

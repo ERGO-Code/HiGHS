@@ -858,8 +858,8 @@ class HighsHashTable {
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0x1)->value())>::type;
+  using ValueType =
+      typename std::remove_reference<decltype(Entry().value())>::type;
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
