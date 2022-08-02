@@ -1216,29 +1216,25 @@ class HighsHashTree {
       }
       case kInnerLeafSizeClass1: {
         InnerLeaf<1>* leaf = node.getInnerLeafSizeClass1();
-        for (int i = 0; i < leaf->size; ++i)
-          leaf->entries[i].forward(f);
+        for (int i = 0; i < leaf->size; ++i) leaf->entries[i].forward(f);
 
         break;
       }
       case kInnerLeafSizeClass2: {
         InnerLeaf<2>* leaf = node.getInnerLeafSizeClass2();
-        for (int i = 0; i < leaf->size; ++i)
-          leaf->entries[i].forward(f);
+        for (int i = 0; i < leaf->size; ++i) leaf->entries[i].forward(f);
 
         break;
       }
       case kInnerLeafSizeClass3: {
         InnerLeaf<3>* leaf = node.getInnerLeafSizeClass3();
-        for (int i = 0; i < leaf->size; ++i)
-          leaf->entries[i].forward(f);
+        for (int i = 0; i < leaf->size; ++i) leaf->entries[i].forward(f);
 
         break;
       }
       case kInnerLeafSizeClass4: {
         InnerLeaf<4>* leaf = node.getInnerLeafSizeClass4();
-        for (int i = 0; i < leaf->size; ++i)
-          leaf->entries[i].forward(f);
+        for (int i = 0; i < leaf->size; ++i) leaf->entries[i].forward(f);
 
         break;
       }
@@ -1246,8 +1242,7 @@ class HighsHashTree {
         BranchNode* branch = node.getBranchNode();
         int size = branch->occupation.num_set();
 
-        for (int i = 0; i < size; ++i)
-          for_each_recurse<R>(branch->child[i], f);
+        for (int i = 0; i < size; ++i) for_each_recurse<R>(branch->child[i], f);
       }
     }
   }
