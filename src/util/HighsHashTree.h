@@ -37,51 +37,26 @@ class HighsHashTree {
   enum Constants {
     kBitsPerLevel = 6,
     kBranchFactor = 1 << kBitsPerLevel,
-    kMaxDepth = 64 / kBitsPerLevel,
+    // even though we could use up to 64 bits of the hash this would require
+    // additional handling in the last levels to avoid negative shift values
+    // up to 9 depth levels are Ok though as up to index 8 the get_hash_chunks16()
+    // function shifts right by a non-negative amount
+    kMaxDepth = 9,
     kMinLeafSize = 6,
     kLeafBurstThreshold = 54,
   };
 
   static uint64_t compute_hash(const K& key) {
-    // discard 4 bits so that the total number of bits, 60, is divisible
-    // by 6, the number of bits used per level of the hash array mapped trie
-    // If we don't discard the bits the get_hash_chunk function below would
-    // need to check for being on the last level to avoid a negative shift value
-    // in that case even though it practically will never occur to reach that
-    // level. Therefore we rather discard the unused bits in the first place
-    // than using the additional branch in the get_hash_chunk() function which
-    // is called for each level during a lookup.
     return HighsHashHelpers::hash(key) >> 4;
   }
 
   static uint8_t get_hash_chunk(uint64_t hash, int pos) {
-    return (hash >> (60 - kBitsPerLevel - pos * kBitsPerLevel)) &
+    return (hash >> (64 - kBitsPerLevel - pos * kBitsPerLevel)) &
            (kBranchFactor - 1);
   }
 
   static uint16_t get_hash_chunks16(uint64_t hash, int pos) {
-    // use a switch and only handle possible cases. Since the function
-    // does not handle a default case and has a return type the compiler
-    // knows that the listed cases are all for which defined behavior is
-    // required and may perform optimizations based on the knowledge that
-    // the no return case cannot be reached.
-    switch (pos) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-      case 7:
-        return (hash >> (44 - pos * kBitsPerLevel));
-      case 8:
-      case 9:
-        // The distinction is needed to avoid a negative right shift in the last
-        // two levels, even though they are highly unlikely to be reached
-        // correctness could be compromised if they are and this is not handled.
-        return (hash << (pos * kBitsPerLevel - 44));
-    }
+    return (hash >> (48 - pos * kBitsPerLevel));
   }
 
   static uint8_t get_first_chunk16(uint16_t chunks) {
