@@ -39,8 +39,8 @@ class HighsHashTree {
     kBranchFactor = 1 << kBitsPerLevel,
     // even though we could use up to 64 bits of the hash this would require
     // additional handling in the last levels to avoid negative shift values
-    // up to 9 depth levels are Ok though as up to index 8 the get_hash_chunks16()
-    // function shifts right by a non-negative amount
+    // up to 9 depth levels are Ok though as up to index 8 the
+    // get_hash_chunks16() function shifts right by a non-negative amount
     kMaxDepth = 9,
     kMinLeafSize = 6,
     kLeafBurstThreshold = 54,
