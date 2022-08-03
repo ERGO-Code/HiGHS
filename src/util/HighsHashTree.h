@@ -47,7 +47,7 @@ class HighsHashTree {
   };
 
   static uint64_t compute_hash(const K& key) {
-    return HighsHashHelpers::hash(key) >> 4;
+    return HighsHashHelpers::hash(key);
   }
 
   static uint8_t get_hash_chunk(uint64_t hash, int pos) {
