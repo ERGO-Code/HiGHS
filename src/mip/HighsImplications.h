@@ -20,6 +20,7 @@
 
 #include "mip/HighsDomain.h"
 #include "mip/HighsDomainChange.h"
+#include "util/HighsHashTree.h"
 
 class HighsCliqueTable;
 class HighsLpRelaxation;
@@ -46,8 +47,8 @@ class HighsImplications {
   };
 
  private:
-  std::vector<std::map<HighsInt, VarBound>> vubs;
-  std::vector<std::map<HighsInt, VarBound>> vlbs;
+  std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
+  std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
 
  public:
   const HighsMipSolver& mipsolver;
@@ -112,17 +113,14 @@ class HighsImplications {
   void columnTransformed(HighsInt col, double scale, double constant) {
     if (scale < 0) std::swap(vubs[col], vlbs[col]);
 
-    for (auto& vlb : vlbs[col]) {
-      vlb.second.constant -= constant;
-      vlb.second.constant /= scale;
-      vlb.second.coef /= scale;
-    }
+    auto transformVbd = [&](HighsInt, VarBound& vbd) {
+      vbd.constant -= constant;
+      vbd.constant /= scale;
+      vbd.coef /= scale;
+    };
 
-    for (auto& vub : vubs[col]) {
-      vub.second.constant -= constant;
-      vub.second.constant /= scale;
-      vub.second.coef /= scale;
-    }
+    vlbs[col].for_each(transformVbd);
+    vubs[col].for_each(transformVbd);
   }
 
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,

@@ -103,6 +103,9 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
+  if (&propdomain != &mipdata.domain)
+    lp->computeBasicDegenerateDuals(mipdata.feastol, &propdomain);
+
   HighsTransformedLp transLp(*lp, mipdata.implications);
   if (mipdata.domain.infeasible()) {
     status = HighsLpRelaxation::Status::kInfeasible;
