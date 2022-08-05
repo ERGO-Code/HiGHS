@@ -364,7 +364,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
   };
 
   HighsLpRelaxation::Playground playground = lp->playground();
-  //  HighsLpRelaxation::ResolveGuard resolveGuard = lp->resolveGuard();
 
   while (true) {
     bool mustStop = getStrongBranchingLpIterations() >= maxSbIters ||
