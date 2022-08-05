@@ -1407,6 +1407,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     // solution branching failed, so choose any integer variable to branch
     // on in case we have a different solution status could happen due to a
     // fail in the LP solution process
+    pseudocost.setDegeneracyFactor(1e6);
 
     for (HighsInt i : mipsolver.mipdata_->integral_cols) {
       if (localdom.col_upper_[i] - localdom.col_lower_[i] < 0.5) continue;
@@ -1429,7 +1430,38 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
       if (score > bestscore) {
         bestscore = score;
-        if (mipsolver.colCost(i) >= 0) {
+        bool branchUpwards;
+        double cost = lp->unscaledDualFeasible(lp->getStatus())
+                          ? lp->getSolution().col_dual[i]
+                          : mipsolver.colCost(i);
+        if (std::fabs(cost) > mipsolver.mipdata_->feastol &&
+            getCutoffBound() < kHighsInf) {
+          // branch in direction of worsening cost first in case the column has
+          // cost and we do have an upper bound
+          branchUpwards = cost > 0;
+        } else if (pseudocost.getAvgInferencesUp(i) >
+                   pseudocost.getAvgInferencesDown(i) +
+                       mipsolver.mipdata_->feastol) {
+          // column does not have (reduced) cost above tolerance so branch in
+          // direction of more inferences
+          branchUpwards = true;
+        } else if (pseudocost.getAvgInferencesUp(i) <
+                   pseudocost.getAvgInferencesDown(i) -
+                       mipsolver.mipdata_->feastol) {
+          branchUpwards = false;
+        } else {
+          // number of inferences give a tie, so we branch in the direction that
+          // does have a less recent domain change to avoid branching the same
+          // integer column into the same direction over and over
+          HighsInt colLowerPos;
+          HighsInt colUpperPos;
+          localdom.getColLowerPos(i, localdom.getNumDomainChanges(),
+                                  colLowerPos);
+          localdom.getColUpperPos(i, localdom.getNumDomainChanges(),
+                                  colUpperPos);
+          branchUpwards = colLowerPos <= colUpperPos;
+        }
+        if (branchUpwards) {
           double upval = std::ceil(fracval);
           currnode.branching_point = upval;
           currnode.branchingdecision.boundtype = HighsBoundType::kLower;
@@ -1444,6 +1476,8 @@ HighsSearch::NodeResult HighsSearch::branch() {
         }
       }
     }
+
+    pseudocost.setDegeneracyFactor(1);
   }
 
   if (currnode.branchingdecision.column == -1) {
