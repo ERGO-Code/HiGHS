@@ -7,6 +7,23 @@ requires = ["setuptools",
 
 build-backend = "setuptools.build_meta"
 
+[tool.cibuildwheel]
+build = "*"
+skip = ""
+test-skip = ""
+archs = ["x86_64 i686 aarch64 ppc64le s390x"]
+# archs = ["x86_64 arm64 x86_64 i686 aarch64 ppc64le s390x"]
+before-all = ["cd /project && git clone https://github.com/ERGO-Code/HiGHS.git",
+              "cd HiGHS/ && mkdir build && cd build",
+              "cmake -DFAST_BUILD=ON -DSHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
+              "make -j && make install"]
+
+
+[tool.cibuildwheel.linux]
+     before-build = [
+        "REPAIR_LIBRARY_PATH=/project/installs/highs/lib"
+     ]
+
 [tool.cibuildwheel.macos]
      repair-wheel-command = [
          "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel}",
