@@ -15,6 +15,7 @@
 
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsIntegers.h"
 
 HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
                                        HighsImplications& implications)
@@ -66,28 +67,22 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     double bestub = mipsolver.mipdata_->domain.col_upper_[col];
     double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
-    // todo: use binary variable bounds on integers?
-    if (true || bestub - bestlb < 100.5) {
-      if (bestlb == bestub) continue;
-      lbDist[col] = lpSolution.col_value[col] - bestlb;
-      if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
-      simpleLbDist[col] = lbDist[col];
-      ubDist[col] = bestub - lpSolution.col_value[col];
-      if (ubDist[col] <= mipsolver.mipdata_->feastol) ubDist[col] = 0.0;
-      simpleUbDist[col] = ubDist[col];
-      boundDist[col] = std::min(lbDist[col], ubDist[col]);
-    } else {
-      mipsolver.mipdata_->implications.cleanupVarbounds(col);
-      if (mipsolver.mipdata_->domain.infeasible()) return;
-      simpleUbDist[col] = bestub - lpSolution.col_value[col];
-      if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
-        simpleUbDist[col] = 0.0;
+
+    mipsolver.mipdata_->implications.cleanupVarbounds(col);
+    if (mipsolver.mipdata_->domain.infeasible()) return;
+    simpleUbDist[col] = bestub - lpSolution.col_value[col];
+    if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
+      simpleUbDist[col] = 0.0;
+
+    simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
+    if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
+      simpleLbDist[col] = 0.0;
+    double simpleBndDist = std::min(simpleLbDist[col], simpleUbDist[col]);
+    if (simpleBndDist > 0 &&
+        std::fabs(HighsIntegers::nearestInteger(lpSolution.col_value[col]) -
+                  lpSolution.col_value[col]) < mipsolver.mipdata_->feastol) {
       bestVub[col] =
           mipsolver.mipdata_->implications.getBestVub(col, lpSolution, bestub);
-
-      simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
-      if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
-        simpleLbDist[col] = 0.0;
       bestVlb[col] =
           mipsolver.mipdata_->implications.getBestVlb(col, lpSolution, bestlb);
 
@@ -95,8 +90,18 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
       ubDist[col] = bestub - lpSolution.col_value[col];
       if (ubDist[col] <= mipsolver.mipdata_->feastol) ubDist[col] = 0.0;
-
       boundDist[col] = std::min(lbDist[col], ubDist[col]);
+      if (boundDist[col] > simpleBndDist + mipsolver.mipdata_->feastol) {
+        lbDist[col] = simpleLbDist[col];
+        ubDist[col] = simpleUbDist[col];
+        boundDist[col] = simpleBndDist;
+        bestVub[col].first = -1;
+        bestVlb[col].first = -1;
+      }
+    } else {
+      lbDist[col] = simpleLbDist[col];
+      ubDist[col] = simpleUbDist[col];
+      boundDist[col] = simpleBndDist;
     }
   }
 
@@ -178,13 +183,24 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     if (lprelaxation.isColIntegral(col)) {
       if (lb == -kHighsInf || ub == kHighsInf) integersPositive = false;
       bool useVbd = false;
-      if (ub - lb > 1.5) {
-        if (vals[i] < 0 && ubDist[col] == 0.0 &&
-            simpleUbDist[col] > mip.mipdata_->feastol) {
+      if (ub - lb > 1.5 && boundDist[col] == 0.0 && simpleLbDist[col] != 0 &&
+          simpleUbDist[col] != 0) {
+        if (bestVlb[col].first == -1 ||
+            ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
+          assert(bestVub[col].first != -1);
           boundTypes[col] = BoundType::kVariableUb;
           useVbd = true;
-        } else if (vals[i] > 0.0 && lbDist[col] == 0.0 &&
-                   simpleLbDist[col] > mip.mipdata_->feastol) {
+        } else if (bestVub[col].first == -1 ||
+                   lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
+          assert(bestVlb[col].first != -1);
+          boundTypes[col] = BoundType::kVariableLb;
+          useVbd = true;
+        } else if (vals[i] > 0) {
+          assert(bestVub[col].first != -1);
+          boundTypes[col] = BoundType::kVariableUb;
+          useVbd = true;
+        } else {
+          assert(bestVlb[col].first != -1);
           boundTypes[col] = BoundType::kVariableLb;
           useVbd = true;
         }
