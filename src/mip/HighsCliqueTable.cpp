@@ -872,6 +872,10 @@ void HighsCliqueTable::extractCliques(
         HighsCDouble colub =
             HighsCDouble(globaldom.col_upper_[col]) - globaldom.col_lower_[col];
         HighsCDouble implcolub = impliedub / vals[perm[j]];
+        if (mipsolver.variableType(col) != HighsVarType::kContinuous)
+          implcolub =
+              std::floor(double(implcolub) + mipsolver.mipdata_->feastol);
+
         if (implcolub < colub - feastol) {
           HighsCDouble coef;
           HighsCDouble constant;
@@ -1154,6 +1158,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
           double implcolub = double(impliedActivity +
                                     vals[perm[j]] * globaldom.col_lower_[col]) /
                              vals[perm[j]];
+          if (mipsolver.variableType(col) != HighsVarType::kContinuous)
+            implcolub = std::floor(implcolub + mipsolver.mipdata_->feastol);
 
           if (implcolub < globaldom.col_upper_[col] - feastol) {
             double coef;
@@ -1174,6 +1180,9 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
           double implcollb = double(impliedActivity +
                                     vals[perm[j]] * globaldom.col_upper_[col]) /
                              vals[perm[j]];
+          if (mipsolver.variableType(col) != HighsVarType::kContinuous)
+            implcollb = std::ceil(implcollb - mipsolver.mipdata_->feastol);
+
           if (implcollb > globaldom.col_lower_[col] + feastol) {
             double coef;
             double constant;
