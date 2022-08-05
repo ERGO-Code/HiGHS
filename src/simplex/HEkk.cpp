@@ -4248,7 +4248,7 @@ double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
 double HEkk::getMaxAbsRowValue(HighsInt row) {
   if (!status_.has_ar_matrix) initialisePartitionedRowwiseMatrix();
 
-  double val = 0.0;
+  double val = -1.0;
   for (HighsInt i = ar_matrix_.start_[row]; i < ar_matrix_.start_[row + 1]; ++i)
     val = std::max(val, std::abs(ar_matrix_.value_[i]));
 
