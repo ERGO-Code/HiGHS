@@ -155,7 +155,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
       if (minVubVal > minbestUb + mipsolver.mipdata_->feastol) return false;
       if (lpSolution.col_dual[vubCol] / vub.coef -
               lpSolution.col_dual[bestVub.first] / bestVub.second.coef >
-          mipsolver.mipdata_->epsilon)
+          mipsolver.mipdata_->feastol)
         return true;
     }
 
@@ -184,6 +184,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
       return;
 
     assert(vubCol >= 0 && vubCol < mipsolver.numCol());
+    ubDist /= std::fabs(vub.coef);
     if (ubDist <= bestUbDist + mipsolver.mipdata_->feastol) {
       double minvubval = vub.minValue();
       int64_t vubnodes =
@@ -221,7 +222,7 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
       if (maxVlbVal < maxbestlb - mipsolver.mipdata_->feastol) return false;
       if (lpSolution.col_dual[vlbCol] / vlb.coef -
               lpSolution.col_dual[bestVlb.first] / bestVlb.second.coef <
-          -mipsolver.mipdata_->epsilon)
+          -mipsolver.mipdata_->feastol)
         return true;
     }
 
@@ -244,6 +245,8 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
         lbDist * lbDist > (1.0 + vlb.coef * vlb.coef) * yDist * yDist)
       return;
 
+    // normalize the binary coefficient to 1 to avoid scaling issues
+    lbDist /= std::fabs(vlb.coef);
     if (lbDist <= bestLbDist + mipsolver.mipdata_->feastol) {
       double maxvlbval = vlb.maxValue();
       int64_t vlbnodes =
