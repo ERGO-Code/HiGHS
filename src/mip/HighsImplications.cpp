@@ -162,6 +162,13 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
     return false;
   };
 
+  double scale = mipsolver.mipdata_->domain.col_upper_[col] -
+                 mipsolver.mipdata_->domain.col_lower_[col];
+  if (scale == kHighsInf)
+    scale = 1.0;
+  else
+    scale = 1.0 / scale;
+
   vubs[col].for_each([&](HighsInt vubCol, const VarBound& vub) {
     if (vub.coef == kHighsInf) return;
     if (mipsolver.mipdata_->domain.isFixed(vubCol)) return;
@@ -179,12 +186,11 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVub(
     // hence the norm is sqrt(1 + a^2) and the distance of the variable bound
     // constraint is ay + b - x evaluated at the solution values of x and y
     // divided by the norm.
-    if (kSkipBadVbds &&
-        ubDist * ubDist > (1.0 + vub.coef * vub.coef) * yDist * yDist)
-      return;
+    double norm2 = 1.0 + vub.coef * vub.coef;
+    if (kSkipBadVbds && ubDist * ubDist > yDist * yDist * norm2) return;
 
     assert(vubCol >= 0 && vubCol < mipsolver.numCol());
-    ubDist /= std::fabs(vub.coef);
+    ubDist *= scale;
     if (ubDist <= bestUbDist + mipsolver.mipdata_->feastol) {
       double minvubval = vub.minValue();
       int64_t vubnodes =
@@ -229,6 +235,13 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
     return false;
   };
 
+  double scale = mipsolver.mipdata_->domain.col_upper_[col] -
+                 mipsolver.mipdata_->domain.col_lower_[col];
+  if (scale == kHighsInf)
+    scale = 1.0;
+  else
+    scale = 1.0 / scale;
+
   vlbs[col].for_each([&](HighsInt vlbCol, const VarBound& vlb) {
     if (vlb.coef == -kHighsInf) return;
     if (mipsolver.mipdata_->domain.isFixed(vlbCol)) return;
@@ -241,12 +254,11 @@ std::pair<HighsInt, HighsImplications::VarBound> HighsImplications::getBestVlb(
                    (vlb.coef > 0 ? lpSolution.col_value[vlbCol]
                                  : 1 - lpSolution.col_value[vlbCol]);
 
-    if (kSkipBadVbds &&
-        lbDist * lbDist > (1.0 + vlb.coef * vlb.coef) * yDist * yDist)
-      return;
+    double norm2 = 1.0 + vlb.coef * vlb.coef;
+    if (kSkipBadVbds && lbDist * lbDist > yDist * yDist * norm2) return;
 
-    // normalize the binary coefficient to 1 to avoid scaling issues
-    lbDist /= std::fabs(vlb.coef);
+    // scale the distance as if the bounded column was scaled to have ub-lb=1
+    lbDist *= scale;
     if (lbDist <= bestLbDist + mipsolver.mipdata_->feastol) {
       double maxvlbval = vlb.maxValue();
       int64_t vlbnodes =
