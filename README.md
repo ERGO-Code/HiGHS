@@ -128,10 +128,9 @@ email sent to highsopt@gmail.com.
 Parallel code
 -------------
 
-Parallel computation within HiGHS is limited to the dual simplex solver and the MIP solver.
+Parallel computation within HiGHS is limited to the dual simplex solver.
 However, performance gain is unlikely to be significant at present. 
 For the simplex solver, at best, speed-up is limited to the number of memory channels, rather than the number of cores. 
-For the MIP solver, the ability of HiGHS to exploit multicore architectures is expected to increase significantly.
 
 HiGHS will identify the number of available threads at run time, and restrict their use to the value of the HiGHS option `threads`.
 

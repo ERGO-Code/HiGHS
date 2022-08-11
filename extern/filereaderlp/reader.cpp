@@ -281,7 +281,8 @@ Model Reader::read() {
    // read first NRAWTOKEN token
    // if file ends early, then all remaining tokens are set to FLEND
    for(size_t i = 0; i < NRAWTOKEN; ++i )
-      while( !readnexttoken(rawtokens[i]) ) ;;
+      while( !readnexttoken(rawtokens[i]) )
+      ;
 
    processtokens();
 
@@ -996,19 +997,25 @@ void Reader::nextrawtoken(size_t howmany) {
       case 1: {
          rawtokens[0] = std::move(rawtokens[1]);
          rawtokens[1] = std::move(rawtokens[2]);
-         while( !readnexttoken(rawtokens[2]) ) ;;
+         while( !readnexttoken(rawtokens[2]) )
+         ;
          break;
       }
       case 2: {
          rawtokens[0] = std::move(rawtokens[2]);
-         while( !readnexttoken(rawtokens[1]) ) ;;
-         while( !readnexttoken(rawtokens[2]) ) ;;
+         while( !readnexttoken(rawtokens[1]) )
+         ;
+         while( !readnexttoken(rawtokens[2]) )
+         ;
          break;
       }
       case 3: {
-         while( !readnexttoken(rawtokens[0]) ) ;;
-         while( !readnexttoken(rawtokens[1]) ) ;;
-         while( !readnexttoken(rawtokens[2]) ) ;;
+         while( !readnexttoken(rawtokens[0]) )
+         ;
+         while( !readnexttoken(rawtokens[1]) )
+         ;
+         while( !readnexttoken(rawtokens[2]) )
+         ;
          break;
       }
       default: {
@@ -1020,7 +1027,8 @@ void Reader::nextrawtoken(size_t howmany) {
          for( ; i < NRAWTOKEN ; ++i )
             // call readnexttoken() to overwrite current token
             // if it didn't actually read a token (returns false), then call again
-            while( !readnexttoken(rawtokens[i]) ) ;;
+            while( !readnexttoken(rawtokens[i]) )
+            ;
       }
    }
 }
