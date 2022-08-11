@@ -237,6 +237,7 @@ set(headers
     parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
+    parallel/HighsRaceTimer.h
     parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
@@ -676,6 +677,7 @@ set(headers_fast_build_
     parallel/HighsCombinable.h
     parallel/HighsMutex.h
     parallel/HighsParallel.h
+    parallel/HighsRaceTimer.h
     parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
