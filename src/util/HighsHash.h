@@ -786,11 +786,32 @@ struct HighsHashTableEntry {
   V value_;
 
  public:
+  HighsHashTableEntry(HighsHashTableEntry<K, V>&&) = default;
+  HighsHashTableEntry(const HighsHashTableEntry<K, V>&) = default;
+  ~HighsHashTableEntry() = default;
   HighsHashTableEntry() = default;
-  template <typename K_>
-  HighsHashTableEntry(K_&& k) : key_(k), value_() {}
+  HighsHashTableEntry<K, V>& operator=(HighsHashTableEntry<K, V>&&) = default;
+  HighsHashTableEntry<K, V>& operator=(const HighsHashTableEntry<K, V>&) =
+      default;
+
+  // add a constructor to pass an argument to initialize the key with a value
+  // and the value as default
+  // the enable if statement makes sure this overload is never selected
+  // when the type of the single argument is HighsHashTableEntry<K,V> so that
+  // the default move and copy constructures are preferred when they match
+  // and this is only used to initialize the key type from a single argument.
+  template <
+      typename K_,
+      typename std::enable_if<
+          !std::is_same<typename std::remove_cv<
+                            typename std::remove_reference<K_>::type>::type,
+                        HighsHashTableEntry<K, V>>::value,
+          int>::type = 0>
+  HighsHashTableEntry(K_&& k) : key_(std::forward<K_>(k)), value_() {}
+
   template <typename K_, typename V_>
-  HighsHashTableEntry(K_&& k, V_&& v) : key_(k), value_(v) {}
+  HighsHashTableEntry(K_&& k, V_&& v)
+      : key_(std::forward<K_>(k)), value_(std::forward<V_>(v)) {}
 
   const K& key() const { return key_; }
   const V& value() const { return value_; }
@@ -820,7 +841,33 @@ struct HighsHashTableEntry<T, void> {
   T value_;
 
  public:
-  template <typename... Args>
+  HighsHashTableEntry(HighsHashTableEntry<T, void>&&) = default;
+  HighsHashTableEntry(const HighsHashTableEntry<T, void>&) = default;
+  ~HighsHashTableEntry() = default;
+  HighsHashTableEntry() = default;
+  HighsHashTableEntry<T, void>& operator=(HighsHashTableEntry<T, void>&&) =
+      default;
+  HighsHashTableEntry<T, void>& operator=(const HighsHashTableEntry<T, void>&) =
+      default;
+
+  // Add a constructor to accept an arbitrary argument pack for initialize the
+  // underlying value of type T. The enable if statement makes sure this
+  // overload is never selected when the type of the single argument is
+  // HighsHashTableEntry<T,void> so that the default move and copy constructures
+  // are preferred when they match and this is only used to initialize the value
+  // of type from a set of arguments which are properly forwarded.
+  // The std::tuple usage in enable_if is a work-around to make the statement
+  // legal when multiple arguments are passed in, since std::is_same expects a
+  // single type. In that case is_same will obviously return false and the
+  // overload is appropriate to initialize the value_ with multiple forwarded
+  // arguments.
+  template <typename... Args,
+            typename std::enable_if<
+                !std::is_same<
+                    std::tuple<typename std::remove_cv<
+                        typename std::remove_reference<Args>::type>::type...>,
+                    std::tuple<HighsHashTableEntry<T, void>>>::value,
+                int>::type = 0>
   HighsHashTableEntry(Args&&... args) : value_(std::forward<Args>(args)...) {}
 
   const T& key() const { return value_; }
@@ -1087,7 +1134,7 @@ class HighsHashTable {
 
     using std::swap;
     ValueType& insertLocation = entryArray[pos].value();
-    Entry entry(key, ValueType());
+    Entry entry(key);
     ++numElements;
 
     do {
