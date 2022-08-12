@@ -106,6 +106,14 @@ enum class MatrixFormat { kColwise = 1, kRowwise, kRowwisePartitioned };
 
 enum class HessianFormat { kTriangular = 1, kSquare };
 
+enum LpSolverList {
+  kLpSolverSifting = 0,
+  kLpSolverDualSimplex,
+  kLpSolverParallelDualSimplex,
+  kLpSolverPrimalSimplex,
+  kLpSolverInteriorPoint
+};
+
 enum SolutionStatus {
   kSolutionStatusNone = 0,
   kSolutionStatusInfeasible,
