@@ -36,9 +36,22 @@ TEST_CASE("test-parallel", "[highs_test_parallel]") {
 void noReturnSpawn() {
   // @Leona Why is the following "invalid use of void expression"
   //
-  //  parallel::spawn(dumbWork());
-  //  dumbWork();
-  //  parallel::sync();
+  // this works, as it creates a lambda that calls the overload of dumbWork()
+  // without an argument and overload resolution works normally
+  parallel::spawn([]() { dumbWork(); });
+
+  // this would work if there was no overload "double dumbWork(const HighsInt
+  // n);"
+  // parallel::spawn(dumbWork);
+
+  // Another version that works is the following.
+  // This resolves the overload resolution to store the function pointer for the
+  // void dumbWork() overload void (*f)() = dumbWork; with the function pointer
+  // you can use it similarly to the version "parallel::spawn(dumbWork)"
+  // parallel::spawn(f);
+
+  dumbWork();
+  parallel::sync();
 }
 
 void returnSpawn() {
@@ -80,7 +93,39 @@ double concurrentLpSolve(const bool use_race_timer) {
   HighsInt num_lp_solvers = lp_solvers.size();
   // @Leona How can I form a vector of Highs instances?
   //
-  //  vector<Highs> parallel_highs;
+  // this should work:
+  vector<Highs> parallel_highs;
+  parallel_highs.resize(num_lp_solvers);
+  for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
+    parallel_highs[lp_solver].passModel(lp);
+  }
+
+  // Alternatively this should work to:
+  // vector<std::unique_ptr<Highs>> parallel_highs;
+  // for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++) {
+  //  parallel_highs.emplace_back(new Highs());
+  //  parallel_highs[lp_solver]->passModel(lp);
+  //}
+
+  // when you have this as a vector you can also use the parallel::for_each call
+  // parallel::for_each(0, num_lp_solvers, [&](HighsInt start, HighsInt end){
+  //  for(HighsInt lp_solver = start; lp_solver < end; ++lp_solver)
+  //  {
+  //    parallel_highs[lp_solver].setOptionValue("output_flag", false);
+  //    parallel_highs[lp_solver].passModel(lp);
+  //    // todo, set pointer to race timer, store return status
+  //    parallel_highs[lp_solver].run();
+  //
+  //    // todo call race_timer decreaseLimit() function if solved successfully
+  //  }
+  //});
+
+  // the additional for-loop inside the for_each call would not really be
+  // necessary with grainSize = 1, which is the default value of the fourth
+  // argument to for_each in that case end-start should always be equal to 1 and
+  // you can remove the for-loop and change "[&](HighsInt start, HighsInt end){"
+  // to "[&](HighsInt lp_solver, HighsInt){"
+
   //
   // vector<Highs*> parallel_highs;
   // for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++) {
@@ -131,8 +176,41 @@ double concurrentLpSolve(const bool use_race_timer) {
     // @Leona I realise that I need to specify a type - double in this
     // case - but I don't know how, and the following gives "error:
     // missing template arguments before ‘race_timer’"
-    // HighsRaceTimer race_timer;
-    assert(1 == 0);
+    HighsRaceTimer<double> race_timer;
+
+    parallel::TaskGroup tg;
+    tg.spawn([&]() {
+      // todo: somehow pass a pointer to the race_timer into the solver. The
+      // solver should check if such a pointer was passed and call the
+      // limitReached(currentTime) function to determine whether a limit was
+      // reached. If limitReached returns true then the solver should stop.
+      // e.g. something like:
+      // if (race_timer_ptr && race_timer_ptr->limitReached(currentTime))
+      //  modelstatus = HighsModelStatus::kIterationLimit;
+
+      primal_simplex_status = highs_primal_simplex.run();
+      // this should check for the status returned when the race timer limit was
+      // reached and only call decrease limit if it was not reached
+      if (highs_dual_simplex.getModelStatus() !=
+          HighsModelStatus::kIterationLimit)
+        race_timer.decreaseLimit(highs_primal_simplex.getHighsRunTime());
+    });
+    tg.spawn([&]() {
+      dual_simplex_status = highs_dual_simplex.run();
+      if (highs_dual_simplex.getModelStatus() !=
+          HighsModelStatus::kIterationLimit)
+        race_timer.decreaseLimit(highs_primal_simplex.getHighsRunTime());
+    });
+    tg.spawn([&]() {
+      ipm_status = highs_ipm.run();
+      // this should check for the status returned when the race timer limit was
+      // reached and only call decrease limit if it was not reached
+      if (highs_dual_simplex.getModelStatus() !=
+          HighsModelStatus::kIterationLimit)
+        race_timer.decreaseLimit(highs_primal_simplex.getHighsRunTime());
+    });
+
+    tg.taskWait();
   } else {
     parallel::TaskGroup tg;
     tg.spawn([&]() { primal_simplex_status = highs_primal_simplex.run(); });
@@ -142,6 +220,8 @@ double concurrentLpSolve(const bool use_race_timer) {
     tg.sync();
     tg.sync();
     tg.sync();
+
+    // alternatively  instead of the 3 sync() calls you can call: tg.taskWait();
   }
 
   primal_simplex_time = highs_primal_simplex.getRunTime();
