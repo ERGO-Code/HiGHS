@@ -11,7 +11,7 @@ const double double_equal_tolerance = 1e-5;
 
 bool equalObjective(const double obj0, const double obj1);
 
-void dumbWork();
+void noReturnDumbWork();
 double dumbWork(const HighsInt n);
 
 void noReturnSpawn();
@@ -34,15 +34,30 @@ TEST_CASE("test-parallel", "[highs_test_parallel]") {
 }
 
 void noReturnSpawn() {
-  // @Leona Why is the following "invalid use of void expression"
-  //
-  // this works, as it creates a lambda that calls the overload of dumbWork()
-  // without an argument and overload resolution works normally
-  parallel::spawn([]() { dumbWork(); });
+  // this worked when there was an overload of dumbWork(), as it
+  // creates a lambda that calls the overload of dumbWork() without an
+  // argument and overload resolution works normally
+  // parallel::spawn([]() { dumbWork(); });
 
-  // this would work if there was no overload "double dumbWork(const HighsInt
-  // n);"
-  // parallel::spawn(dumbWork);
+  // this works now that there is no overload "double dumbWork(const
+  // HighsInt n);"
+  //
+  parallel::spawn(noReturnDumbWork);
+  // @Leona. It compiles (and runs OK), but with the warning
+  //
+  //   In file included from /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:28,
+  //                  from /home/jajhall/HiGHS/src/parallel/HighsTaskExecutor.h:25,
+  //                  from /home/jajhall/HiGHS/src/parallel/HighsMutex.h:18,
+  //                  from /home/jajhall/HiGHS/src/parallel/HighsParallel.h:16,
+  //                  from /home/jajhall/HiGHS/check/TestParallel.cpp:3:
+// /home/jajhall/HiGHS/src/parallel/HighsTask.h: In instantiation of ‘void HighsTask::setTaskData(F&&) [with F = void (&)()]’:
+// /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:294:5:   required from ‘void HighsSplitDeque::push(F&&) [with F = void (&)()]’
+// /home/jajhall/HiGHS/src/parallel/HighsParallel.h:41:3:   required from ‘void highs::parallel::spawn(HighsSplitDeque*, F&&) [with F = void (&)()]’
+// /home/jajhall/HiGHS/src/parallel/HighsParallel.h:46:8:   required from ‘void highs::parallel::spawn(F&&) [with F = void (&)()]’
+// /home/jajhall/HiGHS/check/TestParallel.cpp:44:35:   required from here
+// /home/jajhall/HiGHS/src/parallel/HighsTask.h:99:19: warning: invalid application of ‘sizeof’ to a function type [-Wpointer-arith]
+//    99 |     static_assert(sizeof(F) <= sizeof(taskData),
+//       |                   ^~~~~~~~~
 
   // Another version that works is the following.
   // This resolves the overload resolution to store the function pointer for the
@@ -50,7 +65,7 @@ void noReturnSpawn() {
   // you can use it similarly to the version "parallel::spawn(dumbWork)"
   // parallel::spawn(f);
 
-  dumbWork();
+  noReturnDumbWork();
   parallel::sync();
 }
 
@@ -63,7 +78,7 @@ void returnSpawn() {
   if (dev_run) printf("After  sync(): v10 = %g; v11 = %g\n", v10, v11);
 }
 
-void dumbWork() {
+void noReturnDumbWork() {
   const HighsInt dumb_work_n = 10;
   double sum_products = 0;
   for (HighsInt i = 1; i <= dumb_work_n; i++)
@@ -91,34 +106,66 @@ double concurrentLpSolve(const bool use_race_timer) {
   lp_solvers.push_back(kLpSolverDualSimplex);
   lp_solvers.push_back(kLpSolverInteriorPoint);
   HighsInt num_lp_solvers = lp_solvers.size();
-  // @Leona How can I form a vector of Highs instances?
+  // @Leona this (in /*...*/) should work:
   //
-  // this should work:
-  vector<Highs> parallel_highs;
+  // @Leona this doesn't compile: it gives
+  // In file included from /usr/include/c++/9/vector:66,
+  //                  from /home/jajhall/HiGHS/src/lp_data/HighsLpUtils.h:19,
+  //                  from /home/jajhall/HiGHS/src/Highs.h:21,
+  //                  from /home/jajhall/HiGHS/check/TestParallel.cpp:1:
+// /usr/include/c++/9/bits/stl_uninitialized.h: In instantiation of ‘_ForwardIterator std::uninitialized_copy(_InputIterator, _In// putIterator, _ForwardIterator) [with _InputIterator = std::move_iterator<Highs*>; _ForwardIterator = Highs*]’:
+// /usr/include/c++/9/bits/stl_uninitialized.h:307:37:   required from ‘_ForwardIterator std::__uninitialized_copy_a(_InputIterator, _InputIterator, _ForwardIterator, std::allocator<_Tp>&) [with _InputIterator = std::move_iterator<Highs*>; _ForwardIterator = Highs*; _Tp = Highs]’
+// /usr/include/c++/9/bits/stl_uninitialized.h:329:2:   required from ‘_ForwardIterator std::__uninitialized_move_if_noexcept_a(_InputIterator, _InputIterator, _ForwardIterator, _Allocator&) [with _InputIterator = Highs*; _ForwardIterator = Highs*; _Allocator = std::allocator<Highs>]’
+// /usr/include/c++/9/bits/vector.tcc:659:48:   required from ‘void std::vector<_Tp, _Alloc>::_M_default_append(std::vector<_Tp, _Alloc>::size_type) [with _Tp = Highs; _Alloc = std::allocator<Highs>; std::vector<_Tp, _Alloc>::size_type = long unsigned int]’
+// /usr/include/c++/9/bits/stl_vector.h:937:4:   required from ‘void std::vector<_Tp, _Alloc>::resize(std::vector<_Tp, _Alloc>::size_type) [with _Tp = Highs; _Alloc = std::allocator<Highs>; std::vector<_Tp, _Alloc>::size_type = long unsigned int]’
+// /home/jajhall/HiGHS/check/TestParallel.cpp:98:39:   required from here
+// /usr/include/c++/9/bits/stl_uninitialized.h:127:72: error: static assertion failed: result type must be constructible from value type of input range
+//   127 |       static_assert(is_constructible<_ValueType2, decltype(*__first)>::value,
+//       |
+  
+  /*
+  std::vector<Highs> parallel_highs;
   parallel_highs.resize(num_lp_solvers);
   for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
     parallel_highs[lp_solver].passModel(lp);
   }
-
-  // Alternatively this should work to:
-  // vector<std::unique_ptr<Highs>> parallel_highs;
-  // for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++) {
-  //  parallel_highs.emplace_back(new Highs());
-  //  parallel_highs[lp_solver]->passModel(lp);
-  //}
-
-  // when you have this as a vector you can also use the parallel::for_each call
-  // parallel::for_each(0, num_lp_solvers, [&](HighsInt start, HighsInt end){
-  //  for(HighsInt lp_solver = start; lp_solver < end; ++lp_solver)
-  //  {
-  //    parallel_highs[lp_solver].setOptionValue("output_flag", false);
-  //    parallel_highs[lp_solver].passModel(lp);
-  //    // todo, set pointer to race timer, store return status
-  //    parallel_highs[lp_solver].run();
+  */
+  
+  // Alternatively this should work too:
   //
-  //    // todo call race_timer decreaseLimit() function if solved successfully
-  //  }
-  //});
+  // @Leona: Yes, it does
+   vector<std::unique_ptr<Highs>> parallel_highs;
+   for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++) {
+    parallel_highs.emplace_back(new Highs());
+    parallel_highs[lp_solver]->passModel(lp);
+  }
+
+   std::vector<double> run_time(num_lp_solvers);
+   std::vector<double> objective_function_value(num_lp_solvers);
+   std::vector<HighsStatus> run_status(num_lp_solvers);
+   run_status.assign(num_lp_solvers, HighsStatus::kError);
+  // when you have this as a vector you can also use the parallel::for_each call
+   parallel::for_each(0, num_lp_solvers, [&](HighsInt start, HighsInt end){
+    for (HighsInt lp_solver = start; lp_solver < end; ++lp_solver)
+    {
+      parallel_highs[lp_solver]->setOptionValue("output_flag", false);
+      parallel_highs[lp_solver]->passModel(lp);
+      // todo, set pointer to race timer
+      run_status[lp_solver] = parallel_highs[lp_solver]->run();
+      run_time[lp_solver] = parallel_highs[lp_solver]->getRunTime();
+      objective_function_value[lp_solver] = parallel_highs[lp_solver]->getInfo().objective_function_value;
+      
+      // todo call race_timer decreaseLimit() function if solved successfully
+    }
+  });
+  printf("Status values: primal = %s; dual = %s; ipm = %s\n",
+         highsStatusToString(run_status[0]).c_str(),
+         highsStatusToString(run_status[1]).c_str(),
+         highsStatusToString(run_status[2]).c_str());
+
+  printf("Solve times:  primal = %f6.4; dual = %f6.4; ipm = %f6.4\n",
+         run_time[0], run_time[1], run_time[2]);
+
 
   // the additional for-loop inside the for_each call would not really be
   // necessary with grainSize = 1, which is the default value of the fourth
