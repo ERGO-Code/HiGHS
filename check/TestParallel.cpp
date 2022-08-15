@@ -42,8 +42,10 @@ void noReturnSpawn() {
   // this works now that there is no overload "double dumbWork(const
   // HighsInt n);"
   //
-  parallel::spawn(noReturnDumbWork);
-  // @Leona. It compiles (and runs OK), but with the warning
+  parallel::spawn(&noReturnDumbWork);
+  // @Leona. It compiles (and runs OK), but with the warning, ah okay. Nevermind the warning.
+  // @Julian The warning goes away if you explicitly pass it as a function pointer. Never tested it with function pointers since it does not make sense to use it with just a function pointer.
+  //         Having only a function pointer means there is no return and no arguments, so by definition nothing can happen. If you use it with a lambda expression that captures the arguments to a function and calls it, then this will not occur.
   //
   //   In file included from /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:28,
   //                  from /home/jajhall/HiGHS/src/parallel/HighsTaskExecutor.h:25,
@@ -109,6 +111,8 @@ double concurrentLpSolve(const bool use_race_timer) {
   // @Leona this (in /*...*/) should work:
   //
   // @Leona this doesn't compile: it gives
+  // @Julian, ah I see, then use the unique_ptr version. This requires the HiGHS class to get a move constructor and/or a copy constructor. Wrapping it in a unique_ptr works around that.
+  // adding a move/copy constructor should not be too hard, but there are some members, e.g. the FILE* for input/output handling that might need special handling, so the unique_ptr version is simpler than adding a move contructor.
   // In file included from /usr/include/c++/9/vector:66,
   //                  from /home/jajhall/HiGHS/src/lp_data/HighsLpUtils.h:19,
   //                  from /home/jajhall/HiGHS/src/Highs.h:21,
@@ -134,8 +138,8 @@ double concurrentLpSolve(const bool use_race_timer) {
   // Alternatively this should work too:
   //
   // @Leona: Yes, it does
-   vector<std::unique_ptr<Highs>> parallel_highs;
-   for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++) {
+  vector<std::unique_ptr<Highs>> parallel_highs;
+  for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++) {
     parallel_highs.emplace_back(new Highs());
     parallel_highs[lp_solver]->passModel(lp);
   }
