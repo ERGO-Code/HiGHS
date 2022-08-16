@@ -96,6 +96,10 @@ class HEkk {
   void unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
                          HVector& residual, double& residual_norm);
 
+  void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
+                                    const HighsInt iteration_count,
+                                    const HighsSimplexInfo& info,
+                                    const bool initialise = false);
   HighsSolution getSolution();
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
@@ -211,6 +215,13 @@ class HEkk {
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 
  private:
+  HighsInt iteration_count0 = 0;
+  HighsInt dual_phase1_iteration_count0 = 0;
+  HighsInt dual_phase2_iteration_count0 = 0;
+  HighsInt primal_phase1_iteration_count0 = 0;
+  HighsInt primal_phase2_iteration_count0 = 0;
+  HighsInt primal_bound_swap0 = 0;
+
   bool isUnconstrainedLp();
   void initialiseForSolve();
   void setSimplexOptions();
@@ -318,6 +329,7 @@ class HEkk {
                             const double overwrite_with);
   void unapplyTabooVariableIn(vector<double>& values);
   bool logicalBasis() const;
+
   // Methods in HEkkControl
   void initialiseControl();
   void assessDSEWeightError(const double computed_edge_weight,

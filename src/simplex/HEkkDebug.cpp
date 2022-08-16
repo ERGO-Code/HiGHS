@@ -21,7 +21,6 @@
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HEkk.h"
-#include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
 
 using std::abs;

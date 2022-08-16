@@ -1686,6 +1686,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::setSolution() {
+  invalidateUserSolverData();
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
                                                        const char*, void*),
                                   void* log_callback_data) {

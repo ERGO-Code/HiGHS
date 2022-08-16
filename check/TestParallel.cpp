@@ -160,7 +160,7 @@ double concurrentLpSolve(const bool use_race_timer) {
       objective_function_value[lp_solver] =
           parallel_highs[lp_solver]->getInfo().objective_function_value;
       parallel_highs[lp_solver]->setBasis();
-      //      parallel_highs[lp_solver]->setSolution();
+      parallel_highs[lp_solver]->setSolution();
 
       // todo call race_timer decreaseLimit() function if solved successfully
     }
