@@ -257,7 +257,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           if (coef != 0.0) {
             this->writeToFile(
                 file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ",
-                coef, col, model.hessian_.index_[i]);
+                coef, (col + 1), (model.hessian_.index_[i] + 1));
           }
         }
       }
