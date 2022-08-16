@@ -43,23 +43,36 @@ void noReturnSpawn() {
   // HighsInt n);"
   //
   parallel::spawn(&noReturnDumbWork);
-  // @Leona. It compiles (and runs OK), but with the warning, ah okay. Nevermind the warning.
-  // @Julian The warning goes away if you explicitly pass it as a function pointer. Never tested it with function pointers since it does not make sense to use it with just a function pointer.
-  //         Having only a function pointer means there is no return and no arguments, so by definition nothing can happen. If you use it with a lambda expression that captures the arguments to a function and calls it, then this will not occur.
+  // @Leona. It compiles (and runs OK), but with the warning, ah okay. Nevermind
+  // the warning.
+  // @Julian The warning goes away if you explicitly pass it as a function
+  // pointer. Never tested it with function pointers since it does not make
+  // sense to use it with just a function pointer.
+  //         Having only a function pointer means there is no return and no
+  //         arguments, so by definition nothing can happen. If you use it with
+  //         a lambda expression that captures the arguments to a function and
+  //         calls it, then this will not occur.
   //
-  //   In file included from /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:28,
-  //                  from /home/jajhall/HiGHS/src/parallel/HighsTaskExecutor.h:25,
+  //   In file included from
+  //   /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:28,
+  //                  from
+  //                  /home/jajhall/HiGHS/src/parallel/HighsTaskExecutor.h:25,
   //                  from /home/jajhall/HiGHS/src/parallel/HighsMutex.h:18,
   //                  from /home/jajhall/HiGHS/src/parallel/HighsParallel.h:16,
   //                  from /home/jajhall/HiGHS/check/TestParallel.cpp:3:
-// /home/jajhall/HiGHS/src/parallel/HighsTask.h: In instantiation of ‘void HighsTask::setTaskData(F&&) [with F = void (&)()]’:
-// /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:294:5:   required from ‘void HighsSplitDeque::push(F&&) [with F = void (&)()]’
-// /home/jajhall/HiGHS/src/parallel/HighsParallel.h:41:3:   required from ‘void highs::parallel::spawn(HighsSplitDeque*, F&&) [with F = void (&)()]’
-// /home/jajhall/HiGHS/src/parallel/HighsParallel.h:46:8:   required from ‘void highs::parallel::spawn(F&&) [with F = void (&)()]’
-// /home/jajhall/HiGHS/check/TestParallel.cpp:44:35:   required from here
-// /home/jajhall/HiGHS/src/parallel/HighsTask.h:99:19: warning: invalid application of ‘sizeof’ to a function type [-Wpointer-arith]
-//    99 |     static_assert(sizeof(F) <= sizeof(taskData),
-//       |                   ^~~~~~~~~
+  // /home/jajhall/HiGHS/src/parallel/HighsTask.h: In instantiation of ‘void
+  // HighsTask::setTaskData(F&&) [with F = void (&)()]’:
+  // /home/jajhall/HiGHS/src/parallel/HighsSplitDeque.h:294:5:   required from
+  // ‘void HighsSplitDeque::push(F&&) [with F = void (&)()]’
+  // /home/jajhall/HiGHS/src/parallel/HighsParallel.h:41:3:   required from
+  // ‘void highs::parallel::spawn(HighsSplitDeque*, F&&) [with F = void (&)()]’
+  // /home/jajhall/HiGHS/src/parallel/HighsParallel.h:46:8:   required from
+  // ‘void highs::parallel::spawn(F&&) [with F = void (&)()]’
+  // /home/jajhall/HiGHS/check/TestParallel.cpp:44:35:   required from here
+  // /home/jajhall/HiGHS/src/parallel/HighsTask.h:99:19: warning: invalid
+  // application of ‘sizeof’ to a function type [-Wpointer-arith]
+  //    99 |     static_assert(sizeof(F) <= sizeof(taskData),
+  //       |                   ^~~~~~~~~
 
   // Another version that works is the following.
   // This resolves the overload resolution to store the function pointer for the
@@ -117,37 +130,41 @@ double concurrentLpSolve(const bool use_race_timer) {
   assert(lp_solvers[dual_simplex_index] == kLpSolverDualSimplex);
   assert(lp_solvers[ipm_index] == kLpSolverInteriorPoint);
 
-  // Set up a vector of pointers to Highs instances 
+  // Set up a vector of pointers to Highs instances
   vector<std::unique_ptr<Highs>> parallel_highs;
-  for (HighsInt lp_solver = 0; lp_solver< num_lp_solvers; lp_solver++)
+  for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++)
     parallel_highs.emplace_back(new Highs());
 
-   std::vector<double> run_time(num_lp_solvers);
-   std::vector<double> objective_function_value(num_lp_solvers);
-   std::vector<HighsStatus> run_status(num_lp_solvers);
+  std::vector<double> run_time(num_lp_solvers);
+  std::vector<double> objective_function_value(num_lp_solvers);
+  std::vector<HighsStatus> run_status(num_lp_solvers);
 
-   // Force the primal simplex instance to use primal simplex
-   parallel_highs[primal_simplex_index]->setOptionValue("simplex_strategy", kSimplexStrategyDual);
-   // Force the dual simplex instance to use dual simplex
-   parallel_highs[dual_simplex_index]->setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
-   // Force the IPM instance to use IPM
-   parallel_highs[ipm_index]->setOptionValue("solver", kIpmString);
+  // Force the primal simplex instance to use primal simplex
+  parallel_highs[primal_simplex_index]->setOptionValue("simplex_strategy",
+                                                       kSimplexStrategyDual);
+  // Force the dual simplex instance to use dual simplex
+  parallel_highs[dual_simplex_index]->setOptionValue("simplex_strategy",
+                                                     kSimplexStrategyPrimal);
+  // Force the IPM instance to use IPM
+  parallel_highs[ipm_index]->setOptionValue("solver", kIpmString);
 
-   run_status.assign(num_lp_solvers, HighsStatus::kError);
-   // when you have this as a vector you can also use the parallel::for_each call
-   parallel::for_each(0, num_lp_solvers, [&](HighsInt start, HighsInt end){
-    for (HighsInt lp_solver = start; lp_solver < end; ++lp_solver)
-    {
+  run_status.assign(num_lp_solvers, HighsStatus::kError);
+  // when you have this as a vector you can also use the parallel::for_each call
+  parallel::for_each(0, num_lp_solvers, [&](HighsInt start, HighsInt end) {
+    for (HighsInt lp_solver = start; lp_solver < end; ++lp_solver) {
       parallel_highs[lp_solver]->setOptionValue("output_flag", false);
       parallel_highs[lp_solver]->passModel(lp);
       // todo, set pointer to race timer
       run_status[lp_solver] = parallel_highs[lp_solver]->run();
       run_time[lp_solver] = parallel_highs[lp_solver]->getRunTime();
-      objective_function_value[lp_solver] = parallel_highs[lp_solver]->getInfo().objective_function_value;
-      
+      objective_function_value[lp_solver] =
+          parallel_highs[lp_solver]->getInfo().objective_function_value;
+      parallel_highs[lp_solver]->setBasis();
+      //      parallel_highs[lp_solver]->setSolution();
+
       // todo call race_timer decreaseLimit() function if solved successfully
     }
-					 });
+  });
   printf("Status values: primal = %s; dual = %s; ipm = %s\n",
          highsStatusToString(run_status[0]).c_str(),
          highsStatusToString(run_status[1]).c_str(),
@@ -156,14 +173,11 @@ double concurrentLpSolve(const bool use_race_timer) {
   printf("Solve times:  primal = %f6.4; dual = %f6.4; ipm = %f6.4\n",
          run_time[0], run_time[1], run_time[2]);
 
-
   // the additional for-loop inside the for_each call would not really be
   // necessary with grainSize = 1, which is the default value of the fourth
   // argument to for_each in that case end-start should always be equal to 1 and
   // you can remove the for-loop and change "[&](HighsInt start, HighsInt end){"
   // to "[&](HighsInt lp_solver, HighsInt){"
-
-
 
   if (use_race_timer) {
     // @Leona I realise that I need to specify a type - double in this
@@ -174,35 +188,43 @@ double concurrentLpSolve(const bool use_race_timer) {
     parallel::TaskGroup tg;
     for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
       tg.spawn([&]() {
-		 // todo: somehow pass a pointer to the race_timer into the solver. The
-		 // solver should check if such a pointer was passed and call the
-		 // limitReached(currentTime) function to determine whether a limit was
-		 // reached. If limitReached returns true then the solver should stop.
-		 // e.g. something like:
-		 // if (race_timer_ptr && race_timer_ptr->limitReached(currentTime))
-		 //  modelstatus = HighsModelStatus::kIterationLimit;
+        // todo: somehow pass a pointer to the race_timer into the solver. The
+        // solver should check if such a pointer was passed and call the
+        // limitReached(currentTime) function to determine whether a limit was
+        // reached. If limitReached returns true then the solver should stop.
+        // e.g. something like:
+        // if (race_timer_ptr && race_timer_ptr->limitReached(currentTime))
+        //  modelstatus = HighsModelStatus::kIterationLimit;
 
-		 run_status[lp_solver] = parallel_highs[lp_solver]->run();
-		 // this should check for the status returned when the race timer limit was
-		 // reached and only call decrease limit if it was not reached
-		 if (parallel_highs[lp_solver]->getModelStatus() !=
-		     HighsModelStatus::kIterationLimit)
-		   race_timer.decreaseLimit(parallel_highs[lp_solver]->getRunTime());
-	       });
+        run_status[lp_solver] = parallel_highs[lp_solver]->run();
+        // this should check for the status returned when the race timer limit
+        // was reached and only call decrease limit if it was not reached
+        if (parallel_highs[lp_solver]->getModelStatus() !=
+            HighsModelStatus::kIterationLimit)
+          race_timer.decreaseLimit(parallel_highs[lp_solver]->getRunTime());
+      });
     }
     tg.taskWait();
   } else {
     parallel::TaskGroup tg;
-    
-    tg.spawn([&]() { run_status[primal_simplex_index] = parallel_highs[primal_simplex_index]->run(); });
-    tg.spawn([&]() { run_status[dual_simplex_index] = parallel_highs[dual_simplex_index]->run(); });
-    tg.spawn([&]() { run_status[ipm_index] = parallel_highs[ipm_index]->run(); });
+
+    tg.spawn([&]() {
+      run_status[primal_simplex_index] =
+          parallel_highs[primal_simplex_index]->run();
+    });
+    tg.spawn([&]() {
+      run_status[dual_simplex_index] =
+          parallel_highs[dual_simplex_index]->run();
+    });
+    tg.spawn(
+        [&]() { run_status[ipm_index] = parallel_highs[ipm_index]->run(); });
 
     tg.taskWait();
   }
   double total_time = 0;
   for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
-    objective_function_value[lp_solver] = parallel_highs[lp_solver]->getInfo().objective_function_value;
+    objective_function_value[lp_solver] =
+        parallel_highs[lp_solver]->getInfo().objective_function_value;
     run_time[lp_solver] = parallel_highs[lp_solver]->getRunTime();
     total_time += run_time[lp_solver];
   }
@@ -216,9 +238,9 @@ double concurrentLpSolve(const bool use_race_timer) {
          run_time[0], run_time[1], run_time[2]);
 
   REQUIRE(equalObjective(objective_function_value[dual_simplex_index],
-			 objective_function_value[primal_simplex_index]));
+                         objective_function_value[primal_simplex_index]));
   REQUIRE(equalObjective(objective_function_value[dual_simplex_index],
-			 objective_function_value[ipm_index]));
+                         objective_function_value[ipm_index]));
 
   return total_time;
 }
