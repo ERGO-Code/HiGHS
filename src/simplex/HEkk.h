@@ -16,6 +16,8 @@
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
 
+//#include "parallel/HighsParallel.h"
+#include "parallel/HighsRaceTimer.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HSet.h"
@@ -137,6 +139,7 @@ class HEkk {
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
+  HighsRaceTimer<double>* race_timer_ = nullptr;
   HighsOptions* options_;
   HighsTimer* timer_;
   HighsSimplexAnalysis analysis_;

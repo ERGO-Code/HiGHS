@@ -29,7 +29,8 @@ TEST_CASE("test-parallel", "[highs_test_parallel]") {
   noReturnSpawn();
   returnSpawn();
   double total_time = 0;
-  total_time += concurrentLpSolve(false);
+  total_time += concurrentLpSolve(true);
+  //  total_time += concurrentLpSolve(false);
   printf("Total time is %g\n", total_time);
 }
 
@@ -138,6 +139,7 @@ double concurrentLpSolve(const bool use_race_timer) {
   std::vector<double> run_time(num_lp_solvers);
   std::vector<double> objective_function_value(num_lp_solvers);
   std::vector<HighsStatus> run_status(num_lp_solvers);
+  std::vector<HighsModelStatus> model_status(num_lp_solvers);
 
   // Force the primal simplex instance to use primal simplex
   parallel_highs[primal_simplex_index]->setOptionValue("simplex_strategy",
@@ -180,13 +182,37 @@ double concurrentLpSolve(const bool use_race_timer) {
   // to "[&](HighsInt lp_solver, HighsInt){"
 
   if (use_race_timer) {
-    // @Leona I realise that I need to specify a type - double in this
-    // case - but I don't know how, and the following gives "error:
-    // missing template arguments before ‘race_timer’"
+
+    printf("Setting up parallel HighsLpSolverObject\n"); fflush(stdout);
     HighsRaceTimer<double> race_timer;
 
+    vector<std::unique_ptr<HighsLpSolverObject>> parallel_lp_solver_object;
+    vector<std::unique_ptr<HighsBasis>> parallel_basis;
+    vector<std::unique_ptr<HighsSolution>> parallel_solution;
+    vector<std::unique_ptr<HighsInfo>> parallel_info;
+    vector<std::unique_ptr<HEkk>> parallel_ekk_instance;
+    vector<std::unique_ptr<HighsOptions>> parallel_options;
+    vector<std::unique_ptr<HighsTimer>> parallel_timer;
+    for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
+      parallel_basis.emplace_back(new HighsBasis());
+      parallel_solution.emplace_back(new HighsSolution());
+      parallel_info.emplace_back(new HighsInfo());
+      parallel_ekk_instance.emplace_back(new HEkk());
+      parallel_options.emplace_back(new HighsOptions());
+      parallel_timer.emplace_back(new HighsTimer());
+      parallel_lp_solver_object.emplace_back(new HighsLpSolverObject(lp,
+								     *parallel_basis[lp_solver],
+								     *parallel_solution[lp_solver],
+								     *parallel_info[lp_solver],
+								     *parallel_ekk_instance[lp_solver],
+								     *parallel_options[lp_solver],
+								     *parallel_timer[lp_solver]));
+      parallel_ekk_instance[lp_solver]->race_timer_ = &race_timer;
+    }
+    printf("Set up parallel HighsLpSolverObject\n"); 
     parallel::TaskGroup tg;
     for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
+      printf("Now to spawn LP solver %d\n", int(lp_solver)); 
       tg.spawn([&]() {
         // todo: somehow pass a pointer to the race_timer into the solver. The
         // solver should check if such a pointer was passed and call the
@@ -195,12 +221,15 @@ double concurrentLpSolve(const bool use_race_timer) {
         // e.g. something like:
         // if (race_timer_ptr && race_timer_ptr->limitReached(currentTime))
         //  modelstatus = HighsModelStatus::kIterationLimit;
-
         run_status[lp_solver] = parallel_highs[lp_solver]->run();
+	model_status[lp_solver] = parallel_highs[lp_solver]->getModelStatus();
         // this should check for the status returned when the race timer limit
         // was reached and only call decrease limit if it was not reached
-        if (parallel_highs[lp_solver]->getModelStatus() !=
-            HighsModelStatus::kIterationLimit)
+	printf("LP solver %d returns status %s and model status %s\n",
+	       int(lp_solver),
+	       highsStatusToString(run_status[lp_solver]).c_str(),
+	       parallel_highs[lp_solver]->modelStatusToString(model_status[lp_solver]).c_str()); fflush(stdout);
+        if (model_status[lp_solver] != HighsModelStatus::kIterationLimit)
           race_timer.decreaseLimit(parallel_highs[lp_solver]->getRunTime());
       });
     }
