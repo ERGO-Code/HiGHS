@@ -227,6 +227,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
   assert(lp.a_matrix_.isColwise());
+  const bool has_col_names = lp.col_names_.size() == lp.num_col_;
+  const bool has_row_names = lp.row_names_.size() == lp.num_row_;
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -238,26 +240,35 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                     lp.sense_ == ObjSense::kMinimize ? "min" : "max");
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
-  for (HighsInt i = 0; i < lp.num_col_; i++) {
-    double coef = lp.col_cost_[i];
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double coef = lp.col_cost_[iCol];
     if (coef != 0.0) {
-      this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", coef, (i + 1));
+      this->writeToFile(file, "%+g ", coef);
+      if (has_col_names) {
+	this->writeToFile(file, "%s ", lp.col_names_[iCol]);
+      } else {
+	this->writeToFile(file, "x%" HIGHSINT_FORMAT " ", (iCol + 1));
+      }
     }
   }
   if (model.isQp()) {
     this->writeToFile(file, "+ [ ");
-    for (HighsInt col = 0; col < lp.num_col_; col++) {
-      for (HighsInt i = model.hessian_.start_[col];
-           i < model.hessian_.start_[col + 1]; i++) {
-        if (col <= model.hessian_.index_[i]) {
-          double coef = model.hessian_.value_[i];
-          if (col != model.hessian_.index_[i]) {
-            coef *= 2;
-          }
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      for (HighsInt iEl = model.hessian_.start_[iCol];
+           iEl < model.hessian_.start_[iCol + 1]; iEl++) {
+	HighsInt iRow = model.hessian_.index_[iEl];
+        if (iCol <= iRow) {
+          double coef = model.hessian_.value_[iEl];
+          if (iCol != iRow) coef *= 2;
           if (coef != 0.0) {
-            this->writeToFile(
-                file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ",
-                coef, (col + 1), (model.hessian_.index_[i] + 1));
+            this->writeToFile(file, "%+g ", coef);
+	    if (has_col_names) {
+	      this->writeToFile(file, "%s ", lp.col_names_[iCol]);
+	      this->writeToFile(file, " * %s ", lp.col_names_[iRow]);
+	    } else {
+	      this->writeToFile(file, " x%" HIGHSINT_FORMAT, (iCol + 1));
+	      this->writeToFile(file, " * x%" HIGHSINT_FORMAT " ", (iRow + 1));
+	    }
           }
         }
       }
