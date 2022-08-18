@@ -317,6 +317,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     }
     this->writeToFile(file, "  ]/2 "); // ToDo Surely needs only to be one space
   }
+  double coef = lp.offset_;
+  if (coef != 0) this->writeToFileValue(file, coef);
   this->writeToFileLineend(file);
 
   // write constraint section, lower & upper bounds are one constraint
