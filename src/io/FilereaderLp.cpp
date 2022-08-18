@@ -234,6 +234,10 @@ void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
   this->writeToFile(file, " %s", var_name.c_str());
 }
 
+void FilereaderLp::writeToFileCon(FILE* file, const HighsInt con_index) {
+  this->writeToFile(file, " con%" HIGHSINT_FORMAT, con_index + 1);
+}
+
 
 void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
 					const HighsSparseMatrix ar_matrix,
@@ -258,7 +262,6 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-  //  assert(lp.a_matrix_.isColwise());
   // Create a row-wise copy of the matrix
   HighsSparseMatrix ar_matrix = lp.a_matrix_;
   ar_matrix.ensureRowwise();
@@ -321,24 +324,29 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFile(file, "st");
   this->writeToFileLineend(file);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (has_row_names) {
+      this->writeToFileVar(file, lp.row_names_[iRow]);
+    } else {
+      this->writeToFileCon(file, iRow);
+    }
     if (lp.row_lower_[iRow] == lp.row_upper_[iRow]) {
-      // equality constraint
-      this->writeToFile(file, " con%" HIGHSINT_FORMAT ":", iRow + 1);
+      // Equality constraint
+      this->writeToFile(file, ":");
       this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
       this->writeToFile(file, " =");
       this->writeToFileValue(file, lp.row_lower_[iRow]);
       this->writeToFileLineend(file);
     } else {
       if (lp.row_lower_[iRow] > -kHighsInf) {
-        // has a lower bound
-        this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo:", iRow + 1);
+        // Has a lower bound
+        this->writeToFile(file, "lo:");
 	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
 	this->writeToFile(file, " >=");
 	this->writeToFileValue(file, lp.row_lower_[iRow]);
 	this->writeToFileLineend(file);
       } else if (lp.row_upper_[iRow] < kHighsInf) {
-        // has an upper bound
-        this->writeToFile(file, " con%" HIGHSINT_FORMAT "up:", iRow + 1);
+        // Has an upper bound
+        this->writeToFile(file, "up:");
 	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
 	this->writeToFile(file, " <=");
 	this->writeToFileValue(file, lp.row_upper_[iRow]);
@@ -353,36 +361,42 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   // write bounds section
   this->writeToFile(file, "bounds");
   this->writeToFileLineend(file);
-  for (HighsInt i = 0; i < lp.num_col_; i++) {
-    // if both lower/upper bound are +/-infinite: [name] free
-    if (lp.col_lower_[i] > -kHighsInf && lp.col_upper_[i] < kHighsInf) {
-      this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= %+g",
-                        lp.col_lower_[i], i + 1, lp.col_upper_[i]);
-      this->writeToFileLineend(file);
-    } else if (lp.col_lower_[i] <= -kHighsInf && lp.col_upper_[i] < kHighsInf) {
-      this->writeToFile(file, " -inf <= x%" HIGHSINT_FORMAT " <= %+g", i + 1,
-                        lp.col_upper_[i]);
-      this->writeToFileLineend(file);
-
-    } else if (lp.col_lower_[i] > -kHighsInf && lp.col_upper_[i] >= kHighsInf) {
-      this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= +inf",
-                        lp.col_lower_[i], i + 1);
-      this->writeToFileLineend(file);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.col_lower_[iCol] <= -kHighsInf &&
+	lp.col_upper_[iCol] >= kHighsInf) {
+      if (has_col_names) {
+	this->writeToFileVar(file, lp.col_names_[iCol]);
+      } else {
+	this->writeToFileVar(file, iCol);
+      }
+      this->writeToFile(file, " free");
     } else {
-      this->writeToFile(file, " x%" HIGHSINT_FORMAT " free", i + 1);
-      this->writeToFileLineend(file);
+      this->writeToFileValue(file, lp.col_lower_[iCol], false);
+      this->writeToFile(file, " <=");
+      if (has_col_names) {
+	this->writeToFileVar(file, lp.col_names_[iCol]);
+      } else {
+	this->writeToFileVar(file, iCol);
+      }
+      this->writeToFile(file, " <=");
+      this->writeToFileValue(file, lp.col_upper_[iCol], false);
     }
+    this->writeToFileLineend(file);
   }
 
   if (lp.integrality_.size() > 0) {
     // write binary section
     this->writeToFile(file, "bin");
     this->writeToFileLineend(file);
-    for (HighsInt i = 0; i < lp.num_col_; i++) {
-      if (lp.integrality_[i] == HighsVarType::kInteger ||
-          lp.integrality_[i] == HighsVarType::kSemiInteger) {
-        if (lp.col_lower_[i] == 0.0 && lp.col_upper_[i] == 1.0) {
-          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+        if (lp.col_lower_[iCol] == 0.0 &&
+	    lp.col_upper_[iCol] == 1.0) {
+	  if (has_col_names) {
+	    this->writeToFileVar(file, lp.col_names_[iCol]);
+	  } else {
+	    this->writeToFileVar(file, iCol);
+	  }
           this->writeToFileLineend(file);
         }
       }
@@ -391,11 +405,15 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     // write general section
     this->writeToFile(file, "gen");
     this->writeToFileLineend(file);
-    for (HighsInt i = 0; i < lp.num_col_; i++) {
-      if (lp.integrality_[i] == HighsVarType::kInteger ||
-          lp.integrality_[i] == HighsVarType::kSemiInteger) {
-        if (lp.col_lower_[i] != 0.0 || lp.col_upper_[i] != 1.0) {
-          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+        if (lp.col_lower_[iCol] != 0.0 ||
+	    lp.col_upper_[iCol] != 1.0) {
+	  if (has_col_names) {
+	    this->writeToFileVar(file, lp.col_names_[iCol]);
+	  } else {
+	    this->writeToFileVar(file, iCol);
+	  }
           this->writeToFileLineend(file);
         }
       }
@@ -404,13 +422,15 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     // write semi section
     this->writeToFile(file, "semi");
     this->writeToFileLineend(file);
-    for (HighsInt i = 0; i < lp.num_col_; i++) {
-      if (lp.integrality_[i] == HighsVarType::kSemiContinuous ||
-          lp.integrality_[i] == HighsVarType::kSemiInteger) {
-        if (lp.col_lower_[i] != 0.0 || lp.col_upper_[i] != 1.0) {
-          this->writeToFile(file, " x%" HIGHSINT_FORMAT, i + 1);
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+          lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+	  if (has_col_names) {
+	    this->writeToFileVar(file, lp.col_names_[iCol]);
+	  } else {
+	    this->writeToFileVar(file, iCol);
+	  }
           this->writeToFileLineend(file);
-        }
       }
     }
   }
