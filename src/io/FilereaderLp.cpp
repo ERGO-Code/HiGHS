@@ -222,16 +222,16 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
   this->linelength = 0;
 }
 
-void FilereaderLp::writeToFileValue(FILE* file, const double value) {
-  this->writeToFile(file, "%+g ", value);
+void FilereaderLp::writeToFileValue(FILE* file, const double value, const bool force_plus) {
+  this->writeToFile(file, " %+g", value);
 }
 
 void FilereaderLp::writeToFileVar(FILE* file, const HighsInt var_index) {
-  this->writeToFile(file, "x%" HIGHSINT_FORMAT " ", var_index + 1);
+  this->writeToFile(file, " x%" HIGHSINT_FORMAT, var_index + 1);
 }
 
 void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
-  this->writeToFile(file, "%s ", var_name.c_str());
+  this->writeToFile(file, " %s", var_name.c_str());
 }
 
 
@@ -275,7 +275,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFile(file, "%s",
                     lp.sense_ == ObjSense::kMinimize ? "min" : "max");
   this->writeToFileLineend(file);
-  this->writeToFile(file, " obj: ");
+  this->writeToFile(file, " obj:");
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     double coef = lp.col_cost_[iCol];
     if (coef != 0.0) {
@@ -287,8 +287,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       }
     }
   }
+  this->writeToFile(file, " "); // ToDo Unnecessary, but only to give empty diff
   if (model.isQp()) {
-    this->writeToFile(file, "+ [ ");
+    this->writeToFile(file, "+ [");
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       for (HighsInt iEl = model.hessian_.start_[iCol];
            iEl < model.hessian_.start_[iCol + 1]; iEl++) {
@@ -300,18 +301,18 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
             this->writeToFileValue(file, coef);
 	    if (has_col_names) {
 	      this->writeToFileVar(file, lp.col_names_[iCol]);
-	      this->writeToFile(file, "* ");
+	      this->writeToFile(file, " *");
 	      this->writeToFileVar(file, lp.col_names_[iRow]);
 	    } else {
 	      this->writeToFileVar(file, iCol);
-	      this->writeToFile(file, "* ");
+	      this->writeToFile(file, " *");
 	      this->writeToFileVar(file, iRow);
 	    }
           }
         }
       }
     }
-    this->writeToFile(file, " ]/2 ");
+    this->writeToFile(file, "  ]/2 "); // ToDo Surely needs only to be one space
   }
   this->writeToFileLineend(file);
 
@@ -322,23 +323,24 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] == lp.row_upper_[iRow]) {
       // equality constraint
-      this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", iRow + 1);
+      this->writeToFile(file, " con%" HIGHSINT_FORMAT ":", iRow + 1);
       this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
-      this->writeToFile(file, "= ");
+      this->writeToFile(file, " =");
       this->writeToFileValue(file, lp.row_lower_[iRow]);
       this->writeToFileLineend(file);
     } else {
       if (lp.row_lower_[iRow] > -kHighsInf) {
         // has a lower bound
-        this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", iRow + 1);
+        this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo:", iRow + 1);
 	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
-	this->writeToFile(file, ">= ");
+	this->writeToFile(file, " >=");
 	this->writeToFileValue(file, lp.row_lower_[iRow]);
 	this->writeToFileLineend(file);
       } else if (lp.row_upper_[iRow] < kHighsInf) {
         // has an upper bound
-        this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", iRow + 1);
-	this->writeToFile(file, "<= ");
+        this->writeToFile(file, " con%" HIGHSINT_FORMAT "up:", iRow + 1);
+	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
+	this->writeToFile(file, " <=");
 	this->writeToFileValue(file, lp.row_upper_[iRow]);
         this->writeToFileLineend(file);
       } else {
