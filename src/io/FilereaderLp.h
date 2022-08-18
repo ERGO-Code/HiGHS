@@ -43,6 +43,12 @@ class FilereaderLp : public Filereader {
   HighsInt linelength;
   void writeToFile(FILE* file, const char* format, ...);
   void writeToFileLineend(FILE* file);
+  void writeToFileValue(FILE* file, const double value);
+  void writeToFileVar(FILE* file, const HighsInt var_index);
+  void writeToFileVar(FILE* file, const std::string var_name);
+  void writeToFileMatrixRow(FILE* file, const HighsInt iRow,
+			    const HighsSparseMatrix ar_matrix,
+			    const std::vector<string> col_names);
 };
 
 #endif

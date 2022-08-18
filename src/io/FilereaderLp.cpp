@@ -222,6 +222,38 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
   this->linelength = 0;
 }
 
+void FilereaderLp::writeToFileValue(FILE* file, const double value) {
+  this->writeToFile(file, "%+g ", value);
+}
+
+void FilereaderLp::writeToFileVar(FILE* file, const HighsInt var_index) {
+  this->writeToFile(file, "x%" HIGHSINT_FORMAT " ", var_index + 1);
+}
+
+void FilereaderLp::writeToFileVar(FILE* file, const std::string var_name) {
+  this->writeToFile(file, "%s ", var_name.c_str());
+}
+
+
+void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
+					const HighsSparseMatrix ar_matrix,
+					const std::vector<string> col_names) {
+  assert(ar_matrix.isRowwise());
+  const bool has_col_names = false;//col_names.size() == lp.num_col_;
+  
+  for (HighsInt iEl = ar_matrix.start_[iRow];
+       iEl < ar_matrix.start_[iRow + 1]; iEl++) {
+    HighsInt iCol = ar_matrix.index_[iEl];
+    double coef = ar_matrix.value_[iEl];
+    this->writeToFileValue(file, coef);
+    if (has_col_names) {
+      this->writeToFileVar(file, col_names[iCol]);
+    } else {
+      this->writeToFileVar(file, iCol);
+    }
+  }
+}
+
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
@@ -247,11 +279,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     double coef = lp.col_cost_[iCol];
     if (coef != 0.0) {
-      this->writeToFile(file, "%+g ", coef);
+      this->writeToFileValue(file, coef);
       if (has_col_names) {
-	this->writeToFile(file, "%s ", lp.col_names_[iCol].c_str());
+	this->writeToFileVar(file, lp.col_names_[iCol]);
       } else {
-	this->writeToFile(file, "x%" HIGHSINT_FORMAT " ", (iCol + 1));
+	this->writeToFileVar(file, iCol);
       }
     }
   }
@@ -265,13 +297,15 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           double coef = model.hessian_.value_[iEl];
           if (iCol != iRow) coef *= 2;
           if (coef != 0.0) {
-            this->writeToFile(file, "%+g ", coef);
+            this->writeToFileValue(file, coef);
 	    if (has_col_names) {
-	      this->writeToFile(file, "%s ", lp.col_names_[iCol].c_str());
-	      this->writeToFile(file, " * %s ", lp.col_names_[iRow].c_str());
+	      this->writeToFileVar(file, lp.col_names_[iCol]);
+	      this->writeToFile(file, "* ");
+	      this->writeToFileVar(file, lp.col_names_[iRow]);
 	    } else {
-	      this->writeToFile(file, "x%" HIGHSINT_FORMAT, (iCol + 1));
-	      this->writeToFile(file, " * x%" HIGHSINT_FORMAT " ", (iRow + 1));
+	      this->writeToFileVar(file, iCol);
+	      this->writeToFile(file, "* ");
+	      this->writeToFileVar(file, iRow);
 	    }
           }
         }
@@ -289,36 +323,23 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     if (lp.row_lower_[iRow] == lp.row_upper_[iRow]) {
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", iRow + 1);
-      for (HighsInt iEl = ar_matrix.start_[iRow];
-	   iEl < ar_matrix.start_[iRow + 1]; iEl++) {
-	HighsInt iCol = ar_matrix.index_[iEl];
-	double coef = ar_matrix.value_[iEl];
-	this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", coef, iCol + 1);
-      }
-      this->writeToFile(file, "= %+g", lp.row_lower_[iRow]);
+      this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
+      this->writeToFile(file, "= ");
+      this->writeToFileValue(file, lp.row_lower_[iRow]);
       this->writeToFileLineend(file);
     } else {
       if (lp.row_lower_[iRow] > -kHighsInf) {
-        // has a lower bounds
+        // has a lower bound
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", iRow + 1);
-	for (HighsInt iEl = ar_matrix.start_[iRow];
-	     iEl < ar_matrix.start_[iRow + 1]; iEl++) {
-	  HighsInt iCol = ar_matrix.index_[iEl];
-	  double coef = ar_matrix.value_[iEl];
-	  this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", coef, iCol + 1);
-	}
-	this->writeToFile(file, ">= %+g", lp.row_lower_[iRow]);
+	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
+	this->writeToFile(file, ">= ");
+	this->writeToFileValue(file, lp.row_lower_[iRow]);
 	this->writeToFileLineend(file);
       } else if (lp.row_upper_[iRow] < kHighsInf) {
-        // has an upper bounds
+        // has an upper bound
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", iRow + 1);
-	for (HighsInt iEl = ar_matrix.start_[iRow];
-	     iEl < ar_matrix.start_[iRow + 1]; iEl++) {
-	  HighsInt iCol = ar_matrix.index_[iEl];
-	  double coef = ar_matrix.value_[iEl];
-	  this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", coef, iCol + 1);
-	}
-        this->writeToFile(file, "<= %+g", lp.row_upper_[iRow]);
+	this->writeToFile(file, "<= ");
+	this->writeToFileValue(file, lp.row_upper_[iRow]);
         this->writeToFileLineend(file);
       } else {
         // constraint has infinite lower & upper bounds so not a proper
