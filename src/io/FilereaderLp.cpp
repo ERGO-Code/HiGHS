@@ -245,7 +245,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     if (coef != 0.0) {
       this->writeToFile(file, "%+g ", coef);
       if (has_col_names) {
-	this->writeToFile(file, "%s ", lp.col_names_[iCol]);
+	this->writeToFile(file, "%s ", lp.col_names_[iCol].c_str());
       } else {
 	this->writeToFile(file, "x%" HIGHSINT_FORMAT " ", (iCol + 1));
       }
@@ -263,8 +263,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           if (coef != 0.0) {
             this->writeToFile(file, "%+g ", coef);
 	    if (has_col_names) {
-	      this->writeToFile(file, "%s ", lp.col_names_[iCol]);
-	      this->writeToFile(file, " * %s ", lp.col_names_[iRow]);
+	      this->writeToFile(file, "%s ", lp.col_names_[iCol].c_str());
+	      this->writeToFile(file, " * %s ", lp.col_names_[iRow].c_str());
 	    } else {
 	      this->writeToFile(file, " x%" HIGHSINT_FORMAT, (iCol + 1));
 	      this->writeToFile(file, " * x%" HIGHSINT_FORMAT " ", (iRow + 1));
