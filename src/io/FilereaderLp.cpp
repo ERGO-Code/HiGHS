@@ -225,7 +225,8 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
   this->linelength = 0;
 }
 
-void FilereaderLp::writeToFileValue(FILE* file, const double value, const bool force_plus) {
+void FilereaderLp::writeToFileValue(FILE* file, const double value,
+                                    const bool force_plus) {
   if (original_double_format) {
     this->writeToFile(file, " %+g", value);
   } else {
@@ -250,15 +251,14 @@ void FilereaderLp::writeToFileCon(FILE* file, const HighsInt con_index) {
   this->writeToFile(file, " con%" HIGHSINT_FORMAT, con_index + 1);
 }
 
-
 void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
-					const HighsSparseMatrix ar_matrix,
-					const std::vector<string> col_names) {
+                                        const HighsSparseMatrix ar_matrix,
+                                        const std::vector<string> col_names) {
   assert(ar_matrix.isRowwise());
   const bool has_col_names = allow_model_names && col_names.size() > 0;
-  
-  for (HighsInt iEl = ar_matrix.start_[iRow];
-       iEl < ar_matrix.start_[iRow + 1]; iEl++) {
+
+  for (HighsInt iEl = ar_matrix.start_[iRow]; iEl < ar_matrix.start_[iRow + 1];
+       iEl++) {
     HighsInt iCol = ar_matrix.index_[iEl];
     double coef = ar_matrix.value_[iEl];
     this->writeToFileValue(file, coef);
@@ -277,9 +277,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   // Create a row-wise copy of the matrix
   HighsSparseMatrix ar_matrix = lp.a_matrix_;
   ar_matrix.ensureRowwise();
-  
-  const bool has_col_names = allow_model_names && lp.col_names_.size() == lp.num_col_;
-  const bool has_row_names = allow_model_names && lp.row_names_.size() == lp.num_row_;
+
+  const bool has_col_names =
+      allow_model_names && lp.col_names_.size() == lp.num_col_;
+  const bool has_row_names =
+      allow_model_names && lp.row_names_.size() == lp.num_row_;
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -296,38 +298,40 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     if (coef != 0.0) {
       this->writeToFileValue(file, coef);
       if (has_col_names) {
-	this->writeToFileVar(file, lp.col_names_[iCol]);
+        this->writeToFileVar(file, lp.col_names_[iCol]);
       } else {
-	this->writeToFileVar(file, iCol);
+        this->writeToFileVar(file, iCol);
       }
     }
   }
-  this->writeToFile(file, " "); // ToDo Unnecessary, but only to give empty diff
+  this->writeToFile(file,
+                    " ");  // ToDo Unnecessary, but only to give empty diff
   if (model.isQp()) {
     this->writeToFile(file, "+ [");
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       for (HighsInt iEl = model.hessian_.start_[iCol];
            iEl < model.hessian_.start_[iCol + 1]; iEl++) {
-	HighsInt iRow = model.hessian_.index_[iEl];
+        HighsInt iRow = model.hessian_.index_[iEl];
         if (iCol <= iRow) {
           double coef = model.hessian_.value_[iEl];
           if (iCol != iRow) coef *= 2;
           if (coef != 0.0) {
             this->writeToFileValue(file, coef);
-	    if (has_col_names) {
-	      this->writeToFileVar(file, lp.col_names_[iCol]);
-	      this->writeToFile(file, " *");
-	      this->writeToFileVar(file, lp.col_names_[iRow]);
-	    } else {
-	      this->writeToFileVar(file, iCol);
-	      this->writeToFile(file, " *");
-	      this->writeToFileVar(file, iRow);
-	    }
+            if (has_col_names) {
+              this->writeToFileVar(file, lp.col_names_[iCol]);
+              this->writeToFile(file, " *");
+              this->writeToFileVar(file, lp.col_names_[iRow]);
+            } else {
+              this->writeToFileVar(file, iCol);
+              this->writeToFile(file, " *");
+              this->writeToFileVar(file, iRow);
+            }
           }
         }
       }
     }
-    this->writeToFile(file, "  ]/2 "); // ToDo Surely needs only to be one space
+    this->writeToFile(file,
+                      "  ]/2 ");  // ToDo Surely needs only to be one space
   }
   double coef = lp.offset_;
   if (coef != 0) this->writeToFileValue(file, coef);
@@ -341,9 +345,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     if (lp.row_lower_[iRow] == lp.row_upper_[iRow]) {
       // Equality constraint
       if (has_row_names) {
-	this->writeToFileVar(file, lp.row_names_[iRow]);
+        this->writeToFileVar(file, lp.row_names_[iRow]);
       } else {
-	this->writeToFileCon(file, iRow);
+        this->writeToFileCon(file, iRow);
       }
       this->writeToFile(file, ":");
       this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
@@ -353,28 +357,28 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     } else {
       if (lp.row_lower_[iRow] > -kHighsInf) {
         // Has a lower bound
-	if (has_row_names) {
-	  this->writeToFileVar(file, lp.row_names_[iRow]);
-	} else {
-	  this->writeToFileCon(file, iRow);
-	}
+        if (has_row_names) {
+          this->writeToFileVar(file, lp.row_names_[iRow]);
+        } else {
+          this->writeToFileCon(file, iRow);
+        }
         this->writeToFile(file, "lo:");
-	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
-	this->writeToFile(file, " >=");
-	this->writeToFileValue(file, lp.row_lower_[iRow]);
-	this->writeToFileLineend(file);
+        this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
+        this->writeToFile(file, " >=");
+        this->writeToFileValue(file, lp.row_lower_[iRow]);
+        this->writeToFileLineend(file);
       }
       if (lp.row_upper_[iRow] < kHighsInf) {
         // Has an upper bound
-	if (has_row_names) {
-	  this->writeToFileVar(file, lp.row_names_[iRow]);
-	} else {
-	  this->writeToFileCon(file, iRow);
-	}
+        if (has_row_names) {
+          this->writeToFileVar(file, lp.row_names_[iRow]);
+        } else {
+          this->writeToFileCon(file, iRow);
+        }
         this->writeToFile(file, "up:");
-	this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
-	this->writeToFile(file, " <=");
-	this->writeToFileValue(file, lp.row_upper_[iRow]);
+        this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
+        this->writeToFile(file, " <=");
+        this->writeToFileValue(file, lp.row_upper_[iRow]);
         this->writeToFileLineend(file);
       }
     }
@@ -384,21 +388,20 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFile(file, "bounds");
   this->writeToFileLineend(file);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.col_lower_[iCol] <= -kHighsInf &&
-	lp.col_upper_[iCol] >= kHighsInf) {
+    if (lp.col_lower_[iCol] <= -kHighsInf && lp.col_upper_[iCol] >= kHighsInf) {
       if (has_col_names) {
-	this->writeToFileVar(file, lp.col_names_[iCol]);
+        this->writeToFileVar(file, lp.col_names_[iCol]);
       } else {
-	this->writeToFileVar(file, iCol);
+        this->writeToFileVar(file, iCol);
       }
       this->writeToFile(file, " free");
     } else {
       this->writeToFileValue(file, lp.col_lower_[iCol], false);
       this->writeToFile(file, " <=");
       if (has_col_names) {
-	this->writeToFileVar(file, lp.col_names_[iCol]);
+        this->writeToFileVar(file, lp.col_names_[iCol]);
       } else {
-	this->writeToFileVar(file, iCol);
+        this->writeToFileVar(file, iCol);
       }
       this->writeToFile(file, " <=");
       this->writeToFileValue(file, lp.col_upper_[iCol], false);
@@ -412,13 +415,12 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     this->writeToFileLineend(file);
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] == HighsVarType::kInteger) {
-        if (lp.col_lower_[iCol] == 0.0 &&
-	    lp.col_upper_[iCol] == 1.0) {
-	  if (has_col_names) {
-	    this->writeToFileVar(file, lp.col_names_[iCol]);
-	  } else {
-	    this->writeToFileVar(file, iCol);
-	  }
+        if (lp.col_lower_[iCol] == 0.0 && lp.col_upper_[iCol] == 1.0) {
+          if (has_col_names) {
+            this->writeToFileVar(file, lp.col_names_[iCol]);
+          } else {
+            this->writeToFileVar(file, iCol);
+          }
           this->writeToFileLineend(file);
         }
       }
@@ -429,13 +431,12 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     this->writeToFileLineend(file);
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] == HighsVarType::kInteger) {
-        if (lp.col_lower_[iCol] != 0.0 ||
-	    lp.col_upper_[iCol] != 1.0) {
-	  if (has_col_names) {
-	    this->writeToFileVar(file, lp.col_names_[iCol]);
-	  } else {
-	    this->writeToFileVar(file, iCol);
-	  }
+        if (lp.col_lower_[iCol] != 0.0 || lp.col_upper_[iCol] != 1.0) {
+          if (has_col_names) {
+            this->writeToFileVar(file, lp.col_names_[iCol]);
+          } else {
+            this->writeToFileVar(file, iCol);
+          }
           this->writeToFileLineend(file);
         }
       }
@@ -447,12 +448,12 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
           lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-	  if (has_col_names) {
-	    this->writeToFileVar(file, lp.col_names_[iCol]);
-	  } else {
-	    this->writeToFileVar(file, iCol);
-	  }
-          this->writeToFileLineend(file);
+        if (has_col_names) {
+          this->writeToFileVar(file, lp.col_names_[iCol]);
+        } else {
+          this->writeToFileVar(file, iCol);
+        }
+        this->writeToFileLineend(file);
       }
     }
   }

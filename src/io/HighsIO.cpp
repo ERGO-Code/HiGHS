@@ -31,7 +31,8 @@ void highsLogHeader(const HighsLogOptions& log_options) {
                "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
 }
 
-std::array<char, 32> highsDoubleToString(const double val, const double tolerance) {
+std::array<char, 32> highsDoubleToString(const double val,
+                                         const double tolerance) {
   std::array<char, 32> printString;
   double l =
       std::abs(val) == kHighsInf
