@@ -26,7 +26,7 @@
 #define LP_MAX_LINE_LENGTH 560
 #define LP_MAX_NAME_LENGTH 255
 
-#define LP_COMMENT_FILESTART ("File written by Highs .lp filereader")
+#define LP_COMMENT_FILESTART ("File written by HiGHS .lp file handler")
 
 class FilereaderLp : public Filereader {
  public:

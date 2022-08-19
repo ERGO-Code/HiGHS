@@ -21,15 +21,8 @@
 #include <sstream>
 #include <vector>
 
-//#include "model/HighsModel.h"
-//#include "HConfig.h"
-//#include "io/HighsIO.h"
-//#include "lp_data/HConst.h"
 #include "lp_data/HighsSolution.h"
 #include "util/stringutil.h"
-
-const double kHighsDoubleTolerance = 1e-13;
-const double kGlpsolDoubleTolerance = 1e-12;
 
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
@@ -230,12 +223,12 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     for (HighsInt i = 0; i < lp.num_col_; ++i)
       objective_function_value += lp.col_cost_[i] * solution.col_value[i];
     std::array<char, 32> objStr = highsDoubleToString(
-        (double)objective_function_value, kHighsDoubleTolerance);
+        (double)objective_function_value, kHighsSolutionValueToStringTolerance);
     fprintf(file, "Objective %s\n", objStr.data());
     fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.col_value[ix], kHighsDoubleTolerance);
+          highsDoubleToString(solution.col_value[ix], kHighsSolutionValueToStringTolerance);
       // Create a column name
       ss.str(std::string());
       ss << "C" << ix;
@@ -245,7 +238,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.row_value[ix], kHighsDoubleTolerance);
+          highsDoubleToString(solution.row_value[ix], kHighsSolutionValueToStringTolerance);
       // Create a row name
       ss.str(std::string());
       ss << "R" << ix;
@@ -266,7 +259,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.col_dual[ix], kHighsDoubleTolerance);
+          highsDoubleToString(solution.col_dual[ix], kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << "C" << ix;
       const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
@@ -275,7 +268,7 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
       std::array<char, 32> valStr =
-          highsDoubleToString(solution.row_dual[ix], kHighsDoubleTolerance);
+          highsDoubleToString(solution.row_dual[ix], kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << "R" << ix;
       const std::string name = have_row_names ? lp.row_names_[ix] : ss.str();
@@ -381,7 +374,7 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     fprintf(file, "\nModel status: %s\n",
             utilModelStatusToString(model_status).c_str());
     std::array<char, 32> objStr = highsDoubleToString(
-        (double)info.objective_function_value, kHighsDoubleTolerance);
+        (double)info.objective_function_value, kHighsSolutionValueToStringTolerance);
     fprintf(file, "\nObjective value: %s\n", objStr.data());
   } else if (style == kSolutionStyleGlpsolRaw ||
              style == kSolutionStyleGlpsolPretty) {
@@ -401,7 +394,7 @@ void writeGlpsolCostRow(FILE* file, const bool raw, const bool is_mip,
   if (raw) {
     double double_value = objective_function_value;
     std::array<char, 32> double_string =
-        highsDoubleToString(double_value, kGlpsolDoubleTolerance);
+        highsDoubleToString(double_value, kGlpsolSolutionValueToStringTolerance);
     // Last term of 0 for dual should (also) be blank when not MIP
     fprintf(file, "i %d %s%s%s\n", (int)row_id, is_mip ? "" : "b ",
             double_string.data(), is_mip ? "" : " 0");
@@ -653,7 +646,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     }
     double double_value = has_objective ? info.objective_function_value : 0;
     std::array<char, 32> double_string =
-        highsDoubleToString(double_value, kHighsDoubleTolerance);
+        highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
     fprintf(file, " %s\n", double_string.data());
   }
   if (!raw) {
@@ -686,7 +679,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
         // Complete the line if for a MIP
         double double_value = solution.row_value[iRow];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, kHighsDoubleTolerance);
+            highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
         fprintf(file, "%s\n", double_string.data());
         continue;
       }
@@ -735,7 +728,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       fprintf(file, "%s ", status_char.c_str());
       double double_value = solution.row_value[iRow];
       std::array<char, 32> double_string =
-          highsDoubleToString(double_value, kHighsDoubleTolerance);
+          highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
       fprintf(file, "%s ", double_string.data());
     } else {
       fprintf(file, "%s ", status_text.c_str());
@@ -753,7 +746,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       if (raw) {
         double double_value = solution.row_dual[iRow];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, kHighsDoubleTolerance);
+            highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
         fprintf(file, "%s", double_string.data());
       } else {
         // If the row is known to be basic, don't print the dual
@@ -801,7 +794,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       if (is_mip) {
         double double_value = solution.col_value[iCol];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, kHighsDoubleTolerance);
+            highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
         fprintf(file, "%s\n", double_string.data());
         continue;
       }
@@ -853,7 +846,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       fprintf(file, "%s ", status_char.c_str());
       double double_value = solution.col_value[iCol];
       std::array<char, 32> double_string =
-          highsDoubleToString(double_value, kHighsDoubleTolerance);
+          highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
       fprintf(file, "%s ", double_string.data());
     } else {
       fprintf(file, "%s ", status_text.c_str());
@@ -871,7 +864,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       if (raw) {
         double double_value = solution.col_dual[iCol];
         std::array<char, 32> double_string =
-            highsDoubleToString(double_value, kHighsDoubleTolerance);
+            highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
         fprintf(file, "%s", double_string.data());
       } else {
         // If the column is known to be basic, don't print the dual

@@ -59,7 +59,7 @@ void highsLogHeader(const HighsLogOptions& log_options);
 /**
  * @brief Convert a double number to a string using given tolerance
  */
-std::array<char, 32> highsDoubleToString(double val, double tolerance);
+std::array<char, 32> highsDoubleToString(const double val, const double tolerance);
 
 /**
  * @brief For _single-line_ user logging with message type notification

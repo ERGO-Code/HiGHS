@@ -24,7 +24,7 @@
 #include "lp_data/HighsLpUtils.h"
 
 const bool original_double_format = false;
-const bool allow_mps_names = false;
+const bool allow_model_names = false;
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   const std::string filename,
@@ -229,7 +229,12 @@ void FilereaderLp::writeToFileValue(FILE* file, const double value, const bool f
   if (original_double_format) {
     this->writeToFile(file, " %+g", value);
   } else {
-    this->writeToFile(file, " %+.15g", value);
+    // As for writeModelAsMps
+    if (force_plus) {
+      this->writeToFile(file, " %+.15g", value);
+    } else {
+      this->writeToFile(file, " %.15g", value);
+    }
   }
 }
 
@@ -250,7 +255,7 @@ void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
 					const HighsSparseMatrix ar_matrix,
 					const std::vector<string> col_names) {
   assert(ar_matrix.isRowwise());
-  const bool has_col_names = allow_mps_names && col_names.size() > 0;
+  const bool has_col_names = allow_model_names && col_names.size() > 0;
   
   for (HighsInt iEl = ar_matrix.start_[iRow];
        iEl < ar_matrix.start_[iRow + 1]; iEl++) {
@@ -273,8 +278,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   HighsSparseMatrix ar_matrix = lp.a_matrix_;
   ar_matrix.ensureRowwise();
   
-  const bool has_col_names = allow_mps_names && lp.col_names_.size() == lp.num_col_;
-  const bool has_row_names = allow_mps_names && lp.row_names_.size() == lp.num_row_;
+  const bool has_col_names = allow_model_names && lp.col_names_.size() == lp.num_col_;
+  const bool has_row_names = allow_model_names && lp.row_names_.size() == lp.num_row_;
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
