@@ -352,7 +352,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile(file, ":");
       this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
       this->writeToFile(file, " =");
-      this->writeToFileValue(file, lp.row_lower_[iRow]);
+      this->writeToFileValue(file, lp.row_lower_[iRow], true);
       this->writeToFileLineend(file);
     } else {
       if (lp.row_lower_[iRow] > -kHighsInf) {
@@ -365,7 +365,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         this->writeToFile(file, "lo:");
         this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
         this->writeToFile(file, " >=");
-        this->writeToFileValue(file, lp.row_lower_[iRow]);
+        this->writeToFileValue(file, lp.row_lower_[iRow], true);
         this->writeToFileLineend(file);
       }
       if (lp.row_upper_[iRow] < kHighsInf) {
@@ -378,7 +378,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         this->writeToFile(file, "up:");
         this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
         this->writeToFile(file, " <=");
-        this->writeToFileValue(file, lp.row_upper_[iRow]);
+        this->writeToFileValue(file, lp.row_upper_[iRow], true);
         this->writeToFileLineend(file);
       }
     }
