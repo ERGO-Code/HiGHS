@@ -16,8 +16,7 @@ Although HiGHS is freely available under the MIT license, we would be pleased to
 Reference
 ---------
 If you use HiGHS in an academic context, please acknowledge this and cite the following article.
-P
-arallelizing the dual revised simplex method
+Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
 Mathematical Programming Computation, 10 (1), 119-142, 2018.
 DOI: 10.1007/s12532-017-0130-5
