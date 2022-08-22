@@ -24,6 +24,10 @@ DOI: 10.1007/s12532-017-0130-5
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
+Wikipedia
+---------
+
+The project has an entry on Wikipedia: https://en.wikipedia.org/wiki/HiGHS_optimization_solver
 
 Documentation
 -------------
