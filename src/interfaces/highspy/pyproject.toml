@@ -13,14 +13,33 @@ skip = ""
 test-skip = ""
 
 [tool.cibuildwheel.linux]
-     archs = ["x86_64 i686 aarch64 ppc64le s390x"]
-     before-all = ["cd /project && git clone https://github.com/ERGO-Code/HiGHS.git",
-              "cd HiGHS/ && mkdir build && cd build",
+     # archs = ["x86_64 i686 aarch64 ppc64le s390x"]
+     archs = ["x86_64"]
+
+     # "echo '\n' && ls /host/home/ivet",
+
+     before-all= ["cd /project && ls /host/home/ivet", 
+              "cp -r /host/home/ivet/HiGHS  .",
+              "cd HiGHS",
+              "rm -rf src/interfaces/highspy/build",
+              "rm -rf src/interfaces/highspy/highspy.egg-info",
+              "rm -rf src/interfaces/highspy/highspy/*.so",
+              "rm -rf src/interfaces/highspy/wheelhouse"]
+
+     before-build = ["cd HiGHS",
+              "rm -rf build && mkdir build",
+              "rm -rf src/interfaces/highspy/build",
+              "rm -rf src/interfaces/highspy/highspy.egg-info",
+              "rm -rf src/interfaces/highspy/highspy/*.so",
+              "rm -rf src/interfaces/highspy/wheelhouse",
+              "cd build",
               "cmake -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
-              "make -j && make install"]
-     before-build = [
-        "REPAIR_LIBRARY_PATH=/project/installs/highs/lib"
-     ]
+              "make -j3 && make install",
+              "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:/project/installs/highs/lib64\"",
+              "export DYLD_LIBRARY_PATH=\"$DYLD_LIBRARY_PATH:/project/installs/highs/lib64\""]
+
+     environment = { LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/project/installs/highs/lib64", DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:/project/installs/highs/lib64" }
+
 
 [tool.cibuildwheel.macos]
      archs = ["x86_64 arm64"]
