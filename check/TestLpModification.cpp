@@ -1042,6 +1042,32 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.scaleRow(highs.getNumRow() - 1, -2.0) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
+
+  free(col1357_cost);
+  free(col1357_lower);
+  free(col1357_upper);
+  free(col1357_start);
+  free(col1357_index);
+  free(col1357_value);
+  
+  free(row0135789_lower);
+  free(row0135789_upper);
+  free(row0135789_start);
+  free(row0135789_index);
+  free(row0135789_value);
+
+  free(row012_lower);
+  free(row012_upper);
+  free(row012_start);
+  free(row012_index);
+  free(row012_value);
+
+  free(col0123_cost);
+  free(col0123_lower);
+  free(col0123_upper);
+  free(col0123_start);
+  free(col0123_index);
+  free(col0123_value);
 }
 
 TEST_CASE("LP-getcols", "[highs_data]") {
