@@ -11,10 +11,9 @@ build-backend = "setuptools.build_meta"
 build = "*"
 skip = ""
 test-skip = ""
-archs = ["x86_64 arm64 universal2"]
-# archs = ["x86_64 arm64 x86_64 i686 aarch64 ppc64le s390x"]
 
 [tool.cibuildwheel.linux]
+     archs = ["x86_64 i686 aarch64 ppc64le s390x"]
      before-all = ["cd /project && git clone https://github.com/ERGO-Code/HiGHS.git",
               "cd HiGHS/ && mkdir build && cd build",
               "cmake -DFAST_BUILD=ON -DSHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
@@ -24,6 +23,7 @@ archs = ["x86_64 arm64 universal2"]
      ]
 
 [tool.cibuildwheel.macos]
+     archs = ["x86_64 arm64"]
      repair-wheel-command = [
          "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel}",
          "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}"
