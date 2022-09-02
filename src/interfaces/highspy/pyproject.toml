@@ -1,9 +1,11 @@
 [build-system]
 # Minimum requirements for the build system to execute.
-requires = ["setuptools", 
-            "pybind11", 
-            "pyomo", 
-            "wheel"]  # PEP 508 specifications.
+requires = [
+  "setuptools",
+  "pybind11",
+  "pyomo",
+  "wheel",
+] 
 
 build-backend = "setuptools.build_meta"
 
@@ -13,33 +15,33 @@ skip = ""
 test-skip = ""
 
 [tool.cibuildwheel.linux]
-     # archs = ["x86_64 i686 aarch64 ppc64le s390x"]
-     archs = ["x86_64"]
+archs = ["x86_64 i686 aarch64 ppc64le s390x"]
 
-     # "echo '\n' && ls /host/home/ivet",
+before-all = [
+  "cd /project && ls /host/home/ivet",
+  "cp -r /host/home/ivet/HiGHS  .",
+  "cd HiGHS",
+  "rm -rf build && mkdir build",
+  "rm -rf src/interfaces/highspy/build",
+  "rm -rf src/interfaces/highspy/highspy.egg-info",
+  "rm -rf src/interfaces/highspy/highspy/*.so",
+  "rm -rf src/interfaces/highspy/wheelhouse",
+]
 
-     before-all= ["cd /project && ls /host/home/ivet", 
-              "cp -r /host/home/ivet/HiGHS  .",
-              "cd HiGHS",
-              "rm -rf build && mkdir build",
-              "rm -rf src/interfaces/highspy/build",
-              "rm -rf src/interfaces/highspy/highspy.egg-info",
-              "rm -rf src/interfaces/highspy/highspy/*.so",
-              "rm -rf src/interfaces/highspy/wheelhouse"]
+before-build = [
+  "cd HiGHS",
+  "mkdir -p build && cd build",
+  "cmake -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
+  "make -j3 && make install",
+]
 
-     before-build = ["cd HiGHS",
-              "mkdir -p build && cd build",
-              "cmake -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
-              "make -j3 && make install",
-              "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:/project/installs/highs/lib64\"",
-              "export DYLD_LIBRARY_PATH=\"$DYLD_LIBRARY_PATH:/project/installs/highs/lib64\""]
-
-     environment = { LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/project/installs/highs/lib64", DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:/project/installs/highs/lib64" }
-
+[tool.cibuildwheel.linux.environment]
+DYLD_LIBRARY_PATH = "$DYLD_LIBRARY_PATH:/project/installs/highs/lib:/project/installs/highs/lib64"
+LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:/project/installs/highs/lib:/project/installs/highs/lib64"
 
 [tool.cibuildwheel.macos]
-     archs = ["x86_64 arm64"]
-     repair-wheel-command = [
-         "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel}",
-         "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}"
-     ]
+archs = ["x86_64 arm64"]
+repair-wheel-command = [
+  "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel}",
+  "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
+]
