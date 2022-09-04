@@ -25,7 +25,6 @@ before-all = [
   "rm -rf src/interfaces/highspy/build",
   "rm -rf src/interfaces/highspy/highspy.egg-info",
   "rm -rf src/interfaces/highspy/highspy/*.so",
-  "rm -rf src/interfaces/highspy/wheelhouse",
 ]
 
 before-build = [
