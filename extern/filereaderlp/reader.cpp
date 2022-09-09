@@ -320,6 +320,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vec
          std::shared_ptr<LinTerm> linterm = std::shared_ptr<LinTerm>(new LinTerm());
          linterm->coef = it->value;
          linterm->var = builder.getvarbyname(name);
+	 printf("LpReader: Term   %+g %s\n", linterm->coef, name.c_str());
          expr->linterms.push_back(linterm);
 
          ++it;
@@ -329,6 +330,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vec
 
       // const
       if (it->type == ProcessedTokenType::CONST) {
+	printf("LpReader: Offset change from %+g by %+g\n", expr->offset, it->value);
          expr->offset += it->value;
          ++it;
          continue;
@@ -341,6 +343,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vec
          std::shared_ptr<LinTerm> linterm = std::shared_ptr<LinTerm>(new LinTerm());
          linterm->coef = 1.0;
          linterm->var = builder.getvarbyname(name);
+	 printf("LpReader: Term   %+g %s\n", linterm->coef, name.c_str());
          expr->linterms.push_back(linterm);
 
          ++it;
