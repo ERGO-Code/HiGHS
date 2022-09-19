@@ -1,4 +1,4 @@
-#include "scaling.hpp"
+#include "qpsolver/scaling.hpp"
 
 #include <algorithm>
 #include <map>

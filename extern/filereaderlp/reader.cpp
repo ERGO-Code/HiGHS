@@ -17,7 +17,7 @@
 
 #include "HConfig.h"  // for ZLIB_FOUND
 #ifdef ZLIB_FOUND
-#include "zstr.hpp"
+#include "../extern/zstr/zstr.hpp"
 #endif
 
 enum class RawTokenType {

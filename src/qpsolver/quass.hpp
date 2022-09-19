@@ -1,11 +1,11 @@
 #ifndef __SRC_LIB_QUASS_HPP__
 #define __SRC_LIB_QUASS_HPP__
 
-#include "basis.hpp"
-#include "eventhandler.hpp"
-#include "factor.hpp"
-#include "instance.hpp"
-#include "runtime.hpp"
+#include "qpsolver/basis.hpp"
+#include "qpsolver/eventhandler.hpp"
+#include "qpsolver/factor.hpp"
+#include "qpsolver/instance.hpp"
+#include "qpsolver/runtime.hpp"
 
 struct Quass {
   Quass(Runtime& rt);

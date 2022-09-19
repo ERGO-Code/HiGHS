@@ -26,7 +26,7 @@
 #include "util/stringutil.h"
 
 #ifdef ZLIB_FOUND
-#include "zstr.hpp"
+#include "../extern/zstr/zstr.hpp"
 #endif
 
 using std::map;

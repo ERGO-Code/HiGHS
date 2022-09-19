@@ -1,10 +1,10 @@
 #ifndef __SRC_LIB_PRICING_DEVEXPRICING_HPP__
 #define __SRC_LIB_PRICING_DEVEXPRICING_HPP__
 
-#include "basis.hpp"
-#include "pricing.hpp"
-#include "reducedcosts.hpp"
-#include "runtime.hpp"
+#include "qpsolver/basis.hpp"
+#include "qpsolver/pricing.hpp"
+#include "qpsolver/reducedcosts.hpp"
+#include "qpsolver/runtime.hpp"
 
 // 42726, 78965776.391299, 559, 104.321553, 0.000669, 7937
 
