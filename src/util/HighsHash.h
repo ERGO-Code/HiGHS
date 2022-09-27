@@ -32,6 +32,7 @@
 #include <intrin.h>
 #pragma intrinsic(_BitScanReverse)
 #pragma intrinsic(_BitScanReverse64)
+#pragma intrinsic(__popcnt64)
 #endif
 
 #if __GNUG__ && __GNUC__ < 5
@@ -101,7 +102,9 @@ struct HighsHashHelpers {
 #ifdef HIGHS_HAVE_BUILTIN_CLZ
   static int log2i(uint64_t n) { return 63 - __builtin_clzll(n); }
 
-  static int log2i(unsigned int n) { return 31 - __builtin_clz(n); }
+  static int log2i(uint32_t n) { return 31 - __builtin_clz(n); }
+
+  static int popcnt(uint64_t x) { return __builtin_popcountll(x); }
 
 #elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
   static int log2i(uint64_t n) {
@@ -110,11 +113,13 @@ struct HighsHashHelpers {
     return result;
   }
 
-  static int log2i(unsigned int n) {
+  static int log2i(uint32_t n) {
     unsigned long result;
-    _BitScanReverse64(&result, (unsigned long)n);
+    _BitScanReverse(&result, (unsigned long)n);
     return result;
   }
+
+  static int popcnt(uint64_t x) { return __popcnt64(x); }
 #else
   // integer log2 algorithm without floating point arithmetic. It uses an
   // unrolled loop and requires few instructions that can be well optimized.
@@ -155,6 +160,19 @@ struct HighsHashHelpers {
     log2Iteration(1);
 
     return x;
+  }
+
+  static int popcnt(uint64_t x) {
+    constexpr uint64_t m1 = 0x5555555555555555ull;
+    constexpr uint64_t m2 = 0x3333333333333333ull;
+    constexpr uint64_t m4 = 0x0f0f0f0f0f0f0f0full;
+    constexpr uint64_t h01 = 0x0101010101010101ull;
+
+    x -= (x >> 1) & m1;
+    x = (x & m2) + ((x >> 2) & m2);
+    x = (x + (x >> 4)) & m4;
+
+    return (x * h01) >> 56;
   }
 
 #endif
@@ -761,21 +779,60 @@ struct HighsVectorEqual {
   }
 };
 
-template <typename K, typename V>
+template <typename K, typename V = void>
 struct HighsHashTableEntry {
  private:
   K key_;
   V value_;
 
  public:
-  template <typename K_>
-  HighsHashTableEntry(K_&& k) : key_(k), value_() {}
+  HighsHashTableEntry(HighsHashTableEntry<K, V>&&) = default;
+  HighsHashTableEntry(const HighsHashTableEntry<K, V>&) = default;
+  ~HighsHashTableEntry() = default;
+  HighsHashTableEntry() = default;
+  HighsHashTableEntry<K, V>& operator=(HighsHashTableEntry<K, V>&&) = default;
+  HighsHashTableEntry<K, V>& operator=(const HighsHashTableEntry<K, V>&) =
+      default;
+
+  // add a constructor to pass an argument to initialize the key with a value
+  // and the value as default
+  // the enable if statement makes sure this overload is never selected
+  // when the type of the single argument is HighsHashTableEntry<K,V> so that
+  // the default move and copy constructures are preferred when they match
+  // and this is only used to initialize the key type from a single argument.
+  template <
+      typename K_,
+      typename std::enable_if<
+          !std::is_same<typename std::remove_cv<
+                            typename std::remove_reference<K_>::type>::type,
+                        HighsHashTableEntry<K, V>>::value,
+          int>::type = 0>
+  HighsHashTableEntry(K_&& k) : key_(std::forward<K_>(k)), value_() {}
+
   template <typename K_, typename V_>
-  HighsHashTableEntry(K_&& k, V_&& v) : key_(k), value_(v) {}
+  HighsHashTableEntry(K_&& k, V_&& v)
+      : key_(std::forward<K_>(k)), value_(std::forward<V_>(v)) {}
 
   const K& key() const { return key_; }
   const V& value() const { return value_; }
   V& value() { return value_; }
+
+  template <typename Func>
+  auto forward(Func&& f) -> decltype(f(key_, value_)) {
+    const K& keyRef = key_;
+    return f(keyRef, value_);
+  }
+
+  template <typename Func>
+  auto forward(Func&& f) const -> decltype(f(key_)) {
+    const K& keyRef = key_;
+    return f(keyRef);
+  }
+
+  template <typename Func>
+  auto forward(Func&& f) const -> decltype(f(key_, value_)) {
+    return f(key_, value_);
+  }
 };
 
 template <typename T>
@@ -784,11 +841,47 @@ struct HighsHashTableEntry<T, void> {
   T value_;
 
  public:
-  template <typename... Args>
+  HighsHashTableEntry(HighsHashTableEntry<T, void>&&) = default;
+  HighsHashTableEntry(const HighsHashTableEntry<T, void>&) = default;
+  ~HighsHashTableEntry() = default;
+  HighsHashTableEntry() = default;
+  HighsHashTableEntry<T, void>& operator=(HighsHashTableEntry<T, void>&&) =
+      default;
+  HighsHashTableEntry<T, void>& operator=(const HighsHashTableEntry<T, void>&) =
+      default;
+
+  // Add a constructor to accept an arbitrary argument pack for initialize the
+  // underlying value of type T. The enable if statement makes sure this
+  // overload is never selected when the type of the single argument is
+  // HighsHashTableEntry<T,void> so that the default move and copy constructures
+  // are preferred when they match and this is only used to initialize the value
+  // of type from a set of arguments which are properly forwarded.
+  // The std::tuple usage in enable_if is a work-around to make the statement
+  // legal when multiple arguments are passed in, since std::is_same expects a
+  // single type. In that case is_same will obviously return false and the
+  // overload is appropriate to initialize the value_ with multiple forwarded
+  // arguments.
+  template <typename... Args,
+            typename std::enable_if<
+                !std::is_same<
+                    std::tuple<typename std::remove_cv<
+                        typename std::remove_reference<Args>::type>::type...>,
+                    std::tuple<HighsHashTableEntry<T, void>>>::value,
+                int>::type = 0>
   HighsHashTableEntry(Args&&... args) : value_(std::forward<Args>(args)...) {}
 
   const T& key() const { return value_; }
   const T& value() const { return value_; }
+
+  template <typename Func>
+  auto forward(Func&& f) -> decltype(f(value_)) {
+    return f(value_);
+  }
+
+  template <typename Func>
+  auto forward(Func&& f) const -> decltype(f(value_)) {
+    return f(value_);
+  }
 };
 
 template <typename K, typename V = void>
@@ -812,8 +905,8 @@ class HighsHashTable {
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0x1)->value())>::type;
+  using ValueType =
+      typename std::remove_reference<decltype(Entry().value())>::type;
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
@@ -1001,9 +1094,10 @@ class HighsHashTable {
         for (u64 i = 0; i < capacity; ++i)
           if (occupied(metadata[i])) entries.get()[i].~Entry();
       }
-      if (capacity == 128)
+      if (capacity == 128) {
         std::memset(metadata.get(), 0, 128);
-      else
+        numElements = 0;
+      } else
         makeEmptyTable(128);
     }
   }
@@ -1040,7 +1134,7 @@ class HighsHashTable {
 
     using std::swap;
     ValueType& insertLocation = entryArray[pos].value();
-    Entry entry(key, ValueType());
+    Entry entry(key);
     ++numElements;
 
     do {

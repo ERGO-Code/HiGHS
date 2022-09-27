@@ -1288,6 +1288,26 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
           objsum += sol.col_value[i] * mipsolver.colCost(i);
 
+        if (fractionalints.empty() && !unscaledPrimalFeasible(status)) {
+          std::vector<double> fixSol = sol.col_value;
+          for (HighsInt i = 0; i < mipsolver.numCol(); ++i) {
+            if (fixSol[i] < lpsolver.getLp().col_lower_[i])
+              fixSol[i] = lpsolver.getLp().col_lower_[i];
+            else if (fixSol[i] > lpsolver.getLp().col_upper_[i])
+              fixSol[i] = lpsolver.getLp().col_upper_[i];
+            else if (mipsolver.variableType(i) != HighsVarType::kContinuous)
+              fixSol[i] = std::round(fixSol[i]);
+          }
+
+          if (mipsolver.mipdata_->checkSolution(fixSol)) {
+            const_cast<std::vector<double>&>(sol.col_value) = std::move(fixSol);
+            if (unscaledDualFeasible(status))
+              status = Status::kOptimal;
+            else
+              status = Status::kUnscaledPrimalFeasible;
+          }
+        }
+
         objective = double(objsum);
         break;
       }

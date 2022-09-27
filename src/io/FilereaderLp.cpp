@@ -69,7 +69,9 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     if (num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
     lp.objective_name_ = m.objective->name;
-    lp.offset_ = m.objective->offset;
+    // ToDo: Fix m.objective->offset and then use it here
+    //
+    // lp.offset_ = m.objective->offset;
     lp.col_cost_.resize(lp.num_col_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
