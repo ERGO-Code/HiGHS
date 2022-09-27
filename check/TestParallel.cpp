@@ -212,7 +212,7 @@ double concurrentLpSolve(const bool use_race_timer) {
     printf("Set up parallel HighsLpSolverObject\n"); 
     parallel::TaskGroup tg;
     for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
-      printf("Now to spawn LP solver %d\n", int(lp_solver)); 
+      printf("Now to spawn LP solver %d/%d\n", int(lp_solver), int(num_lp_solvers)); fflush(stdout);
       tg.spawn([&]() {
         // todo: somehow pass a pointer to the race_timer into the solver. The
         // solver should check if such a pointer was passed and call the
