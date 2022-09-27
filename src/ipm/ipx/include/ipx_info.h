@@ -1,12 +1,15 @@
 #ifndef IPX_INFO_H_
 #define IPX_INFO_H_
 
+#include "parallel/HighsRaceTimer.h"
 #include "ipx_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 struct ipx_info {
+    HighsRaceTimer<double>* race_timer;
+    
     ipxint status;
     ipxint status_ipm;
     ipxint status_crossover;

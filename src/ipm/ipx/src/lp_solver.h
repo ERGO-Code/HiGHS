@@ -30,7 +30,8 @@ public:
     Int LoadModel(Int num_var, const double* obj, const double* lb,
                   const double* ub, Int num_constr, const Int* Ap,
                   const Int* Ai, const double* Ax, const double* rhs,
-                  const char* constr_type);
+                  const char* constr_type,
+		  HighsRaceTimer<double>* race_timer = nullptr);
 
     // Loads a primal-dual point as starting point for the IPM.
     // @x: size num_var array
