@@ -101,7 +101,7 @@ private:
     void MakeStream();           // composes output_
     Parameters parameters_;
     std::ofstream logfile_;
-    HighsRaceTimer<double>* race_timer_;
+    HighsRaceTimer<double>* race_timer_ = nullptr;
     Timer timer_;                // total runtime
     mutable Timer interval_;     // time since last interval log
     mutable Multistream output_; // forwards to logfile and/or console
