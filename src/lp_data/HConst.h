@@ -182,6 +182,8 @@ enum class HighsModelStatus {
   kObjectiveTarget,
   kTimeLimit,
   kIterationLimit,
+  kInterrupted,
+  kRaceTimerStop,
   kUnknown,
   kMin = kNotset,
   kMax = kUnknown

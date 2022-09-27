@@ -19,6 +19,7 @@
 #define IPX_STATUS_no_progress              7
 #define IPX_STATUS_failed                   8
 #define IPX_STATUS_debug                    9
+#define IPX_STATUS_race_time_stop           10
 
 /* error flags for invalid input */
 #define IPX_ERROR_argument_null             102

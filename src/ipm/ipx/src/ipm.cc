@@ -76,6 +76,9 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         MakeStep(step);
         info->iter++;
         PrintOutput();
+	raceTimerStop();
+        if (info->errflag)
+            break;
     }
 
     // Set status_ipm if errflag terminated IPM.
@@ -603,6 +606,15 @@ void IPM::PrintOutput() {
         control_.Debug(4) << "  " << Format("-", 8);
     }
     control_.Log() << '\n';
+}
+
+void IPM::raceTimerStop() {
+  if (info_->race_timer) {
+    double limit = -99;//*info_->race_timer->limit;
+    printf("IPM::raceTimerStop race_timer = %g\n", limit);
+  } else {
+    //    printf("IPM::raceTimerStop race_timer_ is nullptr\n");
+  }
 }
 
 }  // namespace ipx

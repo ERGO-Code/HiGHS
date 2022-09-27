@@ -52,7 +52,10 @@ Int LpSolver::LoadIPMStartingPoint(const double* x, const double* xl,
 Int LpSolver::Solve() {
     if (model_.empty())
         return info_.status = IPX_STATUS_no_model;
+    // ToDo Find a neater way than this!
+    HighsRaceTimer<double>* save_race_timer = info_.race_timer;
     ClearSolution();
+    info_.race_timer = save_race_timer;
     control_.ResetTimer();
     control_.OpenLogfile();
     control_.Log() << "IPX version 1.0\n";

@@ -3453,6 +3453,10 @@ bool HEkk::bailoutOnTimeIterations() {
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
+  } else if (race_timer_) {
+    const double run_time = timer_->readRunHighsClock();
+    const bool race_timer_stop = race_timer_->limitReached(run_time);
+    printf("HEkk::bailoutOnTimeIterations: RunTime = %11.4g: stop = %d\n", run_time, race_timer_stop);
   }
   return solve_bailout_;
 }
