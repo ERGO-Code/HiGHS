@@ -16,7 +16,7 @@ double dumbWork(const HighsInt n);
 
 void noReturnSpawn();
 void returnSpawn();
-double concurrentLpSolve(const bool use_race_timer = true);
+double concurrentLpSolve(const bool use_highs_run = true);
 
 TEST_CASE("test-parallel", "[highs_test_parallel]") {
   if (dev_run) {
@@ -108,7 +108,7 @@ double dumbWork(const HighsInt n) {
   return sum_products;
 }
 
-double concurrentLpSolve(const bool use_race_timer) {
+double concurrentLpSolve(const bool use_highs_run) {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   std::string model_file;
@@ -181,11 +181,35 @@ double concurrentLpSolve(const bool use_race_timer) {
   // you can remove the for-loop and change "[&](HighsInt start, HighsInt end){"
   // to "[&](HighsInt lp_solver, HighsInt){"
 
-  if (use_race_timer) {
+  HighsRaceTimer<double> race_timer;
 
+  if (use_highs_run) {
+    parallel::TaskGroup tg;
+    for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
+      parallel_highs[lp_solver]->passRaceTimer(&race_timer);
+      tg.spawn([&parallel_highs, &run_status, &model_status, &race_timer, lp_solver]() {
+        // todo: somehow pass a pointer to the race_timer into the solver. The
+        // solver should check if such a pointer was passed and call the
+        // limitReached(currentTime) function to determine whether a limit was
+        // reached. If limitReached returns true then the solver should stop.
+        // e.g. something like:
+        // if (race_timer_ptr && race_timer_ptr->limitReached(currentTime))
+        //  modelstatus = HighsModelStatus::kIterationLimit;
+        run_status[lp_solver] = parallel_highs[lp_solver]->run();
+	model_status[lp_solver] = parallel_highs[lp_solver]->getModelStatus();
+        // this should check for the status returned when the race timer limit
+        // was reached and only call decrease limit if it was not reached
+	printf("LP solver %d returns status %s and model status %s\n",
+	       int(lp_solver),
+	       highsStatusToString(run_status[lp_solver]).c_str(),
+	       parallel_highs[lp_solver]->modelStatusToString(model_status[lp_solver]).c_str()); fflush(stdout);
+        if (model_status[lp_solver] != HighsModelStatus::kIterationLimit)
+          race_timer.decreaseLimit(parallel_highs[lp_solver]->getRunTime());
+      });
+    }
+    tg.taskWait();
+  } else {
     printf("Setting up parallel HighsLpSolverObject\n"); fflush(stdout);
-    HighsRaceTimer<double> race_timer;
-
     vector<std::unique_ptr<HighsLpSolverObject>> parallel_lp_solver_object;
     vector<std::unique_ptr<HighsBasis>> parallel_basis;
     vector<std::unique_ptr<HighsSolution>> parallel_solution;
@@ -210,44 +234,6 @@ double concurrentLpSolve(const bool use_race_timer) {
       parallel_ekk_instance[lp_solver]->race_timer_ = &race_timer;
     }
     printf("Set up parallel HighsLpSolverObject\n"); 
-    parallel::TaskGroup tg;
-    for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
-      tg.spawn([&parallel_highs, &run_status, &model_status, &race_timer, lp_solver]() {
-        // todo: somehow pass a pointer to the race_timer into the solver. The
-        // solver should check if such a pointer was passed and call the
-        // limitReached(currentTime) function to determine whether a limit was
-        // reached. If limitReached returns true then the solver should stop.
-        // e.g. something like:
-        // if (race_timer_ptr && race_timer_ptr->limitReached(currentTime))
-        //  modelstatus = HighsModelStatus::kIterationLimit;
-        run_status[lp_solver] = parallel_highs[lp_solver]->run();
-	model_status[lp_solver] = parallel_highs[lp_solver]->getModelStatus();
-        // this should check for the status returned when the race timer limit
-        // was reached and only call decrease limit if it was not reached
-	printf("LP solver %d returns status %s and model status %s\n",
-	       int(lp_solver),
-	       highsStatusToString(run_status[lp_solver]).c_str(),
-	       parallel_highs[lp_solver]->modelStatusToString(model_status[lp_solver]).c_str()); fflush(stdout);
-        if (model_status[lp_solver] != HighsModelStatus::kIterationLimit)
-          race_timer.decreaseLimit(parallel_highs[lp_solver]->getRunTime());
-      });
-    }
-    tg.taskWait();
-  } else {
-    parallel::TaskGroup tg;
-
-    tg.spawn([&]() {
-      run_status[primal_simplex_index] =
-          parallel_highs[primal_simplex_index]->run();
-    });
-    tg.spawn([&]() {
-      run_status[dual_simplex_index] =
-          parallel_highs[dual_simplex_index]->run();
-    });
-    tg.spawn(
-        [&]() { run_status[ipm_index] = parallel_highs[ipm_index]->run(); });
-
-    tg.taskWait();
   }
   double total_time = 0;
   for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
@@ -258,9 +244,9 @@ double concurrentLpSolve(const bool use_race_timer) {
   }
 
   printf("Status values: primal = %s; dual = %s; ipm = %s\n",
-         highsStatusToString(run_status[0]).c_str(),
-         highsStatusToString(run_status[1]).c_str(),
-         highsStatusToString(run_status[2]).c_str());
+         highsStatusToString(run_status[primal_simplex_index]).c_str(),
+         highsStatusToString(run_status[dual_simplex_index]).c_str(),
+         highsStatusToString(run_status[ipm_index]).c_str());
 
   printf("Solve times:  primal = %f6.4; dual = %f6.4; ipm = %f6.4\n",
          run_time[0], run_time[1], run_time[2]);

@@ -1065,6 +1065,8 @@ class Highs {
 
   HighsStatus setHighsOutput(FILE* output = nullptr);
 
+  void passRaceTimer(HighsRaceTimer<double>* race_timer) { ekk_instance_.race_timer_ = race_timer; }
+
   const HighsInfo& getHighsInfo() const;
 
   HighsStatus getHighsInfoValue(const std::string& info, HighsInt& value);
