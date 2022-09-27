@@ -240,6 +240,12 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
 
+// Tolerance values for highsDoubleToString
+const double kModelValueToStringTolerance = 1e-15;
+const double kRangingValueToStringTolerance = 1e-13;
+const double kHighsSolutionValueToStringTolerance = 1e-13;
+const double kGlpsolSolutionValueToStringTolerance = 1e-12;
+
 // Termination link in linked lists
 const HighsInt kNoLink = -1;
 

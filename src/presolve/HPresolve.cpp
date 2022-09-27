@@ -187,7 +187,8 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
     // dual detection in the second loop as it must hold for all rows
-    if (rowsizeInteger[nz.index()] < rowsize[nz.index()]) {
+    if (rowsize[nz.index()] < 2 ||
+        rowsizeInteger[nz.index()] < rowsize[nz.index()]) {
       runDualDetection = false;
       continue;
     }
@@ -258,8 +259,9 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
     // dual detection in the second loop as it must hold for all rows
-    if (rowsizeInteger[nz.index()] + rowsizeImplInt[nz.index()] <
-        rowsize[nz.index()] - 1) {
+    if (rowsize[nz.index()] < 2 ||
+        rowsizeInteger[nz.index()] + rowsizeImplInt[nz.index()] <
+            rowsize[nz.index()] - 1) {
       runDualDetection = false;
       continue;
     }
@@ -2681,6 +2683,16 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HighsInt nzPos = colhead[col];
   HighsInt row = Arow[nzPos];
   double colCoef = Avalue[nzPos];
+
+  if (rowsize[row] == 1) {
+    HPRESOLVE_CHECKED_CALL(singletonRow(postsolve_stack, row););
+
+    if (!colDeleted[col]) {
+      assert(colsize[col] == 0);
+      return emptyCol(postsolve_stack, col);
+    }
+    return Result::kOk;
+  }
 
   double colDualUpper =
       -impliedDualRowBounds.getSumLower(col, -model->col_cost_[col]);
