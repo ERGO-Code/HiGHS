@@ -140,6 +140,8 @@ class HEkk {
 
   // Data members
   HighsRaceTimer<double>* race_timer_ = nullptr;
+  double initial_run_time_;
+
   HighsOptions* options_;
   HighsTimer* timer_;
   HighsSimplexAnalysis analysis_;

@@ -61,7 +61,6 @@ private:
                            const double* sl, const double* su, Step& lhs);
     void PrintHeader();
     void PrintOutput();
-    void raceTimerStop();
 
     const Control& control_;
     KKTSolver* kkt_{nullptr};

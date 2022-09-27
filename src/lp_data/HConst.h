@@ -182,11 +182,13 @@ enum class HighsModelStatus {
   kObjectiveTarget,
   kTimeLimit,
   kIterationLimit,
+  kUnknown,
+  // Need to put the next two into a better place, but that breaks
+  // hard-coded cast value checks
   kInterrupted,
   kRaceTimerStop,
-  kUnknown,
   kMin = kNotset,
-  kMax = kUnknown
+  kMax = kRaceTimerStop
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
