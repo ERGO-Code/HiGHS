@@ -212,8 +212,7 @@ double concurrentLpSolve(const bool use_race_timer) {
     printf("Set up parallel HighsLpSolverObject\n"); 
     parallel::TaskGroup tg;
     for (HighsInt lp_solver = 0; lp_solver < num_lp_solvers; lp_solver++) {
-      printf("Now to spawn LP solver %d/%d\n", int(lp_solver), int(num_lp_solvers)); fflush(stdout);
-      tg.spawn([&]() {
+      tg.spawn([&parallel_highs, &run_status, &model_status, &race_timer, lp_solver]() {
         // todo: somehow pass a pointer to the race_timer into the solver. The
         // solver should check if such a pointer was passed and call the
         // limitReached(currentTime) function to determine whether a limit was
