@@ -39,6 +39,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
+  // Make sure that the solver option is OK
+  assert(solverOptionOk(options.solver));
   if (!solver_object.lp_.num_row_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(solver_object);

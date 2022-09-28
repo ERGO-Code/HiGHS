@@ -67,11 +67,14 @@ bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
   return false;
 }
 
+bool solverOptionOk(const string& solver) {
+  return solver == kSimplexString || solver == kHighsChooseString ||
+    solver == kIpmString;
+}
+
 bool commandLineSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
-  if (value == kSimplexString || value == kHighsChooseString ||
-      value == kIpmString)
-    return true;
+  if (solverOptionOk(value)) return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
                "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
                value.c_str(), kSimplexString.c_str(),
