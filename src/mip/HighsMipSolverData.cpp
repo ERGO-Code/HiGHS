@@ -558,8 +558,7 @@ void HighsMipSolverData::runSetup() {
   domain.clearChangedCols();
 
   lp.getLpSolver().setOptionValue("presolve", "off");
-  // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
-  // 0.0); lp.getLpSolver().setOptionValue("parallel", "on");
+  // ToDo Here the concurrent LP solve is forced on
   lp.getLpSolver().setOptionValue("simplex_initial_condition_check", false);
 
   checkObjIntegrality();
@@ -1262,7 +1261,7 @@ restart:
 
   lp.getLpSolver().setOptionValue("output_flag", false);
   lp.getLpSolver().setOptionValue("presolve", "off");
-  lp.getLpSolver().setOptionValue("parallel", "off");
+  // ToDo Here the concurrent LP solve is forced off
 
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
