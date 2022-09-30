@@ -869,6 +869,11 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
+   * @brief Clear the internal HighsSolution instance
+   */
+  HighsStatus setSolution();
+
+  /**
    * @brief Set the callback method and user data to use for logging
    */
   HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
@@ -1059,6 +1064,10 @@ class Highs {
   HighsStatus setHighsLogfile(FILE* logfile = nullptr);
 
   HighsStatus setHighsOutput(FILE* output = nullptr);
+
+  void passRaceTimer(HighsRaceTimer<double>* race_timer) {
+    ekk_instance_.race_timer_ = race_timer;
+  }
 
   const HighsInfo& getHighsInfo() const;
 

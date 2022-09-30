@@ -26,7 +26,8 @@ using std::min;
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
                     solver_object.basis_, solver_object.solution_, 
-                    solver_object.model_status_, solver_object.highs_info_);
+                    solver_object.model_status_, solver_object.highs_info_,
+		    solver_object.ekk_instance_.race_timer_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options,
@@ -35,7 +36,8 @@ HighsStatus solveLpIpx(const HighsOptions& options,
                        HighsBasis& highs_basis,
 		       HighsSolution& highs_solution,
                        HighsModelStatus& model_status,
-                       HighsInfo& highs_info) {
+                       HighsInfo& highs_info,
+		       HighsRaceTimer<double>* race_timer) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -126,7 +128,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
 
   ipx::Int load_status =
       lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
-                    &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
+                    &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0], race_timer);
 
   if (load_status) {
     model_status = HighsModelStatus::kSolveError;

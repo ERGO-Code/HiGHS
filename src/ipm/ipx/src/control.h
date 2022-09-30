@@ -5,6 +5,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include "parallel/HighsRaceTimer.h"
 #include "ipx_internal.h"
 #include "multistream.h"
 #include "timer.h"
@@ -35,6 +36,7 @@ public:
     Control& operator=(Control&&) = delete;
     Control(const Control&&) = delete;
 
+    void passRaceTimer(HighsRaceTimer<double>* race_timer) { race_timer_ = race_timer; }
     // Returns IPX_ERROR_* if interrupt is requested, 0 otherwise.
     Int InterruptCheck() const;
 
@@ -99,6 +101,7 @@ private:
     void MakeStream();           // composes output_
     Parameters parameters_;
     std::ofstream logfile_;
+    HighsRaceTimer<double>* race_timer_ = nullptr;
     Timer timer_;                // total runtime
     mutable Timer interval_;     // time since last interval log
     mutable Multistream output_; // forwards to logfile and/or console

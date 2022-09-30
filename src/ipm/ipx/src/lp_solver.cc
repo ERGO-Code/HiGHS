@@ -15,11 +15,13 @@ namespace ipx {
 Int LpSolver::LoadModel(Int num_var, const double* obj, const double* lb,
                         const double* ub, Int num_constr, const Int* Ap,
                         const Int* Ai, const double* Ax, const double* rhs,
-                        const char* constr_type) {
+                        const char* constr_type,
+			HighsRaceTimer<double>* race_timer) {
     ClearModel();
     Int errflag = model_.Load(control_, num_constr, num_var, Ap, Ai, Ax, rhs,
                               constr_type, obj, lb, ub);
     model_.GetInfo(&info_);
+    info_.race_timer = race_timer;
     return errflag;
 }
 
@@ -50,6 +52,7 @@ Int LpSolver::LoadIPMStartingPoint(const double* x, const double* xl,
 Int LpSolver::Solve() {
     if (model_.empty())
         return info_.status = IPX_STATUS_no_model;
+    control_.passRaceTimer(info_.race_timer);
     ClearSolution();
     control_.ResetTimer();
     control_.OpenLogfile();

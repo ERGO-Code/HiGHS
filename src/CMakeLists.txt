@@ -154,7 +154,6 @@ set(sources
     simplex/HSimplexNlaDebug.cpp
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
-    simplex/HSimplexReport.cpp
     test/DevKkt.cpp
     test/KktCh2.cpp
     util/HFactor.cpp
@@ -255,7 +254,6 @@ set(headers
     simplex/HEkkPrimal.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
-    simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
     simplex/SimplexConst.h
@@ -544,7 +542,6 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexNlaDebug.cpp
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
-    simplex/HSimplexReport.cpp
     test/KktCh2.cpp
     test/DevKkt.cpp
     util/HFactor.cpp
@@ -695,7 +692,6 @@ set(headers_fast_build_
     simplex/HEkkPrimal.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
-    simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
     simplex/SimplexConst.h

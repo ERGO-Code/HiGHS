@@ -14,6 +14,15 @@ Int Control::InterruptCheck() const {
     if (parameters_.time_limit >= 0.0 &&
         parameters_.time_limit < timer_.Elapsed())
         return IPX_ERROR_interrupt_time;
+
+    if (race_timer_) {
+      const double run_time = timer_.Elapsed();
+      const bool race_timer_stop = race_timer_->limitReached(run_time);
+      if (race_timer_stop) {
+	printf("Control::InterruptCheck: RunTime = %11.4g\n", run_time);
+	return IPX_STATUS_race_time_stop;
+      }
+    }
     return 0;
 }
 

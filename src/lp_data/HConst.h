@@ -106,6 +106,14 @@ enum class MatrixFormat { kColwise = 1, kRowwise, kRowwisePartitioned };
 
 enum class HessianFormat { kTriangular = 1, kSquare };
 
+enum LpSolverList {
+  kLpSolverSifting = 0,
+  kLpSolverDualSimplex,
+  kLpSolverParallelDualSimplex,
+  kLpSolverPrimalSimplex,
+  kLpSolverInteriorPoint
+};
+
 enum SolutionStatus {
   kSolutionStatusNone = 0,
   kSolutionStatusInfeasible,
@@ -175,8 +183,12 @@ enum class HighsModelStatus {
   kTimeLimit,
   kIterationLimit,
   kUnknown,
+  // Need to put the next two into a better place, but that breaks
+  // hard-coded cast value checks
+  kInterrupted,
+  kRaceTimerStop,
   kMin = kNotset,
-  kMax = kUnknown
+  kMax = kRaceTimerStop
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

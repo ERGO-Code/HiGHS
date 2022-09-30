@@ -15,6 +15,8 @@
  */
 #include "simplex/HEkk.h"
 
+#include <sstream>
+
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
@@ -23,15 +25,11 @@
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplexDebug.h"
-#include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
 
 using std::fabs;
 using std::max;
 using std::min;
-
-// using std::cout;
-// using std::endl;
 
 void HEkk::clear() {
   // Clears Ekk entirely. Clears all associated pointers, data scalars
@@ -1028,6 +1026,7 @@ HighsStatus HEkk::unpermute() {
 }
 
 HighsStatus HEkk::solve(const bool force_phase2) {
+  initial_run_time_ = timer_->readRunHighsClock();
   debugInitialise();
 
   initialiseAnalysis();
@@ -3450,13 +3449,22 @@ bool HEkk::bailoutOnTimeIterations() {
     assert(model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
-           model_status_ == HighsModelStatus::kObjectiveTarget);
+           model_status_ == HighsModelStatus::kObjectiveTarget ||
+           model_status_ == HighsModelStatus::kRaceTimerStop);
   } else if (timer_->readRunHighsClock() > options_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
+  } else if (race_timer_) {
+    const double run_time = timer_->readRunHighsClock() - initial_run_time_;
+    const bool race_timer_stop = race_timer_->limitReached(run_time);
+    if (race_timer_stop) {
+      printf("HEkk::bailoutOnTimeIterations: RunTime = %11.4g\n", run_time);
+      solve_bailout_ = true;
+      model_status_ = HighsModelStatus::kRaceTimerStop;
+    }
   }
   return solve_bailout_;
 }
@@ -3483,7 +3491,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     assert(model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
-           model_status_ == HighsModelStatus::kObjectiveTarget);
+           model_status_ == HighsModelStatus::kObjectiveTarget ||
+           model_status_ == HighsModelStatus::kRaceTimerStop);
   }
   // Check that returnFromSolve has not already been called: it should
   // be called exactly once per solve
@@ -4343,4 +4352,66 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
     }
     residual_norm = max(fabs(residual.array[iRow]), residual_norm);
   }
+}
+
+void HEkk::reportSimplexPhaseIterations(const HighsLogOptions& log_options,
+                                        const HighsInt iteration_count,
+                                        const HighsSimplexInfo& info,
+                                        const bool initialise) {
+  if (info.run_quiet) return;
+  if (initialise) {
+    iteration_count0 = iteration_count;
+    dual_phase1_iteration_count0 = info.dual_phase1_iteration_count;
+    dual_phase2_iteration_count0 = info.dual_phase2_iteration_count;
+    primal_phase1_iteration_count0 = info.primal_phase1_iteration_count;
+    primal_phase2_iteration_count0 = info.primal_phase2_iteration_count;
+    primal_bound_swap0 = info.primal_bound_swap;
+    return;
+  }
+  const HighsInt delta_iteration_count = iteration_count - iteration_count0;
+  const HighsInt delta_dual_phase1_iteration_count =
+      info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
+  const HighsInt delta_dual_phase2_iteration_count =
+      info.dual_phase2_iteration_count - dual_phase2_iteration_count0;
+  const HighsInt delta_primal_phase1_iteration_count =
+      info.primal_phase1_iteration_count - primal_phase1_iteration_count0;
+  const HighsInt delta_primal_phase2_iteration_count =
+      info.primal_phase2_iteration_count - primal_phase2_iteration_count0;
+  const HighsInt delta_primal_bound_swap =
+      info.primal_bound_swap - primal_bound_swap0;
+
+  HighsInt check_delta_iteration_count =
+      delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
+      delta_primal_phase1_iteration_count + delta_primal_phase2_iteration_count;
+  if (check_delta_iteration_count != delta_iteration_count) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Iteration total error %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT
+        " + %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
+        " != %" HIGHSINT_FORMAT "\n",
+        delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
+        delta_primal_phase1_iteration_count,
+        delta_primal_phase2_iteration_count, check_delta_iteration_count,
+        delta_iteration_count);
+  }
+  std::stringstream iteration_report;
+  if (delta_dual_phase1_iteration_count) {
+    iteration_report << "DuPh1 " << delta_dual_phase1_iteration_count << "; ";
+  }
+  if (delta_dual_phase2_iteration_count) {
+    iteration_report << "DuPh2 " << delta_dual_phase2_iteration_count << "; ";
+  }
+  if (delta_primal_phase1_iteration_count) {
+    iteration_report << "PrPh1 " << delta_primal_phase1_iteration_count << "; ";
+  }
+  if (delta_primal_phase2_iteration_count) {
+    iteration_report << "PrPh2 " << delta_primal_phase2_iteration_count << "; ";
+  }
+  if (delta_primal_bound_swap) {
+    iteration_report << "PrSwap " << delta_primal_bound_swap << "; ";
+  }
+
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "Simplex iterations: %sTotal %" HIGHSINT_FORMAT "\n",
+              iteration_report.str().c_str(), delta_iteration_count);
 }

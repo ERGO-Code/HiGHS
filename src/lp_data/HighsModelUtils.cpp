@@ -1208,6 +1208,13 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kIterationLimit:
       return "Iteration limit reached";
       break;
+    case HighsModelStatus::kInterrupted:
+      assert(1 == 0);
+      return "Interrupted by user";
+      break;
+    case HighsModelStatus::kRaceTimerStop:
+      return "Race timer limit reached";
+      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
       break;
