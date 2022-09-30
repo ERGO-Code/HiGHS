@@ -1751,9 +1751,11 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
 
   if (options.parallel == kHighsOnString &&
       simplex_strategy == kSimplexStrategyDual) {
-    // The parallel strategy is on and the simplex strategy is dual so use
-    // PAMI if there are enough threads
-    if (max_threads >= kDualMultiMinConcurrency)
+    // The parallel strategy is on and the simplex strategy is dual so
+    // use PAMI if there are enough threads and the concurrency is
+    // greater than 1
+    if (max_threads >= kDualMultiMinConcurrency &&
+	simplex_max_concurrency > 1)
       simplex_strategy = kSimplexStrategyDualMulti;
   }
   //

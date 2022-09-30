@@ -258,7 +258,7 @@ class HighsInfo : public HighsInfoStruct {
                              advanced, &mip_dual_bound, 0);
     records.push_back(record_double);
 
-    record_double = new InfoRecordDouble("mip_gap", "MIP solver gap (%)",
+    record_double = new InfoRecordDouble("mip_gap", "(Relative) MIP solver gap",
                                          advanced, &mip_gap, 0);
     records.push_back(record_double);
 
