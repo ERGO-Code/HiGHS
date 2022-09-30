@@ -64,35 +64,55 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   //
   // Determine whether to use concurrent LP solvers
   //
-  HighsInt max_threads = 1;
+  HighsInt max_concurrent_lp_solvers = 1;
+  const HighsInt max_threads = highs::parallel::num_threads();
   if (!solver_object.basis_.valid && !solver_object.solution_.value_valid) {
     // No hot start, so possibly use concurrent LP solvers
-    max_threads = highs::parallel::num_threads();
+    max_concurrent_lp_solvers = max_threads;
     // Prevent concurrent LP solvers unless parallel option is on
-    if (options.parallel != kHighsOnString) max_threads = 1;
+    if (options.parallel != kHighsOnString) max_concurrent_lp_solvers = 1;
     // Prevent concurrent LP solvers if IPM is to be used
-    if (options.solver == kIpmString) max_threads = 1;
+    if (options.solver == kIpmString) max_concurrent_lp_solvers = 1;
+    // Prevent concurrent LP solvers if the simplex strategy is
+    // anythign other than choose
+    if (options.simplex_strategy != kSimplexStrategyChoose) max_concurrent_lp_solvers = 1;
   }
-  assert(max_threads >= 1);
+  // Start with (at most) serial dual, serial primal and parallel dual
+  // running concurrently
+  const HighsInt max_concurrent_simplex_solvers = 3;
+  const HighsInt concurrent_simplex_solver_threads = max_threads-1;
   std::string use_solver = options.solver;
-  HighsInt simplex_strategy = options.simplex_strategy;
+  HighsInt concurrent_simplex_solvers = max_concurrent_simplex_solvers;
+  const HighsInt simplex_strategy = options.simplex_strategy;
   const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
-  if (max_threads > 1) {
-    printf("Using concurrent LP solvers with up to %d threads: solver = %s; simplex strategy = %d\n",
-	   int(max_threads), options.solver.c_str(), int(options.simplex_strategy));
+
+  assert(max_concurrent_lp_solvers >= 1);
+  assert(use_solver != kIpmString || max_concurrent_lp_solvers == 1);
+
+  if (max_concurrent_lp_solvers > 1) {
     // If using concurrent LP solvers, determine which solver is to be
-    // used by this Highs instance
-    if (use_solver == kHighsChooseString || use_solver == kIpmString) {
-      // Can/must use interior point for LP, so this Highs instance
-      // uses interior point
+    // used by this Highs instance, and how many to be used
+    if (use_solver == kHighsChooseString) {
+      // Can use interior point for LP, so this Highs instance uses
+      // IPM
       use_solver = kIpmString;
     } else {
       assert(use_solver == kSimplexString);
       // Can only use simplex solvers, so this Highs instance uses
       // serial dual simplex
+      options.simplex_strategy = kSimplexStrategyDualPlain;
       options.simplex_max_concurrency = 1;
+      // One of the concurrent simplex options is running on this
+      // Highs instance
+      concurrent_simplex_solvers--;
     }
+    // If there is only one thread avaiable for parallel dual simplex, then don't use it
+    if (concurrent_simplex_solvers == concurrent_simplex_solver_threads) concurrent_simplex_solvers--;
+    printf("Spawning %d concurrent simplex LP solvers with up to %d threads: \n",
+	   int(concurrent_simplex_solvers), int(concurrent_simplex_solver_threads));
+    assert(concurrent_simplex_solvers > 0);
   }
+  
 
   if (use_solver == kIpmString) {
     // Use IPM for this Highs instance
@@ -140,9 +160,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // the outcome of the simplex solve
       return_status = HighsStatus::kOk;
       // ToDo: Need to ensure that the clean-up uses serial simplex
-      printf("Cleanup has parallel = %s\n", options.parallel.c_str());
       options.simplex_max_concurrency = 1;
       call_status = solveLpSimplex(solver_object);
+      // Restore simplex_max_concurrency
       options.simplex_max_concurrency = simplex_max_concurrency;
       return_status = interpretCallStatus(options.log_options, call_status,
 					  return_status, "solveLpSimplex");
@@ -154,20 +174,21 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       }
     }
     return solveLpReturn(return_status, solver_object, message);
-  }
-
-  assert(use_solver == kSimplexString || use_solver == kHighsChooseString);
-  // Use Simplex
-  call_status = solveLpSimplex(solver_object);
-  return_status = interpretCallStatus(options.log_options, call_status,
-				      return_status, "solveLpSimplex");
-  // Restore simplex_max_concurrency
-  options.simplex_max_concurrency = simplex_max_concurrency;
-  if (return_status == HighsStatus::kError) return return_status;
-  if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-		 "Inconsistent solution returned from solver\n");
-    return HighsStatus::kError;
+  } else {
+    assert(use_solver == kSimplexString || use_solver == kHighsChooseString);
+    // Use Simplex
+    call_status = solveLpSimplex(solver_object);
+    return_status = interpretCallStatus(options.log_options, call_status,
+					return_status, "solveLpSimplex");
+    // Restore simplex_max_concurrency and strategy
+    options.simplex_max_concurrency = simplex_max_concurrency;
+    options.simplex_strategy = simplex_strategy;
+    if (return_status == HighsStatus::kError) return return_status;
+    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Inconsistent solution returned from solver\n");
+      return HighsStatus::kError;
+    }
   }
   return solveLpReturn(return_status, solver_object, message);
 }
