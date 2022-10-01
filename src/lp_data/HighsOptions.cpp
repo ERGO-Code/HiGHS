@@ -69,7 +69,7 @@ bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
 
 bool solverOptionOk(const string& solver) {
   return solver == kSimplexString || solver == kHighsChooseString ||
-    solver == kIpmString;
+         solver == kIpmString;
 }
 
 bool commandLineSolverOk(const HighsLogOptions& report_log_options,
