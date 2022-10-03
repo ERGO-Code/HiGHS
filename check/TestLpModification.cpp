@@ -1049,7 +1049,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   free(col1357_start);
   free(col1357_index);
   free(col1357_value);
-  
+
   free(row0135789_lower);
   free(row0135789_upper);
   free(row0135789_start);
