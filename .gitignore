@@ -265,3 +265,6 @@ adlittle.lp
 qjh.mps
 
 *.whl
+
+# bazel
+bazel-* 
