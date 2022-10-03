@@ -42,6 +42,7 @@ class HighsSearch {
   int64_t heurlpiterations;
   int64_t sblpiterations;
   double upper_limit;
+  HighsCDouble treeweight;
   std::vector<HighsInt> inds;
   std::vector<double> vals;
   HighsInt depthoffset;
@@ -73,8 +74,6 @@ class HighsSearch {
 
  private:
   ChildSelectionRule childselrule;
-
-  HighsCDouble treeweight;
 
   struct NodeData {
     double lower_bound;

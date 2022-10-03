@@ -2134,6 +2134,7 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   double u_out = baseUpper[row_out];
   theta_primal = (x_out - (delta_primal < 0 ? l_out : u_out)) / alpha_col;
   dualRHS.updatePrimal(&col_aq, theta_primal);
+  ekk_instance_.updateBadBasisChange(col_aq, theta_primal);
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
     const double pivot_in_scaled_space =
         ekk_instance_.simplex_nla_.pivotInScaledSpace(&col_aq, variable_in,

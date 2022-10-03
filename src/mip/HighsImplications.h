@@ -20,6 +20,7 @@
 
 #include "mip/HighsDomain.h"
 #include "mip/HighsDomainChange.h"
+#include "util/HighsHashTree.h"
 
 class HighsCliqueTable;
 class HighsLpRelaxation;
@@ -46,8 +47,8 @@ class HighsImplications {
   };
 
  private:
-  std::vector<std::map<HighsInt, VarBound>> vubs;
-  std::vector<std::map<HighsInt, VarBound>> vlbs;
+  std::vector<HighsHashTree<HighsInt, VarBound>> vubs;
+  std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
 
  public:
   const HighsMipSolver& mipsolver;
@@ -109,17 +110,26 @@ class HighsImplications {
   void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
               double vlbconstant);
 
-  const std::map<HighsInt, VarBound>& getVUBs(HighsInt col) const {
-    return vubs[col];
+  void columnTransformed(HighsInt col, double scale, double constant) {
+    if (scale < 0) std::swap(vubs[col], vlbs[col]);
+
+    auto transformVbd = [&](HighsInt, VarBound& vbd) {
+      vbd.constant -= constant;
+      vbd.constant /= scale;
+      vbd.coef /= scale;
+    };
+
+    vlbs[col].for_each(transformVbd);
+    vubs[col].for_each(transformVbd);
   }
 
-  const std::map<HighsInt, VarBound>& getVLBs(HighsInt col) const {
-    return vlbs[col];
-  }
+  std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
+                                           const HighsSolution& lpSolution,
+                                           double& bestUb) const;
 
-  std::map<HighsInt, VarBound>& getVUBs(HighsInt col) { return vubs[col]; }
-
-  std::map<HighsInt, VarBound>& getVLBs(HighsInt col) { return vlbs[col]; }
+  std::pair<HighsInt, VarBound> getBestVlb(HighsInt col,
+                                           const HighsSolution& lpSolution,
+                                           double& bestLb) const;
 
   bool runProbing(HighsInt col, HighsInt& numReductions);
 

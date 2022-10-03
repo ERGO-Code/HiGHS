@@ -187,7 +187,8 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
     // dual detection in the second loop as it must hold for all rows
-    if (rowsizeInteger[nz.index()] < rowsize[nz.index()]) {
+    if (rowsize[nz.index()] < 2 ||
+        rowsizeInteger[nz.index()] < rowsize[nz.index()]) {
       runDualDetection = false;
       continue;
     }
@@ -258,8 +259,9 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
     // dual detection in the second loop as it must hold for all rows
-    if (rowsizeInteger[nz.index()] + rowsizeImplInt[nz.index()] <
-        rowsize[nz.index()] - 1) {
+    if (rowsize[nz.index()] < 2 ||
+        rowsizeInteger[nz.index()] + rowsizeImplInt[nz.index()] <
+            rowsize[nz.index()] - 1) {
       runDualDetection = false;
       continue;
     }
@@ -1335,8 +1337,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                       cliquetable.getSubstitutions().size();
     int64_t splayContingent =
         cliquetable.numNeighborhoodQueries +
-        std::max(mipsolver->submip ? HighsInt{0} : HighsInt{1000000},
-                 100 * numNonzeros());
+        std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
+                 10 * numNonzeros());
     HighsInt numFail = 0;
     for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
          binaries) {
@@ -1365,8 +1367,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
         // if (numProbed % 10 == 0)
         //   printf(
-        //       "numprobed=%d  numDel=%d  newcliques=%d
-        //       numNeighborhoodQueries=%ld  " "splayContingent=%ld\n",
+        //       "numprobed=%d  numDel=%d  newcliques=%d "
+        //       "numNeighborhoodQueries=%ld  "
+        //       "splayContingent=%ld\n",
         //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
         //       cliquetable.numNeighborhoodQueries, splayContingent);
         if (cliquetable.numNeighborhoodQueries > splayContingent) break;
@@ -1390,16 +1393,16 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         if (newNumDel > numDel) {
           probingContingent += numDel;
           if (!mipsolver->submip) {
-            splayContingent += 1000 * (newNumDel + numDelStart);
-            splayContingent += 10000 * numNewCliques;
+            splayContingent += 100 * (newNumDel + numDelStart);
+            splayContingent += 1000 * numNewCliques;
           }
           numDel = newNumDel;
           numFail = 0;
         } else if (mipsolver->submip || numNewCliques == 0) {
-          splayContingent -= 1000 * numFail;
+          splayContingent -= 100 * numFail;
           ++numFail;
         } else {
-          splayContingent += 10000 * numNewCliques;
+          splayContingent += 1000 * numNewCliques;
           numFail = 0;
         }
 
@@ -2081,25 +2084,8 @@ bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
 
 void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
                                 HighsInt col, double scale, double constant) {
-  if (mipsolver != nullptr) {
-    for (std::pair<const HighsInt, HighsImplications::VarBound>& vbd :
-         mipsolver->mipdata_->implications.getVLBs(col)) {
-      vbd.second.constant -= constant;
-      vbd.second.constant /= scale;
-      vbd.second.coef /= scale;
-    }
-
-    for (std::pair<const HighsInt, HighsImplications::VarBound>& vbd :
-         mipsolver->mipdata_->implications.getVUBs(col)) {
-      vbd.second.constant -= constant;
-      vbd.second.constant /= scale;
-      vbd.second.coef /= scale;
-    }
-
-    if (scale < 0)
-      mipsolver->mipdata_->implications.getVLBs(col).swap(
-          mipsolver->mipdata_->implications.getVUBs(col));
-  }
+  if (mipsolver != nullptr)
+    mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
 
   postsolve_stack.linearTransform(col, scale, constant);
 
@@ -2697,6 +2683,16 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
   HighsInt nzPos = colhead[col];
   HighsInt row = Arow[nzPos];
   double colCoef = Avalue[nzPos];
+
+  if (rowsize[row] == 1) {
+    HPRESOLVE_CHECKED_CALL(singletonRow(postsolve_stack, row););
+
+    if (!colDeleted[col]) {
+      assert(colsize[col] == 0);
+      return emptyCol(postsolve_stack, col);
+    }
+    return Result::kOk;
+  }
 
   double colDualUpper =
       -impliedDualRowBounds.getSumLower(col, -model->col_cost_[col]);

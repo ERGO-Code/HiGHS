@@ -3908,19 +3908,26 @@ void HEkk::clearBadBasisChange(const BadBasisChangeReason reason) {
   if (reason == BadBasisChangeReason::kAll) {
     bad_basis_change_.clear();
   } else {
-    const HighsInt num_bad_basis_change = bad_basis_change_.size();
-    HighsInt new_num_bad_basis_change = 0;
-    for (HighsInt Ix = 0; Ix < num_bad_basis_change; Ix++) {
-      HighsSimplexBadBasisChangeRecord& record = bad_basis_change_[Ix];
-      if (record.reason == reason) continue;
-      bad_basis_change_[new_num_bad_basis_change++] = record;
-    }
-    // Windows doesn't like to resize to zero?
-    if (new_num_bad_basis_change > 0) {
-      bad_basis_change_.resize(new_num_bad_basis_change);
-    } else {
-      bad_basis_change_.clear();
-    }
+    bad_basis_change_.erase(
+        std::remove_if(
+            bad_basis_change_.begin(), bad_basis_change_.end(),
+            [reason](const HighsSimplexBadBasisChangeRecord& record) {
+              return record.reason == reason;
+            }),
+        bad_basis_change_.end());
+  }
+}
+
+void HEkk::updateBadBasisChange(const HVector& col_aq, double theta_primal) {
+  if (!bad_basis_change_.empty()) {
+    bad_basis_change_.erase(
+        std::remove_if(bad_basis_change_.begin(), bad_basis_change_.end(),
+                       [&](const HighsSimplexBadBasisChangeRecord& record) {
+                         return std::fabs(col_aq.array[record.row_out] *
+                                          theta_primal) >=
+                                options_->primal_feasibility_tolerance;
+                       }),
+        bad_basis_change_.end());
   }
 }
 
@@ -4248,7 +4255,7 @@ double HEkk::getValueScale(const HighsInt count, const vector<double>& value) {
 double HEkk::getMaxAbsRowValue(HighsInt row) {
   if (!status_.has_ar_matrix) initialisePartitionedRowwiseMatrix();
 
-  double val = 0.0;
+  double val = -1.0;
   for (HighsInt i = ar_matrix_.start_[row]; i < ar_matrix_.start_[row + 1]; ++i)
     val = std::max(val, std::abs(ar_matrix_.value_[i]));
 

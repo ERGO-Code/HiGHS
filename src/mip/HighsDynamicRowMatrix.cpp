@@ -20,7 +20,6 @@
 HighsDynamicRowMatrix::HighsDynamicRowMatrix(HighsInt ncols) {
   AheadPos_.resize(ncols, -1);
   AheadNeg_.resize(ncols, -1);
-  Asize_.resize(ncols);
 }
 /// adds a row to the matrix with the given values and returns its index
 HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
@@ -82,7 +81,6 @@ HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
 
   for (HighsInt i = start; i != end; ++i) {
     HighsInt col = ARindex_[i];
-    ++Asize_[col];
 
     if (ARvalue_[i] > 0) {
       AprevPos_[i] = -1;
@@ -112,7 +110,6 @@ void HighsDynamicRowMatrix::unlinkColumns(HighsInt rowindex) {
   HighsInt end = ARrange_[rowindex].second;
   for (HighsInt i = start; i != end; ++i) {
     HighsInt col = ARindex_[i];
-    --Asize_[col];
 
     if (ARvalue_[i] > 0) {
       HighsInt prev = AprevPos_[i];
@@ -159,7 +156,6 @@ void HighsDynamicRowMatrix::removeRow(HighsInt rowindex) {
   if (colsLinked[rowindex]) {
     for (HighsInt i = start; i != end; ++i) {
       HighsInt col = ARindex_[i];
-      --Asize_[col];
 
       if (ARvalue_[i] > 0) {
         HighsInt prev = AprevPos_[i];

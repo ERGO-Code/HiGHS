@@ -52,7 +52,6 @@ class HighsDynamicRowMatrix {
   std::vector<HighsInt> deletedrows_;
 
  public:
-  std::vector<HighsInt> Asize_;
   HighsDynamicRowMatrix(HighsInt ncols);
 
   bool columnsLinked(HighsInt rowindex) const { return colsLinked[rowindex]; }
@@ -66,8 +65,6 @@ class HighsDynamicRowMatrix {
   /// removes the row with the given index from the matrix, afterwards the index
   /// can be reused for new rows
   void removeRow(HighsInt rowindex);
-
-  HighsInt numCols() const { return Asize_.size(); }
 
   std::size_t nonzeroCapacity() const { return ARvalue_.size(); }
 

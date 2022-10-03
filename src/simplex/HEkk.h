@@ -303,6 +303,7 @@ class HEkk {
 
   void clearBadBasisChange(
       const BadBasisChangeReason reason = BadBasisChangeReason::kAll);
+  void updateBadBasisChange(const HVector& col_aq, double theta_primal);
 
   HighsInt addBadBasisChange(const HighsInt row_out,
                              const HighsInt variable_out,

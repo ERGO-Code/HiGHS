@@ -114,7 +114,7 @@ class HighsMutex {
   }
 
   void unlock() {
-    unsigned int prevState = state.fetch_add(-1, std::memory_order_relaxed);
+    unsigned int prevState = state.fetch_add(-1, std::memory_order_release);
 
     if (prevState != 1) {
       unsigned int notifyWorkerId = (prevState >> 1) - 1;
