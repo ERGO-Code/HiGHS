@@ -14,6 +14,7 @@
  * @brief Class-independent utilities for HiGHS
  */
 
+#include "Highs.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "parallel/HighsParallel.h"
@@ -118,6 +119,55 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         int(concurrent_simplex_solver_threads));
     assert(concurrent_simplex_solvers > 0);
   }
+  // Determine which simplex solvers are to be used concurrently
+  vector<HighsInt> simplex_solver;
+  if (concurrent_simplex_solvers) {
+    HighsInt available_concurrent_simplex_solvers = concurrent_simplex_solvers;
+    HighsInt available_threads = concurrent_simplex_solver_threads;
+    if (use_solver == kIpmString) {
+      // This thread is running IPM, so need a thread running serial
+      // dual simplex
+      assert(available_concurrent_simplex_solvers);
+      assert(available_threads);
+      simplex_solver.push_back(kSimplexStrategyDualPlain);
+      available_concurrent_simplex_solvers--;
+      available_threads--;
+    } else {
+      // This thread must be using serial dual simplex
+      assert(options.simplex_strategy == kSimplexStrategyDualPlain);
+      assert(options.simplex_max_concurrency == 1);
+    }
+    if (available_concurrent_simplex_solvers) {
+      // Have a thread running primal simplex
+      assert(available_concurrent_simplex_solvers);
+      assert(available_threads);
+      simplex_solver.push_back(kSimplexStrategyPrimal);
+      available_concurrent_simplex_solvers--;
+      available_threads--;
+    }
+  }
+  HighsInt num_concurrent_simplex_solver = simplex_solver.size();
+  // Set up a vector of pointers to Highs instances
+  vector<std::unique_ptr<Highs>> parallel_highs;
+  for (HighsInt ix = 0; ix < num_concurrent_simplex_solver; ix++) {
+    parallel_highs.emplace_back(new Highs());
+    // Concurrent instances run simplex silently
+    parallel_highs[ix]->passOptions(options);
+    parallel_highs[ix]->setOptionValue("output_flag", false);
+    parallel_highs[ix]->setOptionValue("solver", kSimplexString);
+    parallel_highs[ix]->setOptionValue("simplex_strategy", simplex_solver[ix]);
+    if (simplex_solver[ix] != kSimplexStrategyDualTasks) {
+      // Not using PAMI, so force parallel to be off
+      parallel_highs[ix]->setOptionValue("parallel", kHighsOffString);
+    } else {
+      assert(111==222);
+    }
+  }
+
+  std::vector<double> run_time(num_concurrent_simplex_solver);
+  std::vector<double> objective_function_value(num_concurrent_simplex_solver);
+  std::vector<HighsStatus> run_status(num_concurrent_simplex_solver);
+  std::vector<HighsModelStatus> model_status(num_concurrent_simplex_solver);
 
   if (use_solver == kIpmString) {
     // Use IPM for this Highs instance
@@ -178,14 +228,21 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         return HighsStatus::kError;
       }
     }
-    return solveLpReturn(return_status, solver_object, message);
   } else {
     assert(use_solver == kSimplexString || use_solver == kHighsChooseString);
+    // If there are concurrent simplex solvers, this thread mist be
+    // serial dual simplex
+    printf("HighsSolve: concurrent_simplex_solvers = %d; simplex_max_concurrency = %d; simplex_strategy = %d\n",
+	   int(concurrent_simplex_solvers),
+	   int(options.simplex_max_concurrency),
+	   int(options.simplex_strategy));
+    assert(concurrent_simplex_solvers == 0 ||
+	   (options.simplex_max_concurrency == 1 && options.simplex_strategy == kSimplexStrategyDualPlain));
     // Use Simplex
     call_status = solveLpSimplex(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpSimplex");
-    // Restore simplex_max_concurrency and strategy
+    // Restore simplex_max_concurrency and simplex_strategy
     options.simplex_max_concurrency = simplex_max_concurrency;
     options.simplex_strategy = simplex_strategy;
     if (return_status == HighsStatus::kError) return return_status;

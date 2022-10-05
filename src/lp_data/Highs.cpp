@@ -1222,12 +1222,10 @@ HighsStatus Highs::run() {
             HighsOptions save_options = options_;
             const bool full_logging = false;
             if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
-            // Force the use of simplex to clean up if IPM has been used
-            // to solve the presolved problem
-            if (options_.solver == kIpmString) options_.solver = kSimplexString;
+            // Force the use of serial simplex to clean up
+            options_.solver = kSimplexString;
             options_.simplex_strategy = kSimplexStrategyChoose;
-            // Ensure that the parallel solver isn't used
-            options_.simplex_min_concurrency = 1;
+            // options_.simplex_min_concurrency = 1;
             options_.simplex_max_concurrency = 1;
             // Use any pivot threshold resulting from solving the presolved LP
             if (factor_pivot_threshold > 0)
