@@ -21,6 +21,8 @@
 #include "parallel/HighsRaceTimer.h"
 #include "simplex/HApp.h"
 
+using namespace highs;
+
 HighsStatus solveLpReturn(const HighsStatus return_status,
                           HighsLpSolverObject& solver_object,
                           const string message) {
@@ -165,6 +167,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // Using PAMI, so force parallel to be on
       assert(111==222);
     }
+    parallel_highs[ix]->passModel(solver_object.lp_);
   }
 
   std::vector<double> run_time;
@@ -188,7 +191,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 	       model_status[solver] = parallel_highs[solver]->getModelStatus();
 	       // this should check for the status returned when the race timer limit
 	       // was reached and only call decrease limit if it was not reached
-	       printf("LP solver %d returns status %s and model status %s\n",
+	       printf("Spawned solver %d returns status %s and model status %s\n",
 		      int(solver),
 		      highsStatusToString(run_status[solver]).c_str(),
 		      parallel_highs[solver]
@@ -268,10 +271,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     assert(use_solver == kSimplexString || use_solver == kHighsChooseString);
     // If there are concurrent simplex solvers, this thread must be
     // serial dual simplex
-    printf("HighsSolve: spawnable_solvers = %d; simplex_max_concurrency = %d; simplex_strategy = %d\n",
-	   int(spawnable_solvers),
-	   int(options.simplex_max_concurrency),
-	   int(options.simplex_strategy));
     assert(spawnable_solvers == 0 ||
 	   (options.simplex_max_concurrency == 1 &&
 	    options.simplex_strategy == kSimplexStrategyDualPlain));
@@ -292,8 +291,13 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       return HighsStatus::kError;
     }
   }
+  printf("Local solver (%7s; strategy %d) returns status %s and model status %s\n",
+                      use_solver.c_str(),
+                      int(options.simplex_strategy),
+		      highsStatusToString(return_status).c_str(),
+		      utilModelStatusToString(solver_object.model_status_).c_str());
   tg.taskWait();
-  assert(1==99);
+  if (num_spawned_solver) assert(1==99);
   return solveLpReturn(return_status, solver_object, message);
 }
 
