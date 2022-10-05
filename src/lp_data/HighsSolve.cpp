@@ -18,6 +18,7 @@
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "parallel/HighsParallel.h"
+#include "parallel/HighsRaceTimer.h"
 #include "simplex/HApp.h"
 
 HighsStatus solveLpReturn(const HighsStatus return_status,
@@ -173,10 +174,34 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   if (num_spawned_solver) {
     run_time.resize(num_spawned_solver);
     objective_function_value.resize(num_spawned_solver);
-    run_status.resize(num_spawned_solver);
     model_status.resize(num_spawned_solver);
+    run_status.assign(num_spawned_solver, HighsStatus::kError);
   }
-
+  HighsRaceTimer<double> race_timer;
+  parallel::TaskGroup tg;
+  for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {
+    tg.spawn([&parallel_highs, &run_status, &model_status, &race_timer,
+	      &run_time, solver]() {
+	       run_time[solver] = parallel_highs[solver]->getRunTime();
+	       parallel_highs[solver]->passRaceTimer(&race_timer);
+	       run_status[solver] = parallel_highs[solver]->run();
+	       model_status[solver] = parallel_highs[solver]->getModelStatus();
+	       // this should check for the status returned when the race timer limit
+	       // was reached and only call decrease limit if it was not reached
+	       printf("LP solver %d returns status %s and model status %s\n",
+		      int(solver),
+		      highsStatusToString(run_status[solver]).c_str(),
+		      parallel_highs[solver]
+		      ->modelStatusToString(model_status[solver])
+		      .c_str());
+	       fflush(stdout);
+	       if (model_status[solver] != HighsModelStatus::kRaceTimerStop) {
+		 run_time[solver] =
+		   parallel_highs[solver]->getRunTime() - run_time[solver];
+		 race_timer.decreaseLimit(run_time[solver]);
+	       }
+	     });
+  }
   if (use_solver == kIpmString) {
     // Use IPM for this Highs instance
     try {
@@ -267,6 +292,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       return HighsStatus::kError;
     }
   }
+  tg.taskWait();
+  assert(1==99);
   return solveLpReturn(return_status, solver_object, message);
 }
 
