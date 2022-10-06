@@ -23,6 +23,36 @@
 
 using namespace highs;
 
+bool positiveModelStatus(const HighsModelStatus& model_status) {
+   switch (model_status) {
+   case HighsModelStatus::kLoadError:
+   case HighsModelStatus::kModelError:
+   case HighsModelStatus::kModelEmpty:
+   case HighsModelStatus::kOptimal:
+   case HighsModelStatus::kInfeasible:
+   case HighsModelStatus::kUnboundedOrInfeasible:
+   case HighsModelStatus::kUnbounded:
+   case HighsModelStatus::kObjectiveBound:
+   case HighsModelStatus::kObjectiveTarget:
+     return true;
+     break;
+   case HighsModelStatus::kNotset:
+   case HighsModelStatus::kPresolveError:
+   case HighsModelStatus::kSolveError:
+   case HighsModelStatus::kPostsolveError:
+   case HighsModelStatus::kTimeLimit:
+   case HighsModelStatus::kIterationLimit:
+   case HighsModelStatus::kUnknown:
+   case HighsModelStatus::kInterrupted:
+   case HighsModelStatus::kRaceTimerStop:
+     return false;
+     break;
+   default:
+     // All cases should have been considered so assert on reaching here
+     assert(1 == 0);
+   }
+}
+
 void printLocalSolverOutcome(const HighsStatus return_status,
 			     const HighsLpSolverObject& solver_object) {
   printf("Local   solver %2d (time = %11.4g) returns status %s and model status %s\n",
@@ -214,7 +244,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 		      ->modelStatusToString(model_status[solver])
 		      .c_str());
 	       fflush(stdout);
-	       if (model_status[solver] != HighsModelStatus::kRaceTimerStop) {
+	       if (positiveModelStatus(model_status[solver])) {
 		 run_time[solver] =
 		   parallel_highs[solver]->getRunTime() - run_time[solver];
 		 race_timer.decreaseLimit(run_time[solver]);
@@ -311,7 +341,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     assert(111==666);
   }
   double solver_run_time = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
-  if (solver_object.model_status_ != HighsModelStatus::kRaceTimerStop)
+  if (positiveModelStatus(solver_object.model_status_))
     race_timer.decreaseLimit(solver_run_time);
   if (solver_object.spawn_id_ < 0) {
     double save_run_time = solver_object.run_time_;
@@ -320,7 +350,23 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     solver_object.run_time_ = save_run_time;
   }
   tg.taskWait();
-  if (num_spawned_solver)  assert(1==99);
+  if (num_spawned_solver) {
+    bool have_positive_model_status = positiveModelStatus(solver_object.model_status_);
+    // Look for positive model status elsewhere and either take it or
+    // check that it's the same as what's known
+    for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {
+      if (have_positive_model_status) {
+	if (positiveModelStatus(model_status[solver])) {
+	  // Here's another positive model status: should be the
+	  // same, unless it's kObjectiveBound or kObjectiveTarget
+	}
+      } else {
+	// Here's the first positive model status: extract solution
+	// and basis if available
+      }
+    }
+    assert(1==99);
+  }
   return solveLpReturn(return_status, solver_object, message);
 }
 
