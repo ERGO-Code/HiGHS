@@ -25,10 +25,11 @@ using namespace highs;
 
 void printLocalSolverOutcome(const HighsStatus return_status,
 			     const HighsLpSolverObject& solver_object) {
-  printf("Local   solver %2d returns status %s and model status %s\n",
-		      int(solver_object.spawn_id_),
-		      highsStatusToString(return_status).c_str(),
-	              utilModelStatusToString(solver_object.model_status_).c_str());
+  printf("Local   solver %2d (time = %11.4g) returns status %s and model status %s\n",
+	 int(solver_object.spawn_id_),
+	 solver_object.run_time_,
+	 highsStatusToString(return_status).c_str(),
+	 utilModelStatusToString(solver_object.model_status_).c_str());
 }
 HighsStatus solveLpReturn(const HighsStatus return_status,
                           HighsLpSolverObject& solver_object,
@@ -39,6 +40,7 @@ HighsStatus solveLpReturn(const HighsStatus return_status,
         HighsDebugStatus::kLogicalError)
       return HighsStatus::kError;
   }
+  solver_object.run_time_ = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
   printLocalSolverOutcome(return_status, solver_object);
   return return_status;
 }
@@ -204,8 +206,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 	       model_status[solver] = parallel_highs[solver]->getModelStatus();
 	       // this should check for the status returned when the race timer limit
 	       // was reached and only call decrease limit if it was not reached
-	       printf("Spawned solver %2d returns status %s and model status %s\n",
+	       printf("Spawned solver %2d (time = %11.4g) returns status %s and model status %s\n",
 		      int(solver),
+		      parallel_highs[solver]->getRunTime() - run_time[solver],
 		      highsStatusToString(run_status[solver]).c_str(),
 		      parallel_highs[solver]
 		      ->modelStatusToString(model_status[solver])
@@ -218,6 +221,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 	       }
 	     });
   }
+  solver_object.run_time_ = solver_object.timer_.readRunHighsClock();
   if (use_solver == kIpmString) {
     // Use IPM for this Highs instance
     try {
@@ -298,7 +302,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       assert(111==555);
     }
   }
-  if (solver_object.spawn_id_ < 0) printLocalSolverOutcome(return_status, solver_object);
   // Check for solution consistency
   if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
     highsLogUser(options.log_options, HighsLogType::kError,
@@ -307,8 +310,17 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (solver_object.spawn_id_ >= 0) solveLpReturn(HighsStatus::kError, solver_object, message); 
     assert(111==666);
   }
+  double solver_run_time = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
+  if (solver_object.model_status_ != HighsModelStatus::kRaceTimerStop)
+    race_timer.decreaseLimit(solver_run_time);
+  if (solver_object.spawn_id_ < 0) {
+    double save_run_time = solver_object.run_time_;
+    solver_object.run_time_ = solver_run_time;
+    printLocalSolverOutcome(return_status, solver_object);
+    solver_object.run_time_ = save_run_time;
+  }
   tg.taskWait();
-  if (num_spawned_solver) assert(1==99);
+  if (num_spawned_solver)  assert(1==99);
   return solveLpReturn(return_status, solver_object, message);
 }
 
