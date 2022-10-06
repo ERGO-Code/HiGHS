@@ -2,9 +2,14 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
 copy_file(
-    name = "copy_LICENSE",
+    name = "highs-config",
     src = "HConfig.h.bazel",
-    out = "build/HConfig.h",
+    out = "HConfig.h",
+)
+
+cc_library(
+    name = "config",
+    srcs = ["HConfig.h"],
 )
 
 cc_library(
@@ -33,8 +38,7 @@ cc_library(
         "src/qpsolver/*.hpp",
         "src/Highs.h",
         "extern/filereaderlp/*.hpp",
-        "extern/zstr/*.hpp",
-        "build/HConfig.h"]),
+        "extern/zstr/*.hpp"]),
     includes = [
         "extern",
         "extern/filereaderlp",
@@ -53,9 +57,10 @@ cc_library(
         "src/simplex",
         "src/test",
         "src/util",
-        "build"],
+        "bazel-bin"],
     visibility = ["//visibility:public"],
         deps = [
+        "//:config",
         "@zlib",
     ],
 )
