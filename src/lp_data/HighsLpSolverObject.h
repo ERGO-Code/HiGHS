@@ -40,6 +40,7 @@ class HighsLpSolverObject {
   HEkk& ekk_instance_;
   HighsOptions& options_;
   HighsTimer& timer_;
+  HighsInt spawn_id_ = -1;
 
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 };

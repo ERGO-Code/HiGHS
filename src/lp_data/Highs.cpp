@@ -2685,7 +2685,8 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     options_, timer_);
-
+  solver_object.spawn_id_ = this->spawn_id_;
+  ekk_instance_.spawn_id_ = this->spawn_id_;
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
 

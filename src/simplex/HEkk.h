@@ -144,6 +144,7 @@ class HEkk {
 
   HighsOptions* options_;
   HighsTimer* timer_;
+  HighsInt spawn_id_ = -1;
   HighsSimplexAnalysis analysis_;
 
   HighsLp lp_;

@@ -23,6 +23,13 @@
 
 using namespace highs;
 
+void printLocalSolverOutcome(const HighsStatus return_status,
+			     const HighsLpSolverObject& solver_object) {
+  printf("Local   solver %2d returns status %s and model status %s\n",
+		      int(solver_object.spawn_id_),
+		      highsStatusToString(return_status).c_str(),
+	              utilModelStatusToString(solver_object.model_status_).c_str());
+}
 HighsStatus solveLpReturn(const HighsStatus return_status,
                           HighsLpSolverObject& solver_object,
                           const string message) {
@@ -32,6 +39,7 @@ HighsStatus solveLpReturn(const HighsStatus return_status,
         HighsDebugStatus::kLogicalError)
       return HighsStatus::kError;
   }
+  printLocalSolverOutcome(return_status, solver_object);
   return return_status;
 }
 
@@ -157,6 +165,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   vector<std::unique_ptr<Highs>> parallel_highs;
   for (HighsInt ix = 0; ix < num_spawned_solver; ix++) {
     parallel_highs.emplace_back(new Highs());
+    parallel_highs[ix]->passSpawnId(ix);
     // Concurrent instances run simplex silently
     parallel_highs[ix]->passOptions(options);
     parallel_highs[ix]->setOptionValue("output_flag", false);
@@ -180,6 +189,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     model_status.resize(num_spawned_solver);
     run_status.assign(num_spawned_solver, HighsStatus::kError);
   }
+  printf("Spawn Id = %2d: num_spawned_solver = %1d; use_solver = %7s; strategy = %d; parallel = %3s; max concurrency = %d\n",
+	 int(solver_object.spawn_id_), int(num_spawned_solver),
+	 use_solver.c_str(), int(options.simplex_strategy),
+	 options.parallel.c_str(), int(options.simplex_max_concurrency));
   HighsRaceTimer<double> race_timer;
   parallel::TaskGroup tg;
   for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {
@@ -191,7 +204,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 	       model_status[solver] = parallel_highs[solver]->getModelStatus();
 	       // this should check for the status returned when the race timer limit
 	       // was reached and only call decrease limit if it was not reached
-	       printf("Spawned solver %d returns status %s and model status %s\n",
+	       printf("Spawned solver %2d returns status %s and model status %s\n",
 		      int(solver),
 		      highsStatusToString(run_status[solver]).c_str(),
 		      parallel_highs[solver]
@@ -221,10 +234,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) {
-      // Cannot allow this return now - and another LP solver may
-      // succeed
+      // Can only allow this return if this is a spawned solver
+      if (solver_object.spawn_id_ >=0) return solveLpReturn(return_status, solver_object, message);
       assert(111==333);
-      return return_status;
     }
     // Get the objective and any KKT failures
     solver_object.highs_info_.objective_function_value =
@@ -260,11 +272,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       options.simplex_max_concurrency = simplex_max_concurrency;
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpSimplex");
-      if (return_status == HighsStatus::kError) return return_status;
-      if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "Inconsistent solution returned from solver\n");
-        return HighsStatus::kError;
+      if (return_status == HighsStatus::kError) {
+	// Can only allow this return if this is a spawned solver
+	if (solver_object.spawn_id_ >= 0) return solveLpReturn(return_status, solver_object, message);
+	assert(111==444);
       }
     }
   } else {
@@ -281,21 +292,21 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // Restore simplex_max_concurrency and simplex_strategy
     options.simplex_max_concurrency = simplex_max_concurrency;
     options.simplex_strategy = simplex_strategy;
-    if (return_status == HighsStatus::kError) return return_status;
-    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Inconsistent solution returned from solver\n");
-      // Cannot allow this return now - and another LP solver may
-      // succeed
-      assert(111==444);
-      return HighsStatus::kError;
+    if (return_status == HighsStatus::kError) {
+      // Can only allow this return if this is a spawned solver
+      if (solver_object.spawn_id_ >=0) return solveLpReturn(return_status, solver_object, message);
+      assert(111==555);
     }
   }
-  printf("Local solver (%7s; strategy %d) returns status %s and model status %s\n",
-                      use_solver.c_str(),
-                      int(options.simplex_strategy),
-		      highsStatusToString(return_status).c_str(),
-		      utilModelStatusToString(solver_object.model_status_).c_str());
+  if (solver_object.spawn_id_ < 0) printLocalSolverOutcome(return_status, solver_object);
+  // Check for solution consistency
+  if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+		 "Inconsistent solution returned from solver\n");
+    // Can only allow this return if this is a spawned solver
+    if (solver_object.spawn_id_ >= 0) solveLpReturn(HighsStatus::kError, solver_object, message); 
+    assert(111==666);
+  }
   tg.taskWait();
   if (num_spawned_solver) assert(1==99);
   return solveLpReturn(return_status, solver_object, message);

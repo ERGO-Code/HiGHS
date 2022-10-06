@@ -1065,6 +1065,8 @@ class Highs {
 
   HighsStatus setHighsOutput(FILE* output = nullptr);
 
+  void passSpawnId(const HighsInt spawn_id) { spawn_id_ = spawn_id; }
+  
   void passRaceTimer(HighsRaceTimer<double>* race_timer) {
     ekk_instance_.race_timer_ = race_timer;
   }
@@ -1099,6 +1101,7 @@ class Highs {
   HighsModel model_;
   HighsModel presolved_model_;
   HighsTimer timer_;
+  HighsInt spawn_id_ = -1;
 
   HighsOptions options_;
   HighsInfo info_;
