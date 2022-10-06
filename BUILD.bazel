@@ -1,4 +1,11 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+
+copy_file(
+    name = "copy_LICENSE",
+    src = "HConfig.h.bazel",
+    out = "build/HConfig.h",
+)
 
 cc_library(
     name = "highs",
