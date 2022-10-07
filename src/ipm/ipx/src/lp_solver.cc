@@ -346,6 +346,11 @@ void LpSolver::InteriorPointSolve() {
         iterate_->crossover_start(control_.crossover_start());
 
     RunIPM();
+    if (info_.status_ipm == IPX_STATUS_time_limit ||
+	info_.status_ipm == IPX_STATUS_race_timer_stop) {
+      printf("LpSolver::InteriorPointSolve() info_.status_ipm == %d\n", int(info_.status_ipm));
+      return;
+    }
 
     iterate_->Postprocess();
     iterate_->EvaluatePostsolved(&info_);
@@ -464,6 +469,8 @@ void LpSolver::RunInitialIPM(IPM& ipm) {
         ipm.maxiter(std::min(switchiter, control_.ipm_maxiter()));
     }
     ipm.Driver(&kkt, iterate_.get(), &info_);
+    // Handle info_.status_ipm values that cause IPM to continue by
+    // resetting info_.status_ipm to IPX_STATUS_not_run;
     switch (info_.status_ipm) {
     case IPX_STATUS_optimal:
         // If the IPM reached its termination criterion in the initial
@@ -483,6 +490,8 @@ void LpSolver::RunInitialIPM(IPM& ipm) {
     case IPX_STATUS_iter_limit:
         if (info_.iter < control_.ipm_maxiter()) // stopped at switchiter
             info_.status_ipm = IPX_STATUS_not_run;
+	// How can it reach here?
+	assert(11==22);
     }
     info_.time_ipm1 += timer.Elapsed();
 }

@@ -83,7 +83,10 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         if (info->errflag == IPX_ERROR_interrupt_time) {
             info->errflag = 0;
             info->status_ipm = IPX_STATUS_time_limit;
-        } else {
+        } else if (info->errflag == IPX_ERROR_race_timer_stop) {
+            info->errflag = 0;
+            info->status_ipm = IPX_STATUS_race_timer_stop;
+	} else {
             info->status_ipm = IPX_STATUS_failed;
         }
     }

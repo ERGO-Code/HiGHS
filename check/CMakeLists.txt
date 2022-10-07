@@ -48,13 +48,14 @@ set(TEST_SOURCES
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp
+    TestParallel.cpp
     TestPresolve.cpp
     TestQpSolver.cpp
-    TestRays.cpp
+    TestRaceTimer.cpp
     TestRanging.cpp
+    TestRays.cpp
     TestSemiVariables.cpp
     TestThrow.cpp
-    TestParallel.cpp
     Avgas.cpp)
 
 if (NOT APPLE)

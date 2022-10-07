@@ -3461,7 +3461,8 @@ bool HEkk::bailoutOnTimeIterations() {
     const bool race_timer_stop = race_timer_->limitReached(run_time);
     if (race_timer_stop) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-		   "HEkk::bailoutOnTimeIterations: spawn_id = %2d: RunTime = %11.4g\n", int(this->spawn_id_), run_time);
+		   "HEkk::bailoutOnTimeIterations: spawn_id = %2d: Iter = %d; RunTime = %11.4g\n",
+		   int(this->spawn_id_), int(this->iteration_count_), run_time);
       solve_bailout_ = true;
       model_status_ = HighsModelStatus::kRaceTimerStop;
     }
@@ -3578,11 +3579,13 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
-    case HighsModelStatus::kUnknown: {
+    case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop: {
       // Simplex has failed to conclude a model property. Either it
       // has bailed out due to reaching the objecive bound, target,
-      // time or iteration limit, or it has not been set (cycling is
-      // the only reason). Could happen anywhere.
+      // race/run time or iteration limit, or it has not been set
+      // (cycling is the only reason). Could happen anywhere.
       //
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);

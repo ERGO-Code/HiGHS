@@ -3173,6 +3173,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop:
       assert(return_status == HighsStatus::kWarning);
       break;
     default:
@@ -3210,6 +3212,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop:
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!
       assert(have_info == true);

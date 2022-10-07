@@ -310,6 +310,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) {
       // Can only allow this return if this is a spawned solver
       if (solver_object.spawn_id_ >=0) return solveLpReturn(return_status, solver_object, message);
+      logLocalSolverOutcome(return_status, solver_object);
       assert(111==333);
     }
     // Get the objective and any KKT failures
@@ -349,6 +350,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       if (return_status == HighsStatus::kError) {
 	// Can only allow this return if this is a spawned solver
 	if (solver_object.spawn_id_ >= 0) return solveLpReturn(return_status, solver_object, message);
+	logLocalSolverOutcome(return_status, solver_object);
 	assert(111==444);
       }
     }
@@ -369,15 +371,18 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) {
       // Can only allow this return if this is a spawned solver
       if (solver_object.spawn_id_ >=0) return solveLpReturn(return_status, solver_object, message);
+      logLocalSolverOutcome(return_status, solver_object);
       assert(111==555);
     }
   }
   // Check for solution consistency
   if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+    return_status = HighsStatus::kError;
     highsLogUser(options.log_options, HighsLogType::kError,
 		 "Inconsistent solution returned from solver\n");
     // Can only allow this return if this is a spawned solver
-    if (solver_object.spawn_id_ >= 0) solveLpReturn(HighsStatus::kError, solver_object, message); 
+    if (solver_object.spawn_id_ >= 0) solveLpReturn(return_status, solver_object, message); 
+    logLocalSolverOutcome(return_status, solver_object);
     assert(111==666);
   }
   double solver_run_time = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
@@ -386,7 +391,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   if (solver_object.spawn_id_ < 0) {
     double save_run_time = solver_object.run_time_;
     solver_object.run_time_ = solver_run_time;
-    logLocalSolverOutcome(return_status, solver_object);
+    if (num_spawned_solver) logLocalSolverOutcome(return_status, solver_object);
     solver_object.run_time_ = save_run_time;
   }
   tg.taskWait();

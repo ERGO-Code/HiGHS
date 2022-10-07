@@ -221,6 +221,9 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
       model_status = HighsModelStatus::kIterationLimit;
       return HighsStatus::kWarning;
+    } else if (ipx_info.status_ipm == IPX_STATUS_race_timer_stop) {
+      model_status = HighsModelStatus::kRaceTimerStop;
+      return HighsStatus::kWarning;
     } else {
       assert(ipx_info.status_ipm == IPX_STATUS_no_progress);
       reportIpmNoProgress(options, ipx_info);
@@ -584,6 +587,10 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
     highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s debug\n",
                  method_name.c_str());
     return HighsStatus::kError;
+  } else if (status == IPX_STATUS_race_timer_stop) {
+    highsLogUser(options.log_options, HighsLogType::kWarning, "Ipx: %s race timer stop\n",
+                 method_name.c_str());
+    return HighsStatus::kWarning;
   } else {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: %s unrecognised status\n", method_name.c_str());

@@ -20,7 +20,7 @@ Int Control::InterruptCheck() const {
       const bool race_timer_stop = race_timer_->limitReached(run_time);
       if (race_timer_stop) {
 	printf("Control::InterruptCheck: RunTime = %11.4g\n", run_time);
-	return IPX_STATUS_race_time_stop;
+	return IPX_ERROR_race_timer_stop;
       }
     }
     return 0;
