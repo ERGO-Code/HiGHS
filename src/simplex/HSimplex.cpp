@@ -354,7 +354,6 @@ std::string simplexStrategyToString(const HighsInt simplex_strategy) {
     return "Parallel dual simplex (PAMI)";
   } else if (simplex_strategy == kSimplexStrategyPrimal) {
     return "Serial primal simplex";
-  } 
+  }
   return "Unknown";
-
 }

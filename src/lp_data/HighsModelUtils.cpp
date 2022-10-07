@@ -914,13 +914,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   fprintf(file, "        max.rel.err = %.2e on row %d\n", relative_error_value,
           absolute_error_index == 0 ? 0 : (int)relative_error_index);
   fprintf(file, "%8s%s\n", "",
-          relative_error_value <= kGlpsolHighQuality
-              ? "High quality"
-              : relative_error_value <= kGlpsolMediumQuality
-                    ? "Medium quality"
-                    : relative_error_value <= kGlpsolLowQuality
-                          ? "Low quality"
-                          : "PRIMAL SOLUTION IS WRONG");
+          relative_error_value <= kGlpsolHighQuality     ? "High quality"
+          : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+          : relative_error_value <= kGlpsolLowQuality
+              ? "Low quality"
+              : "PRIMAL SOLUTION IS WRONG");
   fprintf(file, "\n");
 
   // Primal infeasibility
@@ -943,13 +941,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
               ? (int)relative_error_index
               : (int)(relative_error_index - lp.num_col_));
   fprintf(file, "%8s%s\n", "",
-          relative_error_value <= kGlpsolHighQuality
-              ? "High quality"
-              : relative_error_value <= kGlpsolMediumQuality
-                    ? "Medium quality"
-                    : relative_error_value <= kGlpsolLowQuality
-                          ? "Low quality"
-                          : "PRIMAL SOLUTION IS INFEASIBLE");
+          relative_error_value <= kGlpsolHighQuality     ? "High quality"
+          : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+          : relative_error_value <= kGlpsolLowQuality
+              ? "Low quality"
+              : "PRIMAL SOLUTION IS INFEASIBLE");
   fprintf(file, "\n");
 
   if (have_dual) {
@@ -965,13 +961,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     fprintf(file, "        max.rel.err = %.2e on column %d\n",
             relative_error_value, (int)relative_error_index);
     fprintf(file, "%8s%s\n", "",
-            relative_error_value <= kGlpsolHighQuality
-                ? "High quality"
-                : relative_error_value <= kGlpsolMediumQuality
-                      ? "Medium quality"
-                      : relative_error_value <= kGlpsolLowQuality
-                            ? "Low quality"
-                            : "DUAL SOLUTION IS WRONG");
+            relative_error_value <= kGlpsolHighQuality     ? "High quality"
+            : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+            : relative_error_value <= kGlpsolLowQuality
+                ? "Low quality"
+                : "DUAL SOLUTION IS WRONG");
     fprintf(file, "\n");
 
     // Dual infeasibility
@@ -995,13 +989,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
                 ? (int)relative_error_index
                 : (int)(relative_error_index - lp.num_col_));
     fprintf(file, "%8s%s\n", "",
-            relative_error_value <= kGlpsolHighQuality
-                ? "High quality"
-                : relative_error_value <= kGlpsolMediumQuality
-                      ? "Medium quality"
-                      : relative_error_value <= kGlpsolLowQuality
-                            ? "Low quality"
-                            : "DUAL SOLUTION IS INFEASIBLE");
+            relative_error_value <= kGlpsolHighQuality     ? "High quality"
+            : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+            : relative_error_value <= kGlpsolLowQuality
+                ? "Low quality"
+                : "DUAL SOLUTION IS INFEASIBLE");
     fprintf(file, "\n");
   }
   fprintf(file, "End of output\n");
@@ -1261,31 +1253,31 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {
-  case HighsModelStatus::kNotset:
-  case HighsModelStatus::kLoadError:
-  case HighsModelStatus::kModelError:
-  case HighsModelStatus::kPresolveError:
-  case HighsModelStatus::kSolveError:
-  case HighsModelStatus::kPostsolveError:
-    return HighsStatus::kError;
-  case HighsModelStatus::kModelEmpty:
-  case HighsModelStatus::kOptimal:
-  case HighsModelStatus::kInfeasible:
-  case HighsModelStatus::kUnboundedOrInfeasible:
-  case HighsModelStatus::kUnbounded:
-  case HighsModelStatus::kObjectiveBound:
-  case HighsModelStatus::kObjectiveTarget:
-    return HighsStatus::kOk;
-  case HighsModelStatus::kTimeLimit:
-  case HighsModelStatus::kIterationLimit:
-  case HighsModelStatus::kUnknown:
-  case HighsModelStatus::kInterrupted:
-  case HighsModelStatus::kRaceTimerStop:
-  return HighsStatus::kWarning;
-  default:
-    // Should be covered above
-    assert(1==0);
-    return HighsStatus::kError;
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kModelEmpty:
+    case HighsModelStatus::kOptimal:
+    case HighsModelStatus::kInfeasible:
+    case HighsModelStatus::kUnboundedOrInfeasible:
+    case HighsModelStatus::kUnbounded:
+    case HighsModelStatus::kObjectiveBound:
+    case HighsModelStatus::kObjectiveTarget:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kTimeLimit:
+    case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop:
+      return HighsStatus::kWarning;
+    default:
+      // Should be covered above
+      assert(1 == 0);
+      return HighsStatus::kError;
   }
 }
 

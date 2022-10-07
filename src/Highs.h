@@ -1071,7 +1071,7 @@ class Highs {
   HighsStatus setHighsOutput(FILE* output = nullptr);
 
   void passSpawnId(const HighsInt spawn_id) { spawn_id_ = spawn_id; }
-  
+
   void passRaceTimer(HighsRaceTimer<double>* race_timer) {
     ekk_instance_.race_timer_ = race_timer;
   }

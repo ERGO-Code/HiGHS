@@ -3461,8 +3461,9 @@ bool HEkk::bailoutOnTimeIterations() {
     const bool race_timer_stop = race_timer_->limitReached(run_time);
     if (race_timer_stop) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-		   "HEkk::bailoutOnTimeIterations: spawn_id = %2d: Iter = %d; RunTime = %11.4g\n",
-		   int(this->spawn_id_), int(this->iteration_count_), run_time);
+                   "HEkk::bailoutOnTimeIterations: spawn_id = %2d: Iter = %d; "
+                   "RunTime = %11.4g\n",
+                   int(this->spawn_id_), int(this->iteration_count_), run_time);
       solve_bailout_ = true;
       model_status_ = HighsModelStatus::kRaceTimerStop;
     }

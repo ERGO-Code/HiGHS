@@ -449,7 +449,8 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
-    string default_parallel = force_concurrent_lp_solve ? kHighsOnString : kHighsChooseString;
+    string default_parallel =
+        force_concurrent_lp_solve ? kHighsOnString : kHighsChooseString;
 
     record_string = new OptionRecordString(
         kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
@@ -544,13 +545,15 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
-    HighsInt default_simplex_strategy = force_concurrent_lp_solve ? kSimplexStrategyChoose : kSimplexStrategyDual;
+    HighsInt default_simplex_strategy = force_concurrent_lp_solve
+                                            ? kSimplexStrategyChoose
+                                            : kSimplexStrategyDual;
     record_int = new OptionRecordInt(
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
         "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
-        advanced, &simplex_strategy, kSimplexStrategyMin, default_simplex_strategy,
-        kSimplexStrategyMax);
+        advanced, &simplex_strategy, kSimplexStrategyMin,
+        default_simplex_strategy, kSimplexStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

@@ -24,73 +24,73 @@
 using namespace highs;
 
 bool boundTermination(const HighsModelStatus& model_status) {
-   switch (model_status) {
-   case HighsModelStatus::kObjectiveBound:
-   case HighsModelStatus::kObjectiveTarget:
-     return true;
-     break;
-   case HighsModelStatus::kLoadError:
-   case HighsModelStatus::kModelError:
-   case HighsModelStatus::kModelEmpty:
-   case HighsModelStatus::kOptimal:
-   case HighsModelStatus::kInfeasible:
-   case HighsModelStatus::kUnboundedOrInfeasible:
-   case HighsModelStatus::kUnbounded:
-   case HighsModelStatus::kNotset:
-   case HighsModelStatus::kPresolveError:
-   case HighsModelStatus::kSolveError:
-   case HighsModelStatus::kPostsolveError:
-   case HighsModelStatus::kTimeLimit:
-   case HighsModelStatus::kIterationLimit:
-   case HighsModelStatus::kUnknown:
-   case HighsModelStatus::kInterrupted:
-   case HighsModelStatus::kRaceTimerStop:
-     return false;
-     break;
-   default:
-     // All cases should have been considered so assert on reaching here
-     assert(1 == 0);
-   }
+  switch (model_status) {
+    case HighsModelStatus::kObjectiveBound:
+    case HighsModelStatus::kObjectiveTarget:
+      return true;
+      break;
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kModelEmpty:
+    case HighsModelStatus::kOptimal:
+    case HighsModelStatus::kInfeasible:
+    case HighsModelStatus::kUnboundedOrInfeasible:
+    case HighsModelStatus::kUnbounded:
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
+    case HighsModelStatus::kTimeLimit:
+    case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop:
+      return false;
+      break;
+    default:
+      // All cases should have been considered so assert on reaching here
+      assert(1 == 0);
+  }
 }
 
 bool positiveModelStatus(const HighsModelStatus& model_status) {
-   switch (model_status) {
-   case HighsModelStatus::kLoadError:
-   case HighsModelStatus::kModelError:
-   case HighsModelStatus::kModelEmpty:
-   case HighsModelStatus::kOptimal:
-   case HighsModelStatus::kInfeasible:
-   case HighsModelStatus::kUnboundedOrInfeasible:
-   case HighsModelStatus::kUnbounded:
-   case HighsModelStatus::kObjectiveBound:
-   case HighsModelStatus::kObjectiveTarget:
-     return true;
-     break;
-   case HighsModelStatus::kNotset:
-   case HighsModelStatus::kPresolveError:
-   case HighsModelStatus::kSolveError:
-   case HighsModelStatus::kPostsolveError:
-   case HighsModelStatus::kTimeLimit:
-   case HighsModelStatus::kIterationLimit:
-   case HighsModelStatus::kUnknown:
-   case HighsModelStatus::kInterrupted:
-   case HighsModelStatus::kRaceTimerStop:
-     return false;
-     break;
-   default:
-     // All cases should have been considered so assert on reaching here
-     assert(1 == 0);
-   }
+  switch (model_status) {
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kModelEmpty:
+    case HighsModelStatus::kOptimal:
+    case HighsModelStatus::kInfeasible:
+    case HighsModelStatus::kUnboundedOrInfeasible:
+    case HighsModelStatus::kUnbounded:
+    case HighsModelStatus::kObjectiveBound:
+    case HighsModelStatus::kObjectiveTarget:
+      return true;
+      break;
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
+    case HighsModelStatus::kTimeLimit:
+    case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop:
+      return false;
+      break;
+    default:
+      // All cases should have been considered so assert on reaching here
+      assert(1 == 0);
+  }
 }
 
 void logLocalSolverOutcome(const HighsStatus return_status,
-			     const HighsLpSolverObject& solver_object) {
+                           const HighsLpSolverObject& solver_object) {
   highsLogUser(solver_object.options_.log_options, HighsLogType::kInfo,
-               "Local   solver %2d (time = %11.4g) returns status %s and model status %s\n",
-	 int(solver_object.spawn_id_),
-	 solver_object.run_time_,
-	 highsStatusToString(return_status).c_str(),
-	 utilModelStatusToString(solver_object.model_status_).c_str());
+               "Local   solver %2d (time = %11.4g) returns status %s and model "
+               "status %s\n",
+               int(solver_object.spawn_id_), solver_object.run_time_,
+               highsStatusToString(return_status).c_str(),
+               utilModelStatusToString(solver_object.model_status_).c_str());
 }
 HighsStatus solveLpReturn(const HighsStatus return_status,
                           HighsLpSolverObject& solver_object,
@@ -101,7 +101,8 @@ HighsStatus solveLpReturn(const HighsStatus return_status,
         HighsDebugStatus::kLogicalError)
       return HighsStatus::kError;
   }
-  solver_object.run_time_ = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
+  solver_object.run_time_ =
+      solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
   logLocalSolverOutcome(return_status, solver_object);
   return return_status;
 }
@@ -159,7 +160,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   const HighsInt max_spawnable_solvers = 3;
   const HighsInt spawnable_threads = max_threads - 1;
   std::string use_solver = options.solver;
-  HighsInt spawnable_solvers = max_concurrent_solvers == 1 ? 0 : max_spawnable_solvers;
+  HighsInt spawnable_solvers =
+      max_concurrent_solvers == 1 ? 0 : max_spawnable_solvers;
   // Save copies of simplex_strategy and simplex_max_concurrency
   const HighsInt simplex_strategy = options.simplex_strategy;
   const HighsInt simplex_max_concurrency = options.simplex_max_concurrency;
@@ -189,11 +191,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // If there is only one thread avaiable for parallel dual simplex,
     // then reduce the number of simplex that can be spawned -
     // preventing it from being used
-    if (spawnable_solvers == spawnable_threads)
-      spawnable_solvers--;
-    printf(
-        "Spawning %d LP solvers using (upto) %d threads: \n",
-        int(spawnable_solvers), int(spawnable_threads));
+    if (spawnable_solvers == spawnable_threads) spawnable_solvers--;
+    printf("Spawning %d LP solvers using (upto) %d threads: \n",
+           int(spawnable_solvers), int(spawnable_threads));
     assert(spawnable_solvers > 0);
   }
   // Determine which solvers are to be spawned
@@ -242,11 +242,12 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     }
     parallel_highs[ix]->setOptionValue("solver", kSimplexString);
     parallel_highs[ix]->setOptionValue("simplex_strategy", spawned_solver[ix]);
-    //    parallel_highs[ix]->setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyOff);
-      parallel_highs[ix]->setOptionValue("parallel", kHighsOffString);
+    //    parallel_highs[ix]->setOptionValue("simplex_scale_strategy",
+    //    kSimplexScaleStrategyOff);
+    parallel_highs[ix]->setOptionValue("parallel", kHighsOffString);
     if (spawned_solver[ix] == kSimplexStrategyDualTasks) {
       // Using PAMI, so force parallel to be on
-      assert(111==222);
+      assert(111 == 222);
     }
     parallel_highs[ix]->passModel(solver_object.lp_);
   }
@@ -261,35 +262,38 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     model_status.resize(num_spawned_solver);
     run_status.assign(num_spawned_solver, HighsStatus::kError);
   }
-  printf("Spawn Id = %2d: num_spawned_solver = %1d; use_solver = %7s; strategy = %d; parallel = %3s; max concurrency = %d\n",
-	 int(solver_object.spawn_id_), int(num_spawned_solver),
-	 use_solver.c_str(), int(options.simplex_strategy),
-	 options.parallel.c_str(), int(options.simplex_max_concurrency));
+  printf(
+      "Spawn Id = %2d: num_spawned_solver = %1d; use_solver = %7s; strategy = "
+      "%d; parallel = %3s; max concurrency = %d\n",
+      int(solver_object.spawn_id_), int(num_spawned_solver), use_solver.c_str(),
+      int(options.simplex_strategy), options.parallel.c_str(),
+      int(options.simplex_max_concurrency));
   HighsRaceTimer<double> race_timer;
   parallel::TaskGroup tg;
   for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {
     tg.spawn([&parallel_highs, &run_status, &model_status, &race_timer,
-	      &run_time, solver]() {
-	       run_time[solver] = parallel_highs[solver]->getRunTime();
-	       parallel_highs[solver]->passRaceTimer(&race_timer);
-	       run_status[solver] = parallel_highs[solver]->run();
-	       model_status[solver] = parallel_highs[solver]->getModelStatus();
-	       // this should check for the status returned when the race timer limit
-	       // was reached and only call decrease limit if it was not reached
-	       printf("Spawned solver %2d (time = %11.4g) returns status %s and model status %s\n",
-		      int(solver),
-		      parallel_highs[solver]->getRunTime() - run_time[solver],
-		      highsStatusToString(run_status[solver]).c_str(),
-		      parallel_highs[solver]
-		      ->modelStatusToString(model_status[solver])
-		      .c_str());
-	       fflush(stdout);
-	       if (positiveModelStatus(model_status[solver])) {
-		 run_time[solver] =
-		   parallel_highs[solver]->getRunTime() - run_time[solver];
-		 race_timer.decreaseLimit(run_time[solver]);
-	       }
-	     });
+              &run_time, solver]() {
+      run_time[solver] = parallel_highs[solver]->getRunTime();
+      parallel_highs[solver]->passRaceTimer(&race_timer);
+      run_status[solver] = parallel_highs[solver]->run();
+      model_status[solver] = parallel_highs[solver]->getModelStatus();
+      // this should check for the status returned when the race timer limit
+      // was reached and only call decrease limit if it was not reached
+      printf(
+          "Spawned solver %2d (time = %11.4g) returns status %s and model "
+          "status %s\n",
+          int(solver), parallel_highs[solver]->getRunTime() - run_time[solver],
+          highsStatusToString(run_status[solver]).c_str(),
+          parallel_highs[solver]
+              ->modelStatusToString(model_status[solver])
+              .c_str());
+      fflush(stdout);
+      if (positiveModelStatus(model_status[solver])) {
+        run_time[solver] =
+            parallel_highs[solver]->getRunTime() - run_time[solver];
+        race_timer.decreaseLimit(run_time[solver]);
+      }
+    });
   }
   solver_object.run_time_ = solver_object.timer_.readRunHighsClock();
   if (use_solver == kIpmString) {
@@ -309,9 +313,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) {
       // Can only allow this return if this is a spawned solver
-      if (solver_object.spawn_id_ >=0) return solveLpReturn(return_status, solver_object, message);
+      if (solver_object.spawn_id_ >= 0)
+        return solveLpReturn(return_status, solver_object, message);
       logLocalSolverOutcome(return_status, solver_object);
-      assert(111==333);
+      assert(111 == 333);
     }
     // Get the objective and any KKT failures
     solver_object.highs_info_.objective_function_value =
@@ -348,10 +353,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLpSimplex");
       if (return_status == HighsStatus::kError) {
-	// Can only allow this return if this is a spawned solver
-	if (solver_object.spawn_id_ >= 0) return solveLpReturn(return_status, solver_object, message);
-	logLocalSolverOutcome(return_status, solver_object);
-	assert(111==444);
+        // Can only allow this return if this is a spawned solver
+        if (solver_object.spawn_id_ >= 0)
+          return solveLpReturn(return_status, solver_object, message);
+        logLocalSolverOutcome(return_status, solver_object);
+        assert(111 == 444);
       }
     }
   } else {
@@ -359,8 +365,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // If there are concurrent simplex solvers, this thread must be
     // serial dual simplex
     assert(spawnable_solvers == 0 ||
-	   (options.simplex_max_concurrency == 1 &&
-	    options.simplex_strategy == kSimplexStrategyDualPlain));
+           (options.simplex_max_concurrency == 1 &&
+            options.simplex_strategy == kSimplexStrategyDualPlain));
     // Use Simplex
     call_status = solveLpSimplex(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
@@ -370,22 +376,25 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     options.simplex_strategy = simplex_strategy;
     if (return_status == HighsStatus::kError) {
       // Can only allow this return if this is a spawned solver
-      if (solver_object.spawn_id_ >=0) return solveLpReturn(return_status, solver_object, message);
+      if (solver_object.spawn_id_ >= 0)
+        return solveLpReturn(return_status, solver_object, message);
       logLocalSolverOutcome(return_status, solver_object);
-      assert(111==555);
+      assert(111 == 555);
     }
   }
   // Check for solution consistency
   if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
     return_status = HighsStatus::kError;
     highsLogUser(options.log_options, HighsLogType::kError,
-		 "Inconsistent solution returned from solver\n");
+                 "Inconsistent solution returned from solver\n");
     // Can only allow this return if this is a spawned solver
-    if (solver_object.spawn_id_ >= 0) solveLpReturn(return_status, solver_object, message); 
+    if (solver_object.spawn_id_ >= 0)
+      solveLpReturn(return_status, solver_object, message);
     logLocalSolverOutcome(return_status, solver_object);
-    assert(111==666);
+    assert(111 == 666);
   }
-  double solver_run_time = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
+  double solver_run_time =
+      solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
   if (positiveModelStatus(solver_object.model_status_))
     race_timer.decreaseLimit(solver_run_time);
   if (solver_object.spawn_id_ < 0) {
@@ -405,32 +414,33 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       const HighsModelStatus this_model_status = model_status[solver];
       const bool this_bound_termination = boundTermination(this_model_status);
       if (have_positive_model_status) {
-	if (positiveModelStatus(this_model_status)) {
-	  // Here's another positive model status: should be the
-	  // same, unless one is a bound termination
-	  if (!this_bound_termination || !have_bound_termination) {
-	    if (this_model_status != have_model_status) {
-	      highsLogUser(options.log_options, HighsLogType::kError,
-			   "Inconsistent positive model status from concurrent solvers: (%s vs %s)\n",
-			   utilModelStatusToString(this_model_status),
-			   utilModelStatusToString(have_model_status));
-	      return solveLpReturn(HighsStatus::kError, solver_object, message);
-	    }	    
-	  }
-	}
+        if (positiveModelStatus(this_model_status)) {
+          // Here's another positive model status: should be the
+          // same, unless one is a bound termination
+          if (!this_bound_termination || !have_bound_termination) {
+            if (this_model_status != have_model_status) {
+              highsLogUser(options.log_options, HighsLogType::kError,
+                           "Inconsistent positive model status from concurrent "
+                           "solvers: (%s vs %s)\n",
+                           utilModelStatusToString(this_model_status),
+                           utilModelStatusToString(have_model_status));
+              return solveLpReturn(HighsStatus::kError, solver_object, message);
+            }
+          }
+        }
       } else {
-	// Here's the first positive model status: extract solution
-	// and basis if available
-	solver_object.basis_ = parallel_highs[solver]->getBasis();
-	solver_object.solution_ = parallel_highs[solver]->getSolution();
-	solver_object.highs_info_ = parallel_highs[solver]->getInfo();
-	//	solver_object.ekk_instance_ = parallel_highs[solver]->getEkk();
-	have_model_status = this_model_status;
-	have_bound_termination = this_bound_termination;
-	highsLogUser(options.log_options, HighsLogType::kInfo,
-			   "Solution obtained from spawned %s solver\n",
-		     simplexStrategyToString(spawned_solver[solver]).c_str());
-	assert(111==000);
+        // Here's the first positive model status: extract solution
+        // and basis if available
+        solver_object.basis_ = parallel_highs[solver]->getBasis();
+        solver_object.solution_ = parallel_highs[solver]->getSolution();
+        solver_object.highs_info_ = parallel_highs[solver]->getInfo();
+        //	solver_object.ekk_instance_ = parallel_highs[solver]->getEkk();
+        have_model_status = this_model_status;
+        have_bound_termination = this_bound_termination;
+        highsLogUser(options.log_options, HighsLogType::kInfo,
+                     "Solution obtained from spawned %s solver\n",
+                     simplexStrategyToString(spawned_solver[solver]).c_str());
+        assert(111 == 000);
       }
     }
   }

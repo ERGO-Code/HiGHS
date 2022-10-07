@@ -396,7 +396,8 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     return_status = highsStatusFromHighsModelStatus(model_status);
     if (return_status != HighsStatus::kError) {
       highsLogUser(options.log_options, HighsLogType::kError,
-		   "HApp: (%d): return_status != HighsStatus::kError\n", int(solver_object.spawn_id_));
+                   "HApp: (%d): return_status != HighsStatus::kError\n",
+                   int(solver_object.spawn_id_));
     }
     assert(return_status == HighsStatus::kError);
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
