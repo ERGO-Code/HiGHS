@@ -1261,40 +1261,31 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::kNotset:
-      return HighsStatus::kError;
-    case HighsModelStatus::kLoadError:
-      return HighsStatus::kError;
-    case HighsModelStatus::kModelError:
-      return HighsStatus::kError;
-    case HighsModelStatus::kPresolveError:
-      return HighsStatus::kError;
-    case HighsModelStatus::kSolveError:
-      return HighsStatus::kError;
-    case HighsModelStatus::kPostsolveError:
-      return HighsStatus::kError;
-    case HighsModelStatus::kModelEmpty:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kOptimal:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kInfeasible:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kUnboundedOrInfeasible:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kUnbounded:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kObjectiveBound:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kObjectiveTarget:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kTimeLimit:
-      return HighsStatus::kWarning;
-    case HighsModelStatus::kIterationLimit:
-      return HighsStatus::kWarning;
-    case HighsModelStatus::kUnknown:
-      return HighsStatus::kWarning;
-    default:
-      return HighsStatus::kError;
+  case HighsModelStatus::kNotset:
+  case HighsModelStatus::kLoadError:
+  case HighsModelStatus::kModelError:
+  case HighsModelStatus::kPresolveError:
+  case HighsModelStatus::kSolveError:
+  case HighsModelStatus::kPostsolveError:
+    return HighsStatus::kError;
+  case HighsModelStatus::kModelEmpty:
+  case HighsModelStatus::kOptimal:
+  case HighsModelStatus::kInfeasible:
+  case HighsModelStatus::kUnboundedOrInfeasible:
+  case HighsModelStatus::kUnbounded:
+  case HighsModelStatus::kObjectiveBound:
+  case HighsModelStatus::kObjectiveTarget:
+    return HighsStatus::kOk;
+  case HighsModelStatus::kTimeLimit:
+  case HighsModelStatus::kIterationLimit:
+  case HighsModelStatus::kUnknown:
+  case HighsModelStatus::kInterrupted:
+  case HighsModelStatus::kRaceTimerStop:
+  return HighsStatus::kWarning;
+  default:
+    // Should be covered above
+    assert(1==0);
+    return HighsStatus::kError;
   }
 }
 

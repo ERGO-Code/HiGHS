@@ -305,6 +305,11 @@ class Highs {
   const HighsBasis& getBasis() const { return basis_; }
 
   /**
+   * @brief Return a const reference to the internal Ekk instance
+   */
+  const HEkk& getEkk() const { return ekk_instance_; }
+
+  /**
    * @brief Return the status for the incumbent model.
    */
   const HighsModelStatus& getModelStatus() const { return model_status_; }

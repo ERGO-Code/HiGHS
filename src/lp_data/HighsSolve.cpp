@@ -23,6 +23,36 @@
 
 using namespace highs;
 
+bool boundTermination(const HighsModelStatus& model_status) {
+   switch (model_status) {
+   case HighsModelStatus::kObjectiveBound:
+   case HighsModelStatus::kObjectiveTarget:
+     return true;
+     break;
+   case HighsModelStatus::kLoadError:
+   case HighsModelStatus::kModelError:
+   case HighsModelStatus::kModelEmpty:
+   case HighsModelStatus::kOptimal:
+   case HighsModelStatus::kInfeasible:
+   case HighsModelStatus::kUnboundedOrInfeasible:
+   case HighsModelStatus::kUnbounded:
+   case HighsModelStatus::kNotset:
+   case HighsModelStatus::kPresolveError:
+   case HighsModelStatus::kSolveError:
+   case HighsModelStatus::kPostsolveError:
+   case HighsModelStatus::kTimeLimit:
+   case HighsModelStatus::kIterationLimit:
+   case HighsModelStatus::kUnknown:
+   case HighsModelStatus::kInterrupted:
+   case HighsModelStatus::kRaceTimerStop:
+     return false;
+     break;
+   default:
+     // All cases should have been considered so assert on reaching here
+     assert(1 == 0);
+   }
+}
+
 bool positiveModelStatus(const HighsModelStatus& model_status) {
    switch (model_status) {
    case HighsModelStatus::kLoadError:
@@ -53,9 +83,10 @@ bool positiveModelStatus(const HighsModelStatus& model_status) {
    }
 }
 
-void printLocalSolverOutcome(const HighsStatus return_status,
+void logLocalSolverOutcome(const HighsStatus return_status,
 			     const HighsLpSolverObject& solver_object) {
-  printf("Local   solver %2d (time = %11.4g) returns status %s and model status %s\n",
+  highsLogUser(solver_object.options_.log_options, HighsLogType::kInfo,
+               "Local   solver %2d (time = %11.4g) returns status %s and model status %s\n",
 	 int(solver_object.spawn_id_),
 	 solver_object.run_time_,
 	 highsStatusToString(return_status).c_str(),
@@ -71,7 +102,7 @@ HighsStatus solveLpReturn(const HighsStatus return_status,
       return HighsStatus::kError;
   }
   solver_object.run_time_ = solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
-  printLocalSolverOutcome(return_status, solver_object);
+  logLocalSolverOutcome(return_status, solver_object);
   return return_status;
 }
 
@@ -198,11 +229,20 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   for (HighsInt ix = 0; ix < num_spawned_solver; ix++) {
     parallel_highs.emplace_back(new Highs());
     parallel_highs[ix]->passSpawnId(ix);
-    // Concurrent instances run simplex silently
+    // Concurrent instances run simplex silently, without (further) scaling
     parallel_highs[ix]->passOptions(options);
-    parallel_highs[ix]->setOptionValue("output_flag", false);
+    const bool debug_log = true;
+    if (debug_log) {
+      std::string log_file = "HiGHS" + std::to_string(ix) + ".log";
+      parallel_highs[ix]->setOptionValue("log_to_console", false);
+      parallel_highs[ix]->setOptionValue("log_file", log_file);
+      parallel_highs[ix]->setOptionValue("log_dev_level", 1);
+    } else {
+      parallel_highs[ix]->setOptionValue("output_flag", false);
+    }
     parallel_highs[ix]->setOptionValue("solver", kSimplexString);
     parallel_highs[ix]->setOptionValue("simplex_strategy", spawned_solver[ix]);
+    //    parallel_highs[ix]->setOptionValue("simplex_scale_strategy", kSimplexScaleStrategyOff);
       parallel_highs[ix]->setOptionValue("parallel", kHighsOffString);
     if (spawned_solver[ix] == kSimplexStrategyDualTasks) {
       // Using PAMI, so force parallel to be on
@@ -346,26 +386,48 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   if (solver_object.spawn_id_ < 0) {
     double save_run_time = solver_object.run_time_;
     solver_object.run_time_ = solver_run_time;
-    printLocalSolverOutcome(return_status, solver_object);
+    logLocalSolverOutcome(return_status, solver_object);
     solver_object.run_time_ = save_run_time;
   }
   tg.taskWait();
   if (num_spawned_solver) {
-    bool have_positive_model_status = positiveModelStatus(solver_object.model_status_);
+    HighsModelStatus have_model_status = solver_object.model_status_;
+    bool have_positive_model_status = positiveModelStatus(have_model_status);
+    bool have_bound_termination = boundTermination(have_model_status);
     // Look for positive model status elsewhere and either take it or
     // check that it's the same as what's known
     for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {
+      const HighsModelStatus this_model_status = model_status[solver];
+      const bool this_bound_termination = boundTermination(this_model_status);
       if (have_positive_model_status) {
-	if (positiveModelStatus(model_status[solver])) {
+	if (positiveModelStatus(this_model_status)) {
 	  // Here's another positive model status: should be the
-	  // same, unless it's kObjectiveBound or kObjectiveTarget
+	  // same, unless one is a bound termination
+	  if (!this_bound_termination || !have_bound_termination) {
+	    if (this_model_status != have_model_status) {
+	      highsLogUser(options.log_options, HighsLogType::kError,
+			   "Inconsistent positive model status from concurrent solvers: (%s vs %s)\n",
+			   utilModelStatusToString(this_model_status),
+			   utilModelStatusToString(have_model_status));
+	      return solveLpReturn(HighsStatus::kError, solver_object, message);
+	    }	    
+	  }
 	}
       } else {
 	// Here's the first positive model status: extract solution
 	// and basis if available
+	solver_object.basis_ = parallel_highs[solver]->getBasis();
+	solver_object.solution_ = parallel_highs[solver]->getSolution();
+	solver_object.highs_info_ = parallel_highs[solver]->getInfo();
+	//	solver_object.ekk_instance_ = parallel_highs[solver]->getEkk();
+	have_model_status = this_model_status;
+	have_bound_termination = this_bound_termination;
+	highsLogUser(options.log_options, HighsLogType::kInfo,
+			   "Solution obtained from spawned %s solver\n",
+		     simplexStrategyToString(spawned_solver[solver]).c_str());
+	assert(111==000);
       }
     }
-    assert(1==99);
   }
   return solveLpReturn(return_status, solver_object, message);
 }

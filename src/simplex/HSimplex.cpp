@@ -344,3 +344,17 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_ && right_size;
   return right_size;
 }
+
+std::string simplexStrategyToString(const HighsInt simplex_strategy) {
+  if (simplex_strategy == kSimplexStrategyDualPlain) {
+    return "Serial dual simplex";
+  } else if (simplex_strategy == kSimplexStrategyDualTasks) {
+    return "Parallel dual simplex (SIP)";
+  } else if (simplex_strategy == kSimplexStrategyDualMulti) {
+    return "Parallel dual simplex (PAMI)";
+  } else if (simplex_strategy == kSimplexStrategyPrimal) {
+    return "Serial primal simplex";
+  } 
+  return "Unknown";
+
+}

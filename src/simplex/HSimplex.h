@@ -46,4 +46,6 @@ void unscaleSimplexCost(HighsLp& lp, double cost_scale);
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
+std::string simplexStrategyToString(const HighsInt simplex_strategy);
+
 #endif  // SIMPLEX_HSIMPLEX_H_

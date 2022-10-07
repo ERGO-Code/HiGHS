@@ -22,6 +22,8 @@
 
 #include "util/HighsInt.h"
 
+const bool force_concurrent_lp_solve = true;
+
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
