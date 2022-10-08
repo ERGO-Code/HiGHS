@@ -46,14 +46,16 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   //
   // 2. kTimeLimit (kWarning) if time limit is reached
   //
-  // 3. kIterationLimit (kWarning) if iteration limit is reached
+  // 3. kRaceTimerStop (kWarning) if race timer stop occurs
   //
-  // 4. kUnknown (kWarning) if IPM makes no progress or if
+  // 4. kIterationLimit (kWarning) if iteration limit is reached
+  //
+  // 5. kUnknown (kWarning) if IPM makes no progress or if
   // IPM/crossover are imprecise
   //
-  // 5. kInfeasible (kOk) if IPM identifies primal infeasibility
+  // 6. kInfeasible (kOk) if IPM identifies primal infeasibility
   //
-  // 6. kUnboundedOrInfeasible (kOk) if IPM identifies dual
+  // 7. kUnboundedOrInfeasible (kOk) if IPM identifies dual
   // infeasibility
   //
   // kOptimal (kOk) if IPM/crossover identify optimality
@@ -137,7 +139,6 @@ HighsStatus solveLpIpx(const HighsOptions& options,
 
   // Use IPX to solve the LP!
   ipx::Int solve_status = lps.Solve();
-
   const bool report_solve_data = kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
@@ -203,6 +204,11 @@ HighsStatus solveLpIpx(const HighsOptions& options,
       model_status = HighsModelStatus::kTimeLimit;
       return HighsStatus::kWarning;
     }
+    // Can stop and reach race timer stop
+    if (ipx_info.status_crossover == IPX_STATUS_race_timer_stop) {
+      model_status = HighsModelStatus::kRaceTimerStop;
+      return HighsStatus::kWarning;
+    }
     //========
     // For IPM
     //========
@@ -213,6 +219,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     if (illegalIpxStoppedIpmStatus(ipx_info, options))
       return HighsStatus::kError;
     // Can stop with time limit
+    // Can stop with race timer stop
     // Can stop with iter limit
     // Can stop with no progress
     if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
@@ -630,6 +637,11 @@ bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_time_limit, options,
                      "solved  status_ipm should not be IPX_STATUS_time_limit");
+  // Cannot solve and have race timer stop
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_race_timer_stop, options,
+                     "solved  status_ipm should not be IPX_STATUS_race_timer_stop");
   // Cannot solve and reach iteration limit
   found_illegal_status =
       found_illegal_status ||
@@ -673,7 +685,13 @@ bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,
       ipxStatusError(
           ipx_info.status_crossover == IPX_STATUS_time_limit, options,
           "solved  status_crossover should not be IPX_STATUS_time_limit");
-  // Cannot solve and reach time limit
+  // Cannot solve and reach race timer stop
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_race_timer_stop, options,
+          "solved  status_crossover should not be IPX_STATUS_race_timer_stop");
+  // Cannot solve and reach iteration limit
   found_illegal_status =
       found_illegal_status ||
       ipxStatusError(
@@ -724,6 +742,7 @@ bool illegalIpxStoppedIpmStatus(const ipx::Info& ipx_info,
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_dual_infeas, options,
                      "stopped status_ipm should not be IPX_STATUS_dual_infeas");
   // Can stop with time limit
+  // Can stop with race timer stop
   // Can stop with iter limit
   // Can stop with no progress
   // Cannot stop and failed - should be error return earlier
@@ -773,6 +792,7 @@ bool illegalIpxStoppedCrossoverStatus(const ipx::Info& ipx_info,
           ipx_info.status_crossover == IPX_STATUS_iter_limit, options,
           "stopped status_crossover should not be IPX_STATUS_iter_limit");
   // Can stop and reach time limit
+  // Can stop and reach race timer stop
   // Cannot stop with no_progress
   found_illegal_status =
       found_illegal_status ||

@@ -17,12 +17,14 @@ void testSolver(Highs& highs, const std::string solver,
   double run_time = -highs.getRunTime();
   HighsStatus return_status = highs.run();
   run_time += highs.getRunTime();
+  HighsModelStatus model_status = highs.getModelStatus();
   printf(
       "Running for %11.4gs (limit %11.4g) with \"%s\" (strategy %d) returns "
       "\"%s\" and model status \"%s\"\n",
       run_time, time_limit, solver.c_str(), int(simplex_strategy),
       highsStatusToString(return_status).c_str(),
-      highs.modelStatusToString(highs.getModelStatus()).c_str());
+      highs.modelStatusToString(model_status).c_str());
+  REQUIRE(model_status == HighsModelStatus::kRaceTimerStop);
 }
 
 TEST_CASE("test-race-timer", "[highs_test_race_timer]") {

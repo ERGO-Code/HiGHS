@@ -347,10 +347,7 @@ void LpSolver::InteriorPointSolve() {
 
     RunIPM();
     if (info_.status_ipm == IPX_STATUS_time_limit ||
-	info_.status_ipm == IPX_STATUS_race_timer_stop) {
-      printf("LpSolver::InteriorPointSolve() info_.status_ipm == %d\n", int(info_.status_ipm));
-      return;
-    }
+	info_.status_ipm == IPX_STATUS_race_timer_stop) return;
 
     iterate_->Postprocess();
     iterate_->EvaluatePostsolved(&info_);
@@ -507,6 +504,10 @@ void LpSolver::BuildStartingBasis() {
     if (info_.errflag == IPX_ERROR_interrupt_time) {
         info_.errflag = 0;
         info_.status_ipm = IPX_STATUS_time_limit;
+        return;
+    } else if (info_.errflag == IPX_ERROR_race_timer_stop) {
+        info_.errflag = 0;
+        info_.status_ipm = IPX_STATUS_race_timer_stop;
         return;
     } else if (info_.errflag) {
         info_.status_ipm = IPX_STATUS_failed;

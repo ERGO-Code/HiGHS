@@ -206,6 +206,9 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
     if (info->errflag == IPX_ERROR_interrupt_time) {
         info->errflag = 0;
         info->status_crossover = IPX_STATUS_time_limit;
+    } else if (info->errflag == IPX_ERROR_race_timer_stop) {
+        info->errflag = 0;
+        info->status_crossover = IPX_STATUS_race_timer_stop;
     } else if (info->errflag != 0) {
         info->status_crossover = IPX_STATUS_failed;
     } else {
@@ -326,6 +329,9 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     if (info->errflag == IPX_ERROR_interrupt_time) {
         info->errflag = 0;
         info->status_crossover = IPX_STATUS_time_limit;
+    } else if (info->errflag == IPX_ERROR_race_timer_stop) {
+        info->errflag = 0;
+        info->status_crossover = IPX_STATUS_race_timer_stop;
     } else if (info->errflag != 0) {
         info->status_crossover = IPX_STATUS_failed;
     } else {

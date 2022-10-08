@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 struct ipx_info {
+    // Needed to pass race_timer pointer to control
     HighsRaceTimer<double>* race_timer;
     
     ipxint status;

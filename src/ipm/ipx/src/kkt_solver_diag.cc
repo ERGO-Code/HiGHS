@@ -98,11 +98,6 @@ void KKTSolverDiag::_Solve(const Vector& a, const Vector& b, double tol,
     ConjugateResiduals cr(control_);
     cr.Solve(normal_matrix_, precond_, rhs, tol, &resscale_[0], maxiter_, y);
     info->errflag = cr.errflag();
-    if (info->errflag == IPX_ERROR_race_timer_stop ||
-	info->errflag == IPX_ERROR_interrupt_time) {
-      printf("KKTSolverDiag::_Solve info->errflag = %d\n", int(info->errflag));
-      return;
-    }
     info->kktiter1 += cr.iter();
     info->time_cr1 += cr.time();
     info->time_cr1_AAt += normal_matrix_.time();
