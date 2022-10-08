@@ -422,8 +422,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
               highsLogUser(options.log_options, HighsLogType::kError,
                            "Inconsistent positive model status from concurrent "
                            "solvers: (%s vs %s)\n",
-                           utilModelStatusToString(this_model_status),
-                           utilModelStatusToString(have_model_status));
+                           utilModelStatusToString(this_model_status).c_str(),
+                           utilModelStatusToString(have_model_status).c_str());
               return solveLpReturn(HighsStatus::kError, solver_object, message);
             }
           }
