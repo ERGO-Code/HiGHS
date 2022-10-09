@@ -1,9 +1,9 @@
 #ifndef IPX_IPM_H_
 #define IPX_IPM_H_
 
-#include "control.h"
-#include "kkt_solver.h"
-#include "iterate.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/kkt_solver.h"
+#include "ipm/ipx/iterate.h"
 
 namespace ipx {
 

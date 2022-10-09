@@ -7,7 +7,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 /* private entries in xstore */
 #define BASICLU_TASK 256

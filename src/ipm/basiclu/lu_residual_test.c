@@ -7,7 +7,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 static double lu_onenorm(lu_int m, const double *x)
 {

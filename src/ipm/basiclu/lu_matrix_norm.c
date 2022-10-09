@@ -8,7 +8,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 void lu_matrix_norm(
     struct lu *this, const lu_int *Bbegin, const lu_int *Bend, const lu_int *Bi,

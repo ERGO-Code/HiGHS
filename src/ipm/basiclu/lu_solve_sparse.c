@@ -5,7 +5,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 void lu_solve_sparse(
     struct lu *this, const lu_int nrhs, const lu_int *irhs, const double *xrhs,

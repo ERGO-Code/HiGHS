@@ -1,10 +1,10 @@
-#include "ipm.h"
+#include "ipm/ipx/ipm.h"
 #include <algorithm>
 #include <cmath>
 #include <cassert>
 #include <limits>
-#include "timer.h"
-#include "utils.h"
+#include "ipm/ipx/timer.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

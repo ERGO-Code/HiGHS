@@ -1,8 +1,8 @@
 #ifndef IPX_BASICLU_WRAPPER_H_
 #define IPX_BASICLU_WRAPPER_H_
 
-#include "control.h"
-#include "lu_update.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/lu_update.h"
 
 namespace ipx {
 

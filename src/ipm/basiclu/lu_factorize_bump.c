@@ -7,8 +7,8 @@
  *
  */
 
-#include "lu_internal.h"
-#include "lu_list.h"
+#include "ipm/basiclu/lu_internal.h"
+#include "ipm/basiclu/lu_list.h"
 
 lu_int lu_factorize_bump(struct lu *this)
 {

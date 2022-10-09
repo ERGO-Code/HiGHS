@@ -1,9 +1,9 @@
-#include "kkt_solver_basis.h"
+#include "ipm/ipx/kkt_solver_basis.h"
 #include <cassert>
 #include <cmath>
-#include "conjugate_residuals.h"
-#include "maxvolume.h"
-#include "starting_basis.h"
+#include "ipm/ipx/conjugate_residuals.h"
+#include "ipm/ipx/maxvolume.h"
+#include "ipm/ipx/starting_basis.h"
 
 namespace ipx {
 

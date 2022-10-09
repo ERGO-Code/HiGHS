@@ -7,7 +7,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 static lu_int dfs_end(
     lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,

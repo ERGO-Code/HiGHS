@@ -32,9 +32,9 @@
 // jn.
 
 #include <vector>
-#include "basis.h"
-#include "control.h"
-#include "indexed_vector.h"
+#include "ipm/ipx/basis.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/indexed_vector.h"
 
 namespace ipx {
 

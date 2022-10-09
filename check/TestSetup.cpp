@@ -1,5 +1,5 @@
 #include "HighsLp.h"
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 #include "catch.hpp"
 
 const bool dev_run = false;

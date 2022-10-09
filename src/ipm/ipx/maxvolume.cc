@@ -1,9 +1,9 @@
-#include "maxvolume.h"
+#include "ipm/ipx/maxvolume.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
-#include "timer.h"
-#include "utils.h"
+#include "ipm/ipx/timer.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

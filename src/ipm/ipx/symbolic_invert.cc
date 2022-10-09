@@ -1,9 +1,9 @@
-#include "symbolic_invert.h"
+#include "ipm/ipx/symbolic_invert.h"
 #include <algorithm>
 #include <cassert>
 #include <random>
-#include "sparse_matrix.h"
-#include "sparse_utils.h"
+#include "ipm/ipx/sparse_matrix.h"
+#include "ipm/ipx/sparse_utils.h"
 
 namespace ipx {
 

@@ -1,7 +1,7 @@
 #ifndef _LU_INTERNAL_H
 #define _LU_INTERNAL_H
 
-#include "lu_def.h"
+#include "ipm/basiclu/lu_def.h"
 
 /* -------------------------------------------------------------------------- */
 /* struct lu */

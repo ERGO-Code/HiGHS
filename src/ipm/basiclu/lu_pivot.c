@@ -29,9 +29,9 @@
  * of the column (and likewise for rows).
  */
 
-#include "lu_internal.h"
-#include "lu_list.h"
-#include "lu_file.h"
+#include "ipm/basiclu/lu_internal.h"
+#include "ipm/basiclu/lu_list.h"
+#include "ipm/basiclu/lu_file.h"
 
 /*
  * MAXROW_SMALL is the maximum number of off-diagonal elements in the pivot

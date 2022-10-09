@@ -1,8 +1,8 @@
-#include "conjugate_residuals.h"
+#include "ipm/ipx/conjugate_residuals.h"
 #include <algorithm>
 #include <cmath>
-#include "timer.h"
-#include "utils.h"
+#include "ipm/ipx/timer.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

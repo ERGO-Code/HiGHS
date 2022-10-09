@@ -1,9 +1,9 @@
-#include "sparse_matrix.h"
+#include "ipm/ipx/sparse_matrix.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <utility>
-#include "utils.h"
+#include "ipm/ipx/utils.h"
 #include "pdqsort/pdqsort.h"
 
 namespace ipx {

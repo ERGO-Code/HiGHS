@@ -2,10 +2,10 @@
 #define IPX_SPLITTED_NORMAL_MATRIX_H_
 
 #include <vector>
-#include "basis.h"
-#include "linear_operator.h"
-#include "model.h"
-#include "sparse_matrix.h"
+#include "ipm/ipx/basis.h"
+#include "ipm/ipx/linear_operator.h"
+#include "ipm/ipx/model.h"
+#include "ipm/ipx/sparse_matrix.h"
 
 namespace ipx {
 

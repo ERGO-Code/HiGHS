@@ -1,8 +1,8 @@
 #ifndef IPX_STARTING_BASIS_H_
 #define IPX_STARTING_BASIS_H_
 
-#include "basis.h"
-#include "iterate.h"
+#include "ipm/ipx/basis.h"
+#include "ipm/ipx/iterate.h"
 
 namespace ipx {
 

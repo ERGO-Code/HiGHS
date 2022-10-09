@@ -3,9 +3,9 @@
 #ifndef IPX_DIAGONAL_PRECOND_H_
 #define IPX_DIAGONAL_PRECOND_H_
 
-#include "linear_operator.h"
-#include "model.h"
-#include "sparse_matrix.h"
+#include "ipm/ipx/linear_operator.h"
+#include "ipm/ipx/model.h"
+#include "ipm/ipx/sparse_matrix.h"
 
 namespace ipx {
 

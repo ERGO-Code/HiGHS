@@ -2,8 +2,8 @@
 #define IPX_MODEL_H_
 
 #include <vector>
-#include "control.h"
-#include "sparse_matrix.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/sparse_matrix.h"
 
 namespace ipx {
 

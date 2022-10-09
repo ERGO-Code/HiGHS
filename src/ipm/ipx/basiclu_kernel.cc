@@ -1,8 +1,9 @@
-#include "basiclu_kernel.h"
 #include <cassert>
 #include <new>                  // bad_alloc
 #include <stdexcept>
-#include "basiclu.h"
+
+#include "ipm/ipx/basiclu_kernel.h"
+#include "ipm/basiclu/basiclu.h"
 
 namespace ipx {
 

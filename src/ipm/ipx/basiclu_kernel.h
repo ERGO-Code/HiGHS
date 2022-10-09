@@ -1,7 +1,7 @@
 #ifndef IPX_BASICLU_KERNEL_H_
 #define IPX_BASICLU_KERNEL_H_
 
-#include "lu_factorization.h"
+#include "ipm/ipx/lu_factorization.h"
 
 namespace ipx {
 

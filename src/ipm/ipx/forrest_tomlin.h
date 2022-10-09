@@ -3,9 +3,9 @@
 
 #include <memory>
 #include <vector>
-#include "control.h"
-#include "lu_factorization.h"
-#include "lu_update.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/lu_factorization.h"
+#include "ipm/ipx/lu_update.h"
 
 namespace ipx {
 

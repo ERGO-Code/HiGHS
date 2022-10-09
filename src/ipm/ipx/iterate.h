@@ -2,7 +2,7 @@
 #define IPX_ITERATE_H_
 
 #include <vector>
-#include "model.h"
+#include "ipm/ipx/model.h"
 
 namespace ipx {
 

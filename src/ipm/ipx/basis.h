@@ -3,11 +3,11 @@
 
 #include <memory>
 #include <vector>
-#include "control.h"
-#include "indexed_vector.h"
-#include "lu_update.h"
-#include "model.h"
-#include "sparse_matrix.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/indexed_vector.h"
+#include "ipm/ipx/lu_update.h"
+#include "ipm/ipx/model.h"
+#include "ipm/ipx/sparse_matrix.h"
 
 namespace ipx {
 

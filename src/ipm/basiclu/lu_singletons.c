@@ -7,7 +7,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 static lu_int singleton_cols
 (

@@ -1,7 +1,7 @@
 #ifndef IPX_PARAMETERS_H_
 #define IPX_PARAMETERS_H_
 
-#include "ipx_config.h"
+#include "ipm/ipx/ipx_config.h"
 
 #ifdef __cplusplus
 extern "C" {

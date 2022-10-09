@@ -1,5 +1,5 @@
-#include "kkt_solver.h"
-#include "timer.h"
+#include "ipm/ipx/kkt_solver.h"
+#include "ipm/ipx/timer.h"
 
 namespace ipx {
 

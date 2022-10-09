@@ -14,7 +14,7 @@
 #include <zlib.h>
 #include <memory>
 #include <iostream>
-#include "../extern/zstr/strict_fstream.hpp"
+#include "zstr/strict_fstream.hpp"
 
 namespace zstr
 {

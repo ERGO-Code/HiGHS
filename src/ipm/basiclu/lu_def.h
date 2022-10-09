@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "basiclu.h"
+#include "ipm/basiclu/basiclu.h"
 
 #define BASICLU_HASH 7743090    /* hash in istore[0], xstore[0] */
 

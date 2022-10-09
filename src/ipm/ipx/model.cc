@@ -1,8 +1,8 @@
-#include "model.h"
+#include "ipm/ipx/model.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include "utils.h"
+#include "ipm/ipx/utils.h"
 #include "pdqsort/pdqsort.h"
 
 namespace ipx {

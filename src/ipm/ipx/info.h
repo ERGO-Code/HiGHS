@@ -3,7 +3,7 @@
 
 #include <ostream>
 #include <string>
-#include "ipx_internal.h"
+#include "ipm/ipx/ipx_internal.h"
 
 namespace ipx {
 

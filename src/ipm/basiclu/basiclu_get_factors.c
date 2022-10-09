@@ -5,7 +5,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 lu_int basiclu_get_factors
 (

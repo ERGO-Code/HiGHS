@@ -19,7 +19,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
 #include "presolve/ICrashUtil.h"

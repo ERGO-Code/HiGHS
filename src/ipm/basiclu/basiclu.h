@@ -136,23 +136,23 @@ typedef int lu_int;
 /* user callable functions */
 /* ----------------------- */
 
-#include "basiclu_initialize.h"
-#include "basiclu_factorize.h"
-#include "basiclu_get_factors.h"
-#include "basiclu_solve_dense.h"
-#include "basiclu_solve_sparse.h"
-#include "basiclu_solve_for_update.h"
-#include "basiclu_update.h"
+#include "ipm/basiclu/basiclu_initialize.h"
+#include "ipm/basiclu/basiclu_factorize.h"
+#include "ipm/basiclu/basiclu_get_factors.h"
+#include "ipm/basiclu/basiclu_solve_dense.h"
+#include "ipm/basiclu/basiclu_solve_sparse.h"
+#include "ipm/basiclu/basiclu_solve_for_update.h"
+#include "ipm/basiclu/basiclu_update.h"
 
-#include "basiclu_object.h"
-#include "basiclu_obj_initialize.h"
-#include "basiclu_obj_factorize.h"
-#include "basiclu_obj_get_factors.h"
-#include "basiclu_obj_solve_dense.h"
-#include "basiclu_obj_solve_sparse.h"
-#include "basiclu_obj_solve_for_update.h"
-#include "basiclu_obj_update.h"
-#include "basiclu_obj_free.h"
+#include "ipm/basiclu/basiclu_object.h"
+#include "ipm/basiclu/basiclu_obj_initialize.h"
+#include "ipm/basiclu/basiclu_obj_factorize.h"
+#include "ipm/basiclu/basiclu_obj_get_factors.h"
+#include "ipm/basiclu/basiclu_obj_solve_dense.h"
+#include "ipm/basiclu/basiclu_obj_solve_sparse.h"
+#include "ipm/basiclu/basiclu_obj_solve_for_update.h"
+#include "ipm/basiclu/basiclu_obj_update.h"
+#include "ipm/basiclu/basiclu_obj_free.h"
 
 #ifdef __cplusplus
 }

@@ -2,7 +2,7 @@
 #define IPX_INDEXED_VECTOR_H_
 
 #include <vector>
-#include "ipx_internal.h"
+#include "ipm/ipx/ipx_internal.h"
 
 namespace ipx {
 

@@ -1,8 +1,8 @@
-#include "starting_basis.h"
+#include "ipm/ipx/starting_basis.h"
 #include <cassert>
 #include <cmath>
 #include <vector>
-#include "timer.h"
+#include "ipm/ipx/timer.h"
 
 namespace ipx {
 

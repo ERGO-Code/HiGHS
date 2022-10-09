@@ -5,7 +5,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 lu_int lu_solve_for_update(
     struct lu *this, const lu_int nrhs, const lu_int *irhs, const double *xrhs,

@@ -1,8 +1,8 @@
 #ifndef IPX_GUESS_BASIS_H_
 #define IPX_GUESS_BASIS_H_
 
-#include "control.h"
-#include "model.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/model.h"
 
 namespace ipx {
 

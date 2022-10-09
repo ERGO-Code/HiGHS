@@ -5,7 +5,7 @@
  *
  */
 
-#include "lu_internal.h"
+#include "ipm/basiclu/lu_internal.h"
 
 void lu_solve_dense(struct lu *this, const double *rhs, double *lhs, char trans)
 {

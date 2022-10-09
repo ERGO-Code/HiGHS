@@ -10,8 +10,8 @@
 // [2] L. Schork, "Basis Preconditioning in Interior Point Methods", PhD thesis
 //     (2018)
 
-#include "control.h"
-#include "linear_operator.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/linear_operator.h"
 
 namespace ipx {
 

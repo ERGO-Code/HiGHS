@@ -1,7 +1,7 @@
 #ifndef IPX_LINEAR_OPERATOR_H_
 #define IPX_LINEAR_OPERATOR_H_
 
-#include "ipx_internal.h"
+#include "ipm/ipx/ipx_internal.h"
 
 namespace ipx {
 

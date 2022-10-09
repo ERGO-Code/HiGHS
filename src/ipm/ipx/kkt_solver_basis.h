@@ -1,11 +1,11 @@
 #ifndef IPX_KKT_SOLVER_BASIS_H_
 #define IPX_KKT_SOLVER_BASIS_H_
 
-#include "basis.h"
-#include "control.h"
-#include "kkt_solver.h"
-#include "model.h"
-#include "splitted_normal_matrix.h"
+#include "ipm/ipx/basis.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/kkt_solver.h"
+#include "ipm/ipx/model.h"
+#include "ipm/ipx/splitted_normal_matrix.h"
 
 namespace ipx {
 

@@ -1,8 +1,8 @@
 #ifndef IPX_MAXVOLUME_H_
 #define IPX_MAXVOLUME_H_
 
-#include "basis.h"
-#include "control.h"
+#include "ipm/ipx/basis.h"
+#include "ipm/ipx/control.h"
 
 namespace ipx {
 

@@ -2,11 +2,11 @@
 #define IPX_LP_SOLVER_H_
 
 #include <memory>
-#include "basis.h"
-#include "control.h"
-#include "ipm.h"
-#include "iterate.h"
-#include "model.h"
+#include "ipm/ipx/basis.h"
+#include "ipm/ipx/control.h"
+#include "ipm/ipx/ipm.h"
+#include "ipm/ipx/iterate.h"
+#include "ipm/ipx/model.h"
 
 namespace ipx {
 

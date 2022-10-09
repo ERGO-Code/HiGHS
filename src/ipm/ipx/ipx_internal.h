@@ -4,10 +4,10 @@
 #include <cstring>
 #include <valarray>
 
-#include "ipx_config.h"
-#include "ipx_info.h"
-#include "ipx_parameters.h"
-#include "ipx_status.h"
+#include "ipm/ipx/ipx_config.h"
+#include "ipm/ipx/ipx_info.h"
+#include "ipm/ipx/ipx_parameters.h"
+#include "ipm/ipx/ipx_status.h"
 
 namespace ipx {
 

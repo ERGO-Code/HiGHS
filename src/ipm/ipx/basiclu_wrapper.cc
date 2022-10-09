@@ -1,8 +1,9 @@
-#include "basiclu_wrapper.h"
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
-#include "basiclu.h"
+
+#include "ipm/ipx/basiclu_wrapper.h"
+#include "ipm/basiclu/basiclu.h"
 
 namespace ipx {
 

@@ -1,4 +1,4 @@
-#include "linear_operator.h"
+#include "ipm/ipx/linear_operator.h"
 
 namespace ipx {
 

@@ -1,4 +1,4 @@
-#include "indexed_vector.h"
+#include "ipm/ipx/indexed_vector.h"
 
 namespace ipx {
 

@@ -1,5 +1,5 @@
 #include "parallel/HighsParallel.h"
-#include "control.h"
+#include "ipm/ipx/control.h"
 #include <iostream>
 
 namespace ipx {

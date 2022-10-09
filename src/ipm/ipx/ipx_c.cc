@@ -1,6 +1,6 @@
-#include "ipx_c.h"
-#include "ipx_internal.h"
-#include "lp_solver.h"
+#include "ipm/ipx/ipx_c.h"
+#include "ipm/ipx/ipx_internal.h"
+#include "ipm/ipx/lp_solver.h"
 
 using namespace ipx;
 

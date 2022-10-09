@@ -1,8 +1,8 @@
-#include "splitted_normal_matrix.h"
+#include "ipm/ipx/splitted_normal_matrix.h"
 #include <cassert>
 #include <cmath>
-#include "timer.h"
-#include "utils.h"
+#include "ipm/ipx/timer.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

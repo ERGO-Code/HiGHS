@@ -1,8 +1,8 @@
-#include "info.h"
+#include "ipm/ipx/info.h"
 #include <cstring>              // for memset
 #include <map>
 #include <string>
-#include "control.h"
+#include "ipm/ipx/control.h"
 namespace ipx {
 
 template <typename T>

@@ -1,7 +1,7 @@
-#include "normal_matrix.h"
+#include "ipm/ipx/normal_matrix.h"
 #include <cassert>
-#include "timer.h"
-#include "utils.h"
+#include "ipm/ipx/timer.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

@@ -1,8 +1,8 @@
 #ifndef IPX_NORMAL_MATRIX_H_
 #define IPX_NORMAL_MATRIX_H_
 
-#include "linear_operator.h"
-#include "model.h"
+#include "ipm/ipx/linear_operator.h"
+#include "ipm/ipx/model.h"
 
 namespace ipx {
 

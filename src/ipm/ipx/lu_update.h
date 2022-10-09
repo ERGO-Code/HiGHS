@@ -2,8 +2,8 @@
 #define IPX_LU_UPDATE_H_
 
 #include <vector>
-#include "indexed_vector.h"
-#include "sparse_matrix.h"
+#include "ipm/ipx/indexed_vector.h"
+#include "ipm/ipx/sparse_matrix.h"
 
 namespace ipx {
 

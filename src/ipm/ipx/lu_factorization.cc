@@ -1,7 +1,7 @@
-#include "lu_factorization.h"
+#include "ipm/ipx/lu_factorization.h"
 #include <algorithm>
 #include <cassert>
-#include "utils.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

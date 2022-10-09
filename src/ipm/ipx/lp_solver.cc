@@ -1,14 +1,14 @@
-#include "lp_solver.h"
+#include "ipm/ipx/lp_solver.h"
 #include <algorithm>
 #include <cassert>
 #include <vector>
 #include <utility>
-#include "crossover.h"
-#include "info.h"
-#include "kkt_solver_basis.h"
-#include "kkt_solver_diag.h"
-#include "starting_basis.h"
-#include "utils.h"
+#include "ipm/ipx/crossover.h"
+#include "ipm/ipx/info.h"
+#include "ipm/ipx/kkt_solver_basis.h"
+#include "ipm/ipx/kkt_solver_diag.h"
+#include "ipm/ipx/starting_basis.h"
+#include "ipm/ipx/utils.h"
 
 namespace ipx {
 

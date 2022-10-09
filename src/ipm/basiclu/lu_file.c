@@ -36,9 +36,9 @@
  *
  */
 
-#include "lu_def.h"
-#include "lu_list.h"
-#include "lu_file.h"
+#include "ipm/basiclu/lu_def.h"
+#include "ipm/basiclu/lu_list.h"
+#include "ipm/basiclu/lu_file.h"
 
 /* ==========================================================================
  * lu_file_empty

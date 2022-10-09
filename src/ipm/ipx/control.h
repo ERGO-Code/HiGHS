@@ -5,9 +5,9 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include "ipx_internal.h"
-#include "multistream.h"
-#include "timer.h"
+#include "ipm/ipx/ipx_internal.h"
+#include "ipm/ipx/multistream.h"
+#include "ipm/ipx/timer.h"
 
 namespace ipx {
 
