@@ -67,9 +67,8 @@ set(ipx_sources
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
 include_directories()
-include_directories(ipm/ipx/include)
-include_directories(ipm/basiclu/src)
-include_directories(ipm/basiclu/include)
+include_directories(ipm/ipx)
+include_directories(ipm/basiclu)
 
 set(sources
     ../extern/filereaderlp/reader.cpp
@@ -572,6 +571,7 @@ target_include_directories(libhighs PUBLIC
 
 target_include_directories(libhighs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>  
@@ -580,14 +580,6 @@ target_include_directories(libhighs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
-    )
-
-target_include_directories(libhighs PRIVATE 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/src
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/include>
     )
 
 target_include_directories(libhighs PRIVATE

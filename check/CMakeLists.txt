@@ -5,11 +5,6 @@ set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/extern/catch)
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/lp_data)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipx)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/src)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/include)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/include)
 
 FILE(WRITE ${CMAKE_BINARY_DIR}/testoptions.txt
 "mip_rel_gap=0.0
