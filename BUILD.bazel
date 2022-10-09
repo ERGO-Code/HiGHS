@@ -5,7 +5,7 @@ copy_file(
     name = "highs-config",
     src = "HConfig.h.bazel",
     out = "HConfig.h",
-    # visibility = ["//visibility:public"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
