@@ -86,8 +86,7 @@ bool positiveModelStatus(const HighsModelStatus& model_status) {
 void logLocalSolverOutcome(const HighsStatus return_status,
                            const HighsLpSolverObject& solver_object) {
   highsLogUser(solver_object.options_.log_options, HighsLogType::kInfo,
-               "Local   solver %2d (time = %11.4g) returns status %s and model "
-               "status %s\n",
+               "Local   solver %2d (time = %11.4g) returns (%-7s; %s)\n",
                int(solver_object.spawn_id_), solver_object.run_time_,
                highsStatusToString(return_status).c_str(),
                utilModelStatusToString(solver_object.model_status_).c_str());
@@ -143,7 +142,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   //
   HighsInt max_concurrent_solvers = 1;
   const HighsInt max_threads = highs::parallel::num_threads();
-  if (!solver_object.basis_.valid && !solver_object.solution_.value_valid) {
+  const bool possible_concurrent_solve = true;
+  const bool have_basis_or_solution = solver_object.basis_.valid || solver_object.solution_.value_valid;
+  //  const bool possible_concurrent_solve = !have_basis_or_solution;
+  if (possible_concurrent_solve) {
     // No hot start, so possibly use concurrent LP solvers
     max_concurrent_solvers = max_threads;
     // Prevent concurrent LP solvers unless parallel option is on
@@ -160,6 +162,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   const HighsInt max_spawnable_solvers = 3;
   const HighsInt spawnable_threads = max_threads - 1;
   std::string use_solver = options.solver;
+  const bool simplex_only = use_solver == kSimplexString || (use_solver == kHighsChooseString && have_basis_or_solution);
   HighsInt spawnable_solvers =
       max_concurrent_solvers == 1 ? 0 : max_spawnable_solvers;
   // Save copies of simplex_strategy and simplex_max_concurrency
@@ -173,12 +176,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   if (max_concurrent_solvers > 1) {
     // If using concurrent LP solvers, determine which solver is to be
     // used by this Highs instance, and how many to be used
-    if (use_solver == kHighsChooseString) {
-      // Can use interior point for LP, so this Highs instance uses
-      // IPM
-      use_solver = kIpmString;
-    } else {
-      assert(use_solver == kSimplexString);
+    if (simplex_only) {
       // Can only use simplex solvers, so this Highs instance uses
       // serial dual simplex
       options.simplex_strategy = kSimplexStrategyDualPlain;
@@ -187,17 +185,23 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // Highs instance, so reduce the number of solvers that can be
       // spawned
       spawnable_solvers--;
+    } else {
+      // Can use interior point for LP, so this Highs instance uses
+      // IPM
+      use_solver = kIpmString;
     }
     // If there is only one thread avaiable for parallel dual simplex,
     // then reduce the number of simplex that can be spawned -
     // preventing it from being used
     if (spawnable_solvers == spawnable_threads) spawnable_solvers--;
-    printf("Spawning %d LP solvers using (upto) %d threads: \n",
-           int(spawnable_solvers), int(spawnable_threads));
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+		 "Spawning %d LP solvers using (upto) %d threads: \n",
+		 int(spawnable_solvers), int(spawnable_threads));
     assert(spawnable_solvers > 0);
   }
   // Determine which solvers are to be spawned
   vector<HighsInt> spawned_solver;
+  HighsInt parallel_dual_simplex_threads = -1;
   if (spawnable_solvers) {
     HighsInt available_solvers = spawnable_solvers;
     HighsInt available_threads = spawnable_threads;
@@ -222,6 +226,25 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       available_solvers--;
       available_threads--;
     }
+    if (available_solvers) {
+      // Have a thread running parallel dual simplex on a limited number of threads
+      assert(available_solvers);
+      assert(available_threads);
+      spawned_solver.push_back(kSimplexStrategyDualMulti);
+      parallel_dual_simplex_threads = available_threads;
+      available_solvers--;
+      available_threads -= available_threads;
+    }
+    assert(available_solvers == 0);
+    assert(available_threads == 0);
+    if (have_basis_or_solution) {
+      if (solver_object.basis_.valid && solver_object.basis_.alien) 
+	highsLogUser(options.log_options, HighsLogType::kInfo,
+		     "Original basis is alien\n");
+      if (solver_object.solution_.value_valid && !solver_object.solution_.dual_valid)
+	highsLogUser(options.log_options, HighsLogType::kInfo,
+		     "Original solution has no dual values\n");
+    }
   }
   HighsInt num_spawned_solver = spawned_solver.size();
   // Set up a vector of pointers to Highs instances
@@ -229,8 +252,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   for (HighsInt ix = 0; ix < num_spawned_solver; ix++) {
     parallel_highs.emplace_back(new Highs());
     parallel_highs[ix]->passSpawnId(ix);
-    // Concurrent instances run simplex silently, without (further) scaling
     parallel_highs[ix]->passOptions(options);
+    // Concurrent instances run simplex silently
     const bool debug_log = true;
     if (debug_log) {
       std::string log_file = "HiGHS" + std::to_string(ix) + ".log";
@@ -240,16 +263,24 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     } else {
       parallel_highs[ix]->setOptionValue("output_flag", false);
     }
+    // Concurrent instances are already presolved
+    parallel_highs[ix]->setOptionValue("presolve", kHighsOffString);
     parallel_highs[ix]->setOptionValue("solver", kSimplexString);
     parallel_highs[ix]->setOptionValue("simplex_strategy", spawned_solver[ix]);
-    //    parallel_highs[ix]->setOptionValue("simplex_scale_strategy",
-    //    kSimplexScaleStrategyOff);
+    // Parallel is off, except for any instance running PAMI
     parallel_highs[ix]->setOptionValue("parallel", kHighsOffString);
-    if (spawned_solver[ix] == kSimplexStrategyDualTasks) {
+    if (spawned_solver[ix] == kSimplexStrategyDualMulti) {
       // Using PAMI, so force parallel to be on
-      assert(111 == 222);
+      HighsInt pami_max_concurrency = std::min(parallel_dual_simplex_threads, HighsInt(8));
+      assert(pami_max_concurrency>1);
+      parallel_highs[ix]->setOptionValue("parallel", kHighsOnString);
+      parallel_highs[ix]->setOptionValue("simplex_max_concurrency", pami_max_concurrency);
     }
     parallel_highs[ix]->passModel(solver_object.lp_);
+    if (solver_object.basis_.valid)
+      parallel_highs[ix]->setBasis(solver_object.basis_);
+    if (solver_object.solution_.value_valid)
+      parallel_highs[ix]->setSolution(solver_object.solution_);
   }
 
   std::vector<double> run_time;
@@ -280,9 +311,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       model_status[solver] = parallel_highs[solver]->getModelStatus();
       // this should check for the status returned when the race timer limit
       // was reached and only call decrease limit if it was not reached
-      printf(
-          "Spawned solver %2d (time = %11.4g) returns status %s and model "
-          "status %s\n",
+      highsLogUser(parallel_highs[solver]->getOptions().log_options, HighsLogType::kInfo,
+          "Spawned solver %2d (time = %11.4g) returns (%-7s; %s)\n",
           int(solver), parallel_highs[solver]->getRunTime() - run_time[solver],
           highsStatusToString(run_status[solver]).c_str(),
           parallel_highs[solver]

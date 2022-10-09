@@ -55,6 +55,11 @@ class Highs {
   HighsStatus clearSolver();
 
   /**
+   * @brief Concurrent LP solver switch
+   */
+  HighsStatus concurrentLpSolver(const std::string on_or_off);
+
+  /**
    * Methods for model input
    */
 

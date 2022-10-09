@@ -55,6 +55,22 @@ HighsStatus Highs::clearSolver() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::concurrentLpSolver(const std::string on_or_off) {
+  if (on_or_off != kHighsOnString && on_or_off != kHighsOffString) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Illegal Highs::concurrentLpSolver parameter %s\n", on_or_off.c_str());
+    return HighsStatus::kError;
+  }
+  if (on_or_off == kHighsOnString) {
+    options_.parallel = kHighsOnString;
+    options_.simplex_strategy = kSimplexStrategyChoose;
+  } else {
+    options_.parallel = kHighsChooseString;
+    options_.simplex_strategy = kSimplexStrategyDual;
+  }
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)

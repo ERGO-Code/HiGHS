@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status);
@@ -110,6 +110,8 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
 void runSetLpSolution(const std::string model) {
   HighsStatus return_status;
   Highs highs;
+  highs.concurrentLpSolver(kHighsOffString);
+
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   const HighsInfo& info = highs.getInfo();
@@ -121,13 +123,15 @@ void runSetLpSolution(const std::string model) {
   highs.run();
   HighsInt simplex_iteration_count0 = info.simplex_iteration_count;
   HighsSolution solution = highs.getSolution();
+
   highs.clear();
+  highs.concurrentLpSolver(kHighsOffString);
+
   if (dev_run) printf("\nSolving from saved solution\n");
   highs.setOptionValue("output_flag", dev_run);
   if (dev_run) highs.setOptionValue("log_dev_level", 1);
-  highs.readModel(model_file);
 
-  // solution.col_value.assign(highs.getNumCol(), 0);
+  highs.readModel(model_file);
 
   return_status = highs.setSolution(solution);
   REQUIRE(return_status == HighsStatus::kOk);
