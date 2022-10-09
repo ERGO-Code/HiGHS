@@ -262,12 +262,13 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     model_status.resize(num_spawned_solver);
     run_status.assign(num_spawned_solver, HighsStatus::kError);
   }
-  printf(
-      "Spawn Id = %2d: num_spawned_solver = %1d; use_solver = %7s; strategy = "
-      "%d; parallel = %3s; max concurrency = %d\n",
-      int(solver_object.spawn_id_), int(num_spawned_solver), use_solver.c_str(),
-      int(options.simplex_strategy), options.parallel.c_str(),
-      int(options.simplex_max_concurrency));
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "solveLp: Spawn Id = %2d: num_spawned_solver = %1d; use_solver "
+               "= %7s; strategy = "
+               "%d; parallel = %3s; max concurrency = %d\n",
+               int(solver_object.spawn_id_), int(num_spawned_solver),
+               use_solver.c_str(), int(options.simplex_strategy),
+               options.parallel.c_str(), int(options.simplex_max_concurrency));
   HighsRaceTimer<double> race_timer;
   parallel::TaskGroup tg;
   for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {

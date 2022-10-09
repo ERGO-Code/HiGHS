@@ -485,10 +485,13 @@ void LpSolver::RunInitialIPM(IPM& ipm) {
         info_.errflag = 0;
         break;
     case IPX_STATUS_iter_limit:
+      // The switchiter parameter is the limit on initial IPM
+      // iterations (before building a starting basis). When this
+      // limit is reached, info_.status_ipm is set to
+      // IPX_STATUS_iter_limit, but this needs to be reset to use IPM
+      // again with basis preconditioning.
         if (info_.iter < control_.ipm_maxiter()) // stopped at switchiter
-            info_.status_ipm = IPX_STATUS_not_run;
-	// How can it reach here?
-	assert(11==22);
+	  info_.status_ipm = IPX_STATUS_not_run; 
     }
     info_.time_ipm1 += timer.Elapsed();
 }

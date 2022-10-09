@@ -1,7 +1,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 struct IterationCount {
   HighsInt simplex;
@@ -192,9 +192,9 @@ void testSolversSetup(const std::string model,
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualTasks] = 72;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyDualMulti] = 73;
+        int)SimplexStrategy::kSimplexStrategyDualMulti] = 86;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyPrimal] = 94;
+        int)SimplexStrategy::kSimplexStrategyPrimal] = 83;
     model_iteration_count.ipm = 13;
     model_iteration_count.crossover = 2;
   }
@@ -202,30 +202,13 @@ void testSolversSetup(const std::string model,
 
 void testSolvers(Highs& highs, IterationCount& model_iteration_count,
                  const vector<HighsInt>& simplex_strategy_iteration_count) {
-  bool have_omp = true;
-
-  /*
-  HighsInt i = (HighsInt)SimplexStrategy::kSimplexStrategyPrimal;
-  model_iteration_count.simplex = simplex_strategy_iteration_count[i];
-  testSolver(highs, "simplex", model_iteration_count, i);
-  */
-
   HighsInt from_i = (HighsInt)SimplexStrategy::kSimplexStrategyMin;
-  HighsInt to_i =
-      (HighsInt)SimplexStrategy::kSimplexStrategyDualMulti;  // PRIMAL;  // NUM;
+  HighsInt to_i = (HighsInt)SimplexStrategy::kSimplexStrategyNum;
   for (HighsInt i = from_i; i < to_i; i++) {
-    if (!have_omp) {
-      if (i == (HighsInt)SimplexStrategy::kSimplexStrategyDualTasks) continue;
-      if (i == (HighsInt)SimplexStrategy::kSimplexStrategyDualMulti) continue;
-    }
     model_iteration_count.simplex = simplex_strategy_iteration_count[i];
     testSolver(highs, "simplex", model_iteration_count, i);
   }
-  // Only use IPX with 32-bit arithmetic
-  // ToDo This is no longer true
-#ifndef HIGHSINT64
   testSolver(highs, "ipm", model_iteration_count);
-#endif
 }
 
 // No commas in test case name.
