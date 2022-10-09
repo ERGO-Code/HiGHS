@@ -5,11 +5,13 @@ copy_file(
     name = "highs-config",
     src = "HConfig.h.bazel",
     out = "HConfig.h",
+    # visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "config",
     srcs = ["HConfig.h"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -31,9 +33,10 @@ cc_library(
          "src/qpsolver/*.cpp",
          "src/simplex/*.cpp",
          "src/test/*.cpp",
-         "src/util/*.cpp",
+         "src/util/*.cpp", 
     ]),
     hdrs = glob([
+        "HConfig.h",
         "**/*.h",
         "src/qpsolver/*.hpp",
         "src/Highs.h",
