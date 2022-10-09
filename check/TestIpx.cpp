@@ -14,7 +14,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "lp_solver.h"
+#include "ipm/ipx/lp_solver.h"
 
 const bool dev_run = false;
 
