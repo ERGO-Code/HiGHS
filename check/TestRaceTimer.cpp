@@ -1,9 +1,8 @@
 #include "Highs.h"
 #include "catch.hpp"
-//#include "parallel/HighsParallel.h"
 #include "parallel/HighsRaceTimer.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void testSolver(Highs& highs, const std::string solver,
                 const HighsInt simplex_strategy, const double time_limit) {
@@ -18,7 +17,7 @@ void testSolver(Highs& highs, const std::string solver,
   HighsStatus return_status = highs.run();
   run_time += highs.getRunTime();
   HighsModelStatus model_status = highs.getModelStatus();
-  printf(
+  if (dev_run) printf(
       "Running for %11.4gs (limit %11.4g) with \"%s\" (strategy %d) returns "
       "\"%s\" and model status \"%s\"\n",
       run_time, time_limit, solver.c_str(), int(simplex_strategy),
@@ -33,7 +32,7 @@ TEST_CASE("test-race-timer", "[highs_test_race_timer]") {
   std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
-  highs.setOptionValue("presolve", kHighsOffString);
+  //  highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("solver", kIpmString);
   highs.readModel(model_file);
   double time_limit = -highs.getRunTime();
