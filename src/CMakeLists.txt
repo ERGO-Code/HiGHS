@@ -2,71 +2,71 @@
 # Outdated CMake approach: update in progress
 
 set(basiclu_sources
-    ipm/basiclu/src/basiclu_factorize.c
-    ipm/basiclu/src/basiclu_solve_dense.c
-    ipm/basiclu/src/lu_build_factors.c
-    ipm/basiclu/src/lu_factorize_bump.c
-    ipm/basiclu/src/lu_initialize.c
-    ipm/basiclu/src/lu_markowitz.c
-    ipm/basiclu/src/lu_setup_bump.c
-    ipm/basiclu/src/lu_solve_sparse.c
-    ipm/basiclu/src/basiclu_get_factors.c
-    ipm/basiclu/src/basiclu_solve_for_update.c
-    ipm/basiclu/src/lu_condest.c
-    ipm/basiclu/src/lu_file.c
-    ipm/basiclu/src/lu_internal.c
-    ipm/basiclu/src/lu_matrix_norm.c
-    ipm/basiclu/src/lu_singletons.c
-    ipm/basiclu/src/lu_solve_symbolic.c
-    ipm/basiclu/src/lu_update.c
-    ipm/basiclu/src/basiclu_initialize.c
-    ipm/basiclu/src/basiclu_solve_sparse.c
-    ipm/basiclu/src/lu_pivot.c
-    ipm/basiclu/src/lu_solve_dense.c
-    ipm/basiclu/src/lu_solve_triangular.c
-    ipm/basiclu/src/basiclu_object.c
-    ipm/basiclu/src/basiclu_update.c
-    ipm/basiclu/src/lu_dfs.c
-    ipm/basiclu/src/lu_garbage_perm.c
-    ipm/basiclu/src/lu_residual_test.c
-    ipm/basiclu/src/lu_solve_for_update.c)
+    ipm/basiclu/basiclu_factorize.c
+    ipm/basiclu/basiclu_solve_dense.c
+    ipm/basiclu/lu_build_factors.c
+    ipm/basiclu/lu_factorize_bump.c
+    ipm/basiclu/lu_initialize.c
+    ipm/basiclu/lu_markowitz.c
+    ipm/basiclu/lu_setup_bump.c
+    ipm/basiclu/lu_solve_sparse.c
+    ipm/basiclu/basiclu_get_factors.c
+    ipm/basiclu/basiclu_solve_for_update.c
+    ipm/basiclu/lu_condest.c
+    ipm/basiclu/lu_file.c
+    ipm/basiclu/lu_internal.c
+    ipm/basiclu/lu_matrix_norm.c
+    ipm/basiclu/lu_singletons.c
+    ipm/basiclu/lu_solve_symbolic.c
+    ipm/basiclu/lu_update.c
+    ipm/basiclu/basiclu_initialize.c
+    ipm/basiclu/basiclu_solve_sparse.c
+    ipm/basiclu/lu_pivot.c
+    ipm/basiclu/lu_solve_dense.c
+    ipm/basiclu/lu_solve_triangular.c
+    ipm/basiclu/basiclu_object.c
+    ipm/basiclu/basiclu_update.c
+    ipm/basiclu/lu_dfs.c
+    ipm/basiclu/lu_garbage_perm.c
+    ipm/basiclu/lu_residual_test.c
+    ipm/basiclu/lu_solve_for_update.c)
 
 set(ipx_sources
-    ipm/ipx/src/basiclu_kernel.cc
-    ipm/ipx/src/basiclu_wrapper.cc
-    ipm/ipx/src/basis.cc
-    ipm/ipx/src/conjugate_residuals.cc
-    ipm/ipx/src/control.cc
-    ipm/ipx/src/crossover.cc
-    ipm/ipx/src/diagonal_precond.cc
-    ipm/ipx/src/forrest_tomlin.cc
-    ipm/ipx/src/guess_basis.cc
-    ipm/ipx/src/indexed_vector.cc
-    ipm/ipx/src/info.cc
-    ipm/ipx/src/ipm.cc
-    ipm/ipx/src/ipx_c.cc
-    ipm/ipx/src/iterate.cc
-    ipm/ipx/src/kkt_solver.cc
-    ipm/ipx/src/kkt_solver_basis.cc
-    ipm/ipx/src/kkt_solver_diag.cc
-    ipm/ipx/src/linear_operator.cc
-    ipm/ipx/src/lp_solver.cc
-    ipm/ipx/src/lu_factorization.cc
-    ipm/ipx/src/lu_update.cc
-    ipm/ipx/src/maxvolume.cc
-    ipm/ipx/src/model.cc
-    ipm/ipx/src/normal_matrix.cc
-    ipm/ipx/src/sparse_matrix.cc
-    ipm/ipx/src/sparse_utils.cc
-    ipm/ipx/src/splitted_normal_matrix.cc
-    ipm/ipx/src/starting_basis.cc
-    ipm/ipx/src/symbolic_invert.cc
-    ipm/ipx/src/timer.cc
-    ipm/ipx/src/utils.cc)
+    ipm/ipx/basiclu_kernel.cc
+    ipm/ipx/basiclu_wrapper.cc
+    ipm/ipx/basis.cc
+    ipm/ipx/conjugate_residuals.cc
+    ipm/ipx/control.cc
+    ipm/ipx/crossover.cc
+    ipm/ipx/diagonal_precond.cc
+    ipm/ipx/forrest_tomlin.cc
+    ipm/ipx/guess_basis.cc
+    ipm/ipx/indexed_vector.cc
+    ipm/ipx/info.cc
+    ipm/ipx/ipm.cc
+    ipm/ipx/ipx_c.cc
+    ipm/ipx/iterate.cc
+    ipm/ipx/kkt_solver.cc
+    ipm/ipx/kkt_solver_basis.cc
+    ipm/ipx/kkt_solver_diag.cc
+    ipm/ipx/linear_operator.cc
+    ipm/ipx/lp_solver.cc
+    ipm/ipx/lu_factorization.cc
+    ipm/ipx/lu_update.cc
+    ipm/ipx/maxvolume.cc
+    ipm/ipx/model.cc
+    ipm/ipx/normal_matrix.cc
+    ipm/ipx/sparse_matrix.cc
+    ipm/ipx/sparse_utils.cc
+    ipm/ipx/splitted_normal_matrix.cc
+    ipm/ipx/starting_basis.cc
+    ipm/ipx/symbolic_invert.cc
+    ipm/ipx/timer.cc
+    ipm/ipx/utils.cc)
 
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
-include_directories(ipm/ipx/src)
+include_directories()
 include_directories(ipm/ipx/include)
 include_directories(ipm/basiclu/src)
 include_directories(ipm/basiclu/include)
@@ -584,7 +584,7 @@ target_include_directories(libhighs PRIVATE
 
 target_include_directories(libhighs PRIVATE 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/src
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu/include>
