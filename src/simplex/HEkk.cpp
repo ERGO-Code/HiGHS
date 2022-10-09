@@ -3461,8 +3461,8 @@ bool HEkk::bailoutOnTimeIterations() {
     const bool race_timer_stop = race_timer_->limitReached(run_time);
     if (race_timer_stop) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
-                   "HEkk::bailoutOnTimeIterations: spawn_id = %2d: Iter = %d; "
-                   "RunTime = %11.4g\n",
+                   "Concurrent LP solver %2d stopped by race timer after %d "
+                   "iterations and %11.4gs\n",
                    int(this->spawn_id_), int(this->iteration_count_), run_time);
       solve_bailout_ = true;
       model_status_ = HighsModelStatus::kRaceTimerStop;
@@ -3500,17 +3500,48 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   // be called exactly once per solve
   assert(!called_return_from_solve_);
   called_return_from_solve_ = true;
-  info_.valid_backtracking_basis_ = false;
 
   // Initialise the status of the primal and dual solutions
   return_primal_solution_status_ = kSolutionStatusNone;
   return_dual_solution_status_ = kSolutionStatusNone;
   // Nothing more is known about the solve after an error return
-  if (return_status == HighsStatus::kError) return return_status;
-
+  if (return_status == HighsStatus::kError) {
+    // Invalidate the backtracking basis here, since it may be needed
+    // when not invert is known
+    info_.valid_backtracking_basis_ = false;
+    return return_status;
+  }
+  // An invert will exist, unless the parallel dual simplex solver is
+  // stopped during minor iterations (due to iteration count, time or
+  // dual objective value). Although not necessary in all these
+  // scenarios, it's simplest to reinvert so that primal and dual
+  // values can be recomputed below
+  bool has_invert = status_.has_invert;
+  if (!has_invert) {
+    const bool allow_no_invert =
+        model_status_ == HighsModelStatus::kTimeLimit ||
+        model_status_ == HighsModelStatus::kIterationLimit ||
+        model_status_ == HighsModelStatus::kObjectiveBound ||
+        model_status_ == HighsModelStatus::kObjectiveTarget ||
+        model_status_ == HighsModelStatus::kRaceTimerStop;
+    assert(allow_no_invert);
+    // If there is no invert legitimately, try to form one
+    if (allow_no_invert) has_invert = getNonsingularInverse();
+    if (!allow_no_invert || !has_invert) {
+      // Has no invert illegally, or unable to form one, so this is an
+      // error return
+      highsLogUser(
+          options_->log_options, HighsLogType::kError, "%s\n",
+          allow_no_invert ? "Has no invert illegally" : "Failure to reinvert");
+      model_status_ = HighsModelStatus::kSolveError;
+      return HighsStatus::kError;
+    }
+  }
   // Check that an invert exists
   assert(status_.has_invert);
-
+  // Invalidate the backtracking basis
+  info_.valid_backtracking_basis_ = false;
+  //
   // Determine a primal and dual solution, removing the effects of
   // perturbations and shifts
   //

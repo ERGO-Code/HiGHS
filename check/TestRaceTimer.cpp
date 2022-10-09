@@ -47,9 +47,14 @@ TEST_CASE("test-race-timer", "[highs_test_race_timer]") {
 
   race_timer.decreaseLimit(time_limit);
 
+  // IPM
   testSolver(highs, kIpmString, -1, time_limit);
+  // Serial dual simplex
   testSolver(highs, kSimplexString, 1, time_limit);
+  // Parallel dual simplex (SIP)
   testSolver(highs, kSimplexString, 2, time_limit);
+  // Parallel dual simplex (PAMI)
   testSolver(highs, kSimplexString, 3, time_limit);
+  // Serial primal simplex
   testSolver(highs, kSimplexString, 4, time_limit);
 }
