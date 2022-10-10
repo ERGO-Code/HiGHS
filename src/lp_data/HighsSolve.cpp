@@ -159,7 +159,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   }
   // Start with (at most) serial dual, serial primal and parallel dual
   // running concurrently
-  const HighsInt max_spawnable_solvers = 3;
+  const HighsInt max_spawnable_solvers = 2;
   const HighsInt spawnable_threads = max_threads - 1;
   std::string use_solver = options.solver;
   const bool simplex_only = use_solver == kSimplexString || (use_solver == kHighsChooseString && have_basis_or_solution);
@@ -236,7 +236,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       available_threads -= available_threads;
     }
     assert(available_solvers == 0);
-    assert(available_threads == 0);
     if (have_basis_or_solution) {
       if (solver_object.basis_.valid && solver_object.basis_.alien) 
 	highsLogUser(options.log_options, HighsLogType::kInfo,
