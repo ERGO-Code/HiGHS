@@ -916,10 +916,24 @@ void HEkkDual::solvePhase2() {
       if (bailoutOnDualObjective()) break;
       assert(solve_phase != kSolvePhaseTabooBasis);
 
-      // If possibly dual unbounded, assess whether this implies
-      // primal infeasibility.
-      if (rebuild_reason == kRebuildReasonPossiblyDualUnbounded)
-        assessPossiblyDualUnbounded();
+      if (rebuild_reason == kRebuildReasonPossiblyDualUnbounded) {
+	// Possibly dual unbounded
+	//
+	// Don't know what to do in the case of SIP: probably OK, but
+	// can't be sure.
+	assert(info.simplex_strategy != kSimplexStrategyDualTasks);
+	if (info.simplex_strategy == kSimplexStrategyDualMulti) {
+	  // Cannot assess this with PAMI without putting in code to
+	  // switch to correct pi_p vector to construct the
+	  // infeasibility proof (and then some more...). So, for
+	  // simplicity, switch to serial dual simplex.
+	  info.simplex_strategy = kSimplexStrategyDualPlain;
+	} else {
+	  // Assess whether possible dual unboundedness implies primal
+	  // infeasibility.
+	  assessPossiblyDualUnbounded();
+	}
+      }
 
       if (rebuild_reason) break;
     }

@@ -336,59 +336,52 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                   "Exception %s in solveLpIpx\n", exception.what());
       call_status = HighsStatus::kError;
     }
-    // Non-error return requires a primal solution
-    assert(solver_object.solution_.value_valid);
-    // Set the return_status, model status and, for completeness, scaled
-    // model status
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) {
       // Can only allow this return if this is a spawned solver
       if (solver_object.spawn_id_ >= 0)
         return solveLpReturn(return_status, solver_object, message);
-      logLocalSolverOutcome(return_status, solver_object);
-      assert(111 == 333);
-    }
-    // Get the objective and any KKT failures
-    solver_object.highs_info_.objective_function_value =
+    } else {
+      // Non-error return requires a primal solution
+      assert(solver_object.solution_.value_valid);
+      // Get the objective and any KKT failures
+      solver_object.highs_info_.objective_function_value =
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
-    getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
-                     solver_object.basis_, solver_object.highs_info_);
-    // Seting the IPM-specific values of (highs_)info_ has been done in
-    // solveLpIpx
-    if ((solver_object.model_status_ == HighsModelStatus::kUnknown ||
-         (solver_object.model_status_ ==
-              HighsModelStatus::kUnboundedOrInfeasible &&
-          !options.allow_unbounded_or_infeasible)) &&
-        options.run_crossover) {
-      // IPX has returned a model status that HiGHS would rather
-      // avoid, so perform simplex clean-up if crossover was allowed.
-      //
-      // This is an unusual situation, and the cost will usually be
-      // acceptable. Worst case is if crossover wasn't run, in which
-      // case there's no basis to start simplex
-      //
-      // ToDo: Check whether simplex can exploit the primal solution returned by
-      // IPX
-      highsLogUser(options.log_options, HighsLogType::kWarning,
-                   "Imprecise solution returned from IPX, so use simplex to "
-                   "clean up\n");
-      // Reset the return status since it will now be determined by
-      // the outcome of the simplex solve
-      return_status = HighsStatus::kOk;
-      // ToDo: Need to ensure that the clean-up uses serial simplex
-      options.simplex_max_concurrency = 1;
-      call_status = solveLpSimplex(solver_object);
-      // Restore simplex_max_concurrency
-      options.simplex_max_concurrency = simplex_max_concurrency;
-      return_status = interpretCallStatus(options.log_options, call_status,
-                                          return_status, "solveLpSimplex");
-      if (return_status == HighsStatus::kError) {
-        // Can only allow this return if this is a spawned solver
-        if (solver_object.spawn_id_ >= 0)
-          return solveLpReturn(return_status, solver_object, message);
-        logLocalSolverOutcome(return_status, solver_object);
-        assert(111 == 444);
+      getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
+		       solver_object.basis_, solver_object.highs_info_);
+      // Seting the IPM-specific values of (highs_)info_ has been done in
+      // solveLpIpx
+      if ((solver_object.model_status_ == HighsModelStatus::kUnknown ||
+	   (solver_object.model_status_ ==
+	    HighsModelStatus::kUnboundedOrInfeasible &&
+	    !options.allow_unbounded_or_infeasible)) &&
+	  options.run_crossover) {
+	// IPX has returned a model status that HiGHS would rather
+	// avoid, so perform simplex clean-up if crossover was allowed.
+	//
+	// This is an unusual situation, and the cost will usually be
+	// acceptable. Worst case is if crossover wasn't run, in which
+	// case there's no basis to start simplex
+	//
+	// ToDo: Check whether simplex can exploit the primal solution returned by
+	// IPX
+	highsLogUser(options.log_options, HighsLogType::kWarning,
+		     "Imprecise solution returned from IPX, so use simplex to "
+		     "clean up\n");
+	// Reset the return status since it will now be determined by
+	// the outcome of the simplex solve
+	return_status = HighsStatus::kOk;
+	// ToDo: Need to ensure that the clean-up uses serial simplex
+	options.simplex_max_concurrency = 1;
+	call_status = solveLpSimplex(solver_object);
+	// Restore simplex_max_concurrency
+	options.simplex_max_concurrency = simplex_max_concurrency;
+	return_status = interpretCallStatus(options.log_options, call_status,
+					    return_status, "solveLpSimplex");
+	  // Can only allow this return if this is a spawned solver
+	if (return_status == HighsStatus::kError &&
+	    solver_object.spawn_id_ >= 0) return solveLpReturn(return_status, solver_object, message);
       }
     }
   } else {
@@ -405,35 +398,40 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // Restore simplex_max_concurrency and simplex_strategy
     options.simplex_max_concurrency = simplex_max_concurrency;
     options.simplex_strategy = simplex_strategy;
-    if (return_status == HighsStatus::kError) {
+    // Can only allow this return if this is a spawned solver
+    if (return_status == HighsStatus::kError &&
+	solver_object.spawn_id_ >= 0) return solveLpReturn(return_status, solver_object, message);
+  }
+  if (return_status == HighsStatus::kError) {
+    // Even if this thread has yielded an error return - as can happen
+    // with IPM if the LP is infeasible or unbounded - need to look at
+    // outcome of spawned solvers
+    assert(solver_object.spawn_id_ < 0);
+  } else {
+    // Check for solution consistency
+    if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+      return_status = HighsStatus::kError;
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Inconsistent solution returned from solver\n");
       // Can only allow this return if this is a spawned solver
       if (solver_object.spawn_id_ >= 0)
-        return solveLpReturn(return_status, solver_object, message);
-      logLocalSolverOutcome(return_status, solver_object);
-      assert(111 == 555);
+	solveLpReturn(return_status, solver_object, message);
     }
-  }
-  // Check for solution consistency
-  if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-    return_status = HighsStatus::kError;
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Inconsistent solution returned from solver\n");
-    // Can only allow this return if this is a spawned solver
-    if (solver_object.spawn_id_ >= 0)
-      solveLpReturn(return_status, solver_object, message);
-    logLocalSolverOutcome(return_status, solver_object);
-    assert(111 == 666);
   }
   double solver_run_time =
       solver_object.timer_.readRunHighsClock() - solver_object.run_time_;
+  // If this thread has yielded a positive outcome then set the race
+  // timer to stop any spawned solvers
   if (positiveModelStatus(solver_object.model_status_))
     race_timer.decreaseLimit(solver_run_time);
   if (solver_object.spawn_id_ < 0) {
+    // Report on the local solver's outcome
     double save_run_time = solver_object.run_time_;
     solver_object.run_time_ = solver_run_time;
     if (num_spawned_solver) logLocalSolverOutcome(return_status, solver_object);
     solver_object.run_time_ = save_run_time;
   }
+  // synchronise all spawned threads
   tg.taskWait();
   if (num_spawned_solver) {
     HighsModelStatus have_model_status = solver_object.model_status_;
@@ -461,7 +459,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         }
       } else {
         // Here's the first positive model status: extract solution
-        // and basis if available
+        // and basis, if available
+	return_status = run_status[solver];
+	solver_object.model_status_ = this_model_status;
         solver_object.basis_ = parallel_highs[solver]->getBasis();
         solver_object.solution_ = parallel_highs[solver]->getSolution();
         solver_object.highs_info_ = parallel_highs[solver]->getInfo();
@@ -471,7 +471,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         highsLogUser(options.log_options, HighsLogType::kInfo,
                      "Solution obtained from spawned %s solver\n",
                      simplexStrategyToString(spawned_solver[solver]).c_str());
-        assert(111 == 000);
       }
     }
   }

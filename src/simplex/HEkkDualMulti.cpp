@@ -73,7 +73,12 @@ void HEkkDual::majorChooseRow() {
   /**
    * 0. Initial check to see if we need to do it again
    */
-  if (ekk_instance_.info_.update_count == 0) multi_chooseAgain = 1;
+  // Have to repeat majorChooseRow if there's been a fresh rebuild, as
+  // well as if there's a fresh INVERT (implying rebuild)
+  if (ekk_instance_.info_.update_count == 0 || ekk_instance_.status_.has_fresh_rebuild) {
+    assert((ekk_instance_.info_.update_count == 0) == ekk_instance_.status_.has_fresh_invert);
+    multi_chooseAgain = 1;
+  }
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
