@@ -1113,7 +1113,6 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     assert(called_return_from_solve_);
     return_status = interpretCallStatus(options_->log_options, call_status,
                                         return_status, "HEkkDual::solve");
-
     // Dual simplex solver may set model_status to be
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
     // be returned, so use primal simplex to distinguish
@@ -1124,6 +1123,17 @@ HighsStatus HEkk::solve(const bool force_phase2) {
       assert(called_return_from_solve_);
       return_status = interpretCallStatus(options_->log_options, call_status,
                                           return_status, "HEkkPrimal::solve");
+    }
+    if (model_status_ == HighsModelStatus::kInfeasible &&
+	simplex_strategy == kSimplexStrategyDualMulti) {
+      // PAMI cannot identify infeasibulity with proof, so use serial solver to check
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+		   "Switching to serial dual simplex due to possible dual unboundedness with PAMI\n");
+      simplex_strategy = kSimplexStrategyDualPlain;
+      call_status = dual_solver.solve(force_phase2);
+      assert(called_return_from_solve_);
+      return_status = interpretCallStatus(options_->log_options, call_status,
+					  return_status, "HEkkDual::solve");
     }
   }
 

@@ -226,6 +226,9 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   HighsStatus read_status;
 
   Highs highs;
+  // Cannot use concurrent LP solvers since iteration count tests
+  // assume serial dual simplex
+  highs.concurrentLpSolver(kHighsOffString);
   highs.setOptionValue("output_flag", dev_run);
 
   // Read mps
@@ -249,6 +252,10 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   // First reset all the options to their default values
   return_status = highs.resetOptions();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  // Cannot use concurrent LP solvers since iteration count tests
+  // assume serial dual simplex
+  highs.concurrentLpSolver(kHighsOffString);
 
   highs.setOptionValue("output_flag", dev_run);
 
@@ -293,6 +300,9 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   const double use_max_objective_bound = 150.0;
   double save_objective_bound;
   Highs highs;
+  // Cannot use concurrent LP solvers since IPM finishes first and
+  // gets optimality, not bound
+  highs.concurrentLpSolver(kHighsOffString);
   highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 

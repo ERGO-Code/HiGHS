@@ -435,6 +435,9 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
+  // IPX fails with this LP, and test requires primal ray, so switch
+  // off concurrent LP solvers
+  highs.concurrentLpSolver(kHighsOffString);
   highs.setOptionValue("output_flag", dev_run);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);

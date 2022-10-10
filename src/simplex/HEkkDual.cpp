@@ -926,8 +926,11 @@ void HEkkDual::solvePhase2() {
 	  // Cannot assess this with PAMI without putting in code to
 	  // switch to correct pi_p vector to construct the
 	  // infeasibility proof (and then some more...). So, for
-	  // simplicity, switch to serial dual simplex.
-	  info.simplex_strategy = kSimplexStrategyDualPlain;
+	  // simplicity, report infeasibility. PAMI+infeasibility on
+	  // return will trigger switch to serial dual simplex.
+	  solve_phase = kSolvePhaseExit;
+	  status.has_fresh_rebuild = true; //Fiction to force exit
+	  ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
 	} else {
 	  // Assess whether possible dual unboundedness implies primal
 	  // infeasibility.
