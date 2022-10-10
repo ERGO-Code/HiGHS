@@ -404,7 +404,8 @@ install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
     RUNTIME
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 # Add library targets to the build-tree export set
 export(TARGETS libhighs
