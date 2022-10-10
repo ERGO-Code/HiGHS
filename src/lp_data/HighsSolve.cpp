@@ -437,6 +437,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     HighsModelStatus have_model_status = solver_object.model_status_;
     bool have_positive_model_status = positiveModelStatus(have_model_status);
     bool have_bound_termination = boundTermination(have_model_status);
+    HighsInt use_spawned_id = have_positive_model_status ? -1 : -kHighsIInf;
     // Look for positive model status elsewhere and either take it or
     // check that it's the same as what's known
     for (HighsInt solver = 0; solver < num_spawned_solver; solver++) {
@@ -460,6 +461,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       } else {
         // Here's the first positive model status: extract solution
         // and basis, if available
+	use_spawned_id = solver;
 	return_status = run_status[solver];
 	solver_object.model_status_ = this_model_status;
         solver_object.basis_ = parallel_highs[solver]->getBasis();
@@ -472,6 +474,17 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                      "Solution obtained from spawned %s solver\n",
                      simplexStrategyToString(spawned_solver[solver]).c_str());
       }
+    }
+    if (use_spawned_id >= 0) {
+      // Using the result from one of the spawned solvers. Should be
+      // possible to extract the EKK instance, but easier for now to
+      // re-solve from the optimal basis using serial dual simplex
+      options.simplex_max_concurrency = 1;
+      options.simplex_strategy = kSimplexStrategyDualPlain;
+      return_status = solveLpSimplex(solver_object);
+      // Restore simplex_max_concurrency and simplex_strategy
+      options.simplex_max_concurrency = simplex_max_concurrency;
+      options.simplex_strategy = simplex_strategy;
     }
   }
   return solveLpReturn(return_status, solver_object, message);

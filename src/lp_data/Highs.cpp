@@ -1384,6 +1384,14 @@ HighsStatus Highs::run() {
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
+  if (!dual_ray_value) {
+    // Only wanting to know if ray exists, so return false if there is
+    // no invert
+    if (!ekk_instance_.status_.has_invert) {
+      has_dual_ray = false;
+      return HighsStatus::kOk;
+    }
+  }
   if (!ekk_instance_.status_.has_invert)
     return invertRequirementError("getDualRay");
   return getDualRayInterface(has_dual_ray, dual_ray_value);
@@ -1409,6 +1417,14 @@ HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
+  if (!primal_ray_value) {
+    // Only wanting to know if ray exists, so return false if there is
+    // no invert
+    if (!ekk_instance_.status_.has_invert) {
+      has_primal_ray = false;
+      return HighsStatus::kOk;
+    }
+  }
   if (!ekk_instance_.status_.has_invert)
     return invertRequirementError("getPrimalRay");
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
@@ -3121,7 +3137,16 @@ HighsStatus Highs::openWriteFile(const string filename,
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
-  assert(return_status == run_return_status);
+  const bool ok_return_status = return_status == run_return_status;
+  if (!ok_return_status) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Highs::returnFromRun has run_return_status = \"%s\" but model_status_ = \"%s\" yields \"%s\" \n",
+		 highsStatusToString(run_return_status).c_str(),
+		 utilModelStatusToString(model_status_).c_str(),
+		 highsStatusToString(return_status).c_str());
+    return HighsStatus::kError;
+  }
+  assert(ok_return_status);
   //  return_status = run_return_status;
   switch (model_status_) {
       // First consider the error returns
