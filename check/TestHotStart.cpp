@@ -10,7 +10,7 @@ TEST_CASE("HotStart-avgas", "[highs_test_hot_start]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
   const HighsInt num_col = lp.num_col_;
@@ -30,7 +30,7 @@ TEST_CASE("HotStart-avgas", "[highs_test_hot_start]") {
 
   highs.setOptionValue("output_flag", false);
   highs.run();
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
 
   vector<double> integer_solution = highs.getSolution().col_value;
 
@@ -71,7 +71,7 @@ TEST_CASE("HotStart-rgn", "[highs_test_hot_start]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
   const HighsInt num_col = lp.num_col_;
@@ -84,7 +84,7 @@ TEST_CASE("HotStart-rgn", "[highs_test_hot_start]") {
   // Get the MIP solution to provide bound tightenings
   highs.setOptionValue("output_flag", false);
   highs.run();
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
 
   vector<double> mip_solution = highs.getSolution().col_value;
 

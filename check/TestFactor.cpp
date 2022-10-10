@@ -25,7 +25,7 @@ TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   std::string model = avgas ? "avgas" : "adlittle";
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   lp = highs.getLp();
   num_row = lp.num_row_;
@@ -52,7 +52,9 @@ TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
   std::string model = avgas ? "avgas" : "adlittle";
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.concurrentLpSolver(kHighsOffString);
+
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   // Switch off presolve so that recovery of DSE weights can be
   // assessed
@@ -113,7 +115,7 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   lp = highs.getLp();
   num_col = lp.num_col_;

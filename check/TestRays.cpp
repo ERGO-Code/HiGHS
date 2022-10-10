@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-14;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
@@ -249,7 +249,7 @@ void testInfeasibleMps(const std::string model,
 void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::kMinimize) {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   if (dev_run) highs.setOptionValue("log_dev_level", 1);
 
@@ -292,7 +292,7 @@ void testUnboundedMps(const std::string model,
 
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -435,7 +435,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
@@ -468,7 +468,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);

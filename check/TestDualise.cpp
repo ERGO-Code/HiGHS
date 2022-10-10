@@ -18,7 +18,7 @@ void instanceTest(Highs& highs, const std::string model_name);
 
 TEST_CASE("Dualise", "[highs_test_dualise]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   // simpleTest(highs);
   // distillationTest(highs);
   // freeColumnTest(highs);

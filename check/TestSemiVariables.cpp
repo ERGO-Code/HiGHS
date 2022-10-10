@@ -11,7 +11,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   const HighsInfo& info = highs.getInfo();
   HighsStatus return_status;
   double optimal_objective_function_value;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsModel model;
   HighsLp& lp = model.lp_;
   lp.num_col_ = 4;
@@ -90,7 +90,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 0;
@@ -156,7 +156,7 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   double optimal_objective_function_value;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   std::string model = "";
   std::string model_file;
   // Solve the same semi-continuous model from MPS and .lp files

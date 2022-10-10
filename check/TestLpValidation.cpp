@@ -38,7 +38,7 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   //  lp.scale_.row.resize(1);
   //  lp.scale_.col.resize(1);
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   HighsStatus return_status;
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
@@ -310,7 +310,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::kWarning);
 
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   const HighsLp& internal_lp = highs.getLp();
   double check_value;
@@ -396,7 +396,7 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   lp.a_matrix_.value_ = {1e300};
   lp.row_lower_ = {1};
   lp.row_upper_ = {inf};
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   // Reading a model with a large value results in HighsStatus::kError
   return_status = highs.passModel(lp);
   if (dev_run)
@@ -422,7 +422,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   const HighsInt change_coefficient_col = 4;
   const HighsInt zero_coefficient_row = 4;

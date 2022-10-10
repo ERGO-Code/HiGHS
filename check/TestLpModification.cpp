@@ -48,7 +48,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
 
 TEST_CASE("LP-717-od", "[highs_data]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) ==
           HighsStatus::kOk);
   std::vector<HighsInt> index = {0};
@@ -82,7 +82,7 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
   lp.a_matrix_.value_ = {1, -1, -3, 1, 1, 1, -2, 3, 1, 2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsLp& highs_lp = highs.getLp();
   highs.passModel(lp);
   highs.run();
@@ -90,7 +90,7 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
   HighsInfo info0 = highs.getInfo();
   HighsSolution solution0 = highs.getSolution();
   highs.clear();
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   std::vector<double> row_block_col_cost;
   std::vector<double> row_block_col_lower;
   std::vector<double> row_block_col_upper;
@@ -194,7 +194,7 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
   lp.a_matrix_.value_ = {1, -1, 1, -1, -3, 1, 1, 1, 1, 1, 1, -2, 3, 1, -1, 2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsLp& highs_lp = highs.getLp();
   highs.passModel(lp);
   highs.run();
@@ -202,7 +202,7 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
   HighsInfo info0 = highs.getInfo();
   HighsSolution solution0 = highs.getSolution();
   highs.clear();
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   std::vector<double> row_block_col_cost;
   std::vector<double> row_block_col_lower;
   std::vector<double> row_block_col_upper;
@@ -314,7 +314,7 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
                          1, -1, 2, 1,  -1, 1, 1, 1, 1, 1, 1, 1,  -1};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsLp& highs_lp = highs.getLp();
   highs.passModel(lp);
   highs.run();
@@ -322,7 +322,7 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
   HighsInfo info0 = highs.getInfo();
   HighsSolution solution0 = highs.getSolution();
   highs.clear();
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   std::vector<double> row_block_col_cost;
   std::vector<double> row_block_col_lower;
   std::vector<double> row_block_col_upper;
@@ -477,7 +477,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   Highs highs;
   highs.passOptions(options);
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   return_status = highs.setOptionValue("highs_debug_level", 3);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -1072,7 +1072,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
 TEST_CASE("LP-getcols", "[highs_data]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   HighsInt aindex[2] = {0, 1};
@@ -1099,7 +1099,7 @@ TEST_CASE("LP-getcols", "[highs_data]") {
 
 TEST_CASE("LP-getrows", "[highs_data]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
   HighsInt aindex = 0;

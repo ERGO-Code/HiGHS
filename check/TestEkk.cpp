@@ -9,7 +9,7 @@ void ekk_solve(Highs& highs, std::string presolve,
                const HighsModelStatus require_model_status,
                const double require_optimal_objective = 0) {
   SpecialLps special_lps;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs.setOptionValue("simplex_strategy", kSimplexStrategyDual) ==
@@ -65,7 +65,7 @@ void ekk_scipLpi3(Highs& highs) {
 
 TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   const bool from_file = true;
   if (from_file) {
@@ -87,7 +87,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   ekk_distillation(highs);
   ekk_blending(highs);
 }

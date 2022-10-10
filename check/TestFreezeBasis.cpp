@@ -10,7 +10,8 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.concurrentLpSolver(kHighsOffString);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
   const HighsInt num_col = lp.num_col_;
@@ -34,7 +35,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
 
   highs.setOptionValue("output_flag", false);
   highs.run();
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
 
   vector<double> integer_solution = highs.getSolution().col_value;
   vector<double> local_col_lower;
@@ -79,7 +80,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   local_col_upper = original_col_upper;
   highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
                          &local_col_upper[0]);
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
   highs.run();
   // highs.setOptionValue("output_flag", false);
   double semi_continuous_objective = info.objective_function_value;
@@ -93,7 +94,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   local_col_upper = integer_solution;
   highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
                          &local_col_upper[0]);
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
   highs.run();
   // highs.setOptionValue("output_flag", false);
 
@@ -114,7 +115,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   if (dev_run) printf("Unfreeze basis %d\n", (int)frozen_basis_id2);
   REQUIRE(highs.unfreezeBasis(frozen_basis_id2) == HighsStatus::kOk);
   // Solving the LP should require no iterations
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
   highs.run();
   // highs.setOptionValue("output_flag", false);
   REQUIRE(info.simplex_iteration_count == 0);
@@ -136,7 +137,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   if (dev_run) printf("Unfreeze basis %d\n", (int)frozen_basis_id1);
   REQUIRE(highs.unfreezeBasis(frozen_basis_id1) == HighsStatus::kOk);
   // Solving the LP should require no iterations
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
   highs.run();
   // highs.setOptionValue("output_flag", false);
   dl_objective = fabs(continuous_objective - info.objective_function_value);
@@ -150,7 +151,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   if (dev_run) printf("Unfreeze basis %d\n", (int)frozen_basis_id0);
   REQUIRE(highs.unfreezeBasis(frozen_basis_id0) == HighsStatus::kOk);
   // Solving the LP should require the same number of iterations as before
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
   highs.run();
   // highs.setOptionValue("output_flag", false);
   dl_objective = fabs(continuous_objective - info.objective_function_value);

@@ -21,7 +21,7 @@ void testSolver(Highs& highs, const std::string solver,
   bool use_simplex = solver == "simplex";
   const HighsInfo& info = highs.getInfo();
 
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   return_status = highs.setOptionValue("solver", solver);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -226,7 +226,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   HighsStatus read_status;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   // Read mps
   model = "adlittle";
@@ -250,7 +250,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.resetOptions();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   read_status = highs.readModel(model_file);
@@ -293,7 +293,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   const double use_max_objective_bound = 150.0;
   double save_objective_bound;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
   //  status = highs.setOptionValue("log_dev_level",

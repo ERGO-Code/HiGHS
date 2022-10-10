@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status);
@@ -18,7 +18,7 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   HighsStatus require_read_status;
   HighsModelStatus require_model_status;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   //  const HighsInfo& info = highs.getInfo();
 
   const bool test_st_test23 = false;

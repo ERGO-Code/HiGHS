@@ -16,7 +16,7 @@ TEST_CASE("logging", "[highs_logging]") {
   log_file = "temp.log";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   // By default, initial output is just to to console
   return_status = highs.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -55,7 +55,7 @@ TEST_CASE("no-logging", "[highs_logging]") {
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   return_status = highs.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kOk);
 

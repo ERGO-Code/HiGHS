@@ -17,7 +17,7 @@ void testRanging(Highs& highs);
 
 TEST_CASE("Ranging-min", "[highs_test_ranging]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
@@ -37,7 +37,7 @@ TEST_CASE("Ranging-min", "[highs_test_ranging]") {
 
 TEST_CASE("Ranging-max", "[highs_test_ranging]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
@@ -60,7 +60,7 @@ TEST_CASE("Ranging-max", "[highs_test_ranging]") {
 HighsStatus quietRun(Highs& highs) {
   highs.setOptionValue("output_flag", false);
   HighsStatus call_status = highs.run();
-  if (dev_run) highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("output_flag", dev_run);
   return call_status;
 }
 

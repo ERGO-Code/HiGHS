@@ -14,13 +14,13 @@ void rowlessMIP(Highs& highs);
 
 TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   distillationMIP(highs);
 }
 
 TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   rowlessMIP(highs);
 }
 
@@ -29,7 +29,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   highs.run();
   highs.readModel(filename);
@@ -87,7 +87,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(mip_node_count == 1);
 
   highs.clearModel();
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   REQUIRE(highs.changeColsIntegrality(num_set_entries, &set[0],
                                       &integrality[0]) == HighsStatus::kOk);
@@ -103,7 +103,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   }
 
   highs.clearModel();
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   REQUIRE(highs.changeColsIntegrality(&mask[0], &integrality[0]) ==
           HighsStatus::kOk);
@@ -120,7 +120,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
 
 TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
@@ -157,7 +157,7 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
   lp.offset_ = offset;
   optimal_objective += offset;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
   const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
@@ -221,7 +221,7 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
 
 TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   HighsStatus return_status;
   HighsModelStatus model_status;
@@ -339,7 +339,7 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 1;
   lp.num_row_ = 0;
@@ -463,7 +463,7 @@ void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective,
            const double require_iteration_count) {
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
   REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 

@@ -36,7 +36,7 @@ TEST_CASE("PresolveSolvePostsolve", "[highs_test_presolve]") {
 
 TEST_CASE("Presolve", "[highs_test_presolve]") {
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
 
   // Make sure that an empty LP returns kNotReduced
   const HighsModel& presolved_model = highs.getPresolvedModel();

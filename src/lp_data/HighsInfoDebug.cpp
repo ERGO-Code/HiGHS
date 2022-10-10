@@ -52,6 +52,8 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kUnknown:
+    case HighsModelStatus::kInterrupted:
+    case HighsModelStatus::kRaceTimerStop:
       // Should have info
       assert(have_info == true);
       if (have_primal_solution) {

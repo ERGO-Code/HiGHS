@@ -435,7 +435,7 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
   std::stringstream ss;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
   HighsLp lp = highs.getLp();
   HighsInt num_col = lp.num_col_;
@@ -627,7 +627,7 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   lp.a_matrix_.value_ = {15, 2, 10, 25, 3, 20};
   lp.sense_ = ObjSense::kMaximize;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   highs.run();
   if (dev_run) highs.writeSolution("", 1);

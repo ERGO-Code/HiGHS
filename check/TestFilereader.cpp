@@ -24,7 +24,8 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = false;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.concurrentLpSolver(kHighsOffString);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
   // Try to run HiGHS with default options. No model loaded so OK
@@ -95,7 +96,7 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   HighsStatus status;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
@@ -122,7 +123,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
   // Read mps
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
   HighsLp lp_mps = highs.getLp();
@@ -188,7 +189,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   HighsStatus status;
 
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
