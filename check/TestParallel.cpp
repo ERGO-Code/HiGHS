@@ -6,7 +6,7 @@
 using namespace highs;
 
 const HighsInt numThreads = (std::thread::hardware_concurrency() + 1) / 2;
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 bool equalObjective(const double obj0, const double obj1);
