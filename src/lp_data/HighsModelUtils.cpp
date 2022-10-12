@@ -914,13 +914,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   fprintf(file, "        max.rel.err = %.2e on row %d\n", relative_error_value,
           absolute_error_index == 0 ? 0 : (int)relative_error_index);
   fprintf(file, "%8s%s\n", "",
-          relative_error_value <= kGlpsolHighQuality
-              ? "High quality"
-              : relative_error_value <= kGlpsolMediumQuality
-                    ? "Medium quality"
-                    : relative_error_value <= kGlpsolLowQuality
-                          ? "Low quality"
-                          : "PRIMAL SOLUTION IS WRONG");
+          relative_error_value <= kGlpsolHighQuality     ? "High quality"
+          : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+          : relative_error_value <= kGlpsolLowQuality
+              ? "Low quality"
+              : "PRIMAL SOLUTION IS WRONG");
   fprintf(file, "\n");
 
   // Primal infeasibility
@@ -943,13 +941,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
               ? (int)relative_error_index
               : (int)(relative_error_index - lp.num_col_));
   fprintf(file, "%8s%s\n", "",
-          relative_error_value <= kGlpsolHighQuality
-              ? "High quality"
-              : relative_error_value <= kGlpsolMediumQuality
-                    ? "Medium quality"
-                    : relative_error_value <= kGlpsolLowQuality
-                          ? "Low quality"
-                          : "PRIMAL SOLUTION IS INFEASIBLE");
+          relative_error_value <= kGlpsolHighQuality     ? "High quality"
+          : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+          : relative_error_value <= kGlpsolLowQuality
+              ? "Low quality"
+              : "PRIMAL SOLUTION IS INFEASIBLE");
   fprintf(file, "\n");
 
   if (have_dual) {
@@ -965,13 +961,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     fprintf(file, "        max.rel.err = %.2e on column %d\n",
             relative_error_value, (int)relative_error_index);
     fprintf(file, "%8s%s\n", "",
-            relative_error_value <= kGlpsolHighQuality
-                ? "High quality"
-                : relative_error_value <= kGlpsolMediumQuality
-                      ? "Medium quality"
-                      : relative_error_value <= kGlpsolLowQuality
-                            ? "Low quality"
-                            : "DUAL SOLUTION IS WRONG");
+            relative_error_value <= kGlpsolHighQuality     ? "High quality"
+            : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+            : relative_error_value <= kGlpsolLowQuality
+                ? "Low quality"
+                : "DUAL SOLUTION IS WRONG");
     fprintf(file, "\n");
 
     // Dual infeasibility
@@ -995,13 +989,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
                 ? (int)relative_error_index
                 : (int)(relative_error_index - lp.num_col_));
     fprintf(file, "%8s%s\n", "",
-            relative_error_value <= kGlpsolHighQuality
-                ? "High quality"
-                : relative_error_value <= kGlpsolMediumQuality
-                      ? "Medium quality"
-                      : relative_error_value <= kGlpsolLowQuality
-                            ? "Low quality"
-                            : "DUAL SOLUTION IS INFEASIBLE");
+            relative_error_value <= kGlpsolHighQuality     ? "High quality"
+            : relative_error_value <= kGlpsolMediumQuality ? "Medium quality"
+            : relative_error_value <= kGlpsolLowQuality
+                ? "Low quality"
+                : "DUAL SOLUTION IS INFEASIBLE");
     fprintf(file, "\n");
   }
   fprintf(file, "End of output\n");
