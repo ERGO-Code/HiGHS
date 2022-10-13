@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: 'If you use this software, please cite it as below'
+authors:
+- given-names: Julian
+  family-names: Hall
+  email: HighsOpt@gmail.com
+- given-names: Ivet
+  family-names: Galabova
+- given-names: Leona
+  family-names: Gottwald
+- given-names: Michael
+  family-names: Feldmeier
+title: "HiGHS"
+version: 1.2.2
+date-released: 2022-04-18
+url: "https://github.com/ERGO-Code/HiGHS/releases/tag/v1.2.2"
+preferred-citation:
+  type: article
+  authors:
+    - given-names: Q.
+      family-names: Huangfu
+    - given-names: J. A. J.
+      family-names: Hall
+      email: jajhall@ed.ac.uk
+      affiliation: University of Edinburgh
+  doi: 10.1007/s12532-017-0130-5
+  journal: "Mathematical Programming Computation"
+  start: 119 # First page number
+  end: 142 # Last page number
+  title: "Parallelizing the dual revised simplex method"
+  issue: 1
+  volume: 10
+  year: 2018

@@ -14,9 +14,9 @@
  * @brief
  */
 
-#include <sstream>
+#include "simplex/HSimplexReport.h"
 
-#include "simplex/HSimplex.h"
+#include <sstream>
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
                                   const HighsInt iteration_count,

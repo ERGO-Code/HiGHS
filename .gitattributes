@@ -1,0 +1,3 @@
+# Exclude mps/lp files from github language stats
+*.mps linguist-vendored
+*.lp linguist-vendored

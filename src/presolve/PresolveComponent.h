@@ -16,10 +16,18 @@
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
+// Not all necessary, but copied from Presolve.h to avoid non-Linux
+// failures
+#include <list>
+#include <map>
+#include <stack>
+#include <string>
+#include <utility>
+
 #include "HighsPostsolveStack.h"
-#include "presolve/HAggregator.h"
-#include "presolve/Presolve.h"
+#include "lp_data/HighsLp.h"
 #include "util/HighsComponent.h"
+#include "util/HighsTimer.h"
 
 // Class defining the Presolve Component to be used in HiGHS.
 // What used to be in Presolve.h but allowing for further testing and dev.
@@ -27,11 +35,19 @@
 // The structure of component is general, of the presolve component - presolve
 // specific.
 
+enum class HighsPostsolveStatus {
+  kNotPresolved = -1,
+  kNoPrimalSolutionError,
+  kSolutionRecovered,
+  kBasisError
+};
+
 struct PresolveComponentData : public HighsComponentData {
   HighsLp reduced_lp_;
   presolve::HighsPostsolveStack postSolveStack;
   HighsSolution recovered_solution_;
   HighsBasis recovered_basis_;
+  HighsPresolveLog presolve_log_;
 
   void clear() {
     is_valid = false;
@@ -67,8 +83,6 @@ struct PresolveComponentInfo : public HighsComponentInfo {
 struct PresolveComponentOptions : public HighsComponentOptions {
   bool is_valid = false;
   // presolve options later when needed.
-  bool presolve_on = true;
-  std::vector<presolve::Presolver> order;
 
   std::string iteration_strategy = "smart";
   HighsInt max_iterations = 0;
@@ -88,6 +102,7 @@ class PresolveComponent : public HighsComponent {
   HighsPresolveStatus run();
 
   HighsLp& getReducedProblem() { return data_.reduced_lp_; }
+  HighsPresolveLog& getPresolveLog() { return data_.presolve_log_; }
 
   HighsStatus setOptions(const HighsOptions& options);
   std::string presolveStatusToString(const HighsPresolveStatus presolve_status);

@@ -4,6 +4,7 @@
 #include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "parallel/HighsParallel.h"
 
 // No commas i// Copyright (c) 2018 ERGO-Code. See license.txt for license.
 //
@@ -38,7 +39,7 @@ const double Ax[] = {-1.0,      0.301,   1.0,   -1.0, 0.301, 1.06,    1.0,
 const double rhs[] = {0.0, 80.0, 0.0, 0.0, 0.0, 0.0, 0.0, 44.0, 300.0};
 const char constr_type[] = {'<', '<', '=', '<', '<', '=', '<', '<', '<'};
 
-TEST_CASE("afiro", "[highs_ipx]") {
+TEST_CASE("test-ipx", "[highs_ipx]") {
   ipx::LpSolver lps;
   ipx::Parameters parameters;
   if (!dev_run) parameters.display = 0;
@@ -48,6 +49,8 @@ TEST_CASE("afiro", "[highs_ipx]") {
   Int load_status = lps.LoadModel(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax,
                                   rhs, constr_type);
   REQUIRE(load_status == 0);
+
+  highs::parallel::initialize_scheduler();
 
   Int status = lps.Solve();
   bool is_solved = status == IPX_STATUS_solved;

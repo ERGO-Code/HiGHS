@@ -52,7 +52,7 @@ void Quass::loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
   rt.statistics.density_nullspace.push_back(0.0);
 }
 
-void tidyup(Vector& p, Vector& rowmove, Basis& basis, Runtime& runtime) {
+static void tidyup(Vector& p, Vector& rowmove, Basis& basis, Runtime& runtime) {
   for (unsigned acon : basis.getactive()) {
     if (acon >= runtime.instance.num_con) {
       p.value[acon - runtime.instance.num_con] = 0.0;
@@ -62,9 +62,7 @@ void tidyup(Vector& p, Vector& rowmove, Basis& basis, Runtime& runtime) {
   }
 }
 
-void recomputexatfsep(Runtime& runtime) {}
-
-void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
+static void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
                     Vector& rowmove) {
   runtime.instance.A.mat_vec(p, rowmove);
   return;
@@ -91,7 +89,7 @@ void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 }
 
 // VECTOR
-Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
+static Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
                                      CholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
   Vector g2 = -redgrad.get();
@@ -104,7 +102,7 @@ Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 }
 
 // VECTOR
-Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
+static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
                                      CholeskyFactor& factor, const Vector& yp,
                                      Gradient& gradient, Vector& gyp, Vector& l,
                                      Vector& m, Vector& p) {
@@ -132,7 +130,7 @@ Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
   }
 }
 
-double computemaxsteplength(Runtime& runtime, const Vector& p,
+static double computemaxsteplength(Runtime& runtime, const Vector& p,
                             Gradient& gradient, Vector& buffer_Qp, bool& zcd) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
   if (fabs(denominator) > 10E-5) {
@@ -148,7 +146,7 @@ double computemaxsteplength(Runtime& runtime, const Vector& p,
   }
 }
 
-QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
+static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
                       Vector& buffer_d, HighsInt& maxabsd,
                       HighsInt& constrainttodrop) {
   HighsInt idx = indexof(basis.getinactive(), newactivecon);
@@ -183,7 +181,7 @@ QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
   // return NullspaceReductionResult(idx != -1);
 }
 
-std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
+static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
                                     ReducedCosts& redcosts) {
   switch (runtime.settings.pricing) {
     case PricingStrategy::Devex:
@@ -195,7 +193,8 @@ std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
   }
   return nullptr;
 }
-void regularize(Runtime& rt) {
+
+static void regularize(Runtime& rt) {
   // add small diagonal to hessian
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
     for (HighsInt index = rt.instance.Q.mat.start[i];
@@ -338,10 +337,11 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
           atfsep = false;
         }
       } else {
-        if (stepres.limitingconstraint ==
+        if (stepres.alpha ==
             std::numeric_limits<double>::infinity()) {
           // unbounded
           runtime.status = ProblemStatus::UNBOUNDED;
+          return;
         }
         atfsep = false;
         redgrad.update(stepres.alpha, false);

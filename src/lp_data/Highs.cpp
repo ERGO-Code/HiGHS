@@ -79,7 +79,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
-                                  const std::string value) {
+                                  const std::string& value) {
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
@@ -96,7 +96,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::readOptions(const std::string filename) {
+HighsStatus Highs::readOptions(const std::string& filename) {
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Empty file name so not reading options\n");
@@ -160,7 +160,7 @@ HighsStatus Highs::resetOptions() {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::writeOptions(const std::string filename,
+HighsStatus Highs::writeOptions(const std::string& filename,
                                 const bool report_only_deviations) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
@@ -217,7 +217,7 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   }
 }
 
-HighsStatus Highs::writeInfo(const std::string filename) const {
+HighsStatus Highs::writeInfo(const std::string& filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -484,7 +484,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
-HighsStatus Highs::readModel(const std::string filename) {
+HighsStatus Highs::readModel(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   Filereader* reader =
@@ -524,7 +524,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::readBasis(const std::string filename) {
+HighsStatus Highs::readBasis(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   // Try to read basis file into read_basis
@@ -549,7 +549,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::writeModel(const std::string filename) {
+HighsStatus Highs::writeModel(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
@@ -575,7 +575,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeBasis(const std::string filename) {
+HighsStatus Highs::writeBasis(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -843,6 +843,58 @@ HighsStatus Highs::run() {
   HighsInt postsolve_iteration_count = -1;
   const bool ipx_no_crossover =
       options_.solver == kIpmString && !options_.run_crossover;
+
+  if (options_.icrash) {
+    ICrashStrategy strategy = ICrashStrategy::kICA;
+    bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
+    if (!strategy_ok) {
+      // std::cout << "ICrash error: unknown strategy." << std::endl;
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "ICrash error: unknown strategy.\n");
+      return HighsStatus::kError;
+    }
+    ICrashOptions icrash_options{
+        options_.icrash_dualize,         strategy,
+        options_.icrash_starting_weight, options_.icrash_iterations,
+        options_.icrash_approx_iter,     options_.icrash_exact,
+        options_.icrash_breakpoints,     options_.log_options};
+
+    HighsStatus icrash_status =
+        callICrash(model_.lp_, icrash_options, icrash_info_);
+
+    if (icrash_status != HighsStatus::kOk) return returnFromRun(icrash_status);
+
+    // for now set the solution_.col_value
+    solution_.col_value = icrash_info_.x_values;
+    // Better not to use Highs::crossover
+    const bool use_highs_crossover = false;
+    if (use_highs_crossover) {
+      crossover(solution_);
+      // loops:
+      called_return_from_run = true;
+
+      options_.icrash = false;  // to avoid loop
+    } else {
+      HighsStatus crossover_status = callCrossover(
+          options_, model_.lp_, basis_, solution_, model_status_, info_);
+      // callCrossover can return HighsStatus::kWarning due to
+      // imprecise dual values. Ignore this since primal simplex will
+      // be called to clean up duals
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Crossover following iCrash has return status of %s, and "
+                   "problem status is %s\n",
+                   highsStatusToString(crossover_status).c_str(),
+                   modelStatusToString(model_status_).c_str());
+      if (crossover_status == HighsStatus::kError)
+        return returnFromRun(crossover_status);
+      assert(options_.simplex_strategy == kSimplexStrategyPrimal);
+    }
+    // timer_.stopRunHighsClock();
+    // run();
+
+    // todo: add "dual" values
+    // return HighsStatus::kOk;
+  }
 
   if (!basis_.valid && solution_.value_valid) {
     // There is no valid basis, but there is a valid solution, so use
@@ -1149,17 +1201,22 @@ HighsStatus Highs::run() {
             basis_.col_status = presolve_.data_.recovered_basis_.col_status;
             basis_.row_status = presolve_.data_.recovered_basis_.row_status;
             basis_.debug_origin_name += ": after postsolve";
-            // Possibly force debug to perform KKT check on what's
-            // returned from postsolve
-            const bool force_debug = false;
-            HighsInt save_highs_debug_level = options_.highs_debug_level;
-            if (force_debug)
-              options_.highs_debug_level = kHighsDebugLevelCostly;
-            if (debugHighsSolution("After returning from postsolve", options_,
-                                   model_, solution_,
-                                   basis_) == HighsDebugStatus::kLogicalError)
-              return returnFromRun(HighsStatus::kError);
-            options_.highs_debug_level = save_highs_debug_level;
+            // Basic primal activities are wrong after postsolve, so
+            // possibly skip KKT check
+            const bool perform_kkt_check = true;
+            if (perform_kkt_check) {
+              // Possibly force debug to perform KKT check on what's
+              // returned from postsolve
+              const bool force_debug = false;
+              HighsInt save_highs_debug_level = options_.highs_debug_level;
+              if (force_debug)
+                options_.highs_debug_level = kHighsDebugLevelCostly;
+              if (debugHighsSolution("After returning from postsolve", options_,
+                                     model_, solution_,
+                                     basis_) == HighsDebugStatus::kLogicalError)
+                return returnFromRun(HighsStatus::kError);
+              options_.highs_debug_level = save_highs_debug_level;
+            }
             // Save the options to allow the best simplex strategy to
             // be used
             HighsOptions save_options = options_;
@@ -1318,6 +1375,24 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
+HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
+                                    HVector& row_ep_buffer) {
+  has_dual_ray = ekk_instance_.status_.has_dual_ray;
+  if (has_dual_ray) {
+    ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
+    row_ep_buffer.clear();
+    row_ep_buffer.count = 1;
+    row_ep_buffer.packFlag = true;
+    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+    row_ep_buffer.index[0] = iRow;
+    row_ep_buffer.array[iRow] = ekk_instance_.info_.dual_ray_sign_;
+
+    ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
+  }
+
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
   if (!ekk_instance_.status_.has_invert)
@@ -1340,6 +1415,13 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   return return_status;
 }
 
+bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
+
+const HighsInt* Highs::getBasicVariablesArray() const {
+  assert(ekk_instance_.status_.has_invert);
+  return ekk_instance_.basis_.basicIndex_.data();
+}
+
 HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
   if (basic_variables == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -1347,6 +1429,20 @@ HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
     return HighsStatus::kError;
   }
   return getBasicVariablesInterface(basic_variables);
+}
+
+HighsStatus Highs::getBasisInverseRowSparse(const HighsInt row,
+                                            HVector& row_ep_buffer) {
+  ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
+  row_ep_buffer.clear();
+  row_ep_buffer.count = 1;
+  row_ep_buffer.index[0] = row;
+  row_ep_buffer.array[row] = 1;
+  row_ep_buffer.packFlag = true;
+
+  ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
+
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
@@ -1598,7 +1694,8 @@ HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::setBasis(const HighsBasis& basis, const std::string origin) {
+HighsStatus Highs::setBasis(const HighsBasis& basis,
+                            const std::string& origin) {
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
@@ -2328,7 +2425,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeSolution(const std::string filename,
+HighsStatus Highs::writeSolution(const std::string& filename,
                                  const HighsInt style) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -2338,8 +2435,8 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
-                    style);
+  writeSolutionFile(file, options_, model_, basis_, solution_, info_,
+                    model_status_, style);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
@@ -2361,7 +2458,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::readSolution(const std::string filename,
+HighsStatus Highs::readSolution(const std::string& filename,
                                 const HighsInt style) {
   return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
                           style);
@@ -2391,9 +2488,14 @@ std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
   return utilBasisValidityToString(basis_validity);
 }
 
+std::string Highs::presolveRuleTypeToString(
+    const HighsInt presolve_rule) const {
+  return utilPresolveRuleTypeToString(presolve_rule);
+}
+
 // Private methods
-void Highs::deprecationMessage(const std::string method_name,
-                               const std::string alt_method_name) const {
+void Highs::deprecationMessage(const std::string& method_name,
+                               const std::string& alt_method_name) const {
   if (alt_method_name.compare("None") == 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Method %s is deprecated: no alternative method\n",
@@ -2469,6 +2571,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
 
   // Update reduction counts.
   assert(presolve_return_status == presolve_.presolve_status_);
+  presolve_log_ = presolve_.getPresolveLog();
   switch (presolve_.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
@@ -2508,6 +2611,8 @@ HighsPostsolveStatus Highs::runPostsolve() {
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
+  // Compute the row activities
+  calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
     presolve_.negateReducedLpColDuals(true);
@@ -2740,7 +2845,10 @@ HighsStatus Highs::callSolveMip() {
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
   HighsLp use_lp;
   if (has_semi_variables) {
-    use_lp = withoutSemiVariables(model_.lp_);
+    // Replace any semi-variables by a continuous/integer variable and
+    // a (temporary) binary. Any initial solution must accommodate this.
+    use_lp = withoutSemiVariables(model_.lp_, solution_,
+                                  options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
   HighsMipSolver solver(options_, lp, solution_);
@@ -3227,7 +3335,7 @@ void Highs::reportSolvedLpQpStats() {
                "HiGHS run time      : %13.2f\n", run_time);
 }
 
-void Highs::underDevelopmentLogMessage(const std::string method_name) {
+void Highs::underDevelopmentLogMessage(const std::string& method_name) {
   highsLogUser(options_.log_options, HighsLogType::kWarning,
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
@@ -3261,7 +3369,7 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::openLogFile(const std::string log_file) {
+HighsStatus Highs::openLogFile(const std::string& log_file) {
   highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }

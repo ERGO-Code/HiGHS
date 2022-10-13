@@ -46,7 +46,6 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt num_nz, const HighsInt* start,
                          const HighsInt* index, const double* value);
 
-// No commas in test case name.
 TEST_CASE("LP-717-od", "[highs_data]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -1043,6 +1042,32 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.scaleRow(highs.getNumRow() - 1, -2.0) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
+
+  free(col1357_cost);
+  free(col1357_lower);
+  free(col1357_upper);
+  free(col1357_start);
+  free(col1357_index);
+  free(col1357_value);
+
+  free(row0135789_lower);
+  free(row0135789_upper);
+  free(row0135789_start);
+  free(row0135789_index);
+  free(row0135789_value);
+
+  free(row012_lower);
+  free(row012_upper);
+  free(row012_start);
+  free(row012_index);
+  free(row012_value);
+
+  free(col0123_cost);
+  free(col0123_lower);
+  free(col0123_upper);
+  free(col0123_start);
+  free(col0123_index);
+  free(col0123_value);
 }
 
 TEST_CASE("LP-getcols", "[highs_data]") {
@@ -1396,7 +1421,7 @@ void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
   if (!dev_run) return;
   highsLogUser(log_options, HighsLogType::kInfo,
                "%s: HighsStatus = %" HIGHSINT_FORMAT " - %s\n", message.c_str(),
-               (int)status, HighsStatusToString(status).c_str());
+               (int)status, highsStatusToString(status).c_str());
 }
 
 void callRun(Highs& highs, const HighsLogOptions& log_options,

@@ -475,6 +475,15 @@ restart:
 void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
+  bool feasible;
+  if (havesolution)
+    feasible =
+        bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        row_violation_ <= options_mip_->mip_feasibility_tolerance;
+  else
+    feasible = false;
+
   dual_bound_ = mipdata_->lower_bound;
   if (mipdata_->objectiveFunction.isIntegral()) {
     double rounded_lower_bound =
@@ -497,7 +506,7 @@ void HighsMipSolver::cleanupSolve() {
 
   if (modelstatus_ == HighsModelStatus::kNotset ||
       modelstatus_ == HighsModelStatus::kInfeasible) {
-    if (havesolution)
+    if (feasible && havesolution)
       modelstatus_ = HighsModelStatus::kOptimal;
     else
       modelstatus_ = HighsModelStatus::kInfeasible;

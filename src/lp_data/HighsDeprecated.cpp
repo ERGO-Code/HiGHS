@@ -35,7 +35,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                       const std::string value) {
+                                       const std::string& value) {
   deprecationMessage("setHighsOptionValue", "setOptionValue");
   return setOptionValue(option, value);
 }
@@ -46,7 +46,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return setOptionValue(option, value);
 }
 
-HighsStatus Highs::readHighsOptions(const std::string filename) {
+HighsStatus Highs::readHighsOptions(const std::string& filename) {
   deprecationMessage("readHighsOptions", "readOptions");
   return readOptions(filename);
 }
@@ -91,7 +91,7 @@ HighsStatus Highs::resetHighsOptions() {
 }
 
 HighsStatus Highs::writeHighsOptions(
-    const std::string filename, const bool report_only_non_default_values) {
+    const std::string& filename, const bool report_only_non_default_values) {
   deprecationMessage("writeHighsOptions", "writeOptions");
   return writeOptions(filename, report_only_non_default_values);
 }
@@ -129,7 +129,7 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info,
   return getInfoValue(info, value);
 }
 
-HighsStatus Highs::writeHighsInfo(const std::string filename) {
+HighsStatus Highs::writeHighsInfo(const std::string& filename) {
   deprecationMessage("writeHighsInfo", "writeInfo");
   return writeInfo(filename);
 }
@@ -145,7 +145,7 @@ double Highs::getHighsRunTime() {
 }
 
 #if 0
-HighsStatus Highs::writeSolution(const std::string filename,
+HighsStatus Highs::writeSolution(const std::string& filename,
                                 const bool pretty) const {
   deprecationMessage("writeSolution(filename, pretty)", "writeSolution(filename, style)");
   HighsStatus return_status = HighsStatus::kOk;
@@ -162,7 +162,8 @@ HighsStatus Highs::writeSolution(const std::string filename,
   } else {
     style = kSolutionStyleRaw;
   }
-  writeSolutionFile(file, model_.lp_, basis_, solution_, info_, model_status_,
+  writeSolutionFile(file, options_,
+		    model_, basis_, solution_, info_, model_status_,
                     style);
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;

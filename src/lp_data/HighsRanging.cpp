@@ -54,7 +54,7 @@ void HighsRanging::clear() {
   this->row_bound_dn.ou_var_.clear();
 }
 
-double infProduct(double value) {
+static double infProduct(double value) {
   // Multiplying value and kHighsInf
   if (value == 0) {
     return 0;
@@ -63,7 +63,7 @@ double infProduct(double value) {
   }
 }
 
-double possInfProduct(double poss_inf, double value) {
+static double possInfProduct(double poss_inf, double value) {
   // Multiplying something that could be infinite and value
   if (value == 0) {
     return 0;
@@ -617,7 +617,6 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
     return;
   }
   fprintf(file, "Valid\n");
-  const double double_tolerance = 1e-13;
   std::stringstream ss;
   const bool have_col_names = lp.col_names_.size() > 0;
   const bool have_row_names = lp.row_names_.size() > 0;
@@ -637,8 +636,8 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
   std::array<char, 32> dn_value;
   std::array<char, 32> up_value;
 
-  std::array<char, 32> objective =
-      highsDoubleToString(objective_function_value, double_tolerance);
+  std::array<char, 32> objective = highsDoubleToString(
+      objective_function_value, kRangingValueToStringTolerance);
   fprintf(file, "Objective %s\n", objective.data());
   if (pretty) {
     fprintf(file,
@@ -664,13 +663,13 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
               ranging.col_cost_up.objective_[iCol], name.c_str());
     } else {
       dn_objective = highsDoubleToString(ranging.col_cost_dn.objective_[iCol],
-                                         double_tolerance);
+                                         kRangingValueToStringTolerance);
       up_objective = highsDoubleToString(ranging.col_cost_up.objective_[iCol],
-                                         double_tolerance);
+                                         kRangingValueToStringTolerance);
       dn_value = highsDoubleToString(ranging.col_cost_dn.value_[iCol],
-                                     double_tolerance);
+                                     kRangingValueToStringTolerance);
       up_value = highsDoubleToString(ranging.col_cost_up.value_[iCol],
-                                     double_tolerance);
+                                     kRangingValueToStringTolerance);
       fprintf(file, raw_cost_format, name.c_str(), dn_objective.data(),
               dn_value.data(), up_value.data(), up_objective.data());
     }
@@ -700,13 +699,13 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
               ranging.col_bound_up.objective_[iCol], name.c_str());
     } else {
       dn_objective = highsDoubleToString(ranging.col_bound_dn.objective_[iCol],
-                                         double_tolerance);
+                                         kRangingValueToStringTolerance);
       up_objective = highsDoubleToString(ranging.col_bound_up.objective_[iCol],
-                                         double_tolerance);
+                                         kRangingValueToStringTolerance);
       dn_value = highsDoubleToString(ranging.col_bound_dn.value_[iCol],
-                                     double_tolerance);
+                                     kRangingValueToStringTolerance);
       up_value = highsDoubleToString(ranging.col_bound_up.value_[iCol],
-                                     double_tolerance);
+                                     kRangingValueToStringTolerance);
       fprintf(file, raw_bound_format, name.c_str(), dn_objective.data(),
               dn_value.data(), up_value.data(), up_objective.data());
     }
@@ -737,13 +736,13 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
               ranging.row_bound_up.objective_[iRow], name.c_str());
     } else {
       dn_objective = highsDoubleToString(ranging.row_bound_dn.objective_[iRow],
-                                         double_tolerance);
+                                         kRangingValueToStringTolerance);
       up_objective = highsDoubleToString(ranging.row_bound_up.objective_[iRow],
-                                         double_tolerance);
+                                         kRangingValueToStringTolerance);
       dn_value = highsDoubleToString(ranging.row_bound_dn.value_[iRow],
-                                     double_tolerance);
+                                     kRangingValueToStringTolerance);
       up_value = highsDoubleToString(ranging.row_bound_up.value_[iRow],
-                                     double_tolerance);
+                                     kRangingValueToStringTolerance);
       fprintf(file, raw_bound_format, name.c_str(), dn_objective.data(),
               dn_value.data(), up_value.data(), up_objective.data());
     }

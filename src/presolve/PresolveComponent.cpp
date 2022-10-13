@@ -73,6 +73,7 @@ HighsPresolveStatus PresolveComponent::run() {
   presolve.setInput(data_.reduced_lp_, *options_, timer);
 
   HighsModelStatus status = presolve.run(data_.postSolveStack);
+  data_.presolve_log_ = presolve.getPresolveLog();
 
   // Ensure that the presolve status is used to set
   // presolve_.presolve_status_, as well as being returned

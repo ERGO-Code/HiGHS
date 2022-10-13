@@ -267,7 +267,6 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
   HighsInt numOrbits = orbitStarts.size() - 1;
   for (HighsInt i = 0; i < numOrbits; ++i) {
-    bool containsNonBin = false;
     HighsInt fixcol = -1;
     for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
       if (domain.isFixed(orbitCols[j])) {

@@ -13,6 +13,8 @@
 
 #include "io/HMpsFF.h"
 
+#include "lp_data/HighsModelUtils.h"
+
 #ifdef ZLIB_FOUND
 #include "zstr.hpp"
 #endif
@@ -98,6 +100,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.row_lower_ = std::move(row_lower);
   lp.row_upper_ = std::move(row_upper);
 
+  lp.objective_name_ = objective_name;
   lp.row_names_ = std::move(row_names);
   lp.col_names_ = std::move(col_names);
 
@@ -119,6 +122,10 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   // hessian must have at least start_[0]=0 for the fictitious column
   // 0
   if (hessian.start_.size() == 0) hessian.clear();
+
+  // Set the objective name, creating one if necessary
+  lp.objective_name_ = findModelObjectiveName(&lp, &hessian);
+  lp.cost_row_location_ = cost_row_location;
 
   return FreeFormatParserReturnCode::kSuccess;
 }
@@ -228,6 +235,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
     num_row = 0;
     num_col = 0;
     num_nz = 0;
+    cost_row_location = -1;
     // Indicate that no duplicate rows or columns have been found
     has_duplicate_row_name_ = false;
     has_duplicate_col_name_ = false;
@@ -521,7 +529,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
                                    std::istream& file) {
   std::string strline, word;
   bool hasobj = false;
-  objective_name = "";
+  // Assign a default objective name
+  objective_name = "Objective";
 
   assert(num_row == 0);
   assert(row_lower.size() == 0);
@@ -565,9 +574,10 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       row_upper.push_back(0.0);
       row_type.push_back(Boundtype::kLe);
     } else if (strline[start] == 'N') {
-      if (objective_name == "") {
+      if (!hasobj) {
         isobj = true;
         hasobj = true;
+        cost_row_location = num_row;
       } else {
         isFreeRow = true;
       }
@@ -772,7 +782,6 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
         }
         col_count = 0;
       }
-      assert(allZeroed(col_value));
       assert(!col_cost);
       colname = word;
       auto ret = colname2idx.emplace(colname, num_col++);
@@ -1253,7 +1262,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     if (colidx < 0) {
       // add new column if did not exist yet
       colidx = getColIdx(marker, true);
-      assert(colidx == num_col-1);
+      assert(colidx == num_col - 1);
       has_lower.push_back(false);
       has_upper.push_back(false);
     }
