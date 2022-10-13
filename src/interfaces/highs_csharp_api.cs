@@ -66,6 +66,7 @@ public class HighsModel
    public int[] astart;
    public int[] aindex;
    public double[] avalue;
+   public int[] highs_integrality;
 
    public HighsModel()
    {
@@ -73,7 +74,7 @@ public class HighsModel
    }
 
    public HighsModel(double[] colcost, double[] collower, double[] colupper, double[] rowlower, double[] rowupper,
-   int[] astart, int[] aindex, double[] avalue, double offset = 0, HighsMatrixFormat a_format = HighsMatrixFormat.kColwise, HighsObjectiveSense sense = HighsObjectiveSense.kMinimize)
+   int[] astart, int[] aindex, double[] avalue, int[] highs_integrality = null, double offset = 0, HighsMatrixFormat a_format = HighsMatrixFormat.kColwise, HighsObjectiveSense sense = HighsObjectiveSense.kMinimize)
    {
       this.colcost = colcost;
       this.collower = collower;
@@ -86,6 +87,7 @@ public class HighsModel
       this.offset = offset;
       this.a_format = a_format;
       this.sense = sense;
+	  this.highs_integrality = highs_integrality;
    }
 }
 
