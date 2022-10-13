@@ -53,6 +53,15 @@ public enum HighsModelStatus
   kUnknown
 }
 
+public enum HighsIntegrality
+{
+  kContinuous = 0,
+  kInteger = 1,
+  kSemiContinuous = 2,
+  kSemiInteger = 3,
+  kImplicitInteger = 4,
+}
+
 public class HighsModel
 {
    public HighsObjectiveSense sense;
