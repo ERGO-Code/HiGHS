@@ -443,7 +443,10 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kSolverString, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
+        kSolverString,
+        "Solver option: \"simplex\", \"choose\" or \"ipm\". If "
+        "\"simplex\"/\"ipm\" is chosen then, for a MIP (QP) the integrality "
+        "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
