@@ -861,49 +861,48 @@ void Reader::processtokens() {
          continue;
       }
 
-      // + Constant
-      if (rawtokens[0].istype(RawTokenType::PLUS) && rawtokens[1].istype(RawTokenType::CONS)) {
-         processedtokens.emplace_back(rawtokens[1].dvalue);
-         nextrawtoken(2);
-         continue;
-      }
+      // + or -
+      if (rawtokens[0].istype(RawTokenType::PLUS) || rawtokens[0].istype(RawTokenType::MINUS)) {
+         double sign = rawtokens[0].istype(RawTokenType::PLUS) ? 1.0 : -1.0;
+         nextrawtoken();
 
-      // - constant
-      if (rawtokens[0].istype(RawTokenType::MINUS) && rawtokens[1].istype(RawTokenType::CONS)) {
-         processedtokens.emplace_back(-rawtokens[1].dvalue);
-         nextrawtoken(2);
-         continue;
-      }
+         // another + or - for #948, #950
+         if( rawtokens[0].istype(RawTokenType::PLUS) || rawtokens[0].istype(RawTokenType::MINUS) ) {
+            sign *= rawtokens[0].istype(RawTokenType::PLUS) ? 1.0 : -1.0;
+            nextrawtoken();
+         }
 
-      // + [
-      if (rawtokens[0].istype(RawTokenType::PLUS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
-         processedtokens.emplace_back(ProcessedTokenType::BRKOP);
-         nextrawtoken(2);
-         continue;
-      }
+         // +/- Constant
+         if (rawtokens[0].istype(RawTokenType::CONS)) {
+            processedtokens.emplace_back(sign * rawtokens[0].dvalue);
+            nextrawtoken();
+            continue;
+         }
 
-      // - [
-      if (rawtokens[0].istype(RawTokenType::MINUS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
+         // + [, + + [, - - [
+         if (rawtokens[0].istype(RawTokenType::BRKOP) && sign == 1.0) {
+            processedtokens.emplace_back(ProcessedTokenType::BRKOP);
+            nextrawtoken();
+            continue;
+         }
+
+         // - [, + - [, - + [
+         if (rawtokens[0].istype(RawTokenType::BRKOP))
+            lpassert(false);
+
+         // +/- variable name
+         if (rawtokens[0].istype(RawTokenType::STR)) {
+            processedtokens.emplace_back(sign);
+            continue;
+         }
+
+         // +/- (possibly twice) followed by something that isn't a constant, opening bracket, or string (variable name)
          lpassert(false);
       }
 
       // constant [
       if (rawtokens[0].istype(RawTokenType::CONS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
          lpassert(false);
-      }
-
-      // +
-      if (rawtokens[0].istype(RawTokenType::PLUS)) {
-         processedtokens.emplace_back(1.0);
-         nextrawtoken();
-         continue;
-      }
-
-      // -
-      if (rawtokens[0].istype(RawTokenType::MINUS)) {
-         processedtokens.emplace_back(-1.0);
-         nextrawtoken();
-         continue;
       }
 
       // constant
