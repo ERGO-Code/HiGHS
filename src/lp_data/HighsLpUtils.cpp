@@ -580,6 +580,28 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
+void relaxSemiVariables(HighsLp& lp) {
+  // When solving relaxation, semi-variables are continuous between 0
+  // and their upper bound, so have to modify the lower bound to be
+  // zero
+  if (!lp.integrality_.size()) return;
+  assert(lp.integrality_.size() == lp.num_col_);
+  HighsInt num_modified_lower = 0;
+  std::vector<HighsInt>& lower_bound_index =
+    lp.mods_.save_semi_variable_lower_bound_index;
+  std::vector<double>& lower_bound_value =
+    lp.mods_.save_semi_variable_lower_bound_value;
+  assert(lower_bound_index.size() == 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      lower_bound_index.push_back(iCol);
+      lower_bound_value.push_back(lp.col_lower_[iCol]);
+      lp.col_lower_[iCol] = 0;
+    }
+  }
+}
+
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value) {
   const std::vector<HighsInt>& upper_bound_index =

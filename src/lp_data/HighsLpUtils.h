@@ -58,6 +58,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options);
+void relaxSemiVariables(HighsLp& lp);
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value);
 

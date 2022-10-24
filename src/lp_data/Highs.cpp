@@ -799,34 +799,46 @@ HighsStatus Highs::run() {
     return returnFromRun(HighsStatus::kError);
   }
 
-  if (!options_.solver.compare(kHighsChooseString) && !options_.solve_relaxation && model_.isQp()) {
-    // Choosing method according to model class, and model is a QP
-    //
-    // Ensure that it's not MIQP!
-    if (model_.isMip()) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot solve MIQP problems with HiGHS\n");
-      return returnFromRun(HighsStatus::kError);
+  if (!options_.solver.compare(kHighsChooseString)) {
+    // Leaving HiGHS to choose method according to model class
+    if (model_.isQp()) {
+      if (model_.isMip()) {
+	if (options_.solve_relaxation) {
+	  // Relax any semi-variables
+	  relaxSemiVariables(model_.lp_);
+	} else {
+	  highsLogUser(options_.log_options, HighsLogType::kError,
+		       "Cannot solve MIQP problems with HiGHS\n");
+	  return returnFromRun(HighsStatus::kError);
+	}
+      }
+      // 
+      // Ensure that its diagonal entries are OK in the context of the
+      // objective sense. It's OK to be semi-definite
+      if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+	highsLogUser(options_.log_options, HighsLogType::kError,
+		     "Cannot solve non-convex QP problems with HiGHS\n");
+	return returnFromRun(HighsStatus::kError);
+      }
+      call_status = callSolveQp();
+      return_status = interpretCallStatus(options_.log_options, call_status,
+					  return_status, "callSolveQp");
+      return returnFromRun(return_status);
+    } else if (model_.isMip() && !options_.solve_relaxation) {
+      // Model is a MIP and not solving just the relaxation
+      call_status = callSolveMip();
+      return_status = interpretCallStatus(options_.log_options, call_status,
+					  return_status, "callSolveMip");
+      return returnFromRun(return_status);
     }
-    // Ensure that its diagonal entries are OK in the context of the
-    // objective sense. It's OK to be semi-definite
-    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot solve non-convex QP problems with HiGHS\n");
-      return returnFromRun(HighsStatus::kError);
-    }
-    call_status = callSolveQp();
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "callSolveQp");
-    return returnFromRun(return_status);
   }
-
-  if (!options_.solver.compare(kHighsChooseString) && model_.isMip()) {
-    // Choosing method according to model class, and model is a MIP
-    call_status = callSolveMip();
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "callSolveMip");
-    return returnFromRun(return_status);
+  // If model is MIP, must be solving the relaxation or not leaving
+  // HiGHS to choose method according to model class
+  if (model_.isMip()) {
+    assert(options_.solve_relaxation ||
+	   options_.solver.compare(kHighsChooseString));
+    // Relax any semi-variables
+    relaxSemiVariables(model_.lp_);
   }
   // Solve the model as an LP
   HighsLp& incumbent_lp = model_.lp_;
