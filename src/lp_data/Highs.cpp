@@ -799,7 +799,7 @@ HighsStatus Highs::run() {
     return returnFromRun(HighsStatus::kError);
   }
 
-  if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
+  if (!options_.solver.compare(kHighsChooseString) && !options_.solve_relaxation && model_.isQp()) {
     // Choosing method according to model class, and model is a QP
     //
     // Ensure that it's not MIQP!
