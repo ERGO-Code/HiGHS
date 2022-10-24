@@ -297,7 +297,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_update_limit;
   HighsInt simplex_min_concurrency;
   HighsInt simplex_max_concurrency;
-  HighsInt ipm_iteration_limit;
+
   std::string write_model_file;
   std::string solution_file;
   std::string log_file;
@@ -305,13 +305,18 @@ struct HighsOptionsStruct {
   bool write_solution_to_file;
   HighsInt write_solution_style;
   HighsInt glpsol_cost_row_location;
+
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
 
+  // Options for IPM solver
+  HighsInt ipm_iteration_limit;
+  bool run_crossover;
+  
   // Advanced options
   HighsInt log_dev_level;
-  bool run_crossover;
+  bool solve_relaxation;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
   bool lp_presolve_requires_basis_postsolve;
@@ -445,7 +450,10 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
-        kSolverString, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
+        kSolverString,
+        "Solver option: \"simplex\", \"choose\" or \"ipm\". If "
+        "\"simplex\"/\"ipm\" is chosen then, for a MIP (QP) the integrality "
+        "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
 
@@ -600,11 +608,6 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex_update_limit",
         "Limit on the number of simplex UPDATE operations", advanced,
         &simplex_update_limit, 0, 5000, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
-        &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -812,6 +815,16 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_abs_gap, 0.0, 1e-6, kHighsInf);
     records.push_back(record_double);
 
+    record_int = new OptionRecordInt(
+        "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
+        &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("run_crossover",
+                                       "Run the crossover routine for IPM solver",
+                                       advanced, &run_crossover, true);
+    records.push_back(record_bool);
+
     // Advanced options
     advanced = true;
 
@@ -822,9 +835,10 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsLogDevLevelMax);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("run_crossover",
-                                       "Run the crossover routine for IPX",
-                                       advanced, &run_crossover, true);
+    record_bool =
+        new OptionRecordBool("solve_relaxation",
+                             "Solve the relaxation of discrete model components",
+                             advanced, &solve_relaxation, false);
     records.push_back(record_bool);
 
     record_bool =
