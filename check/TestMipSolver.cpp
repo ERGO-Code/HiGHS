@@ -181,8 +181,15 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
           options.mip_abs_gap);
   REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
 
+  highs.setOptionValue("solve_relaxation", true);
+  optimal_objective = -11.2;
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+  highs.setOptionValue("solve_relaxation", false);
+
   // Now test with a larger problem
-  const bool use_avgas = false;
+  const bool use_avgas = true;
   const std::string model = use_avgas ? "avgas" : "dcmulti";
   const std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";

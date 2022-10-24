@@ -126,6 +126,8 @@ TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
       optimal_relaxation_objective_function_value;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+  // Check that the lower bound of the semi-variable has been restored
+  REQUIRE(highs.getLp().col_lower_[semi_col] == semi_col_lower);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
