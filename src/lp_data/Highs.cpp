@@ -803,32 +803,32 @@ HighsStatus Highs::run() {
     // Leaving HiGHS to choose method according to model class
     if (model_.isQp()) {
       if (model_.isMip()) {
-	if (options_.solve_relaxation) {
-	  // Relax any semi-variables
-	  relaxSemiVariables(model_.lp_);
-	} else {
-	  highsLogUser(options_.log_options, HighsLogType::kError,
-		       "Cannot solve MIQP problems with HiGHS\n");
-	  return returnFromRun(HighsStatus::kError);
-	}
+        if (options_.solve_relaxation) {
+          // Relax any semi-variables
+          relaxSemiVariables(model_.lp_);
+        } else {
+          highsLogUser(options_.log_options, HighsLogType::kError,
+                       "Cannot solve MIQP problems with HiGHS\n");
+          return returnFromRun(HighsStatus::kError);
+        }
       }
-      // 
+      //
       // Ensure that its diagonal entries are OK in the context of the
       // objective sense. It's OK to be semi-definite
       if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
-	highsLogUser(options_.log_options, HighsLogType::kError,
-		     "Cannot solve non-convex QP problems with HiGHS\n");
-	return returnFromRun(HighsStatus::kError);
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Cannot solve non-convex QP problems with HiGHS\n");
+        return returnFromRun(HighsStatus::kError);
       }
       call_status = callSolveQp();
       return_status = interpretCallStatus(options_.log_options, call_status,
-					  return_status, "callSolveQp");
+                                          return_status, "callSolveQp");
       return returnFromRun(return_status);
     } else if (model_.isMip() && !options_.solve_relaxation) {
       // Model is a MIP and not solving just the relaxation
       call_status = callSolveMip();
       return_status = interpretCallStatus(options_.log_options, call_status,
-					  return_status, "callSolveMip");
+                                          return_status, "callSolveMip");
       return returnFromRun(return_status);
     }
   }
@@ -836,7 +836,7 @@ HighsStatus Highs::run() {
   // HiGHS to choose method according to model class
   if (model_.isMip()) {
     assert(options_.solve_relaxation ||
-	   options_.solver.compare(kHighsChooseString));
+           options_.solver.compare(kHighsChooseString));
     // Relax any semi-variables
     relaxSemiVariables(model_.lp_);
   }

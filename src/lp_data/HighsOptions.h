@@ -311,7 +311,7 @@ struct HighsOptionsStruct {
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
   bool run_crossover;
-  
+
   // Advanced options
   HighsInt log_dev_level;
   bool solve_relaxation;
@@ -812,9 +812,9 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("run_crossover",
-                                       "Run the crossover routine for IPM solver",
-                                       advanced, &run_crossover, true);
+    record_bool = new OptionRecordBool(
+        "run_crossover", "Run the crossover routine for IPM solver", advanced,
+        &run_crossover, true);
     records.push_back(record_bool);
 
     // Advanced options
@@ -827,10 +827,9 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsLogDevLevelMax);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("solve_relaxation",
-                             "Solve the relaxation of discrete model components",
-                             advanced, &solve_relaxation, false);
+    record_bool = new OptionRecordBool(
+        "solve_relaxation", "Solve the relaxation of discrete model components",
+        advanced, &solve_relaxation, false);
     records.push_back(record_bool);
 
     record_bool =

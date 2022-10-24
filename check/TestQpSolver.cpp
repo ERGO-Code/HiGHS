@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -120,15 +120,15 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   HighsInt num_col = highs.getNumCol();
   std::vector<HighsVarType> integrality;
   integrality.assign(num_col, HighsVarType::kInteger);
-  REQUIRE(highs.changeColsIntegrality(0, num_col-1, &integrality[0]) == HighsStatus::kOk);
+  REQUIRE(highs.changeColsIntegrality(0, num_col - 1, &integrality[0]) ==
+          HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kError);
 
+  // Test that attempting to solve MIQP relaxation is OK
   highs.setOptionValue("solve_relaxation", true);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
-
-
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {

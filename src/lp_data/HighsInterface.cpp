@@ -22,7 +22,7 @@
 
 HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
-  assert(!lp.isMip());
+  assert(!lp.isMip() || options_.solve_relaxation);
   assert(solution_.value_valid);
   invalidateBasis();
   HighsInt num_basic = 0;

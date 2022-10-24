@@ -588,9 +588,9 @@ void relaxSemiVariables(HighsLp& lp) {
   assert(lp.integrality_.size() == lp.num_col_);
   HighsInt num_modified_lower = 0;
   std::vector<HighsInt>& lower_bound_index =
-    lp.mods_.save_semi_variable_lower_bound_index;
+      lp.mods_.save_semi_variable_lower_bound_index;
   std::vector<double>& lower_bound_value =
-    lp.mods_.save_semi_variable_lower_bound_value;
+      lp.mods_.save_semi_variable_lower_bound_value;
   assert(lower_bound_index.size() == 0);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
