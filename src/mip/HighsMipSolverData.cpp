@@ -22,7 +22,7 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
-bool HighsMipSolverData::checkSolution(const std::vector<double>& solution) {
+bool HighsMipSolverData::checkSolution(const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
@@ -253,7 +253,7 @@ double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
   return new_upper_limit;
 }
 
-bool HighsMipSolverData::moreHeuristicsAllowed() {
+bool HighsMipSolverData::moreHeuristicsAllowed() const {
   // in the beginning of the search and in sub-MIP heuristics we only allow
   // what is proportionally for the currently spent effort plus an initial
   // offset. This is because in a sub-MIP we usually do a truncated search and

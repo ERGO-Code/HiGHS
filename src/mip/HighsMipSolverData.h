@@ -152,7 +152,7 @@ struct HighsMipSolverData {
 
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;
-  bool moreHeuristicsAllowed();
+  bool moreHeuristicsAllowed() const;
   void removeFixedIndices();
   void init();
   void basisTransfer();
@@ -163,7 +163,7 @@ struct HighsMipSolverData {
   double transformNewIncumbent(const std::vector<double>& sol);
   double percentageInactiveIntegers() const;
   void performRestart();
-  bool checkSolution(const std::vector<double>& solution);
+  bool checkSolution(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution, char source = ' ');
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);

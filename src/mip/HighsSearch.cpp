@@ -20,7 +20,7 @@
 #include "mip/HighsMipSolverData.h"
 
 HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
-                         const HighsPseudocost& pseudocost)
+                         HighsPseudocost& pseudocost)
     : mipsolver(mipsolver),
       lp(nullptr),
       localdom(mipsolver.mipdata_->domain),
