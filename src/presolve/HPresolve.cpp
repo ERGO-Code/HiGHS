@@ -6027,6 +6027,7 @@ void HPresolve::setRelaxedImpliedBounds() {
   }
 }
 
+// Not currently called
 void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   HighsSolution reducedsol;
   HighsBasis reducedbasis;
