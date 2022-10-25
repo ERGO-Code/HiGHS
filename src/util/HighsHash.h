@@ -104,6 +104,8 @@ struct HighsHashHelpers {
 
   static int log2i(uint32_t n) { return 31 - __builtin_clz(n); }
 
+  static int popcnt(uint64_t x) { return __builtin_popcountll(x); }
+
 #elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
   static int log2i(uint64_t n) {
     unsigned long result;
@@ -116,6 +118,8 @@ struct HighsHashHelpers {
     _BitScanReverse(&result, (unsigned long)n);
     return result;
   }
+
+  static int popcnt(uint64_t x) { return __popcnt64(x); }
 #else
   // integer log2 algorithm without floating point arithmetic. It uses an
   // unrolled loop and requires few instructions that can be well optimized.
@@ -157,13 +161,7 @@ struct HighsHashHelpers {
 
     return x;
   }
-#endif
 
-#ifdef FLAG_MPOPCNT_SUPPORTED
-  static int popcnt(uint64_t x) { return __builtin_popcountll(x); }
-#elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
-  static int popcnt(uint64_t x) { return __popcnt64(x); }
-#else
   static int popcnt(uint64_t x) {
     constexpr uint64_t m1 = 0x5555555555555555ull;
     constexpr uint64_t m2 = 0x3333333333333333ull;
@@ -176,6 +174,7 @@ struct HighsHashHelpers {
 
     return (x * h01) >> 56;
   }
+
 #endif
 
   /// compute a * b mod 2^61-1
