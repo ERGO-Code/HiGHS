@@ -19,8 +19,7 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolverData.h"
 
-HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
-                         HighsPseudocost& pseudocost)
+HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
     : mipsolver(mipsolver),
       lp(nullptr),
       localdom(mipsolver.mipdata_->domain),

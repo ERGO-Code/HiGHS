@@ -22,7 +22,8 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
-bool HighsMipSolverData::checkSolution(const std::vector<double>& solution) const {
+bool HighsMipSolverData::checkSolution(
+    const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
