@@ -139,8 +139,7 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
       details.checked++;
       double infeas = 0;
       // j not in L or U
-      if (state.colLower[i] <= -kHighsInf &&
-          state.colUpper[i] >= kHighsInf) {
+      if (state.colLower[i] <= -kHighsInf && state.colUpper[i] >= kHighsInf) {
         if (fabs(state.colDual[i]) > tol) {
           if (dev_print == 1)
             std::cout << "Dual feasibility fail: l=-inf, x[" << i

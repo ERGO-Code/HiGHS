@@ -78,6 +78,8 @@ struct HighsScale {
 };
 
 struct HighsLpMods {
+  std::vector<HighsInt> save_semi_variable_lower_bound_index;
+  std::vector<double> save_semi_variable_lower_bound_value;
   std::vector<HighsInt> save_semi_variable_upper_bound_index;
   std::vector<double> save_semi_variable_upper_bound_value;
   void clear();
