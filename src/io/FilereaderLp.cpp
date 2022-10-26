@@ -391,26 +391,42 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.col_lower_[iCol] <= -kHighsInf && lp.col_upper_[iCol] >= kHighsInf) {
+      // Free variable
       if (has_col_names) {
         this->writeToFileVar(file, lp.col_names_[iCol]);
       } else {
         this->writeToFileVar(file, iCol);
       }
       this->writeToFile(file, " free");
-    } else {
-      this->writeToFileValue(file, lp.col_lower_[iCol], false);
-      this->writeToFile(file, " <=");
+    } else if (lp.col_lower_[iCol] == lp.col_upper_[iCol]) {
+      // Fixed variable
       if (has_col_names) {
         this->writeToFileVar(file, lp.col_names_[iCol]);
       } else {
         this->writeToFileVar(file, iCol);
       }
-      this->writeToFile(file, " <=");
+      this->writeToFile(file, " =");
       this->writeToFileValue(file, lp.col_upper_[iCol], false);
+    } else if (lp.col_lower_[iCol] != 0 || lp.col_upper_[iCol] < kHighsInf) {
+      // Non-default bound
+      if (lp.col_lower_[iCol] != 0) {
+	// Nonzero lower bound
+	this->writeToFileValue(file, lp.col_lower_[iCol], false);
+	this->writeToFile(file, " <=");
+      }
+      if (has_col_names) {
+        this->writeToFileVar(file, lp.col_names_[iCol]);
+      } else {
+        this->writeToFileVar(file, iCol);
+      }
+      if (lp.col_upper_[iCol] < kHighsInf) {
+	// Finite upper bound
+	this->writeToFile(file, " <=");
+	this->writeToFileValue(file, lp.col_upper_[iCol], false);
+      }
     }
     this->writeToFileLineend(file);
   }
-
   if (lp.integrality_.size() > 0) {
     // write binary section
     this->writeToFile(file, "bin");
