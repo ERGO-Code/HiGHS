@@ -9,7 +9,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";
@@ -211,4 +211,46 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
+}
+
+TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
+
+  const std::string lp_file = "ml.lp";
+  const std::string mps_file = "ml.mps";
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-1};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {0};
+  lp.integrality_ = {HighsVarType::kInteger};
+  double optimal_objective_value = 0;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+  highs.writeModel(lp_file);
+  highs.writeModel(mps_file);
+
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  highs.clearModel();
+
+  highs.readModel(lp_file);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  highs.clearModel();
+  
+  highs.readModel(mps_file);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  highs.clearModel();
+
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/fixed-binary.lp";
+  highs.readModel(model_file);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  highs.clearModel();
+  
+  
+  
 }
