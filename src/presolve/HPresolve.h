@@ -341,6 +341,7 @@ class HPresolve {
     return analysis_.presolve_log_;
   }
 
+  // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);
 };
 

@@ -1676,6 +1676,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     if (model_.lp_.num_row_ > 0) {
       // Worth computing the row values
       solution_.row_value.resize(model_.lp_.num_row_);
+      // Matrix must be column-wise
+      model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
           options_.log_options, calculateRowValues(model_.lp_, solution_),
           return_status, "calculateRowValues");
@@ -1688,6 +1690,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     if (model_.lp_.num_col_ > 0) {
       // Worth computing the column duals
       solution_.col_dual.resize(model_.lp_.num_col_);
+      // Matrix must be column-wise
+      model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
           options_.log_options, calculateColDuals(model_.lp_, solution_),
           return_status, "calculateColDuals");
@@ -2624,6 +2628,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
   // Compute the row activities
+  assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)

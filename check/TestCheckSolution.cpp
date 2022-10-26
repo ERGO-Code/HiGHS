@@ -82,6 +82,42 @@ TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
   runSetLpSolution("stair");
 }
 
+TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
+  const HighsInt num_col = 100;
+  std::vector<HighsInt> indices;
+  std::vector<double> values;
+  indices.resize(num_col);
+  values.resize(num_col);
+  for (HighsInt i = 0; i < num_col; i++) {
+    indices[i] = i;
+    values[i] = sin((double)i + 1.0);
+  }
+  // Round 1
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  for (HighsInt i = 0; i < num_col; i++) {
+    highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
+    highs.changeColIntegrality(i, HighsVarType::kInteger);
+  }
+  highs.addRow(0.0, 1.0, num_col, &indices[0], &values[0]);
+  highs.run();
+  double objective1 = highs.getInfo().objective_function_value;
+  HighsSolution solution = highs.getSolution();
+  solution.row_value.clear();
+  highs.clear();
+  // Round 2
+  highs.setOptionValue("output_flag", dev_run);
+  for (HighsInt i = 0; i < num_col; i++) {
+    highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
+    highs.changeColIntegrality(i, HighsVarType::kInteger);
+  }
+  highs.addRow(0.0, 1.0, num_col, &indices[0], &values[0]);
+  highs.setSolution(solution);
+  highs.run();
+  double objective2 = highs.getInfo().objective_function_value;
+  REQUIRE(fabs(objective1 - objective2) / max(1.0, objective1) < 1e-5);
+}
+
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status) {
   HighsStatus run_status;
