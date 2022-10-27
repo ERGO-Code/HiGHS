@@ -9,7 +9,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";
@@ -214,6 +214,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 }
 
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
+  double objective_value;
   const double optimal_objective_value = 0;
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/fixed-binary.lp";
@@ -221,7 +222,9 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
+  printf("0: objective_value = %g\n", objective_value);fflush(stdout);
   highs.clearModel();
 
   const std::string lp_file = "ml.lp";
@@ -239,17 +242,23 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   highs.writeModel(mps_file);
 
   highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
+  printf("1: objective_value = %g\n", objective_value);fflush(stdout);
   highs.clearModel();
 
   highs.readModel(lp_file);
   highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
+  printf("2: objective_value = %g\n", objective_value);fflush(stdout);
   highs.clearModel();
 
   highs.readModel(mps_file);
   highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
+  objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
+  printf("3: objective_value = %g\n", objective_value);fflush(stdout);
   highs.clearModel();
 
   std::remove(lp_file.c_str());
