@@ -9,7 +9,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";
@@ -231,8 +231,6 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("0: objective_value = %g\n", objective_value);
-  fflush(stdout);
   highs.clearModel();
 
   const std::string lp_file = "ml.lp";
@@ -252,24 +250,18 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   highs.run();
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("1: objective_value = %g\n", objective_value);
-  fflush(stdout);
   highs.clearModel();
 
   highs.readModel(lp_file);
   highs.run();
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("2: objective_value = %g\n", objective_value);
-  fflush(stdout);
   highs.clearModel();
 
   highs.readModel(mps_file);
   highs.run();
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("3: objective_value = %g\n", objective_value);
-  fflush(stdout);
   highs.clearModel();
 
   std::remove(lp_file.c_str());
