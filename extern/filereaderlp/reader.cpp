@@ -192,6 +192,7 @@ struct ProcessedToken {
 // set to how many tokens we may need to look ahead
 #define NRAWTOKEN 3
 
+const double kHighsInf = std::numeric_limits<double>::infinity();
 class Reader {
 private:
 #ifdef ZLIB_FOUND
@@ -531,8 +532,8 @@ void Reader::processboundssec() {
          && next1->type == ProcessedTokenType::FREE) {
          std::string name = begin->name;
          std::shared_ptr<Variable> var = builder.getvarbyname(name);
-         var->lowerbound = -std::numeric_limits<double>::infinity(); 
-         var->upperbound = std::numeric_limits<double>::infinity();
+         var->lowerbound = -kHighsInf; 
+         var->upperbound = kHighsInf;
          begin = ++next1;
 		 continue;
       }
@@ -639,8 +640,8 @@ void Reader::processbinsec() {
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       var->type = VariableType::BINARY;
-      var->lowerbound = 0.0;
-      var->upperbound = 1.0;
+      // Respect any bounds already declared
+      if (var->upperbound == kHighsInf) var->upperbound = 1.0;
    }
 }
 
@@ -850,7 +851,7 @@ void Reader::processtokens() {
 
       // check if infinity
       if (rawtokens[0].istype(RawTokenType::STR) && iskeyword(svalue_lc, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
-         processedtokens.emplace_back(std::numeric_limits<double>::infinity());
+         processedtokens.emplace_back(kHighsInf);
          nextrawtoken();
          continue;
       }
