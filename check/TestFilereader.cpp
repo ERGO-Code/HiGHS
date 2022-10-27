@@ -216,7 +216,6 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   double objective_value;
   const double optimal_objective_value = 0;
-  REQUIRE(optimal_objective_value == 0);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/fixed-binary.lp";
   printf("Test Case %s\n", model_file.c_str());
@@ -224,9 +223,11 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   REQUIRE(optimal_objective_value == 0);
   printf("Test Case filereader-fixed-integer\n");
   fflush(stdout);
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  const HighsLp& internal_lp = highs.getLp();
+  REQUIRE(internal_lp.num_col_==1);
   REQUIRE(highs.run() == HighsStatus::kOk);
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);

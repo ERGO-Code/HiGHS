@@ -5,7 +5,7 @@ st
 bounds
  x1 = 0
 bin
-gen
  x1
+gen
 semi
 end
