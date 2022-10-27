@@ -216,15 +216,22 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   double objective_value;
   const double optimal_objective_value = 0;
+  REQUIRE(optimal_objective_value == 0);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/fixed-binary.lp";
+  printf("Test Case %s\n", model_file.c_str());
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(model_file);
-  highs.run();
+  REQUIRE(optimal_objective_value == 0);
+  printf("Test Case filereader-fixed-integer\n");
+  fflush(stdout);
+  //  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("0: objective_value = %g\n", objective_value);fflush(stdout);
+  printf("0: objective_value = %g\n", objective_value);
+  fflush(stdout);
   highs.clearModel();
 
   const std::string lp_file = "ml.lp";
@@ -244,21 +251,24 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   highs.run();
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("1: objective_value = %g\n", objective_value);fflush(stdout);
+  printf("1: objective_value = %g\n", objective_value);
+  fflush(stdout);
   highs.clearModel();
 
   highs.readModel(lp_file);
   highs.run();
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("2: objective_value = %g\n", objective_value);fflush(stdout);
+  printf("2: objective_value = %g\n", objective_value);
+  fflush(stdout);
   highs.clearModel();
 
   highs.readModel(mps_file);
   highs.run();
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
-  printf("3: objective_value = %g\n", objective_value);fflush(stdout);
+  printf("3: objective_value = %g\n", objective_value);
+  fflush(stdout);
   highs.clearModel();
 
   std::remove(lp_file.c_str());
