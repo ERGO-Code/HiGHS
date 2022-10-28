@@ -2673,12 +2673,19 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     if (info_.workLower_[iCol] == -inf && info_.workUpper_[iCol] == inf) {
-      // Don't change for row variables: they should never become
-      // nonbasic when starting from a logical basis, and no crash
-      // should make a free row nonbasic, but could an advanced basis
-      // make a free row nonbasic.
-      // But what it it happened?
-      if (iCol >= lp_.num_col_) continue;
+      // Phase 1 bounds were not modified for free rows in hsol. Why?
+      // To reduce the number of free variables on the assumption that
+      // free rows should never be nonbasic? This is normally true
+      // when starting from a logical basis or crash - unless
+      // singularity makes a free logical nonbasic - but what about an
+      // advanced basis start? It doesn't happen with the HiGHS MIP
+      // solver. However, SCIP cut handling can lead to a nonbasic row
+      // with nonzero dual being made free and, particularly if it's
+      // (then) the only dual infeasibility, phase 1 fails to remove
+      // it.
+      //
+      assert(iCol < lp_.num_col_);
+      //      if (iCol >= lp_.num_col_) continue;
       info_.workLower_[iCol] = -1000,
       info_.workUpper_[iCol] = 1000;  // FREE
     } else if (info_.workLower_[iCol] == -inf) {
