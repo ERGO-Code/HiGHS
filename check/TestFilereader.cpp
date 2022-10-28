@@ -247,8 +247,7 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   REQUIRE(objective_value == optimal_objective_value);
   highs.clearModel();
 
-  REQUIRE(highs.readModel("not_lp_file.lp") == HighsStatus::kError);
-  //			  lp_file) == HighsStatus::kOk);
+  REQUIRE(highs.readModel(lp_file) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
