@@ -4,9 +4,12 @@
 #include <stdexcept>
 #include <string>
 
-void inline lpassert(bool condition) {
+void inline lpassert(const bool condition, const std::string message = "") {
    if (!condition) {
-      throw std::invalid_argument("File not existent or illegal file format.");
+     const std::string feedback = "LP file or format error" +
+       message == "" ? "" : ": for " + message;
+     printf("lpassert fails%s\n", (message == "" ? "" : (" for " + message).c_str()));
+      throw std::invalid_argument(feedback);
    }
 }
 

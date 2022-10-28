@@ -235,7 +235,7 @@ public:
 #else
       file.open(filename);
 #endif
-      lpassert(file.is_open());
+      lpassert(file.is_open(), "file.is_open()");
    };
 
    ~Reader() {
