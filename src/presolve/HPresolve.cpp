@@ -29,7 +29,6 @@
 #include "mip/HighsObjectiveFunction.h"
 #include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
-#include "test/DevKkt.h"
 #include "util/HFactor.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"

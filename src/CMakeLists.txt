@@ -154,8 +154,6 @@ set(sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test/DevKkt.cpp
-    test/KktCh2.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -268,8 +266,6 @@ set(headers
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
     presolve/PresolveComponent.h
-    test/DevKkt.h
-    test/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
@@ -544,8 +540,6 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test/KktCh2.cpp
-    test/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -570,16 +564,20 @@ target_include_directories(libhighs PUBLIC
     )
 
 target_include_directories(libhighs PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/parallel>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/qpsolver>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>  
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
     )
 
 target_include_directories(libhighs PRIVATE
@@ -701,8 +699,6 @@ set(headers_fast_build_
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
     presolve/PresolveComponent.h
-    test/DevKkt.h
-    test/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
