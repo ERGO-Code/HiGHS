@@ -303,7 +303,7 @@ Model Reader::read() {
 }
 
 void Reader::processnonesec() {
-   lpassert(sectiontokens.count(LpSectionKeyword::NONE) == 0);
+  lpassert(sectiontokens.count(LpSectionKeyword::NONE) == 0, "sectiontokens.count(LpSectionKeyword::NONE) == 0");
 }
 
 void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vector<ProcessedToken>::iterator end, std::shared_ptr<Expression> expr, bool isobj) {
@@ -371,7 +371,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vec
             && next3->type == ProcessedTokenType::CONST) {
                std::string name = next1->name;
 
-               lpassert (next3->value == 2.0);
+               lpassert(next3->value == 2.0, "next3->value == 2.0");
 
                std::shared_ptr<QuadTerm> quadterm = std::shared_ptr<QuadTerm>(new QuadTerm());
                quadterm->coef = it->value;
@@ -390,7 +390,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vec
             && next2->type == ProcessedTokenType::CONST) {
                std::string name = it->name;
 
-               lpassert (next2->value == 2.0);
+               lpassert(next2->value == 2.0, "next2->value == 2.0");
 
                std::shared_ptr<QuadTerm> quadterm = std::shared_ptr<QuadTerm>(new QuadTerm());
                quadterm->coef = 1.0;
@@ -447,16 +447,16 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it, std::vec
            ++next1; ++next2;
            if( next1 != end ) ++next2;
 
-           lpassert(next2 != end);
-           lpassert(it->type == ProcessedTokenType::BRKCL);
-           lpassert(next1->type == ProcessedTokenType::SLASH);
-           lpassert(next2->type == ProcessedTokenType::CONST);
-           lpassert(next2->value == 2.0);
+           lpassert(next2 != end, "next2 != end");
+           lpassert(it->type == ProcessedTokenType::BRKCL, "it->type == ProcessedTokenType::BRKCL");
+           lpassert(next1->type == ProcessedTokenType::SLASH, "next1->type == ProcessedTokenType::SLASH");
+           lpassert(next2->type == ProcessedTokenType::CONST, "next2->type == ProcessedTokenType::CONST");
+           lpassert(next2->value == 2.0, "next2->value == 2.0");
            it = ++next2;
          }
          else {
-           lpassert(it != end);
-           lpassert(it->type == ProcessedTokenType::BRKCL);
+           lpassert(it != end, "it != end");
+           lpassert(it->type == ProcessedTokenType::BRKCL, "it->type == ProcessedTokenType::BRKCL");
            ++it;
          }
          continue;
@@ -472,13 +472,13 @@ void Reader::processobjsec() {
    {
       builder.model.sense = ObjectiveSense::MIN;
       parseexpression(sectiontokens[LpSectionKeyword::OBJMIN].first, sectiontokens[LpSectionKeyword::OBJMIN].second, builder.model.objective, true);
-      lpassert(sectiontokens[LpSectionKeyword::OBJMIN].first == sectiontokens[LpSectionKeyword::OBJMIN].second); // all section tokens should have been processed
+      lpassert(sectiontokens[LpSectionKeyword::OBJMIN].first == sectiontokens[LpSectionKeyword::OBJMIN].second, "sectiontokens[LpSectionKeyword::OBJMIN].first == sectiontokens[LpSectionKeyword::OBJMIN].second"); // all section tokens should have been processed
    }
    else if( sectiontokens.count(LpSectionKeyword::OBJMAX) )
    {
       builder.model.sense = ObjectiveSense::MAX;
       parseexpression(sectiontokens[LpSectionKeyword::OBJMAX].first, sectiontokens[LpSectionKeyword::OBJMAX].second, builder.model.objective, true);
-      lpassert(sectiontokens[LpSectionKeyword::OBJMAX].first == sectiontokens[LpSectionKeyword::OBJMAX].second); // all section tokens should have been processed
+      lpassert(sectiontokens[LpSectionKeyword::OBJMAX].first == sectiontokens[LpSectionKeyword::OBJMAX].second, "sectiontokens[LpSectionKeyword::OBJMAX].first == sectiontokens[LpSectionKeyword::OBJMAX].second"); // all section tokens should have been processed
    }
 }
 
@@ -491,14 +491,14 @@ void Reader::processconsec() {
       std::shared_ptr<Constraint> con = std::shared_ptr<Constraint>(new Constraint);
       parseexpression(begin, end, con->expr, false);
       // should not be at end of section yet, but a comparison operator should be next
-      lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
-      lpassert(begin->type == ProcessedTokenType::COMP);
+      lpassert(begin != sectiontokens[LpSectionKeyword::CON].second, "begin != sectiontokens[LpSectionKeyword::CON].second");
+      lpassert(begin->type == ProcessedTokenType::COMP, "begin->type == ProcessedTokenType::COMP");
       LpComparisonType dir = begin->dir;
       ++begin;
 
       // should still not be at end of section yet, but a right-hand-side value should be next
-      lpassert(begin != sectiontokens[LpSectionKeyword::CON].second);
-      lpassert(begin->type == ProcessedTokenType::CONST);
+      lpassert(begin != sectiontokens[LpSectionKeyword::CON].second, "begin != sectiontokens[LpSectionKeyword::CON].second");
+      lpassert(begin->type == ProcessedTokenType::CONST, "begin->type == ProcessedTokenType::CONST");
       switch (dir) {
          case LpComparisonType::EQ:
             con->lowerbound = con->upperbound = begin->value;
@@ -510,7 +510,7 @@ void Reader::processconsec() {
             con->lowerbound = begin->value;
             break;
          default:
-            lpassert(false);
+	   lpassert(false, "LpComparisonType not recognised");
       }
       builder.model.constraints.push_back(con);
       ++begin;
@@ -552,8 +552,8 @@ void Reader::processboundssec() {
 		  && next2->type == ProcessedTokenType::VARID
 		  && next3->type == ProcessedTokenType::COMP
 		  && next4->type == ProcessedTokenType::CONST) {
-		  lpassert(next1->dir == LpComparisonType::LEQ);
-		  lpassert(next3->dir == LpComparisonType::LEQ);
+	    lpassert(next1->dir == LpComparisonType::LEQ, "next1->dir == LpComparisonType::LEQ");
+	    lpassert(next3->dir == LpComparisonType::LEQ, "next3->dir == LpComparisonType::LEQ");
 
 		  double lb = begin->value;
 		  double ub = next4->value;
@@ -578,7 +578,7 @@ void Reader::processboundssec() {
          std::shared_ptr<Variable> var = builder.getvarbyname(name);
          LpComparisonType dir = next1->dir;
 
-         lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G);
+         lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G, "dir != LpComparisonType::L && dir != LpComparisonType::G");
 
          switch (dir) {
             case LpComparisonType::LEQ:
@@ -591,7 +591,7 @@ void Reader::processboundssec() {
                var->lowerbound = var->upperbound = value;
                break;
             default:
-               lpassert(false);
+	      lpassert(false, "LpComparisonType not recognised");
          }
          begin = next3;
          continue;
@@ -607,7 +607,7 @@ void Reader::processboundssec() {
          std::shared_ptr<Variable> var = builder.getvarbyname(name);
          LpComparisonType dir = next1->dir;
 
-         lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G);
+         lpassert(dir != LpComparisonType::L && dir != LpComparisonType::G, "dir != LpComparisonType::L && dir != LpComparisonType::G");
 
          switch (dir) {
             case LpComparisonType::LEQ:
@@ -620,13 +620,13 @@ void Reader::processboundssec() {
                var->lowerbound = var->upperbound = value;
                break;
             default:
-               lpassert(false);
+	      lpassert(false, "LpComparisonType not recognised");
          }
          begin = next3;
          continue;
       }
       
-	  lpassert(false);
+      lpassert(false, "In processboundssec");
    }
 }
 
@@ -636,7 +636,7 @@ void Reader::processbinsec() {
    std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::BIN].first);
    std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::BIN].second);
    for (; begin != end; ++begin) {
-      lpassert(begin->type == ProcessedTokenType::VARID);
+     lpassert(begin->type == ProcessedTokenType::VARID, "begin->type == ProcessedTokenType::VARID");
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       var->type = VariableType::BINARY;
@@ -651,7 +651,7 @@ void Reader::processgensec() {
    std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::GEN].first);
    std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::GEN].second);
    for (; begin != end; ++begin) {
-      lpassert(begin->type == ProcessedTokenType::VARID);
+     lpassert(begin->type == ProcessedTokenType::VARID, "begin->type == ProcessedTokenType::VARID");
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       if (var->type == VariableType::SEMICONTINUOUS) {
@@ -668,7 +668,7 @@ void Reader::processsemisec() {
    std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::SEMI].first);
    std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::SEMI].second);
    for (; begin != end; ++begin) {
-      lpassert(begin->type == ProcessedTokenType::VARID);
+     lpassert(begin->type == ProcessedTokenType::VARID, "begin->type == ProcessedTokenType::VARID");
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
       if (var->type == VariableType::GENERAL) {
@@ -690,13 +690,13 @@ void Reader::processsossec() {
       // sos1: S1 :: x1 : 1  x2 : 2  x3 : 3
 
       // name of SOS is mandatory
-      lpassert(begin->type == ProcessedTokenType::CONID);
+      lpassert(begin->type == ProcessedTokenType::CONID, "begin->type == ProcessedTokenType::CONID");
       sos->name = begin->name;
       ++begin;
 
       // SOS type
-      lpassert(begin != end);
-      lpassert(begin->type == ProcessedTokenType::SOSTYPE);
+      lpassert(begin != end, "begin != end");
+      lpassert(begin->type == ProcessedTokenType::SOSTYPE, "begin->type == ProcessedTokenType::SOSTYPE");
       sos->type = begin->sostype == SosType::SOS1 ? 1 : 2;
       ++begin;
 
@@ -727,7 +727,7 @@ void Reader::processsossec() {
 }
 
 void Reader::processendsec() {
-   lpassert(sectiontokens.count(LpSectionKeyword::END) == 0);
+  lpassert(sectiontokens.count(LpSectionKeyword::END) == 0, "sectiontokens.count(LpSectionKeyword::END) == 0");
 }
 
 void Reader::processsections() {
@@ -752,7 +752,7 @@ void Reader::splittokens() {
          currentsection = it->keyword;
 
          // make sure this section did not yet occur
-         lpassert(sectiontokens.count(currentsection) == 0);
+         lpassert(sectiontokens.count(currentsection) == 0, "sectiontokens.count(currentsection) == 0");
 
          std::vector<ProcessedToken>::iterator next = it;
          ++next;
@@ -827,9 +827,9 @@ void Reader::processtokens() {
 
       // sos type identifier? "S1 ::" or "S2 ::"
       if (rawtokens[0].istype(RawTokenType::STR) && rawtokens[1].istype(RawTokenType::COLON) && rawtokens[2].istype(RawTokenType::COLON)) {
-         lpassert(rawtokens[0].svalue.length() == 2);
-         lpassert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's');
-         lpassert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2');
+	lpassert(rawtokens[0].svalue.length() == 2, "rawtokens[0].svalue.length() == 2");
+	lpassert(rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's', "rawtokens[0].svalue[0] == 'S' || rawtokens[0].svalue[0] == 's'");
+	lpassert(rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2', "rawtokens[0].svalue[1] == '1' || rawtokens[0].svalue[1] == '2'");
          processedtokens.emplace_back(rawtokens[0].svalue[1] == '1' ? SosType::SOS1 : SosType::SOS2);
          nextrawtoken(3);
          continue;
@@ -890,7 +890,7 @@ void Reader::processtokens() {
 
          // - [, + - [, - + [
          if (rawtokens[0].istype(RawTokenType::BRKOP))
-            lpassert(false);
+	   lpassert(false, "- [, + - [, - + [");
 
          // +/- variable name
          if (rawtokens[0].istype(RawTokenType::STR)) {
@@ -899,12 +899,12 @@ void Reader::processtokens() {
          }
 
          // +/- (possibly twice) followed by something that isn't a constant, opening bracket, or string (variable name)
-         lpassert(false);
+         lpassert(false, "+/- (possibly twice)");
       }
 
       // constant [
       if (rawtokens[0].istype(RawTokenType::CONS) && rawtokens[1].istype(RawTokenType::BRKOP)) {
-         lpassert(false);
+	lpassert(false, "constant [");
       }
 
       // constant
@@ -988,7 +988,7 @@ void Reader::processtokens() {
       assert(!rawtokens[0].istype(RawTokenType::FLEND));
 
       // catch all unknown symbols
-      lpassert(false);
+      lpassert(false, "known symbol");
       break;
    }
 }
@@ -1168,6 +1168,6 @@ bool Reader::readnexttoken(RawToken& t) {
       return true;
    }
    
-   lpassert(false);
+   lpassert(false, "readnexttoken");
    return false;
 }
