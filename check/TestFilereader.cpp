@@ -214,44 +214,15 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 }
 
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
+  double objective_value;
   const double optimal_objective_value = 0;
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/fixed-binary.lp";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(model_file);
-  highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
-  highs.clearModel();
 
-  const std::string lp_file = "ml.lp";
-  const std::string mps_file = "ml.mps";
-  HighsLp lp;
-  lp.num_col_ = 1;
-  lp.num_row_ = 0;
-  lp.col_cost_ = {-1};
-  lp.col_lower_ = {0};
-  lp.col_upper_ = {0};
-  lp.integrality_ = {HighsVarType::kInteger};
-
-  highs.passModel(lp);
-  highs.writeModel(lp_file);
-  highs.writeModel(mps_file);
-
-  highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
-  highs.clearModel();
-
-  highs.readModel(lp_file);
-  highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
-  highs.clearModel();
-
-  highs.readModel(mps_file);
-  highs.run();
-  REQUIRE(highs.getInfo().objective_function_value == optimal_objective_value);
-  highs.clearModel();
-
-  std::remove(lp_file.c_str());
-  std::remove(mps_file.c_str());
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
 }
