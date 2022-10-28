@@ -32,12 +32,19 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kModelEmpty);
   REQUIRE(run_status == HighsStatus::kOk);
 
-  // Load a non-existent file and try to run HiGHS
+  // Load a non-existent MPS file and try to run HiGHS
   model = "";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   return_status = highs.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kError);
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
 
+  // Load a non-existent LP file and try to run HiGHS
+  model = "";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  return_status = highs.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kError);
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
@@ -46,7 +53,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
   return_status = highs.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kError);
-
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
