@@ -799,34 +799,46 @@ HighsStatus Highs::run() {
     return returnFromRun(HighsStatus::kError);
   }
 
-  if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
-    // Choosing method according to model class, and model is a QP
-    //
-    // Ensure that it's not MIQP!
-    if (model_.isMip()) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot solve MIQP problems with HiGHS\n");
-      return returnFromRun(HighsStatus::kError);
+  if (!options_.solver.compare(kHighsChooseString)) {
+    // Leaving HiGHS to choose method according to model class
+    if (model_.isQp()) {
+      if (model_.isMip()) {
+        if (options_.solve_relaxation) {
+          // Relax any semi-variables
+          relaxSemiVariables(model_.lp_);
+        } else {
+          highsLogUser(options_.log_options, HighsLogType::kError,
+                       "Cannot solve MIQP problems with HiGHS\n");
+          return returnFromRun(HighsStatus::kError);
+        }
+      }
+      //
+      // Ensure that its diagonal entries are OK in the context of the
+      // objective sense. It's OK to be semi-definite
+      if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Cannot solve non-convex QP problems with HiGHS\n");
+        return returnFromRun(HighsStatus::kError);
+      }
+      call_status = callSolveQp();
+      return_status = interpretCallStatus(options_.log_options, call_status,
+                                          return_status, "callSolveQp");
+      return returnFromRun(return_status);
+    } else if (model_.isMip() && !options_.solve_relaxation) {
+      // Model is a MIP and not solving just the relaxation
+      call_status = callSolveMip();
+      return_status = interpretCallStatus(options_.log_options, call_status,
+                                          return_status, "callSolveMip");
+      return returnFromRun(return_status);
     }
-    // Ensure that its diagonal entries are OK in the context of the
-    // objective sense. It's OK to be semi-definite
-    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot solve non-convex QP problems with HiGHS\n");
-      return returnFromRun(HighsStatus::kError);
-    }
-    call_status = callSolveQp();
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "callSolveQp");
-    return returnFromRun(return_status);
   }
-
-  if (!options_.solver.compare(kHighsChooseString) && model_.isMip()) {
-    // Choosing method according to model class, and model is a MIP
-    call_status = callSolveMip();
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "callSolveMip");
-    return returnFromRun(return_status);
+  // If model is MIP, must be solving the relaxation or not leaving
+  // HiGHS to choose method according to model class
+  if (model_.isMip()) {
+    assert(options_.solve_relaxation ||
+           options_.solver.compare(kHighsChooseString));
+    // Relax any semi-variables
+    relaxSemiVariables(model_.lp_);
   }
   // Solve the model as an LP
   HighsLp& incumbent_lp = model_.lp_;
@@ -1664,6 +1676,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     if (model_.lp_.num_row_ > 0) {
       // Worth computing the row values
       solution_.row_value.resize(model_.lp_.num_row_);
+      // Matrix must be column-wise
+      model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
           options_.log_options, calculateRowValues(model_.lp_, solution_),
           return_status, "calculateRowValues");
@@ -1676,6 +1690,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     if (model_.lp_.num_col_ > 0) {
       // Worth computing the column duals
       solution_.col_dual.resize(model_.lp_.num_col_);
+      // Matrix must be column-wise
+      model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
           options_.log_options, calculateColDuals(model_.lp_, solution_),
           return_status, "calculateColDuals");
@@ -2612,6 +2628,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
   // Compute the row activities
+  assert(model_.lp_.a_matrix_.isColwise());
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
@@ -2776,18 +2793,17 @@ HighsStatus Highs::callSolveQp() {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  model_status_ =
-      runtime.status == ProblemStatus::OPTIMAL
-          ? HighsModelStatus::kOptimal
-          : runtime.status == ProblemStatus::UNBOUNDED
-                ? HighsModelStatus::kUnbounded
-                : runtime.status == ProblemStatus::INFEASIBLE
+  model_status_ = runtime.status == ProblemStatus::OPTIMAL
+                      ? HighsModelStatus::kOptimal
+                  : runtime.status == ProblemStatus::UNBOUNDED
+                      ? HighsModelStatus::kUnbounded
+                  : runtime.status == ProblemStatus::INFEASIBLE
                       ? HighsModelStatus::kInfeasible
-                      : runtime.status == ProblemStatus::ITERATIONLIMIT
-                            ? HighsModelStatus::kIterationLimit
-                            : runtime.status == ProblemStatus::TIMELIMIT
-                                  ? HighsModelStatus::kTimeLimit
-                                  : HighsModelStatus::kNotset;
+                  : runtime.status == ProblemStatus::ITERATIONLIMIT
+                      ? HighsModelStatus::kIterationLimit
+                  : runtime.status == ProblemStatus::TIMELIMIT
+                      ? HighsModelStatus::kTimeLimit
+                      : HighsModelStatus::kNotset;
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
   const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;

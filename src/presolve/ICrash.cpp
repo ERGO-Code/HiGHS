@@ -400,6 +400,7 @@ void reportOptions(const ICrashOptions& options) {
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
                        ICrashInfo& result) {
   if (!checkOptions(lp, options)) return HighsStatus::kError;
+  assert(lp.a_matrix_.isColwise());
 
   // Initialize data structures and initial values.
   Quadratic idata = parseOptions(lp, options);

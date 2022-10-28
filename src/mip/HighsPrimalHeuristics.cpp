@@ -274,7 +274,8 @@ void HighsPrimalHeuristics::rootReducedCost() {
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
-  HighsSearch heur(mipsolver, mipsolver.mipdata_->pseudocost);
+  HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
+  HighsSearch heur(mipsolver, pscost);
   HighsDomain& localdom = heur.getLocalDomain();
   heur.setHeuristic(true);
 
@@ -525,7 +526,8 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
                                }),
                 intcols.end());
 
-  HighsSearch heur(mipsolver, mipsolver.mipdata_->pseudocost);
+  HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
+  HighsSearch heur(mipsolver, pscost);
   HighsDomain& localdom = heur.getLocalDomain();
   heur.setHeuristic(true);
 
