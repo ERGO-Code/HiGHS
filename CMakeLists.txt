@@ -318,7 +318,19 @@ include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
     ${HIGHS_SOURCE_DIR}/extern
-    ${HIGHS_SOURCE_DIR}/src)
+    ${HIGHS_SOURCE_DIR}/extern/zstr
+    ${HIGHS_SOURCE_DIR}/src
+    ${HIGHS_SOURCE_DIR}/src/io
+    ${HIGHS_SOURCE_DIR}/src/ipm/ipx
+    ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
+    ${HIGHS_SOURCE_DIR}/src/lp_data
+    ${HIGHS_SOURCE_DIR}/src/mip
+    ${HIGHS_SOURCE_DIR}/src/model
+    ${HIGHS_SOURCE_DIR}/src/presolve
+    ${HIGHS_SOURCE_DIR}/src/qpsolver
+    ${HIGHS_SOURCE_DIR}/src/simplex
+    ${HIGHS_SOURCE_DIR}/src/test
+    ${HIGHS_SOURCE_DIR}/src/util)
 
 
 # explicitly switch on colored output for ninja
