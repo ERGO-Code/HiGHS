@@ -2684,8 +2684,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
       // (then) the only dual infeasibility, phase 1 fails to remove
       // it.
       //
-      assert(iCol < lp_.num_col_);
-      //      if (iCol >= lp_.num_col_) continue;
+      // if (iCol >= lp_.num_col_) continue;
       info_.workLower_[iCol] = -1000,
       info_.workUpper_[iCol] = 1000;  // FREE
     } else if (info_.workLower_[iCol] == -inf) {
