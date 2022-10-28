@@ -19,9 +19,9 @@
 #include <iomanip>
 #include <sstream>
 
-#include "lp_data/HighsStatus.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsStatus.h"
 #include "presolve/ICrashUtil.h"
 #include "util/HighsUtils.h"
 #include "util/stringutil.h"
