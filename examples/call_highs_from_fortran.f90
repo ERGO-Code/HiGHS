@@ -104,7 +104,7 @@ program fortrantest
   integer alt_sense
   integer scale_strategy
 
-  integer, parameter :: default_scale_strategy = 2
+  integer, parameter :: default_scale_strategy = 1
   integer, parameter :: new_scale_strategy = 3
   double precision, parameter ::  dual_tolerance = 1d-6
   logical ( c_bool ) write_solution_to_file
@@ -531,7 +531,7 @@ program fortrantest
         if (col < qp_numcol) then
            to_el = qp_qstart(col+1)-1
         else
-           to_el = qp_hessian_numnz
+           to_el = qp_hessian_numnz-1
         endif
         objective_function_value = &
              objective_function_value + 0.5 * qp_colvalue(col) * qp_qvalue(from_el+1) * qp_colvalue(col)
