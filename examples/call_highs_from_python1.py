@@ -1,3 +1,10 @@
+# NB Must have installed highspy, either by using pip install highspy,
+# or by following the instructions on
+# https://github.com/ERGO-Code/HiGHS#python
+#
+# The paths to MPS file instances assumes that this is run in the
+# directory of this file (ie highs/examples) or any other dubdirectory
+# of HiGHS
 import highspy
 import numpy as np
 inf = highspy.kHighsInf
@@ -34,7 +41,7 @@ for icol in range(num_var):
     print(icol, solution.col_value[icol], h.basisStatusToString(basis.col_status[icol]))
 
 # Read in and solve avgas
-h.readModel("check/instances/avgas.mps")
+h.readModel("../check/instances/avgas.mps")
 #h.writeModel("ml.mps")
 h.run()
 lp = h.getLp()
@@ -142,7 +149,7 @@ h.writeSolution("", 1)
 h.clear()
 print('25fv47 as HighsModel')
 
-h.readModel("../../../check/instances/25fv47.mps")
+h.readModel("../check/instances/25fv47.mps")
 h.presolve()
 presolved_lp = h.getPresolvedLp()
 # Create a HiGHS instance to solve the presolved LP
