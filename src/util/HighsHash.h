@@ -926,8 +926,8 @@ class HighsHashTable {
     using pointer = IterType*;
     using reference = IterType&;
     using iterator_category = std::forward_iterator_tag;
-    HashTableIterator(u8* pos, u8* end, Entry* entryEnd)
-        : pos(pos), end(end), entryEnd(entryEnd) {}
+    HashTableIterator(u8* pos_, u8* end_, Entry* entryEnd_)
+        : pos(pos_), end(end_), entryEnd(entryEnd_) {}
     HashTableIterator() = default;
 
     HashTableIterator<IterType> operator++(int) {

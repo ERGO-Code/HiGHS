@@ -107,8 +107,8 @@ class HighsMatrixSlice<HighsCompressedSlice> {
     }
   };
 
-  HighsMatrixSlice(const HighsInt* index, const double* value, HighsInt len)
-      : index(index), value(value), len(len) {}
+  HighsMatrixSlice(const HighsInt* index_, const double* value_, HighsInt len_)
+      : index(index_), value(value_), len(len_) {}
   iterator begin() const { return iterator{index, value}; }
   iterator end() const { return iterator{index + len, nullptr}; }
 };
@@ -131,8 +131,8 @@ class HighsMatrixSlice<HighsIndexedSlice> {
     using pointer = const HighsSliceNonzero*;
     using reference = const HighsSliceNonzero&;
 
-    iterator(const HighsInt* index, const double* denseValues)
-        : pos_(index, denseValues), denseValues(denseValues) {}
+    iterator(const HighsInt* index_, const double* denseValues_)
+        : pos_(index_, denseValues_), denseValues(denseValues_) {}
     iterator() = default;
 
     iterator operator++(int) {

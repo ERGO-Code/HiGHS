@@ -58,7 +58,7 @@ class HighsPostsolveStack {
     HighsInt index;
     double value;
 
-    Nonzero(HighsInt index, double value) : index(index), value(value) {}
+    Nonzero(HighsInt index_, double value_) : index(index_), value(value_) {}
     Nonzero() = default;
   };
 
