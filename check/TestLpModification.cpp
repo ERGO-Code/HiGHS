@@ -1416,6 +1416,37 @@ TEST_CASE("LP-delete", "[highs_data]") {
       double_equal_tolerance);
 }
 
+TEST_CASE("LP-free-row", "[highs_data]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, -2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == -2);
+  // Row is nonbasic at its lower bound with negative dual
+  REQUIRE(highs.getBasis().row_status[0] == HighsBasisStatus::kUpper);
+  REQUIRE(highs.getSolution().row_dual[0] < -.5);
+  // Make row free and re-solve from current basis. Analogous
+  // situation exposed error in HEkk::initialiseBound when solving
+  // bell5 with SCIP
+  highs.changeRowBounds(0, -inf, inf);
+  highs.run();
+  REQUIRE(highs.getInfo().objective_function_value == -3);
+}
+
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
   if (!dev_run) return;

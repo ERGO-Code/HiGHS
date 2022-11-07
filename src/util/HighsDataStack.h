@@ -80,7 +80,7 @@ class HighsDataStack {
     }
   }
 
-  void setPosition(HighsInt position) { this->position = position; }
+  void setPosition(HighsInt position_) { this->position = position_; }
 
   HighsInt getCurrentDataSize() const { return data.size(); }
 };

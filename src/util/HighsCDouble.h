@@ -61,7 +61,7 @@ class HighsCDouble {
     y = a2 * b2 - (((x - a1 * b1) - a2 * b1) - a1 * b2);
   }
 
-  HighsCDouble(double hi, double lo) : hi(hi), lo(lo) {}
+  HighsCDouble(double hi_, double lo_) : hi(hi_), lo(lo_) {}
 
  public:
   HighsCDouble() = default;
