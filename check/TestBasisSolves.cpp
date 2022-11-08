@@ -1,9 +1,9 @@
 #include <algorithm>
 
-//#include "HConfig.h"
-#include "Highs.h"
-#include "HighsRandom.h"
 #include "catch.hpp"
+
+#include "Highs.h"
+#include "util/HighsRandom.h"
 
 using std::min;
 
