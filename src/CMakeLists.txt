@@ -66,7 +66,6 @@ set(ipx_sources
 
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
-include_directories()
 include_directories(ipm/ipx)
 include_directories(ipm/basiclu)
 
@@ -705,6 +704,8 @@ set(headers_fast_build_
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
     presolve/PresolveComponent.h
+    test/DevKkt.h
+    test/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
