@@ -1,4 +1,4 @@
-#include "ratiotest.hpp"
+#include "qpsolver/ratiotest.hpp"
 
 static double step(double x, double p, double l, double u, double t) {
   if (p < -t && l > -std::numeric_limits<double>::infinity()) {

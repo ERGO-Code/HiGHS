@@ -20,7 +20,7 @@
 #include <exception>
 #include <map>
 
-#include "../extern/filereaderlp/reader.hpp"
+#include "filereaderlp/reader.hpp"
 #include "lp_data/HighsLpUtils.h"
 
 const bool original_double_format = false;
