@@ -1,13 +1,13 @@
-name: build-unix
+name: build-lunix
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   debug:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v3
