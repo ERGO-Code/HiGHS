@@ -154,6 +154,8 @@ set(sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
+    test/DevKkt.cpp
+    test/KktCh2.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -266,6 +268,8 @@ set(headers
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
     presolve/PresolveComponent.h
+    test/DevKkt.h
+    test/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
@@ -540,6 +544,8 @@ target_sources(libhighs PRIVATE
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
+    test/KktCh2.cpp
+    test/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
