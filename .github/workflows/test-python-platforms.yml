@@ -17,12 +17,12 @@ jobs:
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Create Install Directory
-        run: cmake -E make_directory ${{runner.workspace}}/install
+        run: cmake -E make_directory ${{runner.workspace}}/installs
 
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DFAST_BUILD=OFF -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs/highs
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -31,7 +31,7 @@ jobs:
         run: |
           cmake --build . --parallel --config Release
           make install
-          HIGHS_LIB_DIR=${{runner.workspace}}/install/lib
+          HIGHS_LIB_DIR=${{runner.workspace}}/installs/highs/lib
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
 
