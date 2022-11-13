@@ -254,6 +254,7 @@ const string kModelFileString = "model_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
+const string kRunCrossoverString = "run_crossover";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
@@ -271,6 +272,7 @@ struct HighsOptionsStruct {
   std::string parallel;
   std::string ranging;
   double time_limit;
+  bool run_crossover;
 
   // Options read from the file
   double infinite_cost;
@@ -310,7 +312,6 @@ struct HighsOptionsStruct {
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
-  bool run_crossover;
 
   // Advanced options
   HighsInt log_dev_level;

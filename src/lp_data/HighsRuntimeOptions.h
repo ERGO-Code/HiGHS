@@ -40,7 +40,10 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         cxxopts::value<std::string>(solver))
         (kParallelString,
         "Parallel solve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
-        cxxopts::value<std::string>(parallel))
+	 cxxopts::value<std::string>(parallel))
+        (kRunCrossoverString,
+        "Run crossover: \"true\" by default - \"false\" is alternative.",
+        cxxopts::value<bool>())
         (kTimeLimitString,
         "Run time limit (seconds - double).",
         cxxopts::value<double>())
@@ -113,6 +116,12 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
+    if (result.count(kRunCrossoverString)) {
+      bool value = result[kRunCrossoverString].as<bool>();
+      if (setLocalOptionValue(report_log_options, kRunCrossoverString,
+                              options.records, value) != OptionStatus::kOk)
+        return false;
+    }
     if (result.count(kTimeLimitString)) {
       double value = result[kTimeLimitString].as<double>();
       if (setLocalOptionValue(report_log_options, kTimeLimitString,
