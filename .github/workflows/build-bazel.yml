@@ -1,0 +1,25 @@
+name: build-bazel
+
+on: [push, pull_request]
+
+jobs:
+  bazel:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: bazelbuild/setup-bazelisk@v2
+
+      - name: Mount bazel cache # Optional
+        uses: actions/cache@v3
+        with:
+          path: "~/.cache/bazel"
+          key: bazel
+      - run: bazel build //...
+
+      - name: test
+      - run: ./bazel-bin/examples/call_highs_example

@@ -1,10 +1,10 @@
 #ifndef __SRC_LIB_REDUCEDCOSTS_HPP__
 #define __SRC_LIB_REDUCEDCOSTS_HPP__
 
-#include "basis.hpp"
-#include "gradient.hpp"
-#include "runtime.hpp"
-#include "vector.hpp"
+#include "qpsolver/basis.hpp"
+#include "qpsolver/gradient.hpp"
+#include "qpsolver/runtime.hpp"
+#include "qpsolver/vector.hpp"
 
 class ReducedCosts {
   Basis& basis;

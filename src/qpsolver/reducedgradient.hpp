@@ -1,9 +1,9 @@
 #ifndef __SRC_LIB_REDUCEDGRADIENT_HPP__
 #define __SRC_LIB_REDUCEDGRADIENT_HPP__
 
-#include "basis.hpp"
-#include "runtime.hpp"
-#include "vector.hpp"
+#include "qpsolver/basis.hpp"
+#include "qpsolver/runtime.hpp"
+#include "qpsolver/vector.hpp"
 
 class ReducedGradient {
   Vector rg;

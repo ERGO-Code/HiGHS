@@ -21,7 +21,7 @@
 #include "Highs.h"
 #include "HighsLp.h"
 #include "HighsOptions.h"
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"

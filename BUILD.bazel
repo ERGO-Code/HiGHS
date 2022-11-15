@@ -1,0 +1,68 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+
+copy_file(
+    name = "highs-config",
+    src = "HConfig.h.bazel",
+    out = "HConfig.h",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "config",
+    srcs = ["HConfig.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "highs",
+    srcs = glob([
+        "extern/filereaderlp/*.cpp",
+        "extern/filereaderlp/*.cpp",
+        "src/*.cpp",
+        "src/interfaces/highs_c_api.cpp",
+         "src/io/*.cpp",
+         "src/ipm/*.cpp",
+         "src/ipm/ipx/*.cc",
+         "src/ipm/basiclu/*.c",
+         "src/lp_data/*.cpp",
+         "src/mip/*.cpp",
+         "src/model/*.cpp",
+         "src/parallel/*.cpp",
+         "src/presolve/*.cpp",
+         "src/qpsolver/*.cpp",
+         "src/simplex/*.cpp",
+         "src/test/*.cpp",
+         "src/util/*.cpp", 
+    ]),
+    hdrs = glob([
+        "HConfig.h",
+        "**/*.h",
+        "src/qpsolver/*.hpp",
+        "src/Highs.h",
+        "extern/filereaderlp/*.hpp",
+        "extern/zstr/*.hpp"]),
+    includes = [
+        "extern",
+        # "extern/filereaderlp",
+        # "extern/zstr",
+        "src",
+        # "src/ipm",
+        # "src/ipm/ipx",
+        # "src/ipm/basiclu",
+        # "src/lp_data",
+        # "src/mip",
+        # "src/model",
+        # "src/parallel",
+        # "src/presolve",
+        # "src/qpsolver",
+        # "src/simplex",
+        # "src/test",
+        # "src/util",
+        "bazel-bin"],
+    visibility = ["//visibility:public"],
+        deps = [
+        "//:config",
+        "@zlib",
+    ],
+)

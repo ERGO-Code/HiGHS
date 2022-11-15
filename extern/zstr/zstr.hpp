@@ -12,9 +12,9 @@
 #include <fstream>
 #include <sstream>
 #include <zlib.h>
-#include <strict_fstream.hpp>
 #include <memory>
 #include <iostream>
+#include "zstr/strict_fstream.hpp"
 
 namespace zstr
 {
