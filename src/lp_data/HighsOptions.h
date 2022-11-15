@@ -270,9 +270,12 @@ struct HighsOptionsStruct {
   std::string presolve;
   std::string solver;
   std::string parallel;
-  std::string ranging;
-  double time_limit;
   std::string run_crossover;
+  double time_limit;
+  std::string solution_file;
+  std::string write_model_file;
+  HighsInt random_seed;
+  std::string ranging;
 
   // Options read from the file
   double infinite_cost;
@@ -284,7 +287,6 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   double objective_bound;
   double objective_target;
-  HighsInt random_seed;
   HighsInt threads;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
@@ -298,8 +300,6 @@ struct HighsOptionsStruct {
   HighsInt simplex_min_concurrency;
   HighsInt simplex_max_concurrency;
 
-  std::string write_model_file;
-  std::string solution_file;
   std::string log_file;
   bool write_model_to_file;
   bool write_solution_to_file;
