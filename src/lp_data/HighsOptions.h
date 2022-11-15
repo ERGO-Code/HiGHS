@@ -272,7 +272,7 @@ struct HighsOptionsStruct {
   std::string parallel;
   std::string ranging;
   double time_limit;
-  bool run_crossover;
+  std::string run_crossover;
 
   // Options read from the file
   double infinite_cost;
@@ -459,6 +459,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(
         kParallelString, "Parallel option: \"off\", \"choose\" or \"on\"",
         advanced, &parallel, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kRunCrossoverString, "Run IPM crossover: \"off\", \"choose\" or \"on\"",
+        advanced, &run_crossover, kHighsOnString);
     records.push_back(record_string);
 
     record_double =
@@ -812,11 +817,6 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
-
-    record_bool = new OptionRecordBool(
-        "run_crossover", "Run the crossover routine for IPM solver", advanced,
-        &run_crossover, true);
-    records.push_back(record_bool);
 
     // Advanced options
     advanced = true;

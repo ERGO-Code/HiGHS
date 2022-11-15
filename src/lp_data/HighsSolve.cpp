@@ -72,7 +72,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
          (solver_object.model_status_ ==
               HighsModelStatus::kUnboundedOrInfeasible &&
           !options.allow_unbounded_or_infeasible)) &&
-        options.run_crossover) {
+        options.run_crossover == kHighsOnString) {
       // IPX has returned a model status that HiGHS would rather
       // avoid, so perform simplex clean-up if crossover was allowed.
       //

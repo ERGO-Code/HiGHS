@@ -853,8 +853,8 @@ HighsStatus Highs::run() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool ipx_no_crossover =
-      options_.solver == kIpmString && !options_.run_crossover;
+  const bool ipx_no_crossover = options_.solver == kIpmString &&
+                                options_.run_crossover == kHighsOffString;
 
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
@@ -3166,7 +3166,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
-          (options_.solver == kIpmString && options_.run_crossover) ||
+          (options_.solver == kIpmString &&
+           options_.run_crossover == kHighsOnString) ||
           model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {

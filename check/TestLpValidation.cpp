@@ -1,7 +1,6 @@
-#include "catch.hpp"
-
 #include "Avgas.h"
 #include "Highs.h"
+#include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
 
 const bool dev_run = false;

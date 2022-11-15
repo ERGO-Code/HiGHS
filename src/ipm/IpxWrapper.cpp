@@ -102,7 +102,14 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
   parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
-  parameters.crossover = options.run_crossover;
+  if (options.run_crossover == kHighsOnString) {
+    parameters.crossover = 1;
+  } else if (options.run_crossover == kHighsOffString) {
+    parameters.crossover = 0;
+  } else {
+    parameters.crossover = -1;
+    assert(123==456);
+  }
   if (!parameters.crossover) {
     // If crossover is not run, then set crossover_start to -1 so that
     // IPX can terminate according to its feasibility and optimality
@@ -537,14 +544,15 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   else
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
-    if (ipm_status || options.run_crossover) {
-      // Warn if method not run is IPM or run_crossover option is true
+    if (ipm_status || options.run_crossover == kHighsOnString) {
+      // Warn if method not run is IPM or method not run is crossover
+      // and run_crossover option is "on"
       highsLogUser(options.log_options, HighsLogType::kWarning,
 		   "Ipx: %s not run\n", method_name.c_str());
       return HighsStatus::kWarning;
     }
     // OK if method not run is crossover and run_crossover option is
-    // false!
+    // not "on"
     return HighsStatus::kOk;
   } else if (status == IPX_STATUS_optimal) {
     highsLogUser(options.log_options, HighsLogType::kInfo, "Ipx: %s optimal\n",
