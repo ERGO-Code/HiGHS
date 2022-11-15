@@ -113,14 +113,14 @@ struct HighsHashHelpers {
 #elif defined(HIGHS_HAVE_BITSCAN_REVERSE)
   static int log2i(uint64_t n) {
     unsigned long result;
-  #ifdef _WIN64
+#ifdef _WIN64
     _BitScanReverse64(&result, n);
-  #else
-    if(_BitScanReverse(&result, (n>>32)))
+#else
+    if (_BitScanReverse(&result, (n >> 32)))
       result += 32;
     else
       _BitScanReverse(&result, (n & 0xffffffffu));
-  #endif
+#endif
     return result;
   }
 
@@ -131,11 +131,11 @@ struct HighsHashHelpers {
   }
 
   static int popcnt(uint64_t x) {
-    #ifdef _WIN64 
+#ifdef _WIN64
     return __popcnt64(x);
-    #else 
-    return  __popcnt(x & 0xffffffffu) + __popcnt(x >> 32);
-    #endif
+#else
+    return __popcnt(x & 0xffffffffu) + __popcnt(x >> 32);
+#endif
   }
 #else
   // integer log2 algorithm without floating point arithmetic. It uses an
