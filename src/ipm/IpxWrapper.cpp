@@ -109,7 +109,6 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   } else {
     assert(options.run_crossover == kHighsChooseString);
     parameters.run_crossover = -1;
-    assert(123==456);
   }
   if (!parameters.run_crossover) {
     // If crossover is sure not to be run, then set crossover_start to

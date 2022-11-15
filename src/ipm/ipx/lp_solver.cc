@@ -95,7 +95,7 @@ Int LpSolver::Solve() {
             // solved.
             info_.status = IPX_STATUS_solved;
         } else {
-            Int method_status = control_.run_crossover() ?
+            Int method_status = run_crossover ?
                 info_.status_crossover : info_.status_ipm;
             if (method_status == IPX_STATUS_optimal ||
                 method_status == IPX_STATUS_imprecise)

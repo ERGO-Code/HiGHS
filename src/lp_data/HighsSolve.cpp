@@ -69,42 +69,44 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // Seting the IPM-specific values of (highs_)info_ has been done in
     // solveLpIpx
     const bool unwelcome_ipx_status =
-      solver_object.model_status_ == HighsModelStatus::kUnknown ||
-      (solver_object.model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
-       !options.allow_unbounded_or_infeasible);
+        solver_object.model_status_ == HighsModelStatus::kUnknown ||
+        (solver_object.model_status_ ==
+             HighsModelStatus::kUnboundedOrInfeasible &&
+         !options.allow_unbounded_or_infeasible);
     if (unwelcome_ipx_status) {
       highsLogUser(options.log_options, HighsLogType::kWarning,
-		   "Unwelcome IPX status of %s: basis is %svalid; solution is %svalid; run_crossover is \"%s\"\n",
-		   utilModelStatusToString(solver_object.model_status_).c_str(),
-		   solver_object.basis_.valid ? "" : "not ",
-		   solver_object.solution_.value_valid ? "" : "not ",
-		   options.run_crossover.c_str());
+                   "Unwelcome IPX status of %s: basis is %svalid; solution is "
+                   "%svalid; run_crossover is \"%s\"\n",
+                   utilModelStatusToString(solver_object.model_status_).c_str(),
+                   solver_object.basis_.valid ? "" : "not ",
+                   solver_object.solution_.value_valid ? "" : "not ",
+                   options.run_crossover.c_str());
       if (options.run_crossover != kHighsOffString) {
-	// IPX has returned a model status that HiGHS would rather
-	// avoid, so perform simplex clean-up if crossover was allowed.
-	//
-	// This is an unusual situation, and the cost will usually be
-	// acceptable. Worst case is if crossover wasn't run, in which
-	// case there's no basis to start simplex
-	//
-	// ToDo: Check whether simplex can exploit the primal solution returned by
-	// IPX
-	highsLogUser(options.log_options, HighsLogType::kWarning,
-		     "IPX solution is imprecise, so clean up with simplex\n");
-	// Reset the return status since it will now be determined by
-	// the outcome of the simplex solve
-	return_status = HighsStatus::kOk;
-	call_status = solveLpSimplex(solver_object);
-	return_status = interpretCallStatus(options.log_options, call_status,
-					    return_status, "solveLpSimplex");
-	if (return_status == HighsStatus::kError) return return_status;
-	if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-	  highsLogUser(options.log_options, HighsLogType::kError,
-		       "Inconsistent solution returned from solver\n");
-	  return HighsStatus::kError;
-	}
-      } // options.run_crossover == kHighsOnString
-    } // unwelcome_ipx_status
+        // IPX has returned a model status that HiGHS would rather
+        // avoid, so perform simplex clean-up if crossover was allowed.
+        //
+        // This is an unusual situation, and the cost will usually be
+        // acceptable. Worst case is if crossover wasn't run, in which
+        // case there's no basis to start simplex
+        //
+        // ToDo: Check whether simplex can exploit the primal solution returned
+        // by IPX
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "IPX solution is imprecise, so clean up with simplex\n");
+        // Reset the return status since it will now be determined by
+        // the outcome of the simplex solve
+        return_status = HighsStatus::kOk;
+        call_status = solveLpSimplex(solver_object);
+        return_status = interpretCallStatus(options.log_options, call_status,
+                                            return_status, "solveLpSimplex");
+        if (return_status == HighsStatus::kError) return return_status;
+        if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
+          highsLogUser(options.log_options, HighsLogType::kError,
+                       "Inconsistent solution returned from solver\n");
+          return HighsStatus::kError;
+        }
+      }  // options.run_crossover == kHighsOnString
+    }    // unwelcome_ipx_status
   } else {
     // Use Simplex
     call_status = solveLpSimplex(solver_object);

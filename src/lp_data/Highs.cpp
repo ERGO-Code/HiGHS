@@ -1198,9 +1198,12 @@ HighsStatus Highs::run() {
           solution_.clear();
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
-          if (ipx_no_crossover) {
-            // IPX was used without crossover, so have a dual solution, but no
-            // basis
+          //          if (ipx_no_crossover) {
+          if (!basis_.valid) {
+            // Have a primal-dual solution, but no basis, since IPX
+            // was used without crossover, either because
+            // run_crossover was "off" or "choose" and IPX determined
+            // optimality
             solution_.dual_valid = true;
             basis_.invalidate();
           } else {
