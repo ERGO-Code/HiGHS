@@ -5,11 +5,11 @@
 #include <map>
 #include <vector>
 
-#include "instance.hpp"
-#include "pricing.hpp"
-#include "qpconst.hpp"
-#include "runtime.hpp"
-#include "snippets.hpp"
+#include "qpsolver/instance.hpp"
+#include "qpsolver/pricing.hpp"
+#include "qpsolver/qpconst.hpp"
+#include "qpsolver/runtime.hpp"
+#include "qpsolver/snippets.hpp"
 #include "util/HFactor.h"
 #include "util/HVector.h"
 #include "util/HVectorBase.h"

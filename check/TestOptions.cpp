@@ -1,9 +1,10 @@
 #include <cstdio>
 
-#include "HMPSIO.h"
-#include "Highs.h"
-#include "LoadOptions.h"
 #include "catch.hpp"
+
+#include "Highs.h"
+#include "io/HMPSIO.h"
+#include "io/LoadOptions.h"
 
 const bool dev_run = false;
 

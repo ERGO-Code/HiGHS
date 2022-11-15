@@ -1,7 +1,7 @@
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 #include "catch.hpp"
-#include "ipm/ipx/include/ipx_status.h"
-#include "ipm/ipx/src/lp_solver.h"
+#include "ipm/ipx/ipx_status.h"
+#include "ipm/ipx/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "parallel/HighsParallel.h"
@@ -14,7 +14,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "lp_solver.h"
+#include "ipm/ipx/lp_solver.h"
 
 const bool dev_run = false;
 
