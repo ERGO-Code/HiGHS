@@ -56,10 +56,24 @@ Int LpSolver::Solve() {
     control_.Log() << "IPX version 1.0\n";
     try {
         InteriorPointSolve();
-        if ((info_.status_ipm == IPX_STATUS_optimal ||
-             info_.status_ipm == IPX_STATUS_imprecise) && control_.run_crossover()) {
-            control_.Log() << "Crossover\n";
-            BuildCrossoverStartingPoint();
+	const bool run_crossover_on = control_.run_crossover() == 1;
+	const bool run_crossover_choose = control_.run_crossover() == -1;
+	const bool run_crossover_not_off = run_crossover_choose || run_crossover_on;
+	const bool run_crossover =
+	  (info_.status_ipm == IPX_STATUS_optimal && run_crossover_on) ||
+	  (info_.status_ipm == IPX_STATUS_imprecise && run_crossover_not_off);
+	//        if ((info_.status_ipm == IPX_STATUS_optimal ||
+	//             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
+	if (run_crossover) {
+	    if (run_crossover_on) {
+	      control_.Log() << "Running crossover as requested\n";
+	    } else if (run_crossover_choose) {
+	      assert(info_.status_ipm == IPX_STATUS_imprecise);
+	      control_.Log() << "Running crossover since IPX is imprecise\n";
+	    } else {
+	      assert(run_crossover_on || run_crossover_choose);
+	    }
+	    BuildCrossoverStartingPoint();
             RunCrossover();
         }
         if (basis_) {
