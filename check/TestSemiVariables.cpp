@@ -5,6 +5,11 @@
 const double inf = kHighsInf;
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
+const HighsVarType continuous = HighsVarType::kContinuous;
+const HighsVarType semi_continuous = HighsVarType::kSemiContinuous;
+const HighsVarType semi_integer = HighsVarType::kSemiInteger;
+
+void semiModel0(HighsLp& lp);
 
 TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   Highs highs;
@@ -14,26 +19,12 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsModel model;
   HighsLp& lp = model.lp_;
-  lp.num_col_ = 4;
-  lp.num_row_ = 4;
-  lp.col_cost_ = {1, 2, -4, -3};
-  lp.col_lower_ = {0, 0, 1.1, 0};
-  lp.col_upper_ = {inf, inf, inf, inf};
-  lp.row_lower_ = {-inf, 0, 0, 0.5};
-  lp.row_upper_ = {5, inf, inf, inf};
-  lp.a_matrix_.start_ = {0, 3, 6, 7, 8};
-  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 3};
-  lp.a_matrix_.value_ = {1, 2, -1, 1, -1, 3, 1, 1};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  lp.sense_ = ObjSense::kMaximize;
-
-  const HighsVarType continuous = HighsVarType::kContinuous;
-  const HighsVarType semi_continuous = HighsVarType::kSemiContinuous;
-  const HighsVarType semi_integer = HighsVarType::kSemiInteger;
-  lp.integrality_ = {continuous, continuous, semi_continuous, continuous};
+  semiModel0(lp);
   const HighsInt semi_col = 2;
-  const double save_semi_col_lower = lp.col_lower_[semi_col];
-  const double save_semi_col_upper = lp.col_upper_[semi_col];
+  const double semi_col_cost = -4.0;
+  const double semi_col_lower = lp.col_lower_[semi_col];
+  const double semi_col_upper = lp.col_upper_[semi_col];
+  lp.col_cost_[semi_col] = semi_col_cost;
   optimal_objective_function_value = 6.83333;
   // Legal to have infinte upper bounds on semi-variables
   lp.col_upper_[semi_col] = inf;
@@ -45,7 +36,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
-  // Remove the semi-condition and resolve
+  // Remove the semi-condition and resolve - not the same as relaxation
   highs.changeColIntegrality(semi_col, continuous);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
@@ -72,7 +63,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
 
   // Change to sem-integer, restore the bounds and resolve
   highs.changeColIntegrality(semi_col, semi_integer);
-  highs.changeColBounds(semi_col, save_semi_col_lower, save_semi_col_upper);
+  highs.changeColBounds(semi_col, semi_col_lower, semi_col_upper);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 8.13333;
@@ -86,6 +77,57 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+  //
+}
+
+TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
+  const double optimal_relaxation_objective_function_value = 7.83333;
+  const double optimal_semi_continuous_objective_function_value = 7.23333;
+  double optimal_objective_function_value;
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  semiModel0(lp);
+  const HighsInt semi_col = 2;
+  const double semi_col_cost = -1.0;
+  const double semi_col_lower = lp.col_lower_[semi_col];
+  lp.col_cost_[semi_col] = semi_col_cost;
+  // Force relaxation directly
+  lp.col_lower_[semi_col] = 0;
+  lp.integrality_[semi_col] = continuous;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  optimal_objective_function_value =
+      optimal_relaxation_objective_function_value;
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+
+  // Restore the semi-continuous variable
+  lp.col_lower_[semi_col] = semi_col_lower;
+  lp.integrality_[semi_col] = semi_continuous;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  optimal_objective_function_value =
+      optimal_semi_continuous_objective_function_value;
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+
+  // Now solve the relaxation
+  highs.setOptionValue("solve_relaxation", true);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  optimal_objective_function_value =
+      optimal_relaxation_objective_function_value;
+  REQUIRE(fabs(info.objective_function_value -
+               optimal_objective_function_value) < double_equal_tolerance);
+  // Check that the lower bound of the semi-variable has been restored
+  REQUIRE(highs.getLp().col_lower_[semi_col] == semi_col_lower);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
@@ -185,4 +227,20 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+}
+
+void semiModel0(HighsLp& lp) {
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1, 2, -1, -3};
+  lp.col_lower_ = {0, 0, 1.1, 0};
+  lp.col_upper_ = {inf, inf, inf, inf};
+  lp.row_lower_ = {-inf, 0, 0, 0.5};
+  lp.row_upper_ = {5, inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3, 6, 7, 8};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 3, 3};
+  lp.a_matrix_.value_ = {1, 2, -1, 1, -1, 3, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.integrality_ = {continuous, continuous, semi_continuous, continuous};
 }

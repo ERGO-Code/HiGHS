@@ -16,7 +16,7 @@ class Program {
       double offset = 0;
       HighsMatrixFormat a_format = HighsMatrixFormat.kColwise;
 
-      HighsModel model = new HighsModel(cc, cl, cu, rl, ru, astart, aindex, avalue, offset, a_format, sense);
+      HighsModel model = new HighsModel(cc, cl, cu, rl, ru, astart, aindex, avalue, null, offset, a_format, sense);
 
       HighsLpSolver solver = new HighsLpSolver();
 

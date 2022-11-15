@@ -138,7 +138,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
 
   const bool report_solve_data = kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
-  // Struct ipx_info defined in ipx/include/ipx_info.h
+  // Struct ipx_info defined in ipx/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
   if (report_solve_data) reportSolveData(options.log_options, ipx_info);
   highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;

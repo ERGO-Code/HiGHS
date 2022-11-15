@@ -1,6 +1,6 @@
 name: Wheels
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build_wheels:
@@ -26,12 +26,12 @@ jobs:
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Create install dir
-        run: cmake -E make_directory ${{runner.workspace}}/install
+        run: cmake -E make_directory ${{runner.workspace}}/installs/
 
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install/highs -DFAST_BUILD=ON
+        run: cmake $GITHUB_WORKSPACE -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs/highs -DFAST_BUILD=ON
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -46,22 +46,21 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel 2 --timeout 300 --output-on-failure 
+        run: ctest --parallel 2 --timeout 300 --output-on-failure
 
       - name: Build wheels
         run: |
-           cd  $GITHUB_WORKSPACE/src/interfaces/highspy
-           export REPAIR_LIBRARY_PATH=${{runner.workspace}}/install/highs/lib
-           export LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
-           export DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
-           ls $REPAIR_LIBRARY_PATH
-           python -m cibuildwheel --output-dir wheelhouse
+          cd  $GITHUB_WORKSPACE/src/interfaces/highspy
+          export REPAIR_LIBRARY_PATH=${{runner.workspace}}/installs/highs/lib
+          export LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
+          export DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
+          ls $REPAIR_LIBRARY_PATH
+          python -m cibuildwheel --output-dir wheelhouse
 
-           
         # to supply options, put them in 'env', like:
 
         env:
-          CIBW_ENVIRONMENT:  REPAIR_LIBRARY_PATH=${{runner.workspace}}/install/highs/lib LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
+          CIBW_ENVIRONMENT: REPAIR_LIBRARY_PATH=${{runner.workspace}}/installs/highs/lib LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
             DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel} &&
             DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}

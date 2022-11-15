@@ -56,13 +56,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                   "Exception %s in solveLpIpx\n", exception.what());
       call_status = HighsStatus::kError;
     }
-    // Non-error return requires a primal solution
-    assert(solver_object.solution_.value_valid);
-    // Set the return_status, model status and, for completeness, scaled
-    // model status
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) return return_status;
+    // Non-error return requires a primal solution
+    assert(solver_object.solution_.value_valid);
     // Get the objective and any KKT failures
     solver_object.highs_info_.objective_function_value =
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);

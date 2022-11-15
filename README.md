@@ -191,6 +191,11 @@ Rust
 
 - HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
 
+R
+------
+
+- An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
+
 Javascript
 ----------
 

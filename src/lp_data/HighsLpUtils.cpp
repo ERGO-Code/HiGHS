@@ -580,6 +580,28 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
+void relaxSemiVariables(HighsLp& lp) {
+  // When solving relaxation, semi-variables are continuous between 0
+  // and their upper bound, so have to modify the lower bound to be
+  // zero
+  if (!lp.integrality_.size()) return;
+  assert(lp.integrality_.size() == lp.num_col_);
+  HighsInt num_modified_lower = 0;
+  std::vector<HighsInt>& lower_bound_index =
+      lp.mods_.save_semi_variable_lower_bound_index;
+  std::vector<double>& lower_bound_value =
+      lp.mods_.save_semi_variable_lower_bound_value;
+  assert(lower_bound_index.size() == 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+        lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
+      lower_bound_index.push_back(iCol);
+      lower_bound_value.push_back(lp.col_lower_[iCol]);
+      lp.col_lower_[iCol] = 0;
+    }
+  }
+}
+
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value) {
   const std::vector<HighsInt>& upper_bound_index =
@@ -2264,6 +2286,9 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   //  assert(solution.row_dual.size() > 0);
   if (int(solution.row_dual.size()) < lp.num_row_) return HighsStatus::kError;
+  const bool is_colwise = lp.a_matrix_.isColwise();
+  assert(is_colwise);
+  if (!is_colwise) return HighsStatus::kError;
 
   solution.col_dual.assign(lp.num_col_, 0);
 
@@ -2285,6 +2310,9 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   // assert(solution.col_value.size() > 0);
   if (int(solution.col_value.size()) < lp.num_col_) return HighsStatus::kError;
+  const bool is_colwise = lp.a_matrix_.isColwise();
+  assert(is_colwise);
+  if (!is_colwise) return HighsStatus::kError;
 
   solution.row_value.clear();
   solution.row_value.assign(lp.num_row_, 0);
@@ -2307,6 +2335,9 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
   // assert(solution.col_value.size() > 0);
   if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+  const bool is_colwise = lp.a_matrix_.isColwise();
+  assert(is_colwise);
+  if (!is_colwise) return HighsStatus::kError;
 
   std::vector<HighsCDouble> row_value;
   row_value.assign(lp.num_row_, HighsCDouble{0.0});

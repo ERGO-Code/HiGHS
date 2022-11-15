@@ -35,7 +35,7 @@ class HighsSearch {
   HighsMipSolver& mipsolver;
   HighsLpRelaxation* lp;
   HighsDomain localdom;
-  HighsPseudocost pseudocost;
+  HighsPseudocost& pseudocost;
   HighsRandom random;
   int64_t nnodes;
   int64_t lpiterations;
@@ -142,7 +142,7 @@ class HighsSearch {
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
  public:
-  HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
+  HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
 
   void setRINSNeighbourhood(const std::vector<double>& basesol,
                             const std::vector<double>& relaxsol);

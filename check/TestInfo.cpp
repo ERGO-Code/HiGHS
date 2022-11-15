@@ -1,9 +1,10 @@
 #include <cstdio>
 
-#include "FilereaderEms.h"
-#include "HMPSIO.h"
-#include "Highs.h"
 #include "catch.hpp"
+
+#include "Highs.h"
+#include "io/FilereaderEms.h"
+#include "io/HMPSIO.h"
 
 const bool dev_run = false;
 

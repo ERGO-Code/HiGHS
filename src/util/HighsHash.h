@@ -943,8 +943,8 @@ class HighsHashTable {
     using pointer = IterType*;
     using reference = IterType&;
     using iterator_category = std::forward_iterator_tag;
-    HashTableIterator(u8* pos, u8* end, Entry* entryEnd)
-        : pos(pos), end(end), entryEnd(entryEnd) {}
+    HashTableIterator(u8* pos_, u8* end_, Entry* entryEnd_)
+        : pos(pos_), end(end_), entryEnd(entryEnd_) {}
     HashTableIterator() = default;
 
     HashTableIterator<IterType> operator++(int) {
@@ -1041,7 +1041,7 @@ class HighsHashTable {
   u64 distanceFromIdealSlot(u64 pos) const {
     // we store 7 bits of the hash in the metadata. Assuming a decent
     // hashfunction it is practically never happening that an item travels more
-    // then 127 slots from its ideal position, therefore, we can compute the
+    // than 127 slots from its ideal position, therefore, we can compute the
     // distance from the ideal position just as it would normally be done
     // assuming there is at most one overflow. Consider using 3 bits which gives
     // values from 0 to 7. When an item is at a position with lower bits 7 and

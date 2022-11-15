@@ -1,26 +1,26 @@
-#include "quass.hpp"
+#include "qpsolver/quass.hpp"
 
 #include <algorithm>
 #include <map>
 
 #include "Highs.h"
-#include "basis.hpp"
-#include "crashsolution.hpp"
-#include "dantzigpricing.hpp"
-#include "devexharrispricing.hpp"
-#include "devexpricing.hpp"
-#include "factor.hpp"
-#include "feasibility.hpp"
-#include "gradient.hpp"
-#include "instance.hpp"
+#include "qpsolver/basis.hpp"
+#include "qpsolver/crashsolution.hpp"
+#include "qpsolver/dantzigpricing.hpp"
+#include "qpsolver/devexharrispricing.hpp"
+#include "qpsolver/devexpricing.hpp"
+#include "qpsolver/factor.hpp"
+#include "qpsolver/feasibility.hpp"
+#include "qpsolver/gradient.hpp"
+#include "qpsolver/instance.hpp"
 #include "lp_data/HighsAnalysis.h"
-#include "ratiotest.hpp"
-#include "reducedcosts.hpp"
-#include "reducedgradient.hpp"
-#include "snippets.hpp"
-#include "steepestedgepricing.hpp"
-#include "scaling.hpp"
-#include "perturbation.hpp"
+#include "qpsolver/ratiotest.hpp"
+#include "qpsolver/reducedcosts.hpp"
+#include "qpsolver/reducedgradient.hpp"
+#include "qpsolver/snippets.hpp"
+#include "qpsolver/steepestedgepricing.hpp"
+#include "qpsolver/scaling.hpp"
+#include "qpsolver/perturbation.hpp"
 
 void Quass::solve() {
   scale(runtime);

@@ -1,8 +1,9 @@
 #include <cstdio>
 
-#include "FilereaderLp.h"
-#include "Highs.h"
 #include "catch.hpp"
+
+#include "Highs.h"
+#include "io/FilereaderLp.h"
 
 const bool dev_run = false;
 const double inf = kHighsInf;
@@ -115,6 +116,20 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[2] - required_x2) < double_equal_tolerance);
   std::remove(filename.c_str());
+
+  // Test that attempting to solve MIQP yields error
+  HighsInt num_col = highs.getNumCol();
+  std::vector<HighsVarType> integrality;
+  integrality.assign(num_col, HighsVarType::kInteger);
+  REQUIRE(highs.changeColsIntegrality(0, num_col - 1, &integrality[0]) ==
+          HighsStatus::kOk);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kError);
+
+  // Test that attempting to solve MIQP relaxation is OK
+  highs.setOptionValue("solve_relaxation", true);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {

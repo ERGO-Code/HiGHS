@@ -1,5 +1,5 @@
 
-#include "../extern/filereaderlp/reader.hpp"
+#include "filereaderlp/reader.hpp"
 #include "Highs.h"
 #include "catch.hpp"
 
