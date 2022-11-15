@@ -26,8 +26,8 @@ struct ipx_parameters ipx_default_parameters() {
     p.maxskip_updates = 10;
     p.lu_kernel = 0;
     p.lu_pivottol = 0.0625;
-    p.crossover = 1;
-    p.crossover_start = 1e-8;
+    p.run_crossover = 1;
+    p.start_crossover_tol = 1e-8;
     p.pfeasibility_tol = 1e-7;
     p.dfeasibility_tol = 1e-7;
     p.debug = 0;

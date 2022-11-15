@@ -57,7 +57,7 @@ Int LpSolver::Solve() {
     try {
         InteriorPointSolve();
         if ((info_.status_ipm == IPX_STATUS_optimal ||
-             info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover()) {
+             info_.status_ipm == IPX_STATUS_imprecise) && control_.run_crossover()) {
             control_.Log() << "Crossover\n";
             BuildCrossoverStartingPoint();
             RunCrossover();
@@ -81,7 +81,7 @@ Int LpSolver::Solve() {
             // solved.
             info_.status = IPX_STATUS_solved;
         } else {
-            Int method_status = control_.crossover() ?
+            Int method_status = control_.run_crossover() ?
                 info_.status_crossover : info_.status_ipm;
             if (method_status == IPX_STATUS_optimal ||
                 method_status == IPX_STATUS_imprecise)
@@ -339,8 +339,8 @@ void LpSolver::InteriorPointSolve() {
     iterate_.reset(new Iterate(model_));
     iterate_->feasibility_tol(control_.ipm_feasibility_tol());
     iterate_->optimality_tol(control_.ipm_optimality_tol());
-    if (control_.crossover())
-        iterate_->crossover_start(control_.crossover_start());
+    if (control_.run_crossover())
+        iterate_->start_crossover_tol(control_.start_crossover_tol());
 
     RunIPM();
 

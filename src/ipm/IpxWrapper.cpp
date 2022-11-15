@@ -96,25 +96,26 @@ HighsStatus solveLpIpx(const HighsOptions& options,
                                        options.dual_feasibility_tolerance);
 
   parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
-  parameters.crossover_start = options.start_crossover_tolerance;
+  parameters.start_crossover_tol = options.start_crossover_tolerance;
   parameters.analyse_basis_data = kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
   parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
   if (options.run_crossover == kHighsOnString) {
-    parameters.crossover = 1;
+    parameters.run_crossover = 1;
   } else if (options.run_crossover == kHighsOffString) {
-    parameters.crossover = 0;
+    parameters.run_crossover = 0;
   } else {
-    parameters.crossover = -1;
+    assert(options.run_crossover == kHighsChooseString);
+    parameters.run_crossover = -1;
     assert(123==456);
   }
-  if (!parameters.crossover) {
-    // If crossover is not run, then set crossover_start to -1 so that
-    // IPX can terminate according to its feasibility and optimality
-    // tolerances
-    parameters.crossover_start = -1;
+  if (!parameters.run_crossover) {
+    // If crossover is sure not to be run, then set crossover_start to
+    // -1 so that IPX can terminate according to its feasibility and
+    // optimality tolerances
+    parameters.start_crossover_tol = -1;
   }
 
   // Set the internal IPX parameters
