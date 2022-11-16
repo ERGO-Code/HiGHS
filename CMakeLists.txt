@@ -125,9 +125,13 @@ enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
 enable_cxx_compiler_flag_if_supported("-pedantic")
 endif()
 
-check_cxx_compiler_flag("-mpopcnt" FLAG_MPOPCNT_SUPPORTED)
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -mpopcnt")
-
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
+else()
+  message("FLAG_MPOPCNT_SUPPORTED is not available on this architecture")
+endif()
 
 option(DEBUGSOL "check the debug solution" OFF)
 
