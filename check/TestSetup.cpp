@@ -1,5 +1,4 @@
 #include "catch.hpp"
-
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 

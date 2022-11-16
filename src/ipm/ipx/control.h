@@ -72,8 +72,8 @@ public:
     ipxint maxskip_updates() const { return parameters_.maxskip_updates; }
     ipxint lu_kernel() const { return parameters_.lu_kernel; }
     double lu_pivottol() const { return parameters_.lu_pivottol; }
-    ipxint crossover() const { return parameters_.crossover; }
-    double crossover_start() const { return parameters_.crossover_start; }
+    ipxint run_crossover() const { return parameters_.run_crossover; }
+    double start_crossover_tol() const { return parameters_.start_crossover_tol; }
     double pfeasibility_tol() const { return parameters_.pfeasibility_tol; }
     double dfeasibility_tol() const { return parameters_.dfeasibility_tol; }
     ipxint switchiter() const { return parameters_.switchiter; }

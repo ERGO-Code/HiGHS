@@ -1,8 +1,7 @@
 #include <cstdio>
 
-#include "catch.hpp"
-
 #include "Highs.h"
+#include "catch.hpp"
 #include "io/HMPSIO.h"
 #include "io/LoadOptions.h"
 

@@ -87,7 +87,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
-    ipm.setOptionValue("run_crossover", false);
+    ipm.setOptionValue("run_crossover", kHighsOffString);
     ipm.setOptionValue("presolve", "off");
     ipm.setOptionValue("output_flag", false);
     ipm.setOptionValue("ipm_iteration_limit", 200);
