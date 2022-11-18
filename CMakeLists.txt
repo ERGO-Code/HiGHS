@@ -82,8 +82,8 @@ if(BUILD_SHARED_LIBS AND MSVC)
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
-# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-if(BUILD_PYTHON OR BUILD_JAVA OR BUILD_DOTNET)
+# If wrapper is built, we need to have the install rpath in BINARY_DIR to package
+if(BUILD_PYTHON)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 

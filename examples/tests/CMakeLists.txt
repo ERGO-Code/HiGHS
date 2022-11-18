@@ -17,9 +17,9 @@ if(BUILD_PYTHON_EXAMPLES)
 endif()
 
 if(BUILD_C_EXAMPLES)
-  file(GLOB JAVA_SRCS "*.c")
-  foreach(FILE_NAME IN LISTS JAVA_SRCS)
-    add_java_example(${FILE_NAME})
+  file(GLOB C "*.c")
+  foreach(FILE_NAME IN LISTS C_SRCS)
+    add_c_example(${FILE_NAME})
   endforeach()
 endif()
 

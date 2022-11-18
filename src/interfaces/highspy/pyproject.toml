@@ -46,6 +46,6 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.windows]
-#archs = ["x86 AMD64"]
+archs = ["AMD64"]
 # Only build on CPython 3.9
 build = "cp39-*"
