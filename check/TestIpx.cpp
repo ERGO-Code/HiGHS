@@ -1,9 +1,9 @@
-#include "lp_data/HighsStatus.h"
 #include "catch.hpp"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsStatus.h"
 #include "parallel/HighsParallel.h"
 
 // No commas i// Copyright (c) 2018 ERGO-Code. See license.txt for license.

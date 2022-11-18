@@ -40,8 +40,8 @@ struct ipx_parameters {
     double lu_pivottol;
 
     /* Crossover */
-    ipxint crossover;
-    double crossover_start;
+    ipxint run_crossover;
+    double start_crossover_tol;
     double pfeasibility_tol;
     double dfeasibility_tol;
 

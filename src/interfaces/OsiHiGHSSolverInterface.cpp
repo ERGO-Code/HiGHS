@@ -21,10 +21,10 @@
 #include "Highs.h"
 #include "HighsLp.h"
 #include "HighsOptions.h"
-#include "lp_data/HighsStatus.h"
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "lp_data/HighsStatus.h"
 
 static void logtomessagehandler(HighsLogType type, const char* msg,
                                 void* log_callback_data) {
