@@ -445,8 +445,8 @@ else()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
 
+set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if (NOT ${BUILD_SHARED_LIBS})
-    set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
@@ -604,10 +604,10 @@ set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-if (UNIX)
-    set_target_properties(libhighs PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
-endif()
+# if (UNIX)
+#     set_target_properties(libhighs PROPERTIES
+#         LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+# endif()
 
 set(headers_fast_build_
     ../extern/filereaderlp/builder.hpp
@@ -744,8 +744,8 @@ set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_header
 #set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
 # set the install rpath to the installed destination
-set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+# set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+#     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
@@ -770,8 +770,8 @@ if (UNIX)
     target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
 endif()
 
-set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+# set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+#     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 endif()
 
