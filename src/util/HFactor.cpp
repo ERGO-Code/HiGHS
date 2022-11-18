@@ -880,6 +880,7 @@ HighsInt HFactor::buildKernel() {
   const bool progress_report = false;  // num_basic != num_row;
   const HighsInt progress_frequency = 10000;
   const HighsInt timer_frequency = 100;
+  const bool check_for_timeout = this->time_limit_ < kHighsInf;
   HighsInt search_k = 0;
 
   const HighsInt check_nwork = -11;
@@ -888,16 +889,10 @@ HighsInt HFactor::buildKernel() {
     if (nwork == check_nwork) {
       reportAsm();
     }
-
-    if (search_k % timer_frequency == 0) {
-      // Detemine whether to return due to excee`<ding the time limit
-      double local_build_time = build_timer_->readRunHighsClock();
-      if (local_build_time > this->time_limit_) {
-        printf("HFactor::local_build_time(buildKernel - search_k = %9d) = %g\n",
-               int(search_k), local_build_time);
+    // Detemine whether to return due to exceeding the time limit
+    if (check_for_timeout && search_k % timer_frequency == 0)
+      if (build_timer_->readRunHighsClock() > this->time_limit_)
         return kBuildKernelReturnTimeout;
-      }
-    }
 
     /**
      * 1. Search for the pivot
