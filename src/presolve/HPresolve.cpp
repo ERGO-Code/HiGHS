@@ -4286,8 +4286,10 @@ HPresolve::Result HPresolve::removeDependentEquations(
 
   HighsSparseMatrix matrix;
   matrix.num_col_ = equations.size();
-  // printf("got %d equations, checking for dependent equations\n",
-  //        (int)matrix.num_col_);
+  highsLogDev(options->log_options, HighsLogType::kInfo,
+              "HPresolve::removeDependentEquations Got %d equations, checking "
+              "for dependent equations\n",
+              (int)matrix.num_col_);
   matrix.num_row_ = model->num_col_ + 1;
   matrix.start_.resize(matrix.num_col_ + 1);
   matrix.start_[0] = 0;
@@ -4319,7 +4321,18 @@ HPresolve::Result HPresolve::removeDependentEquations(
   std::iota(colSet.begin(), colSet.end(), 0);
   HFactor factor;
   factor.setup(matrix, colSet);
+  // Set up a time limit to prevent the redundant rows factorization
+  // taking forever.
+  //
+  // ToDo: This is strictly non-deterministic, but so conservative
+  // that it'll only reap the cases when factor.build never finishes
+  const double time_limit = std::max(10.0, options->time_limit / 1000);
+  factor.setTimeLimit(time_limit);
+  // Determine rank deficiency of the equations
   HighsInt rank_deficiency = factor.build();
+  // Must not have timed out
+  assert(rank_deficiency >= 0);
+  // Analyse what's been removed
   HighsInt num_removed_row = 0;
   HighsInt num_removed_nz = 0;
   HighsInt num_fictitious_rows_skipped = 0;
@@ -4406,6 +4419,9 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   HFactor factor;
   factor.setup(matrix, colSet);
   HighsInt rank_deficiency = factor.build();
+  // Must not have timed out
+  assert(rank_deficiency >= 0);
+  // Analyse what's been removed
   HighsInt num_removed_row = 0;
   HighsInt num_removed_nz = 0;
   HighsInt num_fictitious_cols_skipped = 0;

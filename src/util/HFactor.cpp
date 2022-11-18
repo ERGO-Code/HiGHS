@@ -222,6 +222,7 @@ void HFactor::setupGeneral(
   pivot_tolerance =
       max(kMinPivotTolerance, min(pivot_tolerance_, kMaxPivotTolerance));
   highs_debug_level = highs_debug_level_;
+  time_limit_ = kHighsInf;
   log_data = decltype(log_data)(new LogData());
   log_options.output_flag = &log_data->output_flag;
   log_options.log_to_console = &log_data->log_to_console;
@@ -355,6 +356,13 @@ void HFactor::setupMatrix(const HighsSparseMatrix* a_matrix) {
 }
 
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
+  // Set up a timer to prevent build running longer than time_limit_,
+  // which is kHighsInf by default, and only set to a finite value in
+  // HPresolve::removeDependentEquations
+  HighsTimer build_timer;
+  build_timer_ = &build_timer;
+  build_timer.startRunHighsClock();
+
   const bool report_lu = false;
   // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);
@@ -381,12 +389,18 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   }
   factor_timer.stop(FactorInvertSimple, factor_timer_clock_pointer);
   factor_timer.start(FactorInvertKernel, factor_timer_clock_pointer);
-  rank_deficiency = buildKernel();
+  const HighsInt build_kernel_return = buildKernel();
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
-  // rank_deficiency is the deficiency of the basic variables. If
-  // num_basic < num_row, then have to identify the logicals required
-  // to complete the basis by continuing as if a full-dimension set of
-  // basic variables was rank deficient.
+  //
+  // build_kernel_return of kBuildKernelReturnTimeout (<0) indicates
+  // that time limit has been reached, otherwise it's the rank
+  // deficiency of the basic variables. If num_basic < num_row, then
+  // have to identify the logicals required to complete the basis by
+  // continuing as if a full-dimension set of basic variables was rank
+  // deficient.
+  if (build_kernel_return == kBuildKernelReturnTimeout)
+    return kBuildKernelReturnTimeout;
+  rank_deficiency = build_kernel_return;
   const bool incomplete_basis = num_basic < num_row;
   if (rank_deficiency || incomplete_basis) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
@@ -523,6 +537,12 @@ bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
   if (new_pivot_threshold > kMaxPivotThreshold) return false;
   pivot_threshold = new_pivot_threshold;
   return true;
+}
+
+void HFactor::setTimeLimit(const double time_limit) {
+  this->time_limit_ = kHighsInf;
+  if (time_limit < 0) return;
+  this->time_limit_ = time_limit;
 }
 
 void HFactor::luClear() {
@@ -859,6 +879,7 @@ HighsInt HFactor::buildKernel() {
 
   const bool progress_report = false;  // num_basic != num_row;
   const HighsInt progress_frequency = 10000;
+  const HighsInt timer_frequency = 100;
   HighsInt search_k = 0;
 
   const HighsInt check_nwork = -11;
@@ -867,6 +888,17 @@ HighsInt HFactor::buildKernel() {
     if (nwork == check_nwork) {
       reportAsm();
     }
+
+    if (search_k % timer_frequency == 0) {
+      // Detemine whether to return due to excee`<ding the time limit
+      double local_build_time = build_timer_->readRunHighsClock();
+      if (local_build_time > this->time_limit_) {
+        printf("HFactor::local_build_time(buildKernel - search_k = %9d) = %g\n",
+               int(search_k), local_build_time);
+        return kBuildKernelReturnTimeout;
+      }
+    }
+
     /**
      * 1. Search for the pivot
      */
