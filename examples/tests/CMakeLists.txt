@@ -1,0 +1,25 @@
+if(NOT BUILD_EXAMPLES)
+	return()
+endif()
+
+if(BUILD_CXX_EXAMPLES)
+  file(GLOB CXX_SRCS "*.cpp")
+  foreach(FILE_NAME IN LISTS CXX_SRCS)
+    add_cxx_test(${FILE_NAME})
+  endforeach()
+endif()
+
+if(BUILD_PYTHON_EXAMPLES)
+  file(GLOB PYTHON_SRCS "*.py")
+  foreach(FILE_NAME IN LISTS PYTHON_SRCS)
+    add_python_example(${FILE_NAME})
+  endforeach()
+endif()
+
+if(BUILD_C_EXAMPLES)
+  file(GLOB JAVA_SRCS "*.c")
+  foreach(FILE_NAME IN LISTS JAVA_SRCS)
+    add_java_example(${FILE_NAME})
+  endforeach()
+endif()
+
