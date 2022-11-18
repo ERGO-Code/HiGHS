@@ -389,11 +389,11 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
-set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
+# set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 
 
 # static build for windows
-if (FAST_BUILD AND NOT UNIX)
+if (NOT UNIX)
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
@@ -413,7 +413,7 @@ if(BUILD_SHARED_LIBS AND MSVC)
 endif()
 
 # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-if(BUILD_PYTHON OR BUILD_JAVA OR BUILD_DOTNET)
+if(BUILD_PYTHON)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
@@ -423,15 +423,15 @@ option(BUILD_EXAMPLES "Build examples" ON)
 message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
 CMAKE_DEPENDENT_OPTION(BUILD_CXX_EX "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
-message(STATUS "Build C++: ${BUILD_CXX_SAMPLES}")
+message(STATUS "Build C++: ${BUILD_CXX_EX}")
 CMAKE_DEPENDENT_OPTION(BUILD_C_EX "Build c example" ON "BUILD_EXAMPLES;BUILD_C" OFF)
-message(STATUS "Build C: ${BUILD_CXX_SAMPLES}")
+message(STATUS "Build C: ${BUILD_C_EX}")
 CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EX "Build python example" ON "BUILD_EXAMPLES;BUILD_PYTHON" OFF)
-message(STATUS "Build Python: ${BUILD_PYTHON_SAMPLES}")
+message(STATUS "Build Python: ${BUILD_PYTHON_EX}")
 
 # By default all dependencies are NOT built (i.e. BUILD_DEPS=OFF),
 # BUT if building any wrappers (Python, Java or .Net) then BUILD_DEPS=ON.
-if(BUILD_PYTHON OR BUILD_JAVA OR BUILD_DOTNET)
+if(BUILD_PYTHON)
   option(BUILD_DEPS /"Build all dependencies" ON)
 else()
   option(BUILD_DEPS "Build all dependencies" OFF)
