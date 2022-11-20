@@ -853,8 +853,8 @@ HighsStatus Highs::run() {
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
   HighsInt postsolve_iteration_count = -1;
-  const bool ipx_no_crossover =
-      options_.solver == kIpmString && !options_.run_crossover;
+  const bool ipx_no_crossover = options_.solver == kIpmString &&
+                                options_.run_crossover == kHighsOffString;
 
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
@@ -1198,9 +1198,12 @@ HighsStatus Highs::run() {
           solution_.clear();
           solution_ = presolve_.data_.recovered_solution_;
           solution_.value_valid = true;
-          if (ipx_no_crossover) {
-            // IPX was used without crossover, so have a dual solution, but no
-            // basis
+          //          if (ipx_no_crossover) {
+          if (!basis_.valid) {
+            // Have a primal-dual solution, but no basis, since IPX
+            // was used without crossover, either because
+            // run_crossover was "off" or "choose" and IPX determined
+            // optimality
             solution_.dual_valid = true;
             basis_.invalidate();
           } else {
@@ -3166,7 +3169,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
     case HighsModelStatus::kUnboundedOrInfeasible:
       if (options_.allow_unbounded_or_infeasible ||
-          (options_.solver == kIpmString && options_.run_crossover) ||
+          (options_.solver == kIpmString &&
+           options_.run_crossover == kHighsOnString) ||
           model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {

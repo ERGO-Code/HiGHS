@@ -1,8 +1,7 @@
 #include <algorithm>
 
-#include "catch.hpp"
-
 #include "Highs.h"
+#include "catch.hpp"
 #include "util/HighsRandom.h"
 
 using std::min;

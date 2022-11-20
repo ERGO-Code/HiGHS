@@ -39,8 +39,8 @@ struct Parameters : public ipx_parameters {
     maxskip_updates = 10;
     lu_kernel = 0;
     lu_pivottol = 0.0625;
-    crossover = 1;
-    crossover_start = 1e-8;
+    run_crossover = 1;
+    start_crossover_tol = 1e-8;
     pfeasibility_tol = 1e-7;
     dfeasibility_tol = 1e-7;
     debug = 0;

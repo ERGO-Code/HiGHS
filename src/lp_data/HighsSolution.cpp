@@ -1254,6 +1254,8 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
                       kDefaultPivotThreshold, kDefaultPivotTolerance,
                       kHighsDebugLevelMin, &options.log_options);
   HighsInt rank_deficiency = factor.build();
+  // Must not have timed out
+  assert(rank_deficiency >= 0);
   // Deduce the basis from basic_index
   //
   // Set all basic variables to nonbasic

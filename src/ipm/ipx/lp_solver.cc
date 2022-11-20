@@ -56,10 +56,24 @@ Int LpSolver::Solve() {
     control_.Log() << "IPX version 1.0\n";
     try {
         InteriorPointSolve();
-        if ((info_.status_ipm == IPX_STATUS_optimal ||
-             info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover()) {
-            control_.Log() << "Crossover\n";
-            BuildCrossoverStartingPoint();
+	const bool run_crossover_on = control_.run_crossover() == 1;
+	const bool run_crossover_choose = control_.run_crossover() == -1;
+	const bool run_crossover_not_off = run_crossover_choose || run_crossover_on;
+	const bool run_crossover =
+	  (info_.status_ipm == IPX_STATUS_optimal && run_crossover_on) ||
+	  (info_.status_ipm == IPX_STATUS_imprecise && run_crossover_not_off);
+	//        if ((info_.status_ipm == IPX_STATUS_optimal ||
+	//             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
+	if (run_crossover) {
+	    if (run_crossover_on) {
+	      control_.Log() << "Running crossover as requested\n";
+	    } else if (run_crossover_choose) {
+	      assert(info_.status_ipm == IPX_STATUS_imprecise);
+	      control_.Log() << "Running crossover since IPX is imprecise\n";
+	    } else {
+	      assert(run_crossover_on || run_crossover_choose);
+	    }
+	    BuildCrossoverStartingPoint();
             RunCrossover();
         }
         if (basis_) {
@@ -81,7 +95,7 @@ Int LpSolver::Solve() {
             // solved.
             info_.status = IPX_STATUS_solved;
         } else {
-            Int method_status = control_.crossover() ?
+            Int method_status = run_crossover ?
                 info_.status_crossover : info_.status_ipm;
             if (method_status == IPX_STATUS_optimal ||
                 method_status == IPX_STATUS_imprecise)
@@ -339,8 +353,8 @@ void LpSolver::InteriorPointSolve() {
     iterate_.reset(new Iterate(model_));
     iterate_->feasibility_tol(control_.ipm_feasibility_tol());
     iterate_->optimality_tol(control_.ipm_optimality_tol());
-    if (control_.crossover())
-        iterate_->crossover_start(control_.crossover_start());
+    if (control_.run_crossover())
+        iterate_->start_crossover_tol(control_.start_crossover_tol());
 
     RunIPM();
 

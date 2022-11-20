@@ -170,20 +170,21 @@ public:
     // Returns true if the relative objective gap is <= optimality_tol().
     bool optimal() const;
 
-    // Returns true if the iterate satisfies the IPM termination criterion.
-    // If crossover_start() <= 0, the termination criterion is feasible() &&
-    // optimal(). If crossover_start() > 0, it is additionally required that
-    // the relative residuals which result from dropping the iterate to
-    // complementarity are <= crossover_start().
+    // Returns true if the iterate satisfies the IPM termination
+    // criterion.  If start_crossover_tol() <= 0, the termination
+    // criterion is feasible() && optimal(). If start_crossover_tol()
+    // > 0, it is additionally required that the relative residuals
+    // which result from dropping the iterate to complementarity are
+    // <= start_crossover_tol().
     bool term_crit_reached() const;
 
     double feasibility_tol() const { return feasibility_tol_; }
     double optimality_tol() const { return optimality_tol_; }
-    double crossover_start() const { return crossover_start_; }
+    double start_crossover_tol() const { return start_crossover_tol_; }
 
     void feasibility_tol(double new_tol) { feasibility_tol_ = new_tol; }
     void optimality_tol(double new_tol) { optimality_tol_ = new_tol; }
-    void crossover_start(double new_tol) { crossover_start_ = new_tol; }
+    void start_crossover_tol(double new_tol) { start_crossover_tol_ = new_tol; }
 
     // Substitutes x[j], xl[j], xu[j], zl[j] and zu[j] for fixed and implied
     // variables as defined by their state. After Postprocess() the object is
@@ -289,7 +290,7 @@ private:
 
     double feasibility_tol_{1e-6};
     double optimality_tol_{1e-8};
-    double crossover_start_{-1.0};
+    double start_crossover_tol_{-1.0};
 };
 
 inline Iterate::State Iterate::StateOf(Int j) const {

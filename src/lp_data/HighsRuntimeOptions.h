@@ -25,42 +25,57 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
 
-    std::string presolve, solver, parallel, ranging;
-
-    // clang-format off
     cxx_options.add_options()
-        (kModelFileString,
-        "File of model to solve.",
-        cxxopts::value<std::vector<std::string>>())
+        //
+        // Command line file specifications
+        //
+        // model file
+        (kModelFileString, "File of model to solve.",
+         cxxopts::value<std::vector<std::string>>())
+        // options file
+        (kOptionsFileString, "File containing HiGHS options.",
+         cxxopts::value<std::vector<std::string>>())
+        //
+        // Command line option specifications
+        //
+        // presolve option
         (kPresolveString,
-        "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
-        cxxopts::value<std::string>(presolve))
+         "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
+         cxxopts::value<std::string>())
+        // solver option
         (kSolverString,
-        "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
-        cxxopts::value<std::string>(solver))
+         "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are "
+         "alternatives.",
+         cxxopts::value<std::string>())
+        // parallel option
         (kParallelString,
-        "Parallel solve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
-        cxxopts::value<std::string>(parallel))
-        (kTimeLimitString,
-        "Run time limit (seconds - double).",
-        cxxopts::value<double>())
-        (kOptionsFileString,
-        "File containing HiGHS options.",
-        cxxopts::value<std::vector<std::string>>())
-        (kSolutionFileString,
-        "File for writing out model solution.",
-        cxxopts::value<std::vector<std::string>>())
-        (kWriteModelFileString,
-        "File for writing out model.",
-        cxxopts::value<std::vector<std::string>>())
-        (kRandomSeedString,
-        "Seed to initialize random number generation.",
-        cxxopts::value<HighsInt>())
-        (kRangingString,
-        "Compute cost, bound, RHS and basic solution ranging.",
-        cxxopts::value<std::string>(ranging))
-        ("h, help", "Print help.");
-    // clang-format on
+         "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
+         "alternatives.",
+         cxxopts::value<std::string>())
+        // run_crossover option
+        (kRunCrossoverString,
+         "Run crossover: \"on\" by default - \"choose\"/\"off\" are "
+         "alternatives.",
+         cxxopts::value<std::string>())
+        // time_limit option
+        (kTimeLimitString, "Run time limit (seconds - double).",
+         cxxopts::value<double>())
+        // solution_file option
+        (kSolutionFileString, "File for writing out model solution.",
+         cxxopts::value<std::vector<std::string>>())
+        // write_model_file option
+        (kWriteModelFileString, "File for writing out model.",
+         cxxopts::value<std::vector<std::string>>())
+        // random_seed option
+        (kRandomSeedString, "Seed to initialize random number generation.",
+         cxxopts::value<HighsInt>())
+        // ranging option
+        (kRangingString, "Compute cost, bound, RHS and basic solution ranging.",
+         cxxopts::value<std::string>())("h, help", "Print help.");
+
+    // Handle command line file specifications
+    //
+    // model file
     cxx_options.parse_positional("model_file");
 
     auto result = cxx_options.parse(argc, argv);
@@ -88,38 +103,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         model_file = v[0];
       }
     }
-
-    if (result.count(kPresolveString)) {
-      std::string value = result[kPresolveString].as<std::string>();
-      if (setLocalOptionValue(report_log_options, kPresolveString,
-                              options.log_options, options.records,
-                              value) != OptionStatus::kOk)
-        return false;
-    }
-
-    if (result.count(kSolverString)) {
-      std::string value = result[kSolverString].as<std::string>();
-      if (setLocalOptionValue(report_log_options, kSolverString,
-                              options.log_options, options.records,
-                              value) != OptionStatus::kOk)
-        return false;
-    }
-
-    if (result.count(kParallelString)) {
-      std::string value = result[kParallelString].as<std::string>();
-      if (setLocalOptionValue(report_log_options, kParallelString,
-                              options.log_options, options.records,
-                              value) != OptionStatus::kOk)
-        return false;
-    }
-
-    if (result.count(kTimeLimitString)) {
-      double value = result[kTimeLimitString].as<double>();
-      if (setLocalOptionValue(report_log_options, kTimeLimitString,
-                              options.records, value) != OptionStatus::kOk)
-        return false;
-    }
-
+    // options file
     if (result.count(kOptionsFileString)) {
       auto& v = result[kOptionsFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {
@@ -129,6 +113,53 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
       if (!loadOptionsFromFile(report_log_options, options, v[0])) return false;
     }
 
+    // Handle command line option specifications
+    //
+    // presolve option
+    if (result.count(kPresolveString)) {
+      std::string value = result[kPresolveString].as<std::string>();
+      if (setLocalOptionValue(report_log_options, kPresolveString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
+        return false;
+    }
+
+    // solver option
+    if (result.count(kSolverString)) {
+      std::string value = result[kSolverString].as<std::string>();
+      if (setLocalOptionValue(report_log_options, kSolverString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
+        return false;
+    }
+
+    // parallel option
+    if (result.count(kParallelString)) {
+      std::string value = result[kParallelString].as<std::string>();
+      if (setLocalOptionValue(report_log_options, kParallelString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
+        return false;
+    }
+
+    // run_crossover option
+    if (result.count(kRunCrossoverString)) {
+      std::string value = result[kRunCrossoverString].as<std::string>();
+      if (setLocalOptionValue(report_log_options, kRunCrossoverString,
+                              options.log_options, options.records,
+                              value) != OptionStatus::kOk)
+        return false;
+    }
+
+    // time_limit option
+    if (result.count(kTimeLimitString)) {
+      double value = result[kTimeLimitString].as<double>();
+      if (setLocalOptionValue(report_log_options, kTimeLimitString,
+                              options.records, value) != OptionStatus::kOk)
+        return false;
+    }
+
+    // solution_file option
     if (result.count(kSolutionFileString)) {
       auto& v = result[kSolutionFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {
@@ -143,6 +174,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
+    // write_model_file option
     if (result.count(kWriteModelFileString)) {
       auto& v = result[kWriteModelFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {
@@ -157,6 +189,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
+    // random_seed option
     if (result.count(kRandomSeedString)) {
       HighsInt value = result[kRandomSeedString].as<HighsInt>();
       if (setLocalOptionValue(report_log_options, kRandomSeedString,
@@ -164,6 +197,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
+    // ranging option
     if (result.count(kRangingString)) {
       std::string value = result[kRangingString].as<std::string>();
       if (setLocalOptionValue(report_log_options, kRangingString,

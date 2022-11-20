@@ -32,6 +32,8 @@ using std::max;
 // using std::min;
 using std::vector;
 
+const HighsInt kBuildKernelReturnTimeout = -1;
+
 struct InvertibleRepresentation {
   // Factor L
   std::vector<HighsInt> l_pivot_index;
@@ -212,11 +214,11 @@ class HFactor {
    */
   bool setPivotThreshold(
       const double new_pivot_threshold = kDefaultPivotThreshold);
+
   /**
-   * @brief Sets minimum absolute pivot
+   * @brief Sets a time limit
    */
-  bool setMinAbsPivot(
-      const double new_pivot_tolerance = kDefaultPivotTolerance);
+  void setTimeLimit(const double time_limit);
 
   /**
    * @brief Updates instance with respect to new columns in the
@@ -328,6 +330,7 @@ class HFactor {
   double pivot_threshold;
   double pivot_tolerance;
   HighsInt highs_debug_level;
+  double time_limit_;
 
   struct LogData {
     bool output_flag;
@@ -341,6 +344,9 @@ class HFactor {
   bool debug_report_ = false;
   HighsInt basis_matrix_limit_size;
   HighsInt update_method;
+
+  // Internal timing
+  HighsTimer* build_timer_;
 
   // Working buffer
   HighsInt nwork;
