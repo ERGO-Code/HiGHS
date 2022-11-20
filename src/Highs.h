@@ -151,7 +151,7 @@ class Highs {
    * @brief Check the feasibility of the current solution. Of value
    * after calling Highs::readSolution
    */
-  HighsStatus checkSolutionFeasibility();
+  HighsStatus checkSolutionFeasibility() const;
 
   /**
    * Methods for HiGHS option input/output

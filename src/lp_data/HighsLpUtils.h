@@ -202,9 +202,13 @@ HighsStatus readSolutionFile(const std::string filename,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
 
-void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
-                                const HighsSolution& solution);
+HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
+                                       const HighsLp& lp,
+                                       const HighsSolution& solution);
 
+HighsStatus calculateRowValues(const HighsLp& lp,
+                               const std::vector<double>& col_value,
+                               std::vector<double>& row_value);
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

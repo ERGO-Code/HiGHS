@@ -2483,9 +2483,8 @@ HighsStatus Highs::readSolution(const std::string& filename,
                           style);
 }
 
-HighsStatus Highs::checkSolutionFeasibility() {
-  checkLpSolutionFeasibility(options_, model_.lp_, solution_);
-  return HighsStatus::kOk;
+HighsStatus Highs::checkSolutionFeasibility() const {
+  return checkLpSolutionFeasibility(options_, model_.lp_, solution_);
 }
 
 std::string Highs::modelStatusToString(

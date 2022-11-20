@@ -2002,6 +2002,14 @@ HighsStatus readSolutionFile(const std::string filename,
   // Define idetifiers for reading in
   HighsSolution read_solution = solution;
   HighsBasis read_basis = basis;
+  read_solution.clear();
+  read_basis.clear();
+  read_solution.col_value.resize(lp_num_col);
+  read_solution.row_value.resize(lp_num_row);
+  read_solution.col_dual.resize(lp_num_col);
+  read_solution.row_dual.resize(lp_num_row);
+  read_basis.col_status.resize(lp_num_col);
+  read_basis.row_status.resize(lp_num_row);
   std::string section_name;
   HighsInt status;
   in_file.ignore(kMaxLineLength, '\n');  // Model status
@@ -2022,8 +2030,13 @@ HighsStatus readSolutionFile(const std::string filename,
                    num_col, lp_num_col);
       return HighsStatus::kError;
     }
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      in_file >> name >> read_solution.col_value[iCol];
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      double value;
+      in_file >> name >> value;
+      read_solution.col_value[iCol] = value;
+    }
+    read_solution.value_valid = true;
+
     // Read in the row values
     in_file >> keyword >> keyword >> num_row;
     assert(keyword == "Rows");
@@ -2034,8 +2047,11 @@ HighsStatus readSolutionFile(const std::string filename,
                    num_row, lp_num_row);
       return HighsStatus::kError;
     }
-    for (HighsInt iRow = 0; iRow < num_row; iRow++)
-      in_file >> name >> read_solution.row_value[iRow];
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      double value;
+      in_file >> name >> value;
+      read_solution.row_value[iRow] = value;
+    }
   }
   in_file.ignore(kMaxLineLength, '\n');
   in_file.ignore(kMaxLineLength, '\n');  //
@@ -2045,12 +2061,18 @@ HighsStatus readSolutionFile(const std::string filename,
     in_file.ignore(kMaxLineLength, '\n');  // Status
     in_file >> keyword >> keyword >> num_col;
     assert(keyword == "Columns");
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      in_file >> name >> read_solution.col_dual[iCol];
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      double dual;
+      in_file >> name >> dual;
+      read_solution.col_dual[iCol] = dual;
+    }
     in_file >> keyword >> keyword >> num_row;
     assert(keyword == "Rows");
-    for (HighsInt iRow = 0; iRow < num_row; iRow++)
-      in_file >> name >> read_solution.row_dual[iRow];
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      double dual;
+      in_file >> name >> dual;
+      read_solution.row_dual[iRow] = dual;
+    }
   }
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  //
@@ -2062,8 +2084,9 @@ HighsStatus readSolutionFile(const std::string filename,
   return HighsStatus::kOk;
 }
 
-void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
-                                const HighsSolution& solution) {
+HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
+                                       const HighsLp& lp,
+                                       const HighsSolution& solution) {
   HighsInt num_col_infeasibilities = 0;
   double max_col_infeasibility = 0;
   double sum_col_infeasibilities = 0;
@@ -2077,12 +2100,10 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
   double max_row_residual = 0;
   double sum_row_residuals = 0;
   const double kRowResidualTolerance = 1e-12;
-  const vector<HighsInt>& start = lp.a_matrix_.start_;
-  const vector<HighsInt>& index = lp.a_matrix_.index_;
-  const vector<double>& value = lp.a_matrix_.value_;
-  vector<double> row_activity;
-  row_activity.assign(lp.num_row_, 0);
+  vector<double> row_value;
+  row_value.assign(lp.num_row_, 0);
   const bool have_integrality = lp.integrality_.size();
+  if (!solution.value_valid) return HighsStatus::kError;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double primal = solution.col_value[iCol];
     const double lower = lp.col_lower_[iCol];
@@ -2133,9 +2154,10 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
           std::max(integer_infeasibility, max_integer_infeasibility);
       sum_integer_infeasibilities += integer_infeasibility;
     }
-    for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
-      row_activity[index[iEl]] += primal * value[iEl];
   }
+  HighsStatus return_status =
+      calculateRowValues(lp, solution.col_value, row_value);
+  if (return_status != HighsStatus::kOk) return return_status;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
     const double lower = lp.row_lower_[iRow];
@@ -2160,7 +2182,7 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
           std::max(row_infeasibility, max_row_infeasibility);
       sum_row_infeasibilities += row_infeasibility;
     }
-    double row_residual = fabs(primal - row_activity[iRow]);
+    double row_residual = fabs(primal - row_value[iRow]);
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
         highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -2190,6 +2212,10 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Row     residuals       %6d  %11.4g  %11.4g\n",
                (int)num_row_residuals, max_row_residual, sum_row_residuals);
+  if (num_col_infeasibilities || num_integer_infeasibilities ||
+      num_row_infeasibilities)
+    return HighsStatus::kWarning;
+  return HighsStatus::kOk;
 }
 
 void writeBasisFile(FILE*& file, const HighsBasis& basis) {
@@ -2307,15 +2333,17 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   return HighsStatus::kOk;
 }
 
-HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
-  // assert(solution.col_value.size() > 0);
-  if (int(solution.col_value.size()) < lp.num_col_) return HighsStatus::kError;
+HighsStatus calculateRowValues(const HighsLp& lp,
+                               const std::vector<double>& col_value,
+                               std::vector<double>& row_value) {
+  // assert(col_value.size() > 0);
+  if (int(col_value.size()) < lp.num_col_) return HighsStatus::kError;
   const bool is_colwise = lp.a_matrix_.isColwise();
   assert(is_colwise);
   if (!is_colwise) return HighsStatus::kError;
 
-  solution.row_value.clear();
-  solution.row_value.assign(lp.num_row_, 0);
+  row_value.clear();
+  row_value.assign(lp.num_row_, 0);
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -2324,12 +2352,15 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
       assert(row >= 0);
       assert(row < lp.num_row_);
 
-      solution.row_value[row] +=
-          solution.col_value[col] * lp.a_matrix_.value_[i];
+      row_value[row] += col_value[col] * lp.a_matrix_.value_[i];
     }
   }
 
   return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
+  return calculateRowValues(lp, solution.col_value, solution.row_value);
 }
 
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
