@@ -2017,43 +2017,64 @@ HighsStatus readSolutionFile(const std::string filename,
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  // # Primal solution values
   in_file >> keyword;
-  if (keyword != "None") {
-    in_file.ignore(kMaxLineLength, '\n');  // Status
-    in_file.ignore(kMaxLineLength, '\n');  // Objective
-    // Read in the column values
-    in_file >> keyword >> keyword >> num_col;
-    assert(keyword == "Columns");
-    if (num_col != lp_num_col) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " columns, not %" HIGHSINT_FORMAT "\n",
-                   num_col, lp_num_col);
-      return HighsStatus::kError;
-    }
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      double value;
-      in_file >> name >> value;
-      read_solution.col_value[iCol] = value;
-    }
-    read_solution.value_valid = true;
-
-    // Read in the row values
-    in_file >> keyword >> keyword >> num_row;
-    assert(keyword == "Rows");
-    if (num_row != lp_num_row) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " rows, not %" HIGHSINT_FORMAT "\n",
-                   num_row, lp_num_row);
-      return HighsStatus::kError;
-    }
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      double value;
-      in_file >> name >> value;
-      read_solution.row_value[iRow] = value;
-    }
+  if (keyword == "None") {
+    printf("Solution file has no column values\n");
+    return readSolutionFileReturn(HighsStatus::kWarning,
+				  solution, basis, read_solution, read_basis,
+				  in_file);
+  }
+  in_file.ignore(kMaxLineLength, '\n');  // Status
+  in_file.ignore(kMaxLineLength, '\n');  // Objective
+  // Read in the column values
+  in_file >> keyword >> keyword >> num_col;
+  assert(keyword == "Columns");
+  if (num_col != lp_num_col) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+		 " columns, not %" HIGHSINT_FORMAT "\n",
+		 num_col, lp_num_col);
+    return readSolutionFileErrorReturn(in_file);
+  }
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    double value;
+    in_file >> name >> value;
+    read_solution.col_value[iCol] = value;
+  }
+  read_solution.value_valid = true;
+  const bool eof = in_file.eof();
+  if (in_file.eof()) {
+    printf("End of solution file reached after column values\n");
+    return readSolutionFileReturn(HighsStatus::kOk,
+				  solution, basis, read_solution, read_basis,
+				  in_file);
+  }
+  // Read in the row values
+  in_file >> keyword >> keyword >> num_row;
+  
+  if (keyword != "Rows") {
+    printf("keyword != \"Rows\", and in_file.eof() = %d\n", in_file.eof());
+  assert(keyword == "Rows");
+    
+  }
+  if (num_row != lp_num_row) {
+    highsLogUser(log_options, HighsLogType::kError,
+		 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+		 " rows, not %" HIGHSINT_FORMAT "\n",
+		 num_row, lp_num_row);
+    return readSolutionFileErrorReturn(in_file);
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    double value;
+    in_file >> name >> value;
+    read_solution.row_value[iRow] = value;
   }
   in_file.ignore(kMaxLineLength, '\n');
+  if (in_file.eof()) {
+    printf("End of solution file reached after row values\n");
+    return readSolutionFileReturn(HighsStatus::kOk,
+				  solution, basis, read_solution, read_basis,
+				  in_file);
+  }
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  // # Dual solution values
   in_file >> keyword;
@@ -2074,11 +2095,37 @@ HighsStatus readSolutionFile(const std::string filename,
       read_solution.row_dual[iRow] = dual;
     }
   }
+  if (in_file.eof()) {
+    printf("End of solution file reached after dual values\n");
+    return readSolutionFileReturn(HighsStatus::kOk,
+				  solution, basis, read_solution, read_basis,
+				  in_file);
+  }
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  //
   in_file.ignore(kMaxLineLength, '\n');  // # Basis
-  if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
-    return HighsStatus::kError;
+  HighsStatus basis_read_status = readBasisStream(log_options, read_basis, in_file);
+  // Return with basis read status
+  return readSolutionFileReturn(basis_read_status,
+				solution, basis, read_solution, read_basis,
+				in_file);
+}
+
+HighsStatus readSolutionFileErrorReturn(std::ifstream& in_file) {
+  in_file.close();
+  return HighsStatus::kError;
+}
+
+HighsStatus readSolutionFileReturn(const HighsStatus status,
+				   HighsSolution& solution,
+				   HighsBasis& basis,
+				   const HighsSolution& read_solution,
+				   const HighsBasis& read_basis,
+				   std::ifstream& in_file) {
+  in_file.close();
+  if (status != HighsStatus::kOk) {
+    return status;
+  }
   solution = read_solution;
   basis = read_basis;
   return HighsStatus::kOk;

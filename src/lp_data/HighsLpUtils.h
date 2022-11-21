@@ -202,6 +202,14 @@ HighsStatus readSolutionFile(const std::string filename,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
 
+HighsStatus readSolutionFileErrorReturn(std::ifstream& in_file);
+HighsStatus readSolutionFileReturn(const HighsStatus status,
+				   HighsSolution& solution,
+				   HighsBasis& basis,
+				   const HighsSolution& read_solution,
+				   const HighsBasis& read_basis,
+				   std::ifstream& in_file);
+				   
 HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
                                        const HighsLp& lp,
                                        const HighsSolution& solution);
