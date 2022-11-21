@@ -736,40 +736,13 @@ HighsStatus Highs::run() {
   exactResizeModel();
 
   if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the user solution is feasible
-    HighsLp& lp = model_.lp_;
-    HighsStatus return_status =
-        checkLpSolutionFeasibility(options_, lp, solution_);
-    assert(return_status != HighsStatus::kError);
-    if (return_status == HighsStatus::kWarning) {
-      printf("User solution before calling MIP solver is not feasible\n");
-      std::vector<double> save_col_lower = lp.col_lower_;
-      std::vector<double> save_col_upper = lp.col_upper_;
-      std::vector<HighsVarType> save_integrality = lp.integrality_;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-        if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
-        // Fix non-continuous variables at user-supplied values
-        lp.col_lower_[iCol] = solution_.col_value[iCol];
-        lp.col_upper_[iCol] = solution_.col_value[iCol];
-      }
-      lp.integrality_.clear();
-      solution_.clear();
-      basis_.clear();
-      // Solve the model
-      assert(!model_.isMip());
-      return_status = this->run();
-      if (return_status == HighsStatus::kError) {
-        highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Highs::run() error trying to find feasible solution of "
-                     "continuous variables\n");
-        return HighsStatus::kError;
-      }
-      // Recover the column bounds and integrality
-      lp.col_lower_ = save_col_lower;
-      lp.col_upper_ = save_col_upper;
-      lp.integrality_ = save_integrality;
-    }
+    // Determine whether the user solution of a MIP is
+    // feasible. Valuable in the case where users make a heuristic
+    // assignment of discrete variables
+    HighsStatus call_status = assessContinuousMipSolution();
+    if (call_status != HighsStatus::kOk) return HighsStatus::kError;
   }
+
   // Set this so that calls to returnFromRun() can be checked
   called_return_from_run = false;
   // From here all return statements execute returnFromRun()
@@ -2727,6 +2700,46 @@ void Highs::invalidateInfo() { info_.invalidate(); }
 void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
+
+HighsStatus Highs::assessContinuousMipSolution() {
+  // Determine whether the user solution  a MIP is
+  // feasible. Valuable in the case where users make a heuristic
+  // assignment of discrete variables
+  assert(model_.isMip() && solution_.value_valid);
+  HighsLp& lp = model_.lp_;
+  HighsStatus return_status =
+      checkLpSolutionFeasibility(options_, lp, solution_);
+  assert(return_status != HighsStatus::kError);
+  if (return_status == HighsStatus::kOk) return HighsStatus::kOk;
+  // Save the column bounds and integrality in preparation for fixing
+  // the non-continuous variables at user-supplied values
+  std::vector<double> save_col_lower = lp.col_lower_;
+  std::vector<double> save_col_upper = lp.col_upper_;
+  std::vector<HighsVarType> save_integrality = lp.integrality_;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
+    lp.col_lower_[iCol] = solution_.col_value[iCol];
+    lp.col_upper_[iCol] = solution_.col_value[iCol];
+  }
+  lp.integrality_.clear();
+  solution_.clear();
+  basis_.clear();
+  // Solve the model
+  assert(!model_.isMip());
+  return_status = this->run();
+  // Recover the column bounds and integrality
+  lp.col_lower_ = save_col_lower;
+  lp.col_upper_ = save_col_upper;
+  lp.integrality_ = save_integrality;
+  // Handle the error return
+  if (return_status == HighsStatus::kError) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::run() error trying to find feasible solution of "
+                 "continuous variables\n");
+    return HighsStatus::kError;
+  }
+  return HighsStatus::kOk;
+}
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {

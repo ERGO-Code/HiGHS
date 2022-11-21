@@ -1118,6 +1118,8 @@ class Highs {
     this->model_.hessian_.exactResize();
   }
 
+  HighsStatus assessContinuousMipSolution();
+
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
