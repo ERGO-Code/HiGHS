@@ -20,9 +20,8 @@
 #include "util/stringutil.h"
 
 bool loadOptions(const HighsLogOptions& report_log_options, int argc,
-                 char** argv, HighsOptions& options,
-		 std::string& model_file,
-		 std::string& read_solution_file) {
+                 char** argv, HighsOptions& options, std::string& model_file,
+                 std::string& read_solution_file) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();

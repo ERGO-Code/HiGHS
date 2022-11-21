@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status);
@@ -80,7 +80,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   highs.clear();
 
-  const bool test0 = false;
+  const bool test0 = true;
   if (test0) {
     if (dev_run)
       printf("\n***************************\nSolving from saved solution\n");
@@ -99,7 +99,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test1 = false;
+  const bool test1 = true;
   if (test1) {
     if (dev_run)
       printf("\n***************************\nSolving from solution file\n");
@@ -118,7 +118,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test2 = false;
+  const bool test2 = true;
   if (test2) {
     if (dev_run)
       printf(
@@ -151,9 +151,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   const bool test3 = true;
   if (test3) {
     if (dev_run)
-      printf("\n***************************\nSolving from column solution file\n");
+      printf(
+          "\n***************************\nSolving from column solution file\n");
     std::string column_solution_file =
-      std::string(HIGHS_DIR) + "/check/instances/flugpl_integer.sol";
+        std::string(HIGHS_DIR) + "/check/instances/flugpl_integer.sol";
 
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
@@ -170,7 +171,25 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  //  std::remove(solution_file.c_str());
+  const bool test4 = true;
+  if (test4) {
+    if (dev_run)
+      printf(
+          "\n***************************\nSolving from illegal column solution "
+          "file\n");
+    std::string column_solution_file =
+        std::string(HIGHS_DIR) + "/check/instances/flugpl_illegal_integer.sol";
+
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
+    return_status = highs.readSolution(column_solution_file);
+    REQUIRE(return_status == HighsStatus::kError);
+
+    highs.clear();
+  }
+
+  std::remove(solution_file.c_str());
 }
 
 TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
@@ -233,12 +252,17 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   return_status = highs.writeSolution(solution_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  return_status = highs.readSolution(solution_file);
-  REQUIRE(return_status == HighsStatus::kOk);
+  const bool& value_valid = highs.getSolution().value_valid;
 
-  const bool value_valid = highs.getSolution().value_valid;
   // primalDualInfeasible1Lp has no values in the solution file so,
   // after it's read, HiGHS::solution.value_valid is false
+  return_status = highs.readSolution(solution_file);
+  if (value_valid) {
+    REQUIRE(return_status == HighsStatus::kOk);
+  } else {
+    REQUIRE(return_status == HighsStatus::kWarning);
+  }
+
   return_status = highs.checkSolutionFeasibility();
   if (value_valid) {
     REQUIRE(return_status == HighsStatus::kOk);

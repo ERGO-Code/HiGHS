@@ -36,7 +36,8 @@ int main(int argc, char** argv) {
   loaded_options.log_file = "HiGHS.log";
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
-  if (!loadOptions(log_options, argc, argv, loaded_options, model_file, read_solution_file))
+  if (!loadOptions(log_options, argc, argv, loaded_options, model_file,
+                   read_solution_file))
     return (int)HighsStatus::kError;
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
@@ -56,7 +57,8 @@ int main(int argc, char** argv) {
   // Possible read a solution file
   if (read_solution_file != "") {
     HighsStatus read_solution_status = highs.readSolution(read_solution_file);
-    if (read_solution_status == HighsStatus::kError) return (int)read_solution_status;
+    if (read_solution_status == HighsStatus::kError)
+      return (int)read_solution_status;
   }
   // Solve the model
   HighsStatus run_status = highs.run();

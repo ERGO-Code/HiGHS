@@ -2726,6 +2726,9 @@ HighsStatus Highs::assessContinuousMipSolution() {
   basis_.clear();
   // Solve the model
   assert(!model_.isMip());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Attempting to find feasible solution of continuous variables "
+               "for user-supplied values of discrete variables\n");
   return_status = this->run();
   // Recover the column bounds and integrality
   lp.col_lower_ = save_col_lower;
