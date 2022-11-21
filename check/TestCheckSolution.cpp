@@ -55,7 +55,7 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
 
 TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   HighsStatus return_status;
-  const std::string model = "flugpl";  //"egout";
+  const std::string model = "flugpl";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -65,8 +65,10 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   highs.setOptionValue("output_flag", dev_run);
 
   highs.readModel(model_file);
+  HighsLp lp = highs.getLp();
+
   highs.run();
-  HighsSolution solution = highs.getSolution();
+  HighsSolution optimal_solution = highs.getSolution();
 
   HighsInt scratch_num_nodes = info.mip_node_count;
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
@@ -85,7 +87,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
-    return_status = highs.setSolution(solution);
+    return_status = highs.setSolution(optimal_solution);
     REQUIRE(return_status == HighsStatus::kOk);
 
     return_status = highs.checkSolutionFeasibility();
@@ -97,7 +99,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test1 = true;
+  const bool test1 = false;
   if (test1) {
     if (dev_run)
       printf("\n***************************\nSolving from solution file\n");
@@ -109,6 +111,36 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     return_status = highs.checkSolutionFeasibility();
     REQUIRE(return_status == HighsStatus::kOk);
+
+    highs.run();
+    if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    highs.clear();
+  }
+
+  const bool test2 = true;
+  if (test2) {
+    if (dev_run)
+      printf(
+          "\n***************************\nSolving from saved integer "
+          "solution\n");
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
+    HighsSolution solution = optimal_solution;
+    double solution_dl = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] == HighsVarType::kInteger) continue;
+      solution_dl += std::fabs(solution.col_value[iCol]);
+      solution.col_value[iCol] = 0;
+    }
+    REQUIRE(solution_dl);
+
+    return_status = highs.setSolution(solution);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    return_status = highs.checkSolutionFeasibility();
+    REQUIRE(return_status == HighsStatus::kWarning);
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
