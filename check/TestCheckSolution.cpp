@@ -74,8 +74,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
 
   std::string solution_file = model + ".sol";
-  //  if (dev_run) return_status = highs.writeSolution("", kSolutionStyleRaw);
-  return_status = highs.writeSolution(solution_file, kSolutionStyleRaw);
+  //  if (dev_run) return_status = highs.writeSolution("");
+  return_status = highs.writeSolution(solution_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
   highs.clear();
@@ -106,7 +106,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.setOptionValue("output_flag", dev_run);
     highs.readModel(model_file);
 
-    return_status = highs.readSolution(solution_file, kSolutionStyleRaw);
+    return_status = highs.readSolution(solution_file);
     REQUIRE(return_status == HighsStatus::kOk);
 
     return_status = highs.checkSolutionFeasibility();
@@ -118,7 +118,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test2 = true;
+  const bool test2 = false;
   if (test2) {
     if (dev_run)
       printf(
@@ -137,6 +137,28 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     REQUIRE(solution_dl);
 
     return_status = highs.setSolution(solution);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    return_status = highs.checkSolutionFeasibility();
+    REQUIRE(return_status == HighsStatus::kWarning);
+
+    highs.run();
+    if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    highs.clear();
+  }
+
+  const bool test3 = true;
+  if (test3) {
+    if (dev_run)
+      printf("\n***************************\nSolving from column solution file\n");
+    std::string column_solution_file =
+      std::string(HIGHS_DIR) + "/check/instances/flugpl_integer.sol";
+
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
+    return_status = highs.readSolution(column_solution_file);
     REQUIRE(return_status == HighsStatus::kOk);
 
     return_status = highs.checkSolutionFeasibility();
@@ -207,11 +229,11 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   REQUIRE(status == require_model_status);
 
   solution_file = model + ".sol";
-  if (dev_run) return_status = highs.writeSolution("", kSolutionStyleRaw);
-  return_status = highs.writeSolution(solution_file, kSolutionStyleRaw);
+  if (dev_run) return_status = highs.writeSolution("");
+  return_status = highs.writeSolution(solution_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  return_status = highs.readSolution(solution_file, kSolutionStyleRaw);
+  return_status = highs.readSolution(solution_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
   const bool value_valid = highs.getSolution().value_valid;

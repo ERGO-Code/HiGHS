@@ -140,12 +140,12 @@ class Highs {
   /**
    * @brief Write the current solution to a file in a given style
    */
-  HighsStatus writeSolution(const std::string& filename, const HighsInt style);
+  HighsStatus writeSolution(const std::string& filename, const HighsInt style = kSolutionStyleRaw);
 
   /**
    * @brief Read a HiGHS solution file in a given style
    */
-  HighsStatus readSolution(const std::string& filename, const HighsInt style);
+  HighsStatus readSolution(const std::string& filename, const HighsInt style = kSolutionStyleRaw);
 
   /**
    * @brief Check the feasibility of the current solution. Of value

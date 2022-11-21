@@ -20,7 +20,9 @@
 #include "util/stringutil.h"
 
 bool loadOptions(const HighsLogOptions& report_log_options, int argc,
-                 char** argv, HighsOptions& options, std::string& model_file) {
+                 char** argv, HighsOptions& options,
+		 std::string& model_file,
+		 std::string& read_solution_file) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
@@ -31,6 +33,9 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         //
         // model file
         (kModelFileString, "File of model to solve.",
+         cxxopts::value<std::vector<std::string>>())
+        // read_solution file
+        (kReadSolutionFileString, "File of solution to read.",
          cxxopts::value<std::vector<std::string>>())
         // options file
         (kOptionsFileString, "File containing HiGHS options.",
@@ -101,6 +106,26 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         }
       } else {
         model_file = v[0];
+      }
+    }
+    read_solution_file = "";
+    if (result.count(kReadSolutionFileString)) {
+      auto& v = result[kReadSolutionFileString].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        HighsInt nonEmpty = 0;
+        for (HighsInt i = 0; i < (HighsInt)v.size(); i++) {
+          std::string arg = v[i];
+          if (trim(arg).size() > 0) {
+            nonEmpty++;
+            read_solution_file = arg;
+          }
+        }
+        if (nonEmpty > 1) {
+          std::cout << "Multiple files not implemented.\n";
+          return false;
+        }
+      } else {
+        read_solution_file = v[0];
       }
     }
     // options file
