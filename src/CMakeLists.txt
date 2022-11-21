@@ -446,9 +446,8 @@ else()
 add_library(libhighs)
 
 set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if (NOT ${BUILD_SHARED_LIBS})
-    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
-endif()
+target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
+
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
