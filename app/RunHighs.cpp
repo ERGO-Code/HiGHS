@@ -57,8 +57,11 @@ int main(int argc, char** argv) {
   // Possible read a solution file
   if (read_solution_file != "") {
     HighsStatus read_solution_status = highs.readSolution(read_solution_file);
-    if (read_solution_status == HighsStatus::kError)
+    if (read_solution_status == HighsStatus::kError) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Error loading solution file\n");
       return (int)read_solution_status;
+    }
   }
   // Solve the model
   HighsStatus run_status = highs.run();
