@@ -106,12 +106,14 @@ Usage:
       --presolve arg          Presolve: "choose" by default - "on"/"off" are alternatives.
       --solver arg            Solver: "choose" by default - "simplex"/"ipm" are alternatives.
       --parallel arg          Parallel solve: "choose" by default - "on"/"off" are alternatives.
+      --run_crossover arg     Run crossover after IPM: "on" by default - "choose"/"off" are alternatives.
       --time_limit arg        Run time limit (seconds - double).
       --options_file arg      File containing HiGHS options.
       --solution_file arg     File for writing out model solution.
       --write_model_file arg  File for writing out model.
       --random_seed arg       Seed to initialize random number generation.
       --ranging arg           Compute cost, bound, RHS and basic solution ranging.
+      --read_solution_file    File of solution to be read 
       
   -h, --help                 Print help.
   
