@@ -34,6 +34,8 @@ using std::fabs;
 using std::max;
 using std::min;
 
+const HighsInt kMaxLineLength = 80;
+
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status = lpDimensionsOk("assessLp", lp, options.log_options)
@@ -1985,7 +1987,6 @@ HighsStatus readSolutionFile(const std::string filename,
                  (int)style);
     return HighsStatus::kError;
   }
-  const HighsInt kMaxLineLength = 80;
   std::ifstream in_file(filename);
   if (in_file.fail()) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2002,68 +2003,194 @@ HighsStatus readSolutionFile(const std::string filename,
   // Define idetifiers for reading in
   HighsSolution read_solution = solution;
   HighsBasis read_basis = basis;
+  read_solution.clear();
+  read_basis.clear();
+  read_solution.col_value.resize(lp_num_col);
+  read_solution.row_value.resize(lp_num_row);
+  read_solution.col_dual.resize(lp_num_col);
+  read_solution.row_dual.resize(lp_num_row);
+  read_basis.col_status.resize(lp_num_col);
+  read_basis.row_status.resize(lp_num_row);
   std::string section_name;
   HighsInt status;
-  in_file.ignore(kMaxLineLength, '\n');  // Model status
-  in_file.ignore(kMaxLineLength, '\n');  // Optimal
-  in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  // # Primal solution values
-  in_file >> keyword;
-  if (keyword != "None") {
-    in_file.ignore(kMaxLineLength, '\n');  // Status
-    in_file.ignore(kMaxLineLength, '\n');  // Objective
-    // Read in the column values
-    in_file >> keyword >> keyword >> num_col;
-    assert(keyword == "Columns");
-    if (num_col != lp_num_col) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " columns, not %" HIGHSINT_FORMAT "\n",
-                   num_col, lp_num_col);
-      return HighsStatus::kError;
-    }
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      in_file >> name >> read_solution.col_value[iCol];
-    // Read in the row values
-    in_file >> keyword >> keyword >> num_row;
-    assert(keyword == "Rows");
-    if (num_row != lp_num_row) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " rows, not %" HIGHSINT_FORMAT "\n",
-                   num_row, lp_num_row);
-      return HighsStatus::kError;
-    }
-    for (HighsInt iRow = 0; iRow < num_row; iRow++)
-      in_file >> name >> read_solution.row_value[iRow];
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileErrorReturn(in_file);  // Model status
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileErrorReturn(in_file);  // Optimal
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileErrorReturn(in_file);  //
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileErrorReturn(in_file);  // # Primal solution values
+  if (!readSolutionFileKeywordLineOk(keyword, in_file))
+    return readSolutionFileErrorReturn(in_file);
+  // Read in the primal solution values: return warning if there is none
+  if (keyword == "None")
+    return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
+                                  read_solution, read_basis, in_file);
+  // If there are primal solution values then keyword is the status
+  // and the next line is objective
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileErrorReturn(in_file);  // EOL
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileErrorReturn(in_file);  // Objective
+  // Next line should be "Columns" and correct number
+  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+    return readSolutionFileErrorReturn(in_file);
+  assert(keyword == "Columns");
+  if (num_col != lp_num_col) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                 " columns, not %" HIGHSINT_FORMAT "\n",
+                 num_col, lp_num_col);
+    return readSolutionFileErrorReturn(in_file);
   }
-  in_file.ignore(kMaxLineLength, '\n');
-  in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  // # Dual solution values
-  in_file >> keyword;
-  if (keyword != "None") {
-    in_file.ignore(kMaxLineLength, '\n');  // Status
-    in_file >> keyword >> keyword >> num_col;
-    assert(keyword == "Columns");
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      in_file >> name >> read_solution.col_dual[iCol];
-    in_file >> keyword >> keyword >> num_row;
-    assert(keyword == "Rows");
-    for (HighsInt iRow = 0; iRow < num_row; iRow++)
-      in_file >> name >> read_solution.row_dual[iRow];
+  double value;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (!readSolutionFileIdDoubleLineOk(value, in_file))
+      return readSolutionFileErrorReturn(in_file);
+    read_solution.col_value[iCol] = value;
   }
-  in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  //
-  in_file.ignore(kMaxLineLength, '\n');  // # Basis
-  if (readBasisStream(log_options, read_basis, in_file) == HighsStatus::kError)
-    return HighsStatus::kError;
+  read_solution.value_valid = true;
+  // Read in the col values: OK to have none, otherwise next line
+  // should be "Rows" and correct number
+  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis, in_file);
+  assert(keyword == "Rows");
+  if (num_row != lp_num_row) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                 " rows, not %" HIGHSINT_FORMAT "\n",
+                 num_row, lp_num_row);
+    return readSolutionFileErrorReturn(in_file);
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (!readSolutionFileIdDoubleLineOk(value, in_file))
+      return readSolutionFileErrorReturn(in_file);
+    read_solution.row_value[iRow] = value;
+  }
+  // OK to have no EOL
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis,
+                                  in_file);  // EOL
+  // OK to have no blank line
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis,
+                                  in_file);  //
+  // OK to have no reference to dual solution values
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis,
+                                  in_file);  // # Dual solution values
+  // If there's a reference to dual solution values, there's a keyword
+  // to indicate their status
+  if (!readSolutionFileKeywordLineOk(keyword, in_file))
+    return readSolutionFileErrorReturn(in_file);
+  if (keyword != "None") {
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // EOL
+    // Next line should be "Columns" and correct number
+    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+      return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                    read_solution, read_basis, in_file);
+    assert(keyword == "Columns");
+    double dual;
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+        return readSolutionFileErrorReturn(in_file);
+      read_solution.col_dual[iCol] = dual;
+    }
+    // Read in the col values: next line should be "Rows" and correct
+    // number
+    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file))
+      return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                    read_solution, read_basis, in_file);
+    assert(keyword == "Rows");
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+        return readSolutionFileErrorReturn(in_file);
+      read_solution.row_dual[iRow] = dual;
+    }
+  }
+  // OK to have no EOL
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis,
+                                  in_file);  // EOL
+  // OK to have no blank line
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis,
+                                  in_file);  //
+  // OK to have no reference to basis
+  if (!readSolutionFileIgnoreLineOk(in_file))
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis,
+                                  in_file);  // # Basis
+  HighsStatus basis_read_status =
+      readBasisStream(log_options, read_basis, in_file);
+  // Return with basis read status
+  return readSolutionFileReturn(basis_read_status, solution, basis,
+                                read_solution, read_basis, in_file);
+}
+
+HighsStatus readSolutionFileErrorReturn(std::ifstream& in_file) {
+  in_file.close();
+  return HighsStatus::kError;
+}
+
+HighsStatus readSolutionFileReturn(const HighsStatus status,
+                                   HighsSolution& solution, HighsBasis& basis,
+                                   const HighsSolution& read_solution,
+                                   const HighsBasis& read_basis,
+                                   std::ifstream& in_file) {
+  in_file.close();
+  if (status != HighsStatus::kOk) {
+    return status;
+  }
   solution = read_solution;
   basis = read_basis;
   return HighsStatus::kOk;
 }
 
-void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
-                                const HighsSolution& solution) {
+bool readSolutionFileIgnoreLineOk(std::ifstream& in_file) {
+  if (in_file.eof()) return false;
+  in_file.ignore(kMaxLineLength, '\n');
+  return true;
+}
+
+bool readSolutionFileKeywordLineOk(std::string& keyword,
+                                   std::ifstream& in_file) {
+  if (in_file.eof()) return false;
+  in_file >> keyword;
+  return true;
+}
+
+bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+                                          std::ifstream& in_file) {
+  if (in_file.eof()) return false;
+  in_file >> keyword;  // #
+  if (in_file.eof()) return false;
+  in_file >> keyword;  // keyword
+  if (in_file.eof()) return false;
+  in_file >> value;  // integer value
+  return true;
+}
+
+bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file) {
+  std::string id;
+  if (in_file.eof()) return false;
+  in_file >> id;  // Id
+  if (in_file.eof()) return false;
+  in_file >> value;  // double value
+  return true;
+}
+
+HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
+                                       const HighsLp& lp,
+                                       const HighsSolution& solution) {
   HighsInt num_col_infeasibilities = 0;
   double max_col_infeasibility = 0;
   double sum_col_infeasibilities = 0;
@@ -2077,12 +2204,10 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
   double max_row_residual = 0;
   double sum_row_residuals = 0;
   const double kRowResidualTolerance = 1e-12;
-  const vector<HighsInt>& start = lp.a_matrix_.start_;
-  const vector<HighsInt>& index = lp.a_matrix_.index_;
-  const vector<double>& value = lp.a_matrix_.value_;
-  vector<double> row_activity;
-  row_activity.assign(lp.num_row_, 0);
+  vector<double> row_value;
+  row_value.assign(lp.num_row_, 0);
   const bool have_integrality = lp.integrality_.size();
+  if (!solution.value_valid) return HighsStatus::kError;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double primal = solution.col_value[iCol];
     const double lower = lp.col_lower_[iCol];
@@ -2133,9 +2258,10 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
           std::max(integer_infeasibility, max_integer_infeasibility);
       sum_integer_infeasibilities += integer_infeasibility;
     }
-    for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
-      row_activity[index[iEl]] += primal * value[iEl];
   }
+  HighsStatus return_status =
+      calculateRowValues(lp, solution.col_value, row_value);
+  if (return_status != HighsStatus::kOk) return return_status;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
     const double lower = lp.row_lower_[iRow];
@@ -2160,7 +2286,7 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
           std::max(row_infeasibility, max_row_infeasibility);
       sum_row_infeasibilities += row_infeasibility;
     }
-    double row_residual = fabs(primal - row_activity[iRow]);
+    double row_residual = fabs(primal - row_value[iRow]);
     if (row_residual > kRowResidualTolerance) {
       if (row_residual > 2 * max_row_residual) {
         highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -2190,6 +2316,10 @@ void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Row     residuals       %6d  %11.4g  %11.4g\n",
                (int)num_row_residuals, max_row_residual, sum_row_residuals);
+  if (num_col_infeasibilities || num_integer_infeasibilities ||
+      num_row_infeasibilities)
+    return HighsStatus::kWarning;
+  return HighsStatus::kOk;
 }
 
 void writeBasisFile(FILE*& file, const HighsBasis& basis) {
@@ -2307,15 +2437,17 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   return HighsStatus::kOk;
 }
 
-HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
-  // assert(solution.col_value.size() > 0);
-  if (int(solution.col_value.size()) < lp.num_col_) return HighsStatus::kError;
+HighsStatus calculateRowValues(const HighsLp& lp,
+                               const std::vector<double>& col_value,
+                               std::vector<double>& row_value) {
+  // assert(col_value.size() > 0);
+  if (int(col_value.size()) < lp.num_col_) return HighsStatus::kError;
   const bool is_colwise = lp.a_matrix_.isColwise();
   assert(is_colwise);
   if (!is_colwise) return HighsStatus::kError;
 
-  solution.row_value.clear();
-  solution.row_value.assign(lp.num_row_, 0);
+  row_value.clear();
+  row_value.assign(lp.num_row_, 0);
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -2324,12 +2456,15 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
       assert(row >= 0);
       assert(row < lp.num_row_);
 
-      solution.row_value[row] +=
-          solution.col_value[col] * lp.a_matrix_.value_[i];
+      row_value[row] += col_value[col] * lp.a_matrix_.value_[i];
     }
   }
 
   return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
+  return calculateRowValues(lp, solution.col_value, solution.row_value);
 }
 
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {

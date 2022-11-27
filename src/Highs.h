@@ -140,18 +140,20 @@ class Highs {
   /**
    * @brief Write the current solution to a file in a given style
    */
-  HighsStatus writeSolution(const std::string& filename, const HighsInt style);
+  HighsStatus writeSolution(const std::string& filename,
+                            const HighsInt style = kSolutionStyleRaw);
 
   /**
    * @brief Read a HiGHS solution file in a given style
    */
-  HighsStatus readSolution(const std::string& filename, const HighsInt style);
+  HighsStatus readSolution(const std::string& filename,
+                           const HighsInt style = kSolutionStyleRaw);
 
   /**
    * @brief Check the feasibility of the current solution. Of value
    * after calling Highs::readSolution
    */
-  HighsStatus checkSolutionFeasibility();
+  HighsStatus checkSolutionFeasibility() const;
 
   /**
    * Methods for HiGHS option input/output
@@ -1117,6 +1119,8 @@ class Highs {
     this->model_.lp_.exactResize();
     this->model_.hessian_.exactResize();
   }
+
+  HighsStatus assessContinuousMipSolution();
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();

@@ -93,6 +93,8 @@ HighsInt HSimplexNla::invert() {
         analysis_->getThreadFactorTimerClockPtr(thread_id);
   }
   HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
+  // Must not have timed out
+  assert(rank_deficiency >= 0);
   build_synthetic_tick_ = factor_.build_synthetic_tick;
   // Clear any frozen basis updates
   frozenBasisClearAllUpdate();

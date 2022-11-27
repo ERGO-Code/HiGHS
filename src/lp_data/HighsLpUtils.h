@@ -202,9 +202,26 @@ HighsStatus readSolutionFile(const std::string filename,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
 
-void checkLpSolutionFeasibility(const HighsOptions& options, const HighsLp& lp,
-                                const HighsSolution& solution);
+HighsStatus readSolutionFileErrorReturn(std::ifstream& in_file);
+HighsStatus readSolutionFileReturn(const HighsStatus status,
+                                   HighsSolution& solution, HighsBasis& basis,
+                                   const HighsSolution& read_solution,
+                                   const HighsBasis& read_basis,
+                                   std::ifstream& in_file);
+bool readSolutionFileIgnoreLineOk(std::ifstream& in_file);
+bool readSolutionFileKeywordLineOk(std::string& keyword,
+                                   std::ifstream& in_file);
+bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
+                                          std::ifstream& in_file);
+bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
 
+HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
+                                       const HighsLp& lp,
+                                       const HighsSolution& solution);
+
+HighsStatus calculateRowValues(const HighsLp& lp,
+                               const std::vector<double>& col_value,
+                               std::vector<double>& row_value);
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
