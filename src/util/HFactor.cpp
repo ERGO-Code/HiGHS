@@ -901,7 +901,7 @@ HighsInt HFactor::buildKernel() {
       average_iteration_time = 0.9* average_iteration_time + 0.1 * iteration_time;
       
       if (time_difference > this->time_limit_/1e3)
-	timer_frequency = std::max(1, timer_frequency/10);
+	timer_frequency = std::max(HighsInt(1), timer_frequency/10);
       HighsInt iterations_left = kernel_dim - search_k + 1;
       double remaining_time_bound = average_iteration_time * iterations_left;
       double total_time_bound = current_time + remaining_time_bound;
