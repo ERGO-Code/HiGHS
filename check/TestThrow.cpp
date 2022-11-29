@@ -1,9 +1,9 @@
-//#include "Highs.h"
+// #include "Highs.h"
 #include <iostream>
 #include <stdexcept>  //Used in HiGHS
 
 #include "catch.hpp"
-//#include <exception>
+// #include <exception>
 const bool dev_run = false;
 
 void invalidArgument() {

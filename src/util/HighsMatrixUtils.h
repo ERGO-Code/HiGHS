@@ -19,7 +19,7 @@
 #include <cassert>
 #include <vector>
 
-//#include "lp_data/HighsStatus.h"
+// #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsOptions.h"
 
 using std::vector;

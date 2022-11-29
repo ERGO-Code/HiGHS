@@ -35,7 +35,7 @@
 
 #include "io/HighsIO.h"
 #include "model/HighsModel.h"
-//#include "util/HighsInt.h"
+// #include "util/HighsInt.h"
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<HighsInt, HighsInt, double>;

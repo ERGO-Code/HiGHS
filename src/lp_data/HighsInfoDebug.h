@@ -20,7 +20,7 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-//#include "lp_data/HighsLp.h"
+// #include "lp_data/HighsLp.h"
 
 HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
                            const HighsBasis& basis,

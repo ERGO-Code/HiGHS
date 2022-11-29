@@ -17,7 +17,7 @@
 #include "simplex/HSimplexNla.h"
 #include "util/HighsRandom.h"
 
-//#include <stdio.h>
+// #include <stdio.h>
 
 const double kResidualLargeError = 1e-8;
 const double kResidualExcessiveError = sqrt(kResidualLargeError);

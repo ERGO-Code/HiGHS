@@ -879,7 +879,10 @@ HighsInt HFactor::buildKernel() {
 
   const bool progress_report = false;  // num_basic != num_row;
   const HighsInt progress_frequency = 10000;
-  const HighsInt timer_frequency = 100;
+  // Initial timer frequency: may be reduced if iterations get slow
+  HighsInt timer_frequency = 100;
+  double previous_iteration_time = 0;
+  double average_iteration_time = 0;
   const bool check_for_timeout = this->time_limit_ < kHighsInf;
   HighsInt search_k = 0;
 
@@ -890,9 +893,26 @@ HighsInt HFactor::buildKernel() {
       reportAsm();
     }
     // Detemine whether to return due to exceeding the time limit
-    if (check_for_timeout && search_k % timer_frequency == 0)
-      if (build_timer_->readRunHighsClock() > this->time_limit_)
+    if (check_for_timeout && search_k % timer_frequency == 0) {
+      double current_time = build_timer_->readRunHighsClock();
+      double time_difference = current_time - previous_iteration_time;
+      previous_iteration_time = current_time;
+      double iteration_time = time_difference / (1.0 * timer_frequency);
+      average_iteration_time =
+          0.9 * average_iteration_time + 0.1 * iteration_time;
+
+      if (time_difference > this->time_limit_ / 1e3)
+        timer_frequency = std::max(HighsInt(1), timer_frequency / 10);
+      HighsInt iterations_left = kernel_dim - search_k + 1;
+      double remaining_time_bound = average_iteration_time * iterations_left;
+      double total_time_bound = current_time + remaining_time_bound;
+      printf("%d; Iter: Time %11.4g; average = %11.4g; Bound = %11.4g\n",
+             search_k, iteration_time, average_iteration_time,
+             total_time_bound);
+      if (current_time > this->time_limit_ ||
+          total_time_bound > this->time_limit_)
         return kBuildKernelReturnTimeout;
+    }
 
     /**
      * 1. Search for the pivot

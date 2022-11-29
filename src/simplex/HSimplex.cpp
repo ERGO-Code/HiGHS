@@ -21,8 +21,8 @@
 #include <cmath>
 #include <vector>
 
-//#include "lp_data/HighsLpUtils.h"
-//#include "util/HighsSort.h"
+// #include "lp_data/HighsLpUtils.h"
+// #include "util/HighsSort.h"
 
 using std::max;
 using std::min;
