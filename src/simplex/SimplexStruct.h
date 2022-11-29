@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <vector>
 
-//#include "lp_data/HighsLp.h"
+// #include "lp_data/HighsLp.h"
 #include "lp_data/HConst.h"
 #include "simplex/SimplexConst.h"
 

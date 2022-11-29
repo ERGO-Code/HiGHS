@@ -16,7 +16,7 @@
  */
 #include "simplex/HSimplexNla.h"
 
-//#include <stdio.h>
+// #include <stdio.h>
 #include <algorithm>
 
 using std::fabs;

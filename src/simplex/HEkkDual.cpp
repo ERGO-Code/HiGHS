@@ -1264,25 +1264,25 @@ void HEkkDual::iterateTasks() {
   if (1.0 * row_ep.count / solver_num_row < 0.01) slice_PRICE = 0;
 
   analysis->simplexTimerStart(Group1Clock);
-  //#pragma omp parallel
-  //#pragma omp single
+  // #pragma omp parallel
+  // #pragma omp single
   {
-    //#pragma omp task
+    // #pragma omp task
     highs::parallel::spawn([&]() {
       col_DSE.copy(&row_ep);
       updateFtranDSE(&col_DSE);
     });
-    //#pragma omp task
+    // #pragma omp task
     {
       if (slice_PRICE)
         chooseColumnSlice(&row_ep);
       else
         chooseColumn(&row_ep);
-      //#pragma omp task
+      // #pragma omp task
       highs::parallel::spawn([&]() { updateFtranBFRT(); });
-      //#pragma omp task
+      // #pragma omp task
       updateFtran();
-      //#pragma omp taskwait
+      // #pragma omp taskwait
       highs::parallel::sync();
     }
 

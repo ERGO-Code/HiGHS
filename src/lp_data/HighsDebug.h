@@ -23,7 +23,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
 
-//#include "lp_data/HighsOptions.h"
+// #include "lp_data/HighsOptions.h"
 
 HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status);
 
