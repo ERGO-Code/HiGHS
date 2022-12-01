@@ -17,6 +17,7 @@
 #include "io/FilereaderLp.h"
 
 #include <cstdarg>
+#include <cstdio>
 #include <exception>
 #include <map>
 
@@ -211,7 +212,7 @@ void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
   char stringbuffer[LP_MAX_LINE_LENGTH + 1];
-  HighsInt tokenlength = vsprintf(stringbuffer, format, argptr);
+  HighsInt tokenlength = vsnprintf(stringbuffer, sizeof stringbuffer, format, argptr);
   if (this->linelength + tokenlength >= LP_MAX_LINE_LENGTH) {
     fprintf(file, "\n");
     fprintf(file, "%s", stringbuffer);
