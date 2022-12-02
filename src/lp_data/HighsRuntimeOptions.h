@@ -75,7 +75,9 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
          cxxopts::value<HighsInt>())
         // ranging option
         (kRangingString, "Compute cost, bound, RHS and basic solution ranging.",
-         cxxopts::value<std::string>())("h, help", "Print help.");
+         cxxopts::value<std::string>())
+        // version
+        (kVersionString, "Print version.")("h, help", "Print help.");
 
     // Handle command line file specifications
     //
@@ -86,6 +88,13 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
 
     if (result.count("help")) {
       std::cout << cxx_options.help({""}) << std::endl;
+      exit(0);
+    }
+    if (result.count("version")) {
+      std::cout << "HiGHS version " << HIGHS_VERSION_MAJOR << "."
+                << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
+                << std::endl;
+      std::cout << kHighsCopyrightStatement << std::endl;
       exit(0);
     }
     if (result.count(kModelFileString)) {

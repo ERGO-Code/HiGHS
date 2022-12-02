@@ -22,6 +22,9 @@
 
 #include "util/HighsInt.h"
 
+const std::string kHighsCopyrightStatement =
+    "Copyright (c) 2022 HiGHS under MIT licence terms";
+
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
