@@ -28,7 +28,7 @@ void highsLogHeader(const HighsLogOptions& log_options) {
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
                (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
-               kHighsCopyrightStatement);
+               kHighsCopyrightStatement.c_str());
 }
 
 std::array<char, 32> highsDoubleToString(const double val,
