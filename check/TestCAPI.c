@@ -339,6 +339,8 @@ void minimal_api_qp() {
 
 void full_api() {
   void* highs = Highs_create();
+  if (dev_run) printf("HiGHS version %s\n", Highs_version(highs));
+
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
   HighsInt num_col = 2;

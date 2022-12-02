@@ -215,6 +215,13 @@ void* Highs_create(void);
 void Highs_destroy(void* highs);
 
 /**
+ * Return the HiGHS version number vX.Y.Z
+ *
+ * @returns the HiGHS version as a char*
+ */
+const char* Highs_version(void* highs);
+
+/**
  * Read a model from `filename` into `highs`.
  *
  * @param highs     a pointer to the Highs instance

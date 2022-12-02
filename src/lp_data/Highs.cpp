@@ -38,6 +38,13 @@
 
 Highs::Highs() {}
 
+std::string Highs::version() const {
+  std::stringstream ss;
+  ss << "v" << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
+     << HIGHS_VERSION_PATCH;
+  return ss.str();
+}
+
 HighsStatus Highs::clear() {
   resetOptions();
   return clearModel();

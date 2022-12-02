@@ -40,6 +40,11 @@ class Highs {
   }
 
   /**
+   * @brief Return the version as a string
+   */
+  std::string version() const;
+
+  /**
    * @brief Reset the options and then call clearModel()
    */
   HighsStatus clear();

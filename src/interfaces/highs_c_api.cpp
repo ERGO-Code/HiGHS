@@ -174,6 +174,10 @@ void* Highs_create() { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
+const char* Highs_version(void* highs) {
+  return ((Highs*)highs)->version().c_str();
+}
+
 HighsInt Highs_run(void* highs) { return (HighsInt)((Highs*)highs)->run(); }
 
 HighsInt Highs_readModel(void* highs, const char* filename) {
