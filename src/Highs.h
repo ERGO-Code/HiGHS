@@ -26,6 +26,11 @@
 #include "presolve/PresolveComponent.h"
 
 /**
+ * @brief Return the version as a string
+ */
+std::string highsVersion();
+
+/**
  * @brief Class to set parameters and run HiGHS
  */
 class Highs {
@@ -38,11 +43,6 @@ class Highs {
       fclose(log_file_stream);
     }
   }
-
-  /**
-   * @brief Return the version as a string
-   */
-  std::string version() const;
 
   /**
    * @brief Reset the options and then call clearModel()

@@ -12,6 +12,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   HighsStatus status;
   Highs highs;
+  if (!dev_run) printf("HiGHS version %s\n", highsVersion().c_str());
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();

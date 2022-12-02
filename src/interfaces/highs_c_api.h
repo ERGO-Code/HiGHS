@@ -219,7 +219,7 @@ void Highs_destroy(void* highs);
  *
  * @returns the HiGHS version as a char*
  */
-const char* Highs_version(void* highs);
+const char* Highs_version(void);
 
 /**
  * Read a model from `filename` into `highs`.

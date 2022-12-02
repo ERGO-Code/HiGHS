@@ -36,14 +36,14 @@
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
 
-Highs::Highs() {}
-
-std::string Highs::version() const {
+std::string highsVersion() {
   std::stringstream ss;
   ss << "v" << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
      << HIGHS_VERSION_PATCH;
   return ss.str();
 }
+
+Highs::Highs() {}
 
 HighsStatus Highs::clear() {
   resetOptions();
