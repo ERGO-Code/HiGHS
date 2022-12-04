@@ -48,12 +48,14 @@ if(LINUX AND NOT MSVC)
     endif()
 endif()
 
-# Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances,
+# Fast build: No interfaces (apart from c); New (short) ctest instances,
 # static library and exe without PIC. Used for gradually updating the CMake
 # targets build and install / export.
 
-# Note: ON by default yet
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
+
+# interfaces
+option(PYTHON "Build Python interface" OFF)
 option(FORTRAN "Build Fortran interface" OFF)
 option(CSHARP "Build CSharp interface" OFF)
 
@@ -387,7 +389,81 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
-set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
+# set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
+
+
+# static build for windows
+if (NOT UNIX)
+option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+# for multi-config builds (e.g. msvc)
+foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+  string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+endforeach()
+endif()
+
+
+if(BUILD_SHARED_LIBS AND MSVC)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
+# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
+if(BUILD_PYTHON)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
+
+include(CMakeDependentOption)
+
+option(BUILD_EXAMPLES "Build examples" ON)
+message(STATUS "Build examples: ${BUILD_EXAMPLES}")
+
+CMAKE_DEPENDENT_OPTION(BUILD_CXX_EX "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
+message(STATUS "Build C++: ${BUILD_CXX_EX}")
+CMAKE_DEPENDENT_OPTION(BUILD_C_EX "Build c example" ON "BUILD_EXAMPLES;BUILD_C" OFF)
+message(STATUS "Build C: ${BUILD_C_EX}")
+CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EX "Build python example" ON "BUILD_EXAMPLES;BUILD_PYTHON" OFF)
+message(STATUS "Build Python: ${BUILD_PYTHON_EX}")
+
+# By default all dependencies are NOT built (i.e. BUILD_DEPS=OFF),
+# BUT if building any wrappers (Python, Java or .Net) then BUILD_DEPS=ON.
+if(BUILD_PYTHON)
+  option(BUILD_DEPS /"Build all dependencies" ON)
+else()
+  option(BUILD_DEPS "Build all dependencies" OFF)
+endif()
+message(STATUS "Build all dependencies: ${BUILD_DEPS}")
+# Install built dependencies if any,
+option(INSTALL_BUILD_DEPS "Install build all dependencies" ON)
+
+# IF BUILD_DEPS=ON THEN Force all BUILD_*=ON
+CMAKE_DEPENDENT_OPTION(BUILD_ZLIB "Build the ZLIB dependency Library" OFF
+  "NOT BUILD_DEPS" ON)
+message(STATUS "Build ZLIB: ${BUILD_ZLIB}")
+
+
+if(BUILD_PYTHON)
+  CMAKE_DEPENDENT_OPTION(BUILD_pybind11 "Build the pybind11 dependency Library" OFF
+    "NOT BUILD_DEPS" ON)
+  message(STATUS "Python: Build pybind11: ${BUILD_pybind11}")
+
+  CMAKE_DEPENDENT_OPTION(BUILD_VENV "Create Python venv in BINARY_DIR/python/venv" OFF
+    "NOT BUILD_TESTING" ON)
+  message(STATUS "Python: Create venv: ${BUILD_VENV}")
+
+  option(VENV_USE_SYSTEM_SITE_PACKAGES "Python venv can use system site packages" OFF)
+  message(STATUS "Python: Allow venv to use system site packages: ${VENV_USE_SYSTEM_SITE_PACKAGES}")
+
+  option(FETCH_PYTHON_DEPS "Install python required modules if not available" ${BUILD_DEPS})
+  message(STATUS "Python: Fetch dependencies: ${FETCH_PYTHON_DEPS}")
+endif()
+
+# Add tests in examples/tests
+add_subdirectory(examples/tests)
 
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
