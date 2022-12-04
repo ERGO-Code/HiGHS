@@ -43,6 +43,17 @@ void assertLogical(const char* name, const HighsInt is) {
   }
 }
 
+void version_api() {
+  if (dev_run) {
+    printf("HiGHS version %s\n", Highs_version());
+    printf("HiGHS version major %d\n", Highs_version_major());
+    printf("HiGHS version minor %d\n", Highs_version_minor());
+    printf("HiGHS version patch %d\n", Highs_version_patch());
+    printf("HiGHS githash: %s\n", Highs_githash());
+    printf("HiGHS compilation date %s\n", Highs_compilation_date());
+  }
+}
+
 void minimal_api() {
   HighsInt num_col = 2;
   HighsInt num_row = 2;
@@ -339,6 +350,7 @@ void minimal_api_qp() {
 
 void full_api() {
   void* highs = Highs_create();
+
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
   HighsInt num_col = 2;
@@ -934,6 +946,7 @@ void test_setSolution() {
 }
 */
 int main() {
+  version_api();
   minimal_api();
   full_api();
   minimal_api_lp();

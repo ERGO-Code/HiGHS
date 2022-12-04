@@ -36,6 +36,19 @@
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
 
+std::string highsVersion() {
+  std::stringstream ss;
+  ss << "v" << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
+     << HIGHS_VERSION_PATCH;
+  return ss.str();
+}
+
+HighsInt highsVersionMajor() { return HIGHS_VERSION_MAJOR; }
+HighsInt highsVersionMinor() { return HIGHS_VERSION_MINOR; }
+HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
+std::string highsGithash() { return HIGHS_GITHASH; }
+std::string highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
+
 Highs::Highs() {}
 
 HighsStatus Highs::clear() {

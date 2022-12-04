@@ -27,8 +27,8 @@ void highsLogHeader(const HighsLogOptions& log_options) {
                "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
                (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Copyright (c) 2022 ERGO-Code under MIT licence terms\n");
+  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+               kHighsCopyrightStatement.c_str());
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

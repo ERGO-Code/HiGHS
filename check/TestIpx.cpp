@@ -6,8 +6,6 @@
 #include "lp_data/HighsStatus.h"
 #include "parallel/HighsParallel.h"
 
-// No commas i// Copyright (c) 2018 ERGO-Code. See license.txt for license.
-//
 // Example for using IPX from its C++ interface. The program solves the Netlib
 // problem afiro.
 

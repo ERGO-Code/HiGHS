@@ -906,9 +906,6 @@ HighsInt HFactor::buildKernel() {
       HighsInt iterations_left = kernel_dim - search_k + 1;
       double remaining_time_bound = average_iteration_time * iterations_left;
       double total_time_bound = current_time + remaining_time_bound;
-      printf("%d; Iter: Time %11.4g; average = %11.4g; Bound = %11.4g\n",
-             search_k, iteration_time, average_iteration_time,
-             total_time_bound);
       if (current_time > this->time_limit_ ||
           total_time_bound > this->time_limit_)
         return kBuildKernelReturnTimeout;
