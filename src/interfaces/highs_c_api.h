@@ -222,6 +222,41 @@ void Highs_destroy(void* highs);
 const char* Highs_version(void);
 
 /**
+ * Return the HiGHS major version number
+ *
+ * @returns the HiGHS major version number
+ */
+HighsInt Highs_version_major();
+
+/**
+ * Return the HiGHS minor version number
+ *
+ * @returns the HiGHS minor version number
+ */
+HighsInt Highs_version_minor();
+
+/**
+ * Return the HiGHS patch version number
+ *
+ * @returns the HiGHS patch version number
+ */
+HighsInt Highs_version_patch();
+
+/**
+ * Return the HiGHS githash
+ *
+ * @returns the HiGHS githash
+ */
+const char* Highs_githash();
+
+/**
+ * Return the HiGHS compilation date
+ *
+ * @returns the HiGHS compilation date
+ */
+const char* Highs_compilation_date();
+
+/**
  * Read a model from `filename` into `highs`.
  *
  * @param highs     a pointer to the Highs instance
