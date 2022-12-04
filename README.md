@@ -113,13 +113,13 @@ Usage:
       --write_model_file arg  File for writing out model.
       --random_seed arg       Seed to initialize random number generation.
       --ranging arg           Compute cost, bound, RHS and basic solution ranging.
-      --read_solution_file    File of solution to be read 
+      --read_solution_file    File of solution to be read
       
-  -h, --help                 Print help.
+      --version               Print version number      
+  -h, --help                  Print help.
   
   Note:
   
-  * If the file constrains some variables to take integer values (so the problem is a MIP) and "simplex" or "ipm" is selected for the solver option, then the integrality constraint will be ignored.
   * If the file defines a quadratic term in the objective (so the problem is a QP or MIQP) and "simplex" or "ipm" is selected for the solver option, then the quadratic term will be ignored.
   * If the file constrains some variables to take integer values and defines a quadratic term in the objective, then the problem is MIQP and cannot be solved by HiGHS
 
