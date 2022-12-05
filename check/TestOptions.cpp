@@ -335,4 +335,10 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(options.allowed_matrix_scale_factor == allowed_matrix_scale_factor);
   REQUIRE(options.mps_parser_type_free == mps_parser_type_free);
   std::remove(options_file.c_str());
+
+  return_status = highs.setOptionValue("time_limit", 1);
+  REQUIRE(return_status == HighsStatus::kOk);
+  
+  
+
 }
