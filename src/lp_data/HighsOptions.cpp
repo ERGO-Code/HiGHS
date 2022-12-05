@@ -385,7 +385,9 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     if (type == HighsOptionType::kDouble) {
       // Interpret integer as double
       double use_value = value;
-      return setLocalOptionValue(report_log_options, ((OptionRecordDouble*)option_records[index])[0], use_value);      
+      return setLocalOptionValue(
+          report_log_options, ((OptionRecordDouble*)option_records[index])[0],
+          use_value);
     }
     highsLogUser(
         report_log_options, HighsLogType::kError,

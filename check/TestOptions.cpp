@@ -338,7 +338,4 @@ TEST_CASE("highs-options", "[highs_options]") {
 
   return_status = highs.setOptionValue("time_limit", 1);
   REQUIRE(return_status == HighsStatus::kOk);
-  
-  
-
 }
