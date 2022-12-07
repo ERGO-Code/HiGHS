@@ -79,7 +79,6 @@ void issue272(Highs& highs) {
 void issue280(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportIssue(280, dev_run);
-  // This is an easy problem from mckib2 that IPX STILL FAILS to handle
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
@@ -89,8 +88,7 @@ void issue280(Highs& highs) {
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
   special_lps.reportSolution(highs, dev_run);
-  // STILL FAILS!!! Reported to Lukas as issue #1 on IPX
-  //  solve(highs, "off", "ipm", require_model_status, optimal_objective);
+  solve(highs, "off", "ipm", require_model_status, optimal_objective);
 }
 
 void issue282(Highs& highs) {
