@@ -403,7 +403,7 @@ void primalDualInfeasible1(Highs& highs) {
   solve(highs, "on", "simplex", HighsModelStatus::kInfeasible);
   solve(highs, "off", "simplex", require_model_status);
   // Don't run the IPX test until it's fixed
-  //  solve(highs, "on", "ipm", require_model_status);
+  solve(highs, "on", "ipm", require_model_status);
 }
 
 void primalDualInfeasible2(Highs& highs) {
