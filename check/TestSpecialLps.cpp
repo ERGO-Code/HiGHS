@@ -10,13 +10,16 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_iteration_count = -1) {
   SpecialLps special_lps;
   if (!dev_run) highs.setOptionValue("output_flag", false);
+  if (dev_run)
+    printf("\n*****\nSolving with presolve = %s amd solver = %s\n",
+           presolve.c_str(), solver.c_str());
   const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs.setOptionValue("solver", solver) == HighsStatus::kOk);
 
   REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 
-  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
 
   REQUIRE(highs.run() == HighsStatus::kOk);
 
@@ -393,8 +396,9 @@ void mpsGalenet(Highs& highs) {
 void primalDualInfeasible1(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportLpName("primalDualInfeasible1", dev_run);
-  // This LP is both primal and dual infeasible - from Wikipedia. IPX
-  // fails to identify primal infeasibility
+  // This LP is both primal and dual infeasible - from Wikipedia
+  //
+  // IPX fails to identify primal infeasibility
   HighsLp lp;
   HighsModelStatus require_model_status;
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
@@ -402,8 +406,7 @@ void primalDualInfeasible1(Highs& highs) {
   // Presolve doesn't reduce the LP, but does identify primal infeasibility
   solve(highs, "on", "simplex", HighsModelStatus::kInfeasible);
   solve(highs, "off", "simplex", require_model_status);
-  // Don't run the IPX test until it's fixed
-  solve(highs, "on", "ipm", require_model_status);
+  solve(highs, "off", "ipm", require_model_status);
 }
 
 void primalDualInfeasible2(Highs& highs) {
