@@ -48,7 +48,7 @@ repair-wheel-command = [
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
 # Only build on CPython 3.9
-build = "cp39-*"
+# build = "cp39-*"
 
 # Use delvewheel on windows
 before-build = "pip install delvewheel"
