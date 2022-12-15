@@ -260,6 +260,7 @@ const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
 const string kRangingString = "ranging";
+const string kVersionString = "version";
 const string kWriteModelFileString = "write_model_file";
 const string kReadSolutionFileString = "read_solution_file";
 
