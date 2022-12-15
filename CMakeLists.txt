@@ -18,8 +18,13 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RELEASE)
 endif()
 
+<<<<<<< HEAD
+project(HIGHS VERSION 1.4 LANGUAGES CXX C)
+set(HIGHS_VERSION_PATCH 1)
+=======
 project(HIGHS VERSION 1.5 LANGUAGES CXX C)
 set(HIGHS_VERSION_PATCH 0)
+>>>>>>> latest
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
