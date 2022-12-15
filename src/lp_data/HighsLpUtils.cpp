@@ -1278,9 +1278,6 @@ HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
   if (col >= lp.num_col_) return HighsStatus::kError;
   if (!colScale) return HighsStatus::kError;
 
-  for (HighsInt el = lp.a_matrix_.start_[col];
-       el < lp.a_matrix_.start_[col + 1]; el++)
-    lp.a_matrix_.value_[el] *= colScale;
   lp.a_matrix_.scaleCol(col, colScale);
   lp.col_cost_[col] *= colScale;
   if (colScale > 0) {
@@ -1300,12 +1297,6 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
   if (row >= lp.num_row_) return HighsStatus::kError;
   if (!rowScale) return HighsStatus::kError;
 
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt el = lp.a_matrix_.start_[col];
-         el < lp.a_matrix_.start_[col + 1]; el++) {
-      if (lp.a_matrix_.index_[el] == row) lp.a_matrix_.value_[el] *= rowScale;
-    }
-  }
   lp.a_matrix_.scaleRow(row, rowScale);
   if (rowScale > 0) {
     lp.row_lower_[row] /= rowScale;
