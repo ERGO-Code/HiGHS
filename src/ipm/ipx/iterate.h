@@ -186,13 +186,6 @@ public:
     void optimality_tol(double new_tol) { optimality_tol_ = new_tol; }
     void start_crossover_tol(double new_tol) { start_crossover_tol_ = new_tol; }
 
-    // Substitutes x[j], xl[j], xu[j], zl[j] and zu[j] for fixed and implied
-    // variables as defined by their state. After Postprocess() the object is
-    // invalid for use as an IPM iterate.
-    void Postprocess();
-
-    // Calls Model::EvaluateInteriorSolution().
-    void EvaluatePostsolved(Info* info) const;
 
     // Copies y and constructs x and z from the iterate such that
     // x[j]==lb[j] || x[j]==ub[j] || z[j]==0.0 is true for each j.

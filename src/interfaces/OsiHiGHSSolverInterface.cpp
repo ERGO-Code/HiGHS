@@ -19,11 +19,11 @@
 
 #include "CoinWarmStartBasis.hpp"
 #include "Highs.h"
-#include "HighsLp.h"
-#include "HighsOptions.h"
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
 
 static void logtomessagehandler(HighsLogType type, const char* msg,
