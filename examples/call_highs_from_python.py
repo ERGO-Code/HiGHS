@@ -3,7 +3,7 @@
 # https://github.com/ERGO-Code/HiGHS#python
 #
 # The paths to MPS file instances assumes that this is run in the
-# directory of this file (ie highs/examples) or any other dubdirectory
+# directory of this file (ie highs/examples) or any other subdirectory
 # of HiGHS
 import highspy
 import numpy as np
