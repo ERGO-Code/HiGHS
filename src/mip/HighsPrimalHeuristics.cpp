@@ -36,7 +36,6 @@
 #define FP_32BIT_VOLATILE
 #endif
 
-
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lp_iterations(0),
