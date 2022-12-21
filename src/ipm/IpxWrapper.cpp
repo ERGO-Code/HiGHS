@@ -78,7 +78,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   //
   // Set display according to output
   parameters.display = 1;
-  if (!options.output_flag) parameters.display = 0;
+  if (!options.output_flag | !options.log_to_console) parameters.display = 0;
   // Modify parameters.debug according to log_dev_level
   parameters.debug = 0;
   if (options.log_dev_level == kHighsLogDevLevelDetailed) {
