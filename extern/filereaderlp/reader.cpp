@@ -663,7 +663,7 @@ void Reader::processgensec() {
 }
 
 void Reader::processsemisec() {
-   if(!sectiontokens.count(LpSectionKeyword::GEN))
+   if(!sectiontokens.count(LpSectionKeyword::SEMI))
       return;
    std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::SEMI].first);
    std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::SEMI].second);
