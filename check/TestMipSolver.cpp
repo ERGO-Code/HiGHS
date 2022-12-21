@@ -239,33 +239,15 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   lp.col_lower_ = {0};
   lp.col_upper_ = {inf};
   lp.integrality_ = {HighsVarType::kInteger};
+  // Check for trivially unbounded MIP means that this test is now
+  // simpler, as outcome from presolve is not seen
+  return_status = highs.passModel(lp);
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::kUnbounded);
 
-  bool use_presolve = true;
-  HighsModelStatus require_model_status;
-  for (HighsInt k = 0; k < 2; k++) {
-    if (use_presolve) {
-      // With use_presolve = true, MIP solver returns
-      // HighsModelStatus::kUnboundedOrInfeasible from presolve
-      highs.setOptionValue("presolve", kHighsOnString);
-      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
-    } else {
-      // With use_presolve = false, MIP solver returns
-      // HighsModelStatus::kUnbounded
-      highs.setOptionValue("presolve", kHighsOffString);
-      require_model_status = HighsModelStatus::kUnbounded;
-    }
-    return_status = highs.passModel(lp);
-    REQUIRE(return_status == HighsStatus::kOk);
-
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
-
-    model_status = highs.getModelStatus();
-    REQUIRE(model_status == require_model_status);
-
-    // Second time through loop is without presolve
-    use_presolve = false;
-  }
   // Two-variable problem that is also primal unbounded as an LP, but
   // primal infeasible as a MIP.
   //
@@ -285,7 +267,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {1, 2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
 
-  use_presolve = true;
+  bool use_presolve = true;
+  HighsModelStatus require_model_status;
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
       // With use_presolve = true, LP solver returns

@@ -638,6 +638,50 @@ void smallValue(Highs& highs) {
   REQUIRE(highs.run() == HighsStatus::kOk);
 }
 
+void simplePrimalUnbounded(Highs& highs) {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1, 0, 0};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {inf, inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {1, 2};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {1, 2, 1, 2};
+  lp.a_matrix_.value_ = {1, 1, 1, -1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+  // Add another cost: unbounded - but needs simplex
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
+  lp.col_cost_[1] = 1;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+  lp.col_cost_[1] = 0;
+  // Flip the cost: optimal
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
+  lp.col_cost_[0] = -lp.col_cost_[0];
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  // Flip the sense: unbounded
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
+  lp.sense_ = ObjSense::kMaximize;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+  // Make variables integer
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
+
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -739,4 +783,10 @@ TEST_CASE("LP-small-value", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   smallValue(highs);
+}
+
+TEST_CASE("LP-simple-primal-unbounded", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  simplePrimalUnbounded(highs);
 }

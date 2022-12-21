@@ -878,6 +878,13 @@ HighsStatus Highs::run() {
   const bool ipx_no_crossover = options_.solver == kIpmString &&
                                 options_.run_crossover == kHighsOffString;
 
+  if (incumbent_lp.simplePrimalUnbounded()) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Problem is trivially unbounded\n");
+    info_.valid = true;
+    model_status_ = HighsModelStatus::kUnbounded;
+    return returnFromRun(return_status);
+  }
   if (options_.icrash) {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
@@ -2902,6 +2909,13 @@ HighsStatus Highs::callSolveQp() {
 }
 
 HighsStatus Highs::callSolveMip() {
+  if (model_.lp_.simplePrimalUnbounded()) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Problem is trivially unbounded\n");
+    info_.valid = true;
+    model_status_ = HighsModelStatus::kUnbounded;
+    return HighsStatus::kOk;
+  }
   // Record whether there is a valid primal solution on entry
   const bool user_solution = solution_.value_valid;
   std::vector<double> user_solution_col_value;

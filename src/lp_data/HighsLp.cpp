@@ -74,6 +74,44 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   return equal;
 }
 
+// Checks whether the problem is simple primal unbounded
+bool HighsLp::simplePrimalUnbounded() const {
+  assert(this->a_matrix_.isColwise());
+  HighsInt col_with_first_cost = -1;
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    if (this->col_cost_[iCol]) {
+      col_with_first_cost = iCol;
+      break;
+    }
+  }
+  // Bail out if there is no first column with nonzero cost
+  if (col_with_first_cost < 0) return false;
+  // There is a first column with nonzero cost
+  //
+  // Bail out if column is not empty
+  if (this->a_matrix_.start_[col_with_first_cost + 1] >
+      this->a_matrix_.start_[col_with_first_cost])
+    return false;
+  HighsInt col_with_second_cost = -1;
+  // Bail out if any other column has nonzero cost
+  for (HighsInt iCol = col_with_first_cost + 1; iCol < this->num_col_; iCol++)
+    if (this->col_cost_[iCol]) return false;
+
+  double cost = this->col_cost_[col_with_first_cost];
+  assert(col_with_second_cost < 0);
+  assert(cost);
+  // Bail out if a column lower bound prevents unboundedness
+  if (int(this->sense_) * cost > 0 &&
+      this->col_lower_[col_with_first_cost] > -kHighsInf)
+    return false;
+  // Bail out if a column upper bound prevents unboundedness
+  if (int(this->sense_) * cost < 0 &&
+      this->col_upper_[col_with_first_cost] < kHighsInf)
+    return false;
+  // Problem is trivially unbounded
+  return true;
+}
+
 double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   assert((int)solution.size() >= this->num_col_);
   double objective_function_value = this->offset_;
