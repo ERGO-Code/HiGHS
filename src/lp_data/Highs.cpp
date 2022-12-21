@@ -182,7 +182,10 @@ HighsStatus Highs::writeOptions(const std::string& filename,
       options_.log_options, openWriteFile(filename, "writeOptions", file, html),
       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-
+  // Report to user that options are being written to a file
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the option values to %s\n", filename.c_str());
   return_status = interpretCallStatus(
       options_.log_options,
       writeOptionsToFile(file, options_.records, report_only_deviations, html),
@@ -238,7 +241,10 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
       options_.log_options, openWriteFile(filename, "writeInfo", file, html),
       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-
+  // Report to user that options are being written to a file
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the info values to %s\n", filename.c_str());
   return_status = interpretCallStatus(
       options_.log_options,
       writeInfoToFile(file, info_.valid, info_.records, html), return_status,
@@ -579,6 +585,9 @@ HighsStatus Highs::writeModel(const std::string& filename) {
                    "Model file %s not supported\n", filename.c_str());
       return HighsStatus::kError;
     }
+    // Report to user that model is being written
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the model to %s\n", filename.c_str());
     return_status = interpretCallStatus(
         options_.log_options,
         writer->writeModelToFile(options_, filename, model_), return_status,
@@ -597,6 +606,10 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Report to user that basis is being written
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the basis to %s\n", filename.c_str());
   writeBasisFile(file, basis_);
   if (file != stdout) fclose(file);
   return returnFromHighs(return_status);
@@ -2476,6 +2489,10 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Report to user that solution is being written
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the solution to %s\n", filename.c_str());
   writeSolutionFile(file, options_, model_, basis_, solution_, info_,
                     model_status_, style);
   if (style == kSolutionStyleRaw) {
