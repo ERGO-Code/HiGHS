@@ -222,6 +222,23 @@ class SpecialLps {
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
+  void primalDualInfeasible3Lp(HighsLp& lp,
+                               HighsModelStatus& require_model_status) {
+    lp.model_name_ = "primalDualInfeasible3";
+    lp.num_col_ = 3;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {-1, 0, 0};
+    lp.col_lower_ = {0, 0, 0};
+    lp.col_upper_ = {inf, inf, inf};
+    lp.row_lower_ = {-inf, -inf};
+    lp.row_upper_ = {1, -2};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {1, 2, 1, 2};
+    lp.a_matrix_.value_ = {1, 1, 1, -1};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+    require_model_status = HighsModelStatus::kInfeasible;
+  }
+
   void scipLpi2Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
     lp.model_name_ = "scipLpi2";
     lp.num_col_ = 2;

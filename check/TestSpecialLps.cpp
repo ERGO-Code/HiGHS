@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -10,6 +10,9 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_iteration_count = -1) {
   SpecialLps special_lps;
   if (!dev_run) highs.setOptionValue("output_flag", false);
+  if (dev_run)
+    REQUIRE(highs.setOptionValue("log_dev_level", kHighsLogDevLevelDetailed) ==
+            HighsStatus::kOk);
   if (dev_run)
     printf("\n*****\nSolving with presolve = %s amd solver = %s\n",
            presolve.c_str(), solver.c_str());
@@ -425,6 +428,22 @@ void primalDualInfeasible2(Highs& highs) {
   //  solve(highs, "on", "ipm", require_model_status);
 }
 
+void primalDualInfeasible3(Highs& highs) {
+  SpecialLps special_lps;
+  special_lps.reportLpName("primalDualInfeasible3", dev_run);
+  // This LP is both primal and dual infeasible, but looks primal
+  // unbounded. An example of why simple primal unboundedness can't be
+  // claimed
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  special_lps.primalDualInfeasible3Lp(lp, require_model_status);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  // Presolve doesn't reduce the LP, but does identify primal infeasibility
+  solve(highs, "on", "simplex", require_model_status);
+  solve(highs, "off", "simplex", require_model_status);
+  solve(highs, "off", "ipm", require_model_status);
+}
+
 void mpsUnbounded(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportLpName("mpsUnbounded", dev_run);
@@ -705,6 +724,11 @@ TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   primalDualInfeasible2(highs);
+}
+TEST_CASE("LP-primal-dual-infeasible3", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  primalDualInfeasible3(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
