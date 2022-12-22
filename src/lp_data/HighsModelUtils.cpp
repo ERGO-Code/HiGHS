@@ -192,7 +192,7 @@ void writeModelBoundSolution(
 
 void writeModelSolution(FILE* file, const HighsLp& lp,
                         const HighsSolution& solution, const HighsInfo& info,
-			const bool sparse) {
+                        const bool sparse) {
   const bool have_col_names = lp.col_names_.size() > 0;
   const bool have_row_names = lp.row_names_.size() > 0;
   const bool have_primal = solution.value_valid;
@@ -236,7 +236,8 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     // depending on whether format is sparse: either lp.num_col_ if
     // not sparse, or the negation of the number of nonzero values, if
     // sparse
-    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n", sparse ? -num_nonzero_primal_value : lp.num_col_);
+    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n",
+            sparse ? -num_nonzero_primal_value : lp.num_col_);
     for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
       if (sparse && !solution.col_value[ix]) continue;
       std::array<char, 32> valStr = highsDoubleToString(

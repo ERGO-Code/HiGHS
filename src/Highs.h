@@ -1197,7 +1197,8 @@ class Highs {
   // Invalidates ekk_instance_
   void invalidateEkk();
 
-  HighsStatus returnFromWriteSolution(FILE* file, const HighsStatus return_status);
+  HighsStatus returnFromWriteSolution(FILE* file,
+                                      const HighsStatus return_status);
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();

@@ -2495,7 +2495,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
                  "Writing the solution to %s\n", filename.c_str());
   writeSolutionFile(file, options_, model_, basis_, solution_, info_,
                     model_status_, style);
-  if (style == kSolutionStyleSparse) return returnFromWriteSolution(file, return_status);
+  if (style == kSolutionStyleSparse)
+    return returnFromWriteSolution(file, return_status);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
@@ -2509,7 +2510,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
     }
     return_status = interpretCallStatus(
         options_.log_options, this->getRanging(), return_status, "getRanging");
-    if (return_status == HighsStatus::kError) returnFromWriteSolution(file, return_status);
+    if (return_status == HighsStatus::kError)
+      returnFromWriteSolution(file, return_status);
     fprintf(file, "\n# Ranging\n");
     writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
                      solution_, ranging_, style);
@@ -3200,7 +3202,8 @@ HighsStatus Highs::openWriteFile(const string filename,
 }
 
 // Always called when returning from Highs::writeSolution
-HighsStatus Highs::returnFromWriteSolution(FILE* file, const HighsStatus return_status) {
+HighsStatus Highs::returnFromWriteSolution(FILE* file,
+                                           const HighsStatus return_status) {
   if (file != stdout) fclose(file);
   return return_status;
 }
