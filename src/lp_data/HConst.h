@@ -130,8 +130,9 @@ enum SolutionStyle {
   kSolutionStylePretty,        // 1;
   kSolutionStyleGlpsolRaw,     // 2;
   kSolutionStyleGlpsolPretty,  // 3;
+  kSolutionStyleSparse,        // 4;
   kSolutionStyleMin = kSolutionStyleOldRaw,
-  kSolutionStyleMax = kSolutionStyleGlpsolPretty
+  kSolutionStyleMax = kSolutionStyleSparse
 };
 
 enum GlpsolCostRowLocation {

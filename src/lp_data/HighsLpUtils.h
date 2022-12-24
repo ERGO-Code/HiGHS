@@ -214,6 +214,8 @@ bool readSolutionFileKeywordLineOk(std::string& keyword,
 bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
                                           std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
+bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
+                                       std::ifstream& in_file);
 
 HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
                                        const HighsLp& lp,

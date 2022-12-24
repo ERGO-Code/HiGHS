@@ -1972,7 +1972,7 @@ HighsStatus readSolutionFile(const std::string filename,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
   const HighsLogOptions& log_options = options.log_options;
-  if (style != kSolutionStyleRaw) {
+  if (style != kSolutionStyleRaw && style != kSolutionStyleSparse) {
     highsLogUser(log_options, HighsLogType::kError,
                  "readSolutionFile: Cannot read file of style %d\n",
                  (int)style);
@@ -2028,20 +2028,47 @@ HighsStatus readSolutionFile(const std::string filename,
   if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
     return readSolutionFileErrorReturn(in_file);
   assert(keyword == "Columns");
-  if (num_col != lp_num_col) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                 " columns, not %" HIGHSINT_FORMAT "\n",
-                 num_col, lp_num_col);
-    return readSolutionFileErrorReturn(in_file);
+  // The default style parameter is kSolutionStyleRaw, and this still
+  // allows sparse files to be read. Recognise the latter from num_col
+  // <= 0. Doesn't matter if num_col = 0, sinc ethere's nothing to
+  // read either way
+  const bool sparse = num_col <= 0;
+  if (style == kSolutionStyleSparse) assert(sparse);
+  if (sparse) {
+    num_col = -num_col;
+  } else {
+    if (num_col != lp_num_col) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                   " columns, not %" HIGHSINT_FORMAT "\n",
+                   num_col, lp_num_col);
+      return readSolutionFileErrorReturn(in_file);
+    }
   }
   double value;
-  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    if (!readSolutionFileIdDoubleLineOk(value, in_file))
-      return readSolutionFileErrorReturn(in_file);
-    read_solution.col_value[iCol] = value;
+  if (sparse) {
+    read_solution.col_value.assign(lp_num_col, 0);
+    HighsInt iCol;
+    for (HighsInt iX = 0; iX < num_col; iX++) {
+      if (!readSolutionFileIdDoubleIntLineOk(value, iCol, in_file))
+        return readSolutionFileErrorReturn(in_file);
+      read_solution.col_value[iCol] = value;
+    }
+  } else {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      if (!readSolutionFileIdDoubleLineOk(value, in_file))
+        return readSolutionFileErrorReturn(in_file);
+      read_solution.col_value[iCol] = value;
+    }
   }
   read_solution.value_valid = true;
+  if (sparse) {
+    if (calculateRowValues(lp, read_solution.col_value,
+                           read_solution.row_value) != HighsStatus::kOk)
+      return readSolutionFileErrorReturn(in_file);
+    return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
+                                  read_solution, read_basis, in_file);
+  }
   // Read in the col values: OK to have none, otherwise next line
   // should be "Rows" and correct number
   if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file))
@@ -2176,6 +2203,18 @@ bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file) {
   in_file >> id;  // Id
   if (in_file.eof()) return false;
   in_file >> value;  // double value
+  return true;
+}
+
+bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
+                                       std::ifstream& in_file) {
+  std::string id;
+  if (in_file.eof()) return false;
+  in_file >> id;  // Id
+  if (in_file.eof()) return false;
+  in_file >> value;  // double value
+  if (in_file.eof()) return false;
+  in_file >> index;  // double value
   return true;
 }
 
