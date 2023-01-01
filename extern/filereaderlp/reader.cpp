@@ -174,7 +174,11 @@ struct ProcessedToken {
 
    ProcessedToken(ProcessedTokenType t, const std::string& s) : type(t) {
       assert(t == ProcessedTokenType::CONID || t == ProcessedTokenType::VARID);
+#ifndef _WIN32
       name = strdup(s.c_str());
+#else
+      name = _strdup(s.c_str());
+#endif
    };
 
    ProcessedToken(double v) : type(ProcessedTokenType::CONST), value(v) {};
