@@ -338,6 +338,8 @@ class HighsHashTree {
           // is estimated above the threshold to merge when the parent checks
           // its children after deletion
           return kBranchFactor;
+        default:
+          throw std::logic_error("Unexpected type in hash tree");
       }
     }
 
@@ -360,6 +362,8 @@ class HighsHashTree {
           // is estimated above the threshold to merge when the parent checks
           // its children after deletion
           return kBranchFactor;
+        default:
+          throw std::logic_error("Unexpected type in hash tree");
       }
     }
 
@@ -487,6 +491,9 @@ class HighsHashTree {
       case kInnerLeafSizeClass4:
         mergeIntoLeaf(leaf, mergeNode.getInnerLeafSizeClass4(), hashPos);
         delete mergeNode.getInnerLeafSizeClass4();
+        break;
+      default:
+        break;
     }
   }
 
@@ -577,7 +584,10 @@ class HighsHashTree {
             ++i;
           } while (i < leaf->size && get_first_chunk16(leaf->hashes[i]) == pos);
         }
+        break;
       }
+      default:
+        break;
     }
 
     return nullptr;
@@ -882,6 +892,9 @@ class HighsHashTree {
                   branch->child[pos].getInnerLeafSizeClass4()->insert_entry(
                       compute_hash(leaf->entries[i].key()), hashPos + 1,
                       leaf->entries[i]);
+                  break;
+                default:
+                  break;
               }
             }
           }
@@ -1137,11 +1150,15 @@ class HighsHashTree {
 
         return nullptr;
       }
+      default:
+        throw std::logic_error("Unexpected type in hash tree");
     }
   }
 
   static void destroy_recurse(NodePtr node) {
     switch (node.getType()) {
+      case kEmpty:
+        break;
       case kListLeaf: {
         ListLeaf* leaf = node.getListLeaf();
         ListNode* iter = leaf->first.next;
@@ -1180,8 +1197,7 @@ class HighsHashTree {
   static NodePtr copy_recurse(NodePtr node) {
     switch (node.getType()) {
       case kEmpty:
-        assert(false);
-        break;
+        throw std::logic_error("Unexpected node type in empty in hash tree");
       case kListLeaf: {
         ListLeaf* leaf = node.getListLeaf();
 
@@ -1224,6 +1240,8 @@ class HighsHashTree {
 
         return newBranch;
       }
+      default:
+        throw std::logic_error("Unexpected type in hash tree");
     }
   }
 
