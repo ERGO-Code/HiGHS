@@ -474,7 +474,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   if (!lp.integrality_.size()) return return_status;
-  assert(lp.integrality_.size() == lp.num_col_);
+  assert((HighsInt)lp.integrality_.size() == lp.num_col_);
   HighsInt num_illegal_lower = 0;
   HighsInt num_illegal_upper = 0;
   HighsInt num_modified_upper = 0;
@@ -587,7 +587,7 @@ void relaxSemiVariables(HighsLp& lp) {
   // and their upper bound, so have to modify the lower bound to be
   // zero
   if (!lp.integrality_.size()) return;
-  assert(lp.integrality_.size() == lp.num_col_);
+  assert((HighsInt)lp.integrality_.size() == lp.num_col_);
   HighsInt num_modified_lower = 0;
   std::vector<HighsInt>& lower_bound_index =
       lp.mods_.save_semi_variable_lower_bound_index;
@@ -2715,7 +2715,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   const bool has_col_names = lp.col_names_.size();
   const bool has_row_names = lp.row_names_.size();
   const bool has_solution = solution.value_valid;
-  if (has_solution) assert(solution.col_value.size() == lp_.num_col_);
+  if (has_solution) assert((HighsInt)solution.col_value.size() == lp_.num_col_);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
@@ -2782,7 +2782,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   num_col += num_semi_variables;
   lp.num_col_ += num_semi_variables;
   lp.num_row_ += 2 * num_semi_variables;
-  assert(index.size() == new_num_nz);
+  assert((HighsInt)index.size() == new_num_nz);
   // Clear any modifications inherited from lp_
   lp.mods_.clear();
   return lp;

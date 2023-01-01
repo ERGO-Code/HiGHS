@@ -850,7 +850,7 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
 
   lp->flushDomain(localdom);
   if (basis) {
-    if (basis->row_status.size() == lp->numRows())
+    if ((HighsInt)basis->row_status.size() == lp->numRows())
       lp->setStoredBasis(std::move(basis));
     lp->recoverBasis();
   }
@@ -1911,7 +1911,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
   if (nodestack.back().nodeBasis &&
-      nodestack.back().nodeBasis->row_status.size() == lp->getLp().num_row_)
+     (HighsInt)nodestack.back().nodeBasis->row_status.size() == lp->getLp().num_row_)
     lp->setStoredBasis(nodestack.back().nodeBasis);
   lp->recoverBasis();
 

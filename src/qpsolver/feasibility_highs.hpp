@@ -104,7 +104,7 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
   std::vector<HighsInt> initialactive;
   std::vector<HighsInt> initialinactive;
   std::vector<BasisStatus> atlower;
-  for (HighsInt i = 0; i < bas.row_status.size(); i++) {
+  for (HighsInt i = 0; i < (HighsInt)bas.row_status.size(); i++) {
     if (bas.row_status[i] == HighsBasisStatus::kLower) {
       initialactive.push_back(i);
       atlower.push_back(BasisStatus::ActiveAtLower);
@@ -119,7 +119,7 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
     }
   }
 
-  for (HighsInt i = 0; i < bas.col_status.size(); i++) {
+  for (HighsInt i = 0; i < (HighsInt)bas.col_status.size(); i++) {
     if (bas.col_status[i] == HighsBasisStatus::kLower) {
       if (isfreevar(runtime, i)) {
         initialinactive.push_back(runtime.instance.num_con + i);
@@ -148,7 +148,7 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
     }
   }
 
-  assert(initialactive.size() + initialinactive.size() ==
+  assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
          runtime.instance.num_var);
 
   for (HighsInt ia : initialinactive) {

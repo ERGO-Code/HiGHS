@@ -363,7 +363,7 @@ restart:
         double bestBoundNodeLb = mipdata_->nodequeue.getBestLowerBound();
         HighsNodeQueue::OpenNode nextNode(mipdata_->nodequeue.popBestNode());
         if (nextNode.lower_bound == bestBoundNodeLb &&
-            nextNode.domchgstack.size() == bestBoundNodeStackSize)
+           (HighsInt)nextNode.domchgstack.size() == bestBoundNodeStackSize)
           lastLbLeave = numQueueLeaves;
         search.installNode(std::move(nextNode));
       }

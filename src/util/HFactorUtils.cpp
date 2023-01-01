@@ -53,7 +53,7 @@ void HFactor::reportLu(const HighsInt l_u_or_both, const bool full) const {
       reportIntVector("ur_start", ur_start);
       reportIntVector("ur_lastp", ur_lastp);
       reportIntVector("ur_space", ur_space);
-      for (HighsInt iRow = 0; iRow < ur_start.size(); iRow++) {
+      for (size_t iRow = 0; iRow < ur_start.size(); iRow++) {
         const HighsInt start = ur_start[iRow];
         const HighsInt end = ur_lastp[iRow];
         if (start >= end) continue;

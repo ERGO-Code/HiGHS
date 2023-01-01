@@ -6,6 +6,7 @@
 #include "feasibility_highs.hpp"
 #include "feasibility_quass.hpp"
 
+inline
 void computestartingpoint(Runtime& runtime, CrashSolution& result) {
     switch (runtime.settings.phase1strategy) {
         case Phase1Strategy::HIGHS:

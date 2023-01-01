@@ -1675,10 +1675,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   // the old solution and any basis are cleared
   const bool new_primal_solution =
       model_.lp_.num_col_ > 0 &&
-      solution.col_value.size() >= model_.lp_.num_col_;
+      (HighsInt)solution.col_value.size() >= model_.lp_.num_col_;
   const bool new_dual_solution =
       model_.lp_.num_row_ > 0 &&
-      solution.row_dual.size() >= model_.lp_.num_row_;
+      (HighsInt)solution.row_dual.size() >= model_.lp_.num_row_;
   const bool new_solution = new_primal_solution || new_dual_solution;
 
   if (new_solution) invalidateUserSolverData();
@@ -2804,7 +2804,7 @@ HighsStatus Highs::callSolveQp() {
   triangularToSquareHessian(hessian, instance.Q.mat.start, instance.Q.mat.index,
                             instance.Q.mat.value);
 
-  for (HighsInt i = 0; i < instance.c.value.size(); i++) {
+  for (HighsInt i = 0; i < (HighsInt)instance.c.value.size(); i++) {
     if (instance.c.value[i] != 0.0) {
       instance.c.index[instance.c.num_nz++] = i;
     }

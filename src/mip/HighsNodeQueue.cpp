@@ -273,7 +273,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 
     numchgs = globaldomain.getDomainChangeStack().size();
 
-    assert(numCol == globaldomain.col_lower_.size());
+    assert(numCol == (HighsInt)globaldomain.col_lower_.size());
 
     for (HighsInt i = 0; i < numCol; ++i) {
       checkGlobalBounds(i, globaldomain.col_lower_[i],

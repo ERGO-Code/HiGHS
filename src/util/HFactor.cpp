@@ -652,7 +652,7 @@ void HFactor::buildSimple() {
       } else {
         for (HighsInt k = start; k < start + count; k++) {
           mr_count_before[a_index[k]]++;
-          assert(BcountX < b_index.size());
+          assert(BcountX < (HighsInt)b_index.size());
           b_index[BcountX] = a_index[k];
           b_value[BcountX++] = a_value[k];
         }

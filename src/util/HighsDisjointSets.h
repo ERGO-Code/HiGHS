@@ -46,9 +46,9 @@ class HighsDisjointSets {
   }
 
   HighsInt getSet(HighsInt item) {
-    assert(item >= 0 && item < sets.size());
+    assert(item >= 0 && item < (HighsInt)sets.size());
     HighsInt repr = sets[item];
-    assert(repr >= 0 && repr < sets.size());
+    assert(repr >= 0 && repr < (HighsInt)sets.size());
 
     if (repr != sets[repr]) {
       do {
@@ -75,16 +75,16 @@ class HighsDisjointSets {
   }
 
   void merge(HighsInt item1, HighsInt item2) {
-    assert(item1 >= 0 && item1 < sets.size());
-    assert(item2 >= 0 && item2 < sets.size());
+    assert(item1 >= 0 && item1 < (HighsInt)sets.size());
+    assert(item2 >= 0 && item2 < (HighsInt)sets.size());
 
     HighsInt repr1 = getSet(item1);
     assert(sets[repr1] == repr1);
-    assert(repr1 >= 0 && repr1 < sets.size());
+    assert(repr1 >= 0 && repr1 < (HighsInt)sets.size());
 
     HighsInt repr2 = getSet(item2);
     assert(sets[repr2] == repr2);
-    assert(repr2 >= 0 && repr2 < sets.size());
+    assert(repr2 >= 0 && repr2 < (HighsInt)sets.size());
     assert(sizes.size() == sets.size());
 
     if (repr1 == repr2) return;

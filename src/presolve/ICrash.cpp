@@ -242,6 +242,7 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
   }
 }
 
+static
 void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 
@@ -284,6 +285,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   }
 }
 
+static
 void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 

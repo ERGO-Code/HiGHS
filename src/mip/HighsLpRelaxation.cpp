@@ -208,7 +208,7 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
   if (row_ep.size < num_row) {
     row_ep.setup(num_row);
 
-    if (row_ap.values.size() < num_col) {
+    if ((HighsInt)row_ap.values.size() < num_col) {
       row_ap.setDimension(num_col);
       dualproofvals.reserve(num_col);
       dualproofinds.reserve(num_col);
@@ -311,7 +311,7 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
       }
 
       dualproofvals.resize(row_ap.nonzeroinds.size());
-      for (HighsInt i = 0; i < row_ap.nonzeroinds.size(); ++i)
+      for (HighsInt i = 0; i < (HighsInt)row_ap.nonzeroinds.size(); ++i)
         dualproofvals[i] = sign * row_ap.getValue(row_ap.nonzeroinds[i]);
 
       HighsDomainChange domchg;
@@ -523,7 +523,7 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
     ++epochs;
     if (epochs % std::max(agelimit >> 1, HighsInt{2}) != 0)
       agelimit = kHighsIInf;
-    else if (epochs < agelimit)
+    else if ((HighsInt)epochs < agelimit)
       agelimit = epochs;
   } else {
     if (lastAgeCall == numlpiters) return;
@@ -804,7 +804,7 @@ void HighsLpRelaxation::storeDualInfProof() {
   if (row_ep.size < num_row) {
     row_ep.setup(num_row);
 
-    if (row_ap.values.size() < num_col) {
+    if ((HighsInt)row_ap.values.size() < num_col) {
       row_ap.setDimension(num_col);
       dualproofvals.reserve(num_col);
       dualproofinds.reserve(num_col);

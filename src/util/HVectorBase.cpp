@@ -92,7 +92,7 @@ void HVectorBase<Real>::tight() {
   HighsInt totalCount = 0;
   using std::abs;
   if (count < 0) {
-    for (HighsInt my_index = 0; my_index < array.size(); my_index++)
+    for (size_t my_index = 0; my_index < array.size(); my_index++)
       if (abs(array[my_index]) < kHighsTiny) array[my_index] = 0;
   } else {
     for (HighsInt i = 0; i < count; i++) {

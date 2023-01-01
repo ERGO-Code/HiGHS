@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include "runtime.hpp"
 
+inline
 bool isfreevar(Runtime& runtime, HighsInt idx) {
   return runtime.instance.var_lo[idx] == -std::numeric_limits<double>::infinity() && runtime.instance.var_up[idx] == std::numeric_limits<double>::infinity();
 }

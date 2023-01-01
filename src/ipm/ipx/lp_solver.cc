@@ -568,7 +568,7 @@ void LpSolver::RunCrossover() {
     basic_statuses_.clear();
 
     if (crossover_weights_.size()) {
-        assert(crossover_weights_.size() == n+m);
+        assert((Int)crossover_weights_.size() == n+m);
         weights = &crossover_weights_[0];
     }
 
@@ -590,7 +590,7 @@ void LpSolver::RunCrossover() {
     // Recompute vertex solution and set basic statuses.
     basis_->ComputeBasicSolution(x_crossover_, y_crossover_, z_crossover_);
     basic_statuses_.resize(n+m);
-    for (Int j = 0; j < basic_statuses_.size(); j++) {
+    for (Int j = 0; j < (Int)basic_statuses_.size(); j++) {
         if (basis_->IsBasic(j)) {
             basic_statuses_[j] = IPX_basic;
         } else {

@@ -63,12 +63,12 @@ void Iterate::Initialize(const Vector& x, const Vector& xl, const Vector& xu,
     const Int n = model_.cols();
     const Vector& lb = model_.lb();
     const Vector& ub = model_.ub();
-    assert(x.size() == n+m);
-    assert(xl.size() == n+m);
-    assert(xu.size() == n+m);
-    assert(y.size() == m);
-    assert(zl.size() == n+m);
-    assert(zu.size() == n+m);
+    assert((Int)x.size() == n+m);
+    assert((Int)xl.size() == n+m);
+    assert((Int)xu.size() == n+m);
+    assert((Int)y.size() == m);
+    assert((Int)zl.size() == n+m);
+    assert((Int)zu.size() == n+m);
     x_ = x; xl_ = xl; xu_ = xu; y_ = y; zl_ = zl; zu_ = zu;
 
     // Set variable statuses.
@@ -322,9 +322,9 @@ void Iterate::DropToComplementarity(Vector& x, Vector& y, Vector& z) const {
     const Vector& ub = model_.ub();
     assert(postprocessed_);
 
-    assert(x.size() == n+m);
-    assert(y.size() == m);
-    assert(z.size() == n+m);
+    assert((Int)x.size() == n+m);
+    assert((Int)y.size() == m);
+    assert((Int)z.size() == n+m);
     y = y_;
     for (Int j = 0; j < n+m; j++) {
         const double xlj = xl_[j];
