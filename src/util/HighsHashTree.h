@@ -1149,7 +1149,7 @@ class HighsHashTree {
         while (iter != nullptr) {
           ListNode* next = iter->next;
           delete iter;
-          iter = iter->next;
+          iter = next;
         }
 
         break;
