@@ -63,7 +63,6 @@ set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 if (UNIX)
-    target_compile_options(unit_tests PRIVATE "-Wno-return-type" "-Wno-switch")
     target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
     target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
 endif()
