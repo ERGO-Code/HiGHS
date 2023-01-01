@@ -270,7 +270,8 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
         "Matrix dimension validation fails on number of vectors = %d < 0\n",
         (int)num_vec);
   ok = legal_num_vec && ok;
-  const bool legal_matrix_start_size = (HighsInt)matrix_start.size() >= num_vec + 1;
+  const bool legal_matrix_start_size =
+      (HighsInt)matrix_start.size() >= num_vec + 1;
   if (!legal_matrix_start_size)
     highsLogUser(log_options, HighsLogType::kError,
                  "Matrix dimension validation fails on start size = %d < %d = "
@@ -278,7 +279,8 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
                  (int)matrix_start.size(), (int)(num_vec + 1));
   ok = legal_matrix_start_size && ok;
   if (partitioned) {
-    const bool legal_matrix_p_end_size = (HighsInt)matrix_p_end.size() >= num_vec + 1;
+    const bool legal_matrix_p_end_size =
+        (HighsInt)matrix_p_end.size() >= num_vec + 1;
     if (!legal_matrix_p_end_size)
       highsLogUser(log_options, HighsLogType::kError,
                    "Matrix dimension validation fails on p_end size = %d < %d "
@@ -293,14 +295,16 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
   // the index and value vectors are non-negative.
   const HighsInt num_nz = legal_matrix_start_size ? matrix_start[num_vec] : 0;
   if (num_nz >= 0) {
-    const bool legal_matrix_index_size = (HighsInt)matrix_index.size() >= num_nz;
+    const bool legal_matrix_index_size =
+        (HighsInt)matrix_index.size() >= num_nz;
     if (!legal_matrix_index_size)
       highsLogUser(log_options, HighsLogType::kError,
                    "Matrix dimension validation fails on index size = %d < %d "
                    "= number of nonzeros\n",
                    (int)matrix_index.size(), (int)num_nz);
     ok = legal_matrix_index_size && ok;
-    const bool legal_matrix_value_size = (HighsInt)matrix_value.size() >= num_nz;
+    const bool legal_matrix_value_size =
+        (HighsInt)matrix_value.size() >= num_nz;
     if (!legal_matrix_value_size)
       highsLogUser(log_options, HighsLogType::kError,
                    "Matrix dimension validation fails on value size = %d < %d "

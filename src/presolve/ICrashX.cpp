@@ -88,8 +88,9 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     }
   }
   ipx::Int crossover_status;
-  if (highs_solution.dual_valid && (HighsInt)highs_solution.col_dual.size() == num_col &&
-     (HighsInt)highs_solution.row_dual.size() == num_row) {
+  if (highs_solution.dual_valid &&
+      (HighsInt)highs_solution.col_dual.size() == num_col &&
+      (HighsInt)highs_solution.row_dual.size() == num_row) {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with primal and dual values\n");
     crossover_status = lps.CrossoverFromStartingPoint(

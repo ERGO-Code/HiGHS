@@ -242,8 +242,7 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
   }
 }
 
-static
-void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
+static void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 
   std::vector<double> residual_ica(idata.lp.num_row_, 0);
@@ -285,8 +284,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   }
 }
 
-static
-void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
+static void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 
   calculateRowValues(idata.lp, idata.xk);

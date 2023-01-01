@@ -139,7 +139,8 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   if (status.has_dual_steepest_edge_weights) {
     // Dual steepest edge weights are known, so possibly check
     assert((HighsInt)ekk_instance_.dual_edge_weight_.size() >= solver_num_row);
-    assert((HighsInt)ekk_instance_.scattered_dual_edge_weight_.size() >= solver_num_tot);
+    assert((HighsInt)ekk_instance_.scattered_dual_edge_weight_.size() >=
+           solver_num_tot);
     ekk_instance_.devDebugDualSteepestEdgeWeights("before solve");
   } else {
     // Set up edge weights

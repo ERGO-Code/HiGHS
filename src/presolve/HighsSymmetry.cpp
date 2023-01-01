@@ -302,7 +302,9 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
       if (newFixed != 0) {
         domain.propagate();
         if (domain.infeasible()) return numFixed;
-        if ((HighsInt)(domain.getDomainChangeStack().size() - oldSize) > newFixed) i = -1;
+        if ((HighsInt)(domain.getDomainChangeStack().size() - oldSize) >
+            newFixed)
+          i = -1;
       }
     }
   }
@@ -1749,7 +1751,8 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
             }
             backtrackDepth = std::min(backtrackDepth, firstPathDepth);
           } else if (!bestLeavePartition.empty() &&
-                     bestLeavePrefixLen == (HighsInt)currNodeCertificate.size() &&
+                     bestLeavePrefixLen ==
+                         (HighsInt)currNodeCertificate.size() &&
                      compareCurrentGraph(bestLeaveGraph, wrongCell)) {
             HighsInt k = (numAutomorphisms++) & 63;
             HighsInt* permutation = automorphisms.data() + k * numVertices;
@@ -1776,7 +1779,8 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
             }
 
             backtrackDepth = std::min(backtrackDepth, bestPathDepth);
-          } else if (bestLeavePrefixLen < (HighsInt)currNodeCertificate.size() &&
+          } else if (bestLeavePrefixLen <
+                         (HighsInt)currNodeCertificate.size() &&
                      currNodeCertificate[bestLeavePrefixLen] >
                          bestLeaveCertificate[bestLeavePrefixLen]) {
             // certificate value is lexicographically above the smallest one

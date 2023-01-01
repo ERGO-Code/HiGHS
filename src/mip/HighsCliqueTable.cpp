@@ -1726,7 +1726,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   std::vector<double> vals;
   for (std::vector<CliqueVar>& clique : data.cliques) {
 #ifdef ADD_ZERO_WEIGHT_VARS
-     HighsInt extensionend = (HighsInt)data.Z.size();
+    HighsInt extensionend = (HighsInt)data.Z.size();
     for (CliqueVar v : clique) {
       extensionend = partitionNeighborhood(data.neighborhoodInds,
                                            data.numNeighborhoodQueries, v,
