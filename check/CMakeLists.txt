@@ -66,7 +66,6 @@ if (UNIX)
     target_compile_options(unit_tests PRIVATE "-Wno-return-type" "-Wno-switch")
     target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
     target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
-    target_compile_options(unit_tests PRIVATE "-Wno-sign-compare")
 endif()
 target_link_libraries(unit_tests libhighs Catch)
 
