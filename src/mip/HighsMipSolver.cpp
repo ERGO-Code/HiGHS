@@ -43,6 +43,13 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
       clqtableinit(nullptr),
       implicinit(nullptr) {
   if (solution.value_valid) {
+    // MIP solver doesn't check row residuals, but they should be OK
+    // so validate using assert
+#ifndef NDEBUG
+    bool valid, feasible;
+    assessLpPrimalValidityFeasibility(options, lp, solution, valid, feasible);
+    assert(valid);
+#endif    
     bound_violation_ = 0;
     row_violation_ = 0;
     integrality_violation_ = 0;
