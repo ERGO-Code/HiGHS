@@ -2218,9 +2218,12 @@ bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
   return true;
 }
 
-HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
-                                       const HighsLp& lp,
-                                       const HighsSolution& solution) {
+HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
+					    const HighsLp& lp,
+					    const HighsSolution& solution,
+					    bool& valid, bool& feasible) {
+  valid = false;
+  feasible = false;
   HighsInt num_col_infeasibilities = 0;
   double max_col_infeasibility = 0;
   double sum_col_infeasibilities = 0;

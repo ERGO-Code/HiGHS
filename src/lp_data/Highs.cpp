@@ -762,10 +762,11 @@ HighsStatus Highs::run() {
   exactResizeModel();
 
   if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the user solution of a MIP is
-    // feasible. Valuable in the case where users make a heuristic
-    // assignment of discrete variables
-    HighsStatus call_status = assessContinuousMipSolution();
+    // Determine whether the current solution of a MIP is feasible
+    // and, if not, try to assign values to continous variables to
+    // achieve a feasible solution. Valuable in the case where users
+    // make a heuristic assignment of discrete variables
+    HighsStatus call_status = assignContinuousAtDiscreteSolution();
     if (call_status != HighsStatus::kOk) return HighsStatus::kError;
   }
 
@@ -2525,8 +2526,8 @@ HighsStatus Highs::readSolution(const std::string& filename,
                           style);
 }
 
-HighsStatus Highs::checkSolutionFeasibility() const {
-  return checkLpSolutionFeasibility(options_, model_.lp_, solution_);
+HighsStatus Highs::assessPrimalValidityFeasibility(bool& valid, bool& feasible) const {
+  return assessLpPrimalValidityFeasibility(options_, model_.lp_, solution_, valid, feasible);
 }
 
 std::string Highs::modelStatusToString(
@@ -2734,14 +2735,16 @@ void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
-HighsStatus Highs::assessContinuousMipSolution() {
-  // Determine whether the user solution  a MIP is
-  // feasible. Valuable in the case where users make a heuristic
-  // assignment of discrete variables
+HighsStatus Highs::assignContinuousAtDiscreteSolution() {
+  // Determine whether the current solution of a MIP is feasible and,
+  // if not, try to assign values to continous variables to achieve a
+  // feasible solution. Valuable in the case where users make a
+  // heuristic assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
+  bool valid, feasible;
   HighsStatus return_status =
-      checkLpSolutionFeasibility(options_, lp, solution_);
+      assessLpPrimalValidityFeasibility(options_, lp, solution_, valid, feasible);
   assert(return_status != HighsStatus::kError);
   if (return_status == HighsStatus::kOk) return HighsStatus::kOk;
   // Save the column bounds and integrality in preparation for fixing

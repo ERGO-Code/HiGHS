@@ -217,9 +217,10 @@ bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
 bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
                                        std::ifstream& in_file);
 
-HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
-                                       const HighsLp& lp,
-                                       const HighsSolution& solution);
+HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
+					    const HighsLp& lp,
+					    const HighsSolution& solution,
+					    bool& valid, bool& feasible);
 
 HighsStatus calculateRowValues(const HighsLp& lp,
                                const std::vector<double>& col_value,
