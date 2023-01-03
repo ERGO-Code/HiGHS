@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status,
@@ -201,6 +201,32 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   }
 
   std::remove(solution_file.c_str());
+}
+
+TEST_CASE("set-pathological-solution", "[highs_check_solution]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsSolution solution;
+
+  solution.clear();
+  highs.clearSolver();
+  highs.addCol(1.0, 0, 1, 0, nullptr, nullptr);
+  HighsInt index = 0;
+  double value = 1.0;
+  highs.addRow(0, 1, 1, &index, &value);
+  solution.col_value.push_back(0);
+  solution.row_value.push_back(0);
+  highs.setSolution(solution);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  solution.clear();
+  highs.clearModel();
+  highs.addCol(1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
+  solution.col_value.push_back(0);
+  highs.setSolution(solution);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
 }
 
 TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
