@@ -2270,7 +2270,7 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
       if (col_infeasibility > options.primal_feasibility_tolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Col %6d has         infeasiblilty of %11.4g from "
+                       "Col %6d has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
                        (int)iCol, col_infeasibility, lower, primal, upper);
         num_col_infeasibilities++;
@@ -2283,7 +2283,7 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
       if (integer_infeasibility > options.mip_feasibility_tolerance) {
         if (integer_infeasibility > 2 * max_integer_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Col %6d has integer infeasiblilty of %11.4g\n",
+                       "Col %6d has integer infeasibility of %11.4g\n",
                        (int)iCol, integer_infeasibility);
         num_integer_infeasibilities++;
       }
@@ -2310,7 +2310,7 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
       if (row_infeasibility > options.primal_feasibility_tolerance) {
         if (row_infeasibility > 2 * max_row_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "Row %6d has         infeasiblilty of %11.4g from "
+                       "Row %6d has         infeasibility of %11.4g from "
                        "[lower, value, upper] = [%15.8g; %15.8g; %15.8g]\n",
                        (int)iRow, row_infeasibility, lower, primal, upper);
         num_row_infeasibilities++;

@@ -116,7 +116,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   if (have_primal_solution) {
     // There's a primal solution, so check its size and initialise the
-    // infeasiblilty counts
+    // infeasibility counts
     assert((int)solution.col_value.size() >= lp.num_col_);
     assert((int)solution.row_value.size() >= lp.num_row_);
     num_primal_infeasibility = 0;
@@ -125,7 +125,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     primal_dual_errors.max_primal_infeasibility.reset();
     if (have_dual_solution) {
       // There's a dual solution, so check its size and initialise the
-      // infeasiblilty counts
+      // infeasibility counts
       assert((int)solution.col_dual.size() >= lp.num_col_);
       assert((int)solution.row_dual.size() >= lp.num_row_);
       num_dual_infeasibility = 0;
