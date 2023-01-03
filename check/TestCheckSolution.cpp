@@ -91,7 +91,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   highs.clear();
 
   const bool test0 = true;
-  bool valid, feasible;
+  bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
       printf("\n***************************\nSolving from saved solution\n");
@@ -101,7 +101,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(optimal_solution);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.assessPrimalValidityFeasibility(valid, feasible);
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kOk);
 
     highs.run();
@@ -120,7 +120,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.readSolution(solution_file);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.assessPrimalValidityFeasibility(valid, feasible);
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kOk);
 
     highs.run();
@@ -150,7 +150,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(solution);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.assessPrimalValidityFeasibility(valid, feasible);
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kWarning);
 
     highs.run();
@@ -173,7 +173,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.readSolution(column_solution_file);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.assessPrimalValidityFeasibility(valid, feasible);
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kWarning);
 
     highs.run();
@@ -265,7 +265,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   REQUIRE(return_status == HighsStatus::kOk);
 
   const bool& value_valid = highs.getSolution().value_valid;
-  bool valid, feasible;
+  bool valid, integral, feasible;
 
   // primalDualInfeasible1Lp has no values in the solution file so,
   // after it's read, HiGHS::solution.value_valid is false
@@ -276,7 +276,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
     REQUIRE(return_status == HighsStatus::kWarning);
   }
 
-  return_status = highs.assessPrimalValidityFeasibility(valid, feasible);
+  return_status = highs.assessPrimalSolution(valid, integral, feasible);
   if (value_valid) {
     REQUIRE(return_status == HighsStatus::kOk);
   } else {

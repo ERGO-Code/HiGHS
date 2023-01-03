@@ -46,10 +46,10 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
 #ifndef NDEBUG
-    bool valid, feasible;
-    assessLpPrimalValidityFeasibility(options, lp, solution, valid, feasible);
+    bool valid, integral, feasible;
+    assessLpPrimalSolution(options, lp, solution, valid, integral, feasible);
     assert(valid);
-#endif    
+#endif
     bound_violation_ = 0;
     row_violation_ = 0;
     integrality_violation_ = 0;

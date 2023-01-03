@@ -648,8 +648,7 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_int =
-        new OptionRecordInt(
+    record_int = new OptionRecordInt(
         "write_solution_style",
         "Style of solution file (raw = computer-readable, "
         "pretty = human-readable): "

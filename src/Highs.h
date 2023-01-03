@@ -165,10 +165,12 @@ class Highs {
                            const HighsInt style = kSolutionStyleRaw);
 
   /**
-   * @brief Assess the primal validity and feasibility of the current
-   * solution. Of value after calling Highs::readSolution
+   * @brief Assess the validity, integrality and feasibility of the
+   * current primal solution. Of value after calling
+   * Highs::readSolution
    */
-  HighsStatus assessPrimalValidityFeasibility(bool& valid, bool& feasible) const;
+  HighsStatus assessPrimalSolution(bool& valid, bool& integral,
+                                   bool& feasible) const;
 
   /**
    * Methods for HiGHS option input/output

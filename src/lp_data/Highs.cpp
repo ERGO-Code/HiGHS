@@ -848,7 +848,6 @@ HighsStatus Highs::run() {
           return returnFromRun(HighsStatus::kError);
         }
       }
-      //
       // Ensure that its diagonal entries are OK in the context of the
       // objective sense. It's OK to be semi-definite
       if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
@@ -2526,8 +2525,10 @@ HighsStatus Highs::readSolution(const std::string& filename,
                           style);
 }
 
-HighsStatus Highs::assessPrimalValidityFeasibility(bool& valid, bool& feasible) const {
-  return assessLpPrimalValidityFeasibility(options_, model_.lp_, solution_, valid, feasible);
+HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
+                                        bool& feasible) const {
+  return assessLpPrimalSolution(options_, model_.lp_, solution_, valid,
+                                integral, feasible);
 }
 
 std::string Highs::modelStatusToString(
@@ -2742,11 +2743,15 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   // heuristic assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
-  bool valid, feasible;
-  HighsStatus return_status =
-      assessLpPrimalValidityFeasibility(options_, lp, solution_, valid, feasible);
+  bool valid, integral, feasible;
+  HighsStatus return_status = assessLpPrimalSolution(options_, lp, solution_,
+                                                     valid, integral, feasible);
   assert(return_status != HighsStatus::kError);
-  if (return_status == HighsStatus::kOk) return HighsStatus::kOk;
+  assert(valid);
+  // If the current non-continuous solution values are not integral,
+  // then no point in trying to assign values to continous variables
+  // to achieve a feasible solution.
+  if (!integral || feasible) return HighsStatus::kOk;
   // Save the column bounds and integrality in preparation for fixing
   // the non-continuous variables at user-supplied values
   std::vector<double> save_col_lower = lp.col_lower_;

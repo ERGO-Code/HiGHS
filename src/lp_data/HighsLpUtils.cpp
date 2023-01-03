@@ -2071,9 +2071,14 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   // Read in the col values: OK to have none, otherwise next line
   // should be "Rows" and correct number
-  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file))
+  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file)) {
+    // Compute the row values since there are none to read
+    if (calculateRowValues(lp, read_solution.col_value,
+                           read_solution.row_value) != HighsStatus::kOk)
+      return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
+  }
   assert(keyword == "Rows");
   if (num_row != lp_num_row) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2218,11 +2223,12 @@ bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
   return true;
 }
 
-HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
-					    const HighsLp& lp,
-					    const HighsSolution& solution,
-					    bool& valid, bool& feasible) {
+HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+                                   const HighsLp& lp,
+                                   const HighsSolution& solution, bool& valid,
+                                   bool& integral, bool& feasible) {
   valid = false;
+  integral = false;
   feasible = false;
   HighsInt num_col_infeasibilities = 0;
   double max_col_infeasibility = 0;
@@ -2236,7 +2242,8 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
   HighsInt num_row_residuals = 0;
   double max_row_residual = 0;
   double sum_row_residuals = 0;
-  const double kRowResidualTolerance = options.primal_feasibility_tolerance;//1e-12;
+  const double kRowResidualTolerance =
+      options.primal_feasibility_tolerance;  // 1e-12;
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = lp.integrality_.size();
@@ -2256,8 +2263,8 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
     }
     double integer_infeasibility = 0;
     if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
-      double nearest_integer = std::round(primal);
-      double integer_infeasibility = std::fabs(primal - nearest_integer);
+      double nearest_integer = std::floor(primal + 0.5);
+      integer_infeasibility = std::fabs(primal - nearest_integer);
     }
     if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
                                   type == HighsVarType::kSemiInteger)) {
@@ -2265,6 +2272,12 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
       // infeasibility, so possibly zero this
       if (std::fabs(primal) <= options.mip_feasibility_tolerance)
         col_infeasibility = 0;
+      // If there is (still) column infeasibility due to value being
+      // off zero or below lower bound, then this counts as an integer
+      // infeasibility
+      if (col_infeasibility && primal < upper)
+        integer_infeasibility =
+            std::max(col_infeasibility, integer_infeasibility);
     }
     if (col_infeasibility > 0) {
       if (col_infeasibility > options.primal_feasibility_tolerance) {
@@ -2350,11 +2363,10 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
                "Row     residuals       %6d  %11.4g  %11.4g\n",
                (int)num_row_residuals, max_row_residual, sum_row_residuals);
   valid = num_row_residuals == 0;
-  feasible = valid &&
-    num_col_infeasibilities == 0 &&
-    num_integer_infeasibilities == 0 &&
-    num_row_infeasibilities == 0;
-  if (!feasible) return HighsStatus::kWarning;
+  integral = valid && num_integer_infeasibilities == 0;
+  feasible = valid && num_col_infeasibilities == 0 &&
+             num_integer_infeasibilities == 0 && num_row_infeasibilities == 0;
+  if (!(integral && feasible)) return HighsStatus::kWarning;
   return HighsStatus::kOk;
 }
 
@@ -2711,7 +2723,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   vector<HighsInt>& index = lp.a_matrix_.index_;
   vector<double>& value = lp.a_matrix_.value_;
   HighsInt num_nz = start[num_col];
-  HighsInt new_num_nz = num_nz + 2*num_semi_variables;
+  HighsInt new_num_nz = num_nz + 2 * num_semi_variables;
   HighsInt new_el = new_num_nz;
   index.resize(new_num_nz);
   value.resize(new_num_nz);
@@ -2742,7 +2754,7 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
     }
   }
   num_nz = start[num_col];
-  new_num_nz = num_nz + 2*num_semi_variables;
+  new_num_nz = num_nz + 2 * num_semi_variables;
   row_num = num_row;
   HighsInt semi_col_num = 0;
   HighsInt semi_row_num = 0;
@@ -2754,10 +2766,10 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   if (has_solution) {
     // Create zeroed row values for the new rows
     assert(solution.row_value.size() == lp_.num_row_);
-    for (HighsInt iCol = 0; iCol < 2*num_semi_variables; iCol++) 
+    for (HighsInt iCol = 0; iCol < 2 * num_semi_variables; iCol++)
       solution.row_value.push_back(0);
     assert(solution.col_value.size() == lp_.num_col_);
-    assert(solution.row_value.size() == lp_.num_row_ + 2*num_semi_variables);
+    assert(solution.row_value.size() == lp_.num_row_ + 2 * num_semi_variables);
   }
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
@@ -2785,9 +2797,9 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
       value.push_back(-lp.col_lower_[iCol]);
       // Accommodate any primal solution
       if (has_solution) {
-	// Record the previous solution value so any change can be
-	// determined
-	const double prev_primal = solution.col_value[iCol];
+        // Record the previous solution value so any change can be
+        // determined
+        const double prev_primal = solution.col_value[iCol];
         if (solution.col_value[iCol] <= primal_feasibility_tolerance) {
           // Currently at or below zero, so binary is 0
           solution.col_value[iCol] = 0;
@@ -2799,19 +2811,21 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
               std::max(lp.col_lower_[iCol], solution.col_value[iCol]);
           solution.col_value.push_back(1);
         }
-	const double dl_primal = solution.col_value[iCol] - prev_primal;
-	if (dl_primal) {
-	  // Change in primal value, so update row values. NB start
-	  // has been extended to incorporate the values in this
-	  // column for the new rows. Their solution values are zero,
-	  // but will be set later
-	  for (HighsInt iEl = start[iCol]; iEl < start[iCol+1]; iEl++)
-	    solution.row_value[index[iEl]] += dl_primal * value[iEl];
-	}
-	const HighsInt new_col = lp.col_cost_.size() - 1;
-	const double binary_value = solution.col_value[new_col];
-	solution.row_value[row_num-1] = solution.col_value[iCol] - lp.col_lower_[iCol] * binary_value;
-	solution.row_value[row_num] = solution.col_value[iCol] - lp.col_upper_[iCol] * binary_value;
+        const double dl_primal = solution.col_value[iCol] - prev_primal;
+        if (dl_primal) {
+          // Change in primal value, so update row values. NB start
+          // has been extended to incorporate the values in this
+          // column for the new rows. Their solution values are zero,
+          // but will be set later
+          for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
+            solution.row_value[index[iEl]] += dl_primal * value[iEl];
+        }
+        const HighsInt new_col = lp.col_cost_.size() - 1;
+        const double binary_value = solution.col_value[new_col];
+        solution.row_value[row_num - 1] =
+            solution.col_value[iCol] - lp.col_lower_[iCol] * binary_value;
+        solution.row_value[row_num] =
+            solution.col_value[iCol] - lp.col_upper_[iCol] * binary_value;
       }
       // Complete x - u*y <= 0
       lp.row_lower_.push_back(-kHighsInf);
