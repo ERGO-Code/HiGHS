@@ -2236,7 +2236,7 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
   HighsInt num_row_residuals = 0;
   double max_row_residual = 0;
   double sum_row_residuals = 0;
-  const double kRowResidualTolerance = 1e-12;
+  const double kRowResidualTolerance = options.primal_feasibility_tolerance;//1e-12;
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = lp.integrality_.size();
@@ -2349,9 +2349,12 @@ HighsStatus assessLpPrimalValidityFeasibility(const HighsOptions& options,
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Row     residuals       %6d  %11.4g  %11.4g\n",
                (int)num_row_residuals, max_row_residual, sum_row_residuals);
-  if (num_col_infeasibilities || num_integer_infeasibilities ||
-      num_row_infeasibilities)
-    return HighsStatus::kWarning;
+  valid = num_row_residuals == 0;
+  feasible = valid &&
+    num_col_infeasibilities == 0 &&
+    num_integer_infeasibilities == 0 &&
+    num_row_infeasibilities == 0;
+  if (!feasible) return HighsStatus::kWarning;
   return HighsStatus::kOk;
 }
 
