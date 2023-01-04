@@ -392,6 +392,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFile(file, "bounds");
   this->writeToFileLineend(file);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    const bool default_bounds =
+        lp.col_lower_[iCol] == 0 && lp.col_upper_[iCol] == kHighsInf;
+    if (default_bounds) continue;
     if (lp.col_lower_[iCol] <= -kHighsInf && lp.col_upper_[iCol] >= kHighsInf) {
       // Free variable
       if (has_col_names) {
@@ -409,7 +412,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       }
       this->writeToFile(file, " =");
       this->writeToFileValue(file, lp.col_upper_[iCol], false);
-    } else if (lp.col_lower_[iCol] != 0 || lp.col_upper_[iCol] < kHighsInf) {
+    } else {
+      assert(!default_bounds);
       // Non-default bound
       if (lp.col_lower_[iCol] != 0) {
         // Nonzero lower bound
