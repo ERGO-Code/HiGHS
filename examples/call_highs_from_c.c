@@ -77,7 +77,7 @@ void minimal_api() {
   const double row_lower[3] = {-1.0e30, 5.0, 6.0};
   const double row_upper[3] = {7.0, 15.0, 1.0e30};
   // Define the constraint matrix column-wise
-  const int a_format = 1;
+  const int a_format = kHighsMatrixFormatColwise;
   const int a_start[2] = {0, 2};
   const int a_index[5] = {1, 2, 0, 1, 2};
   const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
@@ -209,10 +209,10 @@ void minimal_api_qp() {
   const double a_value[3] = {1.0, 1.0, 1.0};
 
   const int q_format = kHighsHessianFormatTriangular;
-  const int q_num_nz = 5;
+  const int q_num_nz = 4;
   const int q_start[3] = {0, 2, 3};
-  const int q_index[5] = {0, 2, 1, 0, 2};
-  const double q_value[5] = {2.0, -1.0, 0.2, -1.0, 2.0};  
+  const int q_index[4] = {0, 2, 1, 2};
+  const double q_value[4] = {2.0, -1.0, 0.2, 2.0};
 
   double objective_value;
   double* col_value = (double*)malloc(sizeof(double) * num_col);
@@ -327,7 +327,7 @@ void full_api() {
   const double row_lower[3] = {-1.0e30, 5.0, 6.0};
   const double row_upper[3] = {7.0, 15.0, 1.0e30};
   // Define the constraint matrix column-wise
-  const int a_format = kHighsHessianFormatTriangular;
+  const int a_format = kHighsMatrixFormatColwise;
   const int a_start[2] = {0, 2};
   const int a_index[5] = {1, 2, 0, 1, 2};
   const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
