@@ -1592,7 +1592,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }
@@ -1600,8 +1600,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
       num_leaves >= options.mip_max_leaves) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "reached leave node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+                  "reached leaf node limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }
@@ -1611,7 +1611,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached improving solution limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }

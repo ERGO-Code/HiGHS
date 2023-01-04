@@ -475,7 +475,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kObjectiveTarget", HighsModelStatus::kObjectiveTarget)
     .value("kTimeLimit", HighsModelStatus::kTimeLimit)
     .value("kIterationLimit", HighsModelStatus::kIterationLimit)
-    .value("kUnknown", HighsModelStatus::kUnknown);
+    .value("kUnknown", HighsModelStatus::kUnknown)
+    .value("kSolutionLimit", HighsModelStatus::kSolutionLimit);
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
     .value("kLower", HighsBasisStatus::kLower)
     .value("kBasic", HighsBasisStatus::kBasic)

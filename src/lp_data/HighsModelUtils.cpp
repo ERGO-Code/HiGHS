@@ -1219,6 +1219,9 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kIterationLimit:
       return "Iteration limit reached";
       break;
+    case HighsModelStatus::kSolutionLimit:
+      return "Solution limit reached";
+      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
       break;
@@ -1294,6 +1297,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     case HighsModelStatus::kTimeLimit:
       return HighsStatus::kWarning;
     case HighsModelStatus::kIterationLimit:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kSolutionLimit:
       return HighsStatus::kWarning;
     case HighsModelStatus::kUnknown:
       return HighsStatus::kWarning;
