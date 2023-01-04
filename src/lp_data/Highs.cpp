@@ -762,10 +762,11 @@ HighsStatus Highs::run() {
   exactResizeModel();
 
   if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the user solution of a MIP is
-    // feasible. Valuable in the case where users make a heuristic
-    // assignment of discrete variables
-    HighsStatus call_status = assessContinuousMipSolution();
+    // Determine whether the current solution of a MIP is feasible
+    // and, if not, try to assign values to continous variables to
+    // achieve a feasible solution. Valuable in the case where users
+    // make a heuristic assignment of discrete variables
+    HighsStatus call_status = assignContinuousAtDiscreteSolution();
     if (call_status != HighsStatus::kOk) return HighsStatus::kError;
   }
 
@@ -847,7 +848,6 @@ HighsStatus Highs::run() {
           return returnFromRun(HighsStatus::kError);
         }
       }
-      //
       // Ensure that its diagonal entries are OK in the context of the
       // objective sense. It's OK to be semi-definite
       if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
@@ -2525,8 +2525,10 @@ HighsStatus Highs::readSolution(const std::string& filename,
                           style);
 }
 
-HighsStatus Highs::checkSolutionFeasibility() const {
-  return checkLpSolutionFeasibility(options_, model_.lp_, solution_);
+HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
+                                        bool& feasible) const {
+  return assessLpPrimalSolution(options_, model_.lp_, solution_, valid,
+                                integral, feasible);
 }
 
 std::string Highs::modelStatusToString(
@@ -2734,16 +2736,22 @@ void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
-HighsStatus Highs::assessContinuousMipSolution() {
-  // Determine whether the user solution  a MIP is
-  // feasible. Valuable in the case where users make a heuristic
-  // assignment of discrete variables
+HighsStatus Highs::assignContinuousAtDiscreteSolution() {
+  // Determine whether the current solution of a MIP is feasible and,
+  // if not, try to assign values to continous variables to achieve a
+  // feasible solution. Valuable in the case where users make a
+  // heuristic assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
-  HighsStatus return_status =
-      checkLpSolutionFeasibility(options_, lp, solution_);
+  bool valid, integral, feasible;
+  HighsStatus return_status = assessLpPrimalSolution(options_, lp, solution_,
+                                                     valid, integral, feasible);
   assert(return_status != HighsStatus::kError);
-  if (return_status == HighsStatus::kOk) return HighsStatus::kOk;
+  assert(valid);
+  // If the current non-continuous solution values are not integral,
+  // then no point in trying to assign values to continous variables
+  // to achieve a feasible solution.
+  if (!integral || feasible) return HighsStatus::kOk;
   // Save the column bounds and integrality in preparation for fixing
   // the non-continuous variables at user-supplied values
   std::vector<double> save_col_lower = lp.col_lower_;

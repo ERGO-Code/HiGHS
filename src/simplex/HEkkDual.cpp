@@ -343,7 +343,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       }
     } else {
       // Use primal simplex to clean up. This usually yields
-      // optimality or infeasiblilty (according to whether solve_phase
+      // optimality or infeasibility (according to whether solve_phase
       // is kSolvePhaseOptimalCleanup or
       // kSolvePhasePrimalInfeasibleCleanup) but can yield
       // unboundedness. Time/iteration limit return is, of course,
@@ -2961,7 +2961,7 @@ void HEkkDual::assessPossiblyDualUnbounded() {
   //
   const bool proof_of_infeasibility = proofOfPrimalInfeasibility();
   if (proof_of_infeasibility) {
-    // There is a proof of primal infeasiblilty
+    // There is a proof of primal infeasibility
     solve_phase = kSolvePhaseExit;
     // Save dual ray information
     saveDualRay();
@@ -2969,7 +2969,7 @@ void HEkkDual::assessPossiblyDualUnbounded() {
     assert(ekk_instance_.model_status_ == HighsModelStatus::kNotset);
     ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
   } else {
-    // No proof of primal infeasiblilty, so assume dual unbounded
+    // No proof of primal infeasibility, so assume dual unbounded
     // claim is spurious. Make row_out taboo, and prevent rebuild
     ekk_instance_.addBadBasisChange(
         row_out, variable_out, variable_in,

@@ -165,10 +165,12 @@ class Highs {
                            const HighsInt style = kSolutionStyleRaw);
 
   /**
-   * @brief Check the feasibility of the current solution. Of value
-   * after calling Highs::readSolution
+   * @brief Assess the validity, integrality and feasibility of the
+   * current primal solution. Of value after calling
+   * Highs::readSolution
    */
-  HighsStatus checkSolutionFeasibility() const;
+  HighsStatus assessPrimalSolution(bool& valid, bool& integral,
+                                   bool& feasible) const;
 
   /**
    * Methods for HiGHS option input/output
@@ -1135,7 +1137,7 @@ class Highs {
     this->model_.hessian_.exactResize();
   }
 
-  HighsStatus assessContinuousMipSolution();
+  HighsStatus assignContinuousAtDiscreteSolution();
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();

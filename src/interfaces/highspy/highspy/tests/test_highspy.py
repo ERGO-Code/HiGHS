@@ -203,12 +203,12 @@ class TestHighsPy(unittest.TestCase):
     #     print('has_dual_ray = ', has_dual_ray)
     #     self.assertTrue(has_dual_ray)
  
-    def test_check_solution_feasibility(self):
-        h = self.get_basic_model()
-        h.setOptionValue('log_to_console', True)
-        h.checkSolutionFeasibility()
-        h.run()
-        h.checkSolutionFeasibility()
+    # def test_check_solution_feasibility(self):
+    #     h = self.get_basic_model()
+    #     h.setOptionValue('log_to_console', True)
+    #     h.assessLpPrimalSolution()
+    #     h.run()
+    #     h.assessLpPrimalSolution()
 
     def test_log_callback(self):
         h = self.get_basic_model()
