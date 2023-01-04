@@ -1753,14 +1753,25 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
-    HighsBasis modifiable_basis = basis;
-    modifiable_basis.was_alien = true;
-    HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                      info_, ekk_instance_, options_, timer_);
-    HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
-    if (return_status != HighsStatus::kOk) return HighsStatus::kError;
-    // Update the HiGHS basis
-    basis_ = std::move(modifiable_basis);
+    if (model_.lp_.num_row_ == 0) {
+      // Special case where there are no rows, so no singularity
+      // issues. All columns with basic status must be set nonbasic
+      for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
+        basis_.col_status[iCol] =
+            basis.col_status[iCol] == HighsBasisStatus::kBasic
+                ? HighsBasisStatus::kNonbasic
+                : basis.col_status[iCol];
+      basis_.alien = false;
+    } else {
+      HighsBasis modifiable_basis = basis;
+      modifiable_basis.was_alien = true;
+      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
+                                        info_, ekk_instance_, options_, timer_);
+      HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
+      if (return_status != HighsStatus::kOk) return HighsStatus::kError;
+      // Update the HiGHS basis
+      basis_ = std::move(modifiable_basis);
+    }
   } else {
     // Check the user-supplied basis
     if (!isBasisConsistent(model_.lp_, basis)) {

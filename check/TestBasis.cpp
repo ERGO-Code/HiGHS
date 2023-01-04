@@ -97,6 +97,33 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
   testBasisReloadModel(highs, false);
 }
 
+// No commas in test case name.
+TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  HighsBasis basis;
+
+  basis.clear();
+  highs.clearSolver();
+  highs.addCol(1.0, 0, 1, 0, nullptr, nullptr);
+  HighsInt index = 0;
+  double value = 1.0;
+  highs.addRow(0, 1, 1, &index, &value);
+  basis.col_status.push_back(HighsBasisStatus::kLower);
+  basis.row_status.push_back(HighsBasisStatus::kLower);
+  highs.setBasis(basis);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  basis.clear();
+  highs.clearModel();
+  highs.addCol(1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
+  basis.col_status.push_back(HighsBasisStatus::kBasic);
+  highs.setBasis(basis);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+}
+
 void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
@@ -144,6 +171,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   //  highs.writeSolution("", kSolutionStyleRaw);
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
+
 void testBasisRestart(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after changing a bound, solving
