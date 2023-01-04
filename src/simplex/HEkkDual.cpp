@@ -343,7 +343,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       }
     } else {
       // Use primal simplex to clean up. This usually yields
-      // optimality or infeasiblilty (according to whether solve_phase
+      // optimality or infeasibility (according to whether solve_phase
       // is kSolvePhaseOptimalCleanup or
       // kSolvePhasePrimalInfeasibleCleanup) but can yield
       // unboundedness. Time/iteration limit return is, of course,
@@ -772,25 +772,19 @@ void HEkkDual::solvePhase1() {
     }
   }
 
-  // todo @ Julian: this assert fails on miplib2017 models arki001, momentum1,
-  // and glass4 if the one about num_shift_skipped in HEkk.cpp with the other
-  // todo is commented out.
-  // A hotfix suggestion of mine was to put returns above
-  // at the cases where you set model_status = HighsModelStatus::kSolveError. I
-  // think this error can lead to infinite looping, or at least plays a part in
-  // some of the cases where the simplex gets stuck infinitely.
-  const bool solve_phase_ok = solve_phase == kSolvePhase1 ||
-                              solve_phase == kSolvePhase2 ||
-                              solve_phase == kSolvePhaseExit;
+  // Can also get here with solve_phase = kSolvePhaseError
+  const bool solve_phase_ok =
+      solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+      solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError;
   if (!solve_phase_ok)
     highsLogDev(
         ekk_instance_.options_->log_options, HighsLogType::kInfo,
         "HEkkDual::solvePhase1 solve_phase == %d (solve call %d; iter %d)\n",
         (int)solve_phase, (int)ekk_instance_.debug_solve_call_num_,
         (int)ekk_instance_.iteration_count_);
-  assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
-         solve_phase == kSolvePhaseExit);
-  if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {
+  assert(solve_phase_ok);
+  if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit ||
+      solve_phase == kSolvePhaseError) {
     // Moving to phase 2 or exiting, so make sure that the simplex
     // bounds and nonbasic value/move correspond to the LP
     ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -2967,7 +2961,7 @@ void HEkkDual::assessPossiblyDualUnbounded() {
   //
   const bool proof_of_infeasibility = proofOfPrimalInfeasibility();
   if (proof_of_infeasibility) {
-    // There is a proof of primal infeasiblilty
+    // There is a proof of primal infeasibility
     solve_phase = kSolvePhaseExit;
     // Save dual ray information
     saveDualRay();
@@ -2975,7 +2969,7 @@ void HEkkDual::assessPossiblyDualUnbounded() {
     assert(ekk_instance_.model_status_ == HighsModelStatus::kNotset);
     ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
   } else {
-    // No proof of primal infeasiblilty, so assume dual unbounded
+    // No proof of primal infeasibility, so assume dual unbounded
     // claim is spurious. Make row_out taboo, and prevent rebuild
     ekk_instance_.addBadBasisChange(
         row_out, variable_out, variable_in,

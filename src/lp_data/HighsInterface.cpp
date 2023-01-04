@@ -55,10 +55,11 @@ HighsStatus Highs::basisForSolution() {
   const HighsInt num_basic_row = num_basic - num_basic_col;
   assert((int)basis.col_status.size() == lp.num_col_);
   assert((int)basis.row_status.size() == lp.num_row_);
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "LP has %d rows and %d basic variables (%d / %d; %d / %d)\n",
-               (int)lp.num_row_, (int)num_basic, (int)num_basic_col,
-               (int)lp.num_col_, (int)num_basic_row, (int)lp.num_row_);
+  highsLogDev(options_.log_options, HighsLogType::kInfo,
+              "LP has %d rows and solution yields %d possible basic variables "
+              "(%d / %d; %d / %d)\n",
+              (int)lp.num_row_, (int)num_basic, (int)num_basic_col,
+              (int)lp.num_col_, (int)num_basic_row, (int)lp.num_row_);
   return this->setBasis(basis);
 }
 

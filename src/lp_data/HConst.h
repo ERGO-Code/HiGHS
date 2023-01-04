@@ -22,6 +22,9 @@
 
 #include "util/HighsInt.h"
 
+const std::string kHighsCopyrightStatement =
+    "Copyright (c) 2022 HiGHS under MIT licence terms";
+
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
@@ -127,8 +130,9 @@ enum SolutionStyle {
   kSolutionStylePretty,        // 1;
   kSolutionStyleGlpsolRaw,     // 2;
   kSolutionStyleGlpsolPretty,  // 3;
+  kSolutionStyleSparse,        // 4;
   kSolutionStyleMin = kSolutionStyleOldRaw,
-  kSolutionStyleMax = kSolutionStyleGlpsolPretty
+  kSolutionStyleMax = kSolutionStyleSparse
 };
 
 enum GlpsolCostRowLocation {
@@ -174,9 +178,12 @@ enum class HighsModelStatus {
   kObjectiveTarget,
   kTimeLimit,
   kIterationLimit,
+  // V2.0: flip kUnknown and kSolutionLimit - and then modify kMax and
+  // highs_c_api.h, highs_csharp_api.cs, highspy/highs_bindings.cpp
   kUnknown,
+  kSolutionLimit,
   kMin = kNotset,
-  kMax = kUnknown
+  kMax = kSolutionLimit
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

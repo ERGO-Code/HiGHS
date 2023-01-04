@@ -54,12 +54,31 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
             info->status_ipm = IPX_STATUS_optimal;
             break;
         }
-        if (info->iter >= maxiter_) {
-            info->status_ipm = IPX_STATUS_iter_limit;
+        if (num_bad_iter_ >= 5 ||
+            iterate_->complementarity() > kDivergeTol * best_complementarity_) {
+            // No progress in reducing the complementarity gap.
+            // Check if model seems to be primal or dual infeasible.
+            bool dualized = iterate_->model().dualized();
+            double pobjective = iterate_->pobjective_after_postproc();
+            double dobjective = iterate_->dobjective_after_postproc();
+            if (dobjective > std::max(10.0 * std::abs(pobjective), 1.0)) {
+                // Dual objective tends to positive infinity. Looks like the
+                // model is dual unbounded, i.e. primal infeasible.
+                info->status_ipm = dualized ?
+                    IPX_STATUS_dual_infeas : IPX_STATUS_primal_infeas;
+            } else if (pobjective < -std::max(10.0 * std::abs(dobjective), 1.0)) {
+                // Primal objective tends to negative infinity. Looks like the
+                // model is primal unbounded, i.e. dual infeasible.
+                info->status_ipm = dualized ?
+                    IPX_STATUS_primal_infeas : IPX_STATUS_dual_infeas;
+            }
+            else {
+                info->status_ipm = IPX_STATUS_no_progress;
+            }
             break;
         }
-        if (num_bad_iter_ >= 5) {
-            info->status_ipm = IPX_STATUS_no_progress;
+        if (info->iter >= maxiter_) {
+            info->status_ipm = IPX_STATUS_iter_limit;
             break;
         }
         if ((info->errflag = control_.InterruptCheck()) != 0)
@@ -222,6 +241,7 @@ void IPM::ComputeStartingPoint() {
             zu[j] += zshift2;
     }
     iterate_->Initialize(x, xl, xu, y, zl, zu);
+    best_complementarity_ = iterate_->complementarity();
 }
 
 // Computes maximum alpha such that x + alpha*dx >= 0.
@@ -435,6 +455,8 @@ void IPM::MakeStep(const Step& step) {
         num_bad_iter_++;
     else
         num_bad_iter_ = 0;
+    best_complementarity_ =
+        std::min(best_complementarity_, iterate_->complementarity());
 }
 
 void IPM::SolveNewtonSystem(const double* rb, const double* rc,

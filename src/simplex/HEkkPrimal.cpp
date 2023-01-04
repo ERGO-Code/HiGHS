@@ -174,7 +174,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
       //
       // solve_phase = kSolvePhaseUnknown if backtracking
       //
-      // solve_phase = kSolvePhaseExit if primal infeasiblilty is
+      // solve_phase = kSolvePhaseExit if primal infeasibility is
       // detected, in which case model_status_ =
       // HighsModelStatus::kInfeasible is set
       //
@@ -284,7 +284,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
                 info.sum_primal_infeasibilities);
     ekk_instance_.computePrimalObjectiveValue();
     // Use dual to clean up. This almost always yields optimality,
-    // and shouldn't yield infeasiblilty - since the current point
+    // and shouldn't yield infeasibility - since the current point
     // is dual feasible - but can yield
     // unboundedness. Time/iteration limit return is, of course,
     // possible, as are solver error
@@ -1925,13 +1925,13 @@ void HEkkPrimal::considerInfeasibleValueIn() {
   } else {
     double bound_shift;
     if (bound_violated > 0) {
-      // Perturb the upper bound to accommodate the infeasiblilty
+      // Perturb the upper bound to accommodate the infeasibility
       shiftBound(false, variable_in, value_in,
                  info.numTotRandomValue_[variable_in],
                  info.workUpper_[variable_in], bound_shift, true);
       info.workUpperShift_[variable_in] += bound_shift;
     } else {
-      // Perturb the lower bound to accommodate the infeasiblilty
+      // Perturb the lower bound to accommodate the infeasibility
       shiftBound(true, variable_in, value_in,
                  info.numTotRandomValue_[variable_in],
                  info.workLower_[variable_in], bound_shift, true);
@@ -2006,14 +2006,14 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
       HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
       double bound_shift;
       if (bound_violated > 0) {
-        // Perturb the upper bound to accommodate the infeasiblilty
+        // Perturb the upper bound to accommodate the infeasibility
         shiftBound(false, iCol, info.baseValue_[iRow],
                    info.numTotRandomValue_[iCol], info.workUpper_[iCol],
                    bound_shift, true);
         info.baseUpper_[iRow] = info.workUpper_[iCol];
         info.workUpperShift_[iCol] += bound_shift;
       } else {
-        // Perturb the lower bound to accommodate the infeasiblilty
+        // Perturb the lower bound to accommodate the infeasibility
         shiftBound(true, iCol, info.baseValue_[iRow],
                    info.numTotRandomValue_[iCol], info.workLower_[iCol],
                    bound_shift, true);
@@ -2073,14 +2073,14 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
         HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
         double bound_shift;
         if (bound_violated > 0) {
-          // Perturb the upper bound to accommodate the infeasiblilty
+          // Perturb the upper bound to accommodate the infeasibility
           shiftBound(false, iCol, info.baseValue_[iRow],
                      info.numTotRandomValue_[iCol], info.workUpper_[iCol],
                      bound_shift, true);
           info.baseUpper_[iRow] = info.workUpper_[iCol];
           info.workUpperShift_[iCol] += bound_shift;
         } else {
-          // Perturb the lower bound to accommodate the infeasiblilty
+          // Perturb the lower bound to accommodate the infeasibility
           shiftBound(true, iCol, info.baseValue_[iRow],
                      info.numTotRandomValue_[iCol], info.workLower_[iCol],
                      bound_shift, true);

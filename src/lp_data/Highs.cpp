@@ -36,6 +36,19 @@
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
 
+std::string highsVersion() {
+  std::stringstream ss;
+  ss << "v" << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
+     << HIGHS_VERSION_PATCH;
+  return ss.str();
+}
+
+HighsInt highsVersionMajor() { return HIGHS_VERSION_MAJOR; }
+HighsInt highsVersionMinor() { return HIGHS_VERSION_MINOR; }
+HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
+std::string highsGithash() { return HIGHS_GITHASH; }
+std::string highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
+
 Highs::Highs() {}
 
 HighsStatus Highs::clear() {
@@ -169,7 +182,10 @@ HighsStatus Highs::writeOptions(const std::string& filename,
       options_.log_options, openWriteFile(filename, "writeOptions", file, html),
       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-
+  // Report to user that options are being written to a file
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the option values to %s\n", filename.c_str());
   return_status = interpretCallStatus(
       options_.log_options,
       writeOptionsToFile(file, options_.records, report_only_deviations, html),
@@ -225,7 +241,10 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
       options_.log_options, openWriteFile(filename, "writeInfo", file, html),
       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-
+  // Report to user that options are being written to a file
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the info values to %s\n", filename.c_str());
   return_status = interpretCallStatus(
       options_.log_options,
       writeInfoToFile(file, info_.valid, info_.records, html), return_status,
@@ -566,6 +585,9 @@ HighsStatus Highs::writeModel(const std::string& filename) {
                    "Model file %s not supported\n", filename.c_str());
       return HighsStatus::kError;
     }
+    // Report to user that model is being written
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the model to %s\n", filename.c_str());
     return_status = interpretCallStatus(
         options_.log_options,
         writer->writeModelToFile(options_, filename, model_), return_status,
@@ -584,6 +606,10 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Report to user that basis is being written
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the basis to %s\n", filename.c_str());
   writeBasisFile(file, basis_);
   if (file != stdout) fclose(file);
   return returnFromHighs(return_status);
@@ -736,10 +762,11 @@ HighsStatus Highs::run() {
   exactResizeModel();
 
   if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the user solution of a MIP is
-    // feasible. Valuable in the case where users make a heuristic
-    // assignment of discrete variables
-    HighsStatus call_status = assessContinuousMipSolution();
+    // Determine whether the current solution of a MIP is feasible
+    // and, if not, try to assign values to continous variables to
+    // achieve a feasible solution. Valuable in the case where users
+    // make a heuristic assignment of discrete variables
+    HighsStatus call_status = assignContinuousAtDiscreteSolution();
     if (call_status != HighsStatus::kOk) return HighsStatus::kError;
   }
 
@@ -821,7 +848,6 @@ HighsStatus Highs::run() {
           return returnFromRun(HighsStatus::kError);
         }
       }
-      //
       // Ensure that its diagonal entries are OK in the context of the
       // objective sense. It's OK to be semi-definite
       if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
@@ -1727,14 +1753,25 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
-    HighsBasis modifiable_basis = basis;
-    modifiable_basis.was_alien = true;
-    HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                      info_, ekk_instance_, options_, timer_);
-    HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
-    if (return_status != HighsStatus::kOk) return HighsStatus::kError;
-    // Update the HiGHS basis
-    basis_ = std::move(modifiable_basis);
+    if (model_.lp_.num_row_ == 0) {
+      // Special case where there are no rows, so no singularity
+      // issues. All columns with basic status must be set nonbasic
+      for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
+        basis_.col_status[iCol] =
+            basis.col_status[iCol] == HighsBasisStatus::kBasic
+                ? HighsBasisStatus::kNonbasic
+                : basis.col_status[iCol];
+      basis_.alien = false;
+    } else {
+      HighsBasis modifiable_basis = basis;
+      modifiable_basis.was_alien = true;
+      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
+                                        info_, ekk_instance_, options_, timer_);
+      HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
+      if (return_status != HighsStatus::kOk) return HighsStatus::kError;
+      // Update the HiGHS basis
+      basis_ = std::move(modifiable_basis);
+    }
   } else {
     // Check the user-supplied basis
     if (!isBasisConsistent(model_.lp_, basis)) {
@@ -2463,8 +2500,14 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  // Report to user that solution is being written
+  if (filename != "")
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Writing the solution to %s\n", filename.c_str());
   writeSolutionFile(file, options_, model_, basis_, solution_, info_,
                     model_status_, style);
+  if (style == kSolutionStyleSparse)
+    return returnFromWriteSolution(file, return_status);
   if (style == kSolutionStyleRaw) {
     fprintf(file, "\n# Basis\n");
     writeBasisFile(file, basis_);
@@ -2473,17 +2516,18 @@ HighsStatus Highs::writeSolution(const std::string& filename,
     if (model_.isMip() || model_.isQp()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Cannot determing ranging information for MIP or QP\n");
-      return HighsStatus::kError;
+      return_status = HighsStatus::kError;
+      return returnFromWriteSolution(file, return_status);
     }
     return_status = interpretCallStatus(
         options_.log_options, this->getRanging(), return_status, "getRanging");
-    if (return_status == HighsStatus::kError) return return_status;
+    if (return_status == HighsStatus::kError)
+      returnFromWriteSolution(file, return_status);
     fprintf(file, "\n# Ranging\n");
     writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
                      solution_, ranging_, style);
   }
-  if (file != stdout) fclose(file);
-  return HighsStatus::kOk;
+  return returnFromWriteSolution(file, return_status);
 }
 
 HighsStatus Highs::readSolution(const std::string& filename,
@@ -2492,8 +2536,10 @@ HighsStatus Highs::readSolution(const std::string& filename,
                           style);
 }
 
-HighsStatus Highs::checkSolutionFeasibility() const {
-  return checkLpSolutionFeasibility(options_, model_.lp_, solution_);
+HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
+                                        bool& feasible) const {
+  return assessLpPrimalSolution(options_, model_.lp_, solution_, valid,
+                                integral, feasible);
 }
 
 std::string Highs::modelStatusToString(
@@ -2701,16 +2747,22 @@ void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
-HighsStatus Highs::assessContinuousMipSolution() {
-  // Determine whether the user solution  a MIP is
-  // feasible. Valuable in the case where users make a heuristic
-  // assignment of discrete variables
+HighsStatus Highs::assignContinuousAtDiscreteSolution() {
+  // Determine whether the current solution of a MIP is feasible and,
+  // if not, try to assign values to continous variables to achieve a
+  // feasible solution. Valuable in the case where users make a
+  // heuristic assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
-  HighsStatus return_status =
-      checkLpSolutionFeasibility(options_, lp, solution_);
+  bool valid, integral, feasible;
+  HighsStatus return_status = assessLpPrimalSolution(options_, lp, solution_,
+                                                     valid, integral, feasible);
   assert(return_status != HighsStatus::kError);
-  if (return_status == HighsStatus::kOk) return HighsStatus::kOk;
+  assert(valid);
+  // If the current non-continuous solution values are not integral,
+  // then no point in trying to assign values to continous variables
+  // to achieve a feasible solution.
+  if (!integral || feasible) return HighsStatus::kOk;
   // Save the column bounds and integrality in preparation for fixing
   // the non-continuous variables at user-supplied values
   std::vector<double> save_col_lower = lp.col_lower_;
@@ -3168,6 +3220,13 @@ HighsStatus Highs::openWriteFile(const string filename,
   return HighsStatus::kOk;
 }
 
+// Always called when returning from Highs::writeSolution
+HighsStatus Highs::returnFromWriteSolution(FILE* file,
+                                           const HighsStatus return_status) {
+  if (file != stdout) fclose(file);
+  return return_status;
+}
+
 // Applies checks before returning from run()
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(!called_return_from_run);
@@ -3239,6 +3298,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       // Finally consider the warning returns
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kUnknown:
       assert(return_status == HighsStatus::kWarning);
       break;
@@ -3276,6 +3336,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kUnboundedOrInfeasible:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kUnknown:
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!

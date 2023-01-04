@@ -27,7 +27,7 @@ try:
                                         libraries=['highs']))
     
     setup(name='highspy',
-          version='1.4.0.dev0',
+          version='1.5.0.dev0',
           packages=find_packages(),
           description='Python interface to HiGHS',
           maintainer_email='highsopt@gmail.com',
@@ -44,6 +44,8 @@ try:
                        "Programming Language :: Python :: 3.7",
                        "Programming Language :: Python :: 3.8",
                        "Programming Language :: Python :: 3.9",
+                       "Programming Language :: Python :: 3.10",
+                       "Programming Language :: Python :: 3.11",
                        "License :: OSI Approved :: MIT License"]
           )
 finally:

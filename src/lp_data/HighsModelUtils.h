@@ -41,7 +41,8 @@ void writeModelBoundSolution(
     const std::vector<HighsBasisStatus>& status,
     const HighsVarType* integrality = NULL);
 void writeModelSolution(FILE* file, const HighsLp& lp,
-                        const HighsSolution& solution, const HighsInfo& info);
+                        const HighsSolution& solution, const HighsInfo& info,
+                        const bool sparse);
 
 HighsInt maxNameLength(const HighsInt num_name,
                        const std::vector<std::string>& names);

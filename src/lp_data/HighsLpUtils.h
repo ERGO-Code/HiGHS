@@ -214,10 +214,13 @@ bool readSolutionFileKeywordLineOk(std::string& keyword,
 bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
                                           std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
+bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
+                                       std::ifstream& in_file);
 
-HighsStatus checkLpSolutionFeasibility(const HighsOptions& options,
-                                       const HighsLp& lp,
-                                       const HighsSolution& solution);
+HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+                                   const HighsLp& lp,
+                                   const HighsSolution& solution, bool& valid,
+                                   bool& integral, bool& feasible);
 
 HighsStatus calculateRowValues(const HighsLp& lp,
                                const std::vector<double>& col_value,

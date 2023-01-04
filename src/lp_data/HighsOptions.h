@@ -260,6 +260,7 @@ const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
 const string kSolutionFileString = "solution_file";
 const string kRangingString = "ranging";
+const string kVersionString = "version";
 const string kWriteModelFileString = "write_model_file";
 const string kReadSolutionFileString = "read_solution_file";
 
@@ -647,14 +648,15 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
-    record_int =
-        new OptionRecordInt("write_solution_style",
-                            "Style of solution file Raw (computer-readable); "
-                            "Pretty (human-readable): "
-                            "0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol "
-                            "raw; 3 => Glpsol pretty; ",
-                            advanced, &write_solution_style, kSolutionStyleMin,
-                            kSolutionStyleRaw, kSolutionStyleMax);
+    record_int = new OptionRecordInt(
+        "write_solution_style",
+        "Style of solution file (raw = computer-readable, "
+        "pretty = human-readable): "
+        "-1 => HiGHS old raw (deprecated); 0 => HiGHS raw; "
+        "1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; "
+        "4 => HiGHS sparse raw",
+        advanced, &write_solution_style, kSolutionStyleMin, kSolutionStyleRaw,
+        kSolutionStyleMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
