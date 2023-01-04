@@ -76,6 +76,7 @@ const HighsInt kHighsModelStatusObjectiveTarget = 12;
 const HighsInt kHighsModelStatusTimeLimit = 13;
 const HighsInt kHighsModelStatusIterationLimit = 14;
 const HighsInt kHighsModelStatusUnknown = 15;
+const HighsInt kHighsModelStatusSolutionLimit = 16;
 
 const HighsInt kHighsBasisStatusLower = 0;
 const HighsInt kHighsBasisStatusBasic = 1;

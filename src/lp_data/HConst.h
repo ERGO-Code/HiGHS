@@ -178,9 +178,12 @@ enum class HighsModelStatus {
   kObjectiveTarget,
   kTimeLimit,
   kIterationLimit,
+  // V2.0: flip kUnknown and kSolutionLimit - and then modify kMax and
+  // highs_c_api.h, highs_csharp_api.cs, highspy/highs_bindings.cpp
   kUnknown,
+  kSolutionLimit,
   kMin = kNotset,
-  kMax = kUnknown
+  kMax = kSolutionLimit
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

@@ -382,7 +382,7 @@ restart:
         if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
             numStallNodes >= options_mip_->mip_max_stall_nodes) {
           limit_reached = true;
-          modelstatus_ = HighsModelStatus::kIterationLimit;
+          modelstatus_ = HighsModelStatus::kSolutionLimit;
           break;
         }
       } else
