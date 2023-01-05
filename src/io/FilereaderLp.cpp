@@ -67,7 +67,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     // Clear lp.integrality_ if problem is pure LP
-    if (num_continuous == m.variables.size()) lp.integrality_.clear();
+    if ((size_t)num_continuous == m.variables.size()) lp.integrality_.clear();
     // get objective
     lp.objective_name_ = m.objective->name;
     // ToDo: Fix m.objective->offset and then use it here

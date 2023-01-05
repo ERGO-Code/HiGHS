@@ -274,7 +274,7 @@ class HighsSplitDeque {
   }
 
   void cancelTask(HighsInt taskIndex) {
-    assert(taskIndex < ownerData.head);
+    assert(taskIndex < (HighsInt)ownerData.head);
     assert(taskIndex >= 0);
     taskArray[taskIndex].cancel();
   }

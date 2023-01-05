@@ -102,7 +102,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                      std::min(numRow,
                               (HighsInt)mip.mipdata_->integral_cols.size()))});
 
-  if (fractionalBasisvars.size() > maxTries) {
+  if ((HighsInt)fractionalBasisvars.size() > maxTries) {
     const double* edgeWt = lpRelaxation.getLpSolver().getDualEdgeWeights();
     if (edgeWt) {
       // printf("choosing %ld/%zu with DSE weights\n", maxTries,
@@ -216,7 +216,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     HighsInt len = baseRowInds.size();
-    if (len > fracvar.row_ep.size()) {
+    if (len > (HighsInt)fracvar.row_ep.size()) {
       double maxAbsVal = 0.0;
       double minAbsVal = kHighsInf;
       for (HighsInt i = 0; i < len; ++i) {

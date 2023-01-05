@@ -1726,7 +1726,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   std::vector<double> vals;
   for (std::vector<CliqueVar>& clique : data.cliques) {
 #ifdef ADD_ZERO_WEIGHT_VARS
-    auto extensionend = data.Z.size();
+    HighsInt extensionend = (HighsInt)data.Z.size();
     for (CliqueVar v : clique) {
       extensionend = partitionNeighborhood(data.neighborhoodInds,
                                            data.numNeighborhoodQueries, v,
@@ -2152,7 +2152,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
         HighsInt hits = cliquehits[cliqueid];
         cliquehits[cliqueid] = 0;
 
-        if (hits == extensionvars.size()) {
+        if (hits == (HighsInt)extensionvars.size()) {
           redundant = true;
           if (cliques[cliqueid].origin != kHighsIInf &&
               cliques[cliqueid].origin != -1)

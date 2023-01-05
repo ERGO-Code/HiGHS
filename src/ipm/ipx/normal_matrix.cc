@@ -55,8 +55,8 @@ void NormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
     Timer timer;
 
     assert(prepared_);
-    assert(lhs.size() == m);
-    assert(rhs.size() == m);
+    assert((Int)lhs.size() == m);
+    assert((Int)rhs.size() == m);
 
     if (W_) {
         #if MATVECMETHOD == 1

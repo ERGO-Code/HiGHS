@@ -514,15 +514,15 @@ void Basis::CrashBasis(const double* colweights) {
     // rank revealing factorization, but it detects many dependencies in
     // practice.
     std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights);
-    assert(cols_guessed.size() <= m);
-    assert(cols_guessed.size() == m); // at the moment
+    assert((Int)cols_guessed.size() <= m);
+    assert((Int)cols_guessed.size() == m); // at the moment
 
     // Initialize the Basis object and factorize the (partial) basis. If
     // basis_[p] is negative, the p-th column of the basis matrix is zero,
     // and a slack column will be inserted by CrashFacorize().
     std::fill(basis_.begin(), basis_.end(), -1);
     std::fill(map2basis_.begin(), map2basis_.end(), -1);
-    for (Int k = 0; k < cols_guessed.size(); k++) {
+    for (size_t k = 0; k < cols_guessed.size(); k++) {
         basis_[k] = cols_guessed[k];
         assert(map2basis_[basis_[k]] == -1); // must not have duplicates
         map2basis_[basis_[k]] = k;

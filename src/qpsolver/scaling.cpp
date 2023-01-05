@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <map>
 
+static
 double largestpoweroftwo(double value) {
   double l = log2(value);
   HighsInt il = (HighsInt)l;
   return powf(1.0, il);
 }
 
+static
 void scale_rows(Runtime& rt) {
   if (!rt.settings.rowscaling) {
     return;
@@ -50,6 +52,7 @@ void scale_rows(Runtime& rt) {
   }
 }
 
+static
 void scale_cols(Runtime& rt) {
   if (!rt.settings.varscaling) {
     return;

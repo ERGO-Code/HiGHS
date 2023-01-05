@@ -51,15 +51,15 @@ void HSimplexNla::frozenBasisClearAllData() {
 }
 
 void HSimplexNla::frozenBasisClearAllUpdate() {
-  for (HighsInt frozen_basis_id = 0;
-       frozen_basis_id < this->frozen_basis_.size(); frozen_basis_id++)
+  for (size_t frozen_basis_id = 0; frozen_basis_id < this->frozen_basis_.size();
+       frozen_basis_id++)
     this->frozen_basis_[frozen_basis_id].update_.clear();
   this->update_.clear();
 }
 
 bool HSimplexNla::frozenBasisIdValid(const HighsInt frozen_basis_id) const {
   bool valid_id =
-      0 <= frozen_basis_id && frozen_basis_id < frozen_basis_.size();
+      0 <= frozen_basis_id && frozen_basis_id < (HighsInt)frozen_basis_.size();
   if (valid_id) valid_id = frozen_basis_[frozen_basis_id].valid_;
   return valid_id;
 }

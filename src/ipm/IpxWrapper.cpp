@@ -492,45 +492,37 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
   } else if (solve_status == IPX_STATUS_stopped) {
     highsLogUser(options.log_options, HighsLogType::kWarning, "Ipx: Stopped\n");
     return HighsStatus::kWarning;
+    // Remaining cases are errors so drop through to return HighsStatus::kError;
   } else if (solve_status == IPX_STATUS_no_model) {
     if (error_flag == IPX_ERROR_argument_null) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - argument_null\n");
-      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_dimension) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid dimension\n");
-      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_matrix) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid matrix\n");
-      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_vector) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid vector\n");
-      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_basis) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid basis\n");
-      return HighsStatus::kError;
     } else {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - unrecognised error\n");
-      return HighsStatus::kError;
     }
   } else if (solve_status == IPX_STATUS_out_of_memory) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: Out of memory\n");
-    return HighsStatus::kError;
   } else if (solve_status == IPX_STATUS_internal_error) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: Internal error %" HIGHSINT_FORMAT "\n", (int)error_flag);
-    return HighsStatus::kError;
   } else {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: unrecognised solve status = %" HIGHSINT_FORMAT "\n",
                  (int)solve_status);
-    return HighsStatus::kError;
   }
   return HighsStatus::kError;
 }
