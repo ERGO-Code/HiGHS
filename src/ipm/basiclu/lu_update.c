@@ -855,6 +855,12 @@ lu_int lu_update(struct lu *this, double xtbl)
         lu_garbage_perm(this);
     }
 
+    // warning C4703: potentially uninitialized local pointer variable 'row_reach' and 'col_reach' used
+    if (nreach > 0) {
+      assert(&row_reach[0] != NULL);
+      assert(&col_reach[0] != NULL);
+    }
+
     /* append row indices row_reach[0..nreach-1] to end of pivot sequence */
     put = this->pivotlen;
     for (n = 0; n < nreach; n++) pivotrow[put++] = row_reach[n];
