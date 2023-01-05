@@ -4394,7 +4394,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //
   //  for (HighsInt i = 0; i < model->num_col_; ++i) {
   //    if (colDeleted[i]) continue;
-  //    if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] == kHighsInf)
+  //    if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] ==
+  //    kHighsInf)
   //      freeCols.push_back(i);
   //  }
   //
@@ -4403,9 +4404,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  HighsSparseMatrix matrix;
   //  matrix.num_col_ = freeCols.size();
   //  highsLogDev(options->log_options, HighsLogType::kInfo,
-  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
-  //              "for dependent free cols\n",
-  //              (int)matrix.num_col_);
+  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking
+  //              " "for dependent free cols\n", (int)matrix.num_col_);
   //  matrix.num_row_ = model->num_row_ + 1;
   //  matrix.start_.resize(matrix.num_col_ + 1);
   //  matrix.start_[0] = 0;
@@ -4437,9 +4437,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  // Must not have timed out
   //  assert(rank_deficiency >= 0);
   //  highsLogDev(options->log_options, HighsLogType::kInfo,
-  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
-  //              "for dependent free cols\n",
-  //              (int)matrix.num_col_);
+  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking
+  //              " "for dependent free cols\n", (int)matrix.num_col_);
   //  // Analyse what's been removed
   //  HighsInt num_removed_row = 0;
   //  HighsInt num_removed_nz = 0;
@@ -4464,7 +4463,8 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
   //
   //  analysis_.logging_on_ = logging_on;
-  //  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
+  //  if (logging_on)
+  //  analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
   //
   //  return Result::kOk;
 }

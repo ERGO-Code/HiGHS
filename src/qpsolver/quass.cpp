@@ -67,25 +67,26 @@ static void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
   runtime.instance.A.mat_vec(p, rowmove);
   return;
   // rowmove.reset();
-  MatrixBase& Atran = runtime.instance.A.t();
-  Atran.vec_mat(p, rowmove);
-  return;
-  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
-    if (basis.getstatus(i) == BasisStatus::Default) {
-      // check with assertions, is it really the same?
-      double val =
-          p.dot(&Atran.index[Atran.start[i]], &Atran.value[Atran.start[i]],
-                Atran.start[i + 1] - Atran.start[i]);
-      // Vector col = Atran.extractcol(i);
-      // val = col * p;
-
-      // assert(rowmove.value[i] == val);
-      rowmove.value[i] = val;
-    } else {
-      rowmove.value[i] = 0;
-    }
-  }
-  rowmove.resparsify();
+  // Commented out unreachable code
+  //  MatrixBase& Atran = runtime.instance.A.t();
+  //  Atran.vec_mat(p, rowmove);
+  //  return;
+  //  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
+  //    if (basis.getstatus(i) == BasisStatus::Default) {
+  //      // check with assertions, is it really the same?
+  //      double val =
+  //          p.dot(&Atran.index[Atran.start[i]], &Atran.value[Atran.start[i]],
+  //                Atran.start[i + 1] - Atran.start[i]);
+  //      // Vector col = Atran.extractcol(i);
+  //      // val = col * p;
+  //
+  //      // assert(rowmove.value[i] == val);
+  //      rowmove.value[i] = val;
+  //    } else {
+  //      rowmove.value[i] = 0;
+  //    }
+  //  }
+  //  rowmove.resparsify();
 }
 
 // VECTOR
