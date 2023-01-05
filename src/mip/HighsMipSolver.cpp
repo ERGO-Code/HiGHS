@@ -43,6 +43,13 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
       clqtableinit(nullptr),
       implicinit(nullptr) {
   if (solution.value_valid) {
+    // MIP solver doesn't check row residuals, but they should be OK
+    // so validate using assert
+#ifndef NDEBUG
+    bool valid, integral, feasible;
+    assessLpPrimalSolution(options, lp, solution, valid, integral, feasible);
+    assert(valid);
+#endif
     bound_violation_ = 0;
     row_violation_ = 0;
     integrality_violation_ = 0;
@@ -375,7 +382,7 @@ restart:
         if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
             numStallNodes >= options_mip_->mip_max_stall_nodes) {
           limit_reached = true;
-          modelstatus_ = HighsModelStatus::kIterationLimit;
+          modelstatus_ = HighsModelStatus::kSolutionLimit;
           break;
         }
       } else

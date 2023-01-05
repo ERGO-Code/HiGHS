@@ -204,11 +204,13 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   // Solve the same semi-continuous model from MPS and .lp files
   model = "semi-continuous";
   optimal_objective_function_value = 8.22333;
+  if (dev_run) printf("\nSolving %s model from MPS file\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+  if (dev_run) printf("\nSolving %s model from LP file\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -217,11 +219,13 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   // Solve the same semi-integer model from MPS and .lp files
   model = "semi-integer";
   optimal_objective_function_value = 8.13333;
+  if (dev_run) printf("\nSolving %s model from MPS file\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+  if (dev_run) printf("\nSolving %s model from LP file\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);

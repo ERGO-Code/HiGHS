@@ -12,6 +12,7 @@ mip_abs_gap=0.0")
 
 # Make test executable
 set(TEST_SOURCES
+    TestHighsVersion.cpp
     TestAlienBasis.cpp
     TestDualise.cpp
     TestCheckSolution.cpp

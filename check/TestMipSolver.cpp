@@ -24,6 +24,39 @@ TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
   rowlessMIP(highs);
 }
 
+TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+
+  highs.setOptionValue("presolve", kHighsOffString);
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
+
+  // Test for kSolutionLimit with mip_max_nodes
+  highs.setOptionValue("mip_max_nodes", 0);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolutionLimit);
+  highs.setOptionValue("mip_max_nodes", kHighsIInf);
+  highs.clearSolver();
+
+  // Test for kSolutionLimit with mip_max_leaves
+  highs.setOptionValue("mip_max_leaves", 0);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolutionLimit);
+  highs.setOptionValue("mip_max_leaves", kHighsIInf);
+  highs.clearSolver();
+
+  // Test for kSolutionLimit with mip_max_improving_sols
+  highs.setOptionValue("mip_max_improving_sols", 1);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolutionLimit);
+  highs.setOptionValue("mip_max_improving_sols", kHighsIInf);
+  highs.clearSolver();
+}
+
 TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";

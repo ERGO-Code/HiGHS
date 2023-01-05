@@ -51,6 +51,7 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
     case HighsModelStatus::kUnboundedOrInfeasible:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kSolutionLimit:
     case HighsModelStatus::kUnknown:
       // Should have info
       assert(have_info == true);

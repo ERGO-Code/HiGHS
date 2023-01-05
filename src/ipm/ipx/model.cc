@@ -301,13 +301,17 @@ void Model::EvaluateInteriorSolution(const Vector& x_solver,
             assert(xu[j] == INFINITY);
     }
     // rb = rhs-slack-A*x
-    Vector rb = scaled_rhs_ - slack;
-    assert((Int)scaled_rhs_.size() == num_constr_);
-    assert((Int)rb.size() == num_constr_);
+    // Add rhs at the end to avoid losing digits when x is huge.
+    Vector rb(num_constr_);
     MultiplyWithScaledMatrix(x, -1.0, rb, 'N');
+    rb -= slack;
+    rb += scaled_rhs_;
     // rc = obj-zl+zu-A'y
-    Vector rc = scaled_obj_ - zl + zu;
+    // Add obj at the end to avoid losing digits when y, z are huge.
+    Vector rc(num_var_);
     MultiplyWithScaledMatrix(y, -1.0, rc, 'T');
+    rc -= zl - zu;
+    rc += scaled_obj_;
     
     ScaleBackResiduals(rb, rc, rl, ru);
     double presidual = Infnorm(rb);

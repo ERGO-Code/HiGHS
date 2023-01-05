@@ -76,6 +76,7 @@ const HighsInt kHighsModelStatusObjectiveTarget = 12;
 const HighsInt kHighsModelStatusTimeLimit = 13;
 const HighsInt kHighsModelStatusIterationLimit = 14;
 const HighsInt kHighsModelStatusUnknown = 15;
+const HighsInt kHighsModelStatusSolutionLimit = 16;
 
 const HighsInt kHighsBasisStatusLower = 0;
 const HighsInt kHighsBasisStatusBasic = 1;
@@ -213,6 +214,48 @@ void* Highs_create(void);
  * @param highs     a pointer to the Highs instance
  */
 void Highs_destroy(void* highs);
+
+/**
+ * Return the HiGHS version number vX.Y.Z
+ *
+ * @returns the HiGHS version as a char*
+ */
+const char* Highs_version(void);
+
+/**
+ * Return the HiGHS major version number
+ *
+ * @returns the HiGHS major version number
+ */
+HighsInt Highs_version_major();
+
+/**
+ * Return the HiGHS minor version number
+ *
+ * @returns the HiGHS minor version number
+ */
+HighsInt Highs_version_minor();
+
+/**
+ * Return the HiGHS patch version number
+ *
+ * @returns the HiGHS patch version number
+ */
+HighsInt Highs_version_patch();
+
+/**
+ * Return the HiGHS githash
+ *
+ * @returns the HiGHS githash
+ */
+const char* Highs_githash();
+
+/**
+ * Return the HiGHS compilation date
+ *
+ * @returns the HiGHS compilation date
+ */
+const char* Highs_compilation_date();
 
 /**
  * Read a model from `filename` into `highs`.

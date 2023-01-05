@@ -584,6 +584,16 @@ void HighsMipSolverData::runSetup() {
         maxTreeSizeLog2 += (HighsInt)std::ceil(
             std::log2(std::min(1024.0, 1.0 + mipsolver.model_->col_upper_[i] -
                                            mipsolver.model_->col_lower_[i])));
+        // NB Since this is for counting the number of times the
+        // condition is true using the bitwise operator avoids having
+        // any conditional branch whereas using the logical operator
+        // would require a branch due to short circuit
+        // evaluation. Semantically both is equivalent and correct. If
+        // there was any code to be executed for the condition being
+        // true then there would be a conditional branch in any case
+        // and I would have used the logical to begin with.
+        //
+        // Hence any compiler warning can be ignored safely
         numBin += ((mipsolver.model_->col_lower_[i] == 0.0) &
                    (mipsolver.model_->col_upper_[i] == 1.0));
         break;
@@ -1582,7 +1592,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }
@@ -1590,8 +1600,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
       num_leaves >= options.mip_max_leaves) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "reached leave node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+                  "reached leaf node limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }
@@ -1601,7 +1611,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached improving solution limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }

@@ -4,10 +4,11 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
-                               const HighsModelStatus require_model_status);
+                               const HighsModelStatus require_model_status,
+                               const HighsInt write_solution_style);
 
 void runSetLpSolution(const std::string model);
 
@@ -21,36 +22,45 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   //  const HighsInfo& info = highs.getInfo();
 
-  const bool test_st_test23 = false;
-  if (test_st_test23) {
-    model = "st-test23";
-    model_file = "st-test23.lp";
-    require_read_status = HighsStatus::kWarning;
-  } else {
-    model = "avgas";  // 25fv47";
-    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-    require_read_status = HighsStatus::kOk;
+  HighsInt write_solution_style = kSolutionStyleRaw;
+  for (HighsInt pass = 0; pass < 2; pass++) {
+    const bool test_st_test23 = false;
+    if (test_st_test23) {
+      model = "st-test23";
+      model_file = "st-test23.lp";
+      require_read_status = HighsStatus::kWarning;
+    } else {
+      model = "avgas";  // 25fv47";
+      model_file =
+          std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      require_read_status = HighsStatus::kOk;
+    }
+
+    read_status = highs.readModel(model_file);
+    REQUIRE(read_status == require_read_status);
+
+    require_model_status = HighsModelStatus::kOptimal;
+    runWriteReadCheckSolution(highs, model, require_model_status,
+                              write_solution_style);
+    SpecialLps special_lps;
+    HighsLp lp;
+    double optimal_objective;
+
+    model = "distillation";
+    special_lps.distillationMip(lp, require_model_status, optimal_objective);
+    highs.passModel(lp);
+    runWriteReadCheckSolution(highs, model, require_model_status,
+                              write_solution_style);
+
+    lp.clear();
+    model = "primalDualInfeasible1Lp";
+    special_lps.primalDualInfeasible1Lp(lp, require_model_status);
+    highs.passModel(lp);
+    runWriteReadCheckSolution(highs, model, require_model_status,
+                              write_solution_style);
+    // Second pass uses sparse format
+    write_solution_style = kSolutionStyleSparse;
   }
-
-  read_status = highs.readModel(model_file);
-  REQUIRE(read_status == require_read_status);
-
-  require_model_status = HighsModelStatus::kOptimal;
-  runWriteReadCheckSolution(highs, model, require_model_status);
-  SpecialLps special_lps;
-  HighsLp lp;
-  double optimal_objective;
-
-  model = "distillation";
-  special_lps.distillationMip(lp, require_model_status, optimal_objective);
-  highs.passModel(lp);
-  runWriteReadCheckSolution(highs, model, require_model_status);
-
-  lp.clear();
-  model = "primalDualInfeasible1Lp";
-  special_lps.primalDualInfeasible1Lp(lp, require_model_status);
-  highs.passModel(lp);
-  runWriteReadCheckSolution(highs, model, require_model_status);
 }
 
 TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
@@ -81,6 +91,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   highs.clear();
 
   const bool test0 = true;
+  bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
       printf("\n***************************\nSolving from saved solution\n");
@@ -90,7 +101,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(optimal_solution);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.checkSolutionFeasibility();
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kOk);
 
     highs.run();
@@ -109,7 +120,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.readSolution(solution_file);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.checkSolutionFeasibility();
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kOk);
 
     highs.run();
@@ -139,7 +150,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(solution);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.checkSolutionFeasibility();
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kWarning);
 
     highs.run();
@@ -162,7 +173,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.readSolution(column_solution_file);
     REQUIRE(return_status == HighsStatus::kOk);
 
-    return_status = highs.checkSolutionFeasibility();
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
     REQUIRE(return_status == HighsStatus::kWarning);
 
     highs.run();
@@ -190,6 +201,32 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   }
 
   std::remove(solution_file.c_str());
+}
+
+TEST_CASE("set-pathological-solution", "[highs_check_solution]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsSolution solution;
+
+  solution.clear();
+  highs.clearSolver();
+  highs.addCol(1.0, 0, 1, 0, nullptr, nullptr);
+  HighsInt index = 0;
+  double value = 1.0;
+  highs.addRow(0, 1, 1, &index, &value);
+  solution.col_value.push_back(0);
+  solution.row_value.push_back(0);
+  highs.setSolution(solution);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  solution.clear();
+  highs.clearModel();
+  highs.addCol(1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
+  solution.col_value.push_back(0);
+  highs.setSolution(solution);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
 }
 
 TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
@@ -236,7 +273,8 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
-                               const HighsModelStatus require_model_status) {
+                               const HighsModelStatus require_model_status,
+                               const HighsInt write_solution_style) {
   HighsStatus run_status;
   HighsStatus return_status;
   std::string solution_file;
@@ -248,11 +286,12 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   REQUIRE(status == require_model_status);
 
   solution_file = model + ".sol";
-  if (dev_run) return_status = highs.writeSolution("");
-  return_status = highs.writeSolution(solution_file);
+  if (dev_run) return_status = highs.writeSolution("", write_solution_style);
+  return_status = highs.writeSolution(solution_file, write_solution_style);
   REQUIRE(return_status == HighsStatus::kOk);
 
   const bool& value_valid = highs.getSolution().value_valid;
+  bool valid, integral, feasible;
 
   // primalDualInfeasible1Lp has no values in the solution file so,
   // after it's read, HiGHS::solution.value_valid is false
@@ -263,7 +302,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
     REQUIRE(return_status == HighsStatus::kWarning);
   }
 
-  return_status = highs.checkSolutionFeasibility();
+  return_status = highs.assessPrimalSolution(valid, integral, feasible);
   if (value_valid) {
     REQUIRE(return_status == HighsStatus::kOk);
   } else {

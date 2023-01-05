@@ -40,6 +40,10 @@ public:
 
 private:
     struct Step;
+    // IPM terminates when the complementarity gap of the current iterate
+    // exceeds kDivergeTol times the smallest complementarity gap of all
+    // iterates so far.
+    static constexpr double kDivergeTol = 1e6;
 
     void ComputeStartingPoint();
     void Predictor(Step& step);
@@ -71,6 +75,9 @@ private:
     // Counts the # bad iterations since the last good iteration. An iteration
     // is bad if the primal or dual step size is < 0.05.
     Int num_bad_iter_{0};
+    // Smallest complementarity gap of all iterates so far.
+    double best_complementarity_{0.0};
+
     Int maxiter_{-1};
 };
 
