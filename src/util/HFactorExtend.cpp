@@ -123,7 +123,8 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   //
   // Add starts for the identity columns
   HighsInt l_matrix_new_num_nz = lr_index.size();
-  assert(l_matrix_new_num_nz == l_index.size() + new_lr_cols.index_.size());
+  assert(l_matrix_new_num_nz ==
+         (HighsInt)(l_index.size() + new_lr_cols.index_.size()));
   l_start.resize(new_num_row + 1);
   HighsInt to_el = l_matrix_new_num_nz;
   for (HighsInt iCol = num_row + 1; iCol < new_num_row + 1; iCol++)

@@ -387,7 +387,7 @@ if (UNIX)
 
     target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
     target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+    #target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
     #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
     #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
@@ -763,10 +763,8 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDED
 target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
 if (UNIX)
-    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
     target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
     target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
 endif()
 
 # set_target_properties(libhighs PROPERTIES INSTALL_RPATH

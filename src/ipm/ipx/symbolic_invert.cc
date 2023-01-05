@@ -129,7 +129,7 @@ void SymbolicInvert(const Model& model, const std::vector<Int>& basis,
                     Int* rowcounts, Int* colcounts) {
     const SparseMatrix& AI = model.AI();
     const Int m = AI.rows();
-    assert(basis.size() == m);
+    assert((Int)basis.size() == m);
 
     // jmatch is a permutation of basis such that B = AI[:,jmatch] has a
     // zero-free diagonal.

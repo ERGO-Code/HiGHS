@@ -143,7 +143,7 @@ class HighsTaskExecutor {
     if (executorHandle.ptr) {
       // first spin until every worker has acquired its executor reference
       while (executorHandle.ptr.use_count() !=
-             executorHandle.ptr->workerDeques.size())
+             (long)executorHandle.ptr->workerDeques.size())
         HighsSpinMutex::yieldProcessor();
       // set the active flag to false first with release ordering
       executorHandle.ptr->mainWorkerHandle.store(nullptr,

@@ -20,7 +20,7 @@ class DevexHarrisPricing : public Pricing {
 
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
-    for (HighsInt i = 0; i < activeconstraintidx.size(); i++) {
+    for (size_t i = 0; i < activeconstraintidx.size(); i++) {
       HighsInt indexinbasis =
           constraintindexinbasisfactor[activeconstraintidx[i]];
       if (indexinbasis == -1) {

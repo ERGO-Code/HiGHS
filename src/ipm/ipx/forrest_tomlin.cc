@@ -252,7 +252,7 @@ void ForrestTomlin::SolvePermuted(Vector& lhs, char trans) {
     assert(U_.cols() == dim_+num_updates);
 
     // Require num_updates elements workspace at end of lhs.
-    assert(lhs.size() >= dim_+num_updates);
+    assert((Int)lhs.size() >= dim_+num_updates);
 
     if (trans == 't' || trans == 'T') {
         // Move replaced entries to the end of the pivot sequence and zero out

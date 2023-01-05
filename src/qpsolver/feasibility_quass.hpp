@@ -5,6 +5,7 @@
 #include "qpsolver/basis.hpp"
 #include "qpsolver/runtime.hpp"
 
+inline
 void computestartingpoint_quass(Runtime& runtime, CrashSolution& result) {
   /*
    creates and solves the feasibility problem

@@ -185,7 +185,7 @@ static void ProcessRemaining(const Control& control, const Model& model,
         } else {
             num_failed++;
         }
-        if (num_failed >= 10*(m-basis->size()))
+        if (num_failed >= 10*(m-(Int)basis->size()))
             break;
     }
     for (Int i = 0; i < m; i++) {
@@ -226,7 +226,7 @@ std::vector<Int> GuessBasis(const Control& control, const Model& model,
         if (rownumber[i] < 0)
             basis.push_back(n+i);
     }
-    assert(basis.size() == m);
+    assert((Int)basis.size() == m);
     return basis;
 }
 

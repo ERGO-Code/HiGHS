@@ -54,7 +54,7 @@ void Quass::loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
 
 static void tidyup(Vector& p, Vector& rowmove, Basis& basis, Runtime& runtime) {
   for (unsigned acon : basis.getactive()) {
-    if (acon >= runtime.instance.num_con) {
+    if ((HighsInt)acon >= runtime.instance.num_con) {
       p.value[acon - runtime.instance.num_con] = 0.0;
     } else {
       rowmove.value[acon] = 0.0;

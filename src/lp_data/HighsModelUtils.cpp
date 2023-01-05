@@ -558,7 +558,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   HighsInt num_integer = 0;
   HighsInt num_binary = 0;
   bool is_mip = false;
-  if (lp.integrality_.size() == lp.num_col_) {
+  if ((HighsInt)lp.integrality_.size() == lp.num_col_) {
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] != HighsVarType::kContinuous) {
         is_mip = true;
