@@ -4380,92 +4380,93 @@ HPresolve::Result HPresolve::removeDependentEquations(
 
 HPresolve::Result HPresolve::removeDependentFreeCols(
     HighsPostsolveStack& postsolve_stack) {
-  assert(analysis_.allow_rule_[kPresolveRuleDependentFreeCols]);
-  const bool logging_on = analysis_.logging_on_;
   return Result::kOk;
 
-  if (logging_on)
-    analysis_.startPresolveRuleLog(kPresolveRuleDependentFreeCols);
-
-  // todo the postsolve step does not work properly
-  std::vector<HighsInt> freeCols;
-  freeCols.reserve(model->num_col_);
-
-  for (HighsInt i = 0; i < model->num_col_; ++i) {
-    if (colDeleted[i]) continue;
-    if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] == kHighsInf)
-      freeCols.push_back(i);
-  }
-
-  if (freeCols.empty()) return Result::kOk;
-
-  HighsSparseMatrix matrix;
-  matrix.num_col_ = freeCols.size();
-  highsLogDev(options->log_options, HighsLogType::kInfo,
-              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
-              "for dependent free cols\n",
-              (int)matrix.num_col_);
-  matrix.num_row_ = model->num_row_ + 1;
-  matrix.start_.resize(matrix.num_col_ + 1);
-  matrix.start_[0] = 0;
-  const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
-  matrix.value_.reserve(maxCapacity);
-  matrix.index_.reserve(maxCapacity);
-
-  for (HighsInt i = 0; i < matrix.num_col_; ++i) {
-    HighsInt col = freeCols[i];
-    // add entries of free column
-    for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
-      matrix.value_.push_back(nonz.value());
-      matrix.index_.push_back(nonz.index());
-    }
-
-    // add entry for artifical cost row
-    if (model->col_cost_[col] != 0.0) {
-      matrix.value_.push_back(model->col_cost_[col]);
-      matrix.index_.push_back(model->num_row_);
-    }
-
-    matrix.start_[i + 1] = matrix.value_.size();
-  }
-  std::vector<HighsInt> colSet(matrix.num_col_);
-  std::iota(colSet.begin(), colSet.end(), 0);
-  HFactor factor;
-  factor.setup(matrix, colSet);
-  HighsInt rank_deficiency = factor.build();
-  // Must not have timed out
-  assert(rank_deficiency >= 0);
-  highsLogDev(options->log_options, HighsLogType::kInfo,
-              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
-              "for dependent free cols\n",
-              (int)matrix.num_col_);
-  // Analyse what's been removed
-  HighsInt num_removed_row = 0;
-  HighsInt num_removed_nz = 0;
-  HighsInt num_fictitious_cols_skipped = 0;
-  for (HighsInt k = 0; k < rank_deficiency; k++) {
-    if (factor.var_with_no_pivot[k] >= 0) {
-      HighsInt redundant_col = freeCols[factor.var_with_no_pivot[k]];
-      num_removed_nz += colsize[redundant_col];
-      fixColToZero(postsolve_stack, redundant_col);
-    } else {
-      num_fictitious_cols_skipped++;
-    }
-  }
-  highsLogDev(
-      options->log_options, HighsLogType::kInfo,
-      "HPresolve::removeDependentFreeCols Removed %d rows and %d nonzeros",
-      (int)num_removed_row, (int)num_removed_nz);
-  if (num_fictitious_cols_skipped)
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                ", avoiding %d fictitious rows",
-                (int)num_fictitious_cols_skipped);
-  highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
-
-  analysis_.logging_on_ = logging_on;
-  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
-
-  return Result::kOk;
+  // Commented out unreachable code
+  //  assert(analysis_.allow_rule_[kPresolveRuleDependentFreeCols]);
+  //  const bool logging_on = analysis_.logging_on_;
+  //  if (logging_on)
+  //    analysis_.startPresolveRuleLog(kPresolveRuleDependentFreeCols);
+  //
+  //  // todo the postsolve step does not work properly
+  //  std::vector<HighsInt> freeCols;
+  //  freeCols.reserve(model->num_col_);
+  //
+  //  for (HighsInt i = 0; i < model->num_col_; ++i) {
+  //    if (colDeleted[i]) continue;
+  //    if (model->col_lower_[i] == -kHighsInf && model->col_upper_[i] == kHighsInf)
+  //      freeCols.push_back(i);
+  //  }
+  //
+  //  if (freeCols.empty()) return Result::kOk;
+  //
+  //  HighsSparseMatrix matrix;
+  //  matrix.num_col_ = freeCols.size();
+  //  highsLogDev(options->log_options, HighsLogType::kInfo,
+  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
+  //              "for dependent free cols\n",
+  //              (int)matrix.num_col_);
+  //  matrix.num_row_ = model->num_row_ + 1;
+  //  matrix.start_.resize(matrix.num_col_ + 1);
+  //  matrix.start_[0] = 0;
+  //  const HighsInt maxCapacity = numNonzeros() + matrix.num_col_;
+  //  matrix.value_.reserve(maxCapacity);
+  //  matrix.index_.reserve(maxCapacity);
+  //
+  //  for (HighsInt i = 0; i < matrix.num_col_; ++i) {
+  //    HighsInt col = freeCols[i];
+  //    // add entries of free column
+  //    for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
+  //      matrix.value_.push_back(nonz.value());
+  //      matrix.index_.push_back(nonz.index());
+  //    }
+  //
+  //    // add entry for artifical cost row
+  //    if (model->col_cost_[col] != 0.0) {
+  //      matrix.value_.push_back(model->col_cost_[col]);
+  //      matrix.index_.push_back(model->num_row_);
+  //    }
+  //
+  //    matrix.start_[i + 1] = matrix.value_.size();
+  //  }
+  //  std::vector<HighsInt> colSet(matrix.num_col_);
+  //  std::iota(colSet.begin(), colSet.end(), 0);
+  //  HFactor factor;
+  //  factor.setup(matrix, colSet);
+  //  HighsInt rank_deficiency = factor.build();
+  //  // Must not have timed out
+  //  assert(rank_deficiency >= 0);
+  //  highsLogDev(options->log_options, HighsLogType::kInfo,
+  //              "HPresolve::removeDependentFreeCols Got %d free cols, checking "
+  //              "for dependent free cols\n",
+  //              (int)matrix.num_col_);
+  //  // Analyse what's been removed
+  //  HighsInt num_removed_row = 0;
+  //  HighsInt num_removed_nz = 0;
+  //  HighsInt num_fictitious_cols_skipped = 0;
+  //  for (HighsInt k = 0; k < rank_deficiency; k++) {
+  //    if (factor.var_with_no_pivot[k] >= 0) {
+  //      HighsInt redundant_col = freeCols[factor.var_with_no_pivot[k]];
+  //      num_removed_nz += colsize[redundant_col];
+  //      fixColToZero(postsolve_stack, redundant_col);
+  //    } else {
+  //      num_fictitious_cols_skipped++;
+  //    }
+  //  }
+  //  highsLogDev(
+  //      options->log_options, HighsLogType::kInfo,
+  //      "HPresolve::removeDependentFreeCols Removed %d rows and %d nonzeros",
+  //      (int)num_removed_row, (int)num_removed_nz);
+  //  if (num_fictitious_cols_skipped)
+  //    highsLogDev(options->log_options, HighsLogType::kInfo,
+  //                ", avoiding %d fictitious rows",
+  //                (int)num_fictitious_cols_skipped);
+  //  highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
+  //
+  //  analysis_.logging_on_ = logging_on;
+  //  if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
+  //
+  //  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {

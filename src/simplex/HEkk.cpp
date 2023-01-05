@@ -4214,7 +4214,8 @@ bool HEkk::proofOfPrimalInfeasibility(HVector& row_ep, const HighsInt move_out,
         sumInf += value;
         if (sumInf > options_->small_matrix_value) break;
         continue;
-        if (value <= options_->small_matrix_value) continue;
+  // Commented out unreachable code
+	//        if (value <= options_->small_matrix_value) continue;
       }
       implied_upper += value * lp.col_upper_[iCol];
     } else {
