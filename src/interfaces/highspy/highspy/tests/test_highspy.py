@@ -48,10 +48,15 @@ class TestHighsPy(unittest.TestCase):
         h.setOptionValue('presolve', 'off')
         return h
     
-    def test_basics(self):
-        inf = highspy.kHighsInf
+    def test_version(self):
         h = self.get_basic_model()
         self.assertEqual(h.version(), "1.5.0")
+        self.assertEqual(h.versionMajor(), 1)
+        self.assertEqual(h.versionMinor(), 5)
+        self.assertEqual(h.versionPatch(), 0)
+
+    def test_basics(self):
+        h = self.get_basic_model()
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
@@ -63,6 +68,7 @@ class TestHighsPy(unittest.TestCase):
         -x + y >= 3
         x + y >= 0
         """
+        inf = highspy.kHighsInf
         h.changeRowBounds(0, 3, inf)
         h.run()
         sol = h.getSolution()
