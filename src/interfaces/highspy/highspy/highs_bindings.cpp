@@ -644,6 +644,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("mip_heuristic_effort", &HighsOptions::mip_heuristic_effort);
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
+    .def("version", &Highs::version)
     .def("passModel", &highs_passModel)
     .def("passModel", &highs_passModelPointers)
     .def("passModel", &highs_passLp)

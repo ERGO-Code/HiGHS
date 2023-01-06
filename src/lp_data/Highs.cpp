@@ -38,7 +38,7 @@
 
 std::string highsVersion() {
   std::stringstream ss;
-  ss << "v" << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
+  ss << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
      << HIGHS_VERSION_PATCH;
   return ss.str();
 }

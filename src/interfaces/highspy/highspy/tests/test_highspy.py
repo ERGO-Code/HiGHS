@@ -51,6 +51,7 @@ class TestHighsPy(unittest.TestCase):
     def test_basics(self):
         inf = highspy.kHighsInf
         h = self.get_basic_model()
+        self.assertEqual(h.version(), "1.5.0")
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
