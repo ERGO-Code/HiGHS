@@ -439,9 +439,9 @@ HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
   return status;
 }
 
-int foo0(Highs* h, int &i) {
+std::tuple<HighsInt, HighsInt> foo1(Highs* h, HighsInt &i) {
   HighsInt return_value = h->foo(i); 
-  return return_value; }
+  return std::make_tuple(return_value, i); }
 
 PYBIND11_MODULE(highs_bindings, m)
 {
@@ -726,7 +726,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("solutionStatusToString", &Highs::solutionStatusToString)
     .def("basisStatusToString", &Highs::basisStatusToString)
     .def("basisValidityToString", &Highs::basisValidityToString)
-    .def("foo0", [](Highs* h, int i) { int rv = foo0(h, i); return std::make_tuple(rv, i); });
+    .def("foo1", &foo1);
   
   m.attr("kHighsInf") = kHighsInf;
   m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;

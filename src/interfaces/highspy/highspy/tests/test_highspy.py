@@ -51,9 +51,11 @@ class TestHighsPy(unittest.TestCase):
     def test_version(self):
         h = self.get_basic_model()
         arg_v = 0
-        [rv, i] = h.foo0(arg_v)
+        [rv, i] = h.foo1(arg_v)
         self.assertEqual(rv, 123)
         self.assertEqual(i, arg_v+1)
+        [rv, i] = h.foo1(i)
+        self.assertEqual(i, arg_v+2)
         self.assertEqual(h.version(), "1.5.0")
         self.assertEqual(h.versionMajor(), 1)
         self.assertEqual(h.versionMinor(), 5)
