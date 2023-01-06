@@ -63,11 +63,19 @@ class TestHighsPy(unittest.TestCase):
 
     def test_basics(self):
         h = self.get_basic_model()
+        h.setOptionValue('log_to_console', True)
         h.run()
+        h.writeSolution("", 1)
+        [valid, integral, feasible] = h.assessPrimalSolution()
+        self.assertEqual(valid, True)
+        self.assertEqual(integral, True)
+        self.assertEqual(feasible, True)
+        
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
         self.assertAlmostEqual(sol.col_value[1], 1)
 
+        h.setOptionValue('log_to_console', False)
         """
         min y
         s.t.
