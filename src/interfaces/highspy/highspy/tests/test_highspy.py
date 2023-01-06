@@ -50,12 +50,6 @@ class TestHighsPy(unittest.TestCase):
     
     def test_version(self):
         h = self.get_basic_model()
-        arg_v = 0
-        [rv, i] = h.foo1(arg_v)
-        self.assertEqual(rv, 123)
-        self.assertEqual(i, arg_v+1)
-        [rv, i] = h.foo1(i)
-        self.assertEqual(i, arg_v+2)
         self.assertEqual(h.version(), "1.5.0")
         self.assertEqual(h.versionMajor(), 1)
         self.assertEqual(h.versionMinor(), 5)
@@ -66,7 +60,8 @@ class TestHighsPy(unittest.TestCase):
         h.setOptionValue('log_to_console', True)
         h.run()
         h.writeSolution("", 1)
-        [valid, integral, feasible] = h.assessPrimalSolution()
+        [status, valid, integral, feasible] = h.assessPrimalSolution()
+        self.assertEqual(status, highspy.HighsStatus.kOk)
         self.assertEqual(valid, True)
         self.assertEqual(integral, True)
         self.assertEqual(feasible, True)
@@ -224,12 +219,15 @@ class TestHighsPy(unittest.TestCase):
     #     print('has_dual_ray = ', has_dual_ray)
     #     self.assertTrue(has_dual_ray)
  
-    # def test_check_solution_feasibility(self):
-    #     h = self.get_basic_model()
-    #     h.setOptionValue('log_to_console', True)
-    #     h.assessLpPrimalSolution()
-    #     h.run()
-    #     h.assessLpPrimalSolution()
+    def test_check_solution_feasibility(self):
+        h = self.get_basic_model()
+        [status, valid, integral, feasible] = h.assessPrimalSolution()
+        self.assertEqual(status, highspy.HighsStatus.kError)
+        h.run()
+        [status, valid, integral, feasible] = h.assessPrimalSolution()
+        self.assertEqual(valid, True)
+        self.assertEqual(integral, True)
+        self.assertEqual(feasible, True)
 
     def test_log_callback(self):
         h = self.get_basic_model()

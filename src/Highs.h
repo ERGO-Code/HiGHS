@@ -84,11 +84,6 @@ class Highs {
    */
   std::string compilationDate() const { return highsCompilationDate(); }
 
-  HighsInt foo(int& i) {
-    i++;
-    return 123;
-  }
-
   /**
    * @brief Reset the options and then call clearModel()
    */

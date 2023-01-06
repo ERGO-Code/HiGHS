@@ -439,19 +439,14 @@ HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
   return status;
 }
 
-std::tuple<HighsInt, HighsInt> foo1(Highs* h, HighsInt &i) {
-  HighsInt return_value = h->foo(i); 
-  return std::make_tuple(return_value, i);
-}
-
-std::tuple<bool, bool, bool> assessPrimalSolution(Highs* h) {
+std::tuple<HighsStatus, bool, bool, bool> assessPrimalSolution(Highs* h) {
   bool valid, integral, feasible;
   HighsStatus status = h->assessPrimalSolution(valid, integral, feasible);
 
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while calling assessPrimalSolution");
+  //  if (status != HighsStatus::kOk)
+  //    throw py::value_error("Error while calling assessPrimalSolution");
 
-  return std::make_tuple(valid, integral, feasible);
+  return std::make_tuple(status, valid, integral, feasible);
 }
   
 
@@ -739,7 +734,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("solutionStatusToString", &Highs::solutionStatusToString)
     .def("basisStatusToString", &Highs::basisStatusToString)
     .def("basisValidityToString", &Highs::basisValidityToString)
-    .def("foo1", &foo1)
     .def("assessPrimalSolution", &assessPrimalSolution);
   
   m.attr("kHighsInf") = kHighsInf;
