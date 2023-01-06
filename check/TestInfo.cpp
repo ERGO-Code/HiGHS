@@ -77,7 +77,7 @@ TEST_CASE("highs-info", "[highs_info]") {
     printf("From getInfo: objective_function_value = %g\n",
            highs_info.objective_function_value);
     printf("From getInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
-	   highs_info.ipm_iteration_count);
+           highs_info.ipm_iteration_count);
   }
   std::remove(highs_info_file.c_str());
 }
