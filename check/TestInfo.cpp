@@ -24,15 +24,8 @@ TEST_CASE("highs-info", "[highs_info]") {
   return_status = highs.writeInfo("");
   REQUIRE(return_status == HighsStatus::kWarning);
 
-  // Only use IPX if and using 32-bit arithmetic
-  bool use_ipx = false;
-#ifndef HIGHSINT64
-  use_ipx = true;
-#endif
-  if (use_ipx) {
-    return_status = highs.setOptionValue("solver", "ipm");
-    REQUIRE(return_status == HighsStatus::kOk);
-  }
+  return_status = highs.setOptionValue("solver", "ipm");
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Info not valid before run()
   double objective_function_value;
@@ -83,13 +76,8 @@ TEST_CASE("highs-info", "[highs_info]") {
            highs.modelStatusToString(model_status).c_str());
     printf("From getInfo: objective_function_value = %g\n",
            highs_info.objective_function_value);
-    if (use_ipx) {
-      printf("From getInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
-             highs_info.ipm_iteration_count);
-    } else {
-      printf("From getInfo: simplex_iteration_count = %" HIGHSINT_FORMAT "\n",
-             highs_info.simplex_iteration_count);
-    }
+    printf("From getInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
+	   highs_info.ipm_iteration_count);
   }
   std::remove(highs_info_file.c_str());
 }
