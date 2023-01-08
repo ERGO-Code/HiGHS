@@ -8,14 +8,12 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 
-void highs_passModel(Highs* h, HighsModel& model)
+HighsStatus highs_passModel(Highs* h, HighsModel& model)
 {
-  HighsStatus status = h->passModel(model);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing model");
+  return h->passModel(model);
 }
  
-void highs_passModelPointers(Highs* h, 
+HighsStatus highs_passModelPointers(Highs* h, 
 			     const int num_col, const int num_row, const int num_nz,
 			     const int q_num_nz, const int a_format, const int q_format,
 			     const int sense, const double offset,
@@ -58,25 +56,21 @@ void highs_passModelPointers(Highs* h,
   const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
   const int* integrality_ptr = static_cast<int*>(integrality_info.ptr);
 
-  HighsStatus status = h->passModel(num_col, num_row, num_nz,
-				    q_num_nz, a_format, q_format,
-				    sense, offset, col_cost_ptr,
-				    col_lower_ptr, col_upper_ptr, row_lower_ptr,
-				    row_upper_ptr, a_start_ptr, a_index_ptr,
-				    a_value_ptr, q_start_ptr, q_index_ptr,
-				    q_value_ptr, integrality_ptr);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing model");
+  return h->passModel(num_col, num_row, num_nz,
+		      q_num_nz, a_format, q_format,
+		      sense, offset, col_cost_ptr,
+		      col_lower_ptr, col_upper_ptr, row_lower_ptr,
+		      row_upper_ptr, a_start_ptr, a_index_ptr,
+		      a_value_ptr, q_start_ptr, q_index_ptr,
+		      q_value_ptr, integrality_ptr);
 }
  
-void highs_passLp(Highs* h, HighsLp& lp)
+HighsStatus highs_passLp(Highs* h, HighsLp& lp)
 {
-  HighsStatus status = h->passModel(lp);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing LP");
+  return h->passModel(lp);
 }
  
-void highs_passLpPointers(Highs* h, 
+HighsStatus highs_passLpPointers(Highs* h, 
 			  const int num_col, const int num_row, const int num_nz,
 			  const int a_format, const int sense, const double offset,
 			  const py::array_t<double> col_cost,
@@ -109,28 +103,24 @@ void highs_passLpPointers(Highs* h,
   const double* a_value_ptr = static_cast<double*>(a_value_info.ptr);
   const int* integrality_ptr = static_cast<int*>(integrality_info.ptr);
 
-  HighsStatus status = h->passModel(num_col, num_row, num_nz,
-				    a_format, sense, offset,
-				    col_cost_ptr, col_lower_ptr, col_upper_ptr,
-				    row_lower_ptr, row_upper_ptr,
-				    a_start_ptr, a_index_ptr, a_value_ptr,
-				    integrality_ptr);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing model");
+  return h->passModel(num_col, num_row, num_nz,
+		      a_format, sense, offset,
+		      col_cost_ptr, col_lower_ptr, col_upper_ptr,
+		      row_lower_ptr, row_upper_ptr,
+		      a_start_ptr, a_index_ptr, a_value_ptr,
+		      integrality_ptr);
 }
  
-void highs_passHessian(Highs* h, HighsHessian& hessian)
+HighsStatus highs_passHessian(Highs* h, HighsHessian& hessian)
 {
-  HighsStatus status = h->passHessian(hessian);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing Hessian");
+  return h->passHessian(hessian);
 }
  
-void highs_passHessianPointers(Highs* h, 
-			       const int dim, const int num_nz, const int format,
-			       const py::array_t<int> q_start,
-			       const py::array_t<int> q_index,
-			       const py::array_t<double> q_value)
+HighsStatus highs_passHessianPointers(Highs* h, 
+				      const int dim, const int num_nz, const int format,
+				      const py::array_t<int> q_start,
+				      const py::array_t<int> q_index,
+				      const py::array_t<double> q_value)
 {
   py::buffer_info q_start_info = q_start.request();
   py::buffer_info q_index_info = q_index.request();
@@ -140,18 +130,15 @@ void highs_passHessianPointers(Highs* h,
   const int* q_index_ptr = static_cast<int*>(q_index_info.ptr);
   const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
 
-  HighsStatus status = h->passHessian(dim, num_nz, format,
-				      q_start_ptr, q_index_ptr, q_value_ptr);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing Hessian");
+  return h->passHessian(dim, num_nz, format,
+			q_start_ptr, q_index_ptr, q_value_ptr);
 }
  
-void highs_writeSolution(Highs* h, const std::string filename, const int style)
+HighsStatus highs_writeSolution(Highs* h, const std::string filename, const int style)
 {
-  HighsStatus status = h->writeSolution(filename, style);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when writing solution");
+  return h->writeSolution(filename, style);
 }
+
 
 HighsModelStatus highs_getModelStatus(Highs* h)
 {

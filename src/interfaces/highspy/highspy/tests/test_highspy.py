@@ -44,7 +44,8 @@ class TestHighsPy(unittest.TestCase):
         lp.offset_ = 0;
         h = highspy.Highs()
         h.setOptionValue('log_to_console', False)
-        h.passModel(lp)
+        status = h.passModel(lp)
+        self.assertEqual(status, highspy.HighsStatus.kOk)
         h.setOptionValue('presolve', 'off')
         return h
     
