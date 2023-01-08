@@ -7,6 +7,7 @@ from .highs import (
     HighsModelStatus,
     HighsBasisStatus,
     HighsVarType,
+    HighsOptionType,
     HighsStatus,
     HighsLogType,
     HighsSparseMatrix,

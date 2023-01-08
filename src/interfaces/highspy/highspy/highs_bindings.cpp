@@ -389,6 +389,11 @@ py::object highs_getOptionValue(Highs* h, const std::string& option)
     throw py::value_error("Unrecognized option type");
 }
 
+std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std::string& option) {
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+  return std::make_tuple(status, option_type);
+}
 
 ObjSense highs_getObjectiveSense(Highs* h)
 {
@@ -413,7 +418,6 @@ double highs_getObjectiveOffset(Highs* h)
   return obj_offset;
 }
 
-
 class CallbackTuple {
 public:
   CallbackTuple() = default;
@@ -423,14 +427,12 @@ public:
   py::object callback_data;
 };
 
-
 void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* callback_data)
 {
   CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(callback_data);
   std::string msg(msgbuffer);
   callback_tuple->callback(log_type, msg, callback_tuple->callback_data);
 }
-
 
 HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
 {
@@ -442,14 +444,8 @@ HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
 std::tuple<HighsStatus, bool, bool, bool> assessPrimalSolution(Highs* h) {
   bool valid, integral, feasible;
   HighsStatus status = h->assessPrimalSolution(valid, integral, feasible);
-
-  //  if (status != HighsStatus::kOk)
-  //    throw py::value_error("Error while calling assessPrimalSolution");
-
   return std::make_tuple(status, valid, integral, feasible);
 }
-  
-
 
 PYBIND11_MODULE(highs_bindings, m)
 {
@@ -499,6 +495,11 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kInteger", HighsVarType::kInteger)
     .value("kSemiContinuous", HighsVarType::kSemiContinuous)
     .value("kSemiInteger", HighsVarType::kSemiInteger);
+  py::enum_<HighsOptionType>(m, "HighsOptionType")
+    .value("kBool", HighsOptionType::kBool)
+    .value("kInt", HighsOptionType::kInt)
+    .value("kDouble", HighsOptionType::kDouble)
+    .value("kString", HighsOptionType::kString);
   py::enum_<HighsStatus>(m, "HighsStatus")
     .value("kError", HighsStatus::kError)
     .value("kOk", HighsStatus::kOk)
@@ -671,11 +672,25 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("passHessian", &highs_passHessian)
     .def("passHessian", &highs_passHessianPointers)
     .def("readModel", &Highs::readModel)
+    .def("readBasis", &Highs::readBasis)
     .def("presolve", &Highs::presolve)
     .def("run", &Highs::run)
     .def("postsolve", &Highs::postsolve)
     .def("writeSolution", &highs_writeSolution)
     .def("readSolution", &Highs::readSolution)
+    .def("assessPrimalSolution", &assessPrimalSolution)
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string&)>(&Highs::setOptionValue))
+    .def("readOptions", &Highs::readOptions)
+    .def("passOptions", &Highs::passOptions)
+    .def("getOptions", &Highs::getOptions)
+    .def("getOptionValue", &highs_getOptionValue)
+    .def("getOptionType", &highs_getOptionType)
+    .def("resetOptions", &Highs::resetOptions)
+    .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
+    //
     .def("writeModel", &Highs::writeModel)
     .def("getPresolvedLp", &Highs::getPresolvedLp)
     .def("getPresolvedModel", &Highs::getPresolvedModel)
@@ -719,22 +734,11 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getNumRow", &Highs::getNumRow)
     .def("getNumNz", &Highs::getNumNz)
     .def("getHessianNumNz", &Highs::getHessianNumNz)
-    .def("resetOptions", &Highs::resetOptions)
-    .def("readOptions", &Highs::readOptions)
-    .def("passOptions", &Highs::passOptions)
-    .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
-    .def("getOptions", &Highs::getOptions)
-    .def("getOptionValue", &highs_getOptionValue)
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string&)>(&Highs::setOptionValue))
     .def("writeInfo", &Highs::writeInfo)
     .def("modelStatusToString", &Highs::modelStatusToString)
     .def("solutionStatusToString", &Highs::solutionStatusToString)
     .def("basisStatusToString", &Highs::basisStatusToString)
-    .def("basisValidityToString", &Highs::basisValidityToString)
-    .def("assessPrimalSolution", &assessPrimalSolution);
+    .def("basisValidityToString", &Highs::basisValidityToString);
   
   m.attr("kHighsInf") = kHighsInf;
   m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;

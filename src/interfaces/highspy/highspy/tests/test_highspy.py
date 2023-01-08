@@ -15,6 +15,7 @@ class TestHighsPy(unittest.TestCase):
         """
         inf = highspy.kHighsInf
         h = highspy.Highs()
+        h.setOptionValue('log_to_console', False)
         h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
         h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
         num_cons = 2
@@ -25,7 +26,6 @@ class TestHighsPy(unittest.TestCase):
         indices = np.array([0, 1, 0, 1])
         values = np.array([-1, 1, 1, 1], dtype=np.double)
         h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
-        h.setOptionValue('log_to_console', False)
         return h
     
     def get_infeasible_model(self):
@@ -43,8 +43,8 @@ class TestHighsPy(unittest.TestCase):
         lp.a_matrix_.value_ = np.array([2, 1, 1, 3], dtype=np.double)
         lp.offset_ = 0;
         h = highspy.Highs()
-        h.passModel(lp)
         h.setOptionValue('log_to_console', False)
+        h.passModel(lp)
         h.setOptionValue('presolve', 'off')
         return h
     
@@ -57,9 +57,8 @@ class TestHighsPy(unittest.TestCase):
 
     def test_basics(self):
         h = self.get_basic_model()
-        h.setOptionValue('log_to_console', True)
+#        h.setOptionValue('log_to_console', True)
         h.run()
-        h.writeSolution("", 1)
         [status, valid, integral, feasible] = h.assessPrimalSolution()
         self.assertEqual(status, highspy.HighsStatus.kOk)
         self.assertEqual(valid, True)
@@ -140,26 +139,35 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.getObjectiveValue(), -4)
 
     def test_options(self):
-        # test bool option
         h = highspy.Highs()
+        # test bool option
+        [status, type] = h.getOptionType('log_to_console')
+        self.assertEqual(type, highspy.HighsOptionType.kBool)
+
         h.setOptionValue('log_to_console', True)
         self.assertTrue(h.getOptionValue('log_to_console'))
         h.setOptionValue('log_to_console', False)
         self.assertFalse(h.getOptionValue('log_to_console'))
 
         # test string option
+        [status, type] = h.getOptionType('presolve')
+        self.assertEqual(type, highspy.HighsOptionType.kString)
         h.setOptionValue('presolve', 'off')
         self.assertEqual(h.getOptionValue('presolve'), 'off')
         h.setOptionValue('presolve', 'on')
         self.assertEqual(h.getOptionValue('presolve'), 'on')
 
         # test int option
+        [status, type] = h.getOptionType('threads')
+        self.assertEqual(type, highspy.HighsOptionType.kInt)
         h.setOptionValue('threads', 1)
         self.assertEqual(h.getOptionValue('threads'), 1)
         h.setOptionValue('threads', 2)
         self.assertEqual(h.getOptionValue('threads'), 2)
 
         # test double option
+        [status, type] = h.getOptionType('time_limit')
+        self.assertEqual(type, highspy.HighsOptionType.kDouble)
         h.setOptionValue('time_limit', 1.7)
         self.assertAlmostEqual(h.getOptionValue('time_limit'), 1.7)
         h.setOptionValue('time_limit', 2.7)
