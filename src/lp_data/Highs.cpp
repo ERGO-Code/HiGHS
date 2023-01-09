@@ -221,6 +221,14 @@ HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
 }
 #endif
 
+HighsStatus Highs::getInfoType(const std::string& info,
+                                 HighsInfoType& type) const {
+  if (getLocalInfoType(options_.log_options, info, info_.records,
+		       type) == InfoStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   InfoStatus status =
       getLocalInfoValue(options_, info, info_.valid, info_.records, value);

@@ -294,6 +294,9 @@ class Highs {
 
   HighsStatus getInfoValue(const std::string& info, double& value) const;
 
+  HighsStatus getInfoType(const std::string& info,
+			  HighsInfoType& type) const;
+
   /**
    * @brief Write info values to a file, with the extension ".html"
    * producing HTML, otherwise using the standard format used to read
