@@ -35,27 +35,22 @@ TEST_CASE("highs-info", "[highs_info]") {
   }
 
   HighsInfoType highs_info_type;
-  return_status =
-      highs.getInfoType("objective_value", highs_info_type);
+  return_status = highs.getInfoType("objective_value", highs_info_type);
   REQUIRE(return_status == HighsStatus::kError);
   return_status =
       highs.getInfoType("objective_function_value", highs_info_type);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_info_type == HighsInfoType::kDouble);
 
-  return_status =
-      highs.getInfoType("iteration_count", highs_info_type);
+  return_status = highs.getInfoType("iteration_count", highs_info_type);
   REQUIRE(return_status == HighsStatus::kError);
-  return_status =
-      highs.getInfoType("simplex_iteration_count", highs_info_type);
+  return_status = highs.getInfoType("simplex_iteration_count", highs_info_type);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_info_type == HighsInfoType::kInt);
 
-  return_status =
-      highs.getInfoType("mip_count", highs_info_type);
+  return_status = highs.getInfoType("mip_count", highs_info_type);
   REQUIRE(return_status == HighsStatus::kError);
-  return_status =
-      highs.getInfoType("mip_node_count", highs_info_type);
+  return_status = highs.getInfoType("mip_node_count", highs_info_type);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_info_type == HighsInfoType::kInt64);
 

@@ -90,7 +90,7 @@ class InfoRecordDouble : public InfoRecord {
 };
 
 InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
-		        const std::string& name,
+                        const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         HighsInt& index);
 
@@ -113,9 +113,9 @@ InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              double& value);
 
 InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
-			    const std::string& name,
-			    const std::vector<InfoRecord*>& info_records,
-			    HighsInfoType& type);
+                            const std::string& name,
+                            const std::vector<InfoRecord*>& info_records,
+                            HighsInfoType& type);
 
 HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,

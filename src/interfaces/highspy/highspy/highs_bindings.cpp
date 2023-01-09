@@ -305,18 +305,6 @@ void highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> indices)
 }
 
 
-bool highs_getBoolOption(Highs* h, const std::string& option)
-{
-  bool res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
 int highs_getIntOption(Highs* h, const std::string& option)
 {
   int res;
@@ -352,58 +340,37 @@ std::string highs_getStringOption(Highs* h, const std::string& option)
   return res;
 }
 
-
 std::tuple<HighsStatus, bool> highs_getBoolOptionValue(Highs* h, const std::string& option)
 {
-  HighsOptionType option_type;
-  HighsStatus status = h->getOptionType(option, option_type);
-
-  if (status != HighsStatus::kOk)
-    return std::make_tuple(status, false);
-
-  if (option_type != HighsOptionType::kBool)
-    return std::make_tuple(HighsStatus::kError, false);
-  return std::make_tuple(HighsStatus::kOk, highs_getBoolOption(h, option));
+  bool res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
 }
+
 
 std::tuple<HighsStatus, int> highs_getIntOptionValue(Highs* h, const std::string& option)
 {
-  HighsOptionType option_type;
-  HighsStatus status = h->getOptionType(option, option_type);
-
-  if (status != HighsStatus::kOk)
-    return std::make_tuple(status, 0);
-
-  if (option_type != HighsOptionType::kInt)
-    return std::make_tuple(HighsStatus::kError, 0);
-  return std::make_tuple(HighsStatus::kOk, highs_getIntOption(h, option));
+  int res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
 }
+
 
 std::tuple<HighsStatus, double> highs_getDoubleOptionValue(Highs* h, const std::string& option)
 {
-  HighsOptionType option_type;
-  HighsStatus status = h->getOptionType(option, option_type);
-
-  if (status != HighsStatus::kOk)
-    return std::make_tuple(status, 0.0);
-
-  if (option_type != HighsOptionType::kDouble)
-    return std::make_tuple(HighsStatus::kError, 0.0);
-  return std::make_tuple(HighsStatus::kOk, highs_getDoubleOption(h, option));
+  double res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
 }
+
 
 std::tuple<HighsStatus, std::string> highs_getStringOptionValue(Highs* h, const std::string& option)
 {
-  HighsOptionType option_type;
-  HighsStatus status = h->getOptionType(option, option_type);
-
-  if (status != HighsStatus::kOk)
-    return std::make_tuple(status, "");
-
-  if (option_type != HighsOptionType::kString)
-    return std::make_tuple(HighsStatus::kError, "");
-  return std::make_tuple(HighsStatus::kOk, highs_getStringOption(h, option));
+  std::string res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
 }
+
 
 std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std::string& option) {
   HighsOptionType option_type;
@@ -413,36 +380,24 @@ std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std
 
 std::tuple<HighsStatus, int> highs_getIntInfoValue(Highs* h, const std::string& info)
 {
-  HighsInfoType info_type;
-  HighsStatus status = h->getInfoType(info, info_type);
-
-  if (status != HighsStatus::kOk)
-    return std::make_tuple(status, 0);
-
-  if (info_type != HighsInfoType::kInt)
-    return std::make_tuple(HighsStatus::kError, 0);
-  return std::make_tuple(HighsStatus::kOk, 0);//highs_getIntInfo(h, info));
+  int res;
+  HighsStatus status = h->getInfoValue(info, res);
+  return std::make_tuple(status, res);
 }
 
-//py::object highs_getInfoValue(Highs* h, const std::string& info)
-//{
-//  HighsInfoType info_type;
-//  HighsStatus status = h->getInfoType(info, info_type);
-//
-//  if (status != HighsStatus::kOk)
-//    throw py::value_error("Error while getting info " + info);
-//
-//  if (info_type == HighsInfoType::kBool)
-//    return py::cast(highs_getBoolInfo(h, info));
-//  else if (info_type == HighsInfoType::kInt)
-//    return py::cast(highs_getIntInfo(h, info));
-//  else if (info_type == HighsInfoType::kDouble)
-//    return py::cast(highs_getDoubleInfo(h, info));
-//  else if (info_type == HighsInfoType::kString)
-//    return py::cast(highs_getStringInfo(h, info));
-//  else
-//    throw py::value_error("Unrecognized info type");
-//}
+std::tuple<HighsStatus, double> highs_getDoubleInfoValue(Highs* h, const std::string& info)
+{
+  double res;
+  HighsStatus status = h->getInfoValue(info, res);
+  return std::make_tuple(status, res);
+}
+
+std::tuple<HighsStatus, int64_t> highs_getInt64InfoValue(Highs* h, const std::string& info)
+{
+  int64_t res;
+  HighsStatus status = h->getInfoValue(info, res);
+  return std::make_tuple(status, res);
+}
 
 ObjSense highs_getObjectiveSense(Highs* h)
 {
@@ -747,7 +702,9 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("resetOptions", &Highs::resetOptions)
     .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
     .def("getInfo", &Highs::getInfo)
-    //    .def("getInfoValue", &highs_getInfoValue)
+    .def("getIntInfoValue", &highs_getIntInfoValue)
+    .def("getDoubleInfoValue", &highs_getDoubleInfoValue)
+    .def("getInt64InfoValue", &highs_getInt64InfoValue)
     //
     .def("writeModel", &Highs::writeModel)
     .def("getPresolvedLp", &Highs::getPresolvedLp)

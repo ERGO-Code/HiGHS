@@ -66,6 +66,16 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(integral, True)
         self.assertEqual(feasible, True)
         
+        # Info can be obtained from the class instance, specific call
+        # and, in the case of objective_function_value,
+        # h.getObjectiveValue()
+        info = h.getInfo()
+        objective_function_value0 = info.objective_function_value
+        self.assertAlmostEqual(objective_function_value0, 1)
+        [status, objective_function_value1] = h.getDoubleInfoValue("objective_function_value")
+        self.assertAlmostEqual(objective_function_value0, objective_function_value1)
+        self.assertAlmostEqual(h.getObjectiveValue(), objective_function_value0)
+
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
         self.assertAlmostEqual(sol.col_value[1], 1)
@@ -134,6 +144,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[1], -5)
 
         self.assertAlmostEqual(h.getObjectiveValue(), -5)
+
         h.changeObjectiveOffset(1)
         self.assertAlmostEqual(h.getObjectiveOffset(), 1)
         h.run()

@@ -52,7 +52,7 @@ static std::string infoEntryTypeToString(const HighsInfoType type) {
 }
 
 InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
-			const std::string& name,
+                        const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         HighsInt& index) {
   HighsInt num_info = info_records.size();
@@ -160,7 +160,8 @@ InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::vector<InfoRecord*>& info_records,
                              int64_t& value) {
   HighsInt index;
-  InfoStatus status = getInfoIndex(report_log_options, name, info_records, index);
+  InfoStatus status =
+      getInfoIndex(report_log_options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
@@ -182,7 +183,8 @@ InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value) {
   HighsInt index;
-  InfoStatus status = getInfoIndex(report_log_options, name, info_records, index);
+  InfoStatus status =
+      getInfoIndex(report_log_options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
@@ -220,7 +222,8 @@ InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::vector<InfoRecord*>& info_records,
                              double& value) {
   HighsInt index;
-  InfoStatus status = getInfoIndex(report_log_options, name, info_records, index);
+  InfoStatus status =
+      getInfoIndex(report_log_options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
@@ -236,9 +239,10 @@ InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
   return InfoStatus::kOk;
 }
 
-InfoStatus getLocalInfoType(
-    const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<InfoRecord*>& info_records, HighsInfoType& type) {
+InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
+                            const std::string& name,
+                            const std::vector<InfoRecord*>& info_records,
+                            HighsInfoType& type) {
   HighsInt index;
   InfoStatus status =
       getInfoIndex(report_log_options, name, info_records, index);

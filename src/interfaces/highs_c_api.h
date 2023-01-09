@@ -650,8 +650,7 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_getInfoType(const void* highs, const char* info,
-                           HighsInt* type);
+HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
 
 /**
  * Get the primal and dual solution from an optimized model.
