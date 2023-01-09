@@ -430,7 +430,8 @@ configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
 # cmake-projects can link easily against highs, and the pkg-config flie so that
 # other projects can easily build against highs
 install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
-    ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+    ${CMAKE_INSTALL_LIBDIR}/cmake/highs
+    NAMESPACE highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
