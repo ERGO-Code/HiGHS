@@ -205,6 +205,24 @@ Javascript
 
 HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
 
+Alternatively, HiGHS can directly be compiled into a single HTML file and used
+in a browser. This requires `emscripten` to be installed from their website
+(unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
+
+    https://emscripten.org/docs/getting_started/downloads.html
+
+Then, run
+
+    sh build_webdemo.sh
+
+This will create the file `build_webdemo/bin/highs.html`. For fast edit
+iterations run
+
+    find src app | entr -rs 'make -C build_webdemo highs; echo'
+
+This will rebuild `highs.html` every time a source file is modified (e.g.
+from Visual Studio Code).
+
 Python
 ------
 
