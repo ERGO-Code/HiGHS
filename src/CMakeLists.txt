@@ -306,6 +306,7 @@ set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
 set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
 
 add_library(libhighs ${sources})
+add_library(highs:libhighs ALIAS libhighs)
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
