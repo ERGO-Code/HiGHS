@@ -715,7 +715,5 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("basisValidityToString", &Highs::basisValidityToString);
   
   m.attr("kHighsInf") = kHighsInf;
-  m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
-  m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;
-  m.attr("HIGHS_VERSION_PATCH") = HIGHS_VERSION_PATCH;
+  m.attr("kHighsIInf") = kHighsIInf;
 }

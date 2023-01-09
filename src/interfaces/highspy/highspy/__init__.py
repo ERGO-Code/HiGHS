@@ -1,4 +1,5 @@
 from .highs import (
+    # enum classes
     ObjSense,
     MatrixFormat,
     HessianFormat,
@@ -11,6 +12,7 @@ from .highs import (
     HighsInfoType,
     HighsStatus,
     HighsLogType,
+    # classes
     HighsSparseMatrix,
     HighsLp,
     HighsHessian,
@@ -20,8 +22,7 @@ from .highs import (
     HighsInfo,
     HighsOptions,
     Highs,
+    # Constants
     kHighsInf,
-    HIGHS_VERSION_MAJOR,
-    HIGHS_VERSION_MINOR,
-    HIGHS_VERSION_PATCH,
+    kHighsIInf,
 )

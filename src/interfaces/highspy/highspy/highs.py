@@ -1,4 +1,5 @@
 from .highs_bindings import (
+    # enum classes
     ObjSense,
     MatrixFormat,
     HessianFormat,
@@ -12,6 +13,7 @@ from .highs_bindings import (
     HighsStatus,
     HighsLogType,
     CallbackTuple,
+    # classes
     HighsSparseMatrix,
     HighsLp,
     HighsHessian,
@@ -21,10 +23,9 @@ from .highs_bindings import (
     HighsInfo,
     HighsOptions,
     _Highs,
+    # Constants
     kHighsInf,
-    HIGHS_VERSION_MAJOR,
-    HIGHS_VERSION_MINOR,
-    HIGHS_VERSION_PATCH,
+    kHighsIInf,
 )
 
 
