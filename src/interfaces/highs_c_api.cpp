@@ -352,6 +352,15 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
+HighsInt Highs_getInfoType(const void* highs, const char* info,
+                           HighsInt* type) {
+  HighsInfoType t;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)->getInfoType(std::string(info), t);
+  *type = (HighsInt)t;
+  return retcode;
+}
+
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {

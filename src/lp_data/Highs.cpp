@@ -197,7 +197,7 @@ HighsStatus Highs::writeOptions(const std::string& filename,
 HighsStatus Highs::getInfoValue(const std::string& info,
                                 HighsInt& value) const {
   InfoStatus status =
-      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+      getLocalInfoValue(options_.log_options, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {
@@ -210,7 +210,7 @@ HighsStatus Highs::getInfoValue(const std::string& info,
 #ifndef HIGHSINT64
 HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
   InfoStatus status =
-      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+      getLocalInfoValue(options_.log_options, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {
@@ -231,7 +231,7 @@ HighsStatus Highs::getInfoType(const std::string& info,
 
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
   InfoStatus status =
-      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+      getLocalInfoValue(options_.log_options, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {

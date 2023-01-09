@@ -340,6 +340,14 @@ module highs_fortran_api
       integer ( c_int ) :: s
     end function Highs_getDoubleInfoValue
 
+    function Highs_getInfoType ( h, o, v ) result( s ) bind ( c, name='Highs_getInfoType' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getInfoType
+
     function Highs_getSolution (h, cv, cd, rv, rd) result ( s ) bind ( c, name='Highs_getSolution' )
       use iso_c_binding
       type(c_ptr), VALUE :: h

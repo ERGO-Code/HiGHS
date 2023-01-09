@@ -641,6 +641,19 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
                                  int64_t* value);
 
 /**
+ * Get the type expected by an info item.
+ *
+ * @param highs     a pointer to the Highs instance
+ * @param info      the name of the info item
+ * @param type      int in which the corresponding `kHighsOptionType` constant
+ *                  is stored
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getInfoType(const void* highs, const char* info,
+                           HighsInt* type);
+
+/**
  * Get the primal and dual solution from an optimized model.
  *
  * @param highs      a pointer to the Highs instance

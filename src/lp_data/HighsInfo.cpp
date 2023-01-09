@@ -63,7 +63,7 @@ InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
   return InfoStatus::kUnknownInfo;
 }
 
-InfoStatus checkInfo(const HighsOptions& options,
+InfoStatus checkInfo(const HighsLogOptions& report_log_options,
                      const std::vector<InfoRecord*>& info_records) {
   bool error_found = false;
   HighsInt num_info = info_records.size();
@@ -75,7 +75,7 @@ InfoStatus checkInfo(const HighsOptions& options,
       if (check_index == index) continue;
       std::string check_name = info_records[check_index]->name;
       if (check_name == name) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogUser(report_log_options, HighsLogType::kError,
                      "checkInfo: Info %" HIGHSINT_FORMAT
                      " (\"%s\") has the same name as info %" HIGHSINT_FORMAT
                      " \"%s\"\n",
@@ -94,7 +94,7 @@ InfoStatus checkInfo(const HighsOptions& options,
             ((InfoRecordInt64*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::kInt64) {
           if (check_info.value == value_pointer) {
-            highsLogUser(options.log_options, HighsLogType::kError,
+            highsLogUser(report_log_options, HighsLogType::kError,
                          "checkInfo: Info %" HIGHSINT_FORMAT
                          " (\"%s\") has the same value "
                          "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
@@ -115,7 +115,7 @@ InfoStatus checkInfo(const HighsOptions& options,
             ((InfoRecordInt*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::kInt) {
           if (check_info.value == value_pointer) {
-            highsLogUser(options.log_options, HighsLogType::kError,
+            highsLogUser(report_log_options, HighsLogType::kError,
                          "checkInfo: Info %" HIGHSINT_FORMAT
                          " (\"%s\") has the same value "
                          "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
@@ -136,7 +136,7 @@ InfoStatus checkInfo(const HighsOptions& options,
             ((InfoRecordDouble*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::kDouble) {
           if (check_info.value == value_pointer) {
-            highsLogUser(options.log_options, HighsLogType::kError,
+            highsLogUser(report_log_options, HighsLogType::kError,
                          "checkInfo: Info %" HIGHSINT_FORMAT
                          " (\"%s\") has the same value "
                          "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
@@ -149,24 +149,24 @@ InfoStatus checkInfo(const HighsOptions& options,
     }
   }
   if (error_found) return InfoStatus::kIllegalValue;
-  highsLogUser(options.log_options, HighsLogType::kInfo,
+  highsLogUser(report_log_options, HighsLogType::kInfo,
                "checkInfo: Info are OK\n");
   return InfoStatus::kOk;
 }
 
 #ifndef HIGHSINT64
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              int64_t& value) {
   HighsInt index;
-  InfoStatus status = getInfoIndex(options.log_options, name, info_records, index);
+  InfoStatus status = getInfoIndex(report_log_options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::kInt64) {
     highsLogUser(
-        options.log_options, HighsLogType::kError,
+        report_log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not int64_t\n",
         name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;
@@ -177,12 +177,12 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
 }
 #endif
 
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value) {
   HighsInt index;
-  InfoStatus status = getInfoIndex(options.log_options, name, info_records, index);
+  InfoStatus status = getInfoIndex(report_log_options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
@@ -198,7 +198,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
     illegal_type += " or int64_t";
 #endif
     highsLogUser(
-        options.log_options, HighsLogType::kError,
+        report_log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not %s\n",
         name.c_str(), infoEntryTypeToString(type).c_str(),
         illegal_type.c_str());
@@ -215,18 +215,18 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   return InfoStatus::kOk;
 }
 
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value) {
   HighsInt index;
-  InfoStatus status = getInfoIndex(options.log_options, name, info_records, index);
+  InfoStatus status = getInfoIndex(report_log_options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
   if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::kDouble) {
     highsLogUser(
-        options.log_options, HighsLogType::kError,
+        report_log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not double\n",
         name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;

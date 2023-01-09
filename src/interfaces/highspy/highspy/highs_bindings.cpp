@@ -411,6 +411,19 @@ std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std
   return std::make_tuple(status, option_type);
 }
 
+std::tuple<HighsStatus, int> highs_getIntInfoValue(Highs* h, const std::string& info)
+{
+  HighsInfoType info_type;
+  HighsStatus status = h->getInfoType(info, info_type);
+
+  if (status != HighsStatus::kOk)
+    return std::make_tuple(status, 0);
+
+  if (info_type != HighsInfoType::kInt)
+    return std::make_tuple(HighsStatus::kError, 0);
+  return std::make_tuple(HighsStatus::kOk, 0);//highs_getIntInfo(h, info));
+}
+
 //py::object highs_getInfoValue(Highs* h, const std::string& info)
 //{
 //  HighsInfoType info_type;
