@@ -140,6 +140,8 @@ HighsStatus highs_writeSolution(Highs* h, const std::string filename, const int 
 }
 
 
+// Not needed once getModelStatus(const bool scaled_model) disappears
+// from, Highs.h
 HighsModelStatus highs_getModelStatus(Highs* h)
 {
   return h->getModelStatus(); 
@@ -154,6 +156,17 @@ std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> val
   HighsStatus status = h->getDualRay(has_dual_ray, values_ptr); 
 
   return std::make_tuple(status, has_dual_ray);
+}
+
+std::tuple<HighsStatus, bool> highs_getPrimalRay(Highs* h, py::array_t<double> values)
+{
+  bool has_primal_ray;
+  py::buffer_info values_info = values.request();
+  double* values_ptr = static_cast<double*>(values_info.ptr);
+
+  HighsStatus status = h->getPrimalRay(has_primal_ray, values_ptr); 
+
+  return std::make_tuple(status, has_primal_ray);
 }
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
@@ -365,6 +378,12 @@ std::tuple<HighsStatus, int64_t> highs_getInt64InfoValue(Highs* h, const std::st
   return std::make_tuple(status, res);
 }
 
+std::tuple<HighsStatus, HighsInfoType> highs_getInfoType(Highs* h, const std::string& info) {
+  HighsInfoType info_type;
+  HighsStatus status = h->getInfoType(info, info_type);
+  return std::make_tuple(status, info_type);
+}
+
 std::tuple<HighsStatus, ObjSense> highs_getObjectiveSense(Highs* h)
 {
   ObjSense obj_sense;
@@ -446,6 +465,16 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kIterationLimit", HighsModelStatus::kIterationLimit)
     .value("kUnknown", HighsModelStatus::kUnknown)
     .value("kSolutionLimit", HighsModelStatus::kSolutionLimit);
+  py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
+    .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
+    .value("kNotReduced", HighsPresolveStatus::kNotReduced)
+    .value("kInfeasible", HighsPresolveStatus::kInfeasible)
+    .value("kUnboundedOrInfeasible", HighsPresolveStatus::kUnboundedOrInfeasible)
+    .value("kReduced", HighsPresolveStatus::kReduced)
+    .value("kReducedToEmpty", HighsPresolveStatus::kReducedToEmpty)
+    .value("kTimeout", HighsPresolveStatus::kTimeout)
+    .value("kNullError", HighsPresolveStatus::kNullError)
+    .value("kOptionsError", HighsPresolveStatus::kOptionsError);
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
     .value("kLower", HighsBasisStatus::kLower)
     .value("kBasic", HighsBasisStatus::kBasic)
@@ -663,16 +692,21 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getIntInfoValue", &highs_getIntInfoValue)
     .def("getDoubleInfoValue", &highs_getDoubleInfoValue)
     .def("getInt64InfoValue", &highs_getInt64InfoValue)
-    //
-    .def("writeModel", &Highs::writeModel)
+    .def("getInfoType", &highs_getInfoType)
+    .def("writeInfo", &Highs::writeInfo)
+    .def("getInfinity", &Highs::getInfinity)
+    .def("getRunTime", &Highs::getRunTime)
     .def("getPresolvedLp", &Highs::getPresolvedLp)
     .def("getPresolvedModel", &Highs::getPresolvedModel)
     .def("getModel", &Highs::getModel)
     .def("getLp", &Highs::getLp)
     .def("getSolution", &Highs::getSolution)
     .def("getBasis", &Highs::getBasis)
-    .def("getRunTime", &Highs::getRunTime)
-    .def("getInfinity", &Highs::getInfinity)
+    .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
+    .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
+    .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
+    //
+    .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
     .def("changeObjectiveSense", &Highs::changeObjectiveSense)
     .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)
@@ -685,7 +719,9 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveSense", &highs_getObjectiveSense)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
     .def("getRunTime", &Highs::getRunTime)
-    .def("getModelStatus", &highs_getModelStatus)
+// &highs_getModelStatus not needed once getModelStatus(const bool
+// scaled_model) disappears from, Highs.h
+    .def("getModelStatus", &highs_getModelStatus) //&Highs::getModelStatus)
     .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     //    .def("getPrimalRay", &highs_getPrimalRay)   
     //    .def("getObjectiveValue", &Highs::getObjectiveValue)   

@@ -6,6 +6,7 @@ from .highs import (
     SolutionStatus,
     BasisValidity,
     HighsModelStatus,
+    HighsPresolveStatus,
     HighsBasisStatus,
     HighsVarType,
     HighsOptionType,
