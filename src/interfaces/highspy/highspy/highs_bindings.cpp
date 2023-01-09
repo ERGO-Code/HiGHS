@@ -353,24 +353,56 @@ std::string highs_getStringOption(Highs* h, const std::string& option)
 }
 
 
-py::object highs_getOptionValue(Highs* h, const std::string& option)
+std::tuple<HighsStatus, bool> highs_getBoolOptionValue(Highs* h, const std::string& option)
 {
   HighsOptionType option_type;
   HighsStatus status = h->getOptionType(option, option_type);
 
   if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
+    return std::make_tuple(status, false);
 
-  if (option_type == HighsOptionType::kBool)
-    return py::cast(highs_getBoolOption(h, option));
-  else if (option_type == HighsOptionType::kInt)
-    return py::cast(highs_getIntOption(h, option));
-  else if (option_type == HighsOptionType::kDouble)
-    return py::cast(highs_getDoubleOption(h, option));
-  else if (option_type == HighsOptionType::kString)
-    return py::cast(highs_getStringOption(h, option));
-  else
-    throw py::value_error("Unrecognized option type");
+  if (option_type != HighsOptionType::kBool)
+    return std::make_tuple(HighsStatus::kError, false);
+  return std::make_tuple(HighsStatus::kOk, highs_getBoolOption(h, option));
+}
+
+std::tuple<HighsStatus, int> highs_getIntOptionValue(Highs* h, const std::string& option)
+{
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+
+  if (status != HighsStatus::kOk)
+    return std::make_tuple(status, 0);
+
+  if (option_type != HighsOptionType::kInt)
+    return std::make_tuple(HighsStatus::kError, 0);
+  return std::make_tuple(HighsStatus::kOk, highs_getIntOption(h, option));
+}
+
+std::tuple<HighsStatus, double> highs_getDoubleOptionValue(Highs* h, const std::string& option)
+{
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+
+  if (status != HighsStatus::kOk)
+    return std::make_tuple(status, 0.0);
+
+  if (option_type != HighsOptionType::kDouble)
+    return std::make_tuple(HighsStatus::kError, 0.0);
+  return std::make_tuple(HighsStatus::kOk, highs_getDoubleOption(h, option));
+}
+
+std::tuple<HighsStatus, std::string> highs_getStringOptionValue(Highs* h, const std::string& option)
+{
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+
+  if (status != HighsStatus::kOk)
+    return std::make_tuple(status, "");
+
+  if (option_type != HighsOptionType::kString)
+    return std::make_tuple(HighsStatus::kError, "");
+  return std::make_tuple(HighsStatus::kOk, highs_getStringOption(h, option));
 }
 
 std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std::string& option) {
@@ -694,7 +726,10 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("readOptions", &Highs::readOptions)
     .def("passOptions", &Highs::passOptions)
     .def("getOptions", &Highs::getOptions)
-    .def("getOptionValue", &highs_getOptionValue)
+    .def("getBoolOptionValue", &highs_getBoolOptionValue)
+    .def("getIntOptionValue", &highs_getIntOptionValue)
+    .def("getDoubleOptionValue", &highs_getDoubleOptionValue)
+    .def("getStringOptionValue", &highs_getStringOptionValue)
     .def("getOptionType", &highs_getOptionType)
     .def("resetOptions", &Highs::resetOptions)
     .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
