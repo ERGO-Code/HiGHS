@@ -58,6 +58,7 @@ class TestHighsPy(unittest.TestCase):
 
     def test_basics(self):
         h = self.get_basic_model()
+        self.assertEqual(h.setOptionValue('presolve', 'off'), highspy.HighsStatus.kOk)
 #        h.setOptionValue('log_to_console', True)
         h.run()
         [status, valid, integral, feasible] = h.assessPrimalSolution()
@@ -76,11 +77,16 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(objective_function_value0, objective_function_value1)
         self.assertAlmostEqual(h.getObjectiveValue(), objective_function_value0)
 
+        simplex_iteration_count0 = info.simplex_iteration_count
+        self.assertAlmostEqual(simplex_iteration_count0, 2)
+        [status, simplex_iteration_count1] = h.getIntInfoValue("simplex_iteration_count")
+        self.assertAlmostEqual(simplex_iteration_count0, simplex_iteration_count1)
+
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
         self.assertAlmostEqual(sol.col_value[1], 1)
 
-        h.setOptionValue('log_to_console', False)
+#        h.setOptionValue('log_to_console', False)
         """
         min y
         s.t.
@@ -98,7 +104,7 @@ class TestHighsPy(unittest.TestCase):
         h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
         h.run()
         sol = h.getSolution()
-        self.assertAlmostEqual(sol.col_value[0], -1)
+        self.assertAlmostEqual(sol.col_value[0], -1.5)
         self.assertAlmostEqual(sol.col_value[1], 2)
 
         """
@@ -135,9 +141,11 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[1], -5)
 
         h.changeColCost(1, 1)
-        self.assertEqual(h.getObjectiveSense(), highspy.ObjSense.kMinimize)
+        [status, sense] = h.getObjectiveSense()
+        self.assertEqual(sense, highspy.ObjSense.kMinimize)
         h.changeObjectiveSense(highspy.ObjSense.kMaximize)
-        self.assertEqual(h.getObjectiveSense(), highspy.ObjSense.kMaximize)
+        [status, sense] = h.getObjectiveSense()
+        self.assertEqual(sense, highspy.ObjSense.kMaximize)
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -5)
@@ -146,9 +154,19 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.getObjectiveValue(), -5)
 
         h.changeObjectiveOffset(1)
-        self.assertAlmostEqual(h.getObjectiveOffset(), 1)
+        [status, offset] = h.getObjectiveOffset();
+        self.assertAlmostEqual(offset, 1)
         h.run()
         self.assertAlmostEqual(h.getObjectiveValue(), -4)
+
+        info = h.getInfo()
+        mip_node_count0 = info.mip_node_count
+        self.assertAlmostEqual(mip_node_count0, 0)
+        [status, mip_node_count1] = h.getDoubleInfoValue("mip_node_count")
+        self.assertEqual(status, highspy.HighsStatus.kError)
+        [status, mip_node_count1] = h.getInt64InfoValue("mip_node_count")
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+        self.assertAlmostEqual(mip_node_count0, mip_node_count1)
 
     def test_options(self):
         h = highspy.Highs()

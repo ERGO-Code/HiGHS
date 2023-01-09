@@ -156,7 +156,8 @@ std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> val
   return std::make_tuple(status, has_dual_ray);
 }
 
-void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
+HighsStatus highs_addRow(Highs* h, double lower, double upper,
+			 int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info indices_info = indices.request();
   py::buffer_info values_info = values.request();
@@ -164,15 +165,13 @@ void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::arra
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
   double* values_ptr = static_cast<double*>(values_info.ptr);
 
-  HighsStatus status = h->addRow(lower, upper, num_new_nz, indices_ptr, values_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when adding row");
+  return h->addRow(lower, upper, num_new_nz, indices_ptr, values_ptr);
 }
 
 
-void highs_addRows(Highs* h, int num_cons, py::array_t<double> lower, py::array_t<double> upper, int num_new_nz,
-		   py::array_t<int> starts, py::array_t<int> indices, py::array_t<double> values)
+HighsStatus highs_addRows(Highs* h, int num_row,
+			  py::array_t<double> lower, py::array_t<double> upper,
+			  int num_new_nz, py::array_t<int> starts, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
@@ -186,14 +185,12 @@ void highs_addRows(Highs* h, int num_cons, py::array_t<double> lower, py::array_
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
   double* values_ptr = static_cast<double*>(values_info.ptr);
 
-  HighsStatus status = h->addRows(num_cons, lower_ptr, upper_ptr, num_new_nz, starts_ptr, indices_ptr, values_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when adding rows");
+  return h->addRows(num_row, lower_ptr, upper_ptr, num_new_nz, starts_ptr, indices_ptr, values_ptr);
 }
 
 
-void highs_addCol(Highs* h, double cost, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
+HighsStatus highs_addCol(Highs* h, double cost, double lower, double upper,
+			 int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
   py::buffer_info indices_info = indices.request();
   py::buffer_info values_info = values.request();
@@ -201,23 +198,39 @@ void highs_addCol(Highs* h, double cost, double lower, double upper, int num_new
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
   double* values_ptr = static_cast<double*>(values_info.ptr);
 
-  HighsStatus status = h->addCol(cost, lower, upper, num_new_nz, indices_ptr, values_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when adding col");
+  return h->addCol(cost, lower, upper, num_new_nz, indices_ptr, values_ptr);
 }
 
 
-void highs_addVar(Highs* h, double lower, double upper)
+HighsStatus highs_addCols(Highs* h, int num_col,
+			  py::array_t<double> cost, py::array_t<double> lower, py::array_t<double> upper,
+			  int num_new_nz, py::array_t<int> starts, py::array_t<int> indices, py::array_t<double> values)
 {
-  HighsStatus status = h->addVar(lower, upper);
+  py::buffer_info cost_info = cost.request();
+  py::buffer_info lower_info = lower.request();
+  py::buffer_info upper_info = upper.request();
+  py::buffer_info starts_info = starts.request();
+  py::buffer_info indices_info = indices.request();
+  py::buffer_info values_info = values.request();
 
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when adding var");  
+  double* cost_ptr = static_cast<double*>(cost_info.ptr);
+  double* lower_ptr = static_cast<double*>(lower_info.ptr);
+  double* upper_ptr = static_cast<double*>(upper_info.ptr);
+  int* starts_ptr = static_cast<int*>(starts_info.ptr);
+  int* indices_ptr = static_cast<int*>(indices_info.ptr);
+  double* values_ptr = static_cast<double*>(values_info.ptr);
+
+  return h->addCols(num_col, cost_ptr, lower_ptr, upper_ptr, num_new_nz, starts_ptr, indices_ptr, values_ptr);
 }
 
 
-void highs_addVars(Highs* h, int num_vars, py::array_t<double> lower, py::array_t<double> upper)
+HighsStatus highs_addVar(Highs* h, double lower, double upper)
+{
+  return h->addVar(lower, upper);
+}
+
+
+HighsStatus highs_addVars(Highs* h, int num_vars, py::array_t<double> lower, py::array_t<double> upper)
 {
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
@@ -225,14 +238,11 @@ void highs_addVars(Highs* h, int num_vars, py::array_t<double> lower, py::array_
   double* lower_ptr = static_cast<double*>(lower_info.ptr);
   double* upper_ptr = static_cast<double*>(upper_info.ptr);
 
-  HighsStatus status = h->addVars(num_vars, lower_ptr, upper_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when adding vars");  
+  return h->addVars(num_vars, lower_ptr, upper_ptr);
 }
 
 
-void highs_changeColsCost(Highs* h, int num_set_entries, py::array_t<int> indices, py::array_t<double> cost)
+HighsStatus highs_changeColsCost(Highs* h, int num_set_entries, py::array_t<int> indices, py::array_t<double> cost)
 {
   py::buffer_info indices_info = indices.request();
   py::buffer_info cost_info = cost.request();
@@ -240,14 +250,11 @@ void highs_changeColsCost(Highs* h, int num_set_entries, py::array_t<int> indice
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
   double* cost_ptr = static_cast<double*>(cost_info.ptr);
 
-  HighsStatus status = h->changeColsCost(num_set_entries, indices_ptr, cost_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when changing objective coefficients");  
+  return h->changeColsCost(num_set_entries, indices_ptr, cost_ptr);
 }
 
 
-void highs_changeColsBounds(Highs* h, int num_set_entries, py::array_t<int> indices, py::array_t<double> lower, py::array_t<double> upper)
+HighsStatus highs_changeColsBounds(Highs* h, int num_set_entries, py::array_t<int> indices, py::array_t<double> lower, py::array_t<double> upper)
 {
   py::buffer_info indices_info = indices.request();
   py::buffer_info lower_info = lower.request();
@@ -257,14 +264,11 @@ void highs_changeColsBounds(Highs* h, int num_set_entries, py::array_t<int> indi
   double* lower_ptr = static_cast<double*>(lower_info.ptr);
   double* upper_ptr = static_cast<double*>(upper_info.ptr);
 
-  HighsStatus status = h->changeColsBounds(num_set_entries, indices_ptr, lower_ptr, upper_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when changing variable bounds");  
+  return h->changeColsBounds(num_set_entries, indices_ptr, lower_ptr, upper_ptr);
 }
 
 
-void highs_changeColsIntegrality(Highs* h, int num_set_entries, py::array_t<int> indices, py::array_t<HighsVarType> integrality)
+HighsStatus highs_changeColsIntegrality(Highs* h, int num_set_entries, py::array_t<int> indices, py::array_t<HighsVarType> integrality)
 {
   py::buffer_info indices_info = indices.request();
   py::buffer_info integrality_info = integrality.request();
@@ -272,73 +276,35 @@ void highs_changeColsIntegrality(Highs* h, int num_set_entries, py::array_t<int>
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
   HighsVarType* integrality_ptr = static_cast<HighsVarType*>(integrality_info.ptr);
 
-  HighsStatus status = h->changeColsIntegrality(num_set_entries, indices_ptr, integrality_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when changing variable integrality");  
+  return h->changeColsIntegrality(num_set_entries, indices_ptr, integrality_ptr);
 }
 
 
-void highs_deleteVars(Highs* h, int num_set_entries, py::array_t<int> indices)
+HighsStatus highs_deleteCols(Highs* h, int num_set_entries, py::array_t<int> indices)
 {
   py::buffer_info indices_info = indices.request();
 
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
 
-  HighsStatus status = h->deleteVars(num_set_entries, indices_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when deleting columns");  
+  return h->deleteCols(num_set_entries, indices_ptr);
 }
 
 
-void highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> indices)
+HighsStatus highs_deleteVars(Highs* h, int num_set_entries, py::array_t<int> indices)
+{
+  return highs_deleteCols(h, num_set_entries, indices);
+}
+
+
+HighsStatus highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> indices)
 {
   py::buffer_info indices_info = indices.request();
 
   int* indices_ptr = static_cast<int*>(indices_info.ptr);
 
-  HighsStatus status = h->deleteRows(num_set_entries, indices_ptr);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when deleting rows");  
+  return h->deleteRows(num_set_entries, indices_ptr);
 }
 
-
-int highs_getIntOption(Highs* h, const std::string& option)
-{
-  int res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
-double highs_getDoubleOption(Highs* h, const std::string& option)
-{
-  double res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
-std::string highs_getStringOption(Highs* h, const std::string& option)
-{
-  std::string res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
 
 std::tuple<HighsStatus, bool> highs_getBoolOptionValue(Highs* h, const std::string& option)
 {
@@ -399,27 +365,19 @@ std::tuple<HighsStatus, int64_t> highs_getInt64InfoValue(Highs* h, const std::st
   return std::make_tuple(status, res);
 }
 
-ObjSense highs_getObjectiveSense(Highs* h)
+std::tuple<HighsStatus, ObjSense> highs_getObjectiveSense(Highs* h)
 {
   ObjSense obj_sense;
   HighsStatus status = h->getObjectiveSense(obj_sense);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting objective sense");
-
-  return obj_sense;
+  return std::make_tuple(status, obj_sense);
 }
 
 
-double highs_getObjectiveOffset(Highs* h)
+std::tuple<HighsStatus, double> highs_getObjectiveOffset(Highs* h)
 {
   double obj_offset;
   HighsStatus status = h->getObjectiveOffset(obj_offset);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting objective offset");
-
-  return obj_offset;
+  return std::make_tuple(status, obj_offset);
 }
 
 class CallbackTuple {
@@ -735,6 +693,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("addRows", &highs_addRows)
     .def("addRow", &highs_addRow)
     .def("addCol", &highs_addCol)
+    .def("addCols", &highs_addCols)
     .def("addVar", &highs_addVar)
     .def("addVars", &highs_addVars)
     .def("changeColsCost", &highs_changeColsCost)
@@ -742,6 +701,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
     .def("setLogCallback", &highs_setLogCallback)
     .def("setLogCallback", &highs_setLogCallback)
+    .def("deleteCols", &highs_deleteCols)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
     .def("getNumCol", &Highs::getNumCol)
