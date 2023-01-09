@@ -220,13 +220,18 @@ class TestHighsPy(unittest.TestCase):
         h.resetOptions()
         self.assertAlmostEqual(h.getOptionValue('primal_feasibility_tolerance'), orig_feas_tol)
 
-    # def test_dual_ray(self):
-    #     h = self.get_infeasible_model()
-    #     h.setOptionValue('log_to_console', True)
-    #     h.run()
-    #     has_dual_ray = h.getDualRay()
-    #     print('has_dual_ray = ', has_dual_ray)
-    #     self.assertTrue(has_dual_ray)
+    def test_dual_ray(self):
+        h = self.get_infeasible_model()
+        h.setOptionValue('log_to_console', True)
+        h.run()
+        [status, has_dual_ray] = h.getDualRay()
+        print('has_dual_ray = ', has_dual_ray)
+        self.assertTrue(has_dual_ray)
+        num_row = h.getLp().num_row_
+        values = np.array([2, 0], dtype=np.double)
+        h.getDualRay(values)
+        self.assertAlmostEqual(values[0], 0.5)
+        self.assertAlmostEqual(values[1], -1)
  
     def test_check_solution_feasibility(self):
         h = self.get_basic_model()

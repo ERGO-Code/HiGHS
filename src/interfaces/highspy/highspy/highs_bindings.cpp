@@ -145,7 +145,7 @@ HighsModelStatus highs_getModelStatus(Highs* h)
   return h->getModelStatus(); 
 }
 
-bool highs_getDualRay(Highs* h, py::array_t<double> values)
+std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> values)
 {
   bool has_dual_ray;
   py::buffer_info values_info = values.request();
@@ -153,10 +153,7 @@ bool highs_getDualRay(Highs* h, py::array_t<double> values)
 
   HighsStatus status = h->getDualRay(has_dual_ray, values_ptr); 
 
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when calling get dual ray");
-
-  return has_dual_ray;
+  return std::make_tuple(status, has_dual_ray);
 }
 
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
