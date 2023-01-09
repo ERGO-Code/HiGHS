@@ -444,6 +444,7 @@ else()
 # Define library in modern CMake using target_*()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
+add_library(highs:libhighs ALIAS libhighs)
 
 set_target_properties(libhighs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
@@ -830,7 +831,8 @@ if (CMAKE_TARGETS)
     # cmake-projects can link easily against highs, and the pkg-config flie so that
     # other projects can easily build against highs
     install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+        ${CMAKE_INSTALL_LIBDIR}/cmake/highs
+        NAMESPACE highs)
     install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
     install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
