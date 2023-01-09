@@ -379,6 +379,26 @@ std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std
   return std::make_tuple(status, option_type);
 }
 
+//py::object highs_getInfoValue(Highs* h, const std::string& info)
+//{
+//  HighsInfoType info_type;
+//  HighsStatus status = h->getInfoType(info, info_type);
+//
+//  if (status != HighsStatus::kOk)
+//    throw py::value_error("Error while getting info " + info);
+//
+//  if (info_type == HighsInfoType::kBool)
+//    return py::cast(highs_getBoolInfo(h, info));
+//  else if (info_type == HighsInfoType::kInt)
+//    return py::cast(highs_getIntInfo(h, info));
+//  else if (info_type == HighsInfoType::kDouble)
+//    return py::cast(highs_getDoubleInfo(h, info));
+//  else if (info_type == HighsInfoType::kString)
+//    return py::cast(highs_getStringInfo(h, info));
+//  else
+//    throw py::value_error("Unrecognized info type");
+//}
+
 ObjSense highs_getObjectiveSense(Highs* h)
 {
   ObjSense obj_sense;
@@ -484,6 +504,10 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kInt", HighsOptionType::kInt)
     .value("kDouble", HighsOptionType::kDouble)
     .value("kString", HighsOptionType::kString);
+  py::enum_<HighsInfoType>(m, "HighsInfoType")
+    .value("kInt64", HighsInfoType::kInt64)
+    .value("kInt", HighsInfoType::kInt)
+    .value("kDouble", HighsInfoType::kDouble);
   py::enum_<HighsStatus>(m, "HighsStatus")
     .value("kError", HighsStatus::kError)
     .value("kOk", HighsStatus::kOk)
@@ -674,6 +698,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getOptionType", &highs_getOptionType)
     .def("resetOptions", &Highs::resetOptions)
     .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
+    .def("getInfo", &Highs::getInfo)
+    //    .def("getInfoValue", &highs_getInfoValue)
     //
     .def("writeModel", &Highs::writeModel)
     .def("getPresolvedLp", &Highs::getPresolvedLp)
@@ -682,7 +708,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getLp", &Highs::getLp)
     .def("getSolution", &Highs::getSolution)
     .def("getBasis", &Highs::getBasis)
-    .def("getInfo", &Highs::getInfo)
     .def("getRunTime", &Highs::getRunTime)
     .def("getInfinity", &Highs::getInfinity)
     .def("crossover", &Highs::crossover)

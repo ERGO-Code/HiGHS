@@ -222,13 +222,12 @@ class TestHighsPy(unittest.TestCase):
 
     def test_dual_ray(self):
         h = self.get_infeasible_model()
-        h.setOptionValue('log_to_console', True)
         h.run()
         [status, has_dual_ray] = h.getDualRay()
         print('has_dual_ray = ', has_dual_ray)
         self.assertTrue(has_dual_ray)
         num_row = h.getLp().num_row_
-        values = np.array([2, 0], dtype=np.double)
+        values = np.array([num_row, 0], dtype=np.double)
         h.getDualRay(values)
         self.assertAlmostEqual(values[0], 0.5)
         self.assertAlmostEqual(values[1], -1)
