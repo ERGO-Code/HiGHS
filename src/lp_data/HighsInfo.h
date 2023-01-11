@@ -89,27 +89,33 @@ class InfoRecordDouble : public InfoRecord {
   virtual ~InfoRecordDouble() {}
 };
 
-InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
+InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
+                        const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         HighsInt& index);
 
-InfoStatus checkInfo(const HighsOptions& options,
+InfoStatus checkInfo(const HighsLogOptions& report_log_options,
                      const std::vector<InfoRecord*>& info_records);
 InfoStatus checkInfo(const InfoRecordInt& info);
 InfoStatus checkInfo(const InfoRecordDouble& info);
 
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              int64_t& value);
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value);
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value);
+
+InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
+                            const std::string& name,
+                            const std::vector<InfoRecord*>& info_records,
+                            HighsInfoType& type);
 
 HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,

@@ -8,14 +8,12 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 
-void highs_passModel(Highs* h, HighsModel& model)
+HighsStatus highs_passModel(Highs* h, HighsModel& model)
 {
-  HighsStatus status = h->passModel(model);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing model");
+  return h->passModel(model);
 }
  
-void highs_passModelPointers(Highs* h, 
+HighsStatus highs_passModelPointers(Highs* h, 
 			     const int num_col, const int num_row, const int num_nz,
 			     const int q_num_nz, const int a_format, const int q_format,
 			     const int sense, const double offset,
@@ -58,25 +56,21 @@ void highs_passModelPointers(Highs* h,
   const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
   const int* integrality_ptr = static_cast<int*>(integrality_info.ptr);
 
-  HighsStatus status = h->passModel(num_col, num_row, num_nz,
-				    q_num_nz, a_format, q_format,
-				    sense, offset, col_cost_ptr,
-				    col_lower_ptr, col_upper_ptr, row_lower_ptr,
-				    row_upper_ptr, a_start_ptr, a_index_ptr,
-				    a_value_ptr, q_start_ptr, q_index_ptr,
-				    q_value_ptr, integrality_ptr);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing model");
+  return h->passModel(num_col, num_row, num_nz,
+		      q_num_nz, a_format, q_format,
+		      sense, offset, col_cost_ptr,
+		      col_lower_ptr, col_upper_ptr, row_lower_ptr,
+		      row_upper_ptr, a_start_ptr, a_index_ptr,
+		      a_value_ptr, q_start_ptr, q_index_ptr,
+		      q_value_ptr, integrality_ptr);
 }
  
-void highs_passLp(Highs* h, HighsLp& lp)
+HighsStatus highs_passLp(Highs* h, HighsLp& lp)
 {
-  HighsStatus status = h->passModel(lp);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing LP");
+  return h->passModel(lp);
 }
  
-void highs_passLpPointers(Highs* h, 
+HighsStatus highs_passLpPointers(Highs* h, 
 			  const int num_col, const int num_row, const int num_nz,
 			  const int a_format, const int sense, const double offset,
 			  const py::array_t<double> col_cost,
@@ -109,28 +103,24 @@ void highs_passLpPointers(Highs* h,
   const double* a_value_ptr = static_cast<double*>(a_value_info.ptr);
   const int* integrality_ptr = static_cast<int*>(integrality_info.ptr);
 
-  HighsStatus status = h->passModel(num_col, num_row, num_nz,
-				    a_format, sense, offset,
-				    col_cost_ptr, col_lower_ptr, col_upper_ptr,
-				    row_lower_ptr, row_upper_ptr,
-				    a_start_ptr, a_index_ptr, a_value_ptr,
-				    integrality_ptr);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing model");
+  return h->passModel(num_col, num_row, num_nz,
+		      a_format, sense, offset,
+		      col_cost_ptr, col_lower_ptr, col_upper_ptr,
+		      row_lower_ptr, row_upper_ptr,
+		      a_start_ptr, a_index_ptr, a_value_ptr,
+		      integrality_ptr);
 }
  
-void highs_passHessian(Highs* h, HighsHessian& hessian)
+HighsStatus highs_passHessian(Highs* h, HighsHessian& hessian)
 {
-  HighsStatus status = h->passHessian(hessian);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing Hessian");
+  return h->passHessian(hessian);
 }
  
-void highs_passHessianPointers(Highs* h, 
-			       const int dim, const int num_nz, const int format,
-			       const py::array_t<int> q_start,
-			       const py::array_t<int> q_index,
-			       const py::array_t<double> q_value)
+HighsStatus highs_passHessianPointers(Highs* h, 
+				      const int dim, const int num_nz, const int format,
+				      const py::array_t<int> q_start,
+				      const py::array_t<int> q_index,
+				      const py::array_t<double> q_value)
 {
   py::buffer_info q_start_info = q_start.request();
   py::buffer_info q_index_info = q_index.request();
@@ -140,25 +130,22 @@ void highs_passHessianPointers(Highs* h,
   const int* q_index_ptr = static_cast<int*>(q_index_info.ptr);
   const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
 
-  HighsStatus status = h->passHessian(dim, num_nz, format,
-				      q_start_ptr, q_index_ptr, q_value_ptr);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when passing Hessian");
+  return h->passHessian(dim, num_nz, format,
+			q_start_ptr, q_index_ptr, q_value_ptr);
 }
  
-void highs_writeSolution(Highs* h, const std::string filename, const int style)
+HighsStatus highs_writeSolution(Highs* h, const std::string filename, const int style)
 {
-  HighsStatus status = h->writeSolution(filename, style);
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when writing solution");
+  return h->writeSolution(filename, style);
 }
+
 
 HighsModelStatus highs_getModelStatus(Highs* h)
 {
   return h->getModelStatus(); 
 }
 
-bool highs_getDualRay(Highs* h, py::array_t<double> values)
+std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> values)
 {
   bool has_dual_ray;
   py::buffer_info values_info = values.request();
@@ -166,10 +153,7 @@ bool highs_getDualRay(Highs* h, py::array_t<double> values)
 
   HighsStatus status = h->getDualRay(has_dual_ray, values_ptr); 
 
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error when calling get dual ray");
-
-  return has_dual_ray;
+  return std::make_tuple(status, has_dual_ray);
 }
 
 void highs_addRow(Highs* h, double lower, double upper, int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
@@ -321,18 +305,6 @@ void highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> indices)
 }
 
 
-bool highs_getBoolOption(Highs* h, const std::string& option)
-{
-  bool res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
 int highs_getIntOption(Highs* h, const std::string& option)
 {
   int res;
@@ -368,27 +340,64 @@ std::string highs_getStringOption(Highs* h, const std::string& option)
   return res;
 }
 
-
-py::object highs_getOptionValue(Highs* h, const std::string& option)
+std::tuple<HighsStatus, bool> highs_getBoolOptionValue(Highs* h, const std::string& option)
 {
-  HighsOptionType option_type;
-  HighsStatus status = h->getOptionType(option, option_type);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  if (option_type == HighsOptionType::kBool)
-    return py::cast(highs_getBoolOption(h, option));
-  else if (option_type == HighsOptionType::kInt)
-    return py::cast(highs_getIntOption(h, option));
-  else if (option_type == HighsOptionType::kDouble)
-    return py::cast(highs_getDoubleOption(h, option));
-  else if (option_type == HighsOptionType::kString)
-    return py::cast(highs_getStringOption(h, option));
-  else
-    throw py::value_error("Unrecognized option type");
+  bool res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
 }
 
+
+std::tuple<HighsStatus, int> highs_getIntOptionValue(Highs* h, const std::string& option)
+{
+  int res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
+}
+
+
+std::tuple<HighsStatus, double> highs_getDoubleOptionValue(Highs* h, const std::string& option)
+{
+  double res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
+}
+
+
+std::tuple<HighsStatus, std::string> highs_getStringOptionValue(Highs* h, const std::string& option)
+{
+  std::string res;
+  HighsStatus status = h->getOptionValue(option, res);
+  return std::make_tuple(status, res);
+}
+
+
+std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std::string& option) {
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+  return std::make_tuple(status, option_type);
+}
+
+std::tuple<HighsStatus, int> highs_getIntInfoValue(Highs* h, const std::string& info)
+{
+  int res;
+  HighsStatus status = h->getInfoValue(info, res);
+  return std::make_tuple(status, res);
+}
+
+std::tuple<HighsStatus, double> highs_getDoubleInfoValue(Highs* h, const std::string& info)
+{
+  double res;
+  HighsStatus status = h->getInfoValue(info, res);
+  return std::make_tuple(status, res);
+}
+
+std::tuple<HighsStatus, int64_t> highs_getInt64InfoValue(Highs* h, const std::string& info)
+{
+  int64_t res;
+  HighsStatus status = h->getInfoValue(info, res);
+  return std::make_tuple(status, res);
+}
 
 ObjSense highs_getObjectiveSense(Highs* h)
 {
@@ -413,7 +422,6 @@ double highs_getObjectiveOffset(Highs* h)
   return obj_offset;
 }
 
-
 class CallbackTuple {
 public:
   CallbackTuple() = default;
@@ -423,14 +431,12 @@ public:
   py::object callback_data;
 };
 
-
 void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* callback_data)
 {
   CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(callback_data);
   std::string msg(msgbuffer);
   callback_tuple->callback(log_type, msg, callback_tuple->callback_data);
 }
-
 
 HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
 {
@@ -439,6 +445,11 @@ HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
   return status;
 }
 
+std::tuple<HighsStatus, bool, bool, bool> assessPrimalSolution(Highs* h) {
+  bool valid, integral, feasible;
+  HighsStatus status = h->assessPrimalSolution(valid, integral, feasible);
+  return std::make_tuple(status, valid, integral, feasible);
+}
 
 PYBIND11_MODULE(highs_bindings, m)
 {
@@ -488,6 +499,15 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kInteger", HighsVarType::kInteger)
     .value("kSemiContinuous", HighsVarType::kSemiContinuous)
     .value("kSemiInteger", HighsVarType::kSemiInteger);
+  py::enum_<HighsOptionType>(m, "HighsOptionType")
+    .value("kBool", HighsOptionType::kBool)
+    .value("kInt", HighsOptionType::kInt)
+    .value("kDouble", HighsOptionType::kDouble)
+    .value("kString", HighsOptionType::kString);
+  py::enum_<HighsInfoType>(m, "HighsInfoType")
+    .value("kInt64", HighsInfoType::kInt64)
+    .value("kInt", HighsInfoType::kInt)
+    .value("kDouble", HighsInfoType::kDouble);
   py::enum_<HighsStatus>(m, "HighsStatus")
     .value("kError", HighsStatus::kError)
     .value("kOk", HighsStatus::kOk)
@@ -644,6 +664,15 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("mip_heuristic_effort", &HighsOptions::mip_heuristic_effort);
   py::class_<Highs>(m, "_Highs")
     .def(py::init<>())
+    .def("version", &Highs::version)
+    .def("versionMajor", &Highs::versionMajor)
+    .def("versionMinor", &Highs::versionMinor)
+    .def("versionPatch", &Highs::versionPatch)
+    .def("githash", &Highs::githash)
+    .def("compilationDate", &Highs::compilationDate)
+    .def("clear", &Highs::clear)
+    .def("clearModel", &Highs::clearModel)
+    .def("clearSolver", &Highs::clearSolver)
     .def("passModel", &highs_passModel)
     .def("passModel", &highs_passModelPointers)
     .def("passModel", &highs_passLp)
@@ -651,11 +680,32 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("passHessian", &highs_passHessian)
     .def("passHessian", &highs_passHessianPointers)
     .def("readModel", &Highs::readModel)
+    .def("readBasis", &Highs::readBasis)
     .def("presolve", &Highs::presolve)
     .def("run", &Highs::run)
     .def("postsolve", &Highs::postsolve)
     .def("writeSolution", &highs_writeSolution)
     .def("readSolution", &Highs::readSolution)
+    .def("assessPrimalSolution", &assessPrimalSolution)
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string&)>(&Highs::setOptionValue))
+    .def("readOptions", &Highs::readOptions)
+    .def("passOptions", &Highs::passOptions)
+    .def("getOptions", &Highs::getOptions)
+    .def("getBoolOptionValue", &highs_getBoolOptionValue)
+    .def("getIntOptionValue", &highs_getIntOptionValue)
+    .def("getDoubleOptionValue", &highs_getDoubleOptionValue)
+    .def("getStringOptionValue", &highs_getStringOptionValue)
+    .def("getOptionType", &highs_getOptionType)
+    .def("resetOptions", &Highs::resetOptions)
+    .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
+    .def("getInfo", &Highs::getInfo)
+    .def("getIntInfoValue", &highs_getIntInfoValue)
+    .def("getDoubleInfoValue", &highs_getDoubleInfoValue)
+    .def("getInt64InfoValue", &highs_getInt64InfoValue)
+    //
     .def("writeModel", &Highs::writeModel)
     .def("getPresolvedLp", &Highs::getPresolvedLp)
     .def("getPresolvedModel", &Highs::getPresolvedModel)
@@ -663,7 +713,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getLp", &Highs::getLp)
     .def("getSolution", &Highs::getSolution)
     .def("getBasis", &Highs::getBasis)
-    .def("getInfo", &Highs::getInfo)
     .def("getRunTime", &Highs::getRunTime)
     .def("getInfinity", &Highs::getInfinity)
     .def("crossover", &Highs::crossover)
@@ -695,23 +744,10 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("setLogCallback", &highs_setLogCallback)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
-    .def("clear", &Highs::clear)
-    .def("clearModel", &Highs::clearModel)
-    .def("clearSolver", &Highs::clearSolver)
     .def("getNumCol", &Highs::getNumCol)
     .def("getNumRow", &Highs::getNumRow)
     .def("getNumNz", &Highs::getNumNz)
     .def("getHessianNumNz", &Highs::getHessianNumNz)
-    .def("resetOptions", &Highs::resetOptions)
-    .def("readOptions", &Highs::readOptions)
-    .def("passOptions", &Highs::passOptions)
-    .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
-    .def("getOptions", &Highs::getOptions)
-    .def("getOptionValue", &highs_getOptionValue)
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
-    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string&)>(&Highs::setOptionValue))
     .def("writeInfo", &Highs::writeInfo)
     .def("modelStatusToString", &Highs::modelStatusToString)
     .def("solutionStatusToString", &Highs::solutionStatusToString)

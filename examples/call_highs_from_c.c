@@ -515,6 +515,14 @@ void full_api() {
 
   printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
 
+  // Check what type of info values are
+  int info_type;
+  const char* info_string = "objective_function_value";
+  run_status = Highs_getInfoType(highs, info_string, &info_type);
+  printf("Info %s is of type %d\n", info_string, info_type);
+  assert(run_status == kHighsStatusOk);
+  assert(info_type == kHighsInfoTypeDouble);
+
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
   Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
