@@ -100,7 +100,7 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
 // No commas in test case name.
 TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   HighsBasis basis;
 
   basis.clear();
