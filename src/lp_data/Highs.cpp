@@ -1468,11 +1468,6 @@ bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
 
 const HighsInt* Highs::getBasicVariablesArray() const {
   assert(ekk_instance_.status_.has_invert);
-  for (HighsInt iRow = 0; iRow < int(model_.lp_.num_row_); iRow++) {
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "getBasicVariablesArray: basicIndex_[%2d] = %2d\n",
-		 int(iRow), int(ekk_instance_.basis_.basicIndex_[iRow]));
-  }
   return ekk_instance_.basis_.basicIndex_.data();
 }
 
