@@ -169,6 +169,13 @@ std::tuple<HighsStatus, bool> highs_getPrimalRay(Highs* h, py::array_t<double> v
   return std::make_tuple(status, has_primal_ray);
 }
 
+std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h)
+{
+  HighsRanging ranging;
+  HighsStatus status = h->getRanging(ranging); 
+  return std::make_tuple(status, ranging);
+}
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
 			 int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
@@ -692,6 +699,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
     .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
+    .def("getRanging", &highs_getRanging)
     //
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)

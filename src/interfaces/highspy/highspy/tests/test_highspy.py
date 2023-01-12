@@ -285,6 +285,50 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(integral, True)
         self.assertEqual(feasible, True)
 
+    def test_ranging(self):
+        inf = highspy.kHighsInf
+        h = self.get_basic_model()
+        # Cost ranging
+        #c0 2 -1 1 0
+        #c1 0 0 inf inf
+        #
+        ## Bound ranging
+        ## Columns
+        #c0 1 -inf inf 1
+        #c1 1 1 inf 1
+        ## Rows
+        #r0 -inf -inf inf inf
+        #r1 -inf -inf inf inf
+        h.run()
+        [status, ranging] = h.getRanging()
+        self.assertEqual(ranging.col_cost_dn.objective_[0], 2);
+        self.assertEqual(ranging.col_cost_dn.value_[0], -1);
+        self.assertEqual(ranging.col_cost_up.value_[0], 1);
+        self.assertEqual(ranging.col_cost_up.objective_[0], 0);
+        self.assertEqual(ranging.col_cost_dn.objective_[1], 0);
+        self.assertEqual(ranging.col_cost_dn.value_[1], 0);
+        self.assertEqual(ranging.col_cost_up.value_[1], inf);
+        self.assertEqual(ranging.col_cost_up.objective_[1], inf);
+#
+        self.assertEqual(ranging.col_bound_dn.objective_[0], 1);
+        self.assertEqual(ranging.col_bound_dn.value_[0], -inf);
+        self.assertEqual(ranging.col_bound_up.value_[0], inf);
+        self.assertEqual(ranging.col_bound_up.objective_[0], 1);
+        self.assertEqual(ranging.col_bound_dn.objective_[1], 1);
+        self.assertEqual(ranging.col_bound_dn.value_[1], 1);
+        self.assertEqual(ranging.col_bound_up.value_[1], inf);
+        self.assertEqual(ranging.col_bound_up.objective_[1], 1);
+#
+        self.assertEqual(ranging.row_bound_dn.objective_[0], -inf);
+        self.assertEqual(ranging.row_bound_dn.value_[0], -inf);
+        self.assertEqual(ranging.row_bound_up.value_[0], inf);
+        self.assertEqual(ranging.row_bound_up.objective_[0], inf);
+        self.assertEqual(ranging.row_bound_dn.objective_[1], -inf);
+        self.assertEqual(ranging.row_bound_dn.value_[1], -inf);
+        self.assertEqual(ranging.row_bound_up.value_[1], inf);
+        self.assertEqual(ranging.row_bound_up.objective_[1], inf);
+
+        
     def test_log_callback(self):
         h = self.get_basic_model()
         h.setOptionValue('log_to_console', True)

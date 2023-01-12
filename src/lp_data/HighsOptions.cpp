@@ -56,14 +56,25 @@ static std::string optionEntryTypeToString(const HighsOptionType type) {
 }
 
 bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
-                              const string& value) {
+                              const string& name, const string& value) {
   if (value == kHighsOffString || value == kHighsChooseString ||
       value == kHighsOnString)
     return true;
+  highsLogUser(
+      report_log_options, HighsLogType::kWarning,
+      "Value \"%s\" for %s option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), name.c_str(), kHighsOffString.c_str(),
+      kHighsChooseString.c_str(), kHighsOnString.c_str());
+  return false;
+}
+
+bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
+                        const string& name, const string& value) {
+  if (value == kHighsOffString || value == kHighsOnString) return true;
   highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kHighsOffString.c_str(),
-               kHighsChooseString.c_str(), kHighsOnString.c_str());
+               "Value \"%s\" for %s option is not one of \"%s\" or \"%s\"\n",
+               value.c_str(), name.c_str(), kHighsOffString.c_str(),
+               kHighsOnString.c_str());
   return false;
 }
 
@@ -72,10 +83,11 @@ bool commandLineSolverOk(const HighsLogOptions& report_log_options,
   if (value == kSimplexString || value == kHighsChooseString ||
       value == kIpmString)
     return true;
-  highsLogUser(report_log_options, HighsLogType::kWarning,
-               "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), kSimplexString.c_str(),
-               kHighsChooseString.c_str(), kIpmString.c_str());
+  highsLogUser(
+      report_log_options, HighsLogType::kWarning,
+      "Value \"%s\" for solver option is not one of \"%s\", \"%s\" or \"%s\"\n",
+      value.c_str(), kSimplexString.c_str(), kHighsChooseString.c_str(),
+      kIpmString.c_str());
   return false;
 }
 
@@ -336,13 +348,20 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == kPresolveString) {
-    if (!commandLineOffChooseOnOk(report_log_options, value) && value != "mip")
+    if (!commandLineOffChooseOnOk(report_log_options, option.name, value) &&
+        value != "mip")
       return OptionStatus::kIllegalValue;
   } else if (option.name == kSolverString) {
     if (!commandLineSolverOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
   } else if (option.name == kParallelString) {
-    if (!commandLineOffChooseOnOk(report_log_options, value))
+    if (!commandLineOffChooseOnOk(report_log_options, option.name, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kRunCrossoverString) {
+    if (!commandLineOffChooseOnOk(report_log_options, option.name, value))
+      return OptionStatus::kIllegalValue;
+  } else if (option.name == kRangingString) {
+    if (!commandLineOffOnOk(report_log_options, option.name, value))
       return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;
