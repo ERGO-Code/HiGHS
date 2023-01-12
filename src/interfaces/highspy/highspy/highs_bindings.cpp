@@ -176,6 +176,14 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h)
   return std::make_tuple(status, ranging);
 }
 
+HighsStatus highs_getBasicVariables(Highs* h, py::array_t<int> basic_variables)
+{
+  py::buffer_info basic_variables_info = basic_variables.request();
+  int* basic_variables_ptr = static_cast<int*>(basic_variables_info.ptr);
+  return h->getBasicVariables(basic_variables_ptr);
+}
+
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
 			 int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
 {
@@ -700,6 +708,9 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
     .def("getRanging", &highs_getRanging)
+    .def("getObjectiveValue", &Highs::getObjectiveValue)
+    .def("hasInvert", &Highs::hasInvert)
+    .def("getBasicVariables", &highs_getBasicVariables)
     //
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
@@ -710,10 +721,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColBounds", &Highs::changeColBounds)
     .def("changeRowBounds", &Highs::changeRowBounds)
     .def("changeCoeff", &Highs::changeCoeff)
-    .def("getObjectiveValue", &Highs::getObjectiveValue)
     .def("getObjectiveSense", &highs_getObjectiveSense)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
-    //    .def("getBasicVariables", &highs_getBasicVariables)   
     .def("addRows", &highs_addRows)
     .def("addRow", &highs_addRow)
     .def("addCol", &highs_addCol)

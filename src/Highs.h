@@ -408,15 +408,6 @@ class Highs {
   bool hasInvert() const;
 
   /**
-   * @brief Gets the internal basic variable index array in the order
-   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
-   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
-   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
-   * num_col+num_row) are (num_col+row_index).
-   */
-  const HighsInt* getBasicVariablesArray() const;
-
-  /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
    * getBasisTransposeSolve, getReducedRow and
@@ -1030,6 +1021,15 @@ class Highs {
                ? ekk_instance_.dual_edge_weight_.data()
                : nullptr;
   }
+
+  /**
+   * @brief Gets the internal basic variable index array in the order
+   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
+   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
+   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
+   * num_col+num_row) are (num_col+row_index).
+   */
+  const HighsInt* getBasicVariablesArray() const;
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;

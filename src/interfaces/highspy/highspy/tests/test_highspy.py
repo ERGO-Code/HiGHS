@@ -270,7 +270,8 @@ class TestHighsPy(unittest.TestCase):
         print('has_dual_ray = ', has_dual_ray)
         self.assertTrue(has_dual_ray)
         num_row = h.getLp().num_row_
-        values = np.array([num_row, 0], dtype=np.double)
+        values = np.empty(num_row, dtype=np.double)
+#        values = np.array([1, -1], dtype=np.double)
         h.getDualRay(values)
         self.assertAlmostEqual(values[0], 0.5)
         self.assertAlmostEqual(values[1], -1)
@@ -329,6 +330,16 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.row_bound_up.objective_[1], inf);
 
         
+    def test_basic_solves(self):
+        h = self.get_basic_model()
+        h.run()
+        num_row = h.getLp().num_row_
+        basic_variables = np.empty(num_row, dtype=np.intc)
+        h.getBasicVariables(basic_variables)
+        self.assertEqual(basic_variables[0], 1)
+        self.assertEqual(basic_variables[1], 0)
+        
+
     def test_log_callback(self):
         h = self.get_basic_model()
         h.setOptionValue('log_to_console', True)
