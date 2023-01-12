@@ -67,9 +67,6 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return (int)run_status;
 
-  // Possibly compute the ranging information
-  if (options.ranging == kHighsOnString) highs.getRanging();
-
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
     highs.writeSolution(options.solution_file, options.write_solution_style);

@@ -387,10 +387,8 @@ class Highs {
                            double* primal_ray_value = nullptr);
 
   /**
-   * @brief Get the ranging information for the current LP, possibly
-   * returning it, as well as holding it internally
+   * @brief Get the ranging information for the current LP
    */
-  HighsStatus getRanging();
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
@@ -1310,6 +1308,7 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
+  HighsStatus getRangingInterface();
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
