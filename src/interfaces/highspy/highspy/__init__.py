@@ -18,12 +18,15 @@ from .highs import (
     HighsLp,
     HighsHessian,
     HighsModel,
-    HighsSolution,
-    HighsBasis,
     HighsInfo,
     HighsOptions,
     Highs,
-    # Constants
+    # structs
+    HighsSolution,
+    HighsBasis,
+    HighsRangingRecord,
+    HighsRanging,
+    # constants
     kHighsInf,
     kHighsIInf,
 )

@@ -19,12 +19,15 @@ from .highs_bindings import (
     HighsLp,
     HighsHessian,
     HighsModel,
-    HighsSolution,
-    HighsBasis,
     HighsInfo,
     HighsOptions,
     _Highs,
-    # Constants
+    # structs
+    HighsSolution,
+    HighsBasis,
+    HighsRangingRecord,
+    HighsRanging,
+    # constants
     kHighsInf,
     kHighsIInf,
 )

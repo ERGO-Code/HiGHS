@@ -430,6 +430,7 @@ std::tuple<HighsStatus, bool, bool, bool> assessPrimalSolution(Highs* h) {
 
 PYBIND11_MODULE(highs_bindings, m)
 {
+  // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
     .value("kMinimize", ObjSense::kMinimize)
     .value("kMaximize", ObjSense::kMaximize);
@@ -510,6 +511,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def(py::init<py::object, py::object>())
     .def_readwrite("callback", &CallbackTuple::callback)
     .def_readwrite("callback_data", &CallbackTuple::callback_data);
+  // classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
     .def(py::init<>())
     .def_readwrite("format_", &HighsSparseMatrix::format_)
@@ -550,24 +552,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def(py::init<>())
     .def_readwrite("lp_", &HighsModel::lp_)
     .def_readwrite("hessian_", &HighsModel::hessian_);
-  py::class_<HighsSolution>(m, "HighsSolution")
-    .def(py::init<>())
-    .def_readwrite("value_valid", &HighsSolution::value_valid)
-    .def_readwrite("dual_valid", &HighsSolution::dual_valid)
-    .def_readwrite("col_value", &HighsSolution::col_value)
-    .def_readwrite("col_dual", &HighsSolution::col_dual)
-    .def_readwrite("row_value", &HighsSolution::row_value)
-    .def_readwrite("row_dual", &HighsSolution::row_dual);
-  py::class_<HighsBasis>(m, "HighsBasis")
-    .def(py::init<>())
-    .def_readwrite("valid", &HighsBasis::valid)
-    .def_readwrite("alien", &HighsBasis::alien)
-    .def_readwrite("was_alien", &HighsBasis::was_alien)
-    .def_readwrite("debug_id", &HighsBasis::debug_id)
-    .def_readwrite("debug_update_count", &HighsBasis::debug_update_count)
-    .def_readwrite("debug_origin_name", &HighsBasis::debug_origin_name)
-    .def_readwrite("col_status", &HighsBasis::col_status)
-    .def_readwrite("row_status", &HighsBasis::row_status);
   py::class_<HighsInfo>(m, "HighsInfo")
     .def(py::init<>())
     .def_readwrite("valid", &HighsInfo::valid)
@@ -746,6 +730,41 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("basisStatusToString", &Highs::basisStatusToString)
     .def("basisValidityToString", &Highs::basisValidityToString);
   
+  // structs
+  py::class_<HighsSolution>(m, "HighsSolution")
+    .def(py::init<>())
+    .def_readwrite("value_valid", &HighsSolution::value_valid)
+    .def_readwrite("dual_valid", &HighsSolution::dual_valid)
+    .def_readwrite("col_value", &HighsSolution::col_value)
+    .def_readwrite("col_dual", &HighsSolution::col_dual)
+    .def_readwrite("row_value", &HighsSolution::row_value)
+    .def_readwrite("row_dual", &HighsSolution::row_dual);
+  py::class_<HighsBasis>(m, "HighsBasis")
+    .def(py::init<>())
+    .def_readwrite("valid", &HighsBasis::valid)
+    .def_readwrite("alien", &HighsBasis::alien)
+    .def_readwrite("was_alien", &HighsBasis::was_alien)
+    .def_readwrite("debug_id", &HighsBasis::debug_id)
+    .def_readwrite("debug_update_count", &HighsBasis::debug_update_count)
+    .def_readwrite("debug_origin_name", &HighsBasis::debug_origin_name)
+    .def_readwrite("col_status", &HighsBasis::col_status)
+    .def_readwrite("row_status", &HighsBasis::row_status);
+  py::class_<HighsRangingRecord>(m, "HighsRangingRecord")
+    .def(py::init<>())
+    .def_readwrite("value_", &HighsRangingRecord::value_)
+    .def_readwrite("objective_", &HighsRangingRecord::objective_)
+    .def_readwrite("in_var_", &HighsRangingRecord::in_var_)
+    .def_readwrite("ou_var_", &HighsRangingRecord::ou_var_);
+  py::class_<HighsRanging>(m, "HighsRanging")
+    .def(py::init<>())
+    .def_readwrite("valid", &HighsRanging::valid)
+    .def_readwrite("col_cost_up", &HighsRanging::col_cost_up)
+    .def_readwrite("col_cost_dn", &HighsRanging::col_cost_dn)
+    .def_readwrite("col_bound_up", &HighsRanging::col_bound_up)
+    .def_readwrite("col_bound_dn", &HighsRanging::col_bound_dn)
+    .def_readwrite("row_bound_up", &HighsRanging::row_bound_up)
+    .def_readwrite("row_bound_dn", &HighsRanging::row_bound_dn);
+  // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;
 }
