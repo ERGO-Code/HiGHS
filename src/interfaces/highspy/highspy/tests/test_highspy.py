@@ -272,6 +272,8 @@ class TestHighsPy(unittest.TestCase):
         num_row = h.getLp().num_row_
         values = np.empty(num_row, dtype=np.double)
         h.getDualRay(values)
+        v = h.foo()
+        self.assertEqual(v, 1)
         self.assertAlmostEqual(values[0], 0.5)
         self.assertAlmostEqual(values[1], -1)
  
