@@ -147,9 +147,13 @@ HighsModelStatus highs_getModelStatus(Highs* h)
   return h->getModelStatus(); 
 }
 
-int highs_foo(py::array_t<double> ptr)
+int highs_foo(Highs* h, int i, py::array_t<double> fred)
 {
-  return 1;
+  py::buffer_info fred_info = fred.request();
+  double* fred_ptr = static_cast<double*>(fred_info.ptr);
+  assert(fred_ptr == nullptr);
+  if (fred_ptr == nullptr) return 10*i;
+  return i+1;
 }
 
 std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> values)
@@ -726,7 +730,7 @@ PYBIND11_MODULE(highs_bindings, m)
 // scaled_model) disappears from, Highs.h
     .def("getModelStatus", &highs_getModelStatus) //&Highs::getModelStatus)
     .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
-    .def("foo", &highs_foo, py::arg("ptr") = nullptr)
+    .def("foo", &highs_foo, py::arg("i"), py::arg("fred") = nullptr)
     .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
     .def("getRanging", &highs_getRanging)
