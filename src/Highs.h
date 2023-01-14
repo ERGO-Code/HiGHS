@@ -418,15 +418,6 @@ class Highs {
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
-   * returning the result in the given HVector buffer which is
-   * expected to be setup with dimension num_row. The buffers
-   * previous contents will be overwritten.
-   */
-  HighsStatus getBasisInverseRowSparse(const HighsInt row,
-                                       HVector& row_ep_buffer);
-
-  /**
-   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
    * returning the indices of the nonzeros unless row_num_nz is
    * nullptr
    */
@@ -1030,6 +1021,16 @@ class Highs {
    * num_col+num_row) are (num_col+row_index).
    */
   const HighsInt* getBasicVariablesArray() const;
+
+  /**
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the result in the given HVector buffer which is
+   * expected to be setup with dimension num_row. The buffers
+   * previous contents will be overwritten.
+   */
+  HighsStatus getBasisInverseRowSparse(const HighsInt row,
+                                       HVector& row_ep_buffer);
+
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;

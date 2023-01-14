@@ -271,7 +271,6 @@ class TestHighsPy(unittest.TestCase):
         self.assertTrue(has_dual_ray)
         num_row = h.getLp().num_row_
         values = np.empty(num_row, dtype=np.double)
-#        values = np.array([1, -1], dtype=np.double)
         h.getDualRay(values)
         self.assertAlmostEqual(values[0], 0.5)
         self.assertAlmostEqual(values[1], -1)
@@ -338,7 +337,11 @@ class TestHighsPy(unittest.TestCase):
         h.getBasicVariables(basic_variables)
         self.assertEqual(basic_variables[0], 1)
         self.assertEqual(basic_variables[1], 0)
-        
+        row = 0
+        row_vector = np.empty(num_row, dtype=np.double)
+        row_num_nz = np.empty(1, dtype=np.intc)
+        row_indices = np.empty(num_row, dtype=np.intc)
+        h.getBasisInverseRow(row, row_vector, row_num_nz, row_indices)#None, None)
 
     def test_log_callback(self):
         h = self.get_basic_model()

@@ -183,6 +183,22 @@ HighsStatus highs_getBasicVariables(Highs* h, py::array_t<int> basic_variables)
   return h->getBasicVariables(basic_variables_ptr);
 }
 
+HighsStatus highs_getBasisInverseRow(Highs* h,
+				     int row,
+				     py::array_t<double> row_vector,
+				     py::array_t<int> row_num_nz,
+				     py::array_t<int> row_indices)
+{
+  //  py::buffer_info row_vector_info = row_vector.request();
+  //  py::buffer_info row_num_nz_info = row_num_nz.request();
+  //  py::buffer_info row_indices_info = row_indices.request();
+  //  int* row_vector_ptr = static_cast<int*>(row_vector_info.ptr);
+  //  int* row_num_nz_ptr = static_cast<int*>(row_num_nz_info.ptr);
+  //  int* row_indices_ptr = static_cast<int*>(row_indices_info.ptr);
+  //  return h->getBasisInverseRow(row, row_vector_ptr, row_num_nz_ptr, row_indices_ptr);
+  return HighsStatus::kOk;
+}
+
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
 			 int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
@@ -711,6 +727,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveValue", &Highs::getObjectiveValue)
     .def("hasInvert", &Highs::hasInvert)
     .def("getBasicVariables", &highs_getBasicVariables)
+    .def("getBasisInverseRow", &highs_getBasisInverseRow, py::arg("row"), py::arg("row_vector"), py::arg("row_num_nz") = nullptr, py::arg("row_indices") = nullptr)
     //
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
