@@ -1297,11 +1297,11 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
 
   lp.a_matrix_.scaleRow(row, rowScale);
   if (rowScale > 0) {
-    lp.row_lower_[row] /= rowScale;
-    lp.row_upper_[row] /= rowScale;
+    lp.row_lower_[row] *= rowScale;
+    lp.row_upper_[row] *= rowScale;
   } else {
-    const double new_upper = lp.row_lower_[row] / rowScale;
-    lp.row_lower_[row] = lp.row_upper_[row] / rowScale;
+    const double new_upper = lp.row_lower_[row] * rowScale;
+    lp.row_lower_[row] = lp.row_upper_[row] * rowScale;
     lp.row_upper_[row] = new_upper;
   }
   return HighsStatus::kOk;
