@@ -151,29 +151,33 @@ int highs_foo(Highs* h, int i, py::array_t<double> fred)
 {
   py::buffer_info fred_info = fred.request();
   double* fred_ptr = static_cast<double*>(fred_info.ptr);
+  highsLogUser(
+	       h->getOptions().log_options, HighsLogType::kInfo,
+        "\nhighs_foo fred = %s\n",
+        fred == nullptr ? "nullptr" : "ptr");
   assert(fred_ptr == nullptr);
   if (fred_ptr == nullptr) return 10*i;
   return i+1;
 }
 
-std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> values)
+std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> dual_ray_value)
 {
   bool has_dual_ray;
-  py::buffer_info values_info = values.request();
-  double* values_ptr = static_cast<double*>(values_info.ptr);
+  py::buffer_info dual_ray_value_info = dual_ray_value.request();
+  double* dual_ray_value_ptr = static_cast<double*>(dual_ray_value_info.ptr);
 
-  HighsStatus status = h->getDualRay(has_dual_ray, values_ptr); 
+  HighsStatus status = h->getDualRay(has_dual_ray, dual_ray_value_ptr); 
 
   return std::make_tuple(status, has_dual_ray);
 }
 
-std::tuple<HighsStatus, bool> highs_getPrimalRay(Highs* h, py::array_t<double> values)
+std::tuple<HighsStatus, bool> highs_getPrimalRay(Highs* h, py::array_t<double> primal_ray_value)
 {
   bool has_primal_ray;
-  py::buffer_info values_info = values.request();
-  double* values_ptr = static_cast<double*>(values_info.ptr);
+  py::buffer_info primal_ray_value_info = primal_ray_value.request();
+  double* primal_ray_value_ptr = static_cast<double*>(primal_ray_value_info.ptr);
 
-  HighsStatus status = h->getPrimalRay(has_primal_ray, values_ptr); 
+  HighsStatus status = h->getPrimalRay(has_primal_ray, primal_ray_value_ptr); 
 
   return std::make_tuple(status, has_primal_ray);
 }

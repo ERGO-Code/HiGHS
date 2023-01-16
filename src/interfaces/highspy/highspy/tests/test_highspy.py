@@ -15,7 +15,7 @@ class TestHighsPy(unittest.TestCase):
         """
         inf = highspy.kHighsInf
         h = highspy.Highs()
-        h.setOptionValue('log_to_console', False)
+        h.setOptionValue('output_flag', False)
         h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
         h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
         num_cons = 2
@@ -43,7 +43,7 @@ class TestHighsPy(unittest.TestCase):
         lp.a_matrix_.value_ = np.array([2, 1, 1, 3], dtype=np.double)
         lp.offset_ = 0;
         h = highspy.Highs()
-        h.setOptionValue('log_to_console', False)
+        h.setOptionValue('output_flag', False)
         status = h.passModel(lp)
         self.assertEqual(status, highspy.HighsStatus.kOk)
         h.setOptionValue('presolve', 'off')
@@ -59,7 +59,7 @@ class TestHighsPy(unittest.TestCase):
     def test_basics(self):
         h = self.get_basic_model()
         self.assertEqual(h.setOptionValue('presolve', 'off'), highspy.HighsStatus.kOk)
-#        h.setOptionValue('log_to_console', True)
+#        h.setOptionValue('output_flag', True)
         h.run()
         [status, valid, integral, feasible] = h.assessPrimalSolution()
         self.assertEqual(status, highspy.HighsStatus.kOk)
@@ -86,7 +86,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[0], -1)
         self.assertAlmostEqual(sol.col_value[1], 1)
 
-#        h.setOptionValue('log_to_console', False)
+#        h.setOptionValue('output_flag', False)
         """
         min y
         s.t.
@@ -171,14 +171,14 @@ class TestHighsPy(unittest.TestCase):
     def test_options(self):
         h = highspy.Highs()
         # test bool option
-        [status, type] = h.getOptionType('log_to_console')
+        [status, type] = h.getOptionType('output_flag')
         self.assertEqual(type, highspy.HighsOptionType.kBool)
 
-        h.setOptionValue('log_to_console', True)
-        [status, value] = h.getBoolOptionValue('log_to_console')
+        h.setOptionValue('output_flag', True)
+        [status, value] = h.getBoolOptionValue('output_flag')
         self.assertTrue(value)
-        h.setOptionValue('log_to_console', False)
-        [status, value] = h.getBoolOptionValue('log_to_console')
+        h.setOptionValue('output_flag', False)
+        [status, value] = h.getBoolOptionValue('output_flag')
         self.assertFalse(value)
 
         # test string option
@@ -266,14 +266,22 @@ class TestHighsPy(unittest.TestCase):
     def test_dual_ray(self):
         h = self.get_infeasible_model()
         h.run()
+        h.setOptionValue('output_flag', True)
+        # Check that there is a dual ray
         [status, has_dual_ray] = h.getDualRay()
-        print('has_dual_ray = ', has_dual_ray)
         self.assertTrue(has_dual_ray)
+        
         num_row = h.getLp().num_row_
         values = np.empty(num_row, dtype=np.double)
         h.getDualRay(values)
+        
         arg = 2
         v = h.foo(arg)
+        self.assertEqual(v, arg+1)
+        v = h.foo(arg, None)
+        self.assertEqual(v, arg+1)
+        fred = None
+        v = h.foo(arg, fred)
         self.assertEqual(v, arg+1)
         self.assertAlmostEqual(values[0], 0.5)
         self.assertAlmostEqual(values[1], -1)
@@ -348,7 +356,7 @@ class TestHighsPy(unittest.TestCase):
 
     def test_log_callback(self):
         h = self.get_basic_model()
-        h.setOptionValue('log_to_console', True)
+        h.setOptionValue('output_flag', True)
 
         class Foo(object):
             def __str__(self):
