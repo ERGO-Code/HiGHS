@@ -735,7 +735,7 @@ PYBIND11_MODULE(highs_bindings, m)
 // scaled_model) disappears from, Highs.h
     .def("getModelStatus", &highs_getModelStatus) //&Highs::getModelStatus)
     .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
-    .def("foo", &highs_foo, py::arg("fred") = nullptr)
+    .def("foo", &highs_foo, py::arg("fred") = static_cast<py::array_t<double>>(nullptr))
     .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
     .def("getRanging", &highs_getRanging)
