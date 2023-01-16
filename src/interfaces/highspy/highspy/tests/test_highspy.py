@@ -274,17 +274,13 @@ class TestHighsPy(unittest.TestCase):
         num_row = h.getLp().num_row_
         values = np.empty(num_row, dtype=np.double)
         h.getDualRay(values)
-        
-        arg = 2
-        v = h.foo(arg)
-        self.assertEqual(v, arg+1)
-        v = h.foo(arg, None)
-        self.assertEqual(v, arg+1)
-        fred = None
-        v = h.foo(arg, fred)
-        self.assertEqual(v, arg+1)
         self.assertAlmostEqual(values[0], 0.5)
         self.assertAlmostEqual(values[1], -1)
+        
+        v = h.foo(values)
+        self.assertEqual(v, 1)
+        v = h.foo()
+        self.assertEqual(v, -1)
  
     def test_check_solution_feasibility(self):
         h = self.get_basic_model()

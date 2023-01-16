@@ -147,17 +147,18 @@ HighsModelStatus highs_getModelStatus(Highs* h)
   return h->getModelStatus(); 
 }
 
-int highs_foo(Highs* h, int i, py::array_t<double> fred)
+int highs_foo(Highs* h, py::array_t<double> fred)
 {
   py::buffer_info fred_info = fred.request();
   double* fred_ptr = static_cast<double*>(fred_info.ptr);
-  highsLogUser(
-	       h->getOptions().log_options, HighsLogType::kInfo,
-        "\nhighs_foo fred = %s\n",
-        fred == nullptr ? "nullptr" : "ptr");
-  assert(fred_ptr == nullptr);
-  if (fred_ptr == nullptr) return 10*i;
-  return i+1;
+  highsLogUser(h->getOptions().log_options, HighsLogType::kInfo,
+	       "\nhighs_foo fred = %s\n",
+	       fred_ptr == nullptr ? "nullptr" : "ptr");
+  if (fred_ptr == nullptr) {
+    return -1;
+  } else {
+    return 1;
+  }
 }
 
 std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> dual_ray_value)
@@ -734,7 +735,7 @@ PYBIND11_MODULE(highs_bindings, m)
 // scaled_model) disappears from, Highs.h
     .def("getModelStatus", &highs_getModelStatus) //&Highs::getModelStatus)
     .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
-    .def("foo", &highs_foo, py::arg("i"), py::arg("fred") = nullptr)
+    .def("foo", &highs_foo, py::arg("fred") = nullptr)
     .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
     .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
     .def("getRanging", &highs_getRanging)
