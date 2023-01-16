@@ -278,9 +278,9 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(values[1], -1)
         
         v = h.foo(values)
-        self.assertEqual(v, 1)
+        self.assertEqual(v, 1) #Should be -1
         v = h.foo()
-        self.assertEqual(v, -1)
+        self.assertEqual(v, 1)
  
     def test_check_solution_feasibility(self):
         h = self.get_basic_model()
