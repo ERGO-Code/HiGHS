@@ -36,7 +36,9 @@ endif()
 
 option(BUILD_TESTING "Build Tests" ON)
 
-if(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
+elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
