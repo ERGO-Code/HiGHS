@@ -149,7 +149,7 @@ public class HighsLpSolver : IDisposable
 
    private bool _disposed;
 
-   private const string highslibname = "libhighs";
+   private const string highslibname = "highs";
 
    [DllImport(highslibname)]
    private static extern int Highs_call(

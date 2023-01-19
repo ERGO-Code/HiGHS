@@ -562,7 +562,8 @@ endif()
 add_subdirectory(examples/tests)
 
 # condition added to src/CMakeLists.txt
-add_subdirectory(src)
+# add_subdirectory(src)
+include(cpp)
 
 option(JULIA "Build library and executable for Julia" OFF)
 option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
@@ -689,11 +690,11 @@ if (EXP)
 endif()
 
 
-install(TARGETS libhighs EXPORT highs-targets
-    LIBRARY
-    ARCHIVE
-    RUNTIME
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+# install(TARGETS libhighs EXPORT highs-targets
+#     LIBRARY
+#     ARCHIVE
+#     RUNTIME
+#     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 endif()
