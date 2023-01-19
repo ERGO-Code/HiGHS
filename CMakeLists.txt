@@ -197,9 +197,11 @@ endif()
 
 include(CheckCXXCompilerFlag)
 
-if (NOT FAST_BUILD)
 
 option(BUILD_TESTING "Build Tests" ON)
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+
+if (NOT FAST_BUILD)
 
 # Function to set compiler flags on and off easily.
 function(enable_cxx_compiler_flag_if_supported flag)
