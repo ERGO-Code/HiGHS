@@ -1031,7 +1031,6 @@ class Highs {
   HighsStatus getBasisInverseRowSparse(const HighsInt row,
                                        HVector& row_ep_buffer);
 
-
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
