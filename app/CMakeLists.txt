@@ -3,7 +3,7 @@ add_executable(highs-bin)
 
 target_sources(highs-bin PRIVATE RunHighs.cpp)
 
-target_include_directories(highs PRIVATE
+target_include_directories(highs-bin PRIVATE
         $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>  
         )
 

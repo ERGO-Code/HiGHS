@@ -29,7 +29,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Set max os target version.
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+# set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 # set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
@@ -96,7 +96,7 @@ if(BUILD_SHARED_LIBS AND MSVC)
 endif()
 
 # Disable CTest targets
-set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
+# set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 include(CTest)
 
 option(FAST_BUILD "Fast build: " OFF)
@@ -161,6 +161,7 @@ if(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     endif()
 endif()
 
+set(CMAKE_MACOSX_RPATH ON)
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
     "#include <immintrin.h>
@@ -463,12 +464,11 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # Targets
 enable_testing()
+add_subdirectory(src)
 add_subdirectory(app)
 if(BUILD_TESTING)
     add_subdirectory(check)
 endif()
-add_subdirectory(src)
-
 
 else(FAST_BUILD)
 
@@ -582,18 +582,18 @@ endif()
 add_test(NAME highs-lib-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
-                 --target libhighs
+                 --target highs
                  --config ${CMAKE_BUILD_TYPE}
          )
 
 set_tests_properties(highs-lib-build
                      PROPERTIES
-                     RESOURCE_LOCK libhighs)
+                     RESOURCE_LOCK highs)
 
 add_test(NAME highs-exe-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
-                 --target highs
+                 --target highs-bin
                  --config ${CMAKE_BUILD_TYPE}
          )
 
@@ -686,11 +686,11 @@ if (EXP)
     endif()
 
     target_include_directories(doctest PRIVATE extern)
-    target_link_libraries(doctest libhighs)
+    target_link_libraries(doctest highs)
 endif()
 
 
-# install(TARGETS libhighs EXPORT highs-targets
+# install(TARGETS highs EXPORT highs-targets
 #     LIBRARY
 #     ARCHIVE
 #     RUNTIME
