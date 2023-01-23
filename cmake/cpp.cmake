@@ -429,7 +429,6 @@ set(headers_fast_build_
 set(headers_fast_build_ ${headers_fast_build_} ${PROJECT_SOURCE_DIR}/src/ipm/IpxWrapper.h ${basiclu_headers}
     ${ipx_headers})
 
-set target_include_directories()
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
