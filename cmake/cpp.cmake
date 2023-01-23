@@ -439,11 +439,11 @@ write_basic_package_version_file(
 # endforeach()
 # install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-target_include_directories(highs PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
-    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-    )
+# target_include_directories(highs PUBLIC
+#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
+#     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+#     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+#     )
 
 # target_include_directories(highs PRIVATE
 #     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
