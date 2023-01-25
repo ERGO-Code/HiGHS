@@ -143,13 +143,13 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
       }
       if (num_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "Integer  : %" HIGHSINT_FORMAT "\n", num_integer);
+                    "Integer   : %" HIGHSINT_FORMAT "\n", num_integer);
       if (num_semi_continuous)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiConts: %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+                    "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
       if (num_semi_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiInt  : %" HIGHSINT_FORMAT "\n", num_semi_integer);
+                    "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
     } else {
       highsLogUser(log_options, HighsLogType::kInfo, "%s",
                    problem_type.c_str());
