@@ -6,7 +6,7 @@
 #include "util/HighsRandom.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 void testAlienBasis(const bool avgas, const HighsInt seed);
@@ -693,12 +693,13 @@ TEST_CASE("AlienBasis-singular-basis", "[highs_test_alien_basis]") {
   lp.a_matrix_.value_ = {1, 2, 3, 1};
   lp.sense_ = ObjSense::kMinimize;
   Highs highs;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   if (dev_run) highs.setOptionValue("log_dev_level", 3);
   highs.passModel(lp);
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
   HighsBasis basis = highs.getBasis();
+  // Change the second constraint so that it's a copy of the first
   highs.changeCoeff(1, 0, 1);
   highs.changeCoeff(1, 1, 3);
   highs.changeRowBounds(1, -inf, 3);
@@ -712,8 +713,4 @@ TEST_CASE("AlienBasis-singular-basis", "[highs_test_alien_basis]") {
   basic_variables.resize(lp.num_row_);
   return_status = highs.getBasicVariables(&basic_variables[0]);
   REQUIRE(return_status == HighsStatus::kError);
-  
-  highs.run();
-  if (dev_run) highs.writeSolution("", 1);
-  
 }
