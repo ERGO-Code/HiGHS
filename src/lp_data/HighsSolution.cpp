@@ -1172,6 +1172,15 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   return HighsStatus::kOk;
 }
 
+HighsStatus formSimplexLpBasisAndFactorReturn(const HighsStatus return_status,
+					      HighsLpSolverObject& solver_object) {
+  HighsLp& lp = solver_object.lp_;
+  HighsLp& ekk_lp = solver_object.ekk_instance_.lp_;
+  if (lp.is_moved_)
+    lp.moveBackLpAndUnapplyScaling(ekk_lp);
+  return return_status;
+}
+
 HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
                                         const bool only_from_known_basis) {
   // Ideally, forms a SimplexBasis from the HighsBasis in the

@@ -6,7 +6,7 @@
 #include "util/HighsRandom.h"
 
 const double inf = kHighsInf;
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 void testAlienBasis(const bool avgas, const HighsInt seed);
@@ -676,4 +676,44 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
+}
+
+TEST_CASE("AlienBasis-singular-basis", "[highs_test_alien_basis]") {
+  HighsStatus return_status;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {3, 2};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 3, 1};
+  lp.sense_ = ObjSense::kMinimize;
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  if (dev_run) highs.setOptionValue("log_dev_level", 3);
+  highs.passModel(lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  HighsBasis basis = highs.getBasis();
+  highs.changeCoeff(1, 0, 1);
+  highs.changeCoeff(1, 1, 3);
+  highs.changeRowBounds(1, -inf, 3);
+  // Pass the basis - circumventing the internal setting of
+  // basis_.alien - and try to get the corresponding internal basic
+  // variables. INVERT will fail due to singularity, with no provision
+  // for basis changes to achieve non-singularity, so an error is
+  // returned.
+  highs.setBasis(basis);
+  std::vector<HighsInt> basic_variables;
+  basic_variables.resize(lp.num_row_);
+  return_status = highs.getBasicVariables(&basic_variables[0]);
+  REQUIRE(return_status == HighsStatus::kError);
+  
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  
 }

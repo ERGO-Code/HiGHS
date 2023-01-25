@@ -728,9 +728,21 @@ void Highs::changeCoefficientInterface(const HighsInt ext_row,
                             zero_new_value);
   // Deduce the consequences of a changed element
   //
-  // ToDo: Can do something more intelligent if element is in nonbasic column.
-  // Otherwise, treat it as if it's a new row
+  // ToDo: Can do something more intelligent if element is in nonbasic
+  // column
+  //
+  const bool basic_column =
+      this->basis_.col_status[ext_col] == HighsBasisStatus::kBasic;
+  //
+  // For now, treat it as if it's a new row
   invalidateModelStatusSolutionAndInfo();
+
+  if (basic_column) {
+    // Basis is retained, but is has to be viewed as alien, since the
+    // basis matrix has changed
+    this->basis_.was_alien = true;
+    this->basis_.alien = true;
+  }
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewRows);

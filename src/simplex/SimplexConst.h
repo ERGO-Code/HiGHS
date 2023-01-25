@@ -166,7 +166,10 @@ const double kMinDualSteepestEdgeWeight = 1e-4;
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 
-const double minDualSteepestEdgeWeight = 1e-4;
+// Switch to use code to check that, unless the basis supplied by the
+// MIP solver was alien, the simplex solver starts from dual
+// feasibility.
+const bool kDebugMipNodeDualFeasible = false;
 
 enum class LpAction {
   kScale = 0,
