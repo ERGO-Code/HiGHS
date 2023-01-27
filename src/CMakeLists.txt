@@ -767,9 +767,6 @@ if (UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
 endif()
 
-# set_target_properties(highs PROPERTIES INSTALL_RPATH
-#     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
 endif()
 
 if(FORTRAN_FOUND)
@@ -808,7 +805,7 @@ else()
 target_link_libraries(libhighs Threads::Threads)
 endif()
 
-if (CMAKE_TARGETS)
+if (FAST_BUILD AND CMAKE_TARGETS)
     # Add library targets to the build-tree export set
     export(TARGETS highs
         FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
