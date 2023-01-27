@@ -1,3 +1,5 @@
+if (FAST_BUILD)
+
 # create highs binary using library without pic
 add_executable(highs-bin)
 
@@ -21,3 +23,26 @@ target_link_libraries(highs-bin highs)
 # install the binary
 install(TARGETS highs-bin EXPORT highs-targets
         RUNTIME)
+else()
+
+# create highs binary using library without pic
+add_executable(highs)
+
+target_sources(highs PRIVATE RunHighs.cpp)
+
+if (UNIX)
+        target_compile_options(highs PUBLIC "-Wno-unused-variable")
+        target_compile_options(highs PUBLIC "-Wno-unused-const-variable")
+endif()
+
+target_link_libraries(highs libhighs)
+
+target_include_directories(highs PRIVATE
+        $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>  
+        )
+
+# install the binary
+install(TARGETS highs EXPORT highs-targets
+        RUNTIME)
+
+endif()

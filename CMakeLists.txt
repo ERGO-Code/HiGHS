@@ -95,8 +95,6 @@ if(BUILD_SHARED_LIBS AND MSVC)
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
-# Disable CTest targets
-# set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1)
 include(CTest)
 
 option(FAST_BUILD "Fast build: " OFF)
@@ -162,6 +160,19 @@ if(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
 endif()
 
 set(CMAKE_MACOSX_RPATH ON)
+if (NOT FAST_BUILD)
+
+# set the correct rpath for OS X
+set(CMAKE_MACOSX_RPATH ON)
+
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+endif()
+
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
     "#include <immintrin.h>
@@ -464,11 +475,11 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # Targets
 enable_testing()
-add_subdirectory(src)
 add_subdirectory(app)
 if(BUILD_TESTING)
     add_subdirectory(check)
 endif()
+add_subdirectory(src)
 
 else(FAST_BUILD)
 
@@ -572,108 +583,108 @@ option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
 add_subdirectory(app)
 
 
-# check/ not added here, instead define fewer tests:
-# build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
-if (NOT JULIA)
-    enable_testing()
-endif()
+# # check/ not added here, instead define fewer tests:
+# # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
+# if (NOT JULIA)
+#     enable_testing()
+# endif()
 
-# Check whether targets build OK.
-add_test(NAME highs-lib-build
-         COMMAND ${CMAKE_COMMAND}
-                 --build ${HIGHS_BINARY_DIR}
-                 --target highs
-                 --config ${CMAKE_BUILD_TYPE}
-         )
+# # Check whether targets build OK.
+# add_test(NAME highs-lib-build
+#          COMMAND ${CMAKE_COMMAND}
+#                  --build ${HIGHS_BINARY_DIR}
+#                  --target highs
+#                  --config ${CMAKE_BUILD_TYPE}
+#          )
 
-set_tests_properties(highs-lib-build
-                     PROPERTIES
-                     RESOURCE_LOCK highs)
+# set_tests_properties(highs-lib-build
+#                      PROPERTIES
+#                      RESOURCE_LOCK highs)
 
-add_test(NAME highs-exe-build
-         COMMAND ${CMAKE_COMMAND}
-                 --build ${HIGHS_BINARY_DIR}
-                 --target highs-bin
-                 --config ${CMAKE_BUILD_TYPE}
-         )
+# add_test(NAME highs-exe-build
+#          COMMAND ${CMAKE_COMMAND}
+#                  --build ${HIGHS_BINARY_DIR}
+#                  --target highs-bin
+#                  --config ${CMAKE_BUILD_TYPE}
+#          )
 
-set_tests_properties(highs-exe-build
-                     PROPERTIES
-                     RESOURCE_LOCK highs)
+# set_tests_properties(highs-exe-build
+#                      PROPERTIES
+#                      RESOURCE_LOCK highs)
 
-set(successInstances
-    "25fv47\;2888\; 5.5018458883\;"
-    "80bau3b\;3760\; 9.8722419241\;"
-    "greenbea\;5249\;-7.2555248130\;")
+# set(successInstances
+#     "25fv47\;2888\; 5.5018458883\;"
+#     "80bau3b\;3760\; 9.8722419241\;"
+#     "greenbea\;5249\;-7.2555248130\;")
 
-set(optionsInstances
-    "adlittle\;74\; 2.2549496316\;")
+# set(optionsInstances
+#     "adlittle\;74\; 2.2549496316\;")
 
-set(infeasibleInstances
-    "bgetam\;        infeasible")
+# set(infeasibleInstances
+#     "bgetam\;        infeasible")
 
-set(unboundedInstances
-     "gas11\;         unbounded")
+# set(unboundedInstances
+#      "gas11\;         unbounded")
 
-# define settings
-set(settings
-    ""
-    "--presolve=off"
-    "--parallel=on")
+# # define settings
+# set(settings
+#     ""
+#     "--presolve=off"
+#     "--parallel=on")
 
-# define function to add tests
-# More Modern CMake: avoid macros if you can
-function(add_instance_tests instances solutionstatus setting)
-# loop over the instances
-foreach(instance ${${instances}})
-    # add default tests
-    # treat the instance as a tuple (list) of two values
-    list(GET instance 0 name)
-    list(GET instance 1 iter)
+# # define function to add tests
+# # More Modern CMake: avoid macros if you can
+# function(add_instance_tests instances solutionstatus setting)
+# # loop over the instances
+# foreach(instance ${${instances}})
+#     # add default tests
+#     # treat the instance as a tuple (list) of two values
+#     list(GET instance 0 name)
+#     list(GET instance 1 iter)
 
-    if(${solutionstatus} STREQUAL "Optimal")
-        list(GET instance 2 optval)
-    endif()
+#     if(${solutionstatus} STREQUAL "Optimal")
+#         list(GET instance 2 optval)
+#     endif()
 
-    # specify the instance and the settings load command
-    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+#     # specify the instance and the settings load command
+#     set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
-    add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
-            ${inst})
+#     add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+#             ${inst})
 
-    set_tests_properties (${name}${setting} PROPERTIES
-            DEPENDS unit_tests_all)
-    set_tests_properties (${name}${setting} PROPERTIES
-            PASS_REGULAR_EXPRESSION
-            "Model   status      : ${solutionstatus}")
+#     set_tests_properties (${name}${setting} PROPERTIES
+#             DEPENDS unit_tests_all)
+#     set_tests_properties (${name}${setting} PROPERTIES
+#             PASS_REGULAR_EXPRESSION
+#             "Model   status      : ${solutionstatus}")
 
-    if(${solutionstatus} STREQUAL "Optimal")
-        if("${setting}" STREQUAL "--presolve=off")
-            set_tests_properties (${name}${setting} PROPERTIES
-                    PASS_REGULAR_EXPRESSION
-                    "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
-        else()
-            set_tests_properties (${name}${setting} PROPERTIES
-                    PASS_REGULAR_EXPRESSION
-                    "Objective value     : ${optval}")
-        endif()
-    endif()
-endforeach(instance)
+#     if(${solutionstatus} STREQUAL "Optimal")
+#         if("${setting}" STREQUAL "--presolve=off")
+#             set_tests_properties (${name}${setting} PROPERTIES
+#                     PASS_REGULAR_EXPRESSION
+#                     "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
+#         else()
+#             set_tests_properties (${name}${setting} PROPERTIES
+#                     PASS_REGULAR_EXPRESSION
+#                     "Objective value     : ${optval}")
+#         endif()
+#     endif()
+# endforeach(instance)
 
-endfunction()
+# endfunction()
 
-if (NOT JULIA)
-    # add tests for success and fail instances
-    add_instance_tests(successInstances "Optimal" "")
-    add_instance_tests(failInstances "Fail" "")
-    add_instance_tests(infeasibleInstances "Infeasible" "")
-#    add_instance_tests(unboundedInstances "Unbounded" "")
-    set(settings ${settings} "--solver=ipm")
+# if (NOT JULIA)
+#     # add tests for success and fail instances
+#     add_instance_tests(successInstances "Optimal" "")
+#     add_instance_tests(failInstances "Fail" "")
+#     add_instance_tests(infeasibleInstances "Infeasible" "")
+# #    add_instance_tests(unboundedInstances "Unbounded" "")
+#     set(settings ${settings} "--solver=ipm")
 
-    foreach(setting ${settings})
-        add_instance_tests(optionsInstances "Optimal" ${setting})
-    endforeach()
-endif()
+#     foreach(setting ${settings})
+#         add_instance_tests(optionsInstances "Optimal" ${setting})
+#     endforeach()
+# endif()
 
 if (EXP)
     add_executable(doctest)
@@ -698,11 +709,3 @@ endif()
 
 
 endif()
-
-# # Comment out for scaffold/ tests
-# add_subdirectory(scaffold)
-
-# # Only needed if it defines a target like a main executable. For methods stick
-# # to header-only.
-# add_subdirectory(dev_presolve)
-

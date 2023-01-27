@@ -305,26 +305,26 @@ set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
     ${ipx_headers})
 set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
 
-add_library(highs ${sources})
+add_library(libhighs ${sources})
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
-    set_target_properties(highs PROPERTIES
+    set_target_properties(libhighs PROPERTIES
         VERSION
         ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
     if(MINGW)
-        target_compile_definitions(highs PUBLIC highs_STATIC_DEFINE)
+        target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
     endif()
 else()
     # create static highs library with pic
-    set_target_properties(highs PROPERTIES
+    set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
-    target_compile_definitions(highs PUBLIC highs_STATIC_DEFINE)
+    target_compile_definitions(libhighs PUBLIC LIBHIGHS_STATIC_DEFINE)
 endif()
 
 # on UNIX system the 'lib' prefix is automatically added
-set_target_properties(highs PROPERTIES
+set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
@@ -333,7 +333,7 @@ if (OSI_FOUND)
     set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
 
     target_include_directories(OsiHighs PUBLIC ${OSI_INCLUDE_DIRS})
-    target_link_libraries(OsiHighs PUBLIC highs ${OSI_LIBRARIES})
+    target_link_libraries(OsiHighs PUBLIC libhighs ${OSI_LIBRARIES})
     target_compile_options(OsiHighs PUBLIC ${OSI_CFLAGS_OTHER})
 
     if(${BUILD_SHARED_LIBS})
@@ -362,12 +362,12 @@ if (OSI_FOUND)
 endif()
 
 if (ZLIB_FOUND)
-  target_link_libraries(highs ZLIB::ZLIB)
+  target_link_libraries(libhighs ZLIB::ZLIB)
   set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
 endif()
 
 # set the install rpath to the installed destination
-set_target_properties(highs PROPERTIES INSTALL_RPATH
+set_target_properties(libhighs PROPERTIES INSTALL_RPATH
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
@@ -383,10 +383,10 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDED
 if (UNIX)
     #target_compile_options(highs PRIVATE "-Wno-defaulted-function-deleted")
     #target_compile_options(highs PRIVATE "-Wno-return-type-c-linkage")
-    target_compile_options(highs PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    target_compile_options(highs PRIVATE "-Wno-unused-variable")
-    target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
     #target_compile_options(highs PRIVATE "-Wno-sign-compare")
     #target_compile_options(highs PRIVATE "-Wno-logical-op-parentheses")
 
@@ -399,14 +399,14 @@ if (UNIX)
     #target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
 endif()
 
-install(TARGETS highs EXPORT highs-targets
+install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE
     RUNTIME
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 # Add library targets to the build-tree export set
-export(TARGETS highs
+export(TARGETS libhighs
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 # Configure the config file for the build tree:
@@ -446,7 +446,7 @@ else()
 add_library(highs)
 
 set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_definitions(highs PUBLIC highs_STATIC_DEFINE)
+target_compile_definitions(highs PUBLIC LIBHIGHS_STATIC_DEFINE)
 
 
 if(${BUILD_SHARED_LIBS})
@@ -776,7 +776,7 @@ if(FORTRAN_FOUND)
     set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
     add_library(FortranHighs interfaces/highs_fortran_api.f90)
-    target_link_libraries(FortranHighs PUBLIC highs)
+    target_link_libraries(FortranHighs PUBLIC libhighs)
     install(TARGETS FortranHighs
         LIBRARY
         ARCHIVE
@@ -802,11 +802,15 @@ else()
 endif()
 
 find_package(Threads REQUIRED)
+if (FAST_BUILD)
 target_link_libraries(highs Threads::Threads)
+else()
+target_link_libraries(libhighs Threads::Threads)
+endif()
 
 if (CMAKE_TARGETS)
     # Add library targets to the build-tree export set
-    export(TARGETS highs
+    export(TARGETS libhighs
         FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
     # Configure the config file for the build tree:

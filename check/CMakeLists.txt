@@ -67,7 +67,7 @@ if (UNIX)
     target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
     target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
 endif()
-target_link_libraries(unit_tests highs Catch)
+target_link_libraries(unit_tests libhighs Catch)
 
 if (OSI_FOUND AND BUILD_TESTING)
     pkg_check_modules(OSITEST osi-unittests)
@@ -84,14 +84,14 @@ if(FORTRAN_FOUND)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
    include_directories(${HIGHS_SOURCE_DIR}/src)
    add_executable(fortrantest TestFortranAPI.f90)
-   target_link_libraries(fortrantest highs FortranHighs)
+   target_link_libraries(fortrantest libhighs FortranHighs)
    target_include_directories(fortrantest PUBLIC ${HIGHS_SOURCE_DIR}/src/interfaces)
  else()
  endif(FORTRAN_FOUND)
 
 # check the C API
 add_executable(capi_unit_tests TestCAPI.c)
-target_link_libraries(capi_unit_tests highs)
+target_link_libraries(capi_unit_tests libhighs)
 add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
 # Check whether test executable builds OK.
