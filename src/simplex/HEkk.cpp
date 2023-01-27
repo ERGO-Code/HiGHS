@@ -1205,8 +1205,12 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   //
-  // The basis should be dual faeible unless it's alien
-  debug_dual_feasible = !highs_basis.was_alien;
+  if (kDebugMipNodeDualFeasible) {
+    // The basis should be dual feasible unless it was alien
+    debug_dual_feasible = !highs_basis.was_alien;
+  } else {
+    assert(!debug_dual_feasible);
+  }
   HighsOptions& options = *options_;
   if (debugHighsBasisConsistent(options, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {

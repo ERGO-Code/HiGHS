@@ -1172,6 +1172,14 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   return HighsStatus::kOk;
 }
 
+HighsStatus formSimplexLpBasisAndFactorReturn(
+    const HighsStatus return_status, HighsLpSolverObject& solver_object) {
+  HighsLp& lp = solver_object.lp_;
+  HighsLp& ekk_lp = solver_object.ekk_instance_.lp_;
+  if (lp.is_moved_) lp.moveBackLpAndUnapplyScaling(ekk_lp);
+  return return_status;
+}
+
 HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
                                         const bool only_from_known_basis) {
   // Ideally, forms a SimplexBasis from the HighsBasis in the
@@ -1215,17 +1223,19 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
     HighsStatus call_status = ekk_instance.setBasis(basis);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "setBasis");
-    if (return_status == HighsStatus::kError) return return_status;
+    if (return_status == HighsStatus::kError)
+      return formSimplexLpBasisAndFactorReturn(return_status, solver_object);
   }
   // Now form the invert
   assert(ekk_status.has_basis);
   call_status =
       ekk_instance.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
-  if (call_status != HighsStatus::kOk) return HighsStatus::kError;
-  // Once the invert is formed, move back the LP and remove any scaling.
-  lp.moveBackLpAndUnapplyScaling(ekk_lp);
   // If the current basis cannot be inverted, return an error
-  return HighsStatus::kOk;
+  if (call_status != HighsStatus::kOk)
+    return formSimplexLpBasisAndFactorReturn(HighsStatus::kError,
+                                             solver_object);
+  // Once the invert is formed, move back the LP and remove any scaling.
+  return formSimplexLpBasisAndFactorReturn(HighsStatus::kOk, solver_object);
 }
 
 void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
