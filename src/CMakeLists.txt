@@ -747,14 +747,14 @@ set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_header
 #     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 # install the header files of highs
-# foreach ( file ${headers_fast_build_} )
-#     get_filename_component( dir ${file} DIRECTORY )
-#     if ( NOT dir STREQUAL "" )
-#         string( REPLACE ../extern/ "" dir ${dir} )
-#     endif ()
-#     install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
-# endforeach()
-# install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+foreach ( file ${headers_fast_build_} )
+    get_filename_component( dir ${file} DIRECTORY )
+    if ( NOT dir STREQUAL "" )
+        string( REPLACE ../extern/ "" dir ${dir} )
+    endif ()
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
+endforeach()
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 # target_compile_options(highs PRIVATE "-Wall")
@@ -762,10 +762,10 @@ set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_header
 
 target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
-# if (UNIX)
-#     target_compile_options(highs PRIVATE "-Wno-unused-variable")
-#     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
-# endif()
+if (UNIX)
+    target_compile_options(highs PRIVATE "-Wno-unused-variable")
+    target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+endif()
 
 # set_target_properties(highs PROPERTIES INSTALL_RPATH
 #     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
