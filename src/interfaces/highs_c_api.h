@@ -225,21 +225,21 @@ const char* Highs_version(void);
  *
  * @returns the HiGHS major version number
  */
-HighsInt Highs_version_major();
+HighsInt Highs_versionMajor();
 
 /**
  * Return the HiGHS minor version number
  *
  * @returns the HiGHS minor version number
  */
-HighsInt Highs_version_minor();
+HighsInt Highs_versionMinor();
 
 /**
  * Return the HiGHS patch version number
  *
  * @returns the HiGHS patch version number
  */
-HighsInt Highs_version_patch();
+HighsInt Highs_versionPatch();
 
 /**
  * Return the HiGHS githash
@@ -253,7 +253,7 @@ const char* Highs_githash(void);
  *
  * @returns the HiGHS compilation date
  */
-const char* Highs_compilation_date(void);
+const char* Highs_compilationDate(void);
 
 /**
  * Read a model from `filename` into `highs`.

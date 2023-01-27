@@ -177,16 +177,16 @@ const char* Highs_version(void) {
   return version.c_str();
 }
 
-HighsInt Highs_version_major() { return highsVersionMajor(); }
-HighsInt Highs_version_minor() { return highsVersionMinor(); }
-HighsInt Highs_version_patch() { return highsVersionPatch(); }
+HighsInt Highs_versionMajor() { return highsVersionMajor(); }
+HighsInt Highs_versionMinor() { return highsVersionMinor(); }
+HighsInt Highs_versionPatch() { return highsVersionPatch(); }
 
 const char* Highs_githash() {
   static std::string githash = highsGithash();
   return githash.c_str();
 }
 
-const char* Highs_compilation_date() {
+const char* Highs_compilationDate() {
   static std::string compilation_date = highsCompilationDate();
   return compilation_date.c_str();
 }
