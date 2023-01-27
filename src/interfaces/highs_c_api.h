@@ -246,14 +246,14 @@ HighsInt Highs_version_patch();
  *
  * @returns the HiGHS githash
  */
-const char* Highs_githash();
+const char* Highs_githash(void);
 
 /**
  * Return the HiGHS compilation date
  *
  * @returns the HiGHS compilation date
  */
-const char* Highs_compilation_date();
+const char* Highs_compilation_date(void);
 
 /**
  * Read a model from `filename` into `highs`.
