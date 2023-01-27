@@ -34,4 +34,4 @@ jobs:
             -o c_example \
             -I installs/highs/include/highs \
             -L installs/highs/lib -lhighs
-          LD_LIBRARY_PATH=install/lib ./c_example
+          LD_LIBRARY_PATH=installs/lib ./c_example
