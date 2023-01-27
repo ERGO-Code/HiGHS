@@ -34,18 +34,17 @@
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
 
-std::string highsVersion() {
-  std::stringstream ss;
-  ss << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
-     << HIGHS_VERSION_PATCH;
-  return ss.str();
+#define STRINGFY(s) STRINGFY0(s)
+#define STRINGFY0(s) #s
+const char* highsVersion() {
+  return STRINGFY(HIGHS_VERSION_MAJOR) "." STRINGFY(
+      HIGHS_VERSION_MINOR) "." STRINGFY(HIGHS_VERSION_PATCH);
 }
-
 HighsInt highsVersionMajor() { return HIGHS_VERSION_MAJOR; }
 HighsInt highsVersionMinor() { return HIGHS_VERSION_MINOR; }
 HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
-std::string highsGithash() { return HIGHS_GITHASH; }
-std::string highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
+const char* highsGithash() { return HIGHS_GITHASH; }
+const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 
 Highs::Highs() {}
 
