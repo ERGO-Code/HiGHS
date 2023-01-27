@@ -297,147 +297,147 @@ write_basic_package_version_file(
 # endfunction()
 
 
-# set(headers_fast_build_
-#     ${PROJECT_SOURCE_DIR}/extern/filereaderlp/builder.hpp
-#     ${PROJECT_SOURCE_DIR}/extern/filereaderlp/model.hpp
-#     ${PROJECT_SOURCE_DIR}/extern/filereaderlp/reader.hpp
-#     ${PROJECT_SOURCE_DIR}/src/io/Filereader.h
-#     ${PROJECT_SOURCE_DIR}/src/io/FilereaderLp.h
-#     ${PROJECT_SOURCE_DIR}/src/io/FilereaderEms.h
-#     ${PROJECT_SOURCE_DIR}/src/io/FilereaderMps.h
-#     ${PROJECT_SOURCE_DIR}/src/io/HMpsFF.h
-#     ${PROJECT_SOURCE_DIR}/src/io/HMPSIO.h
-#     ${PROJECT_SOURCE_DIR}/src/io/HighsIO.h
-#     ${PROJECT_SOURCE_DIR}/src/io/LoadOptions.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HConst.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HStruct.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsAnalysis.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsDebug.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsInfo.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsInfoDebug.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsLp.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsLpSolverObject.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsLpUtils.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsModelUtils.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsOptions.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsRanging.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsRuntimeOptions.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsSolution.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsSolutionDebug.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsSolve.h
-#     ${PROJECT_SOURCE_DIR}/src/lp_data/HighsStatus.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsCliqueTable.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsCutGeneration.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsConflictPool.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsCutPool.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsDebugSol.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsDomainChange.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsDomain.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsDynamicRowMatrix.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsGFkSolve.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsImplications.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsLpAggregator.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsLpRelaxation.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsMipSolverData.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsMipSolver.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsModkSeparator.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsNodeQueue.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsObjectiveFunction.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsPathSeparator.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsPrimalHeuristics.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsPseudocost.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsRedcostFixing.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsSearch.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsSeparation.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsSeparator.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsTableauSeparator.h
-#     ${PROJECT_SOURCE_DIR}/src/mip/HighsTransformedLp.h
-#     ${PROJECT_SOURCE_DIR}/src/model/HighsHessian.h
-#     ${PROJECT_SOURCE_DIR}/src/model/HighsHessianUtils.h
-#     ${PROJECT_SOURCE_DIR}/src/model/HighsModel.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsBinarySemaphore.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsCacheAlign.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsCombinable.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsMutex.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsParallel.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsRaceTimer.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsSchedulerConstants.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsSpinMutex.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsSplitDeque.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsTaskExecutor.h
-#     ${PROJECT_SOURCE_DIR}/src/parallel/HighsTask.h
-#     ${PROJECT_SOURCE_DIR}/src/qpsolver/quass.hpp
-#     ${PROJECT_SOURCE_DIR}/src/qpsolver/vector.hpp
-#     ${PROJECT_SOURCE_DIR}/src/qpsolver/scaling.hpp
-#     ${PROJECT_SOURCE_DIR}/src/qpsolver/perturbation.hpp
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HApp.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HEkk.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HEkkDual.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HEkkDualRHS.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HEkkDualRow.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HEkkPrimal.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HighsSimplexAnalysis.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HSimplex.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HSimplexReport.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HSimplexDebug.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/HSimplexNla.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/SimplexConst.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/SimplexStruct.h
-#     ${PROJECT_SOURCE_DIR}/src/simplex/SimplexTimer.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/ICrash.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/ICrashUtil.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/ICrashX.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/HighsPostsolveStack.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/HighsSymmetry.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/HPresolve.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/HPresolveAnalysis.h
-#     ${PROJECT_SOURCE_DIR}/src/presolve/PresolveComponent.h
-#     ${PROJECT_SOURCE_DIR}/src/test/DevKkt.h
-#     ${PROJECT_SOURCE_DIR}/src/test/KktCh2.h
-#     ${PROJECT_SOURCE_DIR}/src/util/FactorTimer.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HFactor.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HFactorConst.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HFactorDebug.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsCDouble.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsComponent.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsDataStack.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsDisjointSets.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsHash.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsHashTree.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsInt.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsIntegers.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsLinearSumBounds.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsMatrixPic.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsMatrixSlice.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsMatrixUtils.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsRandom.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsRbTree.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsSort.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsSparseMatrix.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsSparseVectorSum.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsSplay.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsTimer.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HighsUtils.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HSet.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HVector.h
-#     ${PROJECT_SOURCE_DIR}/src/util/HVectorBase.h
-#     ${PROJECT_SOURCE_DIR}/src/util/stringutil.h
-#     ${PROJECT_SOURCE_DIR}/src/Highs.h
-#     ${PROJECT_SOURCE_DIR}/src/interfaces/highs_c_api.h
-# )
+set(headers_fast_build_
+   extern/filereaderlp/builder.hpp
+   extern/filereaderlp/model.hpp
+   extern/filereaderlp/reader.hpp
+   src/io/Filereader.h
+   src/io/FilereaderLp.h
+   src/io/FilereaderEms.h
+   src/io/FilereaderMps.h
+   src/io/HMpsFF.h
+   src/io/HMPSIO.h
+   src/io/HighsIO.h
+   src/io/LoadOptions.h
+   src/lp_data/HConst.h
+   src/lp_data/HStruct.h
+   src/lp_data/HighsAnalysis.h
+   src/lp_data/HighsDebug.h
+   src/lp_data/HighsInfo.h
+   src/lp_data/HighsInfoDebug.h
+   src/lp_data/HighsLp.h
+   src/lp_data/HighsLpSolverObject.h
+   src/lp_data/HighsLpUtils.h
+   src/lp_data/HighsModelUtils.h
+   src/lp_data/HighsOptions.h
+   src/lp_data/HighsRanging.h
+   src/lp_data/HighsRuntimeOptions.h
+   src/lp_data/HighsSolution.h
+   src/lp_data/HighsSolutionDebug.h
+   src/lp_data/HighsSolve.h
+   src/lp_data/HighsStatus.h
+   src/mip/HighsCliqueTable.h
+   src/mip/HighsCutGeneration.h
+   src/mip/HighsConflictPool.h
+   src/mip/HighsCutPool.h
+   src/mip/HighsDebugSol.h
+   src/mip/HighsDomainChange.h
+   src/mip/HighsDomain.h
+   src/mip/HighsDynamicRowMatrix.h
+   src/mip/HighsGFkSolve.h
+   src/mip/HighsImplications.h
+   src/mip/HighsLpAggregator.h
+   src/mip/HighsLpRelaxation.h
+   src/mip/HighsMipSolverData.h
+   src/mip/HighsMipSolver.h
+   src/mip/HighsModkSeparator.h
+   src/mip/HighsNodeQueue.h
+   src/mip/HighsObjectiveFunction.h
+   src/mip/HighsPathSeparator.h
+   src/mip/HighsPrimalHeuristics.h
+   src/mip/HighsPseudocost.h
+   src/mip/HighsRedcostFixing.h
+   src/mip/HighsSearch.h
+   src/mip/HighsSeparation.h
+   src/mip/HighsSeparator.h
+   src/mip/HighsTableauSeparator.h
+   src/mip/HighsTransformedLp.h
+   src/model/HighsHessian.h
+   src/model/HighsHessianUtils.h
+   src/model/HighsModel.h
+   src/parallel/HighsBinarySemaphore.h
+   src/parallel/HighsCacheAlign.h
+   src/parallel/HighsCombinable.h
+   src/parallel/HighsMutex.h
+   src/parallel/HighsParallel.h
+   src/parallel/HighsRaceTimer.h
+   src/parallel/HighsSchedulerConstants.h
+   src/parallel/HighsSpinMutex.h
+   src/parallel/HighsSplitDeque.h
+   src/parallel/HighsTaskExecutor.h
+   src/parallel/HighsTask.h
+   src/qpsolver/quass.hpp
+   src/qpsolver/vector.hpp
+   src/qpsolver/scaling.hpp
+   src/qpsolver/perturbation.hpp
+   src/simplex/HApp.h
+   src/simplex/HEkk.h
+   src/simplex/HEkkDual.h
+   src/simplex/HEkkDualRHS.h
+   src/simplex/HEkkDualRow.h
+   src/simplex/HEkkPrimal.h
+   src/simplex/HighsSimplexAnalysis.h
+   src/simplex/HSimplex.h
+   src/simplex/HSimplexReport.h
+   src/simplex/HSimplexDebug.h
+   src/simplex/HSimplexNla.h
+   src/simplex/SimplexConst.h
+   src/simplex/SimplexStruct.h
+   src/simplex/SimplexTimer.h
+   src/presolve/ICrash.h
+   src/presolve/ICrashUtil.h
+   src/presolve/ICrashX.h
+   src/presolve/HighsPostsolveStack.h
+   src/presolve/HighsSymmetry.h
+   src/presolve/HPresolve.h
+   src/presolve/HPresolveAnalysis.h
+   src/presolve/PresolveComponent.h
+   src/test/DevKkt.h
+   src/test/KktCh2.h
+   src/util/FactorTimer.h
+   src/util/HFactor.h
+   src/util/HFactorConst.h
+   src/util/HFactorDebug.h
+   src/util/HighsCDouble.h
+   src/util/HighsComponent.h
+   src/util/HighsDataStack.h
+   src/util/HighsDisjointSets.h
+   src/util/HighsHash.h
+   src/util/HighsHashTree.h
+   src/util/HighsInt.h
+   src/util/HighsIntegers.h
+   src/util/HighsLinearSumBounds.h
+   src/util/HighsMatrixPic.h
+   src/util/HighsMatrixSlice.h
+   src/util/HighsMatrixUtils.h
+   src/util/HighsRandom.h
+   src/util/HighsRbTree.h
+   src/util/HighsSort.h
+   src/util/HighsSparseMatrix.h
+   src/util/HighsSparseVectorSum.h
+   src/util/HighsSplay.h
+   src/util/HighsTimer.h
+   src/util/HighsUtils.h
+   src/util/HSet.h
+   src/util/HVector.h
+   src/util/HVectorBase.h
+   src/util/stringutil.h
+   src/Highs.h
+   src/interfaces/highs_c_api.h
+)
 
-# set(headers_fast_build_ ${headers_fast_build_} ${PROJECT_SOURCE_DIR}/src/ipm/IpxWrapper.h ${basiclu_headers}
-#     ${ipx_headers})
+set(headers_fast_build_ ${headers_fast_build_} src/ipm/IpxWrapper.h ${basiclu_headers}
+    ${ipx_headers})
 
-# # install the header files of highs
-# foreach ( file ${headers_fast_build_} )
-#     get_filename_component( dir ${file} DIRECTORY )
-#     if ( NOT dir STREQUAL "" )
-#         string( REPLACE ${PROJECT_SOURCE_DIR}/extern/ "" dir ${dir} )
-#     endif ()
-#     install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
-# endforeach()
-# install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+# install the header files of highs
+foreach ( file ${headers_fast_build_} )
+    get_filename_component( dir ${file} DIRECTORY )
+    if ( NOT dir STREQUAL "" )
+        string( REPLACE ${PROJECT_SOURCE_DIR}/extern/ "" dir ${dir} )
+    endif ()
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs )
+endforeach()
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 # target_include_directories(highs PUBLIC
 #     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
