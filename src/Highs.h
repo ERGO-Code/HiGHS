@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file Highs.h
@@ -53,6 +51,36 @@ class Highs {
       fclose(log_file_stream);
     }
   }
+
+  /**
+   * @brief Return the version as a string
+   */
+  std::string version() const { return highsVersion(); }
+
+  /**
+   * @brief Return major version
+   */
+  HighsInt versionMajor() const { return highsVersionMajor(); }
+
+  /**
+   * @brief Return minor version
+   */
+  HighsInt versionMinor() const { return highsVersionMinor(); }
+
+  /**
+   * @brief Return patch version
+   */
+  HighsInt versionPatch() const { return highsVersionPatch(); }
+
+  /**
+   * @brief Return githash
+   */
+  std::string githash() const { return highsGithash(); }
+
+  /**
+   * @brief Return compilation date
+   */
+  std::string compilationDate() const { return highsCompilationDate(); }
 
   /**
    * @brief Reset the options and then call clearModel()
@@ -263,6 +291,8 @@ class Highs {
 #endif
 
   HighsStatus getInfoValue(const std::string& info, double& value) const;
+
+  HighsStatus getInfoType(const std::string& info, HighsInfoType& type) const;
 
   /**
    * @brief Write info values to a file, with the extension ".html"

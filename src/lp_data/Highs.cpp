@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/Highs.cpp
@@ -38,7 +36,7 @@
 
 std::string highsVersion() {
   std::stringstream ss;
-  ss << "v" << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
+  ss << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR << "."
      << HIGHS_VERSION_PATCH;
   return ss.str();
 }
@@ -196,8 +194,8 @@ HighsStatus Highs::writeOptions(const std::string& filename,
 
 HighsStatus Highs::getInfoValue(const std::string& info,
                                 HighsInt& value) const {
-  InfoStatus status =
-      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
+                                        info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {
@@ -209,8 +207,8 @@ HighsStatus Highs::getInfoValue(const std::string& info,
 
 #ifndef HIGHSINT64
 HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
-  InfoStatus status =
-      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
+                                        info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {
@@ -221,9 +219,17 @@ HighsStatus Highs::getInfoValue(const std::string& info, int64_t& value) const {
 }
 #endif
 
+HighsStatus Highs::getInfoType(const std::string& info,
+                               HighsInfoType& type) const {
+  if (getLocalInfoType(options_.log_options, info, info_.records, type) ==
+      InfoStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
-  InfoStatus status =
-      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
+                                        info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {

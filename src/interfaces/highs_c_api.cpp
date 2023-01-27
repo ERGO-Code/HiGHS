@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "highs_c_api.h"
@@ -350,6 +348,15 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
 HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
                                  int64_t* value) {
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
+}
+
+HighsInt Highs_getInfoType(const void* highs, const char* info,
+                           HighsInt* type) {
+  HighsInfoType t;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)->getInfoType(std::string(info), t);
+  *type = (HighsInt)t;
+  return retcode;
 }
 
 HighsInt Highs_getSolution(const void* highs, double* col_value,

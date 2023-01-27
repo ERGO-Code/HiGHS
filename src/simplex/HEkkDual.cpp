@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDual.cpp
@@ -74,6 +72,11 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   force_phase2 = pass_force_phase2 ||
                  info.max_dual_infeasibility * info.max_dual_infeasibility <
                      ekk_instance_.options_->dual_feasibility_tolerance;
+  // Within the MIP solver, unless the basis supplied was alien, the
+  // simplex solver should be able to start from dual feasibility, so
+  // possibly debug this property. Note that debug_dual_feasible is
+  // set in HEkk::setBasis, and is false if kDebugMipNodeDualFeasible
+  // is false
   if (ekk_instance_.debug_dual_feasible &&
       !dual_feasible_with_unperturbed_costs) {
     SimplexBasis& basis = ekk_instance_.basis_;

@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_C_API
@@ -639,6 +637,18 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
  */
 HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
                                  int64_t* value);
+
+/**
+ * Get the type expected by an info item.
+ *
+ * @param highs     a pointer to the Highs instance
+ * @param info      the name of the info item
+ * @param type      int in which the corresponding `kHighsOptionType` constant
+ *                  is stored
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
 
 /**
  * Get the primal and dual solution from an optimized model.

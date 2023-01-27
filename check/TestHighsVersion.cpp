@@ -13,7 +13,7 @@ TEST_CASE("HighsVersion", "[highs_version]") {
   const HighsInt minor = highsVersionMinor();
   const HighsInt patch = highsVersionPatch();
   std::stringstream ss;
-  ss << "v" << major << "." << minor << "." << patch;
+  ss << major << "." << minor << "." << patch;
   std::string local_version = ss.str();
   if (dev_run) {
     printf("HiGHS version: %s\n", version.c_str());
