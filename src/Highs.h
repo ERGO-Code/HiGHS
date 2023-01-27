@@ -24,9 +24,9 @@
 #include "presolve/PresolveComponent.h"
 
 /**
- * @brief Return the version as a string
+ * @brief Return the version
  */
-std::string highsVersion();
+const char* highsVersion();
 
 /**
  * @brief Return detailed version information, githash and compilation
@@ -35,8 +35,8 @@ std::string highsVersion();
 HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
-std::string highsGithash();
-std::string highsCompilationDate();
+const char* highsGithash();
+const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS

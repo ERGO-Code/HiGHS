@@ -172,24 +172,12 @@ void* Highs_create() { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
-const char* Highs_version(void) {
-  static std::string version = highsVersion();
-  return version.c_str();
-}
-
+const char* Highs_version(void) { return highsVersion(); }
 HighsInt Highs_versionMajor() { return highsVersionMajor(); }
 HighsInt Highs_versionMinor() { return highsVersionMinor(); }
 HighsInt Highs_versionPatch() { return highsVersionPatch(); }
-
-const char* Highs_githash() {
-  static std::string githash = highsGithash();
-  return githash.c_str();
-}
-
-const char* Highs_compilationDate() {
-  static std::string compilation_date = highsCompilationDate();
-  return compilation_date.c_str();
-}
+const char* Highs_githash(void) { return highsGithash(); }
+const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 
 HighsInt Highs_run(void* highs) { return (HighsInt)((Highs*)highs)->run(); }
 
