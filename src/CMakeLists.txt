@@ -810,7 +810,7 @@ endif()
 
 if (CMAKE_TARGETS)
     # Add library targets to the build-tree export set
-    export(TARGETS libhighs
+    export(TARGETS highs
         FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
     # Configure the config file for the build tree:
