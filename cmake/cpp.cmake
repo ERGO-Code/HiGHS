@@ -435,18 +435,18 @@ foreach ( file ${headers_fast_build_} )
     if ( NOT dir STREQUAL "" )
         string( REPLACE ${PROJECT_SOURCE_DIR}/extern/ "" dir ${dir} )
     endif ()
-    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 target_include_directories(highs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
     )
 
 target_include_directories(highs PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
