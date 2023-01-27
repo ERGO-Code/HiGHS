@@ -439,39 +439,39 @@ foreach ( file ${headers_fast_build_} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-# target_include_directories(highs PUBLIC
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
-#     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-#     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-#     )
+target_include_directories(highs PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>  
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+    )
 
-# target_include_directories(highs PRIVATE
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/parallel>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/qpsolver>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>  
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
-#     )
+target_include_directories(highs PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/parallel>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/qpsolver>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>  
+    )
 
-# target_include_directories(highs PRIVATE
-#     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
-#     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
-#     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
-#     )
+target_include_directories(highs PRIVATE
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
+    )
 
-# if (ZLIB_FOUND)
-#     target_include_directories(highs PRIVATE
-#     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
-#     )
-#     target_link_libraries(highs ZLIB::ZLIB)
-#     set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
-# endif()
+if (ZLIB_FOUND)
+    target_include_directories(highs PRIVATE
+    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
+    )
+    target_link_libraries(highs ZLIB::ZLIB)
+    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
+endif()
