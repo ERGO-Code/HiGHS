@@ -381,14 +381,14 @@ endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 if (UNIX)
-    #target_compile_options(highs PRIVATE "-Wno-defaulted-function-deleted")
-    #target_compile_options(highs PRIVATE "-Wno-return-type-c-linkage")
+    #target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    #target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
     target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
 
     target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
     target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
-    #target_compile_options(highs PRIVATE "-Wno-sign-compare")
-    #target_compile_options(highs PRIVATE "-Wno-logical-op-parentheses")
+    #target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+    #target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
 
     #target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
     #target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
