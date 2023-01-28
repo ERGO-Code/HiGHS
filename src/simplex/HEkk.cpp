@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkk.cpp
@@ -1207,8 +1205,12 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   //
-  // The basis should be dual faeible unless it's alien
-  debug_dual_feasible = !highs_basis.was_alien;
+  if (kDebugMipNodeDualFeasible) {
+    // The basis should be dual feasible unless it was alien
+    debug_dual_feasible = !highs_basis.was_alien;
+  } else {
+    assert(!debug_dual_feasible);
+  }
   HighsOptions& options = *options_;
   if (debugHighsBasisConsistent(options, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {

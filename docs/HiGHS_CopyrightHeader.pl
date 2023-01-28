@@ -5,10 +5,9 @@ $infile='';
 $CopyrightHeaderLine0 = "/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */";
 $CopyrightHeaderLine1 = "/*                                                                       */";
 $CopyrightHeaderLine2 = "/*    This file is part of the HiGHS linear optimization suite           */";
-$CopyrightHeaderLine3 = "/*    Written and engineered 2008-2022 at the University of Edinburgh    */";
-$CopyrightHeaderLine4 = "/*    Available as open-source under the MIT License                     */";
-$CopyrightHeaderLine5 = "/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */";
-$CopyrightHeaderLine6 = "/*    Feldmeier                                                          */";
+$CopyrightHeaderLine3 = "/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */";
+$CopyrightHeaderLine4 = "/*    Leona Gottwald and Michael Feldmeier                               */";
+$CopyrightHeaderLine5 = "/*    Available as open-source under the MIT License                     */";
 $RemoveCopyrightHeader = 0;
 while(<>) {
     if ($infile ne $ARGV) {
@@ -32,11 +31,9 @@ while(<>) {
 	print(outfile "$CopyrightHeaderLine2\n");
 	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine3\n");
-	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine4\n");
 	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine5\n");
-	print(outfile "$CopyrightHeaderLine6\n");
 	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine0\n");
 #

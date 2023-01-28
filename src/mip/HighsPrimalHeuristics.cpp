@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsPrimalHeuristics.h"
@@ -26,6 +24,16 @@
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
+// GCC floating point errors are well-known for 32-bit architectures;
+// see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=323.
+// An easy workaround is to add the "volatile" keyword to avoid
+// problematic GCC optimizations that impact precision.
+#ifdef __i386__
+#define FP_32BIT_VOLATILE volatile
+#else
+#define FP_32BIT_VOLATILE
+#endif
+
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lp_iterations(0),
@@ -40,24 +48,24 @@ void HighsPrimalHeuristics::setupIntCols() {
   intcols = mipsolver.mipdata_->integer_cols;
 
   pdqsort(intcols.begin(), intcols.end(), [&](HighsInt c1, HighsInt c2) {
-    double lockScore1 =
+    const FP_32BIT_VOLATILE double lockScore1 =
         (mipsolver.mipdata_->feastol + mipsolver.mipdata_->uplocks[c1]) *
         (mipsolver.mipdata_->feastol + mipsolver.mipdata_->downlocks[c1]);
 
-    double lockScore2 =
+    const FP_32BIT_VOLATILE double lockScore2 =
         (mipsolver.mipdata_->feastol + mipsolver.mipdata_->uplocks[c2]) *
         (mipsolver.mipdata_->feastol + mipsolver.mipdata_->downlocks[c2]);
 
     if (lockScore1 > lockScore2) return true;
     if (lockScore2 > lockScore1) return false;
 
-    double cliqueScore1 =
+    const FP_32BIT_VOLATILE double cliqueScore1 =
         (mipsolver.mipdata_->feastol +
          mipsolver.mipdata_->cliquetable.getNumImplications(c1, 1)) *
         (mipsolver.mipdata_->feastol +
          mipsolver.mipdata_->cliquetable.getNumImplications(c1, 0));
 
-    double cliqueScore2 =
+    const FP_32BIT_VOLATILE double cliqueScore2 =
         (mipsolver.mipdata_->feastol +
          mipsolver.mipdata_->cliquetable.getNumImplications(c2, 1)) *
         (mipsolver.mipdata_->feastol +

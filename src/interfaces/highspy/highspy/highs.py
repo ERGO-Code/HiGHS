@@ -7,6 +7,8 @@ from .highs_bindings import (
     HighsModelStatus,
     HighsBasisStatus,
     HighsVarType,
+    HighsOptionType,
+    HighsInfoType,
     HighsStatus,
     HighsLogType,
     CallbackTuple,

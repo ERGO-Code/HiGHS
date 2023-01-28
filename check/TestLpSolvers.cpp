@@ -221,11 +221,7 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
     model_iteration_count.simplex = simplex_strategy_iteration_count[i];
     testSolver(highs, "simplex", model_iteration_count, i);
   }
-  // Only use IPX with 32-bit arithmetic
-  // ToDo This is no longer true
-#ifndef HIGHSINT64
   testSolver(highs, "ipm", model_iteration_count);
-#endif
 }
 
 // No commas in test case name.
