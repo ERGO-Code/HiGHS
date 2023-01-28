@@ -306,7 +306,6 @@ set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
 set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
 
 add_library(libhighs ${sources})
-add_library(highs:libhighs ALIAS libhighs)
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -431,8 +430,7 @@ configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
 # cmake-projects can link easily against highs, and the pkg-config flie so that
 # other projects can easily build against highs
 install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
-    ${CMAKE_INSTALL_LIBDIR}/cmake/highs
-    NAMESPACE highs)
+    ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
@@ -833,8 +831,7 @@ if (FAST_BUILD AND CMAKE_TARGETS)
     # cmake-projects can link easily against highs, and the pkg-config flie so that
     # other projects can easily build against highs
     install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
-        ${CMAKE_INSTALL_LIBDIR}/cmake/highs
-        NAMESPACE highs)
+        ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
     install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
     install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
