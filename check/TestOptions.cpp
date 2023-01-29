@@ -5,7 +5,14 @@
 #include "io/HMPSIO.h"
 #include "io/LoadOptions.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
+
+TEST_CASE("external-options", "[highs_options]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsInt num_options = highs.getnumOptions();
+  if (dev_run) printf("Number of options is %d\n", int(num_options));
+}
 
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;

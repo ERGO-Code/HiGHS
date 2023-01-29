@@ -193,6 +193,44 @@ HighsStatus Highs::writeOptions(const std::string& filename,
 
 //HighsStatus Highs::getOptionType(const char* option, HighsOptionType* type) const { return getOptionType(option, type);}
 
+HighsStatus Highs::getOptionName(const HighsInt index, std::string* name) const {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getOptionType(const std::string& option,
+				 HighsOptionType* type) const {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getBoolOptionInfo(const std::string& option,
+				     bool* current_value,
+				     bool* default_value) const {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getIntOptionInfo(const std::string& option,
+				    HighsInt* current_value,
+				    HighsInt* min_value,
+				    HighsInt* max_value,
+				    HighsInt* default_value) const {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getDoubleOptionInfo(const std::string& option,
+				       double* current_value,
+				       double* min_value,
+				       double* max_value,
+				       double* default_value) const {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getStringOptionInfo(const std::string& option,
+				       std::string* current_value,
+				       std::string* default_value) const {
+  return HighsStatus::kError;
+}
+
+
 HighsStatus Highs::getInfoValue(const std::string& info,
                                 HighsInt& value) const {
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
