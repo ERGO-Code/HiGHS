@@ -15,7 +15,7 @@ set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-include(utils)
+include(utils-highs)
 set_version(VERSION)
 
 project(HIGHS VERSION ${VERSION} LANGUAGES CXX C)
@@ -574,7 +574,7 @@ add_subdirectory(examples/tests)
 
 # condition added to src/CMakeLists.txt
 # add_subdirectory(src)
-include(cpp)
+include(cpp-highs)
 
 option(JULIA "Build library and executable for Julia" OFF)
 option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
