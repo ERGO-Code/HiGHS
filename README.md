@@ -187,17 +187,17 @@ Interfaces
 Julia
 -----
 
-- A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
+A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
 
 Rust
 ----
 
-- HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
+HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
 
 R
 ------
 
-- An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
+An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
 
 Javascript
 ----------
@@ -208,6 +208,19 @@ Node.js
 -------
 
 HiGHS has a [native Node.js](https://www.npmjs.com/package/highs-solver) interface.
+
+C#
+--
+
+Here are observations on calling HiGHS from C#:
+
+- [highs_csharp_api.cs](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_csharp_api.cs) contains all the PInvoke you need. Copy it into your C# project.
+- Make sure that the native HiGHS library (highs.dll, libhighs.dll, libhighs.so, ... depending on your platform) can be found at runtime. How to do this is platform dependent, copying it next to your C# executable should work in most cases. You can use msbuild for that. At least on linux installing HiGHS system wide should work, too.
+- Make sure that all dependencies of the HiGHS library can be found, too. E.g. if HiGHS was build using Visual C++ make sure that the MSVCRuntime is installed on the machine you want to run your application on.
+- Depending on the name of your HiGHS library it might be necessary to change the constant "highslibname", see [cross-platform dotnet](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/cross-platform) if necessary.
+- Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
+
+This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
 
 Python
 ------
