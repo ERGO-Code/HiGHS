@@ -33,7 +33,7 @@ program fortrantest
   ! * The position in aindex/avalue of the index/value of the first
   ! nonzero in each column is stored in astart
   !
-  ! Note that astart[0] must be zero
+  ! Note that astart(1) must be zero
   !
   ! After a successful call to Highs_lpCall, the primal and dual
   ! solution, and the simplex basis are returned as follows
@@ -83,7 +83,7 @@ program fortrantest
   integer ( c_int ), parameter :: modelstatus_optimal = 7
   integer ( c_int ), parameter :: runstatus_error = -1
   integer ( c_int ), parameter :: runstatus_ok = 0
-  integer ( c_int ), parameter :: runstatus_warning = -1
+  integer ( c_int ), parameter :: runstatus_warning = 1
   ! For the full API test
   type ( c_ptr ) :: highs
   
@@ -170,6 +170,25 @@ program fortrantest
   rowupper(1) = 6.0
   rowupper(2) = 14.0
   rowupper(3) = inf
+
+  ! The definition of sparse matrices to be passed into the FORTRAN
+  ! interface is non-trivial, since the FORTRAN interface is a direct
+  ! bind to the C API: no execution (esp. conversion of data) at any
+  ! point. Hence FORTRAN users have to supply vectors that, when
+  ! indexed from 0, are standard for the C API.
+
+  ! Although the FORTRAN arrays in the example are indexed from 1 (of
+  ! course) note that the row indices in aindex are in the interval
+  ! [0, numrow-1]
+
+  ! For this example, aindex is indexed from 1 to 5, and contains [1 2
+  ! 0 1 2], referring to column 0 having entries in rows 1 and 2;
+  ! column 1 having entries in rows 0, 1 and 2
+
+  ! FORTRAN-wise, astart would naturally be [1 3], but it must
+  ! indicate the starts when aindex is indexed from 0 to 4 in C, so
+  ! the starts must have 1 subtracted from them from the values that
+  ! would be used in FORTRAN. Hence astart is [0 2]
   
   astart(1) = 0
   astart(2) = 2
