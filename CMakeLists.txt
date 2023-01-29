@@ -574,7 +574,7 @@ add_subdirectory(examples/tests)
 
 # condition added to src/CMakeLists.txt
 # add_subdirectory(src)
-include(cpp)
+include(cpp-highs)
 
 option(JULIA "Build library and executable for Julia" OFF)
 option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
