@@ -217,7 +217,7 @@ Here are observations on calling HiGHS from C#:
 - [highs_csharp_api.cs](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_csharp_api.cs) contains all the PInvoke you need. Copy it into your C# project.
 - Make sure that the native HiGHS library (highs.dll, libhighs.dll, libhighs.so, ... depending on your platform) can be found at runtime. How to do this is platform dependent, copying it next to your C# executable should work in most cases. You can use msbuild for that. At least on linux installing HiGHS system wide should work, too.
 - Make sure that all dependencies of the HiGHS library can be found, too. E.g. if HiGHS was build using Visual C++ make sure that the MSVCRuntime is installed on the machine you want to run your application on.
-- Depending on the name of your HiGHS library it might be necessary to change the constant "highslibname", see [cross-platform dotnet](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/cross-platform) if necessary.
+- Depending on the name of your HiGHS library it might be necessary to change the constant "highslibname", see [document](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/cross-platform) on writing cross platform P/Invoke code if necessary.
 - Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
 
 This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
