@@ -273,6 +273,27 @@ class Highs {
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
                            const bool report_only_deviations = false) const;
 
+  HighsInt getnumOptions() const;
+  HighsStatus getOptionName(const HighsInt index, std::string* name) const;
+  HighsStatus getOptionType(const std::string& option,
+                            HighsOptionType* type) const;
+  HighsStatus getBoolOptionInfo(const std::string& option,
+				bool* current_value = nullptr,
+				bool* default_value = nullptr) const;
+  HighsStatus getIntOptionInfo(const std::string& option,
+			       HighsInt* current_value = nullptr,
+			       HighsInt* min_value = nullptr,
+			       HighsInt* max_value = nullptr,
+			       HighsInt* default_value = nullptr) const;
+  HighsStatus getDoubleOptionInfo(const std::string& option,
+				  double* current_value = nullptr,
+				  double* min_value = nullptr,
+				  double* max_value = nullptr,
+				  double* default_value = nullptr) const;
+  HighsStatus getStringOptionInfo(const std::string& option,
+				  std::string* current_value = nullptr,
+				  std::string* default_value = nullptr) const;
+
   /**
    * @brief Get a const reference to the internal info values
    * type.

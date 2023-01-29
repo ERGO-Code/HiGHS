@@ -191,6 +191,8 @@ HighsStatus Highs::writeOptions(const std::string& filename,
   return return_status;
 }
 
+//HighsStatus Highs::getOptionType(const char* option, HighsOptionType* type) const { return getOptionType(option, type);}
+
 HighsStatus Highs::getInfoValue(const std::string& info,
                                 HighsInt& value) const {
   InfoStatus status = getLocalInfoValue(options_.log_options, info, info_.valid,
