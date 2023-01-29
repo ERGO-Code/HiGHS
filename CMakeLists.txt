@@ -13,19 +13,132 @@ include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
 set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(utils-highs)
+set_version(VERSION)
+
+project(HIGHS VERSION ${VERSION} LANGUAGES CXX C)
+
+set(PROJECT_NAMESPACE highs)
+message(STATUS "${PROJECT_NAME} version: ${PROJECT_VERSION}")
+
+# use C++11 standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Set max os target version.
+# set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+
 # set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RELEASE)
 endif()
 
-project(HIGHS VERSION 1.5 LANGUAGES CXX C)
-set(HIGHS_VERSION_PATCH 0)
+# Default Build Type to be Release
+# get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+# if(isMultiConfig)
+#   if(NOT CMAKE_CONFIGURATION_TYPES)
+#     set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING
+#     "Choose the type of builds, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release;Debug)"
+#     FORCE)
+#   endif()
+#   message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
+# else()
+#   if(NOT CMAKE_BUILD_TYPE)
+#     set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+#     "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release)"
+#     FORCE)
+#   endif()
+#   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+# endif()
 
-# use C++11 standard
-set(CMAKE_CXX_STANDARD 11)
-
-# use customizable install directories
+# Layout build dir like install dir
 include(GNUInstallDirs)
+
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+
+
+# if(UNIX)
+#   option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
+#   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+#   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+#   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+#   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+#   # for multi-config build system (e.g. xcode)
+#   foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+#     string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+#     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
+#     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
+#     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+#   endforeach()
+# else()
+#   # Currently Only support static build for windows
+#   option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
+#   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+#   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+#   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+#   # for multi-config builds (e.g. msvc)
+#   foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+#     string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+#     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+#     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+#     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+#   endforeach()
+# endif()
+
+if(BUILD_SHARED_LIBS AND MSVC)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
+include(CTest)
+
+option(FAST_BUILD "Fast build: " OFF)
+
+# By default only build the C++ library.
+option(BUILD_CXX "Build C++ library" ON)
+message(STATUS "Build C++ library: ${BUILD_CXX}")
+
+option(PYTHON "Build Python interface" OFF)
+message(STATUS "Build Python: ${PYTHON}")
+option(FORTRAN "Build Fortran interface" OFF)
+message(STATUS "Build Java: ${FORTRAN}")
+option(CSHARP "Build CSharp interface" OFF)
+message(STATUS "Build .Net: ${CSHARP}")
+
+# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
+if(PYTHON OR FORTRAN OR CSHARP)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
+
+
+# Basic type
+include(CMakePushCheckState)
+cmake_push_check_state(RESET)
+set(CMAKE_EXTRA_INCLUDE_FILES "cstdint")
+include(CheckTypeSize)
+check_type_size("long" SIZEOF_LONG LANGUAGE CXX)
+message(STATUS "Found long size: ${SIZEOF_LONG}")
+check_type_size("long long" SIZEOF_LONG_LONG LANGUAGE CXX)
+message(STATUS "Found long long size: ${SIZEOF_LONG_LONG}")
+check_type_size("int64_t" SIZEOF_INT64_T LANGUAGE CXX)
+message(STATUS "Found int64_t size: ${SIZEOF_INT64_T}")
+
+check_type_size("unsigned long" SIZEOF_ULONG LANGUAGE CXX)
+message(STATUS "Found unsigned long size: ${SIZEOF_ULONG}")
+check_type_size("unsigned long long" SIZEOF_ULONG_LONG LANGUAGE CXX)
+message(STATUS "Found unsigned long long size: ${SIZEOF_ULONG_LONG}")
+check_type_size("uint64_t" SIZEOF_UINT64_T LANGUAGE CXX)
+message(STATUS "Found uint64_t size: ${SIZEOF_UINT64_T}")
+
+check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
+message(STATUS "Found int * size: ${SIZEOF_INT_P}")
+cmake_pop_check_state()
+
 
 ### Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
@@ -33,8 +146,6 @@ if(EXISTS "${LOC_PATH}")
     message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file).
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
-
-option(BUILD_TESTING "Build Tests" ON)
 
 if(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     include(CheckIPOSupported)
@@ -48,16 +159,8 @@ if(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     endif()
 endif()
 
-# Fast build: No interfaces (apart from c); New (short) ctest instances,
-# static library and exe without PIC. Used for gradually updating the CMake
-# targets build and install / export.
-
-option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
-
-# interfaces
-option(PYTHON "Build Python interface" OFF)
-option(FORTRAN "Build Fortran interface" OFF)
-option(CSHARP "Build CSharp interface" OFF)
+set(CMAKE_MACOSX_RPATH ON)
+if (NOT FAST_BUILD)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
@@ -68,9 +171,9 @@ option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+endif()
 
 include(CheckCXXSourceCompiles)
-
 check_cxx_source_compiles(
     "#include <immintrin.h>
     int main () {
@@ -106,7 +209,12 @@ endif()
 
 include(CheckCXXCompilerFlag)
 
+
+option(BUILD_TESTING "Build Tests" ON)
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+
 if (NOT FAST_BUILD)
+
 # Function to set compiler flags on and off easily.
 function(enable_cxx_compiler_flag_if_supported flag)
     string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
@@ -373,7 +481,6 @@ if(BUILD_TESTING)
 endif()
 add_subdirectory(src)
 
-
 else(FAST_BUILD)
 
 message(STATUS "FAST_BUILD set to on.
@@ -387,7 +494,7 @@ if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+# configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 # set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 
@@ -466,7 +573,8 @@ endif()
 add_subdirectory(examples/tests)
 
 # condition added to src/CMakeLists.txt
-add_subdirectory(src)
+# add_subdirectory(src)
+include(cpp-highs)
 
 option(JULIA "Build library and executable for Julia" OFF)
 option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
@@ -474,109 +582,6 @@ option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
 # No changes in app/ apart from a relative path
 add_subdirectory(app)
 
-
-# check/ not added here, instead define fewer tests:
-# build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
-if (NOT JULIA)
-    enable_testing()
-endif()
-
-# Check whether targets build OK.
-add_test(NAME highs-lib-build
-         COMMAND ${CMAKE_COMMAND}
-                 --build ${HIGHS_BINARY_DIR}
-                 --target libhighs
-                 --config ${CMAKE_BUILD_TYPE}
-         )
-
-set_tests_properties(highs-lib-build
-                     PROPERTIES
-                     RESOURCE_LOCK libhighs)
-
-add_test(NAME highs-exe-build
-         COMMAND ${CMAKE_COMMAND}
-                 --build ${HIGHS_BINARY_DIR}
-                 --target highs
-                 --config ${CMAKE_BUILD_TYPE}
-         )
-
-set_tests_properties(highs-exe-build
-                     PROPERTIES
-                     RESOURCE_LOCK highs)
-
-set(successInstances
-    "25fv47\;2888\; 5.5018458883\;"
-    "80bau3b\;3760\; 9.8722419241\;"
-    "greenbea\;5249\;-7.2555248130\;")
-
-set(optionsInstances
-    "adlittle\;74\; 2.2549496316\;")
-
-set(infeasibleInstances
-    "bgetam\;        infeasible")
-
-set(unboundedInstances
-     "gas11\;         unbounded")
-
-# define settings
-set(settings
-    ""
-    "--presolve=off"
-    "--parallel=on")
-
-# define function to add tests
-# More Modern CMake: avoid macros if you can
-function(add_instance_tests instances solutionstatus setting)
-# loop over the instances
-foreach(instance ${${instances}})
-    # add default tests
-    # treat the instance as a tuple (list) of two values
-    list(GET instance 0 name)
-    list(GET instance 1 iter)
-
-    if(${solutionstatus} STREQUAL "Optimal")
-        list(GET instance 2 optval)
-    endif()
-
-    # specify the instance and the settings load command
-    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
-
-    add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
-            ${inst})
-
-    set_tests_properties (${name}${setting} PROPERTIES
-            DEPENDS unit_tests_all)
-    set_tests_properties (${name}${setting} PROPERTIES
-            PASS_REGULAR_EXPRESSION
-            "Model   status      : ${solutionstatus}")
-
-    if(${solutionstatus} STREQUAL "Optimal")
-        if("${setting}" STREQUAL "--presolve=off")
-            set_tests_properties (${name}${setting} PROPERTIES
-                    PASS_REGULAR_EXPRESSION
-                    "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
-        else()
-            set_tests_properties (${name}${setting} PROPERTIES
-                    PASS_REGULAR_EXPRESSION
-                    "Objective value     : ${optval}")
-        endif()
-    endif()
-endforeach(instance)
-
-endfunction()
-
-if (NOT JULIA)
-    # add tests for success and fail instances
-    add_instance_tests(successInstances "Optimal" "")
-    add_instance_tests(failInstances "Fail" "")
-    add_instance_tests(infeasibleInstances "Infeasible" "")
-#    add_instance_tests(unboundedInstances "Unbounded" "")
-    set(settings ${settings} "--solver=ipm")
-
-    foreach(setting ${settings})
-        add_instance_tests(optionsInstances "Optimal" ${setting})
-    endforeach()
-endif()
 
 if (EXP)
     add_executable(doctest)
@@ -589,23 +594,15 @@ if (EXP)
     endif()
 
     target_include_directories(doctest PRIVATE extern)
-    target_link_libraries(doctest libhighs)
+    target_link_libraries(doctest highs)
 endif()
 
 
-install(TARGETS libhighs EXPORT highs-targets
-    LIBRARY
-    ARCHIVE
-    RUNTIME
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+# install(TARGETS highs EXPORT highs-targets
+#     LIBRARY
+#     ARCHIVE
+#     RUNTIME
+#     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
 
 endif()
-
-# # Comment out for scaffold/ tests
-# add_subdirectory(scaffold)
-
-# # Only needed if it defines a target like a main executable. For methods stick
-# # to header-only.
-# add_subdirectory(dev_presolve)
-
