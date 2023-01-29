@@ -149,7 +149,7 @@ diminished.
 If multiple threads are available, and run with `threads>1`, HiGHS will use multiple threads. 
 Although the best value will be problem and architecture dependent, for the simplex solver `threads=8` is typically a
 good choice. 
-Although HiGHS is slower when run in parallel than in serial for some problems, it is typically faster in parallel.
+Although HiGHS is slower when run in parallel than in serial for some problems, it can be faster with multiple threads.
 
 HiGHS Library
 -------------
@@ -158,8 +158,7 @@ HiGHS is compiled in a shared library. Running
 
 `make install`
 
-from the build folder installs the library in `lib/`, as well as all header files in `include/`. For a custom
-installation in `install_folder` run
+from the build folder installs the library in `lib/`, as well as all header files in directories rooted at `include/highs/`. For a custom installation in `install_folder` run
 
 `cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
 
@@ -204,6 +203,11 @@ Javascript
 ----------
 
 HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
+
+Node.js
+-------
+
+HiGHS has a [native Node.js](https://www.npmjs.com/package/highs-solver) interface.
 
 Python
 ------
