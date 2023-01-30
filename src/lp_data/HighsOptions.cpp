@@ -732,6 +732,17 @@ OptionStatus getLocalOptionType(
   return OptionStatus::kOk;
 }
 
+OptionStatus getLocalOptionType(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<OptionRecord*>& option_records, HighsOptionType* type) {
+  HighsInt index;
+  OptionStatus status =
+      getOptionIndex(report_log_options, name, option_records, index);
+  if (status != OptionStatus::kOk) return status;
+  if (type) *type = option_records[index]->type;
+  return OptionStatus::kOk;
+}
+
 void resetLocalOptions(std::vector<OptionRecord*>& option_records) {
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {

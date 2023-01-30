@@ -201,6 +201,9 @@ HighsStatus Highs::getOptionName(const HighsInt index, std::string* name) const 
 
 HighsStatus Highs::getOptionType(const std::string& option,
 				 HighsOptionType* type) const {
+  if (getLocalOptionType(options_.log_options, option, options_.records,
+                         type) == OptionStatus::kOk)
+    return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
