@@ -12,6 +12,11 @@ TEST_CASE("external-options", "[highs_options]") {
   highs.setOptionValue("output_flag", dev_run);
   HighsInt num_options = highs.getnumOptions();
   if (dev_run) printf("Number of options is %d\n", int(num_options));
+  std::string option;
+  for (HighsInt index = 0; index < num_options; index++) {
+    REQUIRE(highs.getOptionName(index, &option) == HighsStatus::kOk);
+    if (dev_run) printf("Option %2d is \"%s\"\n", int(index), option.c_str());
+  }
 }
 
 TEST_CASE("internal-options", "[highs_options]") {

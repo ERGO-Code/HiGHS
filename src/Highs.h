@@ -273,7 +273,7 @@ class Highs {
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
                            const bool report_only_deviations = false) const;
 
-  HighsInt getnumOptions() const { return HighsInt(this->options_.records.size()); }
+  HighsInt getnumOptions() const { return this->options_.num_user_settable_options_; }
   HighsStatus getOptionName(const HighsInt index, std::string* name) const;
   HighsStatus getOptionType(const std::string& option,
                             HighsOptionType* type = nullptr) const;

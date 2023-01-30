@@ -819,6 +819,9 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
+    // Fix the number of user settable options
+    num_user_settable_options_ = records.size();
+
     // Advanced options
     advanced = true;
 
@@ -1040,6 +1043,7 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
+    // Set up the log_options aliases
     log_options.log_file_stream =
         log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
     log_options.output_flag = &output_flag;
@@ -1047,6 +1051,7 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.log_dev_level = &log_dev_level;
     log_options.log_callback = nullptr;
     log_options.log_callback_data = nullptr;
+
   }
 
   void deleteRecords() {
@@ -1055,6 +1060,7 @@ class HighsOptions : public HighsOptionsStruct {
 
  public:
   std::vector<OptionRecord*> records;
+  HighsInt num_user_settable_options_;
   void setLogOptions();
 };
 

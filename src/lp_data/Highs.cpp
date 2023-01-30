@@ -194,7 +194,9 @@ HighsStatus Highs::writeOptions(const std::string& filename,
 //HighsStatus Highs::getOptionType(const char* option, HighsOptionType* type) const { return getOptionType(option, type);}
 
 HighsStatus Highs::getOptionName(const HighsInt index, std::string* name) const {
-  return HighsStatus::kError;
+  if (index < 0 || index >= HighsInt(this->options_.records.size())) return HighsStatus::kError;
+  *name = this->options_.records[index]->name;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getOptionType(const std::string& option,
