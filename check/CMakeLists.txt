@@ -238,7 +238,7 @@ foreach(instance ${${instances}})
     endif()
 
     # specify the instance and the settings load command
-    if(ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+    if(ZLIB AND ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
       set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
     else()
       set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")

@@ -563,15 +563,14 @@ if(PYTHON)
   message(STATUS "Python: Fetch dependencies: ${FETCH_PYTHON_DEPS}")
 endif()
 
-# Add tests in examples/tests
-add_subdirectory(examples)
-
-# condition added to src/CMakeLists.txt
-# add_subdirectory(src)
-include(cpp-highs)
-
 option(JULIA "Build library and executable for Julia" OFF)
 option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
+
+
+include(cpp-highs)
+
+# Add tests in examples/tests
+add_subdirectory(examples)
 
 add_subdirectory(app)
 

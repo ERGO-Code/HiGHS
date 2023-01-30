@@ -361,7 +361,7 @@ if (OSI_FOUND)
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
 
-if (ZLIB_FOUND)
+if (ZLIB AND ZLIB_FOUND)
   target_link_libraries(libhighs ZLIB::ZLIB)
   set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
 endif()
@@ -590,7 +590,7 @@ target_include_directories(highs PRIVATE
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
     )
 
-if (ZLIB_FOUND)
+if (ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
     )
