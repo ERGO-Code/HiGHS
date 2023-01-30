@@ -46,11 +46,11 @@ void assertLogical(const char* name, const HighsInt is) {
 void version_api() {
   if (dev_run) {
     printf("HiGHS version %s\n", Highs_version());
-    printf("HiGHS version major %d\n", Highs_version_major());
-    printf("HiGHS version minor %d\n", Highs_version_minor());
-    printf("HiGHS version patch %d\n", Highs_version_patch());
+    printf("HiGHS version major %d\n", Highs_versionMajor());
+    printf("HiGHS version minor %d\n", Highs_versionMinor());
+    printf("HiGHS version patch %d\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
-    printf("HiGHS compilation date %s\n", Highs_compilation_date());
+    printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
 }
 

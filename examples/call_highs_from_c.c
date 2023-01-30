@@ -301,6 +301,12 @@ void minimal_api_mps() {
 }
 
 void full_api() {
+  printf("\nHiGHS version %s\n", Highs_version());
+  printf("      Major version %d\n", Highs_versionMajor());
+  printf("      Minor version %d\n", Highs_versionMinor());
+  printf("      Patch version %d\n", Highs_versionPatch());
+  printf("      Githash %s\n", Highs_githash());
+  printf("      compilation date %s\n", Highs_compilationDate());
   // This example does exactly the same as the minimal example above,
   // but illustrates the full C API.  It first forms and solves the LP
   //
