@@ -106,9 +106,9 @@ message(STATUS "Build C++ library: ${BUILD_CXX}")
 option(PYTHON "Build Python interface" OFF)
 message(STATUS "Build Python: ${PYTHON}")
 option(FORTRAN "Build Fortran interface" OFF)
-message(STATUS "Build Java: ${FORTRAN}")
+message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
-message(STATUS "Build .Net: ${CSHARP}")
+message(STATUS "Build CSharp: ${CSHARP}")
 
 # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
 if(PYTHON OR FORTRAN OR CSHARP)
@@ -160,17 +160,17 @@ if(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
 endif()
 
 set(CMAKE_MACOSX_RPATH ON)
+
 if (NOT FAST_BUILD)
+  # set the correct rpath for OS X
+  set(CMAKE_MACOSX_RPATH ON)
 
-# set the correct rpath for OS X
-set(CMAKE_MACOSX_RPATH ON)
-
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 endif()
 
 include(CheckCXXSourceCompiles)
@@ -210,11 +210,10 @@ endif()
 include(CheckCXXCompilerFlag)
 
 
-option(BUILD_TESTING "Build Tests" ON)
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
-
 if (NOT FAST_BUILD)
 
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+option(BUILD_TESTING "Build Tests" ON)
 # Function to set compiler flags on and off easily.
 function(enable_cxx_compiler_flag_if_supported flag)
     string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
