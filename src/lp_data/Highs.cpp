@@ -191,16 +191,19 @@ HighsStatus Highs::writeOptions(const std::string& filename,
   return return_status;
 }
 
-//HighsStatus Highs::getOptionType(const char* option, HighsOptionType* type) const { return getOptionType(option, type);}
+// HighsStatus Highs::getOptionType(const char* option, HighsOptionType* type)
+// const { return getOptionType(option, type);}
 
-HighsStatus Highs::getOptionName(const HighsInt index, std::string* name) const {
-  if (index < 0 || index >= HighsInt(this->options_.records.size())) return HighsStatus::kError;
+HighsStatus Highs::getOptionName(const HighsInt index,
+                                 std::string* name) const {
+  if (index < 0 || index >= HighsInt(this->options_.records.size()))
+    return HighsStatus::kError;
   *name = this->options_.records[index]->name;
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getOptionType(const std::string& option,
-				 HighsOptionType* type) const {
+                                 HighsOptionType* type) const {
   if (getLocalOptionType(options_.log_options, option, options_.records,
                          type) == OptionStatus::kOk)
     return HighsStatus::kOk;
@@ -208,33 +211,74 @@ HighsStatus Highs::getOptionType(const std::string& option,
 }
 
 HighsStatus Highs::getBoolOptionInfo(const std::string& option,
-				     bool* current_value,
-				     bool* default_value) const {
-  return HighsStatus::kError;
+                                     bool* current_value,
+                                     bool* default_value) const {
+  HighsInt index;
+  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
+      OptionStatus::kOk)
+    return HighsStatus::kError;
+  HighsOptionType type = options_.records[index]->type;
+  if (type != HighsOptionType::kBool) return HighsStatus::kError;
+  OptionRecordBool& option_record =
+      ((OptionRecordBool*)options_.records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (default_value) *default_value = option_record.default_value;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getIntOptionInfo(const std::string& option,
-				    HighsInt* current_value,
-				    HighsInt* min_value,
-				    HighsInt* max_value,
-				    HighsInt* default_value) const {
-  return HighsStatus::kError;
+                                    HighsInt* current_value,
+                                    HighsInt* min_value, HighsInt* max_value,
+                                    HighsInt* default_value) const {
+  HighsInt index;
+  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
+      OptionStatus::kOk)
+    return HighsStatus::kError;
+  HighsOptionType type = options_.records[index]->type;
+  if (type != HighsOptionType::kInt) return HighsStatus::kError;
+  OptionRecordInt& option_record =
+      ((OptionRecordInt*)options_.records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (min_value) *min_value = option_record.lower_bound;
+  if (max_value) *max_value = option_record.upper_bound;
+  if (default_value) *default_value = option_record.default_value;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getDoubleOptionInfo(const std::string& option,
-				       double* current_value,
-				       double* min_value,
-				       double* max_value,
-				       double* default_value) const {
-  return HighsStatus::kError;
+                                       double* current_value, double* min_value,
+                                       double* max_value,
+                                       double* default_value) const {
+  HighsInt index;
+  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
+      OptionStatus::kOk)
+    return HighsStatus::kError;
+  HighsOptionType type = options_.records[index]->type;
+  if (type != HighsOptionType::kDouble) return HighsStatus::kError;
+  OptionRecordDouble& option_record =
+      ((OptionRecordDouble*)options_.records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (min_value) *min_value = option_record.lower_bound;
+  if (max_value) *max_value = option_record.upper_bound;
+  if (default_value) *default_value = option_record.default_value;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getStringOptionInfo(const std::string& option,
-				       std::string* current_value,
-				       std::string* default_value) const {
-  return HighsStatus::kError;
+                                       std::string* current_value,
+                                       std::string* default_value) const {
+  HighsInt index;
+  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
+      OptionStatus::kOk)
+    return HighsStatus::kError;
+  HighsOptionType type = options_.records[index]->type;
+  if (type != HighsOptionType::kString) return HighsStatus::kError;
+  OptionRecordString& option_record =
+      ((OptionRecordString*)options_.records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (default_value) *default_value = option_record.default_value;
+  return HighsStatus::kOk;
 }
-
 
 HighsStatus Highs::getInfoValue(const std::string& info,
                                 HighsInt& value) const {

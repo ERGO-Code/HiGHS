@@ -603,34 +603,19 @@ HighsInt Highs_writeOptions(const void* highs, const char* filename);
 HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
 
 HighsInt Highs_getnumOptions(const void* highs);
-HighsInt Highs_getOptionName(const void* highs,
-			     const HighsInt index,
-			     char* name);
-HighsInt Highs_getBoolOptionInfo(const void* highs,
-				 const char* option,
-				 HighsInt* current_value,
-				 HighsInt* default_value);
-HighsInt Highs_getIntOptionInfo(const void* highs,
-				const char* option,
-				HighsInt* current_value,
-				HighsInt* min_value,
-				HighsInt* max_value,
-				HighsInt* default_value);
-HighsInt Highs_getDoubleOptionInfo(const void* highs,
-				   const char* option,
-				   double* current_value,
-				   double* min_value,
-				   double* max_value,
-				   double* default_value);
-HighsInt Highs_getStringOptionInfo(const void* highs,
-				   const char* option,
-				   char* current_value,
-				   char* default_value);
-
-  
-
-
-
+HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
+                             char* name);
+HighsInt Highs_getBoolOptionInfo(const void* highs, const char* option,
+                                 HighsInt* current_value,
+                                 HighsInt* default_value);
+HighsInt Highs_getIntOptionInfo(const void* highs, const char* option,
+                                HighsInt* current_value, HighsInt* min_value,
+                                HighsInt* max_value, HighsInt* default_value);
+HighsInt Highs_getDoubleOptionInfo(const void* highs, const char* option,
+                                   double* current_value, double* min_value,
+                                   double* max_value, double* default_value);
+HighsInt Highs_getStringOptionInfo(const void* highs, const char* option,
+                                   char* current_value, char* default_value);
 
 /**
  * Get an int-valued info value.

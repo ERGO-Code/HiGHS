@@ -224,7 +224,8 @@ OptionStatus getLocalOptionType(
 
 OptionStatus getLocalOptionType(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, HighsOptionType* type = nullptr);
+    const std::vector<OptionRecord*>& option_records,
+    HighsOptionType* type = nullptr);
 
 void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
@@ -1055,7 +1056,6 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.log_dev_level = &log_dev_level;
     log_options.log_callback = nullptr;
     log_options.log_callback_data = nullptr;
-
   }
 
   void deleteRecords() {
