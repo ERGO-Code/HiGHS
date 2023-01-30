@@ -210,9 +210,9 @@ HighsStatus Highs::getOptionType(const std::string& option,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getBoolOptionInfo(const std::string& option,
-                                     bool* current_value,
-                                     bool* default_value) const {
+HighsStatus Highs::getBoolOptionValues(const std::string& option,
+                                       bool* current_value,
+                                       bool* default_value) const {
   HighsInt index;
   if (getOptionIndex(options_.log_options, option, options_.records, index) !=
       OptionStatus::kOk)
@@ -226,10 +226,10 @@ HighsStatus Highs::getBoolOptionInfo(const std::string& option,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getIntOptionInfo(const std::string& option,
-                                    HighsInt* current_value,
-                                    HighsInt* min_value, HighsInt* max_value,
-                                    HighsInt* default_value) const {
+HighsStatus Highs::getIntOptionValues(const std::string& option,
+                                      HighsInt* current_value,
+                                      HighsInt* min_value, HighsInt* max_value,
+                                      HighsInt* default_value) const {
   HighsInt index;
   if (getOptionIndex(options_.log_options, option, options_.records, index) !=
       OptionStatus::kOk)
@@ -245,10 +245,10 @@ HighsStatus Highs::getIntOptionInfo(const std::string& option,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getDoubleOptionInfo(const std::string& option,
-                                       double* current_value, double* min_value,
-                                       double* max_value,
-                                       double* default_value) const {
+HighsStatus Highs::getDoubleOptionValues(const std::string& option,
+                                         double* current_value,
+                                         double* min_value, double* max_value,
+                                         double* default_value) const {
   HighsInt index;
   if (getOptionIndex(options_.log_options, option, options_.records, index) !=
       OptionStatus::kOk)
@@ -264,9 +264,9 @@ HighsStatus Highs::getDoubleOptionInfo(const std::string& option,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getStringOptionInfo(const std::string& option,
-                                       std::string* current_value,
-                                       std::string* default_value) const {
+HighsStatus Highs::getStringOptionValues(const std::string& option,
+                                         std::string* current_value,
+                                         std::string* default_value) const {
   HighsInt index;
   if (getOptionIndex(options_.log_options, option, options_.records, index) !=
       OptionStatus::kOk)

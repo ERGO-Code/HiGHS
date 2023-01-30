@@ -5,7 +5,7 @@
 #include "io/HMPSIO.h"
 #include "io/LoadOptions.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("external-options", "[highs_options]") {
   Highs highs;
@@ -27,31 +27,37 @@ TEST_CASE("external-options", "[highs_options]") {
       printf("Option %2d is \"%s\" of type %d", int(index), option.c_str(),
              int(type));
     if (type == HighsOptionType::kBool) {
-      REQUIRE(highs.getBoolOptionInfo(option, &current_bool_value,
-                                      &default_bool_value) == HighsStatus::kOk);
+      REQUIRE(highs.getBoolOptionValues(option, &current_bool_value,
+                                        &default_bool_value) ==
+              HighsStatus::kOk);
       if (dev_run)
         printf(": current = %d; default = %d\n", current_bool_value,
                default_bool_value);
     } else if (type == HighsOptionType::kInt) {
-      REQUIRE(highs.getIntOptionInfo(option, &current_int_value, &min_int_value,
-                                     &max_int_value,
-                                     &default_int_value) == HighsStatus::kOk);
+      REQUIRE(highs.getIntOptionValues(option, &current_int_value,
+                                       &min_int_value, &max_int_value,
+                                       &default_int_value) == HighsStatus::kOk);
       if (dev_run)
         printf(": current = %d; min = %d; max = %d; default = %d\n",
                current_int_value, min_int_value, max_int_value,
                default_int_value);
     } else if (type == HighsOptionType::kDouble) {
-      REQUIRE(highs.getDoubleOptionInfo(option, &current_double_value,
-                                        &min_double_value, &max_double_value,
-                                        &default_double_value) ==
+      REQUIRE(highs.getDoubleOptionValues(option, &current_double_value,
+                                          &min_double_value, &max_double_value,
+                                          &default_double_value) ==
               HighsStatus::kOk);
       if (dev_run)
         printf(": current = %g; min = %g; max = %g; default = %g\n",
                current_double_value, min_double_value, max_double_value,
                default_double_value);
+      REQUIRE(highs.getDoubleOptionValues(option, &current_double_value) ==
+              HighsStatus::kOk);
+      if (dev_run)
+        printf("          is \"%s\" of type %d: current = %g\n", option.c_str(),
+               int(type), current_double_value);
     } else {
-      REQUIRE(highs.getStringOptionInfo(option, &current_string_value,
-                                        &default_string_value) ==
+      REQUIRE(highs.getStringOptionValues(option, &current_string_value,
+                                          &default_string_value) ==
               HighsStatus::kOk);
       if (dev_run)
         printf(": current = \"%s\"; default = \"%s\"\n",
