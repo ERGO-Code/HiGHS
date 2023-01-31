@@ -40,6 +40,11 @@ string (TOLOWER ${PROJECT_NAME} lower)
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
   
+# Add library targets to the build-tree export set
+export(TARGETS highs
+    NAMESPACE ${PROJECT_NAMESPACE}::
+    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+
 
 install(EXPORT ${lower}-targets
   NAMESPACE ${PROJECT_NAMESPACE}::
