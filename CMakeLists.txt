@@ -564,8 +564,6 @@ if(PYTHON)
 endif()
 
 option(JULIA "Build library and executable for Julia" OFF)
-option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
-
 
 include(cpp-highs)
 

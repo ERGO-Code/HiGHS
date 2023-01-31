@@ -767,6 +767,37 @@ if (UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
 endif()
 
+    # Add library targets to the build-tree export set
+    # export(TARGETS highs
+    #     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+
+    # Configure the config file for the build tree:
+    # Either list all the src/* directories here, or put explicit paths in all the
+    # include statements.
+    # M reckons that the latter is more transparent, and I'm inclined to agree.
+    set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+    configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+        "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
+
+    # Configure the config file for the install
+    set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
+    configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+        "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
+
+    # Configure the pkg-config file for the install
+    configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
+        "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+    # Install the targets of the highs export group, the config file so that other
+    # cmake-projects can link easily against highs, and the pkg-config flie so that
+    # other projects can easily build against highs
+    # install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
+    #     ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 endif()
 
 if(FORTRAN_FOUND)
@@ -803,38 +834,4 @@ if (FAST_BUILD)
 target_link_libraries(highs Threads::Threads)
 else()
 target_link_libraries(libhighs Threads::Threads)
-endif()
-
-if (FAST_BUILD AND CMAKE_TARGETS)
-    # Add library targets to the build-tree export set
-    # export(TARGETS highs
-    #     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-
-    # Configure the config file for the build tree:
-    # Either list all the src/* directories here, or put explicit paths in all the
-    # include statements.
-    # M reckons that the latter is more transparent, and I'm inclined to agree.
-    set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-    configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
-        "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
-
-    # Configure the config file for the install
-    set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
-    configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
-        "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
-
-    # Configure the pkg-config file for the install
-    configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
-        "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
-
-    # Install the targets of the highs export group, the config file so that other
-    # cmake-projects can link easily against highs, and the pkg-config flie so that
-    # other projects can easily build against highs
-    # install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION
-    #     ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
-    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
-    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-
 endif()
