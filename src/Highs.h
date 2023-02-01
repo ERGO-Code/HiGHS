@@ -245,7 +245,8 @@ class Highs {
    * @brief Gets an option value as bool/HighsInt/double/string and, for
    * bool/int/double, only if it's of the correct type.
    *
-   * NB Deprecate in v2.0, in order to replace with more general get*OptionValues 
+   * NB Deprecate in v2.0, in order to replace with more general
+   * get*OptionValues
    */
   HighsStatus getOptionValue(const std::string& option, bool& value) const {
     return this->getBoolOptionValues(option, &value);
