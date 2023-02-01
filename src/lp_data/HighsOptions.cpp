@@ -710,7 +710,8 @@ OptionStatus getLocalOptionValue(
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
     const std::vector<OptionRecord*>& option_records,
-    bool* current_value, bool* default_value) {
+    bool* current_value,
+    bool* default_value) {
   HighsInt index;
   OptionStatus status =
     getOptionIndex(report_log_options, option, option_records, index);
@@ -733,24 +734,81 @@ OptionStatus getLocalOptionValues(
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
     const std::vector<OptionRecord*>& option_records,
-    HighsInt* current_value, HighsInt* min_value,
-    HighsInt* max_value, HighsInt* default_value) {
-  return OptionStatus::kIllegalValue;
+    HighsInt* current_value,
+    HighsInt* min_value,
+    HighsInt* max_value,
+    HighsInt* default_value) {
+  HighsInt index;
+  OptionStatus status =
+    getOptionIndex(report_log_options, option, option_records, index);
+  if (status != OptionStatus::kOk) return status;
+  HighsOptionType type = option_records[index]->type;
+  if (type != HighsOptionType::kInt) {
+    highsLogUser(report_log_options, HighsLogType::kError,
+                 "getLocalOptionValue: Option \"%s\" requires value of type "
+                 "%s, not HighsInt\n",
+                 option.c_str(), optionEntryTypeToString(type).c_str());
+    return OptionStatus::kIllegalValue;
+  }
+  OptionRecordInt& option_record =
+      ((OptionRecordInt*)option_records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (min_value) *min_value = option_record.lower_bound;
+  if (max_value) *max_value = option_record.upper_bound;
+  if (default_value) *default_value = option_record.default_value;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
     const std::vector<OptionRecord*>& option_records,
-    double* current_value, double* min_value,
-    double* max_value, double* default_value) {
-  return OptionStatus::kIllegalValue;
+    double* current_value,
+    double* min_value,
+    double* max_value,
+    double* default_value) {
+  HighsInt index;
+  OptionStatus status =
+    getOptionIndex(report_log_options, option, option_records, index);
+  if (status != OptionStatus::kOk) return status;
+  HighsOptionType type = option_records[index]->type;
+  if (type != HighsOptionType::kDouble) {
+    highsLogUser(report_log_options, HighsLogType::kError,
+                 "getLocalOptionValue: Option \"%s\" requires value of type "
+                 "%s, not double\n",
+                 option.c_str(), optionEntryTypeToString(type).c_str());
+    return OptionStatus::kIllegalValue;
+  }
+  OptionRecordDouble& option_record =
+      ((OptionRecordDouble*)option_records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (min_value) *min_value = option_record.lower_bound;
+  if (max_value) *max_value = option_record.upper_bound;
+  if (default_value) *default_value = option_record.default_value;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
     const std::vector<OptionRecord*>& option_records,
-    const std::string* current_value, const std::string* default_value) {
-  return OptionStatus::kIllegalValue;
+    std::string* current_value,
+    std::string* default_value) {
+  HighsInt index;
+  OptionStatus status =
+    getOptionIndex(report_log_options, option, option_records, index);
+  if (status != OptionStatus::kOk) return status;
+  HighsOptionType type = option_records[index]->type;
+  if (type != HighsOptionType::kString) {
+    highsLogUser(report_log_options, HighsLogType::kError,
+                 "getLocalOptionValue: Option \"%s\" requires value of type "
+                 "%s, not string\n",
+                 option.c_str(), optionEntryTypeToString(type).c_str());
+    return OptionStatus::kIllegalValue;
+  }
+  OptionRecordString& option_record =
+      ((OptionRecordString*)option_records[index])[0];
+  if (current_value) *current_value = *(option_record.value);
+  if (default_value) *default_value = option_record.default_value;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionType(
