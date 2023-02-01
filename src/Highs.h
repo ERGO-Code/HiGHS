@@ -247,14 +247,22 @@ class Highs {
    *
    * NB Deprecate in v2.0, in order to replace with more general get*OptionValues 
    */
-  HighsStatus getOptionValue(const std::string& option, bool& value) const;
+  HighsStatus getOptionValue(const std::string& option, bool& value) const {
+    return this->getBoolOptionValues(option, &value);
+  }
 
-  HighsStatus getOptionValue(const std::string& option, HighsInt& value) const;
+  HighsStatus getOptionValue(const std::string& option, HighsInt& value) const {
+    return this->getIntOptionValues(option, &value);
+  }
 
-  HighsStatus getOptionValue(const std::string& option, double& value) const;
+  HighsStatus getOptionValue(const std::string& option, double& value) const {
+    return this->getDoubleOptionValues(option, &value);
+  }
 
   HighsStatus getOptionValue(const std::string& option,
-                             std::string& value) const;
+                             std::string& value) const {
+    return this->getStringOptionValues(option, &value);
+  }
 
   /**
    * @brief Get the type expected by an option

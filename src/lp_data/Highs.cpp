@@ -125,38 +125,6 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  bool& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  HighsInt& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  double& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  std::string& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
   return HighsStatus::kOk;
