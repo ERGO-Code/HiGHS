@@ -218,6 +218,25 @@ OptionStatus getLocalOptionValue(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records, std::string& value);
 
+OptionStatus getLocalOptionValues(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<OptionRecord*>& option_records,
+    bool* current_value, bool* default_value = nullptr);
+OptionStatus getLocalOptionValues(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<OptionRecord*>& option_records,
+    HighsInt* current_value, HighsInt* min_value = nullptr,
+    HighsInt* max_value = nullptr, HighsInt* default_value = nullptr);
+OptionStatus getLocalOptionValues(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<OptionRecord*>& option_records,
+    double* current_value, double* min_value = nullptr,
+    double* max_value = nullptr, double* default_value = nullptr);
+OptionStatus getLocalOptionValues(
+    const HighsLogOptions& report_log_options, const std::string& name,
+    const std::vector<OptionRecord*>& option_records,
+    const std::string* current_value, const std::string* default_value = nullptr);
+
 OptionStatus getLocalOptionType(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records,
