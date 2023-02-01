@@ -244,6 +244,8 @@ class Highs {
   /**
    * @brief Gets an option value as bool/HighsInt/double/string and, for
    * bool/int/double, only if it's of the correct type.
+   *
+   * NB Deprecate in v2.0, in order to replace with more general get*OptionValues 
    */
   HighsStatus getOptionValue(const std::string& option, bool& value) const;
 
@@ -273,25 +275,52 @@ class Highs {
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
                            const bool report_only_deviations = false) const;
 
+  /**
+   * @brief Returns the number of user-settable options
+   */
   HighsInt getnumOptions() const {
     return this->options_.num_user_settable_options_;
   }
+
+  /**
+   * @brief Get the number of user-settable options
+   */
   HighsStatus getOptionName(const HighsInt index, std::string* name) const;
+
+  /**
+   * @brief Get the type of an option
+   */
   HighsStatus getOptionType(const std::string& option,
                             HighsOptionType* type = nullptr) const;
+
+  /**
+   * @brief Get the current and default values of a bool option
+   */
   HighsStatus getBoolOptionValues(const std::string& option,
                                   bool* current_value = nullptr,
                                   bool* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current, min, max and default values of an int option
+   */
   HighsStatus getIntOptionValues(const std::string& option,
                                  HighsInt* current_value = nullptr,
                                  HighsInt* min_value = nullptr,
                                  HighsInt* max_value = nullptr,
                                  HighsInt* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current, min, max and default values of a double option
+   */
   HighsStatus getDoubleOptionValues(const std::string& option,
                                     double* current_value = nullptr,
                                     double* min_value = nullptr,
                                     double* max_value = nullptr,
                                     double* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current and default values of a string option
+   */
   HighsStatus getStringOptionValues(const std::string& option,
                                     std::string* current_value = nullptr,
                                     std::string* default_value = nullptr) const;
