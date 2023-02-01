@@ -13,6 +13,8 @@
 
 #include "util/HighsInt.h"
 
+const HighsInt kHighsMaximumStringLength = 512;
+
 const HighsInt kHighsStatusError = -1;
 const HighsInt kHighsStatusOk = 0;
 const HighsInt kHighsStatusWarning = 1;
@@ -607,7 +609,7 @@ HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
  *
  * @param highs     a pointer to the Highs instance
  */
-HighsInt Highs_getnumOptions(const void* highs);
+HighsInt Highs_getNumOptions(const void* highs);
 
 /**
  * Get the name of an option identified by index
@@ -619,7 +621,7 @@ HighsInt Highs_getnumOptions(const void* highs);
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
 HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
-                             char* name);
+                             char** name);
 
 /**
  * Get the current and default values of a bool option

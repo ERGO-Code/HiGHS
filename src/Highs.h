@@ -289,7 +289,7 @@ class Highs {
   /**
    * @brief Returns the number of user-settable options
    */
-  HighsInt getnumOptions() const {
+  HighsInt getNumOptions() const {
     return this->options_.num_user_settable_options_;
   }
 
@@ -302,7 +302,7 @@ class Highs {
    * @brief Get the type of an option
    */
   HighsStatus getOptionType(const std::string& option,
-                            HighsOptionType* type = nullptr) const;
+                            HighsOptionType* type) const;
 
   /**
    * @brief Get the current and default values of a bool option

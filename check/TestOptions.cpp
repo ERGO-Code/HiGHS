@@ -10,7 +10,7 @@ const bool dev_run = false;
 TEST_CASE("external-options", "[highs_options]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  HighsInt num_options = highs.getnumOptions();
+  HighsInt num_options = highs.getNumOptions();
   if (dev_run) printf("Number of options is %d\n", int(num_options));
   std::string option;
   HighsOptionType type;
@@ -21,7 +21,6 @@ TEST_CASE("external-options", "[highs_options]") {
   std::string current_string_value, default_string_value;
   for (HighsInt index = 0; index < num_options; index++) {
     REQUIRE(highs.getOptionName(index, &option) == HighsStatus::kOk);
-    REQUIRE(highs.getOptionType(option) == HighsStatus::kOk);
     REQUIRE(highs.getOptionType(option, &type) == HighsStatus::kOk);
     if (dev_run)
       printf("Option %2d is \"%s\" of type %d", int(index), option.c_str(),
