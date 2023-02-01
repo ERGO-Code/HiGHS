@@ -220,10 +220,6 @@ OptionStatus getLocalOptionValue(
 
 OptionStatus getLocalOptionType(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, HighsOptionType& type);
-
-OptionStatus getLocalOptionType(
-    const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records,
     HighsOptionType* type = nullptr);
 
