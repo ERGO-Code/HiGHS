@@ -285,15 +285,6 @@ HighsInt Highs_setStringOptionValue(void* highs, const char* option,
       ->setOptionValue(std::string(option), std::string(value));
 }
 
-HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
-                                  HighsInt* value) {
-  bool v;
-  HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
-  *value = (HighsInt)v;
-  return retcode;
-}
-
 HighsInt Highs_getNumOptions(const void* highs) {
   return ((Highs*)highs)->getNumOptions();
 }
@@ -307,24 +298,26 @@ HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
   return retcode;
 }
 
+HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
+                                  HighsInt* value) {
+  return Highs_getBoolOptionValues(highs, option, value, nullptr);
+}
+
 HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
                                  HighsInt* value) {
-  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
+  return Highs_getIntOptionValues(highs, option, value, nullptr, nullptr,
+                                  nullptr);
 }
 
 HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
                                     double* value) {
-  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
+  return Highs_getDoubleOptionValues(highs, option, value, nullptr, nullptr,
+                                     nullptr);
 }
 
 HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
                                     char* value) {
-  std::string v;
-  memset(value, 0, 7);
-  HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
-  strcpy(value, v.c_str());
-  return retcode;
+  return Highs_getStringOptionValues(highs, option, value, nullptr);
 }
 
 HighsInt Highs_getOptionType(const void* highs, const char* option,
