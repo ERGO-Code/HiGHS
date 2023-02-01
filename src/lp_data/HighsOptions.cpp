@@ -644,21 +644,7 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
 OptionStatus getLocalOptionValue(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records, bool& value) {
-  HighsInt index;
-  OptionStatus status =
-      getOptionIndex(report_log_options, name, option_records, index);
-  if (status != OptionStatus::kOk) return status;
-  HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::kBool) {
-    highsLogUser(report_log_options, HighsLogType::kError,
-                 "getLocalOptionValue: Option \"%s\" requires value of type "
-                 "%s, not bool\n",
-                 name.c_str(), optionEntryTypeToString(type).c_str());
-    return OptionStatus::kIllegalValue;
-  }
-  OptionRecordBool option = ((OptionRecordBool*)option_records[index])[0];
-  value = *option.value;
-  return OptionStatus::kOk;
+  return getLocalOptionValues(report_log_options, name, option_records, &value);
 }
 
 OptionStatus getLocalOptionValue(
@@ -741,6 +727,7 @@ OptionStatus getLocalOptionValues(
       ((OptionRecordBool*)option_records[index])[0];
   if (current_value) *current_value = *(option_record.value);
   if (default_value) *default_value = option_record.default_value;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValues(
