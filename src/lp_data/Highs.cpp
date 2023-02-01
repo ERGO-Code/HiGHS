@@ -173,16 +173,9 @@ HighsStatus Highs::getOptionType(const std::string& option,
 HighsStatus Highs::getBoolOptionValues(const std::string& option,
                                        bool* current_value,
                                        bool* default_value) const {
-  HighsInt index;
-  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
-      OptionStatus::kOk)
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, default_value) != OptionStatus::kOk)
     return HighsStatus::kError;
-  HighsOptionType type = options_.records[index]->type;
-  if (type != HighsOptionType::kBool) return HighsStatus::kError;
-  OptionRecordBool& option_record =
-      ((OptionRecordBool*)options_.records[index])[0];
-  if (current_value) *current_value = *(option_record.value);
-  if (default_value) *default_value = option_record.default_value;
   return HighsStatus::kOk;
 }
 
@@ -190,18 +183,10 @@ HighsStatus Highs::getIntOptionValues(const std::string& option,
                                       HighsInt* current_value,
                                       HighsInt* min_value, HighsInt* max_value,
                                       HighsInt* default_value) const {
-  HighsInt index;
-  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
-      OptionStatus::kOk)
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, min_value, max_value,
+                           default_value) != OptionStatus::kOk)
     return HighsStatus::kError;
-  HighsOptionType type = options_.records[index]->type;
-  if (type != HighsOptionType::kInt) return HighsStatus::kError;
-  OptionRecordInt& option_record =
-      ((OptionRecordInt*)options_.records[index])[0];
-  if (current_value) *current_value = *(option_record.value);
-  if (min_value) *min_value = option_record.lower_bound;
-  if (max_value) *max_value = option_record.upper_bound;
-  if (default_value) *default_value = option_record.default_value;
   return HighsStatus::kOk;
 }
 
@@ -209,34 +194,19 @@ HighsStatus Highs::getDoubleOptionValues(const std::string& option,
                                          double* current_value,
                                          double* min_value, double* max_value,
                                          double* default_value) const {
-  HighsInt index;
-  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
-      OptionStatus::kOk)
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, min_value, max_value,
+                           default_value) != OptionStatus::kOk)
     return HighsStatus::kError;
-  HighsOptionType type = options_.records[index]->type;
-  if (type != HighsOptionType::kDouble) return HighsStatus::kError;
-  OptionRecordDouble& option_record =
-      ((OptionRecordDouble*)options_.records[index])[0];
-  if (current_value) *current_value = *(option_record.value);
-  if (min_value) *min_value = option_record.lower_bound;
-  if (max_value) *max_value = option_record.upper_bound;
-  if (default_value) *default_value = option_record.default_value;
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getStringOptionValues(const std::string& option,
                                          std::string* current_value,
                                          std::string* default_value) const {
-  HighsInt index;
-  if (getOptionIndex(options_.log_options, option, options_.records, index) !=
-      OptionStatus::kOk)
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, default_value) != OptionStatus::kOk)
     return HighsStatus::kError;
-  HighsOptionType type = options_.records[index]->type;
-  if (type != HighsOptionType::kString) return HighsStatus::kError;
-  OptionRecordString& option_record =
-      ((OptionRecordString*)options_.records[index])[0];
-  if (current_value) *current_value = *(option_record.value);
-  if (default_value) *default_value = option_record.default_value;
   return HighsStatus::kOk;
 }
 

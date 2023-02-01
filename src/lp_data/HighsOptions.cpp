@@ -643,12 +643,11 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
 
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
-    const std::vector<OptionRecord*>& option_records,
-    bool* current_value,
+    const std::vector<OptionRecord*>& option_records, bool* current_value,
     bool* default_value) {
   HighsInt index;
   OptionStatus status =
-    getOptionIndex(report_log_options, option, option_records, index);
+      getOptionIndex(report_log_options, option, option_records, index);
   if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kBool) {
@@ -667,14 +666,11 @@ OptionStatus getLocalOptionValues(
 
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
-    const std::vector<OptionRecord*>& option_records,
-    HighsInt* current_value,
-    HighsInt* min_value,
-    HighsInt* max_value,
-    HighsInt* default_value) {
+    const std::vector<OptionRecord*>& option_records, HighsInt* current_value,
+    HighsInt* min_value, HighsInt* max_value, HighsInt* default_value) {
   HighsInt index;
   OptionStatus status =
-    getOptionIndex(report_log_options, option, option_records, index);
+      getOptionIndex(report_log_options, option, option_records, index);
   if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kInt) {
@@ -684,8 +680,7 @@ OptionStatus getLocalOptionValues(
                  option.c_str(), optionEntryTypeToString(type).c_str());
     return OptionStatus::kIllegalValue;
   }
-  OptionRecordInt& option_record =
-      ((OptionRecordInt*)option_records[index])[0];
+  OptionRecordInt& option_record = ((OptionRecordInt*)option_records[index])[0];
   if (current_value) *current_value = *(option_record.value);
   if (min_value) *min_value = option_record.lower_bound;
   if (max_value) *max_value = option_record.upper_bound;
@@ -695,14 +690,11 @@ OptionStatus getLocalOptionValues(
 
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
-    const std::vector<OptionRecord*>& option_records,
-    double* current_value,
-    double* min_value,
-    double* max_value,
-    double* default_value) {
+    const std::vector<OptionRecord*>& option_records, double* current_value,
+    double* min_value, double* max_value, double* default_value) {
   HighsInt index;
   OptionStatus status =
-    getOptionIndex(report_log_options, option, option_records, index);
+      getOptionIndex(report_log_options, option, option_records, index);
   if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kDouble) {
@@ -724,11 +716,10 @@ OptionStatus getLocalOptionValues(
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& option,
     const std::vector<OptionRecord*>& option_records,
-    std::string* current_value,
-    std::string* default_value) {
+    std::string* current_value, std::string* default_value) {
   HighsInt index;
   OptionStatus status =
-    getOptionIndex(report_log_options, option, option_records, index);
+      getOptionIndex(report_log_options, option, option_records, index);
   if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kString) {
