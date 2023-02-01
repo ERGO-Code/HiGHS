@@ -598,14 +598,14 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
     HighsInt move_out = workDelta < 0 ? -1 : 1;
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
-      HighsInt iCol = *sit;
-      assert(iCol < ekk_instance_.lp_.num_col_);
-      double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, iCol);
+      HighsInt i = *sit;
+      assert(i < ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_);
+      double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, i);
       if (fabs(alpha) > Ta) {
         if (alpha * move_out > 0)
-          ekk_instance_.basis_.nonbasicMove_[iCol] = 1;
+          ekk_instance_.basis_.nonbasicMove_[i] = 1;
         else
-          ekk_instance_.basis_.nonbasicMove_[iCol] = -1;
+          ekk_instance_.basis_.nonbasicMove_[i] = -1;
       }
     }
   }
@@ -614,16 +614,16 @@ void HEkkDualRow::deleteFreemove() {
   if (!freeList.empty()) {
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
-      HighsInt iCol = *sit;
-      assert(iCol < ekk_instance_.lp_.num_col_);
-      ekk_instance_.basis_.nonbasicMove_[iCol] = 0;
+      HighsInt i = *sit;
+      assert(i < ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_);
+      ekk_instance_.basis_.nonbasicMove_[i] = 0;
     }
   }
 }
 
-void HEkkDualRow::deleteFreelist(HighsInt iColumn) {
+void HEkkDualRow::deleteFreelist(HighsInt i) {
   if (!freeList.empty()) {
-    if (freeList.count(iColumn)) freeList.erase(iColumn);
+    if (freeList.count(i)) freeList.erase(i);
   }
 }
 
