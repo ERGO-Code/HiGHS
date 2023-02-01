@@ -222,21 +222,21 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   bool get_mps_parser_type_free;
   return_status =
-      getLocalOptionValue(report_log_options, "mps_parser_type_free",
-                          options.records, get_mps_parser_type_free);
+      getLocalOptionValues(report_log_options, "mps_parser_type_free",
+                          options.records, &get_mps_parser_type_free);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_mps_parser_type_free == false);
 
   HighsInt get_allowed_matrix_scale_factor;
   return_status =
-      getLocalOptionValue(report_log_options, "allowed_matrix_scale_factor",
-                          options.records, get_allowed_matrix_scale_factor);
+      getLocalOptionValues(report_log_options, "allowed_matrix_scale_factor",
+                          options.records, &get_allowed_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_allowed_matrix_scale_factor == allowed_matrix_scale_factor);
 
   double get_small_matrix_value;
-  return_status = getLocalOptionValue(report_log_options, "small_matrix_value",
-                                      options.records, get_small_matrix_value);
+  return_status = getLocalOptionValues(report_log_options, "small_matrix_value",
+                                      options.records, &get_small_matrix_value);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 

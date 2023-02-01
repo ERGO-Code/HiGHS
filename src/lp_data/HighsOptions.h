@@ -205,19 +205,6 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,
                               HighsOptions& to_options);
 
-OptionStatus getLocalOptionValue(
-    const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, bool& value);
-OptionStatus getLocalOptionValue(
-    const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, HighsInt& value);
-OptionStatus getLocalOptionValue(
-    const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, double& value);
-OptionStatus getLocalOptionValue(
-    const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, std::string& value);
-
 OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records,
