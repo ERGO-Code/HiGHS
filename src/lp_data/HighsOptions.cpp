@@ -650,61 +650,19 @@ OptionStatus getLocalOptionValue(
 OptionStatus getLocalOptionValue(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records, HighsInt& value) {
-  HighsInt index;
-  OptionStatus status =
-      getOptionIndex(report_log_options, name, option_records, index);
-  if (status != OptionStatus::kOk) return status;
-  HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::kInt) {
-    highsLogUser(report_log_options, HighsLogType::kError,
-                 "getLocalOptionValue: Option \"%s\" requires value of type "
-                 "%s, not HighsInt\n",
-                 name.c_str(), optionEntryTypeToString(type).c_str());
-    return OptionStatus::kIllegalValue;
-  }
-  OptionRecordInt option = ((OptionRecordInt*)option_records[index])[0];
-  value = *option.value;
-  return OptionStatus::kOk;
+  return getLocalOptionValues(report_log_options, name, option_records, &value);
 }
 
 OptionStatus getLocalOptionValue(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records, double& value) {
-  HighsInt index;
-  OptionStatus status =
-      getOptionIndex(report_log_options, name, option_records, index);
-  if (status != OptionStatus::kOk) return status;
-  HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::kDouble) {
-    highsLogUser(report_log_options, HighsLogType::kError,
-                 "getLocalOptionValue: Option \"%s\" requires value of type "
-                 "%s, not double\n",
-                 name.c_str(), optionEntryTypeToString(type).c_str());
-    return OptionStatus::kIllegalValue;
-  }
-  OptionRecordDouble option = ((OptionRecordDouble*)option_records[index])[0];
-  value = *option.value;
-  return OptionStatus::kOk;
+  return getLocalOptionValues(report_log_options, name, option_records, &value);
 }
 
 OptionStatus getLocalOptionValue(
     const HighsLogOptions& report_log_options, const std::string& name,
     const std::vector<OptionRecord*>& option_records, std::string& value) {
-  HighsInt index;
-  OptionStatus status =
-      getOptionIndex(report_log_options, name, option_records, index);
-  if (status != OptionStatus::kOk) return status;
-  HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::kString) {
-    highsLogUser(report_log_options, HighsLogType::kError,
-                 "getLocalOptionValue: Option \"%s\" requires value of type "
-                 "%s, not string\n",
-                 name.c_str(), optionEntryTypeToString(type).c_str());
-    return OptionStatus::kIllegalValue;
-  }
-  OptionRecordString option = ((OptionRecordString*)option_records[index])[0];
-  value = *option.value;
-  return OptionStatus::kOk;
+  return getLocalOptionValues(report_log_options, name, option_records, &value);
 }
 
 OptionStatus getLocalOptionValues(
