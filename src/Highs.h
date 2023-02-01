@@ -260,7 +260,9 @@ class Highs {
    * @brief Get the type expected by an option
    */
   HighsStatus getOptionType(const std::string& option,
-                            HighsOptionType& type) const;
+                            HighsOptionType& type) const {
+    return this->getOptionType(option, &type);
+  }
 
   /**
    * @brief Reset the options to the default values

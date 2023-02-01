@@ -157,14 +157,6 @@ HighsStatus Highs::getOptionValue(const std::string& option,
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionType(const std::string& option,
-                                 HighsOptionType& type) const {
-  if (getLocalOptionType(options_.log_options, option, options_.records,
-                         type) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
   return HighsStatus::kOk;
