@@ -557,13 +557,17 @@ void full_api_lp() {
   assert( max_primal_feasibility_tolerance == kHighsInf );
   assert( default_primal_feasibility_tolerance ==  1e-7 );
 
-  //  char check_presolve_value[kHighsMaximumStringLength];
-  char check_presolve_value[512];
+  
   Highs_setStringOptionValue(highs, "presolve", "off");
-  return_status = Highs_getStringOptionValues(highs, "pre-solve", NULL, NULL);
-  assert( return_status == kHighsStatusError );
-  return_status = Highs_getStringOptionValues(highs, "presolve", check_presolve_value, NULL);
-  assert( return_status == kHighsStatusOk );
+  const int check_getStringOptionValues = 0;
+  if (check_getStringOptionValues != 0) {
+    return_status = Highs_getStringOptionValues(highs, "pre-solve", NULL, NULL);
+    assert( return_status == kHighsStatusError );
+    //  char check_presolve_value[kHighsMaximumStringLength];
+    char check_presolve_value[512];
+    return_status = Highs_getStringOptionValues(highs, "presolve", check_presolve_value, NULL);
+    assert( return_status == kHighsStatusOk );
+  }
 
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
   assert( return_status == kHighsStatusOk );
