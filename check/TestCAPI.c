@@ -557,7 +557,8 @@ void full_api_lp() {
   assert( max_primal_feasibility_tolerance == kHighsInf );
   assert( default_primal_feasibility_tolerance ==  1e-7 );
 
-  char check_presolve_value[kHighsMaximumStringLength];
+  //  char check_presolve_value[kHighsMaximumStringLength];
+  char check_presolve_value[512];
   Highs_setStringOptionValue(highs, "presolve", "off");
   return_status = Highs_getStringOptionValues(highs, "pre-solve", NULL, NULL);
   assert( return_status == kHighsStatusError );
