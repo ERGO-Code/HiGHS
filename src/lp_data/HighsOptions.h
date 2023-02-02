@@ -996,7 +996,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "presolve_rule_logging", "Log effectiveness of presolve rules for LP",
-        advanced, &presolve_rule_logging, true);
+        advanced, &presolve_rule_logging, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
