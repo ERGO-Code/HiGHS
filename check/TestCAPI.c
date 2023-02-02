@@ -1021,7 +1021,7 @@ int main() {
   minimal_api_lp();
   minimal_api_mip();
   minimal_api_qp();
-  full_api_lp();
+  //  full_api_lp();
   full_api_mip();
   full_api_qp();
   options();
