@@ -435,7 +435,7 @@ void full_api_lp() {
 
   const double kHighsInf = Highs_getInfinity(highs);
   const HighsInt call_getOptionValues = 1;
-  const HighsInt call_getStringOptionValues = 0;
+  const HighsInt call_getStringOptionValues = 1;
   const HighsInt call_getBoolOptionValues = 1;
   const HighsInt call_getOptionName = 0;
   
