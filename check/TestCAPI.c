@@ -501,11 +501,10 @@ void full_api_lp() {
 
   if (call_getOptionName != 0) {
     printf("call_getOptionName\n");
-    //    const HighsInt presolve_index = 0;
+    const HighsInt presolve_index = 0;
     char* name = NULL;
-    return_status = Highs_getOptionName(highs, 0, &name);
-    //    return_status = Highs_getOptionName(highs, presolve_index, &name);
-    //    if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
+    return_status = Highs_getOptionName(highs, presolve_index, &name);
+    if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
     //    const char* presolve = "presolve";
     //    assert( *name == *presolve );
   }
