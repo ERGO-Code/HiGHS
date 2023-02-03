@@ -295,10 +295,10 @@ HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
   HighsInt retcode = (HighsInt)((Highs*)highs)->getOptionName(index, &name_v);
   const HighsInt malloc_size =
       //    kHighsMaxStringLength;
-    sizeof(char) * (name_v.length()+1);
+      sizeof(char) * (name_v.length() + 1);
   //    HighsInt(name_v.length());
   printf("sizeof(char) = %d; name_v.length() = %d; malloc_size = %d\n",
-	 int(sizeof(char)), int(name_v.length()), int(malloc_size));
+         int(sizeof(char)), int(name_v.length()), int(malloc_size));
   *name = (char*)malloc(malloc_size);
   strcpy(*name, name_v.c_str());
   return retcode;
