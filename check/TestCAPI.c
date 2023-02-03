@@ -434,7 +434,7 @@ void full_api_lp() {
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
   const double kHighsInf = Highs_getInfinity(highs);
-  const HighsInt call_getOptionName = 0;
+  const HighsInt call_getOptionName = 1;
   
 
   const HighsInt num_col = 2;
@@ -500,12 +500,14 @@ void full_api_lp() {
   return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
   if (call_getOptionName != 0) {
-    const HighsInt presolve_index = 0;
+    printf("call_getOptionName\n");
+    //    const HighsInt presolve_index = 0;
     char* name = NULL;
-    const char* presolve = "presolve";
-    return_status = Highs_getOptionName(highs, presolve_index, &name);
-    if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
-    assert( *name == *presolve );
+    return_status = Highs_getOptionName(highs, 0, &name);
+    //    return_status = Highs_getOptionName(highs, presolve_index, &name);
+    //    if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
+    //    const char* presolve = "presolve";
+    //    assert( *name == *presolve );
   }
 
   HighsInt check_simplex_scale_strategy;
