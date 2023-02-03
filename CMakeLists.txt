@@ -567,6 +567,10 @@ option(JULIA "Build library and executable for Julia" OFF)
 
 include(cpp-highs)
 
+if (PYTHON)
+  include(python-highs)
+endif()
+
 # Add tests in examples/tests
 add_subdirectory(examples)
 
