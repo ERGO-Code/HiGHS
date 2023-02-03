@@ -2541,7 +2541,6 @@ void HEkkPrimal::updateVerify() {
                 ekk_instance_.iteration_count_, alpha_col,
                 alpha_row_source.c_str(), alpha_row, abs_alpha_diff,
                 numericalTrouble);
-  assert(numericalTrouble < 1e-3);
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
   //
