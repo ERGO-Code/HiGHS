@@ -435,6 +435,8 @@ void full_api_lp() {
 
   const double kHighsInf = Highs_getInfinity(highs);
   const HighsInt call_getOptionValues = 0;
+  const HighsInt call_getStringOptionValues = 0;
+  const HighsInt call_getBoolOptionValues = 1;
   const HighsInt call_getOptionName = 0;
   
 
@@ -510,6 +512,7 @@ void full_api_lp() {
   }
 
   if (call_getOptionValues != 0) {
+    printf("call_getOptionValues\n");
     HighsInt check_simplex_scale_strategy;
     HighsInt min_simplex_scale_strategy;
     HighsInt max_simplex_scale_strategy;
@@ -549,6 +552,7 @@ void full_api_lp() {
   assert( return_status == kHighsStatusOk );
 
   if (call_getOptionValues != 0) {
+    printf("call_getOptionValues\n");
     double check_primal_feasibility_tolerance;
     return_status = Highs_getDoubleOptionValues(highs, "primal_feasibility_tolerance",
   					      &check_primal_feasibility_tolerance, NULL, NULL, NULL);
@@ -569,7 +573,8 @@ void full_api_lp() {
 
   Highs_setStringOptionValue(highs, "presolve", "off");
 
-  if (call_getOptionValues != 0) {
+  if (call_getStringOptionValues != 0) {
+    printf("call_getStringOptionValues\n");
     return_status = Highs_getStringOptionValues(highs, "pre-solve", NULL, NULL);
     assert( return_status == kHighsStatusError );
     //  char check_presolve_value[kHighsMaximumStringLength];
@@ -593,15 +598,16 @@ void full_api_lp() {
 
   assert( return_status == kHighsStatusOk );
 
-  if (call_getOptionValues != 0) {
+  if (call_getBoolOptionValues != 0) {
+    printf("call_getBoolOptionValues\n");
     HighsInt check_output_flag, default_output_flag;
     return_status = Highs_getBoolOptionValues(highs, "output_flag", NULL, NULL);
     assert( return_status == kHighsStatusOk );
     return_status = Highs_getBoolOptionValues(highs, "output_flag",
 					      &check_output_flag, NULL);
     assert( return_status == kHighsStatusOk );
-    //    assert( default_output_flag == output_flag );
-    assert( default_output_flag == 1 );
+    //    assert( check_output_flag == output_flag );
+    assert( check_output_flag == 1 );
     return_status = Highs_getBoolOptionValues(highs, "output_flag",
 					      &check_output_flag,
 					      &default_output_flag);
