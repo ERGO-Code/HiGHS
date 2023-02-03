@@ -543,7 +543,7 @@ void full_api_options() {
     Highs_getStringOptionValues(highs, option, current_string_value, NULL);
     num_string_option++;
     //      if (dev_run)
-    printf("%"HIGHSINT_FORMAT": %24s (\"%s\")\n",
+    printf("%"HIGHSINT_FORMAT": %-24s \"%s\"\n",
 	   num_string_option, option, current_string_value);    
   }
 

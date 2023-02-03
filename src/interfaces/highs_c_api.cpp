@@ -366,11 +366,16 @@ HighsInt Highs_getStringOptionValues(const void* highs, const char* option,
                                      char* current_value, char* default_value) {
   std::string current_v;
   std::string default_v;
-  if (current_value) memset(current_value, 0, 7);
-  if (default_value) memset(default_value, 0, 7);
+  // Inherited from Highs_getStringOptionValue: cannot see why this
+  // was ever useful. Must assume that current_value is of length at
+  // least 7, which isn't necessarily true
+  //
+  //  if (current_value) memset(current_value, 0, 7);
+  //  if (default_value) memset(default_value, 0, 7);
   HighsInt retcode =
       (HighsInt)((Highs*)highs)
           ->getStringOptionValues(std::string(option), &current_v, &default_v);
+  // current_value and default_value are nullptr by default
   if (current_value) strcpy(current_value, current_v.c_str());
   if (default_value) strcpy(default_value, default_v.c_str());
   return retcode;

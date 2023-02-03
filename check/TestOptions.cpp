@@ -64,8 +64,7 @@ TEST_CASE("external-options", "[highs_options]") {
     }
   }
   HighsInt num_string_option = 0;
-  if (dev_run)
-    printf("\nString options are:\n");
+  if (dev_run) printf("\nString options are:\n");
   for (HighsInt index = 0; index < num_options; index++) {
     highs.getOptionName(index, &option);
     highs.getOptionType(option, &type);
@@ -73,8 +72,8 @@ TEST_CASE("external-options", "[highs_options]") {
     if (type != HighsOptionType::kString) continue;
     num_string_option++;
     if (dev_run)
-      printf("%2d: %24s (\"%s\")\n", int(num_string_option),
-	     option.c_str(), current_string_value.c_str());    
+      printf("%2d: %-24s \"%s\"\n", int(num_string_option), option.c_str(),
+             current_string_value.c_str());
   }
 }
 
