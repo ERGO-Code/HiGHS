@@ -293,12 +293,9 @@ HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
                              char** name) {
   std::string name_v;
   HighsInt retcode = (HighsInt)((Highs*)highs)->getOptionName(index, &name_v);
-  const HighsInt malloc_size =
-      //    kHighsMaxStringLength;
-      sizeof(char) * (name_v.length() + 1);
-  //    HighsInt(name_v.length());
-  printf("sizeof(char) = %d; name_v.length() = %d; malloc_size = %d\n",
-         int(sizeof(char)), int(name_v.length()), int(malloc_size));
+  // Guess we have to add one (for Windows, lol!) because char* is
+  // null-terminated
+  const HighsInt malloc_size = sizeof(char) * (name_v.length() + 1);
   *name = (char*)malloc(malloc_size);
   strcpy(*name, name_v.c_str());
   return retcode;

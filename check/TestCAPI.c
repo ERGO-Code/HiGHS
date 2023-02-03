@@ -434,13 +434,10 @@ void full_api_lp() {
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
   const double kHighsInf = Highs_getInfinity(highs);
-  const HighsInt call_getOptionName = 1;
-  
 
   const HighsInt num_col = 2;
   const HighsInt num_row = 3;
   const HighsInt num_nz = 5;
-  HighsInt i;
 
   // Define the column costs, lower bounds and upper bounds
   double col_cost[2] = {2.0, 3.0};
@@ -499,15 +496,12 @@ void full_api_lp() {
   simplex_scale_strategy = 3;
   return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
-  if (call_getOptionName != 0) {
-    printf("call_getOptionName\n");
-    const HighsInt presolve_index = 0;
-    char* name = NULL;
-    return_status = Highs_getOptionName(highs, presolve_index, &name);
-    if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
-    const char* presolve = "presolve";
-    assert( *name == *presolve );
-  }
+  const HighsInt presolve_index = 0;
+  char* name = NULL;
+  return_status = Highs_getOptionName(highs, presolve_index, &name);
+  if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
+  const char* presolve = "presolve";
+  assert( *name == *presolve );
 
   HighsInt check_simplex_scale_strategy;
   HighsInt min_simplex_scale_strategy;
@@ -633,13 +627,13 @@ void full_api_lp() {
       return_status = Highs_getBasis(highs, col_basis_status, row_basis_status);
       assert( return_status == kHighsStatusOk );
       // Report the column primal and dual values, and basis status
-      for (i = 0; i < num_col; i++)
+      for (HighsInt iCol = 0; iCol < num_col; iCol++)
 	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, col_value[i], col_dual[i], col_basis_status[i]);
+	       iCol, col_value[iCol], col_dual[iCol], col_basis_status[iCol]);
       // Report the row primal and dual values, and basis status
-      for (i = 0; i < num_row; i++)
+      for (HighsInt iRow = 0; iRow < num_row; iRow++)
 	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, row_value[i], row_dual[i], row_basis_status[i]);
+	       iRow, row_value[iRow], row_dual[iRow], row_basis_status[iRow]);
     }
   }
   free(col_value);
