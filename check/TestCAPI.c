@@ -420,75 +420,15 @@ void full_api() {
   Highs_destroy(highs);
 }
 
-void full_api_lp() {
-  // Form and solve the LP
-  // Min    f  = 2x_0 + 3x_1
-  // s.t.                x_1 <= 6
-  //       10 <=  x_0 + 2x_1 <= 14
-  //        8 <= 2x_0 +  x_1
-  // 0 <= x_0 <= 3; 1 <= x_1
-
+void full_api_options() {
   void* highs;
 
   highs = Highs_create();
-  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  // Highs_setBoolOptionValue(highs, "output_flag", dev_run);
 
   const double kHighsInf = Highs_getInfinity(highs);
-
-  const HighsInt num_col = 2;
-  const HighsInt num_row = 3;
-  const HighsInt num_nz = 5;
-
-  // Define the column costs, lower bounds and upper bounds
-  double col_cost[2] = {2.0, 3.0};
-  double col_lower[2] = {0.0, 1.0};
-  double col_upper[2] = {3.0, 1.0e30};
-  // Define the row lower bounds and upper bounds
-  double row_lower[3] = {-1.0e30, 10.0, 8.0};
-  double row_upper[3] = {6.0, 14.0, 1.0e30};
-  // Define the constraint matrix row-wise, as it is added to the LP
-  // with the rows
-  HighsInt arstart[3] = {0, 1, 3};
-  HighsInt arindex[5] = {1, 0, 1, 0, 1};
-  double arvalue[5] = {1.0, 1.0, 2.0, 2.0, 1.0};
-
-  double* col_value = (double*)malloc(sizeof(double) * num_col);
-  double* col_dual = (double*)malloc(sizeof(double) * num_col);
-  double* row_value = (double*)malloc(sizeof(double) * num_row);
-  double* row_dual = (double*)malloc(sizeof(double) * num_row);
-
-  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
-  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
-
-  // Add two columns to the empty LP
-  assert( Highs_addCols(highs, num_col, col_cost, col_lower, col_upper, 0, NULL, NULL, NULL) == 0);
-  // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, arstart, arindex, arvalue) == 0);
-
-  HighsInt sense;
-  HighsInt return_status;
-  return_status = Highs_getObjectiveSense(highs, &sense);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("LP problem has objective sense = %"HIGHSINT_FORMAT"\n", sense);
-  assert( sense == kHighsObjSenseMinimize );
-
-  sense *= -1;
-  return_status = Highs_changeObjectiveSense(highs, sense);
-  assert( return_status == kHighsStatusOk );
-  assert( sense == kHighsObjSenseMaximize );
-
-  sense *= -1;
-  return_status = Highs_changeObjectiveSense(highs, sense);
-  assert( return_status == kHighsStatusOk );
-
-  return_status = Highs_getObjectiveSense(highs, &sense);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("LP problem has old objective sense = %"HIGHSINT_FORMAT"\n", sense);
-  assert( sense == kHighsObjSenseMinimize );
-
   HighsInt simplex_scale_strategy;
+  HighsInt return_status;
   return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
   assert( return_status == kHighsStatusOk );
   if (dev_run)
@@ -567,15 +507,6 @@ void full_api_lp() {
   return_status = Highs_getStringOptionValues(highs, "presolve", check_presolve_value, NULL);
   assert( return_status == kHighsStatusOk );
 
-  return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("Running quietly...\n");
-  return_status = Highs_run(highs);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("Running loudly...\n");
-
   // const HighsInt output_flag = 1;
   // return_status = Highs_setBoolOptionValue(highs, "output_flag", output_flag);
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 1);
@@ -597,6 +528,102 @@ void full_api_lp() {
   //    assert( default_output_flag == output_flag );
   assert( default_output_flag == 1 );
   
+  HighsInt num_string_option = 0;
+  char* option = NULL;
+  HighsInt type;
+  HighsInt num_options = Highs_getNumOptions(highs);
+  char current_string_value[512];
+ 
+  //  if (dev_run)
+    printf("\nString options are:\n");
+  for (HighsInt index = 0; index < num_options; index++) {
+    Highs_getOptionName(highs, index, &option);
+    Highs_getOptionType(highs, option, &type);
+    if (type != kHighsOptionTypeString) continue;
+    Highs_getStringOptionValues(highs, option, current_string_value, NULL);
+    num_string_option++;
+    //      if (dev_run)
+    printf("%"HIGHSINT_FORMAT": %24s (\"%s\")\n",
+	   num_string_option, option, current_string_value);    
+  }
+
+}
+
+void full_api_lp() {
+  // Form and solve the LP
+  // Min    f  = 2x_0 + 3x_1
+  // s.t.                x_1 <= 6
+  //       10 <=  x_0 + 2x_1 <= 14
+  //        8 <= 2x_0 +  x_1
+  // 0 <= x_0 <= 3; 1 <= x_1
+
+  void* highs;
+
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  const HighsInt num_nz = 5;
+
+  // Define the column costs, lower bounds and upper bounds
+  double col_cost[2] = {2.0, 3.0};
+  double col_lower[2] = {0.0, 1.0};
+  double col_upper[2] = {3.0, 1.0e30};
+  // Define the row lower bounds and upper bounds
+  double row_lower[3] = {-1.0e30, 10.0, 8.0};
+  double row_upper[3] = {6.0, 14.0, 1.0e30};
+  // Define the constraint matrix row-wise, as it is added to the LP
+  // with the rows
+  HighsInt arstart[3] = {0, 1, 3};
+  HighsInt arindex[5] = {1, 0, 1, 0, 1};
+  double arvalue[5] = {1.0, 1.0, 2.0, 2.0, 1.0};
+
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
+
+  HighsInt* col_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* row_basis_status = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+
+  // Add two columns to the empty LP
+  assert( Highs_addCols(highs, num_col, col_cost, col_lower, col_upper, 0, NULL, NULL, NULL) == 0);
+  // Add three rows to the 2-column LP
+  assert( Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, arstart, arindex, arvalue) == 0);
+
+  HighsInt sense;
+  HighsInt return_status;
+  return_status = Highs_getObjectiveSense(highs, &sense);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("LP problem has objective sense = %"HIGHSINT_FORMAT"\n", sense);
+  assert( sense == kHighsObjSenseMinimize );
+
+  sense *= -1;
+  return_status = Highs_changeObjectiveSense(highs, sense);
+  assert( return_status == kHighsStatusOk );
+  assert( sense == kHighsObjSenseMaximize );
+
+  sense *= -1;
+  return_status = Highs_changeObjectiveSense(highs, sense);
+  assert( return_status == kHighsStatusOk );
+
+  return_status = Highs_getObjectiveSense(highs, &sense);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("LP problem has old objective sense = %"HIGHSINT_FORMAT"\n", sense);
+  assert( sense == kHighsObjSenseMinimize );
+
+  return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("Running quietly...\n");
+  return_status = Highs_run(highs);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("Running loudly...\n");
+
   // Get the model status
   HighsInt model_status = Highs_getModelStatus(highs);
 
@@ -1025,6 +1052,7 @@ int main() {
   minimal_api_lp();
   minimal_api_mip();
   minimal_api_qp();
+  full_api_options();
   full_api_lp();
   full_api_mip();
   full_api_qp();
