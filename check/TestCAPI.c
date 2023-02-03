@@ -505,8 +505,8 @@ void full_api_lp() {
     char* name = NULL;
     return_status = Highs_getOptionName(highs, presolve_index, &name);
     if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
-    //    const char* presolve = "presolve";
-    //    assert( *name == *presolve );
+    const char* presolve = "presolve";
+    assert( *name == *presolve );
   }
 
   HighsInt check_simplex_scale_strategy;
