@@ -455,6 +455,9 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     if (lp.col_cost_[iCol]) num_nz++;
   const bool empty_cost_row = num_nz == lp.a_matrix_.numNz();
   const bool has_objective = !empty_cost_row || model.hessian_.dim_;
+  // Writes the solution using the GLPK raw style (defined in
+  // api/wrsol.c) or pretty style (defined in api/prsol.c)
+  //
   // When writing out the row information (and hence the number of
   // rows and nonzeros), the case of the cost row is tricky
   // (particularly if it's empty) if HiGHS is to be able to reproduce
