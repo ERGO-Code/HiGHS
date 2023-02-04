@@ -205,25 +205,6 @@ program fortrantest
   avalue(4) = 2
   avalue(5) = 1
 
-  ! Define the constraint matrix row-wise, as it is added to the LP with the rows
-  arstart(1) = 0
-  arstart(2) = 1
-  arstart(3) = 3
-  arindex(1) = 1
-  arindex(2) = 0
-  arindex(3) = 1
-  arindex(4) = 0
-  arindex(5) = 1
-  arvalue(1) = 1
-  arvalue(2) = 1
-  arvalue(3) = 2
-  arvalue(4) = 2
-  arvalue(5) = 1
-
-  qp_sol(1) = 0.5
-  qp_sol(2) = 5.0
-  qp_sol(3) = 1.5
-
   !================================================================================
   ! Illustrate use of Highs_lpCall to solve a given LP
   print*, "*********"
@@ -301,7 +282,23 @@ program fortrantest
   ! Add two columns to the empty LP, but no matrix. After numnz=0, can
   ! just pass arrays rather than NULL
   runstatus = Highs_addCols(highs, numcol, colcost, collower, colupper, 0, integer_null, integer_null, double_null);
-  ! Add three rows to the 2-column LP
+  ! Define the constraint matrix by adding it as three rows to the
+  ! 2-column LP - requiring the matrix row-wise
+
+  arstart(1) = 0
+  arstart(2) = 1
+  arstart(3) = 3
+  arindex(1) = 1
+  arindex(2) = 0
+  arindex(3) = 1
+  arindex(4) = 0
+  arindex(5) = 1
+  arvalue(1) = 1
+  arvalue(2) = 1
+  arvalue(3) = 2
+  arvalue(4) = 2
+  arvalue(5) = 1
+
   runstatus = Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue)
 
   runstatus = Highs_getObjectiveSense(highs, alt_sense);
@@ -381,8 +378,8 @@ program fortrantest
 
   ! Write out model as MPS for use later
   runstatus = Highs_writeModel(highs, "F90.mps"//C_NULL_CHAR)
-  print*, "runstatus = ", runstatus
-  call assert(runstatus .ne. runstatus_warning, "Highs_writeModel runstatus")
+  ! runstatus is runstatus_warning since there are no names
+  call assert(runstatus .eq. runstatus_warning, "Highs_writeModel runstatus")
   
   call Highs_destroy(highs)
   !================================================================================
@@ -512,6 +509,10 @@ program fortrantest
   qp_qvalue(2) = -1.0
   qp_qvalue(3) = 0.2
   qp_qvalue(4) = 2.0
+
+  qp_sol(1) = 0.5
+  qp_sol(2) = 5.0
+  qp_sol(3) = 1.5
 
   runstatus = Highs_qpCall( qp_numcol, qp_numrow, qp_numnz, qp_hessian_numnz,&
        aformat_colwise, qformat_triangular, sense, offset,&
