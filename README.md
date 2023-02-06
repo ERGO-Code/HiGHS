@@ -114,7 +114,7 @@ Usage:
       --solution_file arg     File for writing out model solution.
       --write_model_file arg  File for writing out model.
       --random_seed arg       Seed to initialize random number generation.
-      --ranging arg           Compute cost, bound, RHS and basic solution ranging.
+      --ranging arg           Report cost, bound, RHS and basic solution ranging in any solution file: "off" by default - "on" is alternatives.
       --read_solution_file    File of solution to be read
       
       --version               Print version number      

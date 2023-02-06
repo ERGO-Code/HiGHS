@@ -205,22 +205,29 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,
                               HighsOptions& to_options);
 
-OptionStatus getLocalOptionValue(
+OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, bool& value);
-OptionStatus getLocalOptionValue(
+    const std::vector<OptionRecord*>& option_records, bool* current_value,
+    bool* default_value = nullptr);
+OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, HighsInt& value);
-OptionStatus getLocalOptionValue(
+    const std::vector<OptionRecord*>& option_records, HighsInt* current_value,
+    HighsInt* min_value = nullptr, HighsInt* max_value = nullptr,
+    HighsInt* default_value = nullptr);
+OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, double& value);
-OptionStatus getLocalOptionValue(
+    const std::vector<OptionRecord*>& option_records, double* current_value,
+    double* min_value = nullptr, double* max_value = nullptr,
+    double* default_value = nullptr);
+OptionStatus getLocalOptionValues(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, std::string& value);
+    const std::vector<OptionRecord*>& option_records,
+    std::string* current_value, std::string* default_value = nullptr);
 
 OptionStatus getLocalOptionType(
     const HighsLogOptions& report_log_options, const std::string& name,
-    const std::vector<OptionRecord*>& option_records, HighsOptionType& type);
+    const std::vector<OptionRecord*>& option_records,
+    HighsOptionType* type = nullptr);
 
 void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
@@ -819,6 +826,9 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
+    // Fix the number of user settable options
+    num_user_settable_options_ = records.size();
+
     // Advanced options
     advanced = true;
 
@@ -1040,6 +1050,7 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
+    // Set up the log_options aliases
     log_options.log_file_stream =
         log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
     log_options.output_flag = &output_flag;
@@ -1055,6 +1066,7 @@ class HighsOptions : public HighsOptionsStruct {
 
  public:
   std::vector<OptionRecord*> records;
+  HighsInt num_user_settable_options_;
   void setLogOptions();
 };
 
