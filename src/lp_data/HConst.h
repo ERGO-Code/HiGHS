@@ -35,6 +35,7 @@ const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
 
+const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
 enum SimplexScaleStrategy {
