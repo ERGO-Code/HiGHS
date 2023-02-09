@@ -8,7 +8,7 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 1;
+const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
@@ -424,7 +424,7 @@ void full_api_options() {
   void* highs;
 
   highs = Highs_create();
-  // Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
 
   const double kHighsInf = Highs_getInfinity(highs);
   HighsInt simplex_scale_strategy;
@@ -534,7 +534,7 @@ void full_api_options() {
   HighsInt num_options = Highs_getNumOptions(highs);
   char current_string_value[512];
  
-  //  if (dev_run)
+  if (dev_run)
     printf("\nString options are:\n");
   for (HighsInt index = 0; index < num_options; index++) {
     Highs_getOptionName(highs, index, &option);
@@ -542,9 +542,9 @@ void full_api_options() {
     if (type != kHighsOptionTypeString) continue;
     Highs_getStringOptionValues(highs, option, current_string_value, NULL);
     num_string_option++;
-    //      if (dev_run)
-    printf("%"HIGHSINT_FORMAT": %-24s \"%s\"\n",
-	   num_string_option, option, current_string_value);    
+    if (dev_run)
+      printf("%"HIGHSINT_FORMAT": %-24s \"%s\"\n",
+	     num_string_option, option, current_string_value);    
   }
 
 }
