@@ -420,6 +420,135 @@ void full_api() {
   Highs_destroy(highs);
 }
 
+void full_api_options() {
+  void* highs;
+
+  highs = Highs_create();
+  // Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+
+  const double kHighsInf = Highs_getInfinity(highs);
+  HighsInt simplex_scale_strategy;
+  HighsInt return_status;
+  return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("simplex_scale_strategy = %"HIGHSINT_FORMAT": setting it to 3\n", simplex_scale_strategy);
+  simplex_scale_strategy = 3;
+  return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+
+  const HighsInt presolve_index = 0;
+  char* name = NULL;
+  return_status = Highs_getOptionName(highs, presolve_index, &name);
+  if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
+  const char* presolve = "presolve";
+  assert( *name == *presolve );
+
+  HighsInt check_simplex_scale_strategy;
+  HighsInt min_simplex_scale_strategy;
+  HighsInt max_simplex_scale_strategy;
+  HighsInt default_simplex_scale_strategy;
+  return_status = Highs_getIntOptionValues(highs, "scale_strategy", NULL, NULL, NULL, NULL);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_getDoubleOptionValues(highs, "simplex_scale_strategy", NULL, NULL, NULL, NULL);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_getIntOptionValues(highs, "simplex_scale_strategy",
+					   &check_simplex_scale_strategy,
+					   &min_simplex_scale_strategy,
+					   &max_simplex_scale_strategy,
+					   &default_simplex_scale_strategy);
+  assert( return_status == kHighsStatusOk );
+  assert( check_simplex_scale_strategy == simplex_scale_strategy );
+  assert( min_simplex_scale_strategy ==  0 );
+  assert( max_simplex_scale_strategy ==  5 );
+  assert( default_simplex_scale_strategy == 1 );
+
+
+  // There are some functions to check what type of option value you should
+  // provide.
+  HighsInt option_type;
+  return_status = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
+  assert( return_status == kHighsStatusOk );
+  assert( option_type == kHighsOptionTypeInt );
+  return_status = Highs_getOptionType(highs, "bad_option", &option_type);
+  assert( return_status == kHighsStatusError );
+
+  double primal_feasibility_tolerance;
+  return_status = Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
+  primal_feasibility_tolerance = 1e-6;
+  return_status = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
+  assert( return_status == kHighsStatusOk );
+
+  double check_primal_feasibility_tolerance;
+  return_status = Highs_getDoubleOptionValues(highs, "primal_feasibility_tolerance",
+  					      &check_primal_feasibility_tolerance, NULL, NULL, NULL);
+  assert( return_status == kHighsStatusOk );
+  assert( check_primal_feasibility_tolerance == primal_feasibility_tolerance );
+  double default_primal_feasibility_tolerance;
+  double min_primal_feasibility_tolerance;
+  double max_primal_feasibility_tolerance;
+  return_status = Highs_getDoubleOptionValues(highs, "primal_feasibility_tolerance",
+  					      &check_primal_feasibility_tolerance,
+  					      &min_primal_feasibility_tolerance,
+  					      &max_primal_feasibility_tolerance,
+  					      &default_primal_feasibility_tolerance);
+  assert( min_primal_feasibility_tolerance == 1e-10 );
+  assert( max_primal_feasibility_tolerance == kHighsInf );
+  assert( default_primal_feasibility_tolerance ==  1e-7 );
+
+  Highs_setStringOptionValue(highs, "presolve", "off");
+
+  return_status = Highs_getStringOptionValues(highs, "pre-solve", NULL, NULL);
+  assert( return_status == kHighsStatusError );
+  //  char check_presolve_value[kHighsMaximumStringLength];
+  char check_presolve_value[512];
+  return_status = Highs_getStringOptionValues(highs, "presolve", check_presolve_value, NULL);
+  assert( return_status == kHighsStatusOk );
+
+  // const HighsInt output_flag = 1;
+  // return_status = Highs_setBoolOptionValue(highs, "output_flag", output_flag);
+  return_status = Highs_setBoolOptionValue(highs, "output_flag", 1);
+
+  assert( return_status == kHighsStatusOk );
+
+  HighsInt check_output_flag, default_output_flag;
+  return_status = Highs_getBoolOptionValues(highs, "output_flag", NULL, NULL);
+  assert( return_status == kHighsStatusOk );
+  return_status = Highs_getBoolOptionValues(highs, "output_flag",
+					    &check_output_flag, NULL);
+  assert( return_status == kHighsStatusOk );
+  //    assert( check_output_flag == output_flag );
+  assert( check_output_flag == 1 );
+  return_status = Highs_getBoolOptionValues(highs, "output_flag",
+					    &check_output_flag,
+					    &default_output_flag);
+  assert( return_status == kHighsStatusOk );
+  //    assert( default_output_flag == output_flag );
+  assert( default_output_flag == 1 );
+  
+  HighsInt num_string_option = 0;
+  char* option = NULL;
+  HighsInt type;
+  HighsInt num_options = Highs_getNumOptions(highs);
+  char current_string_value[512];
+ 
+  //  if (dev_run)
+    printf("\nString options are:\n");
+  for (HighsInt index = 0; index < num_options; index++) {
+    Highs_getOptionName(highs, index, &option);
+    Highs_getOptionType(highs, option, &type);
+    if (type != kHighsOptionTypeString) continue;
+    Highs_getStringOptionValues(highs, option, current_string_value, NULL);
+    num_string_option++;
+    //      if (dev_run)
+    printf("%"HIGHSINT_FORMAT": %-24s \"%s\"\n",
+	   num_string_option, option, current_string_value);    
+  }
+
+}
+
 void full_api_lp() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
@@ -431,12 +560,11 @@ void full_api_lp() {
   void* highs;
 
   highs = Highs_create();
-  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
 
   const HighsInt num_col = 2;
   const HighsInt num_row = 3;
   const HighsInt num_nz = 5;
-  HighsInt i;
 
   // Define the column costs, lower bounds and upper bounds
   double col_cost[2] = {2.0, 3.0};
@@ -487,32 +615,6 @@ void full_api_lp() {
     printf("LP problem has old objective sense = %"HIGHSINT_FORMAT"\n", sense);
   assert( sense == kHighsObjSenseMinimize );
 
-  HighsInt simplex_scale_strategy;
-  return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("simplex_scale_strategy = %"HIGHSINT_FORMAT": setting it to 3\n", simplex_scale_strategy);
-  simplex_scale_strategy = 3;
-  return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
-
-  // There are some functions to check what type of option value you should
-  // provide.
-  HighsInt option_type;
-  return_status = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
-  assert( return_status == kHighsStatusOk );
-  assert( option_type == kHighsOptionTypeInt );
-  return_status = Highs_getOptionType(highs, "bad_option", &option_type);
-  assert( return_status == kHighsStatusError );
-
-  double primal_feasibility_tolerance;
-  return_status = Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
-  primal_feasibility_tolerance = 1e-6;
-  return_status = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
-  assert( return_status == kHighsStatusOk );
-
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
   assert( return_status == kHighsStatusOk );
   if (dev_run)
@@ -521,8 +623,6 @@ void full_api_lp() {
   assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("Running loudly...\n");
-  return_status = Highs_setBoolOptionValue(highs, "output_flag", 1);
-  assert( return_status == kHighsStatusOk );
 
   // Get the model status
   HighsInt model_status = Highs_getModelStatus(highs);
@@ -554,13 +654,13 @@ void full_api_lp() {
       return_status = Highs_getBasis(highs, col_basis_status, row_basis_status);
       assert( return_status == kHighsStatusOk );
       // Report the column primal and dual values, and basis status
-      for (i = 0; i < num_col; i++)
+      for (HighsInt iCol = 0; iCol < num_col; iCol++)
 	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, col_value[i], col_dual[i], col_basis_status[i]);
+	       iCol, col_value[iCol], col_dual[iCol], col_basis_status[iCol]);
       // Report the row primal and dual values, and basis status
-      for (i = 0; i < num_row; i++)
+      for (HighsInt iRow = 0; iRow < num_row; iRow++)
 	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, row_value[i], row_dual[i], row_basis_status[i]);
+	       iRow, row_value[iRow], row_dual[iRow], row_basis_status[iRow]);
     }
   }
   free(col_value);
@@ -952,6 +1052,7 @@ int main() {
   minimal_api_lp();
   minimal_api_mip();
   minimal_api_qp();
+  full_api_options();
   full_api_lp();
   full_api_mip();
   full_api_qp();

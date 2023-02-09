@@ -285,33 +285,42 @@ HighsInt Highs_setStringOptionValue(void* highs, const char* option,
       ->setOptionValue(std::string(option), std::string(value));
 }
 
+HighsInt Highs_getNumOptions(const void* highs) {
+  return ((Highs*)highs)->getNumOptions();
+}
+
+HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
+                             char** name) {
+  std::string name_v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getOptionName(index, &name_v);
+  // Guess we have to add one (for Windows, lol!) because char* is
+  // null-terminated
+  const HighsInt malloc_size = sizeof(char) * (name_v.length() + 1);
+  *name = (char*)malloc(malloc_size);
+  strcpy(*name, name_v.c_str());
+  return retcode;
+}
+
 HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
                                   HighsInt* value) {
-  bool v;
-  HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
-  *value = (HighsInt)v;
-  return retcode;
+  return Highs_getBoolOptionValues(highs, option, value, nullptr);
 }
 
 HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
                                  HighsInt* value) {
-  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
+  return Highs_getIntOptionValues(highs, option, value, nullptr, nullptr,
+                                  nullptr);
 }
 
 HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
                                     double* value) {
-  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
+  return Highs_getDoubleOptionValues(highs, option, value, nullptr, nullptr,
+                                     nullptr);
 }
 
 HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
                                     char* value) {
-  std::string v;
-  memset(value, 0, 7);
-  HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
-  strcpy(value, v.c_str());
-  return retcode;
+  return Highs_getStringOptionValues(highs, option, value, nullptr);
 }
 
 HighsInt Highs_getOptionType(const void* highs, const char* option,
@@ -320,6 +329,55 @@ HighsInt Highs_getOptionType(const void* highs, const char* option,
   HighsInt retcode =
       (HighsInt)((Highs*)highs)->getOptionType(std::string(option), t);
   *type = (HighsInt)t;
+  return retcode;
+}
+
+HighsInt Highs_getBoolOptionValues(const void* highs, const char* option,
+                                   HighsInt* current_value,
+                                   HighsInt* default_value) {
+  bool current_v;
+  bool default_v;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)
+          ->getBoolOptionValues(std::string(option), &current_v, &default_v);
+  if (current_value) *current_value = current_v;
+  if (default_value) *default_value = default_v;
+  return retcode;
+}
+
+HighsInt Highs_getIntOptionValues(const void* highs, const char* option,
+                                  HighsInt* current_value, HighsInt* min_value,
+                                  HighsInt* max_value,
+                                  HighsInt* default_value) {
+  return (HighsInt)((Highs*)highs)
+      ->getIntOptionValues(std::string(option), current_value, min_value,
+                           max_value, default_value);
+}
+
+HighsInt Highs_getDoubleOptionValues(const void* highs, const char* option,
+                                     double* current_value, double* min_value,
+                                     double* max_value, double* default_value) {
+  return (HighsInt)((Highs*)highs)
+      ->getDoubleOptionValues(std::string(option), current_value, min_value,
+                              max_value, default_value);
+}
+
+HighsInt Highs_getStringOptionValues(const void* highs, const char* option,
+                                     char* current_value, char* default_value) {
+  std::string current_v;
+  std::string default_v;
+  // Inherited from Highs_getStringOptionValue: cannot see why this
+  // was ever useful. Must assume that current_value is of length at
+  // least 7, which isn't necessarily true
+  //
+  //  if (current_value) memset(current_value, 0, 7);
+  //  if (default_value) memset(default_value, 0, 7);
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)
+          ->getStringOptionValues(std::string(option), &current_v, &default_v);
+  // current_value and default_value are nullptr by default
+  if (current_value) strcpy(current_value, current_v.c_str());
+  if (default_value) strcpy(default_value, default_v.c_str());
   return retcode;
 }
 

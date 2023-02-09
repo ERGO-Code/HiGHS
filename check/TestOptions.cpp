@@ -7,6 +7,76 @@
 
 const bool dev_run = false;
 
+TEST_CASE("external-options", "[highs_options]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsInt num_options = highs.getNumOptions();
+  if (dev_run) printf("Number of options is %d\n", int(num_options));
+  std::string option;
+  HighsOptionType type;
+  bool current_bool_value, default_bool_value;
+  HighsInt min_int_value, max_int_value, current_int_value, default_int_value;
+  double min_double_value, max_double_value, current_double_value,
+      default_double_value;
+  std::string current_string_value, default_string_value;
+  for (HighsInt index = 0; index < num_options; index++) {
+    REQUIRE(highs.getOptionName(index, &option) == HighsStatus::kOk);
+    REQUIRE(highs.getOptionType(option, &type) == HighsStatus::kOk);
+    if (dev_run)
+      printf("Option %2d is \"%s\" of type %d", int(index), option.c_str(),
+             int(type));
+    if (type == HighsOptionType::kBool) {
+      REQUIRE(highs.getBoolOptionValues(option, &current_bool_value,
+                                        &default_bool_value) ==
+              HighsStatus::kOk);
+      if (dev_run)
+        printf(": current = %d; default = %d\n", current_bool_value,
+               default_bool_value);
+    } else if (type == HighsOptionType::kInt) {
+      REQUIRE(highs.getIntOptionValues(option, &current_int_value,
+                                       &min_int_value, &max_int_value,
+                                       &default_int_value) == HighsStatus::kOk);
+      if (dev_run)
+        printf(": current = %d; min = %d; max = %d; default = %d\n",
+               current_int_value, min_int_value, max_int_value,
+               default_int_value);
+    } else if (type == HighsOptionType::kDouble) {
+      REQUIRE(highs.getDoubleOptionValues(option, &current_double_value,
+                                          &min_double_value, &max_double_value,
+                                          &default_double_value) ==
+              HighsStatus::kOk);
+      if (dev_run)
+        printf(": current = %g; min = %g; max = %g; default = %g\n",
+               current_double_value, min_double_value, max_double_value,
+               default_double_value);
+      REQUIRE(highs.getDoubleOptionValues(option, &current_double_value) ==
+              HighsStatus::kOk);
+      if (dev_run)
+        printf("          is \"%s\" of type %d: current = %g\n", option.c_str(),
+               int(type), current_double_value);
+    } else {
+      REQUIRE(highs.getStringOptionValues(option, &current_string_value,
+                                          &default_string_value) ==
+              HighsStatus::kOk);
+      if (dev_run)
+        printf(": current = \"%s\"; default = \"%s\"\n",
+               current_string_value.c_str(), default_string_value.c_str());
+    }
+  }
+  HighsInt num_string_option = 0;
+  if (dev_run) printf("\nString options are:\n");
+  for (HighsInt index = 0; index < num_options; index++) {
+    highs.getOptionName(index, &option);
+    highs.getOptionType(option, &type);
+    highs.getStringOptionValues(option, &current_string_value);
+    if (type != HighsOptionType::kString) continue;
+    num_string_option++;
+    if (dev_run)
+      printf("%2d: %-24s \"%s\"\n", int(num_string_option), option.c_str(),
+             current_string_value.c_str());
+  }
+}
+
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
   HighsLogOptions report_log_options = options.log_options;
@@ -163,21 +233,22 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   bool get_mps_parser_type_free;
   return_status =
-      getLocalOptionValue(report_log_options, "mps_parser_type_free",
-                          options.records, get_mps_parser_type_free);
+      getLocalOptionValues(report_log_options, "mps_parser_type_free",
+                           options.records, &get_mps_parser_type_free);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_mps_parser_type_free == false);
 
   HighsInt get_allowed_matrix_scale_factor;
   return_status =
-      getLocalOptionValue(report_log_options, "allowed_matrix_scale_factor",
-                          options.records, get_allowed_matrix_scale_factor);
+      getLocalOptionValues(report_log_options, "allowed_matrix_scale_factor",
+                           options.records, &get_allowed_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_allowed_matrix_scale_factor == allowed_matrix_scale_factor);
 
   double get_small_matrix_value;
-  return_status = getLocalOptionValue(report_log_options, "small_matrix_value",
-                                      options.records, get_small_matrix_value);
+  return_status =
+      getLocalOptionValues(report_log_options, "small_matrix_value",
+                           options.records, &get_small_matrix_value);
   REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
