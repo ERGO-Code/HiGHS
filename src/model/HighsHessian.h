@@ -30,7 +30,7 @@ class HighsHessian {
   std::vector<HighsInt> start_;
   std::vector<HighsInt> index_;
   std::vector<double> value_;
-  bool operator==(const HighsHessian& hessian);
+  bool operator==(const HighsHessian& hessian) const;
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
