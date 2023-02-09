@@ -95,7 +95,40 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   }
 }
 
-TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
+void freeFixedModelTest(const std::string model_name) {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/" + model_name + ".mps";
+  HighsStatus status;
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::kOk);
+
+  HighsModel model_free = highs.getModel();
+
+  status = highs.setOptionValue("mps_parser_type_free", false);
+  REQUIRE(status == HighsStatus::kOk);
+
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::kOk);
+
+  HighsModel model_fixed = highs.getModel();
+
+  bool are_the_same = model_free == model_fixed;
+  REQUIRE(are_the_same);
+}
+
+TEST_CASE("filereader-free-format-parser-qp", "[highs_filereader]") {
+  freeFixedModelTest("qjh");
+  freeFixedModelTest("qjh_quadobj");
+  // This test can't be used since fixed format reader can't handle
+  // QMATRIX section
+  //
+  //  freeFixedModelTest("qjh_qmatrix");
+}
+
+TEST_CASE("filereader-free-format-parser-lp", "[highs_filereader]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   HighsStatus status;

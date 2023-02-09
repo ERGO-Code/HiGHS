@@ -72,7 +72,7 @@ void HighsHessian::print() const {
       col[this->index_[iEl]] = 0;
   }
 }
-bool HighsHessian::operator==(const HighsHessian& hessian) {
+bool HighsHessian::operator==(const HighsHessian& hessian) const {
   bool equal = true;
   equal = this->dim_ == hessian.dim_ && equal;
   equal = this->start_ == hessian.start_ && equal;
