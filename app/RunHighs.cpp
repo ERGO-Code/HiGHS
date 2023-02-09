@@ -22,6 +22,7 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
 int main(int argc, char** argv) {
   // Create the Highs instance
   Highs highs;
+  highs.writeOptions("Options.set");
   const HighsOptions& options = highs.getOptions();
   const HighsLogOptions& log_options = options.log_options;
 

@@ -8,7 +8,7 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 0;
+const HighsInt dev_run = 1;
 const double double_equal_tolerance = 1e-5;
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
@@ -614,6 +614,67 @@ void full_api_lp() {
   if (dev_run)
     printf("LP problem has old objective sense = %"HIGHSINT_FORMAT"\n", sense);
   assert( sense == kHighsObjSenseMinimize );
+
+
+
+  // fetch column data (just first column)
+  {
+    const HighsInt get_col = 0;
+    const HighsInt num_get_col = 1;
+    HighsInt get_num_col = 0;
+    double* get_costs = (double*)malloc(sizeof(double) * num_get_col);
+    double* get_lower = (double*)malloc(sizeof(double) * num_get_col);
+    double* get_upper = (double*)malloc(sizeof(double) * num_get_col);
+    HighsInt get_num_nz = 0;
+
+    return_status = Highs_getColsByRange(highs, get_col, get_col,
+					 &get_num_col, get_costs, get_lower, get_upper, &get_num_nz,
+					 NULL, NULL, NULL);
+    assert( return_status == kHighsStatusOk );
+
+    assertIntValuesEqual("getCols get_num_col", get_num_col, num_get_col);
+    assertDoubleValuesEqual("getCols get_costs", get_costs[0], col_cost[get_col]);
+    assertDoubleValuesEqual("getCols get_lower", get_lower[0], col_lower[get_col]);
+    assertDoubleValuesEqual("getCols get_upper", get_upper[0], col_upper[get_col]);
+    assertIntValuesEqual("getCols get_num_nz", get_num_nz, 2);
+
+      // could also check coefficients by calling again...
+
+    free(get_upper);
+    free(get_lower);
+    free(get_costs);
+  }
+
+  // fetch row data (just 2nd row: 10 <=  x_0 + 2x_1 <= 14)
+  {
+    const HighsInt get_row = 1;
+    const HighsInt num_get_row = 1;
+    HighsInt get_num_row = 0;
+    double* get_lower = (double*)malloc(sizeof(double) * num_get_row);
+    double* get_upper = (double*)malloc(sizeof(double) * num_get_row);
+    HighsInt get_num_nz = 0;
+
+    assertIntValuesEqual("getNumRows", Highs_getNumRows(highs), num_row);
+
+    return_status = Highs_getRowsByRange(highs, get_row, get_row,
+					 &get_num_row, get_lower, get_upper, &get_num_nz,
+					 NULL, NULL, NULL);
+    assert( return_status == kHighsStatusOk );
+
+    assertIntValuesEqual("getRows get_num_row", get_num_row, num_get_row);
+    assertDoubleValuesEqual("getRows get_lower", get_lower[0], row_lower[get_row]);
+    assertDoubleValuesEqual("getRows get_upper", get_upper[0], row_upper[get_row]);
+    assertIntValuesEqual("getRows get_num_nz", get_num_nz, 2);
+
+      // could also check coefficients by calling again...
+
+    free(get_upper);
+    free(get_lower);
+  }
+
+  
+
+
 
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
   assert( return_status == kHighsStatusOk );
