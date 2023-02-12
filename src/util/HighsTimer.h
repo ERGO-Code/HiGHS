@@ -14,6 +14,7 @@
 #ifndef UTIL_HIGHSTIMER_H_
 #define UTIL_HIGHSTIMER_H_
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstdio>

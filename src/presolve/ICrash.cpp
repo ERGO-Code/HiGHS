@@ -15,6 +15,7 @@
 #include "presolve/ICrash.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
