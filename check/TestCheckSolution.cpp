@@ -253,7 +253,7 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
     highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
     highs.changeColIntegrality(i, HighsVarType::kInteger);
   }
-  highs.addRow(0.0, 1.0, num_col, &indices[0], &values[0]);
+  highs.addRow(0.0, 1.0, num_col, indices.data(), values.data());
   highs.run();
   double objective1 = highs.getInfo().objective_function_value;
   HighsSolution solution = highs.getSolution();
@@ -265,7 +265,7 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
     highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
     highs.changeColIntegrality(i, HighsVarType::kInteger);
   }
-  highs.addRow(0.0, 1.0, num_col, &indices[0], &values[0]);
+  highs.addRow(0.0, 1.0, num_col, indices.data(), values.data());
   highs.setSolution(solution);
   highs.run();
   double objective2 = highs.getInfo().objective_function_value;

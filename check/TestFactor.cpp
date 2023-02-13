@@ -32,7 +32,7 @@ TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   highs.run();
   basic_set.resize(num_row);
   // Get the optimal set of basic variables
-  highs.getBasicVariables(&basic_set[0]);
+  highs.getBasicVariables(basic_set.data());
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     basic_set[iRow] =
         basic_set[iRow] < 0 ? num_col - basic_set[iRow] + 1 : basic_set[iRow];
