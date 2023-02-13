@@ -52,8 +52,9 @@ class HighsLp {
   HighsInt cost_row_location_;
   HighsLpMods mods_;
 
-  bool operator==(const HighsLp& lp);
+  bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
+  bool equalNames(const HighsLp& lp) const;
   bool isMip() const;
   bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;

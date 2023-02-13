@@ -396,26 +396,6 @@ if (HIGHS_COVERAGE)
   endif()
 endif ()
 
-if(NOT MSVC)
-    set(OSI_ROOT "" CACHE PATH "Osi root folder.")
-    if (NOT "${OSI_ROOT}" STREQUAL "")
-        # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
-        message(STATUS "OSI root folder set: " ${OSI_ROOT})
-        set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-    endif ()
-    unset(OSI_ROOT CACHE)
-    find_package(PkgConfig)
-
-    if(PKG_CONFIG_FOUND)
-        pkg_check_modules(OSI osi)
-        if (OSI_FOUND)
-            # need to come before adding any targets (add_executable, add_library)
-            link_directories(${OSI_LIBRARY_DIRS})
-            include_directories(${OSITEST_INCLUDE_DIRS})
-        endif (OSI_FOUND)
-    endif()
-endif()
-
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})

@@ -47,6 +47,7 @@ FilereaderRetcode readMps(
   // MPS file buffer
   numRow = 0;
   numCol = 0;
+  Qdim = 0;
   cost_row_location = -1;
   objOffset = 0;
   objSense = ObjSense::kMinimize;

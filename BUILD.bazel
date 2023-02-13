@@ -1,5 +1,4 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_cc//cc:defs.bzl", "cc_test")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
 copy_file(
@@ -66,13 +65,4 @@ cc_library(
         "//:config",
         "@zlib",
     ],
-)
-
-cc_test(
-    name = "call-highs-example",
-    srcs= ["examples/call_highs_from_cpp.cpp"],
-    deps = [
-        "@//:highs",
-    ],
-    size="small",
 )

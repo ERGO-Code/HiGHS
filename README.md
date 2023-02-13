@@ -72,11 +72,11 @@ a build folder and call CMake as follows
 
     mkdir build
     cd build
-    cmake ..
+    cmake -DFAST_BUILD=ON ..
 
 Then compile the code using
 
-    make
+    cmake --build . 
 
 This installs the executable `bin/highs`.
 The minimum CMake version required is 3.15.

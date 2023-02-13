@@ -510,15 +510,13 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
       if (row_upper != NULL) row_upper[new_iRow] = lp.row_upper_[iRow];
     }
   }
-  // bail out if no matrix is to be extracted
   const bool extract_start = row_matrix_start != NULL;
   const bool extract_index = row_matrix_index != NULL;
   const bool extract_value = row_matrix_value != NULL;
   const bool extract_matrix = extract_index || extract_value;
-  // Someone might just want the values, but to get them makes use of
-  // the starts so tough!
-  if (!extract_start) return;
-  // Allocate an array of lengths for the row-wise matrix to be extracted
+  // Allocate an array of lengths for the row-wise matrix to be
+  // extracted: necessary even if just the number of nonzeros is
+  // required
   vector<HighsInt> row_matrix_length;
   row_matrix_length.assign(get_num_row, 0);
   // Identify the lengths of the rows in the row-wise matrix to be extracted
@@ -530,6 +528,14 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
       if (new_iRow >= 0) row_matrix_length[new_iRow]++;
     }
   }
+  if (!extract_start) {
+    // bail out if no matrix starts are to be extracted, but only after
+    // computing the number of nonzeros
+    for (HighsInt iRow = 0; iRow < get_num_row; iRow++)
+      get_num_nz += row_matrix_length[iRow];
+    return;
+  }
+  // Allocate an array of lengths for the row-wise matrix to be extracted
   row_matrix_start[0] = 0;
   for (HighsInt iRow = 0; iRow < get_num_row - 1; iRow++) {
     row_matrix_start[iRow + 1] =
