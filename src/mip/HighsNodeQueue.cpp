@@ -420,3 +420,9 @@ HighsInt HighsNodeQueue::getBestBoundDomchgStackSize() const {
   return std::min(HighsInt(nodes[suboptimalMin].domchgstack.size()),
                   domchgStackSize);
 }
+
+void HighsNodeQueue::clear() {
+  HighsNodeQueue nodequeue;
+  nodequeue.setNumCol(numCol);
+  *this = std::move(nodequeue);
+}
