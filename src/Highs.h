@@ -1094,9 +1094,6 @@ class Highs {
                : nullptr;
   }
 
-#ifdef OSI_FOUND
-  friend class OsiHiGHSSolverInterface;
-#endif
   // Start of deprecated methods
 
   HighsInt getNumCols() const {
