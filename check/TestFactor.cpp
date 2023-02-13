@@ -351,7 +351,7 @@ bool testSolveDense() {
     unit[iCol] = 1.0;
     rhs_dense.clear();
     for (HighsInt iCol = 0; iCol < num_row; iCol++)
-      rhs_dense[iCol] = lp.a_matrix_.computeDot(unit, basic_set[iCol]);
+      rhs_dense.push_back(lp.a_matrix_.computeDot(unit, basic_set[iCol]));
     factor.btranCall(rhs_dense);
     error_norm = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -369,7 +369,7 @@ bool testSolveDense() {
     // Dense BTRAN
     rhs_dense.clear();
     for (HighsInt iCol = 0; iCol < num_row; iCol++)
-      rhs_dense[iCol] = lp.a_matrix_.computeDot(solution, basic_set[iCol]);
+      rhs_dense.push_back(lp.a_matrix_.computeDot(solution, basic_set[iCol]));
     factor.btranCall(rhs_dense);
     error_norm = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++)
