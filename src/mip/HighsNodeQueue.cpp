@@ -430,7 +430,8 @@ void HighsNodeQueue::clear() {
   } else {
     (*this).allocatorState = std::move(nodequeue.allocatorState);
     (*this).nodes = std::move(nodequeue.nodes);
-    (*this).freeslots = std::move(nodequeue.freeslots);
+    //    (*this).freeslots = std::move(nodequeue.freeslots);
+    (*this).freeslots = nodequeue.freeslots;
     (*this).colLowerNodesPtr = std::move(nodequeue.colLowerNodesPtr);
     (*this).colUpperNodesPtr = std::move(nodequeue.colUpperNodesPtr);
     (*this).lowerRoot = nodequeue.lowerRoot;
