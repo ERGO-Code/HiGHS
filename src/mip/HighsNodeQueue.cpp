@@ -422,7 +422,25 @@ HighsInt HighsNodeQueue::getBestBoundDomchgStackSize() const {
 }
 
 void HighsNodeQueue::clear() {
+  const bool original = false;
   HighsNodeQueue nodequeue;
   nodequeue.setNumCol(numCol);
-  *this = std::move(nodequeue);
+  if (original) {
+    *this = std::move(nodequeue);
+  } else {
+    (*this).allocatorState = std::move(nodequeue.allocatorState);
+    (*this).nodes = std::move(nodequeue.nodes);
+    (*this).freeslots = std::move(nodequeue.freeslots);
+    (*this).colLowerNodesPtr = std::move(nodequeue.colLowerNodesPtr);
+    (*this).colUpperNodesPtr = std::move(nodequeue.colUpperNodesPtr);
+    (*this).lowerRoot = nodequeue.lowerRoot;
+    (*this).lowerMin = nodequeue.lowerMin;
+    (*this).hybridEstimRoot = nodequeue.hybridEstimRoot;
+    (*this).hybridEstimMin = nodequeue.hybridEstimMin;
+    (*this).suboptimalRoot = nodequeue.suboptimalRoot;
+    (*this).suboptimalMin = nodequeue.suboptimalMin;
+    (*this).numSuboptimal = nodequeue.numSuboptimal;
+    (*this).optimality_limit = nodequeue.optimality_limit;
+    (*this).numCol = nodequeue.numCol;
+  }
 }
