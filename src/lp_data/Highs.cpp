@@ -125,46 +125,6 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  bool& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  HighsInt& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  double& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                  std::string& value) const {
-  if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::getOptionType(const std::string& option,
-                                 HighsOptionType& type) const {
-  if (getLocalOptionType(options_.log_options, option, options_.records,
-                         type) == OptionStatus::kOk)
-    return HighsStatus::kOk;
-  return HighsStatus::kError;
-}
-
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
   return HighsStatus::kOk;
@@ -189,6 +149,65 @@ HighsStatus Highs::writeOptions(const std::string& filename,
       return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;
+}
+
+// HighsStatus Highs::getOptionType(const char* option, HighsOptionType* type)
+// const { return getOptionType(option, type);}
+
+HighsStatus Highs::getOptionName(const HighsInt index,
+                                 std::string* name) const {
+  if (index < 0 || index >= HighsInt(this->options_.records.size()))
+    return HighsStatus::kError;
+  *name = this->options_.records[index]->name;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getOptionType(const std::string& option,
+                                 HighsOptionType* type) const {
+  if (getLocalOptionType(options_.log_options, option, options_.records,
+                         type) == OptionStatus::kOk)
+    return HighsStatus::kOk;
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getBoolOptionValues(const std::string& option,
+                                       bool* current_value,
+                                       bool* default_value) const {
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, default_value) != OptionStatus::kOk)
+    return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getIntOptionValues(const std::string& option,
+                                      HighsInt* current_value,
+                                      HighsInt* min_value, HighsInt* max_value,
+                                      HighsInt* default_value) const {
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, min_value, max_value,
+                           default_value) != OptionStatus::kOk)
+    return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getDoubleOptionValues(const std::string& option,
+                                         double* current_value,
+                                         double* min_value, double* max_value,
+                                         double* default_value) const {
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, min_value, max_value,
+                           default_value) != OptionStatus::kOk)
+    return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getStringOptionValues(const std::string& option,
+                                         std::string* current_value,
+                                         std::string* default_value) const {
+  if (getLocalOptionValues(options_.log_options, option, options_.records,
+                           current_value, default_value) != OptionStatus::kOk)
+    return HighsStatus::kError;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getInfoValue(const std::string& info,
