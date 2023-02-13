@@ -2,6 +2,7 @@
 
 #include "builder.hpp"
 
+#include <cctype>
 #include <cstring>
 #include <cassert>
 #include <iostream>
