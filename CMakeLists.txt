@@ -105,6 +105,7 @@ message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
 message(STATUS "Build CSharp: ${CSHARP}")
 
+# ZLIB can be switched off, for building interfaces
 option(ZLIB "Fast build: " ON)
 
 # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
@@ -510,18 +511,6 @@ message(STATUS "Build Python: ${BUILD_PYTHON_EXAMPLE}")
 CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
 message(STATUS "Build CSharp: ${BUILD_CSHARP_EXAMPLE}")
 
-# By default all dependencies are NOT built (i.e. BUILD_DEPS=OFF),
-# BUT if building any wrappers (Python, Java or .Net) then BUILD_DEPS=ON.
-if(PYTHON)
-  option(BUILD_DEPS /"Build all dependencies" ON)
-else()
-  option(BUILD_DEPS "Build all dependencies" OFF)
-endif()
-message(STATUS "Build all dependencies: ${BUILD_DEPS}")
-
-# Install built dependencies if any,
-option(INSTALL_BUILD_DEPS "Install build all dependencies" ON)
-
 # IF BUILD_DEPS=ON THEN Force all BUILD_*=ON
 CMAKE_DEPENDENT_OPTION(BUILD_ZLIB "Build the ZLIB dependency Library" OFF
   "NOT BUILD_DEPS" ON)
@@ -531,10 +520,6 @@ if(PYTHON)
   CMAKE_DEPENDENT_OPTION(BUILD_pybind11 "Build the pybind11 dependency Library" OFF
     "NOT BUILD_DEPS" ON)
   message(STATUS "Python: Build pybind11: ${BUILD_pybind11}")
-
-  CMAKE_DEPENDENT_OPTION(BUILD_pyomo "Build the pyomo dependency Library" OFF
-    "NOT BUILD_DEPS" ON)
-  message(STATUS "Python: Build pyomo: ${BUILD_pyomo}")
 
   CMAKE_DEPENDENT_OPTION(BUILD_VENV "Create Python venv in BINARY_DIR/python/venv" OFF
     "NOT BUILD_TESTING" ON)
