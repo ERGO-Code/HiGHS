@@ -478,7 +478,9 @@ class HighsDomain {
   }
 
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
-    assert(infeasible_ == 0);
+    if (kAllowDeveloperAssert) {
+      assert(infeasible_ == 0);
+    }
     if (col_lower_[col] < val) {
       changeBound({val, col, HighsBoundType::kLower}, reason);
       if (infeasible_ == 0) propagate();

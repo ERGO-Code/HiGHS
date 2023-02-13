@@ -13,6 +13,8 @@
 
 #include "util/HighsInt.h"
 
+const HighsInt kHighsMaximumStringLength = 512;
+
 const HighsInt kHighsStatusError = -1;
 const HighsInt kHighsStatusOk = 0;
 const HighsInt kHighsStatusWarning = 1;
@@ -601,6 +603,79 @@ HighsInt Highs_writeOptions(const void* highs, const char* filename);
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
 HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
+
+/**
+ * Return the number of options
+ *
+ * @param highs     a pointer to the Highs instance
+ */
+HighsInt Highs_getNumOptions(const void* highs);
+
+/**
+ * Get the name of an option identified by index
+ *
+ * @param highs     a pointer to the Highs instance
+ * @param index     the index of the option
+ * @param name      the name of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
+                             char** name);
+
+/**
+ * Get the current and default values of a bool option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getBoolOptionValues(const void* highs, const char* option,
+                                   HighsInt* current_value,
+                                   HighsInt* default_value);
+/**
+ * Get the current and default values of an int option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param min_value     a pointer to the minimum value of the option
+ * @param max_value     a pointer to the maximum value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getIntOptionValues(const void* highs, const char* option,
+                                  HighsInt* current_value, HighsInt* min_value,
+                                  HighsInt* max_value, HighsInt* default_value);
+
+/**
+ * Get the current and default values of a double option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param min_value     a pointer to the minimum value of the option
+ * @param max_value     a pointer to the maximum value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getDoubleOptionValues(const void* highs, const char* option,
+                                     double* current_value, double* min_value,
+                                     double* max_value, double* default_value);
+
+/**
+ * Get the current and default values of a string option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getStringOptionValues(const void* highs, const char* option,
+                                     char* current_value, char* default_value);
 
 /**
  * Get an int-valued info value.

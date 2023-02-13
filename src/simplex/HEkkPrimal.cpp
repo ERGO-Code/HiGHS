@@ -745,7 +745,9 @@ void HEkkPrimal::rebuild() {
   ekk_instance_.computePrimal();
   if (solve_phase == kSolvePhase2) {
     bool correct_primal_ok = correctPrimal();
-    assert(correct_primal_ok);
+    if (kAllowDeveloperAssert) {
+      assert(correct_primal_ok);
+    }
   }
   getBasicPrimalInfeasibility();
   if (info.num_primal_infeasibilities > 0) {
@@ -2100,7 +2102,9 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kError,
                 "correctPrimal: Missed %d bound shifts\n",
                 num_primal_correction_skipped);
-    assert(!num_primal_correction_skipped);
+    if (kAllowDeveloperAssert) {
+      assert(!num_primal_correction_skipped);
+    }
     return false;
   }
   if (max_primal_correction > 2 * max_max_primal_correction) {
@@ -2541,7 +2545,9 @@ void HEkkPrimal::updateVerify() {
                 ekk_instance_.iteration_count_, alpha_col,
                 alpha_row_source.c_str(), alpha_row, abs_alpha_diff,
                 numericalTrouble);
-  assert(numericalTrouble < 1e-3);
+  if (kAllowDeveloperAssert) {
+    assert(numericalTrouble < 1e-3);
+  }
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
   //
