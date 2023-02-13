@@ -733,7 +733,7 @@ void HEkkPrimal::rebuild() {
     assert(info.backtracking_);
     ekk_instance_.initialisePartitionedRowwiseMatrix();
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
-						     ekk_instance_.basis_.nonbasicFlag_.data()));
+        ekk_instance_.basis_.nonbasicFlag_.data()));
   }
 
   if (info.backtracking_) {

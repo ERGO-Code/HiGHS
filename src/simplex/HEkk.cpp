@@ -1307,7 +1307,8 @@ void HEkk::addRows(const HighsLp& lp,
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
   if (kExtendInvertWhenAddingRows && this->status_.has_nla) {
-    this->simplex_nla_.addRows(&lp, basis_.basicIndex_.data(), &scaled_ar_matrix);
+    this->simplex_nla_.addRows(&lp, basis_.basicIndex_.data(),
+                               &scaled_ar_matrix);
     setNlaPointersForTrans(lp);
     this->debugNlaCheckInvert("HEkk::addRows - on entry",
                               kHighsDebugLevelExpensive + 1);
@@ -1515,19 +1516,19 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
   //
   if (this->status_.has_nla) {
     assert(lpFactorRowCompatible());
-    this->simplex_nla_.setPointers(&(this->lp_), local_scaled_a_matrix,
-                                   this->basis_.basicIndex_.data(), this->options_,
-                                   this->timer_, &(this->analysis_));
+    this->simplex_nla_.setPointers(
+        &(this->lp_), local_scaled_a_matrix, this->basis_.basicIndex_.data(),
+        this->options_, this->timer_, &(this->analysis_));
   } else {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_->factor_pivot_threshold);
-    simplex_nla_.setup(&(this->lp_),                  //&lp_,
-                       this->basis_.basicIndex_.data(),  //basis_.basicIndex_.data(),
-                       this->options_,                // options_,
-                       this->timer_,                  // timer_,
-                       &(this->analysis_),            //&analysis_,
-                       local_scaled_a_matrix,
-                       this->info_.factor_pivot_threshold);
+    simplex_nla_.setup(
+        &(this->lp_),                     //&lp_,
+        this->basis_.basicIndex_.data(),  // basis_.basicIndex_.data(),
+        this->options_,                   // options_,
+        this->timer_,                     // timer_,
+        &(this->analysis_),               //&analysis_,
+        local_scaled_a_matrix, this->info_.factor_pivot_threshold);
     status_.has_nla = true;
   }
 
@@ -2298,7 +2299,8 @@ void HEkk::resetSyntheticClock() {
 void HEkk::initialisePartitionedRowwiseMatrix() {
   if (status_.has_ar_matrix) return;
   analysis_.simplexTimerStart(matrixSetupClock);
-  ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, basis_.nonbasicFlag_.data());
+  ar_matrix_.createRowwisePartitioned(lp_.a_matrix_,
+                                      basis_.nonbasicFlag_.data());
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;

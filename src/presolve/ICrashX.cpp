@@ -51,9 +51,9 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   ipx::LpSolver lps;
   lps.SetParameters(parameters);
 
-  ipx::Int load_status =
-    lps.LoadModel(num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
-		  Ap.data(), Ai.data(), Av.data(), rhs.data(), constraint_type.data());
+  ipx::Int load_status = lps.LoadModel(
+      num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
+      Ap.data(), Ai.data(), Av.data(), rhs.data(), constraint_type.data());
   if (load_status != 0) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Error loading ipx model\n");
@@ -91,13 +91,14 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       (HighsInt)highs_solution.row_dual.size() == num_row) {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with primal and dual values\n");
-    crossover_status = lps.CrossoverFromStartingPoint(x.data(), slack.data(), highs_solution.row_dual.data(),
-						      highs_solution.col_dual.data());
+    crossover_status = lps.CrossoverFromStartingPoint(
+        x.data(), slack.data(), highs_solution.row_dual.data(),
+        highs_solution.col_dual.data());
   } else {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with only primal values\n");
-    crossover_status =
-      lps.CrossoverFromStartingPoint(x.data(), slack.data(), nullptr, nullptr);
+    crossover_status = lps.CrossoverFromStartingPoint(x.data(), slack.data(),
+                                                      nullptr, nullptr);
   }
 
   if (crossover_status != 0) {
@@ -132,9 +133,10 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   ipx_solution.ipx_row_dual.resize(num_row);
   ipx_solution.ipx_row_status.resize(num_row);
   ipx_solution.ipx_col_status.resize(num_col);
-  ipx::Int errflag = lps.GetBasicSolution(ipx_solution.ipx_col_value.data(), ipx_solution.ipx_row_value.data(),
-					  ipx_solution.ipx_row_dual.data(), ipx_solution.ipx_col_dual.data(),
-					  ipx_solution.ipx_row_status.data(), ipx_solution.ipx_col_status.data());
+  ipx::Int errflag = lps.GetBasicSolution(
+      ipx_solution.ipx_col_value.data(), ipx_solution.ipx_row_value.data(),
+      ipx_solution.ipx_row_dual.data(), ipx_solution.ipx_col_dual.data(),
+      ipx_solution.ipx_row_status.data(), ipx_solution.ipx_col_status.data());
   if (errflag != 0) {
     highsLogUser(log_options, HighsLogType::kError,
                  "IPX crossover getting basic solution: flag = %d\n",
