@@ -39,8 +39,14 @@ bool HighsLp::hasSemiVariables() const {
   return false;
 }
 
-bool HighsLp::operator==(const HighsLp& lp) {
+bool HighsLp::operator==(const HighsLp& lp) const {
   bool equal = equalButForNames(lp);
+  equal = equalNames(lp) && equal;
+  return equal;
+}
+
+bool HighsLp::equalNames(const HighsLp& lp) const {
+  bool equal = true;
   equal = this->objective_name_ == lp.objective_name_ && equal;
   equal = this->row_names_ == lp.row_names_ && equal;
   equal = this->col_names_ == lp.col_names_ && equal;

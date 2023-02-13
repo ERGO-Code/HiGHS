@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 
 // void setLogOptions();
 

@@ -17,6 +17,18 @@
 
 #include <cassert>
 
+bool HighsModel::operator==(const HighsModel& model) const {
+  bool equal = equalButForNames(model);
+  equal = this->lp_.equalNames(model.lp_) && equal;
+  return equal;
+}
+
+bool HighsModel::equalButForNames(const HighsModel& model) const {
+  bool equal = this->lp_.equalButForNames(model.lp_);
+  equal = this->hessian_ == model.hessian_ && equal;
+  return equal;
+}
+
 void HighsModel::clear() {
   this->lp_.clear();
   this->hessian_.clear();
