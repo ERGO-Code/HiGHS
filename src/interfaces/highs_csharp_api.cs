@@ -188,6 +188,12 @@ public class HighsLpSolver : IDisposable
    private static extern int Highs_writeModel(IntPtr highs, string filename);
 
    [DllImport(highslibname)]
+   private static extern int Highs_writeSolutionPretty(IntPtr highs, string filename);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_getInfinity(IntPtr highs);
+
+   [DllImport(highslibname)]
    private static extern int Highs_passLp(
       IntPtr highs,
       int numcol,
@@ -343,6 +349,12 @@ public class HighsLpSolver : IDisposable
 
    [DllImport(highslibname)]
    private static extern int Highs_changeRowsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_changeColsIntegralityByRange(IntPtr highs, int from_col, int to_col, int[] integrality);
+
+   [DllImport(highslibname)]
+   private static extern int Highs_changeCoeff(IntPtr highs, int row, int col, double value);
 
    [DllImport(highslibname)]
    private static extern int Highs_deleteColsByRange(IntPtr highs, int from_col, int to_col);
@@ -563,6 +575,16 @@ public class HighsLpSolver : IDisposable
    public HighsStatus writeModel(string filename)
    {
       return (HighsStatus)HighsLpSolver.Highs_writeModel(this.highs, filename);
+   }
+
+   public HighsStatus writeSolutionPretty(string filename)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_writeSolutionPretty(this.highs, filename);
+   }
+
+   public Double getInfinity()
+   {
+      return (Double)HighsLpSolver.Highs_getInfinity(this.highs);
    }
 
    public HighsStatus passLp(HighsModel model)
@@ -793,6 +815,16 @@ public class HighsLpSolver : IDisposable
    public HighsStatus changeRowsBoundsByMask(bool[] mask, double[] lower, double[] upper)
    {
       return (HighsStatus)HighsLpSolver.Highs_changeRowsBoundsByMask(this.highs, mask.Select(x => x ? 1 : 0).ToArray(), lower, upper);
+   }
+
+   public HighsStatus changeColsIntegralityByRange(int from_col, int to_col, int[] integrality)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_changeColsIntegralityByRange(this.highs, from_col, to_col, integrality);
+   }
+
+   public HighsStatus changeCoeff(int row, int col, double value)
+   {
+      return (HighsStatus)HighsLpSolver.Highs_changeCoeff(this.highs, row, col, value);
    }
 
    public HighsStatus deleteColsByRange(int from, int to)
