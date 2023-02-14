@@ -268,7 +268,7 @@ if(MSVC)
 # This fouls up building HiGHS as part of a larger CMake project: see #1129.
 # Setting it will speed up run-time in debug (and compile-time?)
 #
-    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+#    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 endif()
 
 if (NOT FAST_BUILD OR FORTRAN)
