@@ -328,39 +328,6 @@ set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-if (OSI_FOUND)
-    add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
-    set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
-
-    target_include_directories(OsiHighs PUBLIC ${OSI_INCLUDE_DIRS})
-    target_link_libraries(OsiHighs PUBLIC libhighs ${OSI_LIBRARIES})
-    target_compile_options(OsiHighs PUBLIC ${OSI_CFLAGS_OTHER})
-
-    if(${BUILD_SHARED_LIBS})
-        set_target_properties(OsiHighs PROPERTIES
-           VERSION
-           ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
-           SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
-    else()
-        set_target_properties(OsiHighs PROPERTIES POSITION_INDEPENDENT_CODE on)
-    endif()
-
-    install(TARGETS OsiHighs
-        LIBRARY
-        ARCHIVE
-        RUNTIME
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-
-    set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
-    #configure and install the pkg-config file
-    configure_file(${HIGHS_SOURCE_DIR}/osi-highs.pc.in
-        "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
-    install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-endif()
-
 if (ZLIB_FOUND)
   target_link_libraries(libhighs ZLIB::ZLIB)
   set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
