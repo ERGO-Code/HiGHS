@@ -2,14 +2,13 @@ from setuptools import setup, find_packages
 import pybind11.setup_helpers
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 import os
-import ctypes.util
-
+from pyomo.common.fileutils import find_library
 
 original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS
 pybind11.setup_helpers.MACOS = False
 
 try:
-    highs_lib = ctypes.util.find_library('highs')
+    highs_lib = find_library('libhighs', include_PATH=True)
     if highs_lib is None:
         raise RuntimeError('Could not find HiGHS library; Please make sure it is in the LD_LIBRARY_PATH environment variable')
     highs_lib_dir = os.path.dirname(highs_lib)
