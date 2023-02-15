@@ -1872,12 +1872,12 @@ void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
     // With postitive number of rows, can assume that there are index and value
     // vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
-                 lp.a_matrix_.start_[lp.num_col_], &lp.a_matrix_.start_[0],
-                 &lp.a_matrix_.index_[0], &lp.a_matrix_.value_[0]);
+                 lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
+                 lp.a_matrix_.index_.data(), lp.a_matrix_.value_.data());
   } else {
     // With no rows, can's assume that there are index and value vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
-                 lp.a_matrix_.start_[lp.num_col_], &lp.a_matrix_.start_[0],
+                 lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
                  NULL, NULL);
   }
 }

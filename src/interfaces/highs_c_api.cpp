@@ -690,7 +690,7 @@ HighsInt Highs_changeColsIntegralityByRange(void* highs,
     }
   }
   return (HighsInt)((Highs*)highs)
-      ->changeColsIntegrality(from_col, to_col, &pass_integrality[0]);
+      ->changeColsIntegrality(from_col, to_col, pass_integrality.data());
 }
 
 HighsInt Highs_changeColsIntegralityBySet(void* highs,
@@ -705,7 +705,7 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
     }
   }
   return (HighsInt)((Highs*)highs)
-      ->changeColsIntegrality(num_set_entries, set, &pass_integrality[0]);
+      ->changeColsIntegrality(num_set_entries, set, pass_integrality.data());
 }
 
 HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
@@ -719,7 +719,7 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
     }
   }
   return (HighsInt)((Highs*)highs)
-      ->changeColsIntegrality(mask, &pass_integrality[0]);
+      ->changeColsIntegrality(mask, pass_integrality.data());
 }
 
 HighsInt Highs_changeColCost(void* highs, const HighsInt col,
@@ -969,13 +969,13 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   *num_col = lp.num_col_;
   *num_row = lp.num_row_;
   if (*num_col > 0) {
-    memcpy(col_cost, &lp.col_cost_[0], *num_col * sizeof(double));
-    memcpy(col_lower, &lp.col_lower_[0], *num_col * sizeof(double));
-    memcpy(col_upper, &lp.col_upper_[0], *num_col * sizeof(double));
+    memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
+    memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
+    memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
   }
   if (*num_row > 0) {
-    memcpy(row_lower, &lp.row_lower_[0], *num_row * sizeof(double));
-    memcpy(row_upper, &lp.row_upper_[0], *num_row * sizeof(double));
+    memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
+    memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
   }
 
   // Save the original orientation so that it is recovered
@@ -995,16 +995,16 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
 
   if (*num_col > 0 && *num_row > 0) {
     *num_nz = lp.a_matrix_.numNz();
-    memcpy(a_start, &lp.a_matrix_.start_[0],
+    memcpy(a_start, lp.a_matrix_.start_.data(),
            num_start_entries * sizeof(HighsInt));
-    memcpy(a_index, &lp.a_matrix_.index_[0], *num_nz * sizeof(HighsInt));
-    memcpy(a_value, &lp.a_matrix_.value_[0], *num_nz * sizeof(double));
+    memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
+    memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
     *q_num_nz = hessian.start_[*num_col];
-    memcpy(q_start, &hessian.start_[0], *num_col * sizeof(HighsInt));
-    memcpy(q_index, &hessian.index_[0], *q_num_nz * sizeof(HighsInt));
-    memcpy(q_value, &hessian.value_[0], *q_num_nz * sizeof(double));
+    memcpy(q_start, hessian.start_.data(), *num_col * sizeof(HighsInt));
+    memcpy(q_index, hessian.index_.data(), *q_num_nz * sizeof(HighsInt));
+    memcpy(q_value, hessian.value_.data(), *q_num_nz * sizeof(double));
   }
   if ((HighsInt)lp.integrality_.size()) {
     for (int iCol = 0; iCol < *num_col; iCol++)

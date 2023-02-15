@@ -170,7 +170,8 @@ TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   double coeff = 1e6;
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value = {-1, coeff};
-  REQUIRE(highs.addRow(0, 0, 2, &index[0], &value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRow(0, 0, 2, index.data(), value.data()) ==
+          HighsStatus::kOk);
   // Problem is no longer unbounded due to equation linking the
   // semi-variable to the continuous variable. However, optimal value
   // of semi-variable should be 1e6, so it is active at the modified upper

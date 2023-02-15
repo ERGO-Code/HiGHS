@@ -1664,8 +1664,8 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
     rhs[row] = 1;
     basis_inverse_row.resize(num_row, 0);
     // Form B^{-T}e_{row}
-    basisSolveInterface(rhs, &basis_inverse_row[0], NULL, NULL, true);
-    basis_inverse_row_vector = &basis_inverse_row[0];
+    basisSolveInterface(rhs, basis_inverse_row.data(), NULL, NULL, true);
+    basis_inverse_row_vector = basis_inverse_row.data();
   }
   bool return_indices = row_num_nz != NULL;
   if (return_indices) *row_num_nz = 0;
@@ -1939,7 +1939,7 @@ HighsStatus Highs::addVars(const HighsInt num_new_var, const double* lower,
   if (num_new_var <= 0) returnFromHighs(return_status);
   std::vector<double> cost;
   cost.assign(num_new_var, 0);
-  return addCols(num_new_var, &cost[0], lower, upper, 0, nullptr, nullptr,
+  return addCols(num_new_var, cost.data(), lower, upper, 0, nullptr, nullptr,
                  nullptr);
 }
 
@@ -2022,13 +2022,14 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
   std::vector<HighsVarType> local_integrality{integrality,
                                               integrality + num_set_entries};
   std::vector<HighsInt> local_set{set, set + num_set_entries};
-  sortSetData(num_set_entries, local_set, integrality, &local_integrality[0]);
+  sortSetData(num_set_entries, local_set, integrality,
+              local_integrality.data());
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
-                                &local_set[0], model_.lp_.num_col_);
+                                local_set.data(), model_.lp_.num_col_);
   assert(create_ok);
   HighsStatus call_status =
-      changeIntegralityInterface(index_collection, &local_integrality[0]);
+      changeIntegralityInterface(index_collection, local_integrality.data());
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "changeIntegrality");
@@ -2083,14 +2084,14 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
   // Ensure that the set and data are in ascending order
   std::vector<double> local_cost{cost, cost + num_set_entries};
   std::vector<HighsInt> local_set{set, set + num_set_entries};
-  sortSetData(num_set_entries, local_set, cost, NULL, NULL, &local_cost[0],
+  sortSetData(num_set_entries, local_set, cost, NULL, NULL, local_cost.data(),
               NULL, NULL);
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
-                                &local_set[0], model_.lp_.num_col_);
+                                local_set.data(), model_.lp_.num_col_);
   assert(create_ok);
   HighsStatus call_status =
-      changeCostsInterface(index_collection, &local_cost[0]);
+      changeCostsInterface(index_collection, local_cost.data());
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "changeCosts");
@@ -2154,14 +2155,14 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
   std::vector<double> local_lower{lower, lower + num_set_entries};
   std::vector<double> local_upper{upper, upper + num_set_entries};
   std::vector<HighsInt> local_set{set, set + num_set_entries};
-  sortSetData(num_set_entries, local_set, lower, upper, NULL, &local_lower[0],
-              &local_upper[0], NULL);
+  sortSetData(num_set_entries, local_set, lower, upper, NULL,
+              local_lower.data(), local_upper.data(), NULL);
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
-                                &local_set[0], model_.lp_.num_col_);
+                                local_set.data(), model_.lp_.num_col_);
   assert(create_ok);
   HighsStatus call_status = changeColBoundsInterface(
-      index_collection, &local_lower[0], &local_upper[0]);
+      index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "changeColBounds");
@@ -2227,14 +2228,14 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
   std::vector<double> local_lower{lower, lower + num_set_entries};
   std::vector<double> local_upper{upper, upper + num_set_entries};
   std::vector<HighsInt> local_set{set, set + num_set_entries};
-  sortSetData(num_set_entries, local_set, lower, upper, NULL, &local_lower[0],
-              &local_upper[0], NULL);
+  sortSetData(num_set_entries, local_set, lower, upper, NULL,
+              local_lower.data(), local_upper.data(), NULL);
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
-                                &local_set[0], model_.lp_.num_row_);
+                                local_set.data(), model_.lp_.num_row_);
   assert(create_ok);
   HighsStatus call_status = changeRowBoundsInterface(
-      index_collection, &local_lower[0], &local_upper[0]);
+      index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "changeRowBounds");
@@ -3172,8 +3173,8 @@ void Highs::reportModel() {
   if (model_.hessian_.dim_) {
     const HighsInt dim = model_.hessian_.dim_;
     reportHessian(options_.log_options, dim, model_.hessian_.start_[dim],
-                  &model_.hessian_.start_[0], &model_.hessian_.index_[0],
-                  &model_.hessian_.value_[0]);
+                  model_.hessian_.start_.data(), model_.hessian_.index_.data(),
+                  model_.hessian_.value_.data());
   }
 }
 

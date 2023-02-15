@@ -301,7 +301,7 @@ void HighsSimplexAnalysis::setupFactorTime(const HighsOptions& options) {
       clock.timer_pointer_ = timer_;
       thread_factor_clocks.push_back(clock);
     }
-    pointer_serial_factor_clocks = &thread_factor_clocks[0];
+    pointer_serial_factor_clocks = thread_factor_clocks.data();
     FactorTimer factor_timer;
     for (HighsTimerClock& clock : thread_factor_clocks)
       factor_timer.initialiseFactorClocks(clock);

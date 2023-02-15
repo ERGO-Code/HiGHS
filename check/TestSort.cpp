@@ -24,7 +24,7 @@ void getRandomValues(const HighsInt num_values, vector<double>& values,
 void doFullSort(const HighsInt num_values, vector<double>& values,
                 vector<HighsInt>& indices) {
   // Sort the vector of random number and their corresponding indices
-  maxheapsort(&values[0], &indices[0], num_values);
+  maxheapsort(values.data(), indices.data(), num_values);
 }
 
 void doAddSort(HighsInt& num_values_sorted,
@@ -138,7 +138,7 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   int_values.resize(num_values);
   std::make_heap(int_values.begin(), int_values.end());
   std::sort_heap(int_values.begin(), int_values.end());
-  //  maxheapsort(&int_values[0], num_values);
+  //  maxheapsort(int_values.data(), num_values);
 
   bool ok;
   // Check that the values in the vector of doubles are ascending - can do
@@ -208,8 +208,8 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   sorted_lb.resize(num_values);
   sorted_ub.resize(num_values);
 
-  sortSetData(num_values, sorted_set, &lb[0], &ub[0], NULL, &sorted_lb[0],
-              &sorted_ub[0], NULL);
+  sortSetData(num_values, sorted_set, lb.data(), ub.data(), NULL,
+              sorted_lb.data(), sorted_ub.data(), NULL);
 
   HighsInt prev_ix = -kHighsIInf;
   for (HighsInt k0 = 0; k0 < num_values; k0++) {

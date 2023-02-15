@@ -733,7 +733,7 @@ void HEkkPrimal::rebuild() {
     assert(info.backtracking_);
     ekk_instance_.initialisePartitionedRowwiseMatrix();
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
-        &ekk_instance_.basis_.nonbasicFlag_[0]));
+        ekk_instance_.basis_.nonbasicFlag_.data()));
   }
 
   if (info.backtracking_) {
@@ -2473,7 +2473,7 @@ void HEkkPrimal::updateDualSteepestEdgeWeights() {
   const double Kai = -2 / pivot_in_scaled_space;
   ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, &col_aq,
                                               new_pivotal_edge_weight, Kai,
-                                              &col_steepest_edge.array[0]);
+                                              col_steepest_edge.array.data());
   edge_weight[row_out] = new_pivotal_edge_weight;
 }
 

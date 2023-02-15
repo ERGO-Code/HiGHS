@@ -30,7 +30,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   // Get the integer solution to provide bound tightenings
   vector<HighsVarType> integrality;
   integrality.assign(num_col, HighsVarType::kInteger);
-  highs.changeColsIntegrality(from_col, to_col, &integrality[0]);
+  highs.changeColsIntegrality(from_col, to_col, integrality.data());
 
   highs.setOptionValue("output_flag", false);
   highs.run();
@@ -43,7 +43,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   // Now restore the original integrality and set an explicit logical
   // basis to force reinversion
   integrality.assign(num_col, HighsVarType::kContinuous);
-  highs.changeColsIntegrality(from_col, to_col, &integrality[0]);
+  highs.changeColsIntegrality(from_col, to_col, integrality.data());
   HighsBasis basis;
   for (HighsInt iCol = 0; iCol < num_col; iCol++)
     basis.col_status.push_back(HighsBasisStatus::kLower);
@@ -58,7 +58,7 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   // Get the basic variables to force INVERT with a logical basis
   vector<HighsInt> basic_variables;
   basic_variables.resize(lp.num_row_);
-  highs.getBasicVariables(&basic_variables[0]);
+  highs.getBasicVariables(basic_variables.data());
 
   // Can freeze a basis now!
   REQUIRE(highs.freezeBasis(frozen_basis_id0) == HighsStatus::kOk);
@@ -77,8 +77,8 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   if (dev_run) printf("\nSolving with bounds (integer solution, upper)\n");
   local_col_lower = integer_solution;
   local_col_upper = original_col_upper;
-  highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
-                         &local_col_upper[0]);
+  highs.changeColsBounds(from_col, to_col, local_col_lower.data(),
+                         local_col_upper.data());
   if (dev_run) highs.setOptionValue("output_flag", true);
   highs.run();
   // highs.setOptionValue("output_flag", false);
@@ -91,8 +91,8 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
     printf("\nSolving with bounds (integer solution, integer solution)\n");
   local_col_lower = integer_solution;
   local_col_upper = integer_solution;
-  highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
-                         &local_col_upper[0]);
+  highs.changeColsBounds(from_col, to_col, local_col_lower.data(),
+                         local_col_upper.data());
   if (dev_run) highs.setOptionValue("output_flag", true);
   highs.run();
   // highs.setOptionValue("output_flag", false);
@@ -109,8 +109,8 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   if (dev_run) printf("Change column bounds to (integer solution, upper)\n");
   local_col_lower = integer_solution;
   local_col_upper = original_col_upper;
-  highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
-                         &local_col_upper[0]);
+  highs.changeColsBounds(from_col, to_col, local_col_lower.data(),
+                         local_col_upper.data());
   if (dev_run) printf("Unfreeze basis %d\n", (int)frozen_basis_id2);
   REQUIRE(highs.unfreezeBasis(frozen_basis_id2) == HighsStatus::kOk);
   // Solving the LP should require no iterations
@@ -131,8 +131,8 @@ TEST_CASE("FreezeBasis", "[highs_test_freeze_basis]") {
   if (dev_run) printf("Change column bounds to (lower, upper)\n");
   local_col_lower = original_col_lower;
   local_col_upper = original_col_upper;
-  highs.changeColsBounds(from_col, to_col, &local_col_lower[0],
-                         &local_col_upper[0]);
+  highs.changeColsBounds(from_col, to_col, local_col_lower.data(),
+                         local_col_upper.data());
   if (dev_run) printf("Unfreeze basis %d\n", (int)frozen_basis_id1);
   REQUIRE(highs.unfreezeBasis(frozen_basis_id1) == HighsStatus::kOk);
   // Solving the LP should require no iterations

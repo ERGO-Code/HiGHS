@@ -652,8 +652,8 @@ HighsStatus Highs::changeColBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                col_lower, col_upper, NULL, &local_colLower[0],
-                &local_colUpper[0], NULL);
+                col_lower, col_upper, NULL, local_colLower.data(),
+                local_colUpper.data(), NULL);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
@@ -697,7 +697,8 @@ HighsStatus Highs::changeRowBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_, lower,
-                upper, NULL, &local_rowLower[0], &local_rowUpper[0], NULL);
+                upper, NULL, local_rowLower.data(), local_rowUpper.data(),
+                NULL);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
@@ -1426,7 +1427,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       rhs[col - num_col] = primal_ray_sign;
     }
     HighsInt* column_num_nz = 0;
-    basisSolveInterface(rhs, &column[0], column_num_nz, NULL, false);
+    basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
     // Now zero primal_ray_value and scatter the column according to
     // the basic variables.
     for (HighsInt iCol = 0; iCol < num_col; iCol++) primal_ray_value[iCol] = 0;
