@@ -3186,15 +3186,26 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                                            primal_feastol);
 
                 if (zLower == zUpper) {
-                  // rounded bounds are equal, so fix x1 to the corresponding
-                  // bound
+                  // Rounded bounds are equal
+                  //
+                  // Adjust bounds if variable is fixed to a value in between
+                  // its bounds
                   double fixVal = zLower * d + b;
+                  assert(fixVal > model->col_lower_[x1] - primal_feastol);
+                  assert(fixVal < model->col_upper_[x1] + primal_feastol);
+                  if (fixVal > model->col_lower_[x1])
+                    changeColLower(x1, fixVal);
+                  if (fixVal < model->col_upper_[x1])
+                    changeColUpper(x1, fixVal);
+                  // Fix variable
                   if (std::abs(model->col_lower_[x1] - fixVal) <=
                       primal_feastol) {
                     fixColToLower(postsolve_stack, x1);
-		  } else {
+                  } else {
+                    assert(std::abs(model->col_upper_[x1] - fixVal) <=
+                           primal_feastol);
                     fixColToUpper(postsolve_stack, x1);
-		  }
+                  }
                   rowpositions.erase(rowpositions.begin() + x1Cand);
                 } else {
                   transformColumn(postsolve_stack, x1, d, b);
