@@ -330,8 +330,8 @@ void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
   vector<HighsInt> sort_set_vec(1 + num_entries);
   vector<HighsInt> perm_vec(1 + num_entries);
 
-  HighsInt* sort_set = &sort_set_vec[0];
-  HighsInt* perm = &perm_vec[0];
+  HighsInt* sort_set = sort_set_vec.data();
+  HighsInt* perm = perm_vec.data();
 
   for (HighsInt ix = 0; ix < num_entries; ix++) {
     sort_set[1 + ix] = set[ix];
@@ -352,8 +352,8 @@ void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
   vector<HighsInt> sort_set_vec(1 + num_entries);
   vector<HighsInt> perm_vec(1 + num_entries);
 
-  HighsInt* sort_set = &sort_set_vec[0];
-  HighsInt* perm = &perm_vec[0];
+  HighsInt* sort_set = sort_set_vec.data();
+  HighsInt* perm = perm_vec.data();
 
   for (HighsInt ix = 0; ix < num_entries; ix++) {
     sort_set[1 + ix] = set[ix];

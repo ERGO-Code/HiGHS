@@ -413,13 +413,13 @@ void HEkkDual::initialiseInstance() {
   analysis = &ekk_instance_.analysis_;
 
   // Copy pointers
-  jMove = &ekk_instance_.basis_.nonbasicMove_[0];
-  workDual = &ekk_instance_.info_.workDual_[0];
-  workValue = &ekk_instance_.info_.workValue_[0];
-  workRange = &ekk_instance_.info_.workRange_[0];
-  baseLower = &ekk_instance_.info_.baseLower_[0];
-  baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  baseValue = &ekk_instance_.info_.baseValue_[0];
+  jMove = ekk_instance_.basis_.nonbasicMove_.data();
+  workDual = ekk_instance_.info_.workDual_.data();
+  workValue = ekk_instance_.info_.workValue_.data();
+  workRange = ekk_instance_.info_.workRange_.data();
+  baseLower = ekk_instance_.info_.baseLower_.data();
+  baseUpper = ekk_instance_.info_.baseUpper_.data();
+  baseValue = ekk_instance_.info_.baseValue_.data();
 
   // Setup local vectors
   col_DSE.setup(solver_num_row);
@@ -502,9 +502,9 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   }
 
   // Alias to the matrix
-  const HighsInt* Astart = &a_matrix->start_[0];
-  const HighsInt* Aindex = &a_matrix->index_[0];
-  const double* Avalue = &a_matrix->value_[0];
+  const HighsInt* Astart = a_matrix->start_.data();
+  const HighsInt* Aindex = a_matrix->index_.data();
+  const double* Avalue = a_matrix->value_.data();
   const HighsInt AcountX = Astart[solver_num_col];
 
   // Figure out partition weight
@@ -1036,7 +1036,7 @@ void HEkkDual::rebuild() {
     assert(info.backtracking_);
     ekk_instance_.initialisePartitionedRowwiseMatrix();
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
-        &ekk_instance_.basis_.nonbasicFlag_[0]));
+        ekk_instance_.basis_.nonbasicFlag_.data()));
   }
   // Record whether the update objective value should be tested. If
   // the objective value is known, then the updated objective value
@@ -2144,7 +2144,7 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
     const double Kai = -2 / pivot_in_scaled_space;
     ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, &col_aq,
                                                 new_pivotal_edge_weight, Kai,
-                                                &DSE_Vector->array[0]);
+                                                DSE_Vector->array.data());
     edge_weight[row_out] = new_pivotal_edge_weight;
   } else if (edge_weight_mode == EdgeWeightMode::kDevex) {
     // Pivotal row is for the current basis: weights are required for

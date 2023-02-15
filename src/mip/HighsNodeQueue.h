@@ -286,11 +286,7 @@ class HighsNodeQueue {
 
   HighsInt getBestBoundDomchgStackSize() const;
 
-  void clear() {
-    HighsNodeQueue nodequeue;
-    nodequeue.setNumCol(numCol);
-    *this = std::move(nodequeue);
-  }
+  void clear();
 
   int64_t numNodes() const { return nodes.size() - freeslots.size(); }
 

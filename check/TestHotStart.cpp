@@ -26,7 +26,7 @@ TEST_CASE("HotStart-avgas", "[highs_test_hot_start]") {
   // Get the integer solution to provide bound tightenings
   vector<HighsVarType> integrality;
   integrality.assign(num_col, HighsVarType::kInteger);
-  highs.changeColsIntegrality(from_col, to_col, &integrality[0]);
+  highs.changeColsIntegrality(from_col, to_col, integrality.data());
 
   highs.setOptionValue("output_flag", false);
   highs.run();
@@ -36,7 +36,7 @@ TEST_CASE("HotStart-avgas", "[highs_test_hot_start]") {
 
   // Now restore the original integrality
   integrality.assign(num_col, HighsVarType::kContinuous);
-  highs.changeColsIntegrality(from_col, to_col, &integrality[0]);
+  highs.changeColsIntegrality(from_col, to_col, integrality.data());
 
   // Solve the continuous problem and get its hot start
   highs.run();
@@ -51,8 +51,8 @@ TEST_CASE("HotStart-avgas", "[highs_test_hot_start]") {
   highs.setBasis();
 
   // Set the integer solution as upper bounds
-  highs.changeColsBounds(from_col, to_col, &original_col_lower[0],
-                         &integer_solution[0]);
+  highs.changeColsBounds(from_col, to_col, original_col_lower.data(),
+                         integer_solution.data());
 
   if (dev_run) printf("\nSolving with bounds (lower, integer solution)\n");
 
@@ -91,7 +91,7 @@ TEST_CASE("HotStart-rgn", "[highs_test_hot_start]") {
   // Now remove integrality
   vector<HighsVarType> integrality;
   integrality.assign(num_col, HighsVarType::kContinuous);
-  highs.changeColsIntegrality(from_col, to_col, &integrality[0]);
+  highs.changeColsIntegrality(from_col, to_col, integrality.data());
 
   // Solve the continuous problem and get its hot start
   highs.run();
@@ -106,8 +106,8 @@ TEST_CASE("HotStart-rgn", "[highs_test_hot_start]") {
   highs.setBasis();
 
   // Set the mip solution as upper bounds
-  highs.changeColsBounds(from_col, to_col, &original_col_lower[0],
-                         &mip_solution[0]);
+  highs.changeColsBounds(from_col, to_col, original_col_lower.data(),
+                         mip_solution.data());
 
   if (dev_run) printf("\nSolving with bounds (lower, mip solution)\n");
 
