@@ -3190,11 +3190,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   // bound
                   double fixVal = zLower * d + b;
                   if (std::abs(model->col_lower_[x1] - fixVal) <=
-                      primal_feastol)
+                      primal_feastol) {
                     fixColToLower(postsolve_stack, x1);
-                  else
+		  } else {
                     fixColToUpper(postsolve_stack, x1);
-
+		  }
                   rowpositions.erase(rowpositions.begin() + x1Cand);
                 } else {
                   transformColumn(postsolve_stack, x1, d, b);
