@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 cc_binary(
-    name = "call_highs_example",
+    name = "call-highs-example",
     srcs= ["call_highs_from_cpp.cpp"],
     deps = [
         "@highs",
