@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 TEST_CASE("highs-names", "[highs_names]") {
   const std::string model = "avgas";
   const std::string model_file =
@@ -22,5 +22,6 @@ TEST_CASE("highs-names", "[highs_names]") {
     //    REQUIRE(highs.passColName(iCol, name) == HighsStatus::kOk);
   }
   highs.run();
+  REQUIRE(highs.writeModel("") == HighsStatus::kOk);
   highs.writeSolution("", 1);
 }

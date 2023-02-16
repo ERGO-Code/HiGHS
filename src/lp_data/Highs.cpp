@@ -607,6 +607,17 @@ HighsStatus Highs::writeModel(const std::string& filename) {
 
   // Ensure that the LP is column-wise
   model_.lp_.ensureColwise();
+  // Check for repeated column or row names that would corrupt the file
+  if (repeatedNames(model_.lp_.col_names_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Model has repeated column names\n");
+    return returnFromHighs(HighsStatus::kError);
+  }
+  if (repeatedNames(model_.lp_.row_names_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Model has repeated row names\n");
+    return returnFromHighs(HighsStatus::kError);
+  }
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel();

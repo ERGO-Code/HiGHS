@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -1373,3 +1374,29 @@ std::string findModelObjectiveName(const HighsLp* lp,
   assert(objective_name != "");
   return objective_name;
 }
+
+/*
+void print_map(std::string comment, const std::map<std::string, HighsInt>& m)
+{
+    std::cout << comment;
+
+  for (const auto& n : m)
+      std::cout << n.first << " = " << n.second << "; ";
+    std::cout << '\n';
+}
+*/
+bool repeatedNames(const std::vector<std::string> name) {
+  const HighsInt num_name = name.size();
+  // With no names, cannot have any repeated
+  if (num_name == 0) return false;
+  std::map<std::string, HighsInt> name_map;
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    auto search = name_map.find(name[ix]);
+    if (search != name_map.end()) return true;
+    //    printf("Search for %s yields %d\n", name[ix].c_str(), int(search->second));
+    name_map.insert({name[ix], ix});
+    //    print_map("Map\n", name_map);
+  }
+  return false;
+}
+
