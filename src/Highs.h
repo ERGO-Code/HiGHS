@@ -154,6 +154,10 @@ class Highs {
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
+  /**
+   * @brief Pass names to the incumbent model
+   */
+  HighsStatus passNames(const char** col_names);
 
   /**
    * @brief Read in a model

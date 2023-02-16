@@ -527,6 +527,10 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passNames(const char** col_names) {
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::readModel(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;

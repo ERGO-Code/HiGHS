@@ -21,6 +21,7 @@ set(TEST_SOURCES
     TestFreezeBasis.cpp
     TestHotStart.cpp
     TestMain.cpp
+    TestNames.cpp
     TestOptions.cpp
     TestIO.cpp
     TestSort.cpp
