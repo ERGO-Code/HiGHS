@@ -21,10 +21,10 @@ jobs:
           key: bazel
 
       - name: build bazel
-        run: bazel build ...
+        run: bazel build //...
       
       - name: build example
-        run:  bazel build examples:call-highs-example
+        run:  bazel build //examples:call-highs-example
 
       - name: test
         run: ./bazel-bin/examples/call-highs-example
