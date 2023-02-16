@@ -527,7 +527,13 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
-HighsStatus Highs::passNames(const char** col_names) {
+HighsStatus Highs::passColName(const HighsInt col,
+			       const std::string& name) {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::passRowName(const HighsInt row,
+			       const std::string& name) {
   return HighsStatus::kError;
 }
 
@@ -2342,6 +2348,14 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
   return returnFromHighs(HighsStatus::kOk);
 }
 
+HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::getColIntegrality(const HighsInt col, HighsVarType& integrality) const {
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
@@ -2381,6 +2395,10 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
   return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
+  return HighsStatus::kError;
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
