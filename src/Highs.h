@@ -157,14 +157,12 @@ class Highs {
   /**
    * @brief Pass a column name to the incumbent model
    */
-  HighsStatus passColName(const HighsInt col,
-			  const std::string& name);
+  HighsStatus passColName(const HighsInt col, const std::string& name);
 
   /**
    * @brief Pass a row name to the incumbent model
    */
-  HighsStatus passRowName(const HighsInt row,
-			  const std::string& name);
+  HighsStatus passRowName(const HighsInt row, const std::string& name);
 
   /**
    * @brief Read in a model
@@ -653,14 +651,13 @@ class Highs {
   /**
    * @brief Get a column name from the incumbent model
    */
-  HighsStatus getColName(const HighsInt col,
-				std::string& name) const;
+  HighsStatus getColName(const HighsInt col, std::string& name) const;
 
   /**
    * @brief Get a column integrality from the incumbent model
    */
   HighsStatus getColIntegrality(const HighsInt col,
-				       HighsVarType& integrality) const;
+                                HighsVarType& integrality) const;
 
   /**
    * @brief Get multiple rows from the model given by an interval [from_row,
@@ -719,8 +716,7 @@ class Highs {
   /**
    * @brief Get a row name from the incumbent model
    */
-  HighsStatus getRowName(const HighsInt row,
-				std::string& name) const;
+  HighsStatus getRowName(const HighsInt row, std::string& name) const;
 
   /**
    * @brief Get a matrix coefficient

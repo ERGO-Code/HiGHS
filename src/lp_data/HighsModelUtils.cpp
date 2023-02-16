@@ -1385,6 +1385,7 @@ void print_map(std::string comment, const std::map<std::string, HighsInt>& m)
     std::cout << '\n';
 }
 */
+
 bool repeatedNames(const std::vector<std::string> name) {
   const HighsInt num_name = name.size();
   // With no names, cannot have any repeated
@@ -1393,10 +1394,10 @@ bool repeatedNames(const std::vector<std::string> name) {
   for (HighsInt ix = 0; ix < num_name; ix++) {
     auto search = name_map.find(name[ix]);
     if (search != name_map.end()) return true;
-    //    printf("Search for %s yields %d\n", name[ix].c_str(), int(search->second));
+    //    printf("Search for %s yields %d\n", name[ix].c_str(),
+    //    int(search->second));
     name_map.insert({name[ix], ix});
     //    print_map("Map\n", name_map);
   }
   return false;
 }
-
