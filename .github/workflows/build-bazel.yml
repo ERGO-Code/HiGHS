@@ -25,11 +25,7 @@ jobs:
       
       - name: build bazel
         run: |
-          pwd
-          ls $GITHUB_WORKSPACE 
           bazel build //...
-          ls ${runner.workspace}
-          ls $GITHUB_WORKSPACE/bazel-bin 
       
       - name: test
         run: ./bazel-bin/examples/call-highs-example
