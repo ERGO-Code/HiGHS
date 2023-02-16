@@ -24,7 +24,9 @@ jobs:
         run: bazel clean
       
       - name: build bazel
-        run: bazel build //...
+        run: |
+          pwd
+          bazel build //...
       
       - name: test
         run: ./bazel-bin/examples/call-highs-example
