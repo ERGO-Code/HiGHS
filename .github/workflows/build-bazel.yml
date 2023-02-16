@@ -26,6 +26,8 @@ jobs:
       - name: build bazel
         run: |
           pwd
+          ls $GITHUB_WORKSPACE 
+          ls $GITHUB_WORKSPACE/bazel-bin 
           bazel build //...
       
       - name: test
