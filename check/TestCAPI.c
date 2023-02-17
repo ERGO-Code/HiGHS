@@ -439,18 +439,18 @@ void full_api() {
   return_status = Highs_writeModel(highs, "");
   assert( return_status == kHighsStatusError );
 
+  // Define all column names to be different
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    const char suffix = iCol + '0';
+    const char* suffix_p = &suffix;
+    char name[4];
+    strncpy(name, col_prefix, sizeof(name));
+    strncat(name, suffix_p, sizeof(name)-strlen(name));
+    const char* name_p = name;
+    return_status = Highs_passColName(highs, iCol, name_p);
+    assert( return_status == kHighsStatusOk );
+  }
   if (full_api_names) {
-    // Define all column names to be different
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      const char suffix = iCol + '0';
-      const char* suffix_p = &suffix;
-      char name[4];
-      strncpy(name, col_prefix, sizeof(name));
-      strncat(name, suffix_p, sizeof(name)-strlen(name));
-      const char* name_p = name;
-      return_status = Highs_passColName(highs, iCol, name_p);
-      assert( return_status == kHighsStatusOk );
-    }
     return_status = Highs_writeModel(highs, "");
     assert( return_status == kHighsStatusOk );
 
