@@ -431,15 +431,15 @@ void full_api() {
   return_status = Highs_passRowName(highs, num_row, row_prefix);
   assert( return_status == kHighsStatusError );
 
-  if (full_api_names) {
-    // Define all column names to be the same
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      return_status = Highs_passColName(highs, iCol, col_prefix);
-      assert( return_status == kHighsStatusOk );
-    }
-    return_status = Highs_writeModel(highs, "");
-    assert( return_status == kHighsStatusError );
+  // Define all column names to be the same
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    return_status = Highs_passColName(highs, iCol, col_prefix);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusError );
 
+  if (full_api_names) {
     // Define all column names to be different
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       const char suffix = iCol + '0';
