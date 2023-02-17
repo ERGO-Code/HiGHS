@@ -1545,6 +1545,36 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_row, double* lower, double* upper,
                              HighsInt* num_nz, HighsInt* matrix_start,
                              HighsInt* matrix_index, double* matrix_value);
+/**
+ * Get the name of a row
+ *
+ * @param row   the row for which the name is required
+ * @param name  the name of the rowumn
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
+  
+/**
+ * Get the name of a column
+ *
+ * @param col   the column for which the name is required
+ * @param name  the name of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
+  
+/**
+ * Get the integrality of a column
+ *
+ * @param col          the column for which the name is required
+ * @param integrality  the integrality of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getColIntegrality(const void* highs, const HighsInt col, HighsInt* integrality);
+  
 
 /**
  * Delete multiple adjacent columns.
