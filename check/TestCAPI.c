@@ -515,6 +515,7 @@ void full_api_options() {
   if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
   const char* presolve = "presolve";
   assert( *name == *presolve );
+  free(name);
 
   HighsInt check_simplex_scale_strategy;
   HighsInt min_simplex_scale_strategy;
@@ -898,6 +899,8 @@ void full_api_mip() {
     assert( return_status == kHighsStatusOk );
     assert( col_integrality == 1 );
   }
+  free(col_value);
+  free(row_value);
 
 }
 
@@ -928,9 +931,9 @@ void full_api_qp() {
   HighsInt q_dim = 1;
   HighsInt q_num_nz = 1;
   HighsInt q_format = kHighsHessianFormatTriangular;
-  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
-  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
-  double* q_value = (double*)malloc(sizeof(double) * q_num_nz);
+  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt*) * q_dim);
+  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt*) * q_num_nz);
+  double* q_value = (double*)malloc(sizeof(double*) * q_num_nz);
   q_start[0] = 0;
   q_index[0] = 0;
   q_value[0] = 2.0;
@@ -968,10 +971,13 @@ void full_api_qp() {
   model_status = Highs_getModelStatus(highs);
   assertIntValuesEqual("Model status for 2-d QP with illegal Hessian", model_status, 2);
 
+  free(q_start);
+  free(q_index);
+  free(q_value);
+
   // Pass the new Hessian
   q_dim = 2;
   q_num_nz = 2;
-  q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
   q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
   q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
   q_value = (double*)malloc(sizeof(double) * q_num_nz);
@@ -996,6 +1002,7 @@ void full_api_qp() {
   objective_function_value = Highs_getObjectiveValue(highs);
   assertDoubleValuesEqual("Objective", objective_function_value, required_objective_function_value);
 
+  free(col_solution);
   col_solution = (double*)malloc(sizeof(double) * num_col);
 
   return_status = Highs_getSolution(highs, col_solution, NULL, NULL, NULL);
@@ -1062,6 +1069,12 @@ void full_api_qp() {
   model_status = Highs_getModelStatus(highs);
   assertIntValuesEqual("Model status for infeasible 2-d QP", model_status, 8);
   assert( model_status == kHighsModelStatusInfeasible );
+
+  free(q_start);
+  free(q_index);
+  free(q_value);
+  free(col_solution);
+
 }
 
 void options() {
@@ -1084,6 +1097,7 @@ void options() {
   assert( primal_feasibility_tolerance == 2.0 );
 
   Highs_destroy(highs);
+
 }
 
 void test_getColsByRange() {
