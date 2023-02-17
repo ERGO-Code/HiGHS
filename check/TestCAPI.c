@@ -417,6 +417,79 @@ void full_api() {
   return_status = Highs_run(highs);
   assert( return_status == kHighsStatusOk );
 
+
+  const char* col_prefix = "Col";
+  const char* row_prefix = "Row";
+  // Check index out of bounds
+  return_status = Highs_passColName(highs, -1, col_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passColName(highs, num_col, col_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passRowName(highs, -1, row_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passRowName(highs, num_row, row_prefix);
+  assert( return_status == kHighsStatusError );
+
+  // Define all column names to be the same
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    return_status = Highs_passColName(highs, iCol, col_prefix);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusError );
+
+  // Define all column names to be different
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    const char suffix = iCol + '0';
+    const char* suffix_p = &suffix;
+    char name[4];
+    strncpy(name, col_prefix, sizeof(name));
+    strncat(name, suffix_p, sizeof(name)-strlen(name));
+    const char* name_p = name;
+    return_status = Highs_passColName(highs, iCol, name_p);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusOk );
+
+  // Define all row names to be the same
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    return_status = Highs_passRowName(highs, iRow, row_prefix);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusError );
+
+  // Define all row names to be different
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    const char suffix = iRow + '0';
+    const char* suffix_p = &suffix;
+    char name[4];
+    strncpy(name, row_prefix, sizeof(name));
+    strncat(name, suffix_p, sizeof(name)-strlen(name));
+    const char* name_p = name;
+    return_status = Highs_passRowName(highs, iRow, name_p);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusOk );
+
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    char name[4];
+    char* name_p = name;
+    return_status = Highs_getColName(highs, iCol, name_p);
+    assert( return_status == kHighsStatusOk );
+    if (dev_run) printf("Column %d has name %s\n", iCol, name_p);
+  }
+
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    char name[4];
+    char* name_p = name;
+    return_status = Highs_getRowName(highs, iRow, name_p);
+    assert( return_status == kHighsStatusOk );
+    if (dev_run) printf("Row    %d has name %s\n", iRow, name_p);
+  }
+
   Highs_destroy(highs);
 }
 
@@ -813,6 +886,18 @@ void full_api_mip() {
   return_status = Highs_getInt64InfoValue(highs, "mip_node_count", &mip_node_count);
   assert( return_status == kHighsStatusOk );
   assert( mip_node_count == 1 );
+
+  // Test Highs_getColIntegrality
+  HighsInt col_integrality;
+  return_status = Highs_getColIntegrality(highs, -1, &col_integrality);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_getColIntegrality(highs, num_col, &col_integrality);
+  assert( return_status == kHighsStatusError );
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    return_status = Highs_getColIntegrality(highs, iCol, &col_integrality);
+    assert( return_status == kHighsStatusOk );
+    assert( col_integrality == 1 );
+  }
 
 }
 

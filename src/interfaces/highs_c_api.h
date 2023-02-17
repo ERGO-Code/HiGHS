@@ -464,6 +464,28 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const double* value);
 
 /**
+ * Pass the name of a row
+ *
+ * @param row   the row for which the name is supplied
+ * @param name  the name of the row
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_passRowName(const void* highs, const HighsInt row,
+                           const char* name);
+
+/**
+ * Pass the name of a column
+ *
+ * @param col   the column for which the name is supplied
+ * @param name  the name of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_passColName(const void* highs, const HighsInt col,
+                           const char* name);
+
+/**
  * Set a boolean-valued option.
  *
  * @param highs     a pointer to the Highs instance
@@ -1549,12 +1571,12 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
  * Get the name of a row
  *
  * @param row   the row for which the name is required
- * @param name  the name of the rowumn
+ * @param name  the name of the row
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
 HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
-  
+
 /**
  * Get the name of a column
  *
@@ -1564,7 +1586,7 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
-  
+
 /**
  * Get the integrality of a column
  *
@@ -1573,8 +1595,8 @@ HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
  *
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
-HighsInt Highs_getColIntegrality(const void* highs, const HighsInt col, HighsInt* integrality);
-  
+HighsInt Highs_getColIntegrality(const void* highs, const HighsInt col,
+                                 HighsInt* integrality);
 
 /**
  * Delete multiple adjacent columns.

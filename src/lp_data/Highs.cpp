@@ -2411,7 +2411,7 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
 HighsStatus Highs::getColIntegrality(const HighsInt col,
                                      HighsVarType& integrality) const {
   const HighsInt num_col = this->model_.lp_.num_col_;
-  if (col < 0 || col > num_col) {
+  if (col < 0 || col >= num_col) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Index %d for column integrality is outside the range [0, "
                  "num_col = %d)\n",

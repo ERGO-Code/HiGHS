@@ -253,6 +253,16 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passRowName(const void* highs, const HighsInt row,
+                           const char* name) {
+  return (HighsInt)((Highs*)highs)->passRowName(row, std::string(name));
+}
+
+HighsInt Highs_passColName(const void* highs, const HighsInt col,
+                           const char* name) {
+  return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
+}
+
 HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
 
 HighsInt Highs_clearModel(void* highs) {
@@ -892,6 +902,29 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
   *num_row = local_num_row;
   *num_nz = local_num_nz;
   return (HighsInt)status;
+}
+
+HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
+  std::string name_v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getRowName(row, name_v);
+  strcpy(name, name_v.c_str());
+  return retcode;
+}
+
+HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name) {
+  std::string name_v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getColName(col, name_v);
+  strcpy(name, name_v.c_str());
+  return retcode;
+}
+
+HighsInt Highs_getColIntegrality(const void* highs, const HighsInt col,
+                                 HighsInt* integrality) {
+  HighsVarType integrality_v;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)->getColIntegrality(col, integrality_v);
+  *integrality = HighsInt(integrality_v);
+  return retcode;
 }
 
 HighsInt Highs_deleteColsByRange(void* highs, const HighsInt from_col,
