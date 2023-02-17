@@ -613,13 +613,19 @@ void full_api_options() {
   for (HighsInt index = 0; index < num_options; index++) {
     Highs_getOptionName(highs, index, &option);
     Highs_getOptionType(highs, option, &type);
-    if (type != kHighsOptionTypeString) continue;
+    if (type != kHighsOptionTypeString) {
+      free(option);
+      continue;
+    }
     Highs_getStringOptionValues(highs, option, current_string_value, NULL);
     num_string_option++;
     if (dev_run)
       printf("%"HIGHSINT_FORMAT": %-24s \"%s\"\n",
 	     num_string_option, option, current_string_value);    
+    free(option);
   }
+
+  Highs_destroy(highs);
 
 }
 
@@ -827,6 +833,7 @@ void full_api_lp() {
   assert( model_status == kHighsModelStatusOptimal );
   if (dev_run)
     printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
+
   Highs_destroy(highs);
 }
 
@@ -899,6 +906,9 @@ void full_api_mip() {
     assert( return_status == kHighsStatusOk );
     assert( col_integrality == 1 );
   }
+
+  Highs_destroy(highs);
+
   free(col_value);
   free(row_value);
 
@@ -1070,6 +1080,8 @@ void full_api_qp() {
   assertIntValuesEqual("Model status for infeasible 2-d QP", model_status, 8);
   assert( model_status == kHighsModelStatusInfeasible );
 
+  Highs_destroy(highs);
+
   free(q_start);
   free(q_index);
   free(q_value);
@@ -1131,6 +1143,7 @@ void test_getColsByRange() {
   assert( matrix_index[1] == 0 );
   assert( matrix_value[0] == 1.0 );
   assert( matrix_value[1] == -1.0 );
+
   Highs_destroy(highs);
 }
 
@@ -1158,6 +1171,7 @@ void test_passHessian() {
   assertDoubleValuesEqual("Objective", objective_value, optimal_objective_value);
   assertDoubleValuesEqual("Primal", col_value[0], primal);
   assertDoubleValuesEqual("Dual", col_dual[0], dual);
+
   Highs_destroy(highs);
 }
 
@@ -1203,6 +1217,7 @@ void test_setSolution() {
   printf("Iteration counts are %d and %d\n", iteration_count0, iteration_count1);
   assertLogical("Dual", logic);
   
+  Highs_destroy(highs);
 }
 */
 int main() {
