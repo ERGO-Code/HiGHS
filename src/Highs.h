@@ -154,6 +154,15 @@ class Highs {
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
+  /**
+   * @brief Pass a column name to the incumbent model
+   */
+  HighsStatus passColName(const HighsInt col, const std::string& name);
+
+  /**
+   * @brief Pass a row name to the incumbent model
+   */
+  HighsStatus passRowName(const HighsInt row, const std::string& name);
 
   /**
    * @brief Read in a model
@@ -640,6 +649,17 @@ class Highs {
   );
 
   /**
+   * @brief Get a column name from the incumbent model
+   */
+  HighsStatus getColName(const HighsInt col, std::string& name) const;
+
+  /**
+   * @brief Get a column integrality from the incumbent model
+   */
+  HighsStatus getColIntegrality(const HighsInt col,
+                                HighsVarType& integrality) const;
+
+  /**
    * @brief Get multiple rows from the model given by an interval [from_row,
    * to_row]
    */
@@ -692,6 +712,11 @@ class Highs {
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
   );
+
+  /**
+   * @brief Get a row name from the incumbent model
+   */
+  HighsStatus getRowName(const HighsInt row, std::string& name) const;
 
   /**
    * @brief Get a matrix coefficient

@@ -487,6 +487,8 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
 }
 
+TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
                  const bool dev_run = false) {

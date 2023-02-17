@@ -527,6 +527,44 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
+  const HighsInt num_col = this->model_.lp_.num_col_;
+  if (col < 0 || col >= num_col) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Index %d for column name %s is outside the range [0, num_col = %d)\n",
+        int(col), name.c_str(), int(num_col));
+    return HighsStatus::kError;
+  }
+  if (int(name.length()) <= 0) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot define empty column names\n");
+    return HighsStatus::kError;
+  }
+  this->model_.lp_.col_names_.resize(num_col);
+  this->model_.lp_.col_names_[col] = name;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
+  const HighsInt num_row = this->model_.lp_.num_row_;
+  if (row < 0 || row >= num_row) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Index %d for row name %s is outside the range [0, num_row = %d)\n",
+        int(row), name.c_str(), int(num_row));
+    return HighsStatus::kError;
+  }
+  if (int(name.length()) <= 0) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot define empty column names\n");
+    return HighsStatus::kError;
+  }
+  this->model_.lp_.row_names_.resize(num_row);
+  this->model_.lp_.row_names_[row] = name;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::readModel(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
@@ -597,6 +635,17 @@ HighsStatus Highs::writeModel(const std::string& filename) {
 
   // Ensure that the LP is column-wise
   model_.lp_.ensureColwise();
+  // Check for repeated column or row names that would corrupt the file
+  if (repeatedNames(model_.lp_.col_names_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Model has repeated column names\n");
+    return returnFromHighs(HighsStatus::kError);
+  }
+  if (repeatedNames(model_.lp_.row_names_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Model has repeated row names\n");
+    return returnFromHighs(HighsStatus::kError);
+  }
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel();
@@ -2338,6 +2387,47 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
   return returnFromHighs(HighsStatus::kOk);
 }
 
+HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
+  const HighsInt num_col = this->model_.lp_.num_col_;
+  if (col < 0 || col >= num_col) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Index %d for column name is outside the range [0, num_col = %d)\n",
+        int(col), int(num_col));
+    return HighsStatus::kError;
+  }
+  const HighsInt num_col_name = this->model_.lp_.col_names_.size();
+  if (col >= num_col_name) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Index %d for column name is outside the range [0, "
+                 "num_col_name = %d)\n",
+                 int(col), int(num_col_name));
+    return HighsStatus::kError;
+  }
+  name = this->model_.lp_.col_names_[col];
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getColIntegrality(const HighsInt col,
+                                     HighsVarType& integrality) const {
+  const HighsInt num_col = this->model_.lp_.num_col_;
+  if (col < 0 || col > num_col) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Index %d for column integrality is outside the range [0, "
+                 "num_col = %d)\n",
+                 int(col), int(num_col));
+    return HighsStatus::kError;
+  }
+  if (col < int(this->model_.lp_.integrality_.size())) {
+    integrality = this->model_.lp_.integrality_[col];
+    return HighsStatus::kOk;
+  } else {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Model integrality does not exist for index %d\n", int(col));
+    return HighsStatus::kError;
+  }
+}
+
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
@@ -2377,6 +2467,27 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
   return returnFromHighs(HighsStatus::kOk);
+}
+
+HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
+  const HighsInt num_row = this->model_.lp_.num_row_;
+  if (row < 0 || row >= num_row) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Index %d for row name is outside the range [0, num_row = %d)\n",
+        int(row), int(num_row));
+    return HighsStatus::kError;
+  }
+  const HighsInt num_row_name = this->model_.lp_.row_names_.size();
+  if (row >= num_row_name) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Index %d for row name is outside the range [0, num_row_name = %d)\n",
+        int(row), int(num_row_name));
+    return HighsStatus::kError;
+  }
+  name = this->model_.lp_.row_names_[row];
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
