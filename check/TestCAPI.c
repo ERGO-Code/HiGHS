@@ -8,7 +8,7 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 0;
+const HighsInt dev_run = 1;
 const HighsInt full_api_names = 0;
 const HighsInt full_api_mip_integrality = 1;
 const double double_equal_tolerance = 1e-5;
@@ -419,20 +419,19 @@ void full_api() {
   return_status = Highs_run(highs);
   assert( return_status == kHighsStatusOk );
 
+  char* col_prefix = "Col";
+  char* row_prefix = "Row";
+  // Check index out of bounds
+  return_status = Highs_passColName(highs, -1, col_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passColName(highs, num_col, col_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passRowName(highs, -1, row_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passRowName(highs, num_row, row_prefix);
+  assert( return_status == kHighsStatusError );
 
   if (full_api_names) {
-    const char* col_prefix = "Col";
-    const char* row_prefix = "Row";
-    // Check index out of bounds
-    return_status = Highs_passColName(highs, -1, col_prefix);
-    assert( return_status == kHighsStatusError );
-    return_status = Highs_passColName(highs, num_col, col_prefix);
-    assert( return_status == kHighsStatusError );
-    return_status = Highs_passRowName(highs, -1, row_prefix);
-    assert( return_status == kHighsStatusError );
-    return_status = Highs_passRowName(highs, num_row, row_prefix);
-    assert( return_status == kHighsStatusError );
-
     // Define all column names to be the same
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       return_status = Highs_passColName(highs, iCol, col_prefix);
