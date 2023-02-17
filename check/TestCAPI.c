@@ -10,7 +10,7 @@
 
 const HighsInt dev_run = 0;
 const HighsInt full_api_names = 0;
-const HighsInt full_api_mip_integrality = 0;
+const HighsInt full_api_mip_integrality = 1;
 const double double_equal_tolerance = 1e-5;
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
