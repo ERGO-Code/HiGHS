@@ -48,9 +48,9 @@ void assertLogical(const char* name, const HighsInt is) {
 void version_api() {
   if (dev_run) {
     printf("HiGHS version %s\n", Highs_version());
-    printf("HiGHS version major %d\n", Highs_versionMajor());
-    printf("HiGHS version minor %d\n", Highs_versionMinor());
-    printf("HiGHS version patch %d\n", Highs_versionPatch());
+    printf("HiGHS version major %"HIGHSINT_FORMAT"\n", Highs_versionMajor());
+    printf("HiGHS version minor %"HIGHSINT_FORMAT"\n", Highs_versionMinor());
+    printf("HiGHS version patch %"HIGHSINT_FORMAT"\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
     printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
@@ -484,7 +484,7 @@ void full_api() {
       char* name_p = name;
       return_status = Highs_getColName(highs, iCol, name_p);
       assert( return_status == kHighsStatusOk );
-      if (dev_run) printf("Column %d has name %s\n", iCol, name_p);
+      if (dev_run) printf("Column %"HIGHSINT_FORMAT" has name %s\n", iCol, name_p);
     }
 
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -492,7 +492,7 @@ void full_api() {
       char* name_p = name;
       return_status = Highs_getRowName(highs, iRow, name_p);
       assert( return_status == kHighsStatusOk );
-      if (dev_run) printf("Row    %d has name %s\n", iRow, name_p);
+      if (dev_run) printf("Row    %"HIGHSINT_FORMAT" has name %s\n", iRow, name_p);
     }
   }
 
