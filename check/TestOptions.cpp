@@ -38,8 +38,8 @@ TEST_CASE("external-options", "[highs_options]") {
                                        &default_int_value) == HighsStatus::kOk);
       if (dev_run)
         printf(": current = %d; min = %d; max = %d; default = %d\n",
-               current_int_value, min_int_value, max_int_value,
-               default_int_value);
+               int(current_int_value), int(min_int_value), int(max_int_value),
+               int(default_int_value));
     } else if (type == HighsOptionType::kDouble) {
       REQUIRE(highs.getDoubleOptionValues(option, &current_double_value,
                                           &min_double_value, &max_double_value,
