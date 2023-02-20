@@ -61,6 +61,9 @@ option(PYTHON "Build Python interface" OFF)
 option(FORTRAN "Build Fortran interface" OFF)
 option(CSHARP "Build CSharp interface" OFF)
 
+# emscripten
+option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
+
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
 
