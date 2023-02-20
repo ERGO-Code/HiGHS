@@ -160,24 +160,6 @@ elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     endif()
 endif()
 
-<<<<<<< HEAD
-=======
-# Fast build: No interfaces (apart from c); New (short) ctest instances,
-# static library and exe without PIC. Used for gradually updating the CMake
-# targets build and install / export.
-
-option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
-
-# interfaces
-option(PYTHON "Build Python interface" OFF)
-option(FORTRAN "Build Fortran interface" OFF)
-option(CSHARP "Build CSharp interface" OFF)
-
-# emscripten
-option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
-
-# set the correct rpath for OS X
->>>>>>> master
 set(CMAKE_MACOSX_RPATH ON)
 
 include(CheckCXXSourceCompiles)

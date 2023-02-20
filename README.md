@@ -204,7 +204,6 @@ Javascript
 
 HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
 
-<<<<<<< HEAD
 Node.js
 -------
 
@@ -222,7 +221,6 @@ Here are observations on calling HiGHS from C#:
 - Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
 
 This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
-=======
 Alternatively, HiGHS can directly be compiled into a single HTML file and used
 in a browser. This requires `emscripten` to be installed from their website
 (unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
@@ -240,7 +238,6 @@ iterations run
 
 This will rebuild `highs.html` every time a source file is modified (e.g.
 from Visual Studio Code).
->>>>>>> master
 
 Python
 ------
