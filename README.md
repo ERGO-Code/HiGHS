@@ -221,6 +221,10 @@ Here are observations on calling HiGHS from C#:
 - Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
 
 This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
+
+Webdemo
+-------
+
 Alternatively, HiGHS can directly be compiled into a single HTML file and used
 in a browser. This requires `emscripten` to be installed from their website
 (unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):

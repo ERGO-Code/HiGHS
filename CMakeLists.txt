@@ -160,6 +160,9 @@ elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     endif()
 endif()
 
+# emscripten
+option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
+
 set(CMAKE_MACOSX_RPATH ON)
 
 include(CheckCXXSourceCompiles)
