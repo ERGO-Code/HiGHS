@@ -28,9 +28,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set max os target version.
-# set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
-
 # set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RELEASE)
@@ -57,11 +54,9 @@ endif()
 # Layout build dir like install dir
 include(GNUInstallDirs)
 
-
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-
 
 # if(UNIX)
 #   option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
@@ -106,15 +101,17 @@ message(STATUS "Build C++ library: ${BUILD_CXX}")
 option(PYTHON "Build Python interface" OFF)
 message(STATUS "Build Python: ${PYTHON}")
 option(FORTRAN "Build Fortran interface" OFF)
-message(STATUS "Build Java: ${FORTRAN}")
+message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
-message(STATUS "Build .Net: ${CSHARP}")
+message(STATUS "Build CSharp: ${CSHARP}")
+
+# ZLIB can be switched off, for building interfaces
+option(ZLIB "Fast build: " ON)
 
 # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
 if(PYTHON OR FORTRAN OR CSHARP)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
-
 
 # Basic type
 include(CMakePushCheckState)
@@ -164,18 +161,6 @@ elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
 endif()
 
 set(CMAKE_MACOSX_RPATH ON)
-if (NOT FAST_BUILD)
-
-# set the correct rpath for OS X
-set(CMAKE_MACOSX_RPATH ON)
-
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
-
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-endif()
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
@@ -213,30 +198,34 @@ endif()
 
 include(CheckCXXCompilerFlag)
 
-
-option(BUILD_TESTING "Build Tests" ON)
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
-
 if (NOT FAST_BUILD)
 
-# Function to set compiler flags on and off easily.
-function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-        check_cxx_compiler_flag("${flag}" flag_supported)
-        if(flag_supported)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-        endif()
-        unset(flag_supported CACHE)
-    endif()
-endfunction()
+  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
-# usage: turn pedantic on for even more warnings.
-enable_cxx_compiler_flag_if_supported("-Wall")
-enable_cxx_compiler_flag_if_supported("-Wextra")
-enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
-enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
-enable_cxx_compiler_flag_if_supported("-pedantic")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+
+  option(BUILD_TESTING "Build Tests" ON)
+
+  # Function to set compiler flags on and off easily.
+  function(enable_cxx_compiler_flag_if_supported flag)
+      string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
+      if(flag_already_set EQUAL -1)
+          check_cxx_compiler_flag("${flag}" flag_supported)
+          if(flag_supported)
+              set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
+          endif()
+          unset(flag_supported CACHE)
+      endif()
+  endfunction()
+
+  # usage: turn pedantic on for even more warnings.
+  enable_cxx_compiler_flag_if_supported("-Wall")
+  enable_cxx_compiler_flag_if_supported("-Wextra")
+  enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
+  enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
+  enable_cxx_compiler_flag_if_supported("-pedantic")
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
@@ -272,26 +261,26 @@ if(MSVC)
 endif()
 
 if (NOT FAST_BUILD OR FORTRAN)
-include(CheckLanguage)
-if(NOT MSVC)
-    check_language("Fortran")
-endif()
-if(CMAKE_Fortran_COMPILER)
-    enable_language(Fortran)
-    set(FORTRAN_FOUND ON)
-else()
-    set(FORTRAN_FOUND OFF)
-endif(CMAKE_Fortran_COMPILER)
+  include(CheckLanguage)
+  if(NOT MSVC)
+      check_language("Fortran")
+  endif()
+  if(CMAKE_Fortran_COMPILER)
+      enable_language(Fortran)
+      set(FORTRAN_FOUND ON)
+  else()
+      set(FORTRAN_FOUND OFF)
+  endif(CMAKE_Fortran_COMPILER)
 endif()
 
 if (NOT FAST_BUILD OR CSHARP)
-check_language("CSharp")
-if(CMAKE_CSharp_COMPILER)
-    enable_language(CSharp)
-    set(CSHARP_FOUND ON)
-else()
-    set(CSHARP_FOUND OFF)
-endif(CMAKE_CSharp_COMPILER)
+  check_language("CSharp")
+  if(CMAKE_CSharp_COMPILER)
+      enable_language(CSharp)
+      set(CSHARP_FOUND ON)
+  else()
+      set(CSHARP_FOUND OFF)
+  endif(CMAKE_CSharp_COMPILER)
 endif()
 
 check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
@@ -312,7 +301,9 @@ endif()
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 
 # if zlib is found, then we can enable reading zlib-compressed input
-find_package(ZLIB 1.2.3)
+if (ZLIB)
+  find_package(ZLIB 1.2.3)
+endif()
 
 include(CPack)
 set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
@@ -517,31 +508,19 @@ include(CMakeDependentOption)
 option(BUILD_EXAMPLES "Build examples" ON)
 message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
-CMAKE_DEPENDENT_OPTION(BUILD_CXX_EX "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
+CMAKE_DEPENDENT_OPTION(BUILD_CXX_EXAMPLE "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
 message(STATUS "Build C++: ${BUILD_CXX_EX}")
-CMAKE_DEPENDENT_OPTION(BUILD_C_EX "Build c example" ON "BUILD_EXAMPLES;BUILD_C" OFF)
-message(STATUS "Build C: ${BUILD_C_EX}")
-CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EX "Build python example" ON "BUILD_EXAMPLES;BUILD_PYTHON" OFF)
-message(STATUS "Build Python: ${BUILD_PYTHON_EX}")
-
-# By default all dependencies are NOT built (i.e. BUILD_DEPS=OFF),
-# BUT if building any wrappers (Python, Java or .Net) then BUILD_DEPS=ON.
-if(BUILD_PYTHON)
-  option(BUILD_DEPS /"Build all dependencies" ON)
-else()
-  option(BUILD_DEPS "Build all dependencies" OFF)
-endif()
-message(STATUS "Build all dependencies: ${BUILD_DEPS}")
-# Install built dependencies if any,
-option(INSTALL_BUILD_DEPS "Install build all dependencies" ON)
+CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
+message(STATUS "Build Python: ${BUILD_PYTHON_EXAMPLE}")
+CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
+message(STATUS "Build CSharp: ${BUILD_CSHARP_EXAMPLE}")
 
 # IF BUILD_DEPS=ON THEN Force all BUILD_*=ON
 CMAKE_DEPENDENT_OPTION(BUILD_ZLIB "Build the ZLIB dependency Library" OFF
   "NOT BUILD_DEPS" ON)
 message(STATUS "Build ZLIB: ${BUILD_ZLIB}")
 
-
-if(BUILD_PYTHON)
+if(PYTHON)
   CMAKE_DEPENDENT_OPTION(BUILD_pybind11 "Build the pybind11 dependency Library" OFF
     "NOT BUILD_DEPS" ON)
   message(STATUS "Python: Build pybind11: ${BUILD_pybind11}")
@@ -557,19 +536,18 @@ if(BUILD_PYTHON)
   message(STATUS "Python: Fetch dependencies: ${FETCH_PYTHON_DEPS}")
 endif()
 
-# Add tests in examples/tests
-add_subdirectory(examples/tests)
+option(JULIA "Build library and executable for Julia" OFF)
 
-# condition added to src/CMakeLists.txt
-# add_subdirectory(src)
 include(cpp-highs)
 
-option(JULIA "Build library and executable for Julia" OFF)
-option(CMAKE_TARGETS "Install module to find HiGHS targets" OFF)
+if (PYTHON)
+  include(python-highs)
+endif()
 
-# No changes in app/ apart from a relative path
+# Add tests in examples/tests
+add_subdirectory(examples)
+
 add_subdirectory(app)
-
 
 if (EXP)
     add_executable(doctest)
@@ -585,12 +563,10 @@ if (EXP)
     target_link_libraries(doctest highs)
 endif()
 
-
 # install(TARGETS highs EXPORT highs-targets
 #     LIBRARY
 #     ARCHIVE
 #     RUNTIME
 #     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-
 
 endif()

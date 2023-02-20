@@ -20,8 +20,12 @@ jobs:
           path: "~/.cache/bazel"
           key: bazel
 
+      - name: bazel clean
+        run: bazel clean
+      
       - name: build bazel
-        run: bazel build ...
-
+        run: |
+          bazel build //...
+      
       - name: test
         run: ./bazel-bin/examples/call-highs-example
