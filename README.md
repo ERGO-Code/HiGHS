@@ -221,6 +221,23 @@ Here are observations on calling HiGHS from C#:
 - Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
 
 This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
+Alternatively, HiGHS can directly be compiled into a single HTML file and used
+in a browser. This requires `emscripten` to be installed from their website
+(unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
+
+    https://emscripten.org/docs/getting_started/downloads.html
+
+Then, run
+
+    sh build_webdemo.sh
+
+This will create the file `build_webdemo/bin/highs.html`. For fast edit
+iterations run
+
+    find src app | entr -rs 'make -C build_webdemo highs; echo'
+
+This will rebuild `highs.html` every time a source file is modified (e.g.
+from Visual Studio Code).
 
 Python
 ------
