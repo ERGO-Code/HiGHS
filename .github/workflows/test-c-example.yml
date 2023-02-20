@@ -3,9 +3,7 @@
 # https://github.com/JuliaPackaging/Yggdrasil/blob/master/H/HiGHS/build_tarballs.jl
 name: test-c-example
 
-# on: [push, pull_request]
-on: [pull_request]
-
+on: [push, pull_request]
 
 jobs:
   build:
