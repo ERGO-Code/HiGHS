@@ -28,13 +28,12 @@ http://www.maths.ed.ac.uk/hall/HuHa13/
 Wikipedia
 ---------
 
-The project has an entry on Wikipedia: https://en.wikipedia.org/wiki/HiGHS_optimization_solver
+The project has an entry on Wikipedia: https://en.wikipedia.org/wiki/HiGHS_optimization_solver.
 
 Documentation
 -------------
 
-Documentation is available at https://ergo-code.github.io/HiGHS/ 
-Find out more about HiGHS at https://www.highs.dev.
+Documentation is available at https://ergo-code.github.io/HiGHS/. Find out more about HiGHS at https://www.highs.dev.
 
 Executables
 -----------
@@ -202,7 +201,7 @@ __From PyPi__
 
 HiGHS has been added to PyPi, so should be installable using the command 
 
-pip install highspy
+    pip install highspy
 
 The installation can be tested using the example [minimal.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/minimal.py), yielding the output
 
