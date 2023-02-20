@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file Highs.h
@@ -26,9 +24,9 @@
 #include "presolve/PresolveComponent.h"
 
 /**
- * @brief Return the version as a string
+ * @brief Return the version
  */
-std::string highsVersion();
+const char* highsVersion();
 
 /**
  * @brief Return detailed version information, githash and compilation
@@ -37,8 +35,8 @@ std::string highsVersion();
 HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
-std::string highsGithash();
-std::string highsCompilationDate();
+const char* highsGithash();
+const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -53,6 +51,36 @@ class Highs {
       fclose(log_file_stream);
     }
   }
+
+  /**
+   * @brief Return the version as a string
+   */
+  std::string version() const { return highsVersion(); }
+
+  /**
+   * @brief Return major version
+   */
+  HighsInt versionMajor() const { return highsVersionMajor(); }
+
+  /**
+   * @brief Return minor version
+   */
+  HighsInt versionMinor() const { return highsVersionMinor(); }
+
+  /**
+   * @brief Return patch version
+   */
+  HighsInt versionPatch() const { return highsVersionPatch(); }
+
+  /**
+   * @brief Return githash
+   */
+  std::string githash() const { return highsGithash(); }
+
+  /**
+   * @brief Return compilation date
+   */
+  std::string compilationDate() const { return highsCompilationDate(); }
 
   /**
    * @brief Reset the options and then call clearModel()
@@ -126,6 +154,15 @@ class Highs {
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
+  /**
+   * @brief Pass a column name to the incumbent model
+   */
+  HighsStatus passColName(const HighsInt col, const std::string& name);
+
+  /**
+   * @brief Pass a row name to the incumbent model
+   */
+  HighsStatus passRowName(const HighsInt row, const std::string& name);
 
   /**
    * @brief Read in a model
@@ -216,21 +253,34 @@ class Highs {
   /**
    * @brief Gets an option value as bool/HighsInt/double/string and, for
    * bool/int/double, only if it's of the correct type.
+   *
+   * NB Deprecate in v2.0, in order to replace with more general
+   * get*OptionValues
    */
-  HighsStatus getOptionValue(const std::string& option, bool& value) const;
+  HighsStatus getOptionValue(const std::string& option, bool& value) const {
+    return this->getBoolOptionValues(option, &value);
+  }
 
-  HighsStatus getOptionValue(const std::string& option, HighsInt& value) const;
+  HighsStatus getOptionValue(const std::string& option, HighsInt& value) const {
+    return this->getIntOptionValues(option, &value);
+  }
 
-  HighsStatus getOptionValue(const std::string& option, double& value) const;
+  HighsStatus getOptionValue(const std::string& option, double& value) const {
+    return this->getDoubleOptionValues(option, &value);
+  }
 
   HighsStatus getOptionValue(const std::string& option,
-                             std::string& value) const;
+                             std::string& value) const {
+    return this->getStringOptionValues(option, &value);
+  }
 
   /**
    * @brief Get the type expected by an option
    */
   HighsStatus getOptionType(const std::string& option,
-                            HighsOptionType& type) const;
+                            HighsOptionType& type) const {
+    return this->getOptionType(option, &type);
+  }
 
   /**
    * @brief Reset the options to the default values
@@ -244,6 +294,56 @@ class Highs {
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
                            const bool report_only_deviations = false) const;
+
+  /**
+   * @brief Returns the number of user-settable options
+   */
+  HighsInt getNumOptions() const {
+    return this->options_.num_user_settable_options_;
+  }
+
+  /**
+   * @brief Get the number of user-settable options
+   */
+  HighsStatus getOptionName(const HighsInt index, std::string* name) const;
+
+  /**
+   * @brief Get the type of an option
+   */
+  HighsStatus getOptionType(const std::string& option,
+                            HighsOptionType* type) const;
+
+  /**
+   * @brief Get the current and default values of a bool option
+   */
+  HighsStatus getBoolOptionValues(const std::string& option,
+                                  bool* current_value = nullptr,
+                                  bool* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current, min, max and default values of an int option
+   */
+  HighsStatus getIntOptionValues(const std::string& option,
+                                 HighsInt* current_value = nullptr,
+                                 HighsInt* min_value = nullptr,
+                                 HighsInt* max_value = nullptr,
+                                 HighsInt* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current, min, max and default values of a double option
+   */
+  HighsStatus getDoubleOptionValues(const std::string& option,
+                                    double* current_value = nullptr,
+                                    double* min_value = nullptr,
+                                    double* max_value = nullptr,
+                                    double* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current and default values of a string option
+   */
+  HighsStatus getStringOptionValues(const std::string& option,
+                                    std::string* current_value = nullptr,
+                                    std::string* default_value = nullptr) const;
 
   /**
    * @brief Get a const reference to the internal info values
@@ -263,6 +363,8 @@ class Highs {
 #endif
 
   HighsStatus getInfoValue(const std::string& info, double& value) const;
+
+  HighsStatus getInfoType(const std::string& info, HighsInfoType& type) const;
 
   /**
    * @brief Write info values to a file, with the extension ".html"
@@ -547,6 +649,17 @@ class Highs {
   );
 
   /**
+   * @brief Get a column name from the incumbent model
+   */
+  HighsStatus getColName(const HighsInt col, std::string& name) const;
+
+  /**
+   * @brief Get a column integrality from the incumbent model
+   */
+  HighsStatus getColIntegrality(const HighsInt col,
+                                HighsVarType& integrality) const;
+
+  /**
    * @brief Get multiple rows from the model given by an interval [from_row,
    * to_row]
    */
@@ -599,6 +712,11 @@ class Highs {
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
   );
+
+  /**
+   * @brief Get a row name from the incumbent model
+   */
+  HighsStatus getRowName(const HighsInt row, std::string& name) const;
 
   /**
    * @brief Get a matrix coefficient
@@ -1001,9 +1119,6 @@ class Highs {
                : nullptr;
   }
 
-#ifdef OSI_FOUND
-  friend class OsiHiGHSSolverInterface;
-#endif
   // Start of deprecated methods
 
   HighsInt getNumCols() const {

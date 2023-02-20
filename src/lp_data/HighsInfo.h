@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsInfo.h
@@ -89,27 +87,33 @@ class InfoRecordDouble : public InfoRecord {
   virtual ~InfoRecordDouble() {}
 };
 
-InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
+InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
+                        const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         HighsInt& index);
 
-InfoStatus checkInfo(const HighsOptions& options,
+InfoStatus checkInfo(const HighsLogOptions& report_log_options,
                      const std::vector<InfoRecord*>& info_records);
 InfoStatus checkInfo(const InfoRecordInt& info);
 InfoStatus checkInfo(const InfoRecordDouble& info);
 
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              int64_t& value);
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value);
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value);
+
+InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
+                            const std::string& name,
+                            const std::vector<InfoRecord*>& info_records,
+                            HighsInfoType& type);
 
 HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,
@@ -132,8 +136,8 @@ struct HighsInfoStruct {
   int64_t mip_node_count;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
-  HighsInt qp_iteration_count;
   HighsInt crossover_iteration_count;
+  HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
   HighsInt basis_validity;
@@ -205,11 +209,6 @@ class HighsInfo : public HighsInfoStruct {
     record_int = new InfoRecordInt("ipm_iteration_count",
                                    "Iteration count for IPM solver", advanced,
                                    &ipm_iteration_count, 0);
-    records.push_back(record_int);
-
-    record_int =
-        new InfoRecordInt("qp_iteration_count", "Iteration count for QP solver",
-                          advanced, &qp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt("crossover_iteration_count",

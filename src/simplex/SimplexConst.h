@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/SimplexConst.h
@@ -168,7 +166,10 @@ const double kMinDualSteepestEdgeWeight = 1e-4;
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 
-const double minDualSteepestEdgeWeight = 1e-4;
+// Switch to use code to check that, unless the basis supplied by the
+// MIP solver was alien, the simplex solver starts from dual
+// feasibility.
+const bool kDebugMipNodeDualFeasible = false;
 
 enum class LpAction {
   kScale = 0,

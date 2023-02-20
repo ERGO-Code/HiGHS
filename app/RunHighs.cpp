@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ../app/RunHighs.cpp
@@ -145,13 +143,13 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
       }
       if (num_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "Integer  : %" HIGHSINT_FORMAT "\n", num_integer);
+                    "Integer   : %" HIGHSINT_FORMAT "\n", num_integer);
       if (num_semi_continuous)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiConts: %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+                    "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
       if (num_semi_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiInt  : %" HIGHSINT_FORMAT "\n", num_semi_integer);
+                    "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
     } else {
       highsLogUser(log_options, HighsLogType::kInfo, "%s",
                    problem_type.c_str());

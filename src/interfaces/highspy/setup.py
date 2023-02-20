@@ -4,12 +4,11 @@ from pybind11.setup_helpers import Pybind11Extension, build_ext
 import os
 from pyomo.common.fileutils import find_library
 
-
 original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS
 pybind11.setup_helpers.MACOS = False
 
 try:
-    highs_lib = find_library('highs', include_PATH=True)
+    highs_lib = find_library('libhighs', include_PATH=True)
     if highs_lib is None:
         raise RuntimeError('Could not find HiGHS library; Please make sure it is in the LD_LIBRARY_PATH environment variable')
     highs_lib_dir = os.path.dirname(highs_lib)
@@ -27,7 +26,7 @@ try:
                                         libraries=['highs']))
     
     setup(name='highspy',
-          version='1.5.0.dev0',
+          version='1.5.0',
           packages=find_packages(),
           description='Python interface to HiGHS',
           maintainer_email='highsopt@gmail.com',

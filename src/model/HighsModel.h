@@ -27,6 +27,8 @@ class HighsModel {
  public:
   HighsLp lp_;
   HighsHessian hessian_;
+  bool operator==(const HighsModel& model) const;
+  bool equalButForNames(const HighsModel& model) const;
   bool isQp() const { return this->hessian_.dim_; }
   bool isMip() const { return this->lp_.isMip(); }
   bool isEmpty() const {

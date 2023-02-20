@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexAnalysis.cpp
@@ -303,7 +301,7 @@ void HighsSimplexAnalysis::setupFactorTime(const HighsOptions& options) {
       clock.timer_pointer_ = timer_;
       thread_factor_clocks.push_back(clock);
     }
-    pointer_serial_factor_clocks = &thread_factor_clocks[0];
+    pointer_serial_factor_clocks = thread_factor_clocks.data();
     FactorTimer factor_timer;
     for (HighsTimerClock& clock : thread_factor_clocks)
       factor_timer.initialiseFactorClocks(clock);

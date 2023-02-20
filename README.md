@@ -149,7 +149,7 @@ diminished.
 If multiple threads are available, and run with `threads>1`, HiGHS will use multiple threads. 
 Although the best value will be problem and architecture dependent, for the simplex solver `threads=8` is typically a
 good choice. 
-Although HiGHS is slower when run in parallel than in serial for some problems, it is typically faster in parallel.
+Although HiGHS is slower when run in parallel than in serial for some problems, it can be faster with multiple threads.
 
 HiGHS Library
 -------------
@@ -158,8 +158,7 @@ HiGHS is compiled in a shared library. Running
 
 `make install`
 
-from the build folder installs the library in `lib/`, as well as all header files in `include/`. For a custom
-installation in `install_folder` run
+from the build folder installs the library in `lib/`, as well as all header files in directories rooted at `include/highs/`. For a custom installation in `install_folder` run
 
 `cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
 
@@ -178,7 +177,7 @@ Compiling and linking without CMake
 
 An executable defined in the file `use_highs.cpp` (for example) is linked with the HiGHS library as follows. After running the code above, compile and run with
 
-`g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
+`g++ -o use_highs use_highs.cpp -I install_folder/include/highs -L install_folder/lib/ -lhighs`
 
 `LD_LIBRARY_PATH=install_folder/lib/ ./use_highs`
 
@@ -188,22 +187,43 @@ Interfaces
 Julia
 -----
 
-- A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
+A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
 
 Rust
 ----
 
-- HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
+HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
 
 R
 ------
 
-- An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
+An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
 
 Javascript
 ----------
 
 HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
+
+Node.js
+-------
+
+HiGHS has a [native Node.js](https://www.npmjs.com/package/highs-solver) interface.
+
+C#
+--
+
+Here are observations on calling HiGHS from C#:
+
+- [highs_csharp_api.cs](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_csharp_api.cs) contains all the PInvoke you need. Copy it into your C# project.
+- Make sure that the native HiGHS library (highs.dll, libhighs.dll, libhighs.so, ... depending on your platform) can be found at runtime. How to do this is platform dependent, copying it next to your C# executable should work in most cases. You can use msbuild for that. At least on linux installing HiGHS system wide should work, too.
+- Make sure that all dependencies of the HiGHS library can be found, too. E.g. if HiGHS was build using Visual C++ make sure that the MSVCRuntime is installed on the machine you want to run your application on.
+- Depending on the name of your HiGHS library it might be necessary to change the constant "highslibname", see [document](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/cross-platform) on writing cross platform P/Invoke code if necessary.
+- Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
+
+This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
+
+Webdemo
+-------
 
 Alternatively, HiGHS can directly be compiled into a single HTML file and used
 in a browser. This requires `emscripten` to be installed from their website

@@ -13,13 +13,13 @@ jobs:
       - name: Create Build Environment
         run: |
           mkdir build
-          mkdir install
+          mkdir installs
       - name: Build HiGHS library
         shell: bash
         working-directory: build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX=../install \
+            -DCMAKE_INSTALL_PREFIX=../installs/highs \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=ON \
             -DFAST_BUILD=ON \
@@ -32,6 +32,6 @@ jobs:
         run: |
           g++ $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
             -o c_example \
-            -I install/include/highs \
-            -L install/lib -lhighs
-          LD_LIBRARY_PATH=install/lib ./c_example
+            -I installs/highs/include/highs \
+            -L installs/highs/lib -lhighs
+          LD_LIBRARY_PATH=installs/highs/lib ./c_example

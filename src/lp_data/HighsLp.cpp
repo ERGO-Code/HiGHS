@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
@@ -41,8 +39,14 @@ bool HighsLp::hasSemiVariables() const {
   return false;
 }
 
-bool HighsLp::operator==(const HighsLp& lp) {
+bool HighsLp::operator==(const HighsLp& lp) const {
   bool equal = equalButForNames(lp);
+  equal = equalNames(lp) && equal;
+  return equal;
+}
+
+bool HighsLp::equalNames(const HighsLp& lp) const {
+  bool equal = true;
   equal = this->objective_name_ == lp.objective_name_ && equal;
   equal = this->row_names_ == lp.row_names_ && equal;
   equal = this->col_names_ == lp.col_names_ && equal;

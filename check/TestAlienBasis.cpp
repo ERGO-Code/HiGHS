@@ -635,12 +635,12 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   // Add another variable
   vector<HighsInt> new_index = {0, 1, 2};
   vector<double> new_value = {50, 4, 30};
-  highs.addCol(850, 0, inf, 3, &new_index[0], &new_value[0]);
+  highs.addCol(850, 0, inf, 3, new_index.data(), new_value.data());
   // Add a new constraint
   new_value[0] = 15;
   new_value[1] = 24;
   new_value[2] = 30;
-  highs.addRow(-inf, 108, 3, &new_index[0], &new_value[0]);
+  highs.addRow(-inf, 108, 3, new_index.data(), new_value.data());
   const bool singlar_also = true;
   if (singlar_also) {
     const HighsInt from_col = 0;
@@ -656,8 +656,8 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
     vector<HighsInt> get_index(get_num_nz);
     vector<double> get_value(get_num_nz);
     highs.getCols(from_col, to_col, get_num_col, &get_cost, &get_lower,
-                  &get_upper, get_num_nz, &get_start[0], &get_index[0],
-                  &get_value[0]);
+                  &get_upper, get_num_nz, get_start.data(), get_index.data(),
+                  get_value.data());
 
     // Make the first two columns parallel, so that the saved basis is
     // singular, as well as having too few basic variables
@@ -676,4 +676,41 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
+}
+
+TEST_CASE("AlienBasis-singular-basis", "[highs_test_alien_basis]") {
+  HighsStatus return_status;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {3, 2};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 3, 1};
+  lp.sense_ = ObjSense::kMinimize;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) highs.setOptionValue("log_dev_level", 3);
+  highs.passModel(lp);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  HighsBasis basis = highs.getBasis();
+  // Change the second constraint so that it's a copy of the first
+  highs.changeCoeff(1, 0, 1);
+  highs.changeCoeff(1, 1, 3);
+  highs.changeRowBounds(1, -inf, 3);
+  // Pass the basis - circumventing the internal setting of
+  // basis_.alien - and try to get the corresponding internal basic
+  // variables. INVERT will fail due to singularity, with no provision
+  // for basis changes to achieve non-singularity, so an error is
+  // returned.
+  highs.setBasis(basis);
+  std::vector<HighsInt> basic_variables;
+  basic_variables.resize(lp.num_row_);
+  return_status = highs.getBasicVariables(basic_variables.data());
+  REQUIRE(return_status == HighsStatus::kError);
 }

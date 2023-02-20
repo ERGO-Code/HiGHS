@@ -70,7 +70,6 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   std::remove(invalid_basis_file.c_str());
 }
 
-// No commas in test case name.
 TEST_CASE("Basis-data", "[highs_basis_data]") {
   HighsStatus return_status;
   std::string model0_file =
@@ -97,10 +96,9 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
   testBasisReloadModel(highs, false);
 }
 
-// No commas in test case name.
 TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   HighsBasis basis;
 
   basis.clear();
@@ -109,6 +107,15 @@ TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   HighsInt index = 0;
   double value = 1.0;
   highs.addRow(0, 1, 1, &index, &value);
+  // Set up a basis with everything nonbasic. This will lead to
+  // basic_index being empty when passed to
+  // HFactor::setupGeneral. Previously this led to the creation of
+  // pointer &basic_index[0] that caused Windows faiure referenced in
+  // #1129, and reported in #1166. However, now that
+  // basic_index.data() is used to create the pointer, there is no
+  // Windows failure. Within HFactor::setupGeneral and
+  // HFactor::build(), the empty list of basic variables is handled
+  // correctly - with a basis of logicals being created
   basis.col_status.push_back(HighsBasisStatus::kLower);
   basis.row_status.push_back(HighsBasisStatus::kLower);
   highs.setBasis(basis);
@@ -124,6 +131,31 @@ TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
 }
 
+TEST_CASE("Basis-no-basic", "[highs_basis_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.addCol(1.0, 0, 1, 0, nullptr, nullptr);
+  highs.addCol(-1.0, 0, 1, 0, nullptr, nullptr);
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {1.0, 2.0};
+  highs.addRow(0, 1, 2, index.data(), value.data());
+  value[0] = -1.0;
+  highs.addRow(0, 1, 2, index.data(), value.data());
+  // Make all variables basic. This is a 2-row version of
+  // set-pathological-basis
+  HighsBasis basis;
+  basis.col_status.push_back(HighsBasisStatus::kLower);
+  basis.col_status.push_back(HighsBasisStatus::kLower);
+  basis.row_status.push_back(HighsBasisStatus::kLower);
+  basis.row_status.push_back(HighsBasisStatus::kLower);
+  REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  REQUIRE(highs.getInfo().objective_function_value == -0.5);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}
+
+// No commas in test case name.
 void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
