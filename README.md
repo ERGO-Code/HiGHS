@@ -1,4 +1,4 @@
-t # HiGHS - Linear optimization software
+# HiGHS - Linear optimization software
 
 [![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
@@ -36,39 +36,20 @@ Documentation
 Documentation is available at https://ergo-code.github.io/HiGHS/ 
 Find out more about HiGHS at https://www.highs.dev.
 
---------
+Executables
+-----------
 
 Precompiled static executables are available for a variety of platforms at:
 https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
-**Installation instructions**
-
-To install, download the appropriate file and extract the executable located at `/bin/highs`.
-
- * For Windows users: if in doubt, choose the file ending in `x86_64-w64-mingw32.tar.gz`
- * For M1 macOS users: choose the file ending in `aarch64-apple-darwin.tar.gz`
- * For Intel macOS users: choose the file ending in `x86_64-apple-darwin.tar.gz`
-
-**Shared libaries**
-
-For advanced users, precompiled executables using shared libraries are available for a variety of platforms at:
-https://github.com/JuliaBinaryWrappers/HiGHS_jll.jl/releases.
-
-Similar download instructions apply.
-
- * These files link against `libstdc++`. If you do not have one installed, download the platform-specific libraries from: 
-   https://github.com/JuliaBinaryWrappers/CompilerSupportLibraries_jll.jl/releases/tag/CompilerSupportLibraries-v0.5.1%2B0
-   and copy all the libraries into the same folder as the `highs` executable.
- * Unless using the FORTRAN interface, any of versions libgfortran3-libgfortran5 should work.
-   If in doubt, Windows users should choose the `x86_64-w64-mingw32-libgfortran5.tar.gz`.
+See https://ergo-code.github.io/HiGHS/cpp/get-started.html#Precompiled-executables.
 
 Compilation
 -----------
 
-HiGHS uses CMake as build system. First setup
-a build folder and call CMake as follows
+HiGHS uses CMake as build system. First setup a build folder and call CMake as follows
 
     mkdir build
     cd build
