@@ -1,4 +1,4 @@
-# HiGHS - Linear optimization software
+t # HiGHS - Linear optimization software
 
 [![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
@@ -33,9 +33,9 @@ The project has an entry on Wikipedia: https://en.wikipedia.org/wiki/HiGHS_optim
 Documentation
 -------------
 
-The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available via https://www.highs.dev.
+Documentation is available at https://ergo-code.github.io/HiGHS/ 
+Find out more about HiGHS at https://www.highs.dev.
 
-Download
 --------
 
 Precompiled static executables are available for a variety of platforms at:
@@ -129,8 +129,7 @@ Language interfaces and further documentation
 ---------------------------------------------
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. 
-Documentation is availble via https://www.highs.dev/, and we are happy to give a reasonable level of support via
-email sent to highsopt@gmail.com.
+We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
 Parallel code
 -------------
@@ -150,36 +149,6 @@ If multiple threads are available, and run with `threads>1`, HiGHS will use mult
 Although the best value will be problem and architecture dependent, for the simplex solver `threads=8` is typically a
 good choice. 
 Although HiGHS is slower when run in parallel than in serial for some problems, it can be faster with multiple threads.
-
-HiGHS Library
--------------
-
-HiGHS is compiled in a shared library. Running
-
-`make install`
-
-from the build folder installs the library in `lib/`, as well as all header files in directories rooted at `include/highs/`. For a custom installation in `install_folder` run
-
-`cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
-
-and then
-
-`make install`
-
-To use the library from a CMake project use
-
-`find_package(HiGHS)`
-
-and add the correct path to HIGHS_DIR.
-
-Compiling and linking without CMake
------------------------------------
-
-An executable defined in the file `use_highs.cpp` (for example) is linked with the HiGHS library as follows. After running the code above, compile and run with
-
-`g++ -o use_highs use_highs.cpp -I install_folder/include/highs -L install_folder/lib/ -lhighs`
-
-`LD_LIBRARY_PATH=install_folder/lib/ ./use_highs`
 
 Interfaces
 ==========
