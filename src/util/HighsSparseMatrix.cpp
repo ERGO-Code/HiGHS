@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsSparseMatrix.cpp
@@ -1245,6 +1243,11 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   // density or during hyper-sparse PRICE if there is too much fill-in
   HighsInt next_index = from_index;
   // Possibly don't perform hyper-sparse PRICE based on historical density
+  //
+  // Ensure that result was set up for this number of columns, and
+  // that result.index is still of corect size
+  assert(HighsInt(result.size) == this->num_col_);
+  assert(HighsInt(result.index.size()) == this->num_col_);
   if (expected_density <= kHyperPriceDensity) {
     for (HighsInt ix = next_index; ix < column.count; ix++) {
       HighsInt iRow = column.index[ix];
@@ -1316,8 +1319,13 @@ void HighsSparseMatrix::priceByRowWithSwitch(
     }
   } else {
     if (quad_precision) {
+      // HVector result should have result.index of size this->num_col_
+      // by virtue of result.setup. However, it will generally lose
+      // this property by virtue of the following move
       result.index = std::move(sum.nonzeroinds);
       HighsInt result_num_nz = result.index.size();
+      // Restore the size of result.index
+      result.index.resize(this->num_col_);
       result.count = result_num_nz;
       for (HighsInt i = 0; i < result_num_nz; ++i) {
         HighsInt iRow = result.index[i];

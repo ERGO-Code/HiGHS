@@ -2,9 +2,6 @@
 #define HCONFIG_H_
 
 #define FAST_BUILD
-/* #undef SCIP_DEV */
-/* #undef HiGHSDEV */
-/* #undef OSI_FOUND */
 /* #undef ZLIB_FOUND */
 #define CMAKE_BUILD_TYPE "RELEASE"
 #define HiGHSRELEASE

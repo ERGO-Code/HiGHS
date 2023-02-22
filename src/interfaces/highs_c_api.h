@@ -2,18 +2,18 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
 
 #include "util/HighsInt.h"
+
+const HighsInt kHighsMaximumStringLength = 512;
 
 const HighsInt kHighsStatusError = -1;
 const HighsInt kHighsStatusOk = 0;
@@ -227,35 +227,35 @@ const char* Highs_version(void);
  *
  * @returns the HiGHS major version number
  */
-HighsInt Highs_version_major();
+HighsInt Highs_versionMajor();
 
 /**
  * Return the HiGHS minor version number
  *
  * @returns the HiGHS minor version number
  */
-HighsInt Highs_version_minor();
+HighsInt Highs_versionMinor();
 
 /**
  * Return the HiGHS patch version number
  *
  * @returns the HiGHS patch version number
  */
-HighsInt Highs_version_patch();
+HighsInt Highs_versionPatch();
 
 /**
  * Return the HiGHS githash
  *
  * @returns the HiGHS githash
  */
-const char* Highs_githash();
+const char* Highs_githash(void);
 
 /**
  * Return the HiGHS compilation date
  *
  * @returns the HiGHS compilation date
  */
-const char* Highs_compilation_date();
+const char* Highs_compilationDate(void);
 
 /**
  * Read a model from `filename` into `highs`.
@@ -464,6 +464,28 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const double* value);
 
 /**
+ * Pass the name of a row
+ *
+ * @param row   the row for which the name is supplied
+ * @param name  the name of the row
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_passRowName(const void* highs, const HighsInt row,
+                           const char* name);
+
+/**
+ * Pass the name of a column
+ *
+ * @param col   the column for which the name is supplied
+ * @param name  the name of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_passColName(const void* highs, const HighsInt col,
+                           const char* name);
+
+/**
  * Set a boolean-valued option.
  *
  * @param highs     a pointer to the Highs instance
@@ -603,6 +625,79 @@ HighsInt Highs_writeOptions(const void* highs, const char* filename);
  * @returns a `kHighsStatus` constant indicating whether the call succeeded
  */
 HighsInt Highs_writeOptionsDeviations(const void* highs, const char* filename);
+
+/**
+ * Return the number of options
+ *
+ * @param highs     a pointer to the Highs instance
+ */
+HighsInt Highs_getNumOptions(const void* highs);
+
+/**
+ * Get the name of an option identified by index
+ *
+ * @param highs     a pointer to the Highs instance
+ * @param index     the index of the option
+ * @param name      the name of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
+                             char** name);
+
+/**
+ * Get the current and default values of a bool option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getBoolOptionValues(const void* highs, const char* option,
+                                   HighsInt* current_value,
+                                   HighsInt* default_value);
+/**
+ * Get the current and default values of an int option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param min_value     a pointer to the minimum value of the option
+ * @param max_value     a pointer to the maximum value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getIntOptionValues(const void* highs, const char* option,
+                                  HighsInt* current_value, HighsInt* min_value,
+                                  HighsInt* max_value, HighsInt* default_value);
+
+/**
+ * Get the current and default values of a double option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param min_value     a pointer to the minimum value of the option
+ * @param max_value     a pointer to the maximum value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getDoubleOptionValues(const void* highs, const char* option,
+                                     double* current_value, double* min_value,
+                                     double* max_value, double* default_value);
+
+/**
+ * Get the current and default values of a string option
+ *
+ * @param highs         a pointer to the Highs instance
+ * @param current_value a pointer to the current value of the option
+ * @param default_value a pointer to the default value of the option
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getStringOptionValues(const void* highs, const char* option,
+                                     char* current_value, char* default_value);
 
 /**
  * Get an int-valued info value.
@@ -1472,6 +1567,36 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
                              HighsInt* num_row, double* lower, double* upper,
                              HighsInt* num_nz, HighsInt* matrix_start,
                              HighsInt* matrix_index, double* matrix_value);
+/**
+ * Get the name of a row
+ *
+ * @param row   the row for which the name is required
+ * @param name  the name of the row
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
+
+/**
+ * Get the name of a column
+ *
+ * @param col   the column for which the name is required
+ * @param name  the name of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
+
+/**
+ * Get the integrality of a column
+ *
+ * @param col          the column for which the name is required
+ * @param integrality  the integrality of the column
+ *
+ * @returns a `kHighsStatus` constant indicating whether the call succeeded
+ */
+HighsInt Highs_getColIntegrality(const void* highs, const HighsInt col,
+                                 HighsInt* integrality);
 
 /**
  * Delete multiple adjacent columns.

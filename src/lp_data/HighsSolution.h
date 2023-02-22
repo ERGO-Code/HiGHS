@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolution.h
@@ -117,6 +115,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
+HighsStatus formSimplexLpBasisAndFactorReturn(
+    const HighsStatus return_status, HighsLpSolverObject& solver_object);
 HighsStatus formSimplexLpBasisAndFactor(
     HighsLpSolverObject& solver_object,
     const bool only_from_known_basis = false);

@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsUtils.cpp
@@ -1299,11 +1297,11 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
 
   lp.a_matrix_.scaleRow(row, rowScale);
   if (rowScale > 0) {
-    lp.row_lower_[row] /= rowScale;
-    lp.row_upper_[row] /= rowScale;
+    lp.row_lower_[row] *= rowScale;
+    lp.row_upper_[row] *= rowScale;
   } else {
-    const double new_upper = lp.row_lower_[row] / rowScale;
-    lp.row_lower_[row] = lp.row_upper_[row] / rowScale;
+    const double new_upper = lp.row_lower_[row] * rowScale;
+    lp.row_lower_[row] = lp.row_upper_[row] * rowScale;
     lp.row_upper_[row] = new_upper;
   }
   return HighsStatus::kOk;
@@ -1874,12 +1872,12 @@ void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
     // With postitive number of rows, can assume that there are index and value
     // vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
-                 lp.a_matrix_.start_[lp.num_col_], &lp.a_matrix_.start_[0],
-                 &lp.a_matrix_.index_[0], &lp.a_matrix_.value_[0]);
+                 lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
+                 lp.a_matrix_.index_.data(), lp.a_matrix_.value_.data());
   } else {
     // With no rows, can's assume that there are index and value vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
-                 lp.a_matrix_.start_[lp.num_col_], &lp.a_matrix_.start_[0],
+                 lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
                  NULL, NULL);
   }
 }

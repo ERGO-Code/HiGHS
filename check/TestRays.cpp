@@ -238,7 +238,7 @@ void testInfeasibleMps(const std::string model,
   dual_ray_value.resize(lp.num_row_);
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == has_dual_ray_);
-  REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
           HighsStatus::kOk);
   checkDualRayValue(highs, dual_ray_value);
   // Check that there is no primal ray
@@ -285,7 +285,7 @@ void testUnboundedMps(const std::string model,
   primal_ray_value.resize(lp.num_col_);
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
-  REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
+  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
           HighsStatus::kOk);
   checkPrimalRayValue(highs, primal_ray_value);
 }
@@ -323,7 +323,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == true);
   // Get the dual ray
-  REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
           HighsStatus::kOk);
   vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
   if (dev_run) {
@@ -370,7 +370,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   primal_ray_value.resize(lp.num_col_);
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
-  REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
+  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
           HighsStatus::kOk);
   vector<double> expected_primal_ray = {0.5, -1};
   if (dev_run) {
@@ -453,7 +453,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   REQUIRE(has_ray == true);
   vector<double> ray_value;
   ray_value.assign(2, NAN);
-  highs.getPrimalRay(has_ray, &ray_value[0]);
+  highs.getPrimalRay(has_ray, ray_value.data());
   checkPrimalRayValue(highs, ray_value);
   REQUIRE(has_ray);
   REQUIRE(ray_value[0] == ray_value[1]);
@@ -486,7 +486,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   REQUIRE(has_ray == true);
   vector<double> ray_value;
   ray_value.assign(2, NAN);
-  highs.getPrimalRay(has_ray, &ray_value[0]);
+  highs.getPrimalRay(has_ray, ray_value.data());
   checkPrimalRayValue(highs, ray_value);
   REQUIRE(has_ray);
   REQUIRE(ray_value[0] == ray_value[1]);

@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsInterface.cpp
@@ -512,15 +510,13 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
       if (row_upper != NULL) row_upper[new_iRow] = lp.row_upper_[iRow];
     }
   }
-  // bail out if no matrix is to be extracted
   const bool extract_start = row_matrix_start != NULL;
   const bool extract_index = row_matrix_index != NULL;
   const bool extract_value = row_matrix_value != NULL;
   const bool extract_matrix = extract_index || extract_value;
-  // Someone might just want the values, but to get them makes use of
-  // the starts so tough!
-  if (!extract_start) return;
-  // Allocate an array of lengths for the row-wise matrix to be extracted
+  // Allocate an array of lengths for the row-wise matrix to be
+  // extracted: necessary even if just the number of nonzeros is
+  // required
   vector<HighsInt> row_matrix_length;
   row_matrix_length.assign(get_num_row, 0);
   // Identify the lengths of the rows in the row-wise matrix to be extracted
@@ -532,6 +528,14 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
       if (new_iRow >= 0) row_matrix_length[new_iRow]++;
     }
   }
+  if (!extract_start) {
+    // bail out if no matrix starts are to be extracted, but only after
+    // computing the number of nonzeros
+    for (HighsInt iRow = 0; iRow < get_num_row; iRow++)
+      get_num_nz += row_matrix_length[iRow];
+    return;
+  }
+  // Allocate an array of lengths for the row-wise matrix to be extracted
   row_matrix_start[0] = 0;
   for (HighsInt iRow = 0; iRow < get_num_row - 1; iRow++) {
     row_matrix_start[iRow + 1] =
@@ -648,8 +652,8 @@ HighsStatus Highs::changeColBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                col_lower, col_upper, NULL, &local_colLower[0],
-                &local_colUpper[0], NULL);
+                col_lower, col_upper, NULL, local_colLower.data(),
+                local_colUpper.data(), NULL);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
@@ -693,7 +697,8 @@ HighsStatus Highs::changeRowBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_, lower,
-                upper, NULL, &local_rowLower[0], &local_rowUpper[0], NULL);
+                upper, NULL, local_rowLower.data(), local_rowUpper.data(),
+                NULL);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
@@ -730,9 +735,21 @@ void Highs::changeCoefficientInterface(const HighsInt ext_row,
                             zero_new_value);
   // Deduce the consequences of a changed element
   //
-  // ToDo: Can do something more intelligent if element is in nonbasic column.
-  // Otherwise, treat it as if it's a new row
+  // ToDo: Can do something more intelligent if element is in nonbasic
+  // column
+  //
+  const bool basic_column =
+      this->basis_.col_status[ext_col] == HighsBasisStatus::kBasic;
+  //
+  // For now, treat it as if it's a new row
   invalidateModelStatusSolutionAndInfo();
+
+  if (basic_column) {
+    // Basis is retained, but is has to be viewed as alien, since the
+    // basis matrix has changed
+    this->basis_.was_alien = true;
+    this->basis_.alien = true;
+  }
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewRows);
@@ -1411,7 +1428,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       rhs[col - num_col] = primal_ray_sign;
     }
     HighsInt* column_num_nz = 0;
-    basisSolveInterface(rhs, &column[0], column_num_nz, NULL, false);
+    basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
     // Now zero primal_ray_value and scatter the column according to
     // the basic variables.
     for (HighsInt iCol = 0; iCol < num_col; iCol++) primal_ray_value[iCol] = 0;
