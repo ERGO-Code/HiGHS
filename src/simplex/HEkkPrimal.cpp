@@ -2794,7 +2794,9 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
 void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
                             const double value, const double random_value,
                             double& bound, double& shift, const bool report) {
+  const double scale_threshold = 1e3;
   double feasibility = (1 + random_value) * primal_feasibility_tolerance;
+  assert(1.0 + feasibility / scale_threshold > 1.0);
   double old_bound = bound;
   std::string type;
   double infeasibility;
@@ -2807,7 +2809,10 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     assert(infeasibility > 0);
     // Determine the amount by which value will be feasible - so that
     // it's not degenerate
-    shift = infeasibility + feasibility;
+    if (infeasibility <= scale_threshold)
+       shift = infeasibility + feasibility;
+    else
+       shift = infeasibility * (1.0 + feasibility / scale_threshold);
     bound -= shift;
     new_infeasibility = bound - value;
     assert(new_infeasibility < 0);
@@ -2819,7 +2824,10 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     assert(infeasibility > 0);
     // Determine the amount by which value will be feasible - so that
     // it's not degenerate
-    shift = infeasibility + feasibility;
+    if (infeasibility <= scale_threshold)
+       shift = infeasibility + feasibility;
+    else
+       shift = infeasibility * (1.0 + feasibility / scale_threshold);
     bound += shift;
     new_infeasibility = value - bound;
     assert(new_infeasibility < 0);
