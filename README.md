@@ -12,7 +12,6 @@
 *   [Compilation](#compilation)
 *   [Interfaces](#interfaces)
 *   [Python](#python)
-*   [Licence](#licence)
 *   [Reference](#reference)
 
 About HiGHS 
@@ -142,14 +141,6 @@ iterations run
 
 This will rebuild `highs.html` every time a source file is modified (e.g.
 from Visual Studio Code).
-
-Licence
--------
-
-MIT License
-
-Copyright (c) 2023 HiGHS
-
 
 Reference
 ---------
