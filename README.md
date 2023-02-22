@@ -6,15 +6,17 @@
 
 ## Table of Contents
 
-*   [About HiGHS](#about)
-<!-- *   [Codemap](#codemap) -->
+*   [About HiGHS](#about-highs)
 *   [Documentation](#documentation)
 *   [Precompiled Binaries](#precompiled-binaries)
 *   [Compilation](#compilation)
+*   [Interfaces](#interfaces)
+*   [Python](#python)
 *   [Licence](#licence)
 *   [Reference](#reference)
 
-## About HiGHS 
+About HiGHS 
+-----------
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear optimization problems of the form
@@ -29,20 +31,23 @@ Find out more about HiGHS at https://www.highs.dev.
 
 Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
-## Documentation
+Documentation
+-------------
 
 Documentation is available at https://ergo-code.github.io/HiGHS/. Executables
 
-## Precompiled binaries
+Precompiled binaries
+--------------------
 
 Precompiled static executables are available for a variety of platforms at:
 https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
-See https://ergo-code.github.io/HiGHS/cpp/get-started.html#Precompiled-executables.
+See https://ergo-code.github.io/HiGHS/binaries.html.
 
-## Compilation
+Compilation
+-----------
 
 HiGHS uses CMake as build system. First setup a build folder and call CMake as follows
 
@@ -66,92 +71,12 @@ solves the model in `ml.mps`
 
     highs ml.mps
 
-Language interfaces and further documentation
----------------------------------------------
-
-There are HiGHS interfaces for C, C#, FORTRAN, and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. 
-We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
-
-Parallel code
--------------
-
-Parallel computation within HiGHS is limited to the dual simplex solver.
-However, performance gain is unlikely to be significant at present. 
-For the simplex solver, at best, speed-up is limited to the number of memory channels, rather than the number of cores. 
-
-HiGHS will identify the number of available threads at run time, and restrict their use to the value of the HiGHS option `threads`.
-
-If run with `threads=1`, HiGHS is serial. The `--parallel` run-time
-option will cause the HiGHS parallel dual simplex solver to run in serial. Although this
-could lead to better performance on some problems, performance will typically be
-diminished.
-
-If multiple threads are available, and run with `threads>1`, HiGHS will use multiple threads. 
-Although the best value will be problem and architecture dependent, for the simplex solver `threads=8` is typically a
-good choice. 
-Although HiGHS is slower when run in parallel than in serial for some problems, it can be faster with multiple threads.
-
-Interfaces
-==========
-
-Julia
------
-
-A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
-
-Rust
-----
-
-HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
-
-R
-------
-
-An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
-
-Javascript
+Interfaces 
 ----------
 
-HiGHS can be used from javascript directly inside a web browser thanks to [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/) and the [npm package](https://www.npmjs.com/package/highs).
+There are HiGHS interfaces for C, C#, FORTRAN, and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/interfaces.html.
 
-Node.js
--------
-
-HiGHS has a [native Node.js](https://www.npmjs.com/package/highs-solver) interface.
-
-C#
---
-
-Here are observations on calling HiGHS from C#:
-
-- [highs_csharp_api.cs](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_csharp_api.cs) contains all the PInvoke you need. Copy it into your C# project.
-- Make sure that the native HiGHS library (highs.dll, libhighs.dll, libhighs.so, ... depending on your platform) can be found at runtime. How to do this is platform dependent, copying it next to your C# executable should work in most cases. You can use msbuild for that. At least on linux installing HiGHS system wide should work, too.
-- Make sure that all dependencies of the HiGHS library can be found, too. E.g. if HiGHS was build using Visual C++ make sure that the MSVCRuntime is installed on the machine you want to run your application on.
-- Depending on the name of your HiGHS library it might be necessary to change the constant "highslibname", see [document](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/cross-platform) on writing cross platform P/Invoke code if necessary.
-- Call the Methods in highs_csharp_api.cs and have fun with HiGHS.
-
-This is the normal way to call plain old C from C# with the great simplification that you don't have to write the PInvoke declarations yourself.
-
-Webdemo
--------
-
-Alternatively, HiGHS can directly be compiled into a single HTML file and used
-in a browser. This requires `emscripten` to be installed from their website
-(unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
-
-    https://emscripten.org/docs/getting_started/downloads.html
-
-Then, run
-
-    sh build_webdemo.sh
-
-This will create the file `build_webdemo/bin/highs.html`. For fast edit
-iterations run
-
-    find src app | entr -rs 'make -C build_webdemo highs; echo'
-
-This will rebuild `highs.html` every time a source file is modified (e.g.
-from Visual Studio Code).
+We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
 Python
 ------
@@ -195,16 +120,39 @@ You may also require
 * `pip install pybind11`
 * `pip install pyomo`
 
-The Python interface can then be tested as above
+The Python interface can then be tested as above.
 
-## Licence
+Webdemo
+-------
+
+Alternatively, HiGHS can directly be compiled into a single HTML file and used
+in a browser. This requires `emscripten` to be installed from their website
+(unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
+
+    https://emscripten.org/docs/getting_started/downloads.html
+
+Then, run
+
+    sh build_webdemo.sh
+
+This will create the file `build_webdemo/bin/highs.html`. For fast edit
+iterations run
+
+    find src app | entr -rs 'make -C build_webdemo highs; echo'
+
+This will rebuild `highs.html` every time a source file is modified (e.g.
+from Visual Studio Code).
+
+Licence
+-------
 
 MIT License
 
-Copyright (c) 2022 HiGHS
+Copyright (c) 2023 HiGHS
 
 
-## Reference
+Reference
+---------
 
 If you use HiGHS in an academic context, please acknowledge this and cite the following article.
 Parallelizing the dual revised simplex method
