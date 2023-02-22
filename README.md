@@ -4,6 +4,18 @@
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
 
+## Table of Contents
+
+*   [About HiGHS](#about)
+<!-- *   [Codemap](#codemap) -->
+*   [Documentation](#documentation)
+*   [Precompiled Binaries](#precompiled-binaries)
+*   [Compilation](#compilation)
+*   [Licence](#licence)
+*   [Reference](#reference)
+
+## About HiGHS 
+
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear optimization problems of the form
 
@@ -13,30 +25,15 @@ where Q must be positive semi-definite and, if Q is zero, there may be a require
 
 HiGHS has primal and dual revised simplex solvers, originally written by Qi Huangfu and further developed by Julian Hall. It also has an interior point solver for LP written by Lukas Schork, an active set solver for QP written by Michael Feldmeier, and a MIP solver written by Leona Gottwald. Other features have been added by Julian Hall and Ivet Galabova, who manages the software engineering of HiGHS and interfaces to C, C#, FORTRAN, Julia and Python.
 
+Find out more about HiGHS at https://www.highs.dev.
+
 Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
-Reference
----------
-If you use HiGHS in an academic context, please acknowledge this and cite the following article.
-Parallelizing the dual revised simplex method
-Q. Huangfu and J. A. J. Hall
-Mathematical Programming Computation, 10 (1), 119-142, 2018.
-DOI: 10.1007/s12532-017-0130-5
+## Documentation
 
-http://www.maths.ed.ac.uk/hall/HuHa13/
+Documentation is available at https://ergo-code.github.io/HiGHS/. Executables
 
-Wikipedia
----------
-
-The project has an entry on Wikipedia: https://en.wikipedia.org/wiki/HiGHS_optimization_solver.
-
-Documentation
--------------
-
-Documentation is available at https://ergo-code.github.io/HiGHS/. Find out more about HiGHS at https://www.highs.dev.
-
-Executables
------------
+## Precompiled binaries
 
 Precompiled static executables are available for a variety of platforms at:
 https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
@@ -45,8 +42,7 @@ _These binaries are provided by the Julia community and are not officially suppo
 
 See https://ergo-code.github.io/HiGHS/cpp/get-started.html#Precompiled-executables.
 
-Compilation
------------
+## Compilation
 
 HiGHS uses CMake as build system. First setup a build folder and call CMake as follows
 
@@ -61,49 +57,14 @@ Then compile the code using
 This installs the executable `bin/highs`.
 The minimum CMake version required is 3.15.
 
-Testing
--------
-
 To perform a quick test whether the compilation was successful, run
 
     ctest
-
-Run-time options
-----------------
-
-In the following discussion, the name of the executable file generated is
-assumed to be `highs`.
 
 HiGHS can read plain text MPS files and LP files and the following command
 solves the model in `ml.mps`
 
     highs ml.mps
-
-HiGHS options
--------------
-Usage:
-    highs [OPTION...] [file]
-    
-      --model_file arg        File of model to solve.
-      --presolve arg          Presolve: "choose" by default - "on"/"off" are alternatives.
-      --solver arg            Solver: "choose" by default - "simplex"/"ipm" are alternatives.
-      --parallel arg          Parallel solve: "choose" by default - "on"/"off" are alternatives.
-      --run_crossover arg     Run crossover after IPM: "on" by default - "choose"/"off" are alternatives.
-      --time_limit arg        Run time limit (seconds - double).
-      --options_file arg      File containing HiGHS options.
-      --solution_file arg     File for writing out model solution.
-      --write_model_file arg  File for writing out model.
-      --random_seed arg       Seed to initialize random number generation.
-      --ranging arg           Report cost, bound, RHS and basic solution ranging in any solution file: "off" by default - "on" is alternatives.
-      --read_solution_file    File of solution to be read
-      
-      --version               Print version number      
-  -h, --help                  Print help.
-  
-  Note:
-  
-  * If the file defines a quadratic term in the objective (so the problem is a QP or MIQP) and "simplex" or "ipm" is selected for the solver option, then the quadratic term will be ignored.
-  * If the file constrains some variables to take integer values and defines a quadratic term in the objective, then the problem is MIQP and cannot be solved by HiGHS
 
 Language interfaces and further documentation
 ---------------------------------------------
@@ -235,3 +196,20 @@ You may also require
 * `pip install pyomo`
 
 The Python interface can then be tested as above
+
+## Licence
+
+MIT License
+
+Copyright (c) 2022 HiGHS
+
+
+## Reference
+
+If you use HiGHS in an academic context, please acknowledge this and cite the following article.
+Parallelizing the dual revised simplex method
+Q. Huangfu and J. A. J. Hall
+Mathematical Programming Computation, 10 (1), 119-142, 2018.
+DOI: 10.1007/s12532-017-0130-5
+
+http://www.maths.ed.ac.uk/hall/HuHa13/
