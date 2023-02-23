@@ -20,7 +20,7 @@ About HiGHS
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear optimization problems of the form
 
-$$ \texttt{minimize } \dfrac{1}{2}x^TQx + c^Tx \texttt{ subject to } L <= Ax <= U; l <= x <= u $$
+$$ \textrm{minimize}~f = \dfrac{1}{2}x^TQx + c^Tx \textrm{subject to}~L <= Ax <= U; l <= x <= u $$
 
 where Q must be positive semi-definite and, if Q is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations. No third-party dependencies are required.
 
