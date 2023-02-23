@@ -126,26 +126,9 @@ You may also require
 
 The Python interface can then be tested as above.
 
-Webdemo
--------
-
-HiGHS can directly be compiled into a single HTML file and used
-in a browser. This requires `emscripten` to be installed from their website
-(unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
-
-    https://emscripten.org/docs/getting_started/downloads.html
-
-Then, run
-
-    sh build_webdemo.sh
-
-This will create the file `build_webdemo/bin/highs.html`. For fast edit
-iterations run
-
-    find src app | entr -rs 'make -C build_webdemo highs; echo'
-
-This will rebuild `highs.html` every time a source file is modified (e.g.
-from Visual Studio Code).
+Google Colab Notebook Example
+-----------------------------
+The [Google Colab Notebook Example](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) demonstrates how to call HiGHS via the Python interface `highspy`.
 
 Reference
 ---------
