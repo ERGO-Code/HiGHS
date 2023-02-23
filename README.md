@@ -155,6 +155,4 @@ If you use HiGHS in an academic context, please acknowledge this and cite the fo
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
 Mathematical Programming Computation, 10 (1), 119-142, 2018.
-DOI: 10.1007/s12532-017-0130-5
-
-http://www.maths.ed.ac.uk/hall/HuHa13/
+DOI: [10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5)
