@@ -12,6 +12,7 @@
 *   [Compilation](#compilation)
 *   [Interfaces](#interfaces)
 *   [Python](#python)
+*   [Example](#google-colab-example)
 *   [Reference](#reference)
 
 About HiGHS 
@@ -126,9 +127,9 @@ You may also require
 
 The Python interface can then be tested as above.
 
-Google Colab Notebook Example
+Google Colab Example
 -----------------------------
-The [Google Colab Notebook Example](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) demonstrates how to call HiGHS via the Python interface `highspy`.
+The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) demonstrates how to call HiGHS via the Python interface `highspy`.
 
 Reference
 ---------
