@@ -8,7 +8,7 @@
 
 *   [About HiGHS](#about-highs)
 *   [Documentation](#documentation)
-*   [Precompiled Binaries](#precompiled-binaries)
+*   [Precompiled binaries](#precompiled-binaries)
 *   [Compilation](#compilation)
 *   [Interfaces](#interfaces)
 *   [Python](#python)
@@ -20,7 +20,7 @@ About HiGHS
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear optimization problems of the form
 
-    Minimize (1/2) x^TQx + c^Tx subject to L <= Ax <= U; l <= x <= u
+    Minimize (1/2) x^TQx + c^Tx subject to l <= Ax <= u; L <= x <= U
 
 where Q must be positive semi-definite and, if Q is zero, there may be a requirement that some of the variables take integer values. Thus HiGHS can solve linear programming (LP) problems, convex quadratic programming (QP) problems, and mixed integer programming (MIP) problems. It is mainly written in C++, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations. No third-party dependencies are required.
 
@@ -33,12 +33,12 @@ Although HiGHS is freely available under the MIT license, we would be pleased to
 Documentation
 -------------
 
-Documentation is available at https://ergo-code.github.io/HiGHS/. Executables
+Documentation is available at https://ergo-code.github.io/HiGHS/.
 
 Precompiled binaries
 --------------------
 
-Precompiled static executables are available for a variety of platforms at:
+Precompiled static executables are available for a variety of platforms at
 https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
@@ -48,7 +48,7 @@ See https://ergo-code.github.io/HiGHS/binaries.html.
 Compilation
 -----------
 
-HiGHS uses CMake as build system. First setup a build folder and call CMake as follows
+HiGHS uses CMake as build system, and requires at least version 3.15. First setup a build folder and call CMake as follows
 
     mkdir build
     cd build
@@ -59,21 +59,26 @@ Then compile the code using
     cmake --build . 
 
 This installs the executable `bin/highs`.
-The minimum CMake version required is 3.15.
 
-To perform a quick test whether the compilation was successful, run
+To test whether the compilation was successful, run
 
     ctest
 
-HiGHS can read plain text MPS files and LP files and the following command
+HiGHS can read MPS files and (CPLEX) LP files, and the following command
 solves the model in `ml.mps`
 
     highs ml.mps
+    
+HiGHS is installed using the command
+
+    cmake --install .
+
+with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
 Interfaces 
 ----------
 
-There are HiGHS interfaces for C, C#, FORTRAN, and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/interfaces.html.
+There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/interfaces.html.
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
@@ -90,8 +95,8 @@ HiGHS has been added to PyPi, so should be installable using the command
 
 The installation can be tested using the example [minimal.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/minimal.py), yielding the output
 
-    Running HiGHS 1.2.2 [date: 2022-09-04, git hash: 8701dbf19]
-    Copyright (c) 2022 ERGO-Code under MIT licence terms
+    Running HiGHS 1.5.0 [date: 2023-02-22, git hash: d041b3da0]
+    Copyright (c) 2023 HiGHS under MIT licence terms
     Presolving model
     2 rows, 2 cols, 4 nonzeros
     0 rows, 0 cols, 0 nonzeros
@@ -124,7 +129,7 @@ The Python interface can then be tested as above.
 Webdemo
 -------
 
-Alternatively, HiGHS can directly be compiled into a single HTML file and used
+HiGHS can directly be compiled into a single HTML file and used
 in a browser. This requires `emscripten` to be installed from their website
 (unfortunately, e.g. `sudo apt install emscripten` in Ubuntu Linux is broken):
 
@@ -146,6 +151,7 @@ Reference
 ---------
 
 If you use HiGHS in an academic context, please acknowledge this and cite the following article.
+
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
 Mathematical Programming Computation, 10 (1), 119-142, 2018.
