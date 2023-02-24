@@ -1813,10 +1813,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
+HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
                                                        const char*, void*),
                                   void* log_deprecated) {
-  options_.log_options.log_callback = log_callback;
+  options_.log_options.log_user_callback = log_user_callback;
   options_.log_options.log_deprecated = log_deprecated;
   return HighsStatus::kOk;
 }

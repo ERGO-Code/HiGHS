@@ -50,7 +50,7 @@ TEST_CASE("log-callback", "[highs_io]") {
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  log_options.log_callback = myLogCallback;
+  log_options.log_user_callback = myLogCallback;
   log_options.log_deprecated = (void*)&dummy_data;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
