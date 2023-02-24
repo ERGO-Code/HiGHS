@@ -35,6 +35,7 @@ class HighsMipSolver {
   double primal_bound_;
   double gap_;
   int64_t node_count_;
+  int64_t total_lp_iterations_;
 
   bool submip;
   const HighsBasis* rootbasis;

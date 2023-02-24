@@ -501,6 +501,7 @@ void HighsMipSolver::cleanupSolve() {
   dual_bound_ += model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
+  total_lp_iterations_ = mipdata_->total_lp_iterations;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
 
   // adjust objective sense in case of maximization problem
