@@ -1009,8 +1009,9 @@ class Highs {
    * @brief Set the callback method and user data to use for logging
    */
   HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType, const char*,
-                                                  void*),
-                             void* log_deprecated = nullptr);
+                                                  void*)
+                             , void* deprecated = nullptr// V2.0 remove
+			     );
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis

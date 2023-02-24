@@ -1058,7 +1058,6 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.log_dev_level = &log_dev_level;
     log_options.log_highs_callback = nullptr;
     log_options.log_user_callback = nullptr;
-    log_options.log_deprecated = nullptr;
   }
 
   void deleteRecords() {
