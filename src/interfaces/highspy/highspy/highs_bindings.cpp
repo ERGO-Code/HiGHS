@@ -425,17 +425,17 @@ double highs_getObjectiveOffset(Highs* h)
 class CallbackTuple {
 public:
   CallbackTuple() = default;
-  CallbackTuple(py::object _callback, py::object _cb_data) : callback(_callback), callback_data(_cb_data) {}
+  CallbackTuple(py::object _callback, py::object _cb_data) : callback(_callback), log_deprecated(_cb_data) {}
   ~CallbackTuple() = default;
   py::object callback;
-  py::object callback_data;
+  py::object log_deprecated;
 };
 
-void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* callback_data)
+void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* log_deprecated)
 {
-  CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(callback_data);
+  CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(log_deprecated);
   std::string msg(msgbuffer);
-  callback_tuple->callback(log_type, msg, callback_tuple->callback_data);
+  callback_tuple->callback(log_type, msg, callback_tuple->log_deprecated);
 }
 
 HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
@@ -522,7 +522,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def(py::init<>())
     .def(py::init<py::object, py::object>())
     .def_readwrite("callback", &CallbackTuple::callback)
-    .def_readwrite("callback_data", &CallbackTuple::callback_data);
+    .def_readwrite("log_deprecated", &CallbackTuple::log_deprecated);
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
     .def(py::init<>())
     .def_readwrite("format_", &HighsSparseMatrix::format_)

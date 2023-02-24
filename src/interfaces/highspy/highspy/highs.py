@@ -33,7 +33,7 @@ class Highs(_Highs):
         super().__init__()
         self._log_callback_tuple = CallbackTuple()
 
-    def setLogCallback(self, func, callback_data):
+    def setLogCallback(self, func, log_deprecated):
         self._log_callback_tuple.callback = func
-        self._log_callback_tuple.callback_data = callback_data
+        self._log_callback_tuple.log_deprecated = log_deprecated
         super().setLogCallback(self._log_callback_tuple)
