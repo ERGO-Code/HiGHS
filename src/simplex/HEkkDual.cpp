@@ -2876,9 +2876,9 @@ double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
     // flipping the sign of its dual and for a basic variable we may need to add
     // to the dual objective using one of the bounds when its dual is not zero.
     double active_value;
-    if (exact_dual > ekk_instance_.options_->small_matrix_value)
+    if (exact_dual > ekk_instance_.options_->dual_feasibility_tolerance)
       active_value = lp.col_lower_[iCol];
-    else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
+    else if (exact_dual < -ekk_instance_.options_->dual_feasibility_tolerance)
       active_value = lp.col_upper_[iCol];
     else
       active_value = info.workValue_[iCol];
@@ -2909,9 +2909,9 @@ double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
     // basic variable we may need to add to the dual objective using one of the
     // bounds when its dual is not zero.
     double active_value;
-    if (exact_dual > ekk_instance_.options_->small_matrix_value)
+    if (exact_dual > ekk_instance_.options_->dual_feasibility_tolerance)
       active_value = lp.row_lower_[iRow];
-    else if (exact_dual < -ekk_instance_.options_->small_matrix_value)
+    else if (exact_dual < -ekk_instance_.options_->dual_feasibility_tolerance)
       active_value = lp.row_upper_[iRow];
     else
       active_value = -info.workValue_[iVar];
