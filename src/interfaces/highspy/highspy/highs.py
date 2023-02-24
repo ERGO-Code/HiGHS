@@ -31,9 +31,9 @@ from .highs_bindings import (
 class Highs(_Highs):
     def __init__(self):
         super().__init__()
-        self._log_callback_tuple = CallbackTuple()
+        self._log_user_callback_tuple = CallbackTuple()
 
     def setLogCallback(self, func, log_deprecated):
-        self._log_callback_tuple.callback = func
-        self._log_callback_tuple.log_deprecated = log_deprecated
-        super().setLogCallback(self._log_callback_tuple)
+        self._log_user_callback_tuple.callback = func
+        self._log_user_callback_tuple.log_deprecated = log_deprecated
+        super().setLogCallback(self._log_user_callback_tuple)

@@ -431,7 +431,7 @@ public:
   py::object log_deprecated;
 };
 
-void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* log_deprecated)
+void py_log_user_callback(HighsLogType log_type, const char* msgbuffer, void* log_deprecated)
 {
   CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(log_deprecated);
   std::string msg(msgbuffer);
@@ -440,8 +440,8 @@ void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* log_dep
 
 HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
 {
-  void (*_log_callback)(HighsLogType, const char*, void*) = &py_log_callback;
-  HighsStatus status = h->setLogCallback(_log_callback, callback_tuple);
+  void (*_log_user_callback)(HighsLogType, const char*, void*) = &py_log_user_callback;
+  HighsStatus status = h->setLogCallback(_log_user_callback, callback_tuple);
   return status;
 }
 
