@@ -33,7 +33,7 @@
 // The structure of component is general, of the presolve component - presolve
 // specific.
 
-enum class HighsPostsolveStatus {
+enum class HighsPostsolveStatus { // V2.0: Delete if not used!
   kNotPresolved = -1,
   kNoPrimalSolutionError,
   kSolutionRecovered,

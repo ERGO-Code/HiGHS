@@ -155,8 +155,8 @@ enum class HighsPresolveStatus {
   kReduced,
   kReducedToEmpty,
   kTimeout,
-  kNullError,
-  kOptionsError,
+  kNullError, // V2.0: Delete since it's not used!
+  kOptionsError, // V2.0: Delete since it's not used!
 };
 
 enum class HighsModelStatus {
@@ -164,11 +164,11 @@ enum class HighsModelStatus {
   // values is unchanged, since enums are not preserved in some
   // interfaces
   kNotset = 0,
-  kLoadError,
+  kLoadError, // V2.0: Delete since it's not used!
   kModelError,
-  kPresolveError,
+  kPresolveError, // V2.0: Delete since it's not used!
   kSolveError,
-  kPostsolveError,
+  kPostsolveError,  // V2.0: Delete if not used! Add to documentation if used
   kModelEmpty,
   kOptimal,
   kInfeasible,
@@ -192,7 +192,7 @@ enum class HighsBasisStatus : uint8_t {
       0,   // (slack) variable is at its lower bound [including fixed variables]
   kBasic,  // (slack) variable is basic
   kUpper,  // (slack) variable is at its upper bound
-  kZero,   // free variable is non-basic and set to zero
+  kZero,   // free variable is nonbasic and set to zero
   kNonbasic  // nonbasic with no specific bound information - useful for users
              // and postsolve
 };
