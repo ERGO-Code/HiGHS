@@ -19,13 +19,15 @@ using std::strstr;
 
 // Callback that saves message for comparison
 static void myLogCallback(HighsLogType type, const char* message,
-                          void* deprecated // V2.0 remove
-			  ) { strcpy(printed_log, message); }
+                          void* deprecated  // V2.0 remove
+) {
+  strcpy(printed_log, message);
+}
 
 // Callback that provides user logging
 static void userLogCallback(HighsLogType type, const char* message,
-                            void* deprecated // V2.0 remove
-			    ) {
+                            void* deprecated  // V2.0 remove
+) {
   if (dev_run) printf("userLogCallback: %s", message);
 }
 
