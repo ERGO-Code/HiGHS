@@ -1010,7 +1010,7 @@ class Highs {
    */
   HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
                                                   void*),
-                             void* log_callback_data = nullptr);
+                             void* log_deprecated = nullptr);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis

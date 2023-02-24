@@ -20,14 +20,14 @@ using std::strstr;
 
 // Callback that saves message for comparison
 static void myLogCallback(HighsLogType type, const char* message,
-                          void* log_callback_data) {
+                          void* log_deprecated) {
   strcpy(printed_log, message);
-  received_data = log_callback_data;
+  received_data = log_deprecated;
 }
 
 // Callback that provides user logging
 static void userLogCallback(HighsLogType type, const char* message,
-                            void* log_callback_data) {
+                            void* log_deprecated) {
   if (dev_run) printf("userLogCallback: %s", message);
 }
 
@@ -51,7 +51,7 @@ TEST_CASE("log-callback", "[highs_io]") {
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
   log_options.log_callback = myLogCallback;
-  log_options.log_callback_data = (void*)&dummy_data;
+  log_options.log_deprecated = (void*)&dummy_data;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
