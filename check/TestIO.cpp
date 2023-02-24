@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const HighsInt kLogBufferSize = kIoBufferSize;
 
