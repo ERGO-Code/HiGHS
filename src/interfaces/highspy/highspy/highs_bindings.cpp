@@ -422,29 +422,6 @@ double highs_getObjectiveOffset(Highs* h)
   return obj_offset;
 }
 
-class CallbackTuple {
-public:
-  CallbackTuple() = default;
-  CallbackTuple(py::object _callback, py::object _cb_data) : callback(_callback), log_deprecated(_cb_data) {}
-  ~CallbackTuple() = default;
-  py::object callback;
-  py::object log_deprecated;
-};
-
-void py_log_user_callback(HighsLogType log_type, const char* msgbuffer, void* log_deprecated)
-{
-  CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(log_deprecated);
-  std::string msg(msgbuffer);
-  callback_tuple->callback(log_type, msg, callback_tuple->log_deprecated);
-}
-
-HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
-{
-  void (*_log_user_callback)(HighsLogType, const char*, void*) = &py_log_user_callback;
-  HighsStatus status = h->setLogCallback(_log_user_callback, callback_tuple);
-  return status;
-}
-
 std::tuple<HighsStatus, bool, bool, bool> assessPrimalSolution(Highs* h) {
   bool valid, integral, feasible;
   HighsStatus status = h->assessPrimalSolution(valid, integral, feasible);
@@ -518,11 +495,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kVerbose", HighsLogType::kVerbose)
     .value("kWarning", HighsLogType::kWarning)
     .value("kError", HighsLogType::kError);
-  py::class_<CallbackTuple>(m, "CallbackTuple")
-    .def(py::init<>())
-    .def(py::init<py::object, py::object>())
-    .def_readwrite("callback", &CallbackTuple::callback)
-    .def_readwrite("log_deprecated", &CallbackTuple::log_deprecated);
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
     .def(py::init<>())
     .def_readwrite("format_", &HighsSparseMatrix::format_)
@@ -740,8 +712,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsCost", &highs_changeColsCost)
     .def("changeColsBounds", &highs_changeColsBounds)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
-    .def("setLogCallback", &highs_setLogCallback)
-    .def("setLogCallback", &highs_setLogCallback)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
     .def("getNumCol", &Highs::getNumCol)
