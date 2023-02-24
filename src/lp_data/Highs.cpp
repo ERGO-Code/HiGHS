@@ -3157,6 +3157,12 @@ HighsStatus Highs::callSolveMip() {
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;
   info_.mip_gap = solver.gap_;
+  // Get the number of LP iterations, avoiding overflow if the int64_t
+  // value is too large
+  int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
+  info_.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
+                                      ? -1
+                                      : HighsInt(mip_total_lp_iterations);
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("MIP", return_status);
