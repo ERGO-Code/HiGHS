@@ -1130,8 +1130,10 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
-        // Validate the reduced LP
-        assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        // Validate the reduced LP; note that assessLp() may return a warning
+        // if matrix values dropped below the small_matrix_value threshold
+        // during presolving
+        assert(assessLp(reduced_lp, options_) != HighsStatus::kError);
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve
