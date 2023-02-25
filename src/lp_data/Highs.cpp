@@ -114,11 +114,11 @@ HighsStatus Highs::readOptions(const std::string& filename) {
   }
   HighsLogOptions report_log_options = options_.log_options;
   switch (loadOptionsFromFile(report_log_options, options_, filename)) {
-  case HighsLoadOptionsStatus::kError:
-  case HighsLoadOptionsStatus::kEmpty:
-    return HighsStatus::kError;
-  default:
-    break;
+    case HighsLoadOptionsStatus::kError:
+    case HighsLoadOptionsStatus::kEmpty:
+      return HighsStatus::kError;
+    default:
+      break;
   }
   return HighsStatus::kOk;
 }

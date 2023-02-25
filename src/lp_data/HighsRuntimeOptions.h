@@ -142,14 +142,14 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
       }
       switch (loadOptionsFromFile(report_log_options, options, v[0])) {
-      case HighsLoadOptionsStatus::kError:
-	return false;
-      case HighsLoadOptionsStatus::kEmpty:
-	printf("loadOptions: HighsLoadOptionsStatus::kEmpty\n");
-	writeOptionsToFile(stdout, options.records);
-	return false;
-      default:
-	break;
+        case HighsLoadOptionsStatus::kError:
+          return false;
+        case HighsLoadOptionsStatus::kEmpty:
+          printf("loadOptions: HighsLoadOptionsStatus::kEmpty\n");
+          writeOptionsToFile(stdout, options.records);
+          return false;
+        default:
+          break;
       }
     }
 
