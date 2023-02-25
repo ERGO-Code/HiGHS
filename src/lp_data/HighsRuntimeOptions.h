@@ -141,7 +141,14 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         std::cout << "Multiple options files not implemented.\n";
         return false;
       }
-      if (!loadOptionsFromFile(report_log_options, options, v[0])) return false;
+      switch (loadOptionsFromFile(report_log_options, options, v[0])) {
+      case HighsLoadOptionsStatus::kError:
+	return false;
+      case HighsLoadOptionsStatus::kEmpty:
+	return false;
+      default:
+	break;
+      }
     }
 
     // Handle command line option specifications
