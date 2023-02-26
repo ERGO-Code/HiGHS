@@ -1266,7 +1266,7 @@ class Highs {
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
-                            FILE*& file, bool& html) const;
+                            FILE*& file, HighsFileType& file_type) const;
 
   void reportModel();
   void newHighsBasis();

@@ -773,7 +773,8 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records) {
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_deviations,
-                               const bool html) {
+                               const HighsFileType file_type) {
+  const bool html = file_type == HighsFileType::kHtml;
   if (html) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Options</title>\n");
@@ -788,7 +789,7 @@ HighsStatus writeOptionsToFile(FILE* file,
     fprintf(file, "<h3>HiGHS Options</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
-  reportOptions(file, option_records, report_only_deviations, html);
+  reportOptions(file, option_records, report_only_deviations, file_type);
   if (html) {
     fprintf(file, "</ul>\n");
     fprintf(file, "</body>\n\n</html>\n");
@@ -797,7 +798,9 @@ HighsStatus writeOptionsToFile(FILE* file,
 }
 
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_deviations, const bool html) {
+                   const bool report_only_deviations,
+                   const HighsFileType file_type) {
+  const bool html = file_type == HighsFileType::kHtml;
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
@@ -806,22 +809,24 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
     if (html && option_records[index]->advanced) continue;
     if (type == HighsOptionType::kBool) {
       reportOption(file, ((OptionRecordBool*)option_records[index])[0],
-                   report_only_deviations, html);
+                   report_only_deviations, file_type);
     } else if (type == HighsOptionType::kInt) {
       reportOption(file, ((OptionRecordInt*)option_records[index])[0],
-                   report_only_deviations, html);
+                   report_only_deviations, file_type);
     } else if (type == HighsOptionType::kDouble) {
       reportOption(file, ((OptionRecordDouble*)option_records[index])[0],
-                   report_only_deviations, html);
+                   report_only_deviations, file_type);
     } else {
       reportOption(file, ((OptionRecordString*)option_records[index])[0],
-                   report_only_deviations, html);
+                   report_only_deviations, file_type);
     }
   }
 }
 
 void reportOption(FILE* file, const OptionRecordBool& option,
-                  const bool report_only_deviations, const bool html) {
+                  const bool report_only_deviations,
+                  const HighsFileType file_type) {
+  const bool html = file_type == HighsFileType::kHtml;
   if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
@@ -847,7 +852,9 @@ void reportOption(FILE* file, const OptionRecordBool& option,
 }
 
 void reportOption(FILE* file, const OptionRecordInt& option,
-                  const bool report_only_deviations, const bool html) {
+                  const bool report_only_deviations,
+                  const HighsFileType file_type) {
+  const bool html = file_type == HighsFileType::kHtml;
   if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
@@ -874,7 +881,9 @@ void reportOption(FILE* file, const OptionRecordInt& option,
 }
 
 void reportOption(FILE* file, const OptionRecordDouble& option,
-                  const bool report_only_deviations, const bool html) {
+                  const bool report_only_deviations,
+                  const HighsFileType file_type) {
+  const bool html = file_type == HighsFileType::kHtml;
   if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
@@ -898,8 +907,10 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
 }
 
 void reportOption(FILE* file, const OptionRecordString& option,
-                  const bool report_only_deviations, const bool html) {
+                  const bool report_only_deviations,
+                  const HighsFileType file_type) {
   // Don't report for the options file if writing to an options file
+  const bool html = file_type == HighsFileType::kHtml;
   if (option.name == kOptionsFileString) return;
   if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {

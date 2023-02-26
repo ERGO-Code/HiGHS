@@ -231,21 +231,25 @@ OptionStatus getLocalOptionType(
 
 void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
-HighsStatus writeOptionsToFile(FILE* file,
-                               const std::vector<OptionRecord*>& option_records,
-                               const bool report_only_deviations = false,
-                               const bool html = false);
+HighsStatus writeOptionsToFile(
+    FILE* file, const std::vector<OptionRecord*>& option_records,
+    const bool report_only_deviations = false,
+    const HighsFileType file_type = HighsFileType::kOther);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations = true,
-                   const bool html = false);
+                   const HighsFileType file_type = HighsFileType::kOther);
 void reportOption(FILE* file, const OptionRecordBool& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 void reportOption(FILE* file, const OptionRecordInt& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 void reportOption(FILE* file, const OptionRecordDouble& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 void reportOption(FILE* file, const OptionRecordString& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";

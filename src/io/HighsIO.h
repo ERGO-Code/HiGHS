@@ -23,6 +23,8 @@ class HighsOptions;
 
 const HighsInt kIoBufferSize = 1024;  // 65536;
 
+enum class HighsFileType { kNone = 0, kOther, kMps, kLp, kMd, kHtml };
+
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
