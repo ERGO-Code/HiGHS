@@ -90,4 +90,6 @@ std::string highsFormatToString(const char* format, ...);
 
 const std::string highsBoolToString(const bool b);
 
+const std::string highsInsertMdEscapes(const std::string from_string);
+
 #endif

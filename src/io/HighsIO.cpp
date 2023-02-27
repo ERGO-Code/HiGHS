@@ -238,3 +238,19 @@ std::string highsFormatToString(const char* format, ...) {
 const std::string highsBoolToString(const bool b) {
   return b ? "true" : "false";
 }
+
+const std::string highsInsertMdEscapes(const std::string from_string) {
+    std::string to_string = "";
+  const char* underscore = "_";
+  const char* backslash = "\\";
+  HighsInt from_string_length = from_string.length();
+  for (HighsInt p = 0; p < from_string_length; p++) {
+    const char string_ch = from_string[p];
+    if (string_ch == *underscore) {
+      to_string += backslash;
+    }
+    to_string += from_string[p];
+  }
+  return to_string;
+}
+

@@ -846,7 +846,7 @@ void reportOption(FILE* file, const OptionRecordBool& option,
     } else if (md_file) {
       fprintf(file,
               "## %s\n- %s\n- Type: boolean\n- Default: \"%s\"\n\n",
-	      option.name.c_str(),
+	      highsInsertMdEscapes(option.name).c_str(),
 	      option.description.c_str(),
 	      highsBoolToString(option.default_value).c_str());
     } else {
@@ -883,7 +883,7 @@ void reportOption(FILE* file, const OptionRecordInt& option,
       fprintf(file,
 	      "## %s\n- %s\n- Type: integer\n- Range: {%" HIGHSINT_FORMAT
               ", %" HIGHSINT_FORMAT "}\n- Default: %" HIGHSINT_FORMAT "\n\n",
-	      option.name.c_str(),
+	      highsInsertMdEscapes(option.name).c_str(),
 	      option.description.c_str(),
 	      option.lower_bound,
 	      option.upper_bound, option.default_value);
@@ -919,7 +919,7 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
     } else if (md_file) {
       fprintf(file,
 	      "## %s\n- %s\n- Type: double\n- Range: [%g, %g]\n- Default: %g\n\n",
-	      option.name.c_str(),
+	      highsInsertMdEscapes(option.name).c_str(),
 	      option.description.c_str(),
 	      option.lower_bound,
 	      option.upper_bound, option.default_value);
@@ -957,7 +957,7 @@ void reportOption(FILE* file, const OptionRecordString& option,
     } else if (md_file) {
       fprintf(file,
               "## %s\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
-	      option.name.c_str(),
+	      highsInsertMdEscapes(option.name).c_str(),
 	      option.description.c_str(),
 	      option.default_value.c_str());
     } else {
