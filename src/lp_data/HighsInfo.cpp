@@ -252,9 +252,11 @@ InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
 HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const HighsFileType file_type) {
-  const bool html = file_type == HighsFileType::kHtml;
-  if (!html && !valid) return HighsStatus::kWarning;
-  if (html) {
+  const bool html_file = file_type == HighsFileType::kHtml;
+  const bool md_file = file_type == HighsFileType::kMd;
+  const bool documentation_file = html_file || md_file;
+  if (!documentation_file && !valid) return HighsStatus::kWarning;
+  if (html_file) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Info</title>\n");
     fprintf(file, "	<meta charset=\"utf-8\" />\n");
@@ -268,8 +270,8 @@ HighsStatus writeInfoToFile(FILE* file, const bool valid,
     fprintf(file, "<h3>HiGHS Info</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
-  if (html || valid) reportInfo(file, info_records, file_type);
-  if (html) {
+  if (html_file || valid) reportInfo(file, info_records, file_type);
+  if (html_file) {
     fprintf(file, "</ul>\n");
     fprintf(file, "</body>\n\n</html>\n");
   }
@@ -278,12 +280,13 @@ HighsStatus writeInfoToFile(FILE* file, const bool valid,
 
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
                 const HighsFileType file_type) {
-  const bool html = file_type == HighsFileType::kHtml;
+  const bool html_file = file_type == HighsFileType::kHtml;
+  const bool md_file = file_type == HighsFileType::kMd;
   HighsInt num_info = info_records.size();
   for (HighsInt index = 0; index < num_info; index++) {
     HighsInfoType type = info_records[index]->type;
     // Skip the advanced info when creating HTML
-    if (html && info_records[index]->advanced) continue;
+    if (html_file && info_records[index]->advanced) continue;
     if (type == HighsInfoType::kInt64) {
       reportInfo(file, ((InfoRecordInt64*)info_records[index])[0], file_type);
     } else if (type == HighsInfoType::kInt) {
@@ -296,8 +299,9 @@ void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
 
 void reportInfo(FILE* file, const InfoRecordInt64& info,
                 const HighsFileType file_type) {
-  const bool html = file_type == HighsFileType::kHtml;
-  if (html) {
+  const bool html_file = file_type == HighsFileType::kHtml;
+  const bool md_file = file_type == HighsFileType::kMd;
+  if (html_file) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
@@ -315,8 +319,9 @@ void reportInfo(FILE* file, const InfoRecordInt64& info,
 
 void reportInfo(FILE* file, const InfoRecordInt& info,
                 const HighsFileType file_type) {
-  const bool html = file_type == HighsFileType::kHtml;
-  if (html) {
+  const bool html_file = file_type == HighsFileType::kHtml;
+  const bool md_file = file_type == HighsFileType::kMd;
+  if (html_file) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
@@ -335,8 +340,9 @@ void reportInfo(FILE* file, const InfoRecordInt& info,
 
 void reportInfo(FILE* file, const InfoRecordDouble& info,
                 const HighsFileType file_type) {
-  const bool html = file_type == HighsFileType::kHtml;
-  if (html) {
+  const bool html_file = file_type == HighsFileType::kHtml;
+  const bool md_file = file_type == HighsFileType::kMd;
+  if (html_file) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());

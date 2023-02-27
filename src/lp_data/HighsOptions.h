@@ -27,6 +27,8 @@ using std::string;
 
 enum class OptionStatus { kOk = 0, kUnknownOption, kIllegalValue };
 
+const bool kAdvancedInDocumentation = false;
+
 class OptionRecord {
  public:
   HighsOptionType type;
