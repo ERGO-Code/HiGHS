@@ -806,8 +806,8 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
-    //    fprintf(file, "\n# Option %1" HIGHSINT_FORMAT "\n", index);
-    if (option_records[index]->advanced && (html_file || md_file)) {
+    // Only report non-advanced options
+    if (option_records[index]->advanced) {// && (html_file || md_file)) {
       // Possibly the advanced options when creating HTML or Md file
       if (!kAdvancedInDocumentation) continue;
     }
@@ -847,7 +847,7 @@ void reportOption(FILE* file, const OptionRecordBool& option,
       fprintf(file,
               "## %s\n- %s\n- Type: boolean\n- Default: \"%s\"\n\n",
 	      highsInsertMdEscapes(option.name).c_str(),
-	      option.description.c_str(),
+	      highsInsertMdEscapes(option.description).c_str(),
 	      highsBoolToString(option.default_value).c_str());
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
@@ -884,7 +884,7 @@ void reportOption(FILE* file, const OptionRecordInt& option,
 	      "## %s\n- %s\n- Type: integer\n- Range: {%" HIGHSINT_FORMAT
               ", %" HIGHSINT_FORMAT "}\n- Default: %" HIGHSINT_FORMAT "\n\n",
 	      highsInsertMdEscapes(option.name).c_str(),
-	      option.description.c_str(),
+	      highsInsertMdEscapes(option.description).c_str(),
 	      option.lower_bound,
 	      option.upper_bound, option.default_value);
     } else {
@@ -920,7 +920,7 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
       fprintf(file,
 	      "## %s\n- %s\n- Type: double\n- Range: [%g, %g]\n- Default: %g\n\n",
 	      highsInsertMdEscapes(option.name).c_str(),
-	      option.description.c_str(),
+	      highsInsertMdEscapes(option.description).c_str(),
 	      option.lower_bound,
 	      option.upper_bound, option.default_value);
     } else {
@@ -958,7 +958,7 @@ void reportOption(FILE* file, const OptionRecordString& option,
       fprintf(file,
               "## %s\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
 	      highsInsertMdEscapes(option.name).c_str(),
-	      option.description.c_str(),
+	      highsInsertMdEscapes(option.description).c_str(),
 	      option.default_value.c_str());
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
