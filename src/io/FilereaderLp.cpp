@@ -357,6 +357,10 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFileValue(file, lp.row_lower_[iRow], true);
       this->writeToFileLineend(file);
     } else {
+      // Need to distinguish the names when writing out boxed
+      // constraint row as two single-sided constraints
+      const bool boxed =
+          lp.row_lower_[iRow] > -kHighsInf && lp.row_upper_[iRow] < kHighsInf;
       if (lp.row_lower_[iRow] > -kHighsInf) {
         // Has a lower bound
         if (has_row_names) {
@@ -364,7 +368,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         } else {
           this->writeToFileCon(file, iRow);
         }
-        this->writeToFile(file, "lo:");
+        if (boxed) {
+          this->writeToFile(file, "lo:");
+        } else {
+          this->writeToFile(file, ":");
+        }
         this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
         this->writeToFile(file, " >=");
         this->writeToFileValue(file, lp.row_lower_[iRow], true);
@@ -377,7 +385,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         } else {
           this->writeToFileCon(file, iRow);
         }
-        this->writeToFile(file, "up:");
+        if (boxed) {
+          this->writeToFile(file, "up:");
+        } else {
+          this->writeToFile(file, ":");
+        }
         this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
         this->writeToFile(file, " <=");
         this->writeToFileValue(file, lp.row_upper_[iRow], true);
