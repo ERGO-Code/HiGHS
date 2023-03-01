@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return (int)run_status;
 
-  //  highs.writeInfo("Info.md");
+  highs.writeInfo("Info.md");
   // Possibly compute the ranging information
   if (options.ranging == kHighsOnString) highs.getRanging();
 

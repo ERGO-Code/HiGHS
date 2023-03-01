@@ -270,7 +270,7 @@ HighsStatus writeInfoToFile(FILE* file, const bool valid,
     fprintf(file, "<h3>HiGHS Info</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
-  if (html_file || valid) reportInfo(file, info_records, file_type);
+  if (documentation_file || valid) reportInfo(file, info_records, file_type);
   if (html_file) {
     fprintf(file, "</ul>\n");
     fprintf(file, "</body>\n\n</html>\n");
@@ -303,17 +303,15 @@ void reportInfo(FILE* file, const InfoRecordInt64& info,
   const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file,
-            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-            info.name.c_str());
-    fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: HighsInt, advanced: %s\n",
-            highsBoolToString(info.advanced).c_str());
-    fprintf(file, "</li>\n");
+            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: int64_t</li>\n",
+            info.name.c_str(), info.description.c_str());
+  } else if (md_file) {
+      fprintf(file, "## %s\n- %s\n- Type: long integer\n\n",
+	      highsInsertMdEscapes(info.name).c_str(),
+	      highsInsertMdEscapes(info.description).c_str());
   } else {
-    fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: HighsInt, advanced: %s]\n",
-            highsBoolToString(info.advanced).c_str());
-    fprintf(file, "%s = %" PRId64 "\n", info.name.c_str(), *info.value);
+    fprintf(file, "\n# %s\n# [type: int64_t]\n%s = %" PRId64 "\n",
+	    info.description.c_str(), info.name.c_str(), *info.value);
   }
 }
 
@@ -323,18 +321,14 @@ void reportInfo(FILE* file, const InfoRecordInt& info,
   const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file,
-            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-            info.name.c_str());
-    fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: HighsInt, advanced: %s\n",
-            highsBoolToString(info.advanced).c_str());
-    fprintf(file, "</li>\n");
+            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: HighsInt</li>\n",
+            info.name.c_str(), info.description.c_str());
+  } else if (md_file) {
+    fprintf(file, "## %s\n- %s\n- Type: integer\n\n",
+	    highsInsertMdEscapes(info.name).c_str(),
+	    highsInsertMdEscapes(info.description).c_str());
   } else {
-    fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: HighsInt, advanced: %s]\n",
-            highsBoolToString(info.advanced).c_str());
-    fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", info.name.c_str(),
-            *info.value);
+    fprintf(file, "\n# %s\n# [type: HighsInt]\n%s = %" HIGHSINT_FORMAT "\n", info.description.c_str(), info.name.c_str(), *info.value);
   }
 }
 
@@ -344,16 +338,13 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
   const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file,
-            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-            info.name.c_str());
-    fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: double, advanced: %s\n",
-            highsBoolToString(info.advanced).c_str());
-    fprintf(file, "</li>\n");
+            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: double\n</li>\n",
+            info.name.c_str(), info.description.c_str());
+  } else if (md_file) {
+    fprintf(file, "## %s\n- %s\n- Type: double\n\n",
+	    highsInsertMdEscapes(info.name).c_str(),
+	    highsInsertMdEscapes(info.description).c_str());
   } else {
-    fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: double, advanced: %s]\n",
-            highsBoolToString(info.advanced).c_str());
-    fprintf(file, "%s = %g\n", info.name.c_str(), *info.value);
+    fprintf(file, "\n# %s\n# [type: double]\n%s = %g\n", info.description.c_str(), info.name.c_str(), *info.value);
   }
 }
