@@ -199,7 +199,7 @@ class HighsInfo : public HighsInfoStruct {
     InfoRecordInt64* record_int64;
     InfoRecordInt* record_int;
     InfoRecordDouble* record_double;
-    const bool advanced = false; // Not used
+    const bool advanced = false;  // Not used
 
     record_int = new InfoRecordInt("simplex_iteration_count",
                                    "Iteration count for simplex solver",

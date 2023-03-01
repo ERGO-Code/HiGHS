@@ -555,10 +555,10 @@ class HighsOptions : public HighsOptionsStruct {
         &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
-                            now_advanced, &highs_debug_level, kHighsDebugLevelMin,
-                            kHighsDebugLevelMin, kHighsDebugLevelMax);
+    record_int = new OptionRecordInt("highs_debug_level",
+                                     "Debugging level in HiGHS", now_advanced,
+                                     &highs_debug_level, kHighsDebugLevelMin,
+                                     kHighsDebugLevelMin, kHighsDebugLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -680,8 +680,8 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsIInf);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("icrash", "Run iCrash", now_advanced, &icrash, false);
+    record_bool = new OptionRecordBool("icrash", "Run iCrash", now_advanced,
+                                       &icrash, false);
     records.push_back(record_bool);
 
     record_bool =
@@ -699,8 +699,9 @@ class HighsOptions : public HighsOptionsStruct {
         &icrash_starting_weight, 1e-10, 1e-3, 1e50);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
-                                     now_advanced, &icrash_iterations, 0, 30, 200);
+    record_int =
+        new OptionRecordInt("icrash_iterations", "iCrash iterations",
+                            now_advanced, &icrash_iterations, 0, 30, 200);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -713,9 +714,9 @@ class HighsOptions : public HighsOptionsStruct {
                                        now_advanced, &icrash_exact, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("icrash_breakpoints",
-                                       "Exact subproblem solution for iCrash",
-                                       now_advanced, &icrash_breakpoints, false);
+    record_bool = new OptionRecordBool(
+        "icrash_breakpoints", "Exact subproblem solution for iCrash",
+        now_advanced, &icrash_breakpoints, false);
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(

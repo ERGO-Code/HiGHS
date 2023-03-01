@@ -807,7 +807,7 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
     // Only report non-advanced options
-    if (option_records[index]->advanced) {// && (html_file || md_file)) {
+    if (option_records[index]->advanced) {  // && (html_file || md_file)) {
       // Possibly the advanced options when creating HTML or Md file
       if (!kAdvancedInDocumentation) continue;
     }
@@ -844,11 +844,10 @@ void reportOption(FILE* file, const OptionRecordBool& option,
               highsBoolToString(option.default_value).c_str());
       fprintf(file, "</li>\n");
     } else if (md_file) {
-      fprintf(file,
-              "## %s\n- %s\n- Type: boolean\n- Default: \"%s\"\n\n",
-	      highsInsertMdEscapes(option.name).c_str(),
-	      highsInsertMdEscapes(option.description).c_str(),
-	      highsBoolToString(option.default_value).c_str());
+      fprintf(file, "## %s\n- %s\n- Type: boolean\n- Default: \"%s\"\n\n",
+              highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdEscapes(option.description).c_str(),
+              highsBoolToString(option.default_value).c_str());
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(
@@ -881,12 +880,11 @@ void reportOption(FILE* file, const OptionRecordInt& option,
       fprintf(file, "</li>\n");
     } else if (md_file) {
       fprintf(file,
-	      "## %s\n- %s\n- Type: integer\n- Range: {%" HIGHSINT_FORMAT
+              "## %s\n- %s\n- Type: integer\n- Range: {%" HIGHSINT_FORMAT
               ", %" HIGHSINT_FORMAT "}\n- Default: %" HIGHSINT_FORMAT "\n\n",
-	      highsInsertMdEscapes(option.name).c_str(),
-	      highsInsertMdEscapes(option.description).c_str(),
-	      option.lower_bound,
-	      option.upper_bound, option.default_value);
+              highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdEscapes(option.description).c_str(),
+              option.lower_bound, option.upper_bound, option.default_value);
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
@@ -908,21 +906,21 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
   if (!report_only_deviations || option.default_value != *option.value) {
     if (html_file) {
       fprintf(file,
-	      "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-	      option.name.c_str());
+              "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
+              option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
       fprintf(file,
-	      "type: double, advanced: %s, range: [%g, %g], default: %g\n",
-	      highsBoolToString(option.advanced).c_str(), option.lower_bound,
-	      option.upper_bound, option.default_value);
+              "type: double, advanced: %s, range: [%g, %g], default: %g\n",
+              highsBoolToString(option.advanced).c_str(), option.lower_bound,
+              option.upper_bound, option.default_value);
       fprintf(file, "</li>\n");
     } else if (md_file) {
-      fprintf(file,
-	      "## %s\n- %s\n- Type: double\n- Range: [%g, %g]\n- Default: %g\n\n",
-	      highsInsertMdEscapes(option.name).c_str(),
-	      highsInsertMdEscapes(option.description).c_str(),
-	      option.lower_bound,
-	      option.upper_bound, option.default_value);
+      fprintf(
+          file,
+          "## %s\n- %s\n- Type: double\n- Range: [%g, %g]\n- Default: %g\n\n",
+          highsInsertMdEscapes(option.name).c_str(),
+          highsInsertMdEscapes(option.description).c_str(), option.lower_bound,
+          option.upper_bound, option.default_value);
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
@@ -955,11 +953,10 @@ void reportOption(FILE* file, const OptionRecordString& option,
               option.default_value.c_str());
       fprintf(file, "</li>\n");
     } else if (md_file) {
-      fprintf(file,
-              "## %s\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
-	      highsInsertMdEscapes(option.name).c_str(),
-	      highsInsertMdEscapes(option.description).c_str(),
-	      option.default_value.c_str());
+      fprintf(file, "## %s\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
+              highsInsertMdEscapes(option.name).c_str(),
+              highsInsertMdEscapes(option.description).c_str(),
+              option.default_value.c_str());
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",

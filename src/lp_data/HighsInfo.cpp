@@ -303,15 +303,17 @@ void reportInfo(FILE* file, const InfoRecordInt64& info,
   const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file,
-            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: int64_t</li>\n",
+            "<li><tt><font "
+            "size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: "
+            "int64_t</li>\n",
             info.name.c_str(), info.description.c_str());
   } else if (md_file) {
-      fprintf(file, "## %s\n- %s\n- Type: long integer\n\n",
-	      highsInsertMdEscapes(info.name).c_str(),
-	      highsInsertMdEscapes(info.description).c_str());
+    fprintf(file, "## %s\n- %s\n- Type: long integer\n\n",
+            highsInsertMdEscapes(info.name).c_str(),
+            highsInsertMdEscapes(info.description).c_str());
   } else {
     fprintf(file, "\n# %s\n# [type: int64_t]\n%s = %" PRId64 "\n",
-	    info.description.c_str(), info.name.c_str(), *info.value);
+            info.description.c_str(), info.name.c_str(), *info.value);
   }
 }
 
@@ -321,14 +323,17 @@ void reportInfo(FILE* file, const InfoRecordInt& info,
   const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file,
-            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: HighsInt</li>\n",
+            "<li><tt><font "
+            "size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: "
+            "HighsInt</li>\n",
             info.name.c_str(), info.description.c_str());
   } else if (md_file) {
     fprintf(file, "## %s\n- %s\n- Type: integer\n\n",
-	    highsInsertMdEscapes(info.name).c_str(),
-	    highsInsertMdEscapes(info.description).c_str());
+            highsInsertMdEscapes(info.name).c_str(),
+            highsInsertMdEscapes(info.description).c_str());
   } else {
-    fprintf(file, "\n# %s\n# [type: HighsInt]\n%s = %" HIGHSINT_FORMAT "\n", info.description.c_str(), info.name.c_str(), *info.value);
+    fprintf(file, "\n# %s\n# [type: HighsInt]\n%s = %" HIGHSINT_FORMAT "\n",
+            info.description.c_str(), info.name.c_str(), *info.value);
   }
 }
 
@@ -338,13 +343,16 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
   const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file,
-            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: double\n</li>\n",
+            "<li><tt><font "
+            "size=\"+2\"><strong>%s</strong></font></tt><br>\n%s<br>\ntype: "
+            "double\n</li>\n",
             info.name.c_str(), info.description.c_str());
   } else if (md_file) {
     fprintf(file, "## %s\n- %s\n- Type: double\n\n",
-	    highsInsertMdEscapes(info.name).c_str(),
-	    highsInsertMdEscapes(info.description).c_str());
+            highsInsertMdEscapes(info.name).c_str(),
+            highsInsertMdEscapes(info.description).c_str());
   } else {
-    fprintf(file, "\n# %s\n# [type: double]\n%s = %g\n", info.description.c_str(), info.name.c_str(), *info.value);
+    fprintf(file, "\n# %s\n# [type: double]\n%s = %g\n",
+            info.description.c_str(), info.name.c_str(), *info.value);
   }
 }

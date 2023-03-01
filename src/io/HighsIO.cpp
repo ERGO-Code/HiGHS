@@ -240,7 +240,7 @@ const std::string highsBoolToString(const bool b) {
 }
 
 const std::string highsInsertMdEscapes(const std::string from_string) {
-    std::string to_string = "";
+  std::string to_string = "";
   const char* underscore = "_";
   const char* backslash = "\\";
   HighsInt from_string_length = from_string.length();
@@ -253,4 +253,3 @@ const std::string highsInsertMdEscapes(const std::string from_string) {
   }
   return to_string;
 }
-
