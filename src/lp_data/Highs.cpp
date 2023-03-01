@@ -1131,6 +1131,8 @@ HighsStatus Highs::run() {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
         // Validate the reduced LP
+        //
+        // ToDo. Assess #1187
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
