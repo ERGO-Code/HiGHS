@@ -17,8 +17,11 @@
 
 #include "lp_data/HighsOptions.h"
 
+enum class HighsLoadOptionsStatus { kError = -1, kOk = 0, kEmpty = 1 };
+
 // For extended options to be parsed from filename
-bool loadOptionsFromFile(const HighsLogOptions& report_log_options,
-                         HighsOptions& options, const std::string filename);
+HighsLoadOptionsStatus loadOptionsFromFile(
+    const HighsLogOptions& report_log_options, HighsOptions& options,
+    const std::string filename);
 
 #endif

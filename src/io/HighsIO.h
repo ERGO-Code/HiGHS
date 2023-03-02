@@ -23,6 +23,8 @@ class HighsOptions;
 
 const HighsInt kIoBufferSize = 1024;  // 65536;
 
+enum class HighsFileType { kNone = 0, kOther, kMps, kLp, kMd, kHtml };
+
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
@@ -44,8 +46,8 @@ struct HighsLogOptions {
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;
-  void (*log_callback)(HighsLogType, const char*, void*) = nullptr;
-  void* log_callback_data = nullptr;
+  void (*log_highs_callback)(HighsLogType, const char*, void*) = nullptr;
+  void (*log_user_callback)(HighsLogType, const char*, void*) = nullptr;
 };
 
 /**
@@ -87,5 +89,7 @@ void highsReportLogOptions(const HighsLogOptions& log_options_);
 std::string highsFormatToString(const char* format, ...);
 
 const std::string highsBoolToString(const bool b);
+
+const std::string highsInsertMdEscapes(const std::string from_string);
 
 #endif
