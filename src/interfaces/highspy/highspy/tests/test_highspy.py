@@ -173,14 +173,17 @@ class TestHighsPy(unittest.TestCase):
 
         # test vanilla get option value method
 
-        output_flag = h.getOptionValue('output_flag')
-        solver = h.getOptionValue('solver')
-        primal_feasibility_tolerance = h.getOptionValue('primal_feasibility_tolerance')
-        simplex_update_limit = h.getOptionValue('simplex_update_limit')
+        [status, output_flag] = h.getOptionValue('output_flag')
+        [status, solver] = h.getOptionValue('solver')
+        [status, primal_feasibility_tolerance] = h.getOptionValue('primal_feasibility_tolerance')
+        [status, simplex_update_limit] = h.getOptionValue('simplex_update_limit')
         self.assertEqual(output_flag, True);
         self.assertEqual(solver, 'choose');
         self.assertEqual(primal_feasibility_tolerance, 1e-7);
         self.assertEqual(simplex_update_limit, 5000);
+        # Illegal name
+        option_value = h.getOptionValue('simplex_limit')
+        self.assertEqual(option_value[0], highspy.HighsStatus.kError)
         
         # test bool option
         [status, type] = h.getOptionType('output_flag')

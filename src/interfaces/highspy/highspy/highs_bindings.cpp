@@ -364,68 +364,32 @@ HighsStatus highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> ind
 }
 
 
-int highs_getIntOption(Highs* h, const std::string& option)
-{
-  int res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
-double highs_getDoubleOption(Highs* h, const std::string& option)
-{
-  double res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
-std::string highs_getStringOption(Highs* h, const std::string& option)
-{
-  std::string res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
-py::object highs_getOptionValue(Highs* h, const std::string& option)
+std::tuple<HighsStatus, py::object> highs_getOptionValue(Highs* h, const std::string& option)
 {
   HighsOptionType option_type;
   HighsStatus status = h->getOptionType(option, option_type);
 
   if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
+    return std::make_tuple(status, py::cast(0));
 
   if (option_type == HighsOptionType::kBool) {
     bool value;
     status = h->getOptionValue(option, value);
-    return py::cast(value);
+    return std::make_tuple(status, py::cast(value));
   } else if (option_type == HighsOptionType::kInt) {
     HighsInt value;
     status = h->getOptionValue(option, value);
-    return py::cast(value);
+    return std::make_tuple(status, py::cast(value));
   } else if (option_type == HighsOptionType::kDouble) {
     double value;
     status = h->getOptionValue(option, value);
-    return py::cast(value);
+    return std::make_tuple(status, py::cast(value));
   } else if (option_type == HighsOptionType::kString) {
     std::string value;
     status = h->getOptionValue(option, value);
-    return py::cast(value);
+    return std::make_tuple(status, py::cast(value));
   } else
-    throw py::value_error("Unrecognized option type");
+    return std::make_tuple(HighsStatus::kError, py::cast(0));
 }
 
 
