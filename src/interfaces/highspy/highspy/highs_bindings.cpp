@@ -339,6 +339,10 @@ std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std
   return std::make_tuple(status, option_type);
 }
 
+HighsStatus highs_writeOptions(Highs* h, const std::string& filename) {
+  return h->writeOptions(filename);
+}
+
 std::tuple<HighsStatus, py::object> highs_getInfoValue(Highs* h, const std::string& info)
 {
   HighsInfoType info_type;
@@ -405,12 +409,6 @@ HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
   void (*_log_callback)(HighsLogType, const char*, void*) = &py_log_callback;
   HighsStatus status = h->setLogCallback(_log_callback, callback_tuple);
   return status;
-}
-
-std::tuple<HighsStatus, bool, bool, bool> assessPrimalSolution(Highs* h) {
-  bool valid, integral, feasible;
-  HighsStatus status = h->assessPrimalSolution(valid, integral, feasible);
-  return std::make_tuple(status, valid, integral, feasible);
 }
 
 PYBIND11_MODULE(highs_bindings, m)
@@ -642,7 +640,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("postsolve", &Highs::postsolve)
     .def("writeSolution", &highs_writeSolution)
     .def("readSolution", &Highs::readSolution)
-    .def("assessPrimalSolution", &assessPrimalSolution)
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
@@ -653,7 +650,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getOptionValue", &highs_getOptionValue)
     .def("getOptionType", &highs_getOptionType)
     .def("resetOptions", &Highs::resetOptions)
-    .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
+    .def("writeOptions", &highs_writeOptions)
     .def("getInfo", &Highs::getInfo)
     .def("getInfoValue", &highs_getInfoValue)
     .def("getInfoType", &highs_getInfoType)
@@ -692,7 +689,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsCost", &highs_changeColsCost)
     .def("changeColsBounds", &highs_changeColsBounds)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
-    .def("setLogCallback", &highs_setLogCallback)
     .def("setLogCallback", &highs_setLogCallback)
     .def("deleteCols", &highs_deleteCols)
     .def("deleteVars", &highs_deleteVars)
