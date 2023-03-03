@@ -147,72 +147,12 @@ HighsModelStatus highs_getModelStatus(Highs* h)
   return h->getModelStatus(); 
 }
 
-int highs_foo(Highs* h, py::array_t<double> fred)
-{
-  py::buffer_info fred_info = fred.request();
-  double* fred_ptr = static_cast<double*>(fred_info.ptr);
-  highsLogUser(h->getOptions().log_options, HighsLogType::kInfo,
-	       "\nhighs_foo fred = %s\n",
-	       fred_ptr == nullptr ? "nullptr" : "ptr");
-  if (fred_ptr == nullptr) {
-    return -1;
-  } else {
-    return 1;
-  }
-}
-
-std::tuple<HighsStatus, bool> highs_getDualRay(Highs* h, py::array_t<double> dual_ray_value)
-{
-  bool has_dual_ray;
-  py::buffer_info dual_ray_value_info = dual_ray_value.request();
-  double* dual_ray_value_ptr = static_cast<double*>(dual_ray_value_info.ptr);
-
-  HighsStatus status = h->getDualRay(has_dual_ray, dual_ray_value_ptr); 
-
-  return std::make_tuple(status, has_dual_ray);
-}
-
-std::tuple<HighsStatus, bool> highs_getPrimalRay(Highs* h, py::array_t<double> primal_ray_value)
-{
-  bool has_primal_ray;
-  py::buffer_info primal_ray_value_info = primal_ray_value.request();
-  double* primal_ray_value_ptr = static_cast<double*>(primal_ray_value_info.ptr);
-
-  HighsStatus status = h->getPrimalRay(has_primal_ray, primal_ray_value_ptr); 
-
-  return std::make_tuple(status, has_primal_ray);
-}
-
 std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h)
 {
   HighsRanging ranging;
   HighsStatus status = h->getRanging(ranging); 
   return std::make_tuple(status, ranging);
 }
-
-HighsStatus highs_getBasicVariables(Highs* h, py::array_t<int> basic_variables)
-{
-  py::buffer_info basic_variables_info = basic_variables.request();
-  int* basic_variables_ptr = static_cast<int*>(basic_variables_info.ptr);
-  return h->getBasicVariables(basic_variables_ptr);
-}
-
-HighsStatus highs_getBasisInverseRow(Highs* h,
-				     int row,
-				     py::array_t<double> row_vector,
-				     py::array_t<int> row_num_nz,
-				     py::array_t<int> row_indices)
-{
-  //  py::buffer_info row_vector_info = row_vector.request();
-  //  py::buffer_info row_num_nz_info = row_num_nz.request();
-  //  py::buffer_info row_indices_info = row_indices.request();
-  //  int* row_vector_ptr = static_cast<int*>(row_vector_info.ptr);
-  //  int* row_num_nz_ptr = static_cast<int*>(row_num_nz_info.ptr);
-  //  int* row_indices_ptr = static_cast<int*>(row_indices_info.ptr);
-  //  return h->getBasisInverseRow(row, row_vector_ptr, row_num_nz_ptr, row_indices_ptr);
-  return HighsStatus::kOk;
-}
-
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
 			 int num_new_nz, py::array_t<int> indices, py::array_t<double> values)
@@ -730,15 +670,8 @@ PYBIND11_MODULE(highs_bindings, m)
 // scaled_model) disappears from, Highs.h
     .def("getModelStatus", &highs_getModelStatus) //&Highs::getModelStatus)
     .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
-    .def("foo", &highs_foo, py::arg("fred") = nullptr)
-    .def("getDualRay", &highs_getDualRay, py::arg("dual_ray_value") = nullptr)
-    .def("getPrimalRay", &highs_getPrimalRay, py::arg("primal_ray_value") = nullptr)
     .def("getRanging", &highs_getRanging)
     .def("getObjectiveValue", &Highs::getObjectiveValue)
-    .def("hasInvert", &Highs::hasInvert)
-    .def("getBasicVariables", &highs_getBasicVariables)
-    .def("getBasisInverseRow", &highs_getBasisInverseRow, py::arg("row"), py::arg("row_vector"), py::arg("row_num_nz") = nullptr, py::arg("row_indices") = nullptr)
-    //
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
     .def("changeObjectiveSense", &Highs::changeObjectiveSense)
