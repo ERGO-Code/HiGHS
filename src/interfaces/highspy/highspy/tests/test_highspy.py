@@ -73,13 +73,13 @@ class TestHighsPy(unittest.TestCase):
         info = h.getInfo()
         objective_function_value0 = info.objective_function_value
         self.assertAlmostEqual(objective_function_value0, 1)
-        [status, objective_function_value1] = h.getDoubleInfoValue("objective_function_value")
+        [status, objective_function_value1] = h.getInfoValue("objective_function_value")
         self.assertAlmostEqual(objective_function_value0, objective_function_value1)
         self.assertAlmostEqual(h.getObjectiveValue(), objective_function_value0)
 
         simplex_iteration_count0 = info.simplex_iteration_count
         self.assertAlmostEqual(simplex_iteration_count0, 2)
-        [status, simplex_iteration_count1] = h.getIntInfoValue("simplex_iteration_count")
+        [status, simplex_iteration_count1] = h.getInfoValue("simplex_iteration_count")
         self.assertAlmostEqual(simplex_iteration_count0, simplex_iteration_count1)
 
         sol = h.getSolution()
@@ -162,9 +162,7 @@ class TestHighsPy(unittest.TestCase):
         info = h.getInfo()
         mip_node_count0 = info.mip_node_count
         self.assertAlmostEqual(mip_node_count0, 0)
-        [status, mip_node_count1] = h.getDoubleInfoValue("mip_node_count")
-        self.assertEqual(status, highspy.HighsStatus.kError)
-        [status, mip_node_count1] = h.getInt64InfoValue("mip_node_count")
+        [status, mip_node_count1] = h.getInfoValue("mip_node_count")
         self.assertEqual(status, highspy.HighsStatus.kOk)
         self.assertAlmostEqual(mip_node_count0, mip_node_count1)
 

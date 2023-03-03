@@ -399,6 +399,30 @@ std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std
   return std::make_tuple(status, option_type);
 }
 
+std::tuple<HighsStatus, py::object> highs_getInfoValue(Highs* h, const std::string& info)
+{
+  HighsInfoType info_type;
+  HighsStatus status = h->getInfoType(info, info_type);
+
+  if (status != HighsStatus::kOk)
+    return std::make_tuple(status, py::cast(0));
+
+  if (info_type == HighsInfoType::kInt64) {
+    int64_t value;
+    status = h->getInfoValue(info, value);
+    return std::make_tuple(status, py::cast(value));
+  } else if (info_type == HighsInfoType::kInt) {
+    HighsInt value;
+    status = h->getInfoValue(info, value);
+    return std::make_tuple(status, py::cast(value));
+  } else if (info_type == HighsInfoType::kDouble) {
+    double value;
+    status = h->getInfoValue(info, value);
+    return std::make_tuple(status, py::cast(value));
+  } else
+    return std::make_tuple(HighsStatus::kError, py::cast(0));
+}
+
 std::tuple<HighsStatus, int> highs_getIntInfoValue(Highs* h, const std::string& info)
 {
   int res;
@@ -712,6 +736,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("resetOptions", &Highs::resetOptions)
     .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)
     .def("getInfo", &Highs::getInfo)
+    .def("getInfoValue", &highs_getInfoValue)
     .def("getIntInfoValue", &highs_getIntInfoValue)
     .def("getDoubleInfoValue", &highs_getDoubleInfoValue)
     .def("getInt64InfoValue", &highs_getInt64InfoValue)
