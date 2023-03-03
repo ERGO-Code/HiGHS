@@ -87,7 +87,8 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   std::string filename = std::string(HIGHS_DIR) + "/check/sample_options_file";
 
-  bool success = loadOptionsFromFile(report_log_options, options, filename);
+  bool success = loadOptionsFromFile(report_log_options, options, filename) ==
+                 HighsLoadOptionsStatus::kOk;
   REQUIRE(success == true);
   REQUIRE(options.presolve == kHighsOnString);
   REQUIRE(options.small_matrix_value == 0.001);

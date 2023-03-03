@@ -27,6 +27,8 @@ using std::string;
 
 enum class OptionStatus { kOk = 0, kUnknownOption, kIllegalValue };
 
+const bool kAdvancedInDocumentation = false;
+
 class OptionRecord {
  public:
   HighsOptionType type;
@@ -231,21 +233,25 @@ OptionStatus getLocalOptionType(
 
 void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
-HighsStatus writeOptionsToFile(FILE* file,
-                               const std::vector<OptionRecord*>& option_records,
-                               const bool report_only_deviations = false,
-                               const bool html = false);
+HighsStatus writeOptionsToFile(
+    FILE* file, const std::vector<OptionRecord*>& option_records,
+    const bool report_only_deviations = false,
+    const HighsFileType file_type = HighsFileType::kOther);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations = true,
-                   const bool html = false);
+                   const HighsFileType file_type = HighsFileType::kOther);
 void reportOption(FILE* file, const OptionRecordBool& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 void reportOption(FILE* file, const OptionRecordInt& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 void reportOption(FILE* file, const OptionRecordDouble& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 void reportOption(FILE* file, const OptionRecordString& option,
-                  const bool report_only_deviations, const bool html);
+                  const bool report_only_deviations,
+                  const HighsFileType file_type);
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
@@ -447,8 +453,8 @@ class HighsOptions : public HighsOptionsStruct {
     OptionRecordInt* record_int;
     OptionRecordDouble* record_double;
     OptionRecordString* record_string;
-    bool advanced;
-    advanced = false;
+    bool advanced = false;
+    const bool now_advanced = true;
     // Options read from the command line
     record_string = new OptionRecordString(
         kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
@@ -540,23 +546,23 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int =
-        new OptionRecordInt(kRandomSeedString, "random seed used in HiGHS",
+        new OptionRecordInt(kRandomSeedString, "Random seed used in HiGHS",
                             advanced, &random_seed, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "threads", "number of threads used by HiGHS (0: automatic)", advanced,
+        "threads", "Number of threads used by HiGHS (0: automatic)", advanced,
         &threads, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
-                            advanced, &highs_debug_level, kHighsDebugLevelMin,
-                            kHighsDebugLevelMin, kHighsDebugLevelMax);
+    record_int = new OptionRecordInt("highs_debug_level",
+                                     "Debugging level in HiGHS", now_advanced,
+                                     &highs_debug_level, kHighsDebugLevelMin,
+                                     kHighsDebugLevelMin, kHighsDebugLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "highs_analysis_level", "Analysis level in HiGHS", advanced,
+        "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
         &highs_analysis_level, kHighsAnalysisLevelMin, kHighsAnalysisLevelMin,
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
@@ -579,7 +585,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_crash_strategy",
-        "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)", advanced,
+        "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)", now_advanced,
         &simplex_crash_strategy, kSimplexCrashStrategyMin,
         kSimplexCrashStrategyOff, kSimplexCrashStrategyMax);
     records.push_back(record_int);
@@ -674,42 +680,43 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsIInf);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
+    record_bool = new OptionRecordBool("icrash", "Run iCrash", now_advanced,
+                                       &icrash, false);
     records.push_back(record_bool);
 
     record_bool =
         new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
-                             advanced, &icrash_dualize, false);
+                             now_advanced, &icrash_dualize, false);
     records.push_back(record_bool);
 
     record_string =
         new OptionRecordString("icrash_strategy", "Strategy for iCrash",
-                               advanced, &icrash_strategy, "ICA");
+                               now_advanced, &icrash_strategy, "ICA");
     records.push_back(record_string);
 
     record_double = new OptionRecordDouble(
-        "icrash_starting_weight", "iCrash starting weight", advanced,
+        "icrash_starting_weight", "iCrash starting weight", now_advanced,
         &icrash_starting_weight, 1e-10, 1e-3, 1e50);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
-                                     advanced, &icrash_iterations, 0, 30, 200);
+    record_int =
+        new OptionRecordInt("icrash_iterations", "iCrash iterations",
+                            now_advanced, &icrash_iterations, 0, 30, 200);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "icrash_approx_iter", "iCrash approximate minimization iterations",
-        advanced, &icrash_approx_iter, 0, 50, 100);
+        now_advanced, &icrash_approx_iter, 0, 50, 100);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("icrash_exact",
                                        "Exact subproblem solution for iCrash",
-                                       advanced, &icrash_exact, false);
+                                       now_advanced, &icrash_exact, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("icrash_breakpoints",
-                                       "Exact subproblem solution for iCrash",
-                                       advanced, &icrash_breakpoints, false);
+    record_bool = new OptionRecordBool(
+        "icrash_breakpoints", "Exact subproblem solution for iCrash",
+        now_advanced, &icrash_breakpoints, false);
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
@@ -752,13 +759,13 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "mip_max_improving_sols",
-        "limit on the number of improving solutions found to stop the MIP "
+        "Limit on the number of improving solutions found to stop the MIP "
         "solver prematurely",
         advanced, &mip_max_improving_sols, 1, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_lp_age_limit",
-                                     "maximal age of dynamic LP rows before "
+                                     "Maximal age of dynamic LP rows before "
                                      "they are removed from the LP relaxation",
                                      advanced, &mip_lp_age_limit, 0, 10,
                                      std::numeric_limits<int16_t>::max());
@@ -766,19 +773,19 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "mip_pool_age_limit",
-        "maximal age of rows in the cutpool before they are deleted", advanced,
+        "Maximal age of rows in the cutpool before they are deleted", advanced,
         &mip_pool_age_limit, 0, 30, 1000);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_pool_soft_limit",
-                                     "soft limit on the number of rows in the "
+                                     "Soft limit on the number of rows in the "
                                      "cutpool for dynamic age adjustment",
                                      advanced, &mip_pool_soft_limit, 1, 10000,
                                      kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_pscost_minreliable",
-                                     "minimal number of observations before "
+                                     "Minimal number of observations before "
                                      "pseudo costs are considered reliable",
                                      advanced, &mip_pscost_minreliable, 0, 8,
                                      kHighsIInf);
@@ -786,7 +793,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "mip_min_cliquetable_entries_for_parallelism",
-        "minimal number of entries in the cliquetable before neighborhood "
+        "Minimal number of entries in the cliquetable before neighborhood "
         "queries of the conflict graph use parallel processing",
         advanced, &mip_min_cliquetable_entries_for_parallelism, 0, 100000,
         kHighsIInf);
@@ -803,20 +810,20 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
+        "mip_heuristic_effort", "Effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "mip_rel_gap",
-        "tolerance on relative gap, |ub-lb|/|ub|, to determine whether "
+        "Tolerance on relative gap, |ub-lb|/|ub|, to determine whether "
         "optimality has been reached for a MIP instance",
         advanced, &mip_rel_gap, 0.0, 1e-4, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "mip_abs_gap",
-        "tolerance on absolute gap of MIP, |ub-lb|, to determine whether "
+        "Tolerance on absolute gap of MIP, |ub-lb|, to determine whether "
         "optimality has been reached for a MIP instance",
         advanced, &mip_abs_gap, 0.0, 1e-6, kHighsInf);
     records.push_back(record_double);
@@ -1056,8 +1063,8 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;
-    log_options.log_callback = nullptr;
-    log_options.log_callback_data = nullptr;
+    log_options.log_highs_callback = nullptr;
+    log_options.log_user_callback = nullptr;
   }
 
   void deleteRecords() {
