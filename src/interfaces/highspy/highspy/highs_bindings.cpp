@@ -364,6 +364,75 @@ HighsStatus highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> ind
 }
 
 
+bool highs_getBoolOption(Highs* h, const std::string& option)
+{
+  bool res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+int highs_getIntOption(Highs* h, const std::string& option)
+{
+  int res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+double highs_getDoubleOption(Highs* h, const std::string& option)
+{
+  double res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+std::string highs_getStringOption(Highs* h, const std::string& option)
+{
+  std::string res;
+  HighsStatus status = h->getOptionValue(option, res);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  return res;
+}
+
+
+py::object highs_getOptionValue(Highs* h, const std::string& option)
+{
+  HighsOptionType option_type;
+  HighsStatus status = h->getOptionType(option, option_type);
+
+  if (status != HighsStatus::kOk)
+    throw py::value_error("Error while getting option " + option);
+
+  if (option_type == HighsOptionType::kBool)
+    return py::cast(highs_getBoolOption(h, option));
+  else if (option_type == HighsOptionType::kInt)
+    return py::cast(highs_getIntOption(h, option));
+  else if (option_type == HighsOptionType::kDouble)
+    return py::cast(highs_getDoubleOption(h, option));
+  else if (option_type == HighsOptionType::kString)
+    return py::cast(highs_getStringOption(h, option));
+  else
+    throw py::value_error("Unrecognized option type");
+}
+
+
 std::tuple<HighsStatus, bool> highs_getBoolOptionValue(Highs* h, const std::string& option)
 {
   bool res;
@@ -710,6 +779,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("readOptions", &Highs::readOptions)
     .def("passOptions", &Highs::passOptions)
     .def("getOptions", &Highs::getOptions)
+    .def("getOptionValue", &highs_getOptionValue)
     .def("getBoolOptionValue", &highs_getBoolOptionValue)
     .def("getIntOptionValue", &highs_getIntOptionValue)
     .def("getDoubleOptionValue", &highs_getDoubleOptionValue)

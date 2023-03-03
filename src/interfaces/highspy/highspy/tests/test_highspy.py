@@ -170,6 +170,15 @@ class TestHighsPy(unittest.TestCase):
 
     def test_options(self):
         h = highspy.Highs()
+
+        # test vanilla get option value method
+
+        output_flag = h.getOptionValue('output_flag')
+        solver = h.getOptionValue('solver')
+        primal_feasibility_tolerance = h.getOptionValue('primal_feasibility_tolerance')
+        simplex_update_limit = h.getOptionValue('simplex_update_limit')
+        print('output_flag = ', output_flag, '\nsolver = ', solver, '\nprimal_feasibility_tolerance = ', primal_feasibility_tolerance, '\nsimplex_update_limit = ', simplex_update_limit, '\n')
+        
         # test bool option
         [status, type] = h.getOptionType('output_flag')
         self.assertEqual(type, highspy.HighsOptionType.kBool)
