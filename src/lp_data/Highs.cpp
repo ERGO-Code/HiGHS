@@ -322,7 +322,8 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp.ensureColwise();
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
-      options_.log_options, assessLp(lp, options_), return_status, "assessLp");
+      options_.log_options, assessLp(lp, options_, true), return_status,
+      "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
@@ -879,7 +880,7 @@ HighsStatus Highs::run() {
   if (options_.highs_debug_level > min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
-    call_status = assessLp(model_.lp_, options_);
+    call_status = assessLp(model_.lp_, options_, true);
     // If any errors have been found or normalisation carried out,
     // call_status will be kError or kWarning, so only valid return is OK.
     assert(call_status == HighsStatus::kOk);
@@ -1133,7 +1134,12 @@ HighsStatus Highs::run() {
         // Validate the reduced LP; note that assessLp() may return a warning
         // if matrix values dropped below the small_matrix_value threshold
         // during presolving
-        assert(assessLp(reduced_lp, options_) != HighsStatus::kError);
+        return_status = assessLp(reduced_lp, options_, false);
+        if (kAllowDeveloperAssert) {
+          assert(return_status == HighsStatus::kOk);
+        } else {
+          assert(return_status != HighsStatus::kError);
+        }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve

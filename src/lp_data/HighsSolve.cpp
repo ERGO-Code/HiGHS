@@ -29,7 +29,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   if (options.highs_debug_level > kHighsDebugLevelMin) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
-    call_status = assessLp(solver_object.lp_, options);
+    call_status = assessLp(solver_object.lp_, options, false);
     // If any errors have been found or normalisation carried out,
     // call_status will be ERROR or WARNING, so only valid return is OK.
     assert(call_status == HighsStatus::kOk);

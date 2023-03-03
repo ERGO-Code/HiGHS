@@ -160,7 +160,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
               Aindex, Avalue);
   }
 
-  return_status = assessLp(lp, options);
+  return_status = assessLp(lp, options, true);
   REQUIRE(return_status == HighsStatus::kOk);
   //  reportLp(lp, HighsLogType::kVerbose);
 

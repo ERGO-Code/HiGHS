@@ -66,7 +66,8 @@ class HighsSparseMatrix {
   HighsStatus assess(const HighsLogOptions& log_options,
                      const std::string matrix_name,
                      const double small_matrix_value,
-                     const double large_matrix_value);
+                     const double large_matrix_value,
+                     const bool cleanup);
   bool hasLargeValue(const double large_matrix_value);
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);

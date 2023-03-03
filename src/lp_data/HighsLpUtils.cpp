@@ -34,7 +34,8 @@ using std::min;
 
 const HighsInt kMaxLineLength = 80;
 
-HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
+HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
+                     const bool cleanup) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status = lpDimensionsOk("assessLp", lp, options.log_options)
                                 ? HighsStatus::kOk
@@ -64,7 +65,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the LP column bounds
   call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
-                             lp.col_upper_, options.infinite_bound);
+                             lp.col_upper_, options.infinite_bound, cleanup);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
@@ -76,7 +77,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.to_ = lp.num_row_ - 1;
     call_status =
         assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
-                     lp.row_upper_, options.infinite_bound);
+                     lp.row_upper_, options.infinite_bound, cleanup);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -84,7 +85,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   // Assess the LP matrix - even if there are no rows!
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
-                          options.large_matrix_value);
+                          options.large_matrix_value, cleanup);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
@@ -348,7 +349,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
-                         const double infinite_bound) {
+                         const double infinite_bound,
+                         const bool cleanup) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -404,7 +406,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!highs_isInfinity(-lower[usr_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
       bool infinite_lower_bound = lower[usr_ix] <= -infinite_bound;
-      if (infinite_lower_bound) {
+      if (cleanup && infinite_lower_bound) {
         lower[usr_ix] = -kHighsInf;
         num_infinite_lower_bound++;
       }
@@ -412,7 +414,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (!highs_isInfinity(upper[usr_ix])) {
       // Check whether a finite upper bound will be treated as Infinity
       bool infinite_upper_bound = upper[usr_ix] >= infinite_bound;
-      if (infinite_upper_bound) {
+      if (cleanup && infinite_upper_bound) {
         upper[usr_ix] = kHighsInf;
         num_infinite_upper_bound++;
       }
