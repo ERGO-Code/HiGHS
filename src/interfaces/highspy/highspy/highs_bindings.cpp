@@ -364,18 +364,6 @@ HighsStatus highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> ind
 }
 
 
-bool highs_getBoolOption(Highs* h, const std::string& option)
-{
-  bool res;
-  HighsStatus status = h->getOptionValue(option, res);
-
-  if (status != HighsStatus::kOk)
-    throw py::value_error("Error while getting option " + option);
-
-  return res;
-}
-
-
 int highs_getIntOption(Highs* h, const std::string& option)
 {
   int res;
@@ -420,15 +408,23 @@ py::object highs_getOptionValue(Highs* h, const std::string& option)
   if (status != HighsStatus::kOk)
     throw py::value_error("Error while getting option " + option);
 
-  if (option_type == HighsOptionType::kBool)
-    return py::cast(highs_getBoolOption(h, option));
-  else if (option_type == HighsOptionType::kInt)
-    return py::cast(highs_getIntOption(h, option));
-  else if (option_type == HighsOptionType::kDouble)
-    return py::cast(highs_getDoubleOption(h, option));
-  else if (option_type == HighsOptionType::kString)
-    return py::cast(highs_getStringOption(h, option));
-  else
+  if (option_type == HighsOptionType::kBool) {
+    bool value;
+    status = h->getOptionValue(option, value);
+    return py::cast(value);
+  } else if (option_type == HighsOptionType::kInt) {
+    HighsInt value;
+    status = h->getOptionValue(option, value);
+    return py::cast(value);
+  } else if (option_type == HighsOptionType::kDouble) {
+    double value;
+    status = h->getOptionValue(option, value);
+    return py::cast(value);
+  } else if (option_type == HighsOptionType::kString) {
+    std::string value;
+    status = h->getOptionValue(option, value);
+    return py::cast(value);
+  } else
     throw py::value_error("Unrecognized option type");
 }
 

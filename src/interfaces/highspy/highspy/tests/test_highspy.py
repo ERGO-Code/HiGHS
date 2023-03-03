@@ -177,7 +177,10 @@ class TestHighsPy(unittest.TestCase):
         solver = h.getOptionValue('solver')
         primal_feasibility_tolerance = h.getOptionValue('primal_feasibility_tolerance')
         simplex_update_limit = h.getOptionValue('simplex_update_limit')
-        print('output_flag = ', output_flag, '\nsolver = ', solver, '\nprimal_feasibility_tolerance = ', primal_feasibility_tolerance, '\nsimplex_update_limit = ', simplex_update_limit, '\n')
+        self.assertEqual(output_flag, True);
+        self.assertEqual(solver, 'choose');
+        self.assertEqual(primal_feasibility_tolerance, 1e-7);
+        self.assertEqual(simplex_update_limit, 5000);
         
         # test bool option
         [status, type] = h.getOptionType('output_flag')
