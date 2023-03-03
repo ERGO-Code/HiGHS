@@ -155,8 +155,8 @@ enum class HighsPresolveStatus {
   kReduced,
   kReducedToEmpty,
   kTimeout,
-  kNullError, // V2.0: Delete since it's not used!
-  kOptionsError, // V2.0: Delete since it's not used!
+  kNullError,     // V2.0: Delete since it's not used!
+  kOptionsError,  // V2.0: Delete since it's not used!
 };
 
 enum class HighsModelStatus {
@@ -164,9 +164,9 @@ enum class HighsModelStatus {
   // values is unchanged, since enums are not preserved in some
   // interfaces
   kNotset = 0,
-  kLoadError, // V2.0: Delete since it's not used!
+  kLoadError,  // V2.0: Delete since it's not used!
   kModelError,
-  kPresolveError, // V2.0: Delete since it's not used!
+  kPresolveError,  // V2.0: Delete since it's not used!
   kSolveError,
   kPostsolveError,  // V2.0: Delete if not used! Add to documentation if used
   kModelEmpty,
