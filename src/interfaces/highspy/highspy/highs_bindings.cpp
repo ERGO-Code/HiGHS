@@ -393,38 +393,6 @@ std::tuple<HighsStatus, py::object> highs_getOptionValue(Highs* h, const std::st
 }
 
 
-std::tuple<HighsStatus, bool> highs_getBoolOptionValue(Highs* h, const std::string& option)
-{
-  bool res;
-  HighsStatus status = h->getOptionValue(option, res);
-  return std::make_tuple(status, res);
-}
-
-
-std::tuple<HighsStatus, int> highs_getIntOptionValue(Highs* h, const std::string& option)
-{
-  int res;
-  HighsStatus status = h->getOptionValue(option, res);
-  return std::make_tuple(status, res);
-}
-
-
-std::tuple<HighsStatus, double> highs_getDoubleOptionValue(Highs* h, const std::string& option)
-{
-  double res;
-  HighsStatus status = h->getOptionValue(option, res);
-  return std::make_tuple(status, res);
-}
-
-
-std::tuple<HighsStatus, std::string> highs_getStringOptionValue(Highs* h, const std::string& option)
-{
-  std::string res;
-  HighsStatus status = h->getOptionValue(option, res);
-  return std::make_tuple(status, res);
-}
-
-
 std::tuple<HighsStatus, HighsOptionType> highs_getOptionType(Highs* h, const std::string& option) {
   HighsOptionType option_type;
   HighsStatus status = h->getOptionType(option, option_type);
@@ -740,10 +708,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("passOptions", &Highs::passOptions)
     .def("getOptions", &Highs::getOptions)
     .def("getOptionValue", &highs_getOptionValue)
-    .def("getBoolOptionValue", &highs_getBoolOptionValue)
-    .def("getIntOptionValue", &highs_getIntOptionValue)
-    .def("getDoubleOptionValue", &highs_getDoubleOptionValue)
-    .def("getStringOptionValue", &highs_getStringOptionValue)
     .def("getOptionType", &highs_getOptionType)
     .def("resetOptions", &Highs::resetOptions)
     .def("writeOptions", &Highs::writeOptions, py::arg("filename"), py::arg("report_only_deviations") = false)

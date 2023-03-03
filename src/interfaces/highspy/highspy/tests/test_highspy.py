@@ -190,40 +190,40 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(type, highspy.HighsOptionType.kBool)
 
         h.setOptionValue('output_flag', True)
-        [status, value] = h.getBoolOptionValue('output_flag')
+        [status, value] = h.getOptionValue('output_flag')
         self.assertTrue(value)
         h.setOptionValue('output_flag', False)
-        [status, value] = h.getBoolOptionValue('output_flag')
+        [status, value] = h.getOptionValue('output_flag')
         self.assertFalse(value)
 
         # test string option
         [status, type] = h.getOptionType('presolve')
         self.assertEqual(type, highspy.HighsOptionType.kString)
         h.setOptionValue('presolve', 'off')
-        [status, value] = h.getStringOptionValue('presolve')
+        [status, value] = h.getOptionValue('presolve')
         self.assertEqual(value, 'off')
         h.setOptionValue('presolve', 'on')
-        [status, value] = h.getStringOptionValue('presolve')
+        [status, value] = h.getOptionValue('presolve')
         self.assertEqual(value, 'on')
 
         # test int option
         [status, type] = h.getOptionType('threads')
         self.assertEqual(type, highspy.HighsOptionType.kInt)
         h.setOptionValue('threads', 1)
-        [status, value] = h.getIntOptionValue('threads')
+        [status, value] = h.getOptionValue('threads')
         self.assertEqual(value, 1)
         h.setOptionValue('threads', 2)
-        [status, value] = h.getIntOptionValue('threads')
+        [status, value] = h.getOptionValue('threads')
         self.assertEqual(value, 2)
 
         # test double option
         [status, type] = h.getOptionType('time_limit')
         self.assertEqual(type, highspy.HighsOptionType.kDouble)
         h.setOptionValue('time_limit', 1.7)
-        [status, value] = h.getDoubleOptionValue('time_limit')
+        [status, value] = h.getOptionValue('time_limit')
         self.assertAlmostEqual(value, 1.7)
         h.setOptionValue('time_limit', 2.7)
-        [status, value] = h.getDoubleOptionValue('time_limit')
+        [status, value] = h.getOptionValue('time_limit')
         self.assertAlmostEqual(value, 2.7)
 
     def test_clear(self):
@@ -232,27 +232,27 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.getNumRow(), 2)
         self.assertEqual(h.getNumNz(), 4)
 
-        [status, orig_feas_tol] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, orig_feas_tol] = h.getOptionValue('primal_feasibility_tolerance')
         new_feas_tol = orig_feas_tol + 1
         h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
         h.clear()
         self.assertEqual(h.getNumCol(), 0)
         self.assertEqual(h.getNumRow(), 0)
         self.assertEqual(h.getNumNz(), 0)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, orig_feas_tol)
 
         h = self.get_basic_model()
         h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
         h.clearModel()
         self.assertEqual(h.getNumCol(), 0)
         self.assertEqual(h.getNumRow(), 0)
         self.assertEqual(h.getNumNz(), 0)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
 
         h = self.get_basic_model()
@@ -269,13 +269,13 @@ class TestHighsPy(unittest.TestCase):
         self.assertFalse(sol.dual_valid)
 
         h = self.get_basic_model()
-        [status, orig_feas_tol] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, orig_feas_tol] = h.getOptionValue('primal_feasibility_tolerance')
         new_feas_tol = orig_feas_tol + 1
         h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
         h.resetOptions()
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, orig_feas_tol)
 
     def test_dual_ray(self):
