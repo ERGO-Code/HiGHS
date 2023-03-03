@@ -1147,6 +1147,7 @@ HighsStatus Highs::run() {
           assert(return_status == HighsStatus::kOk);
         } else {
           assert(return_status != HighsStatus::kError);
+          return_status = HighsStatus::kOk;
         }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
