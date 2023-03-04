@@ -329,9 +329,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Ensure that the LP is column-wise
   lp.ensureColwise();
   // Check validity of the LP, normalising its values
-  return_status = interpretCallStatus(
-      options_.log_options, assessLp(lp, options_, true), return_status,
-      "assessLp");
+  return_status =
+      interpretCallStatus(options_.log_options, assessLp(lp, options_, true),
+                          return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,

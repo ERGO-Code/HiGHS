@@ -77,11 +77,10 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
 
   // Assess Q
-  call_status =
-      assessMatrix(options.log_options, "Hessian", hessian.dim_, hessian.dim_,
-                   hessian.start_, hessian.index_, hessian.value_,
-                   options.small_matrix_value, options.large_matrix_value,
-                   true);
+  call_status = assessMatrix(options.log_options, "Hessian", hessian.dim_,
+                             hessian.dim_, hessian.start_, hessian.index_,
+                             hessian.value_, options.small_matrix_value,
+                             options.large_matrix_value, true);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;

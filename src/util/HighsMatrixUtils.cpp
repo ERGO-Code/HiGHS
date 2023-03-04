@@ -26,8 +26,7 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<HighsInt>& matrix_index,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
-                         const double large_matrix_value,
-                         const bool cleanup) {
+                         const double large_matrix_value, const bool cleanup) {
   vector<HighsInt> matrix_p_end;
   const bool partitioned = false;
   return assessMatrix(log_options, matrix_name, vec_dim, num_vec, partitioned,
@@ -42,21 +41,22 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<HighsInt>& matrix_index,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
-                         const double large_matrix_value,
-                         const bool cleanup) {
+                         const double large_matrix_value, const bool cleanup) {
   const bool partitioned = false;
   return assessMatrix(log_options, matrix_name, vec_dim, num_vec, partitioned,
                       matrix_start, matrix_p_end, matrix_index, matrix_value,
                       small_matrix_value, large_matrix_value, cleanup);
 }
 
-HighsStatus assessMatrix(
-    const HighsLogOptions& log_options, const std::string matrix_name,
-    const HighsInt vec_dim, const HighsInt num_vec, const bool partitioned,
-    vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
-    vector<HighsInt>& matrix_index, vector<double>& matrix_value,
-    const double small_matrix_value, const double large_matrix_value,
-    const bool cleanup) {
+HighsStatus assessMatrix(const HighsLogOptions& log_options,
+                         const std::string matrix_name, const HighsInt vec_dim,
+                         const HighsInt num_vec, const bool partitioned,
+                         vector<HighsInt>& matrix_start,
+                         vector<HighsInt>& matrix_p_end,
+                         vector<HighsInt>& matrix_index,
+                         vector<double>& matrix_value,
+                         const double small_matrix_value,
+                         const double large_matrix_value, const bool cleanup) {
   if (assessMatrixDimensions(log_options, num_vec, partitioned, matrix_start,
                              matrix_p_end, matrix_index,
                              matrix_value) == HighsStatus::kError) {
