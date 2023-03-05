@@ -381,26 +381,4 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.row_bound_dn.value_[1], -inf);
         self.assertEqual(ranging.row_bound_up.value_[1], inf);
         self.assertEqual(ranging.row_bound_up.objective_[1], inf);
-
         
-    def test_log_callback(self):
-        h = self.get_basic_model()
-        h.setOptionValue('output_flag', True)
-
-        class Foo(object):
-            def __str__(self):
-                return 'an instance of Foo'
-
-            def __repr__(self):
-                return self.__str__()
-
-        def log_callback(log_type, message, data):
-            print('got a log message: ', log_type, data, message)
-
-        h.setLogCallback(log_callback, Foo())
-        out = StringIO()
-        with capture_output(out) as t:
-            h.run()
-        out = out.getvalue()
-        self.assertIn('got a log message:  HighsLogType.kInfo an instance of Foo Presolving model', out)
-

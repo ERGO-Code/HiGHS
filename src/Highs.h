@@ -988,9 +988,10 @@ class Highs {
   /**
    * @brief Set the callback method and user data to use for logging
    */
-  HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
-                                                  void*),
-                             void* log_callback_data = nullptr);
+  HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
+                                                       const char*, void*),
+                             void* deprecated = nullptr  // V2.0 remove
+  );
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1263,7 +1264,7 @@ class Highs {
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
-                            FILE*& file, bool& html) const;
+                            FILE*& file, HighsFileType& file_type) const;
 
   void reportModel();
   void newHighsBasis();

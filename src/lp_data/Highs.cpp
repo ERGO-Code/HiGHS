@@ -113,8 +113,13 @@ HighsStatus Highs::readOptions(const std::string& filename) {
     return HighsStatus::kWarning;
   }
   HighsLogOptions report_log_options = options_.log_options;
-  if (!loadOptionsFromFile(report_log_options, options_, filename))
-    return HighsStatus::kError;
+  switch (loadOptionsFromFile(report_log_options, options_, filename)) {
+    case HighsLoadOptionsStatus::kError:
+    case HighsLoadOptionsStatus::kEmpty:
+      return HighsStatus::kError;
+    default:
+      break;
+  }
   return HighsStatus::kOk;
 }
 
@@ -134,19 +139,21 @@ HighsStatus Highs::writeOptions(const std::string& filename,
                                 const bool report_only_deviations) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
-  bool html;
+  HighsFileType file_type;
   return_status = interpretCallStatus(
-      options_.log_options, openWriteFile(filename, "writeOptions", file, html),
-      return_status, "openWriteFile");
+      options_.log_options,
+      openWriteFile(filename, "writeOptions", file, file_type), return_status,
+      "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
   // Report to user that options are being written to a file
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the option values to %s\n", filename.c_str());
-  return_status = interpretCallStatus(
-      options_.log_options,
-      writeOptionsToFile(file, options_.records, report_only_deviations, html),
-      return_status, "writeOptionsToFile");
+  return_status =
+      interpretCallStatus(options_.log_options,
+                          writeOptionsToFile(file, options_.records,
+                                             report_only_deviations, file_type),
+                          return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -260,10 +267,11 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
 HighsStatus Highs::writeInfo(const std::string& filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
-  bool html;
-  return_status = interpretCallStatus(
-      options_.log_options, openWriteFile(filename, "writeInfo", file, html),
-      return_status, "openWriteFile");
+  HighsFileType file_type;
+  return_status =
+      interpretCallStatus(options_.log_options,
+                          openWriteFile(filename, "writeInfo", file, file_type),
+                          return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
   // Report to user that options are being written to a file
   if (filename != "")
@@ -271,8 +279,8 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
                  "Writing the info values to %s\n", filename.c_str());
   return_status = interpretCallStatus(
       options_.log_options,
-      writeInfoToFile(file, info_.valid, info_.records, html), return_status,
-      "writeInfoToFile");
+      writeInfoToFile(file, info_.valid, info_.records, file_type),
+      return_status, "writeInfoToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -674,8 +682,8 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
-  bool html;
-  call_status = openWriteFile(filename, "writebasis", file, html);
+  HighsFileType file_type;
+  call_status = openWriteFile(filename, "writebasis", file, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
@@ -1131,6 +1139,8 @@ HighsStatus Highs::run() {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
         // Validate the reduced LP
+        //
+        // ToDo. Assess #1187
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
@@ -1804,11 +1814,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
-                                                       const char*, void*),
-                                  void* log_callback_data) {
-  options_.log_options.log_callback = log_callback;
-  options_.log_options.log_callback_data = log_callback_data;
+HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
+                                                            const char*, void*),
+                                  void* deprecated  // V2.0 remove
+) {
+  options_.log_options.log_user_callback = log_user_callback;
   return HighsStatus::kOk;
 }
 
@@ -2622,8 +2632,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
-  bool html;
-  call_status = openWriteFile(filename, "writeSolution", file, html);
+  HighsFileType file_type;
+  call_status = openWriteFile(filename, "writeSolution", file, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
@@ -3147,6 +3157,12 @@ HighsStatus Highs::callSolveMip() {
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;
   info_.mip_gap = solver.gap_;
+  // Get the number of LP iterations, avoiding overflow if the int64_t
+  // value is too large
+  int64_t mip_total_lp_iterations = solver.total_lp_iterations_;
+  info_.simplex_iteration_count = mip_total_lp_iterations > kHighsIInf
+                                      ? -1
+                                      : HighsInt(mip_total_lp_iterations);
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("MIP", return_status);
@@ -3327,8 +3343,8 @@ void Highs::setBasisValidity() {
 
 HighsStatus Highs::openWriteFile(const string filename,
                                  const string method_name, FILE*& file,
-                                 bool& html) const {
-  html = false;
+                                 HighsFileType& file_type) const {
+  file_type = HighsFileType::kNone;
   if (filename == "") {
     // Empty file name: use stdout
     file = stdout;
@@ -3341,7 +3357,17 @@ HighsStatus Highs::openWriteFile(const string filename,
       return HighsStatus::kError;
     }
     const char* dot = strrchr(filename.c_str(), '.');
-    if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
+    if (dot && dot != filename) {
+      if (strcmp(dot + 1, "mps") == 0) {
+        file_type = HighsFileType::kMps;
+      } else if (strcmp(dot + 1, "lp") == 0) {
+        file_type = HighsFileType::kLp;
+      } else if (strcmp(dot + 1, "md") == 0) {
+        file_type = HighsFileType::kMd;
+      } else if (strcmp(dot + 1, "html") == 0) {
+        file_type = HighsFileType::kHtml;
+      }
+    }
   }
   return HighsStatus::kOk;
 }

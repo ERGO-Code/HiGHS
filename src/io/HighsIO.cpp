@@ -107,7 +107,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.log_callback) {
+  if (!log_options_.log_user_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
       if (prefix)
@@ -137,7 +137,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
+    log_options_.log_user_callback(type, msgbuffer, nullptr);
   }
   va_end(argptr);
 }
@@ -165,7 +165,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.log_callback) {
+  if (!log_options_.log_user_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_file_stream) {
       // Write to log file stream
@@ -187,7 +187,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
+    log_options_.log_user_callback(type, msgbuffer, nullptr);
   }
   va_end(argptr);
 }
@@ -237,4 +237,19 @@ std::string highsFormatToString(const char* format, ...) {
 
 const std::string highsBoolToString(const bool b) {
   return b ? "true" : "false";
+}
+
+const std::string highsInsertMdEscapes(const std::string from_string) {
+  std::string to_string = "";
+  const char* underscore = "_";
+  const char* backslash = "\\";
+  HighsInt from_string_length = from_string.length();
+  for (HighsInt p = 0; p < from_string_length; p++) {
+    const char string_ch = from_string[p];
+    if (string_ch == *underscore) {
+      to_string += backslash;
+    }
+    to_string += from_string[p];
+  }
+  return to_string;
 }

@@ -2,7 +2,6 @@
 #define HCONFIG_H_
 
 #cmakedefine FAST_BUILD
-#cmakedefine OSI_FOUND
 #cmakedefine ZLIB_FOUND
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine CMAKE_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"

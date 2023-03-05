@@ -149,8 +149,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
-  bool html;
-  call_status = openWriteFile(filename, "writeSolution", file, html);
+  HighsFileType file_type;
+  call_status = openWriteFile(filename, "writeSolution", file, file_type);
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;

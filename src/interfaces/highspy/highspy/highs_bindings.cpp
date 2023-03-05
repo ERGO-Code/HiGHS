@@ -464,29 +464,6 @@ std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>, py::array_
   return std::make_tuple(status, py::cast(start), py::cast(index), py::cast(value));
 }
 
-class CallbackTuple {
-public:
-  CallbackTuple() = default;
-  CallbackTuple(py::object _callback, py::object _cb_data) : callback(_callback), callback_data(_cb_data) {}
-  ~CallbackTuple() = default;
-  py::object callback;
-  py::object callback_data;
-};
-
-void py_log_callback(HighsLogType log_type, const char* msgbuffer, void* callback_data)
-{
-  CallbackTuple* callback_tuple = static_cast<CallbackTuple*>(callback_data);
-  std::string msg(msgbuffer);
-  callback_tuple->callback(log_type, msg, callback_tuple->callback_data);
-}
-
-HighsStatus highs_setLogCallback(Highs* h, CallbackTuple* callback_tuple)
-{
-  void (*_log_callback)(HighsLogType, const char*, void*) = &py_log_callback;
-  HighsStatus status = h->setLogCallback(_log_callback, callback_tuple);
-  return status;
-}
-
 PYBIND11_MODULE(highs_bindings, m)
 {
   // enum classes
@@ -565,12 +542,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .value("kVerbose", HighsLogType::kVerbose)
     .value("kWarning", HighsLogType::kWarning)
     .value("kError", HighsLogType::kError);
-  py::class_<CallbackTuple>(m, "CallbackTuple")
-    .def(py::init<>())
-    .def(py::init<py::object, py::object>())
-    .def_readwrite("callback", &CallbackTuple::callback)
-    .def_readwrite("callback_data", &CallbackTuple::callback_data);
-  // classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
     .def(py::init<>())
     .def_readwrite("format_", &HighsSparseMatrix::format_)
@@ -783,7 +754,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColsCost", &highs_changeColsCost)
     .def("changeColsBounds", &highs_changeColsBounds)
     .def("changeColsIntegrality", &highs_changeColsIntegrality)
-    .def("setLogCallback", &highs_setLogCallback)
     .def("deleteCols", &highs_deleteCols)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
