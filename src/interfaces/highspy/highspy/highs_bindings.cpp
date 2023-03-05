@@ -406,6 +406,22 @@ std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, py::
   return std::make_tuple(status, num_col, py::cast(cost), py::cast(lower), py::cast(upper), num_nz);
 }
 
+std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, HighsInt> highs_getRows(Highs* h, int num_set_entries, py::array_t<int> indices)
+{
+  py::buffer_info indices_info = indices.request();
+  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+  const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
+  std::vector<double> lower(dim);
+  std::vector<double> upper(dim);
+  double* lower_ptr = static_cast<double*>(lower.data());
+  double* upper_ptr = static_cast<double*>(upper.data());
+  HighsInt num_row;
+  HighsInt num_nz;
+  HighsStatus status = h->getRows(num_set_entries, indices_ptr, num_row, lower_ptr, upper_ptr, num_nz, nullptr, nullptr, nullptr);
+
+  return std::make_tuple(status, num_row, py::cast(lower), py::cast(upper), num_nz);
+}
+
 class CallbackTuple {
 public:
   CallbackTuple() = default;
@@ -704,6 +720,8 @@ PYBIND11_MODULE(highs_bindings, m)
 
     .def("getCols", &highs_getCols)
     //    .def("getColsEntries", &highs_getColsEntries)
+    .def("getRows", &highs_getRows)
+    //    .def("getRowsEntries", &highs_getRowsEntries)
 
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)

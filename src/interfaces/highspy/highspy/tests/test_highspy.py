@@ -195,8 +195,25 @@ class TestHighsPy(unittest.TestCase):
 
     def test_example(self):
         h = self.get_example_model()
+        lp = h.getLp()
+        #
+        # Extract columns 0 and 1
         indices = np.array([0, 1])
         [status, num_col, cost, lower, upper, num_nz] = h.getCols(2, indices)
+        for get_col in range(num_col):
+            iCol = indices[get_col]
+            self.assertEqual(cost[get_col], lp.col_cost_[iCol])
+            self.assertEqual(lower[get_col], lp.col_lower_[iCol])
+            self.assertEqual(upper[get_col], lp.col_upper_[iCol])
+        #
+        # Extract rows 0 and 2
+        indices = np.array([0, 2])
+        [status, num_row, lower, upper, num_nz] = h.getRows(2, indices)
+        for get_row in range(num_row):
+            iRow = indices[get_row]
+            self.assertEqual(lower[get_row], lp.row_lower_[iRow])
+            self.assertEqual(upper[get_row], lp.row_upper_[iRow])
+        
         
 
     def test_options(self):
