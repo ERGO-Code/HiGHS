@@ -195,6 +195,8 @@ class TestHighsPy(unittest.TestCase):
 
     def test_example(self):
         h = self.get_example_model()
+        indices = np.array([0, 1])
+        [status, num_col, cost, lower, upper, num_nz] = h.getCols(2, indices)
         
 
     def test_options(self):
