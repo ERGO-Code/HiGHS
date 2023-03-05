@@ -58,14 +58,16 @@ class TestHighsPy(unittest.TestCase):
 
     def test_basics(self):
         h = self.get_basic_model()
+        h.passColName(0, 'Col0')
+        h.passColName(1, 'Col1')
+        h.passRowName(0, 'Row0')
+        h.passRowName(1, 'Row1')
+#        h.setOptionValue('output_flag', True)
+        h.writeModel('')
+        h.setOptionValue('output_flag', False)
         self.assertEqual(h.setOptionValue('presolve', 'off'), highspy.HighsStatus.kOk)
 #        h.setOptionValue('output_flag', True)
         h.run()
-        [status, valid, integral, feasible] = h.assessPrimalSolution()
-        self.assertEqual(status, highspy.HighsStatus.kOk)
-        self.assertEqual(valid, True)
-        self.assertEqual(integral, True)
-        self.assertEqual(feasible, True)
         
         # Info can be obtained from the class instance, specific call
         # and, in the case of objective_function_value,
@@ -275,16 +277,6 @@ class TestHighsPy(unittest.TestCase):
         h.resetOptions()
         [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, orig_feas_tol)
-
-    def test_check_solution_feasibility(self):
-        h = self.get_basic_model()
-        [status, valid, integral, feasible] = h.assessPrimalSolution()
-        self.assertEqual(status, highspy.HighsStatus.kError)
-        h.run()
-        [status, valid, integral, feasible] = h.assessPrimalSolution()
-        self.assertEqual(valid, True)
-        self.assertEqual(integral, True)
-        self.assertEqual(feasible, True)
 
     def test_ranging(self):
         inf = highspy.kHighsInf

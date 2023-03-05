@@ -388,6 +388,23 @@ std::tuple<HighsStatus, double> highs_getObjectiveOffset(Highs* h)
   return std::make_tuple(status, obj_offset);
 }
 
+std::tuple<HighsStatus, py::array_t<double>, py::array_t<double>, py::array_t<double>, HighsInt> highs_getCols(Highs* h, int num_set_entries, py::array_t<int> indices)
+{
+  py::buffer_info indices_info = indices.request();
+  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+  const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
+  std::vector<double> cost(dim);
+  std::vector<double> lower(dim);
+  std::vector<double> upper(dim);
+  double* cost_ptr = static_cast<double*>(cost.data());
+  double* lower_ptr = static_cast<double*>(lower.data());
+  double* upper_ptr = static_cast<double*>(upper.data());
+  HighsInt num_nz;
+  HighsStatus status = h->getCols(num_set_entries, indices_ptr, cost_ptr, lower_ptr, upper_ptr, num_nz, nullptr, nullptr, nullptr);
+
+  return std::make_tuple(status, cost, lower, upper, num_nz);
+}
+
 class CallbackTuple {
 public:
   CallbackTuple() = default;
@@ -633,6 +650,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("passModel", &highs_passLpPointers)
     .def("passHessian", &highs_passHessian)
     .def("passHessian", &highs_passHessianPointers)
+    .def("passColName", &Highs::passColName)
+    .def("passRowName", &Highs::passRowName)
     .def("readModel", &Highs::readModel)
     .def("readBasis", &Highs::readBasis)
     .def("presolve", &Highs::presolve)
@@ -648,9 +667,14 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("passOptions", &Highs::passOptions)
     .def("getOptions", &Highs::getOptions)
     .def("getOptionValue", &highs_getOptionValue)
+    //    .def("getOptionName", &highs_getOptionName)
     .def("getOptionType", &highs_getOptionType)
     .def("resetOptions", &Highs::resetOptions)
     .def("writeOptions", &highs_writeOptions)
+    //    .def("getBoolOptionValues", &highs_getBoolOptionValues)
+    //    .def("getIntOptionValues", &highs_getIntOptionValues)
+    //    .def("getDoubleOptionValues", &highs_getDoubleOptionValues)
+    //    .def("getStringOptionValues", &highs_getStringOptionValues)
     .def("getInfo", &Highs::getInfo)
     .def("getInfoValue", &highs_getInfoValue)
     .def("getInfoType", &highs_getInfoType)
@@ -658,7 +682,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getInfinity", &Highs::getInfinity)
     .def("getRunTime", &Highs::getRunTime)
     .def("getPresolvedLp", &Highs::getPresolvedLp)
-    .def("getPresolvedModel", &Highs::getPresolvedModel)
+    //    .def("getPresolvedModel", &Highs::getPresolvedModel)
+    //    .def("getPresolveLog", &Highs::getPresolveLog)
     .def("getLp", &Highs::getLp)
     .def("getModel", &Highs::getModel)
     .def("getSolution", &Highs::getSolution)
@@ -669,6 +694,16 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
     .def("getRanging", &highs_getRanging)
     .def("getObjectiveValue", &Highs::getObjectiveValue)
+    .def("getNumCol", &Highs::getNumCol)
+    .def("getNumRow", &Highs::getNumRow)
+    .def("getNumNz", &Highs::getNumNz)
+    .def("getHessianNumNz", &Highs::getHessianNumNz)
+    .def("getObjectiveSense", &highs_getObjectiveSense)
+    .def("getObjectiveOffset", &highs_getObjectiveOffset)
+
+    .def("getCols", &highs_getCols)
+    //    .def("getColsEntries", &highs_getColsEntries)
+
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
     .def("changeObjectiveSense", &Highs::changeObjectiveSense)
@@ -678,8 +713,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("changeColBounds", &Highs::changeColBounds)
     .def("changeRowBounds", &Highs::changeRowBounds)
     .def("changeCoeff", &Highs::changeCoeff)
-    .def("getObjectiveSense", &highs_getObjectiveSense)
-    .def("getObjectiveOffset", &highs_getObjectiveOffset)
     .def("addRows", &highs_addRows)
     .def("addRow", &highs_addRow)
     .def("addCol", &highs_addCol)
@@ -693,10 +726,6 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("deleteCols", &highs_deleteCols)
     .def("deleteVars", &highs_deleteVars)
     .def("deleteRows", &highs_deleteRows)
-    .def("getNumCol", &Highs::getNumCol)
-    .def("getNumRow", &Highs::getNumRow)
-    .def("getNumNz", &Highs::getNumNz)
-    .def("getHessianNumNz", &Highs::getHessianNumNz)
     .def("writeInfo", &Highs::writeInfo)
     .def("modelStatusToString", &Highs::modelStatusToString)
     .def("solutionStatusToString", &Highs::solutionStatusToString)
