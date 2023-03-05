@@ -28,6 +28,30 @@ class TestHighsPy(unittest.TestCase):
         h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
         return h
     
+    def get_example_model(self):
+        """
+        minimize    f  =  x0 +  x1
+        subject to              x1 <= 7
+                    5 <=  x0 + 2x1 <= 15
+                    6 <= 3x0 + 2x1
+                    0 <= x0 <= 4; 1 <= x1
+        """
+        inf = highspy.kHighsInf
+        # Define a HighsLp instance
+        lp = highspy.HighsLp()
+        lp.num_col_ = 2;
+        lp.num_row_ = 3;
+        lp.col_cost_ = np.array([1, 1], dtype=np.double)
+        lp.col_lower_ = np.array([0, 1], dtype=np.double)
+        lp.col_upper_ = np.array([4, inf], dtype=np.double)
+        lp.row_lower_ = np.array([-inf, 5, 6], dtype=np.double)
+        lp.row_upper_ = np.array([7, 15, inf], dtype=np.double)
+        lp.a_matrix_.start_ = np.array([0, 2, 5])
+        lp.a_matrix_.index_ = np.array([1, 2, 0, 1, 2])
+        lp.a_matrix_.value_ = np.array([1, 3, 1, 2, 2], dtype=np.double)
+        h.passModel(lp)
+        return h
+    
     def get_infeasible_model(self):
         inf = highspy.kHighsInf
         lp = highspy.HighsLp()
@@ -167,6 +191,11 @@ class TestHighsPy(unittest.TestCase):
         [status, mip_node_count1] = h.getInfoValue("mip_node_count")
         self.assertEqual(status, highspy.HighsStatus.kOk)
         self.assertAlmostEqual(mip_node_count0, mip_node_count1)
+
+    def test_example(self):
+        h = highspy.Highs()
+        h = self.get_example_model()
+        
 
     def test_options(self):
         h = highspy.Highs()

@@ -388,7 +388,9 @@ std::tuple<HighsStatus, double> highs_getObjectiveOffset(Highs* h)
   return std::make_tuple(status, obj_offset);
 }
 
-std::tuple<HighsStatus, py::array_t<double>, py::array_t<double>, py::array_t<double>, HighsInt> highs_getCols(Highs* h, int num_set_entries, py::array_t<int> indices)
+std::tuple<HighsStatus, HighsInt,
+	   //py::array_t<double>, py::array_t<double>, py::array_t<double>,
+	   HighsInt> highs_getCols(Highs* h, int num_set_entries, py::array_t<int> indices)
 {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
@@ -399,10 +401,13 @@ std::tuple<HighsStatus, py::array_t<double>, py::array_t<double>, py::array_t<do
   double* cost_ptr = static_cast<double*>(cost.data());
   double* lower_ptr = static_cast<double*>(lower.data());
   double* upper_ptr = static_cast<double*>(upper.data());
+  HighsInt num_col;
   HighsInt num_nz;
-  HighsStatus status = h->getCols(num_set_entries, indices_ptr, cost_ptr, lower_ptr, upper_ptr, num_nz, nullptr, nullptr, nullptr);
+  HighsStatus status = h->getCols(num_set_entries, indices_ptr, num_col, cost_ptr, lower_ptr, upper_ptr, num_nz, nullptr, nullptr, nullptr);
 
-  return std::make_tuple(status, cost, lower, upper, num_nz);
+  return std::make_tuple(status, num_col,
+			 //cost, lower, upper,
+			 num_nz);
 }
 
 class CallbackTuple {
