@@ -37,6 +37,7 @@ class TestHighsPy(unittest.TestCase):
                     0 <= x0 <= 4; 1 <= x1
         """
         inf = highspy.kHighsInf
+        h = highspy.Highs()
         # Define a HighsLp instance
         lp = highspy.HighsLp()
         lp.num_col_ = 2;
@@ -193,7 +194,6 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(mip_node_count0, mip_node_count1)
 
     def test_example(self):
-        h = highspy.Highs()
         h = self.get_example_model()
         
 
