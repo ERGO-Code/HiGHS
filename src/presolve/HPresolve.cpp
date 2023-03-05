@@ -2728,11 +2728,12 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
                analysis_.allow_rule_[kPresolveRuleForcingCol]) {
       // todo: forcing column, since this implies colDual >= 0 and we
       // already checked that colDual <= 0 and since the cost are 0.0
-      // all the rows are at a dual multiplier of zero and we can determine
-      // one nonbasic row in postsolve, and make the other rows and the column
-      // basic. The columns primal value is computed from the non-basic row
-      // which is chosen such that the values of all rows are primal feasible
-      // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
+      // all the rows are at a dual multiplier of zero and we can
+      // determine one nonbasic row in postsolve, and make the other
+      // rows and the column basic. The columns primal value is
+      // computed from the nonbasic row which is chosen such that the
+      // values of all rows are primal feasible printf("removing
+      // forcing column of size %" HIGHSINT_FORMAT "\n",
       // colsize[col]);
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
       postsolve_stack.forcingColumn(col, getColumnVector(col),

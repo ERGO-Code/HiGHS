@@ -457,10 +457,8 @@ class Highs {
                            double* primal_ray_value = nullptr);
 
   /**
-   * @brief Get the ranging information for the current LP, possibly
-   * returning it, as well as holding it internally
+   * @brief Get the ranging information for the current LP
    */
-  HighsStatus getRanging();
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
@@ -480,15 +478,6 @@ class Highs {
   bool hasInvert() const;
 
   /**
-   * @brief Gets the internal basic variable index array in the order
-   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
-   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
-   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
-   * num_col+num_row) are (num_col+row_index).
-   */
-  const HighsInt* getBasicVariablesArray() const;
-
-  /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
    * getBasisTransposeSolve, getReducedRow and
@@ -496,15 +485,6 @@ class Highs {
    * and negative entries are -(row_index+1).
    */
   HighsStatus getBasicVariables(HighsInt* basic_variables);
-
-  /**
-   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
-   * returning the result in the given HVector buffer which is
-   * expected to be setup with dimension num_row. The buffers
-   * previous contents will be overwritten.
-   */
-  HighsStatus getBasisInverseRowSparse(const HighsInt row,
-                                       HVector& row_ep_buffer);
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -1120,6 +1100,24 @@ class Highs {
                : nullptr;
   }
 
+  /**
+   * @brief Gets the internal basic variable index array in the order
+   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
+   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
+   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
+   * num_col+num_row) are (num_col+row_index).
+   */
+  const HighsInt* getBasicVariablesArray() const;
+
+  /**
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the result in the given HVector buffer which is
+   * expected to be setup with dimension num_row. The buffers
+   * previous contents will be overwritten.
+   */
+  HighsStatus getBasisInverseRowSparse(const HighsInt row,
+                                       HVector& row_ep_buffer);
+
   // Start of deprecated methods
 
   HighsInt getNumCols() const {
@@ -1394,6 +1392,7 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
+  HighsStatus getRangingInterface();
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();

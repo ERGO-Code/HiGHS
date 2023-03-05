@@ -15,7 +15,7 @@ class TestHighsPy(unittest.TestCase):
         """
         inf = highspy.kHighsInf
         h = highspy.Highs()
-        h.setOptionValue('log_to_console', False)
+        h.setOptionValue('output_flag', False)
         h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
         h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
         num_cons = 2
@@ -26,6 +26,31 @@ class TestHighsPy(unittest.TestCase):
         indices = np.array([0, 1, 0, 1])
         values = np.array([-1, 1, 1, 1], dtype=np.double)
         h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
+        return h
+    
+    def get_example_model(self):
+        """
+        minimize    f  =  x0 +  x1
+        subject to              x1 <= 7
+                    5 <=  x0 + 2x1 <= 15
+                    6 <= 3x0 + 2x1
+                    0 <= x0 <= 4; 1 <= x1
+        """
+        inf = highspy.kHighsInf
+        h = highspy.Highs()
+        # Define a HighsLp instance
+        lp = highspy.HighsLp()
+        lp.num_col_ = 2;
+        lp.num_row_ = 3;
+        lp.col_cost_ = np.array([1, 1], dtype=np.double)
+        lp.col_lower_ = np.array([0, 1], dtype=np.double)
+        lp.col_upper_ = np.array([4, inf], dtype=np.double)
+        lp.row_lower_ = np.array([-inf, 5, 6], dtype=np.double)
+        lp.row_upper_ = np.array([7, 15, inf], dtype=np.double)
+        lp.a_matrix_.start_ = np.array([0, 2, 5])
+        lp.a_matrix_.index_ = np.array([1, 2, 0, 1, 2])
+        lp.a_matrix_.value_ = np.array([1, 3, 1, 2, 2], dtype=np.double)
+        h.passModel(lp)
         return h
     
     def get_infeasible_model(self):
@@ -43,7 +68,7 @@ class TestHighsPy(unittest.TestCase):
         lp.a_matrix_.value_ = np.array([2, 1, 1, 3], dtype=np.double)
         lp.offset_ = 0;
         h = highspy.Highs()
-        h.setOptionValue('log_to_console', False)
+        h.setOptionValue('output_flag', False)
         status = h.passModel(lp)
         self.assertEqual(status, highspy.HighsStatus.kOk)
         h.setOptionValue('presolve', 'off')
@@ -58,13 +83,16 @@ class TestHighsPy(unittest.TestCase):
 
     def test_basics(self):
         h = self.get_basic_model()
-#        h.setOptionValue('log_to_console', True)
+        h.passColName(0, 'Col0')
+        h.passColName(1, 'Col1')
+        h.passRowName(0, 'Row0')
+        h.passRowName(1, 'Row1')
+#        h.setOptionValue('output_flag', True)
+        h.writeModel('')
+        h.setOptionValue('output_flag', False)
+        self.assertEqual(h.setOptionValue('presolve', 'off'), highspy.HighsStatus.kOk)
+#        h.setOptionValue('output_flag', True)
         h.run()
-        [status, valid, integral, feasible] = h.assessPrimalSolution()
-        self.assertEqual(status, highspy.HighsStatus.kOk)
-        self.assertEqual(valid, True)
-        self.assertEqual(integral, True)
-        self.assertEqual(feasible, True)
         
         # Info can be obtained from the class instance, specific call
         # and, in the case of objective_function_value,
@@ -72,15 +100,20 @@ class TestHighsPy(unittest.TestCase):
         info = h.getInfo()
         objective_function_value0 = info.objective_function_value
         self.assertAlmostEqual(objective_function_value0, 1)
-        [status, objective_function_value1] = h.getDoubleInfoValue("objective_function_value")
+        [status, objective_function_value1] = h.getInfoValue("objective_function_value")
         self.assertAlmostEqual(objective_function_value0, objective_function_value1)
         self.assertAlmostEqual(h.getObjectiveValue(), objective_function_value0)
+
+        simplex_iteration_count0 = info.simplex_iteration_count
+        self.assertAlmostEqual(simplex_iteration_count0, 2)
+        [status, simplex_iteration_count1] = h.getInfoValue("simplex_iteration_count")
+        self.assertAlmostEqual(simplex_iteration_count0, simplex_iteration_count1)
 
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
         self.assertAlmostEqual(sol.col_value[1], 1)
 
-        h.setOptionValue('log_to_console', False)
+#        h.setOptionValue('output_flag', False)
         """
         min y
         s.t.
@@ -98,7 +131,7 @@ class TestHighsPy(unittest.TestCase):
         h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
         h.run()
         sol = h.getSolution()
-        self.assertAlmostEqual(sol.col_value[0], -1)
+        self.assertAlmostEqual(sol.col_value[0], -1.5)
         self.assertAlmostEqual(sol.col_value[1], 2)
 
         """
@@ -135,9 +168,11 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[1], -5)
 
         h.changeColCost(1, 1)
-        self.assertEqual(h.getObjectiveSense(), highspy.ObjSense.kMinimize)
+        [status, sense] = h.getObjectiveSense()
+        self.assertEqual(sense, highspy.ObjSense.kMinimize)
         h.changeObjectiveSense(highspy.ObjSense.kMaximize)
-        self.assertEqual(h.getObjectiveSense(), highspy.ObjSense.kMaximize)
+        [status, sense] = h.getObjectiveSense()
+        self.assertEqual(sense, highspy.ObjSense.kMaximize)
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -5)
@@ -146,51 +181,110 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.getObjectiveValue(), -5)
 
         h.changeObjectiveOffset(1)
-        self.assertAlmostEqual(h.getObjectiveOffset(), 1)
+        [status, offset] = h.getObjectiveOffset();
+        self.assertAlmostEqual(offset, 1)
         h.run()
         self.assertAlmostEqual(h.getObjectiveValue(), -4)
 
+        info = h.getInfo()
+        mip_node_count0 = info.mip_node_count
+        self.assertAlmostEqual(mip_node_count0, 0)
+        [status, mip_node_count1] = h.getInfoValue("mip_node_count")
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+        self.assertAlmostEqual(mip_node_count0, mip_node_count1)
+
+    def test_example(self):
+        h = self.get_example_model()
+        lp = h.getLp()
+        #
+        # Extract columns 0 and 1
+        indices = np.array([0, 1])
+        [status, get_num_col, cost, lower, upper, get_num_nz] = h.getCols(2, indices)
+        for get_col in range(get_num_col):
+            iCol = indices[get_col]
+            self.assertEqual(cost[get_col], lp.col_cost_[iCol])
+            self.assertEqual(lower[get_col], lp.col_lower_[iCol])
+            self.assertEqual(upper[get_col], lp.col_upper_[iCol])
+        start = np.empty(get_num_col)
+        index = np.empty(get_num_nz)
+        value = np.empty(get_num_nz, dtype=np.double)
+        [status, start, index, value] = h.getColsEntries(2, indices)
+        for iCol in range(lp.num_col_):
+            self.assertEqual(start[iCol], lp.a_matrix_.start_[iCol])
+        for iEl in range(get_num_nz):
+            self.assertEqual(index[iEl], lp.a_matrix_.index_[iEl])
+            self.assertEqual(value[iEl], lp.a_matrix_.value_[iEl])
+        #
+        # Extract rows 0 and 2
+        indices = np.array([0, 2])
+        [status, get_num_row, lower, upper, get_num_nz] = h.getRows(2, indices)
+        for get_row in range(get_num_row):
+            iRow = indices[get_row]
+            self.assertEqual(lower[get_row], lp.row_lower_[iRow])
+            self.assertEqual(upper[get_row], lp.row_upper_[iRow])
+        start = np.empty(get_num_row)
+        index = np.empty(get_num_nz)
+        value = np.empty(get_num_nz, dtype=np.double)
+        [status, start, index, value] = h.getRowsEntries(2, indices)
+        
+        
+
     def test_options(self):
         h = highspy.Highs()
+
+        # test vanilla get option value method
+
+        [status, output_flag] = h.getOptionValue('output_flag')
+        [status, solver] = h.getOptionValue('solver')
+        [status, primal_feasibility_tolerance] = h.getOptionValue('primal_feasibility_tolerance')
+        [status, simplex_update_limit] = h.getOptionValue('simplex_update_limit')
+        self.assertEqual(output_flag, True);
+        self.assertEqual(solver, 'choose');
+        self.assertEqual(primal_feasibility_tolerance, 1e-7);
+        self.assertEqual(simplex_update_limit, 5000);
+        # Illegal name
+        option_value = h.getOptionValue('simplex_limit')
+        self.assertEqual(option_value[0], highspy.HighsStatus.kError)
+        
         # test bool option
-        [status, type] = h.getOptionType('log_to_console')
+        [status, type] = h.getOptionType('output_flag')
         self.assertEqual(type, highspy.HighsOptionType.kBool)
 
-        h.setOptionValue('log_to_console', True)
-        [status, value] = h.getBoolOptionValue('log_to_console')
+        h.setOptionValue('output_flag', True)
+        [status, value] = h.getOptionValue('output_flag')
         self.assertTrue(value)
-        h.setOptionValue('log_to_console', False)
-        [status, value] = h.getBoolOptionValue('log_to_console')
+        h.setOptionValue('output_flag', False)
+        [status, value] = h.getOptionValue('output_flag')
         self.assertFalse(value)
 
         # test string option
         [status, type] = h.getOptionType('presolve')
         self.assertEqual(type, highspy.HighsOptionType.kString)
         h.setOptionValue('presolve', 'off')
-        [status, value] = h.getStringOptionValue('presolve')
+        [status, value] = h.getOptionValue('presolve')
         self.assertEqual(value, 'off')
         h.setOptionValue('presolve', 'on')
-        [status, value] = h.getStringOptionValue('presolve')
+        [status, value] = h.getOptionValue('presolve')
         self.assertEqual(value, 'on')
 
         # test int option
         [status, type] = h.getOptionType('threads')
         self.assertEqual(type, highspy.HighsOptionType.kInt)
         h.setOptionValue('threads', 1)
-        [status, value] = h.getIntOptionValue('threads')
+        [status, value] = h.getOptionValue('threads')
         self.assertEqual(value, 1)
         h.setOptionValue('threads', 2)
-        [status, value] = h.getIntOptionValue('threads')
+        [status, value] = h.getOptionValue('threads')
         self.assertEqual(value, 2)
 
         # test double option
         [status, type] = h.getOptionType('time_limit')
         self.assertEqual(type, highspy.HighsOptionType.kDouble)
         h.setOptionValue('time_limit', 1.7)
-        [status, value] = h.getDoubleOptionValue('time_limit')
+        [status, value] = h.getOptionValue('time_limit')
         self.assertAlmostEqual(value, 1.7)
         h.setOptionValue('time_limit', 2.7)
-        [status, value] = h.getDoubleOptionValue('time_limit')
+        [status, value] = h.getOptionValue('time_limit')
         self.assertAlmostEqual(value, 2.7)
 
     def test_clear(self):
@@ -199,27 +293,27 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.getNumRow(), 2)
         self.assertEqual(h.getNumNz(), 4)
 
-        [status, orig_feas_tol] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, orig_feas_tol] = h.getOptionValue('primal_feasibility_tolerance')
         new_feas_tol = orig_feas_tol + 1
         h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
         h.clear()
         self.assertEqual(h.getNumCol(), 0)
         self.assertEqual(h.getNumRow(), 0)
         self.assertEqual(h.getNumNz(), 0)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, orig_feas_tol)
 
         h = self.get_basic_model()
         h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
         h.clearModel()
         self.assertEqual(h.getNumCol(), 0)
         self.assertEqual(h.getNumRow(), 0)
         self.assertEqual(h.getNumNz(), 0)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
 
         h = self.get_basic_model()
@@ -236,34 +330,55 @@ class TestHighsPy(unittest.TestCase):
         self.assertFalse(sol.dual_valid)
 
         h = self.get_basic_model()
-        [status, orig_feas_tol] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, orig_feas_tol] = h.getOptionValue('primal_feasibility_tolerance')
         new_feas_tol = orig_feas_tol + 1
         h.setOptionValue('primal_feasibility_tolerance', new_feas_tol)
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, new_feas_tol)
         h.resetOptions()
-        [status, value] = h.getDoubleOptionValue('primal_feasibility_tolerance')
+        [status, value] = h.getOptionValue('primal_feasibility_tolerance')
         self.assertAlmostEqual(value, orig_feas_tol)
 
-    def test_dual_ray(self):
-        h = self.get_infeasible_model()
-        h.run()
-        [status, has_dual_ray] = h.getDualRay()
-        print('has_dual_ray = ', has_dual_ray)
-        self.assertTrue(has_dual_ray)
-        num_row = h.getLp().num_row_
-        values = np.array([num_row, 0], dtype=np.double)
-        h.getDualRay(values)
-        self.assertAlmostEqual(values[0], 0.5)
-        self.assertAlmostEqual(values[1], -1)
- 
-    def test_check_solution_feasibility(self):
+    def test_ranging(self):
+        inf = highspy.kHighsInf
         h = self.get_basic_model()
-        [status, valid, integral, feasible] = h.assessPrimalSolution()
-        self.assertEqual(status, highspy.HighsStatus.kError)
+        # Cost ranging
+        #c0 2 -1 1 0
+        #c1 0 0 inf inf
+        #
+        ## Bound ranging
+        ## Columns
+        #c0 1 -inf inf 1
+        #c1 1 1 inf 1
+        ## Rows
+        #r0 -inf -inf inf inf
+        #r1 -inf -inf inf inf
         h.run()
-        [status, valid, integral, feasible] = h.assessPrimalSolution()
-        self.assertEqual(valid, True)
-        self.assertEqual(integral, True)
-        self.assertEqual(feasible, True)
-
+        [status, ranging] = h.getRanging()
+        self.assertEqual(ranging.col_cost_dn.objective_[0], 2);
+        self.assertEqual(ranging.col_cost_dn.value_[0], -1);
+        self.assertEqual(ranging.col_cost_up.value_[0], 1);
+        self.assertEqual(ranging.col_cost_up.objective_[0], 0);
+        self.assertEqual(ranging.col_cost_dn.objective_[1], 0);
+        self.assertEqual(ranging.col_cost_dn.value_[1], 0);
+        self.assertEqual(ranging.col_cost_up.value_[1], inf);
+        self.assertEqual(ranging.col_cost_up.objective_[1], inf);
+#
+        self.assertEqual(ranging.col_bound_dn.objective_[0], 1);
+        self.assertEqual(ranging.col_bound_dn.value_[0], -inf);
+        self.assertEqual(ranging.col_bound_up.value_[0], inf);
+        self.assertEqual(ranging.col_bound_up.objective_[0], 1);
+        self.assertEqual(ranging.col_bound_dn.objective_[1], 1);
+        self.assertEqual(ranging.col_bound_dn.value_[1], 1);
+        self.assertEqual(ranging.col_bound_up.value_[1], inf);
+        self.assertEqual(ranging.col_bound_up.objective_[1], 1);
+#
+        self.assertEqual(ranging.row_bound_dn.objective_[0], -inf);
+        self.assertEqual(ranging.row_bound_dn.value_[0], -inf);
+        self.assertEqual(ranging.row_bound_up.value_[0], inf);
+        self.assertEqual(ranging.row_bound_up.objective_[0], inf);
+        self.assertEqual(ranging.row_bound_dn.objective_[1], -inf);
+        self.assertEqual(ranging.row_bound_dn.value_[1], -inf);
+        self.assertEqual(ranging.row_bound_up.value_[1], inf);
+        self.assertEqual(ranging.row_bound_up.objective_[1], inf);
+        

@@ -2,6 +2,8 @@ from setuptools import setup, find_packages
 import pybind11.setup_helpers
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 import os
+# find_library and capture_output in test_log_callback seem to be the
+# reasons for including pyomo
 from pyomo.common.fileutils import find_library
 
 original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS

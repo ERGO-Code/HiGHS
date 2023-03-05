@@ -133,7 +133,9 @@ void highsOpenLogFile(HighsLogOptions& log_options,
                       const std::string log_file);
 
 bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
-                              const string& value);
+                              const string& name, const string& value);
+bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
+                        const string& name, const string& value);
 bool commandLineSolverOk(const HighsLogOptions& report_log_options,
                          const string& value);
 

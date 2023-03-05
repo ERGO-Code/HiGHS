@@ -1,29 +1,34 @@
 from .highs_bindings import (
+    # enum classes
     ObjSense,
     MatrixFormat,
     HessianFormat,
     SolutionStatus,
     BasisValidity,
     HighsModelStatus,
+    HighsPresolveStatus,
     HighsBasisStatus,
     HighsVarType,
     HighsOptionType,
     HighsInfoType,
     HighsStatus,
     HighsLogType,
+    # classes
     HighsSparseMatrix,
     HighsLp,
     HighsHessian,
     HighsModel,
-    HighsSolution,
-    HighsBasis,
     HighsInfo,
     HighsOptions,
     _Highs,
+    # structs
+    HighsSolution,
+    HighsBasis,
+    HighsRangingRecord,
+    HighsRanging,
+    # constants
     kHighsInf,
-    HIGHS_VERSION_MAJOR,
-    HIGHS_VERSION_MINOR,
-    HIGHS_VERSION_PATCH,
+    kHighsIInf,
 )
 
 

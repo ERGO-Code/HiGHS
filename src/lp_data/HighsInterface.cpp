@@ -1108,8 +1108,6 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   if (!ekk_status.has_invert) {
     // The LP has no invert to use, so have to set one up, but only
     // for the current basis, so return_value is the rank deficiency.
-    //
-    // Create a HighsLpSolverObject
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
                                       ekk_instance_, options_, timer_);
     const bool only_from_known_basis = true;
@@ -1378,6 +1376,9 @@ void Highs::zeroIterationCounts() {
 
 HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
                                        double* dual_ray_value) {
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "\nHighs::getDualRayInterface dual_ray_value = %s\n",
+               dual_ray_value == nullptr ? "nullptr" : "ptr");
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
@@ -1438,6 +1439,13 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
   }
   return return_status;
+}
+
+HighsStatus Highs::getRangingInterface() {
+  HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
+                                    ekk_instance_, options_, timer_);
+  solver_object.model_status_ = model_status_;
+  return getRangingData(this->ranging_, solver_object);
 }
 
 bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {

@@ -1533,17 +1533,8 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
-HighsStatus Highs::getRanging() {
-  // Create a HighsLpSolverObject of references to data in the Highs
-  // class, and the scaled/unscaled model status
-  HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
-                                    ekk_instance_, options_, timer_);
-  solver_object.model_status_ = model_status_;
-  return getRangingData(this->ranging_, solver_object);
-}
-
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
-  HighsStatus return_status = getRanging();
+  HighsStatus return_status = getRangingInterface();
   ranging = this->ranging_;
   return return_status;
 }
@@ -2665,8 +2656,9 @@ HighsStatus Highs::writeSolution(const std::string& filename,
       return_status = HighsStatus::kError;
       return returnFromWriteSolution(file, return_status);
     }
-    return_status = interpretCallStatus(
-        options_.log_options, this->getRanging(), return_status, "getRanging");
+    return_status =
+        interpretCallStatus(options_.log_options, this->getRangingInterface(),
+                            return_status, "getRangingInterface");
     if (return_status == HighsStatus::kError)
       returnFromWriteSolution(file, return_status);
     fprintf(file, "\n# Ranging\n");
@@ -2947,8 +2939,6 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
-  // Create a HighsLpSolverObject of references to data in the Highs
-  // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     options_, timer_);
 
