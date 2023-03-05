@@ -1,8 +1,10 @@
 #include "Highs.h"
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
+#include <cassert>
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -392,6 +394,7 @@ std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, py::
 {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+  // Make sure that the vectors are not empty
   const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
   std::vector<double> cost(dim);
   std::vector<double> lower(dim);
@@ -399,27 +402,66 @@ std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, py::
   double* cost_ptr = static_cast<double*>(cost.data());
   double* lower_ptr = static_cast<double*>(lower.data());
   double* upper_ptr = static_cast<double*>(upper.data());
-  HighsInt num_col;
-  HighsInt num_nz;
-  HighsStatus status = h->getCols(num_set_entries, indices_ptr, num_col, cost_ptr, lower_ptr, upper_ptr, num_nz, nullptr, nullptr, nullptr);
+  HighsInt get_num_col;
+  HighsInt get_num_nz;
+  HighsStatus status = h->getCols(num_set_entries, indices_ptr, get_num_col, cost_ptr, lower_ptr, upper_ptr, get_num_nz, nullptr, nullptr, nullptr);
+  return std::make_tuple(status, get_num_col, py::cast(cost), py::cast(lower), py::cast(upper), get_num_nz);
+}
 
-  return std::make_tuple(status, num_col, py::cast(cost), py::cast(lower), py::cast(upper), num_nz);
+std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>, py::array_t<double>> highs_getColsEntries(Highs* h, int num_set_entries, py::array_t<int> indices)
+{
+  py::buffer_info indices_info = indices.request();
+  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+  // Make sure that the vectors are not empty
+  const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
+  HighsInt get_num_col;
+  HighsInt get_num_nz;
+  h->getCols(num_set_entries, indices_ptr, get_num_col, nullptr, nullptr, nullptr, get_num_nz, nullptr, nullptr, nullptr);
+  get_num_nz = get_num_nz > 0 ? get_num_nz : 1;
+  std::vector<HighsInt> start(dim);
+  std::vector<HighsInt> index(get_num_nz);
+  std::vector<double> value(get_num_nz);
+  HighsInt* start_ptr = static_cast<HighsInt*>(start.data());
+  HighsInt* index_ptr = static_cast<HighsInt*>(index.data());
+  double* value_ptr = static_cast<double*>(value.data());
+  HighsStatus status = h->getCols(num_set_entries, indices_ptr, get_num_col, nullptr, nullptr, nullptr, get_num_nz, start_ptr, index_ptr, value_ptr);
+  return std::make_tuple(status, py::cast(start), py::cast(index), py::cast(value));
 }
 
 std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, HighsInt> highs_getRows(Highs* h, int num_set_entries, py::array_t<int> indices)
 {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+  // Make sure that the vectors are not empty
   const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
   std::vector<double> lower(dim);
   std::vector<double> upper(dim);
   double* lower_ptr = static_cast<double*>(lower.data());
   double* upper_ptr = static_cast<double*>(upper.data());
-  HighsInt num_row;
-  HighsInt num_nz;
-  HighsStatus status = h->getRows(num_set_entries, indices_ptr, num_row, lower_ptr, upper_ptr, num_nz, nullptr, nullptr, nullptr);
+  HighsInt get_num_row;
+  HighsInt get_num_nz;
+  HighsStatus status = h->getRows(num_set_entries, indices_ptr, get_num_row, lower_ptr, upper_ptr, get_num_nz, nullptr, nullptr, nullptr);
+  return std::make_tuple(status, get_num_row, py::cast(lower), py::cast(upper), get_num_nz);
+}
 
-  return std::make_tuple(status, num_row, py::cast(lower), py::cast(upper), num_nz);
+std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>, py::array_t<double>> highs_getRowsEntries(Highs* h, int num_set_entries, py::array_t<int> indices)
+{
+  py::buffer_info indices_info = indices.request();
+  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+  // Make sure that the vectors are not empty
+  const HighsInt dim = num_set_entries > 0 ? num_set_entries : 1;
+  HighsInt get_num_row;
+  HighsInt get_num_nz;
+  h->getRows(num_set_entries, indices_ptr, get_num_row, nullptr, nullptr, get_num_nz, nullptr, nullptr, nullptr);
+  get_num_nz = get_num_nz > 0 ? get_num_nz : 1;
+  std::vector<HighsInt> start(dim);
+  std::vector<HighsInt> index(get_num_nz);
+  std::vector<double> value(get_num_nz);
+  HighsInt* start_ptr = static_cast<HighsInt*>(start.data());
+  HighsInt* index_ptr = static_cast<HighsInt*>(index.data());
+  double* value_ptr = static_cast<double*>(value.data());
+  HighsStatus status = h->getRows(num_set_entries, indices_ptr, get_num_row, nullptr, nullptr, get_num_nz, start_ptr, index_ptr, value_ptr);
+  return std::make_tuple(status, py::cast(start), py::cast(index), py::cast(value));
 }
 
 class CallbackTuple {
@@ -719,9 +761,9 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
 
     .def("getCols", &highs_getCols)
-    //    .def("getColsEntries", &highs_getColsEntries)
+    .def("getColsEntries", &highs_getColsEntries)
     .def("getRows", &highs_getRows)
-    //    .def("getRowsEntries", &highs_getRowsEntries)
+    .def("getRowsEntries", &highs_getRowsEntries)
 
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
