@@ -1376,9 +1376,6 @@ void Highs::zeroIterationCounts() {
 
 HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
                                        double* dual_ray_value) {
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "\nHighs::getDualRayInterface dual_ray_value = %s\n",
-               dual_ray_value == nullptr ? "nullptr" : "ptr");
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
