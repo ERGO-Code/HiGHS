@@ -3624,6 +3624,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         markRowDeleted(row);
         for (const HighsSliceNonzero& nonzero : rowVector) {
           if (nonzero.value() < 0) {
+            if (model->integrality_[nonzero.index()] !=
+                HighsVarType::kContinuous) {
+              // If a non-continuous variable is fixed at a fractional
+              // value then the problem is infeasible
+              const double upper = model->col_upper_[nonzero.index()];
+              const double fraction = upper - std::floor(upper);
+              assert(fraction >= 0);
+              const bool non_fractional =
+                  fraction <=
+                  mipsolver->options_mip_->mip_feasibility_tolerance;
+              //	      assert(non_fractional);
+              if (!non_fractional) return Result::kPrimalInfeasible;
+            }
             postsolve_stack.fixedColAtUpper(nonzero.index(),
                                             model->col_upper_[nonzero.index()],
                                             model->col_cost_[nonzero.index()],
@@ -3635,6 +3648,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             removeFixedCol(nonzero.index());
           } else {
+            if (model->integrality_[nonzero.index()] !=
+                HighsVarType::kContinuous) {
+              // If a non-continuous variable is fixed at a fractional
+              // value then the problem is infeasible
+              const double lower = model->col_lower_[nonzero.index()];
+              const double fraction = std::ceil(lower) - lower;
+              assert(fraction >= 0);
+              const bool non_fractional =
+                  fraction <=
+                  mipsolver->options_mip_->mip_feasibility_tolerance;
+              //	      assert(non_fractional);
+              if (!non_fractional) return Result::kPrimalInfeasible;
+            }
             postsolve_stack.fixedColAtLower(nonzero.index(),
                                             model->col_lower_[nonzero.index()],
                                             model->col_cost_[nonzero.index()],
