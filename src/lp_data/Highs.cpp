@@ -1141,25 +1141,26 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
-	if (kAllowDeveloperAssert) {
-	  // Validate the reduced LP
-	  //
-	  // Although preseolve can yield small values in the matrix,
-	  // they are only stripped out (by assessLp) in debug. This
-	  // suggests that they are no real danger to the simplex
-	  // solver. The only danger is pivoting on them, but that
-	  // implies that values of roughly that size have been chosen
-	  // in the ratio test. Even with the filter, values of 1e-9
-	  // could be in the matrix, and these would be bad
-	  // pivots. Hence, since the small values may play a
-	  // meaningful role in postsolve, then it's better to keep
-	  // them.
-	  //
-	  // ToDo. Analyse the extent of small value creation. See #1187
-	  assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
-	} else {
-	  reduced_lp.a_matrix_.assessSmallValues(options_.log_options, options_.small_matrix_value);
-	}
+        if (kAllowDeveloperAssert) {
+          // Validate the reduced LP
+          //
+          // Although preseolve can yield small values in the matrix,
+          // they are only stripped out (by assessLp) in debug. This
+          // suggests that they are no real danger to the simplex
+          // solver. The only danger is pivoting on them, but that
+          // implies that values of roughly that size have been chosen
+          // in the ratio test. Even with the filter, values of 1e-9
+          // could be in the matrix, and these would be bad
+          // pivots. Hence, since the small values may play a
+          // meaningful role in postsolve, then it's better to keep
+          // them.
+          //
+          // ToDo. Analyse the extent of small value creation. See #1187
+          assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        } else {
+          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
+                                                 options_.small_matrix_value);
+        }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve

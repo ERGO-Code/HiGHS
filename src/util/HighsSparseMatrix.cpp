@@ -693,15 +693,15 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
 }
 
 void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
-					  const double small_matrix_value) {
+                                          const double small_matrix_value) {
   double min_value = kHighsInf;
   const HighsInt num_values = this->value_.size();
-  for (HighsInt iX = 0; iX < num_values; iX++) 
+  for (HighsInt iX = 0; iX < num_values; iX++)
     min_value = std::min(std::abs(this->value_[iX]), min_value);
   if (min_value > small_matrix_value) return;
-  analyseVectorValues(&log_options, "Small values in matrix", num_values, this->value_, false, "");
+  analyseVectorValues(&log_options, "Small values in matrix", num_values,
+                      this->value_, false, "");
 }
-
 
 bool HighsSparseMatrix::hasLargeValue(const double large_matrix_value) {
   for (HighsInt iEl = 0; iEl < this->numNz(); iEl++)
