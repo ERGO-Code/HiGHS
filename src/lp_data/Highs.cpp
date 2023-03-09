@@ -292,6 +292,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
   // eventually call it
   this->logHeader();
+  // Possibly analyse the LP data
+  if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
+    analyseLp(options_.log_options, model.lp_);
   HighsStatus return_status = HighsStatus::kOk;
   // Clear the incumbent model and any associated data
   clearModel();
