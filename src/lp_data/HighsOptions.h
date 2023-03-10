@@ -625,7 +625,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_min_concurrency",
-        "Minimum level of concurrency in parallel simplex", advanced,
+        "Minimum level of concurrency in parallel simplex", now_advanced,
         &simplex_min_concurrency, 1, 1, kSimplexConcurrencyLimit);
     records.push_back(record_int);
 

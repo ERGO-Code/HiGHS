@@ -916,7 +916,8 @@ HighsStatus Highs::run() {
     return returnFromRun(HighsStatus::kError);
   }
 
-  if (!options_.solver.compare(kHighsChooseString)) {
+  const bool use_simplex_or_ipm = options_.solver.compare(kHighsChooseString);
+  if (!use_simplex_or_ipm) {
     // Leaving HiGHS to choose method according to model class
     if (model_.isQp()) {
       if (model_.isMip()) {
@@ -951,10 +952,15 @@ HighsStatus Highs::run() {
   // If model is MIP, must be solving the relaxation or not leaving
   // HiGHS to choose method according to model class
   if (model_.isMip()) {
-    assert(options_.solve_relaxation ||
-           options_.solver.compare(kHighsChooseString));
+    assert(options_.solve_relaxation || use_simplex_or_ipm);
     // Relax any semi-variables
     relaxSemiVariables(model_.lp_);
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Solving LP relaxation since%s%s%s\n",
+        options_.solve_relaxation ? " solve_relaxation is true" : "",
+        options_.solve_relaxation && use_simplex_or_ipm ? " and" : "",
+        use_simplex_or_ipm ? (" solver = " + options_.solver).c_str() : "");
   }
   // Solve the model as an LP
   HighsLp& incumbent_lp = model_.lp_;
@@ -3530,8 +3536,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   this->model_.lp_.unapplyMods();
 
   // Unless solved as a MIP, report on the solution
-  const bool solved_as_mip =
-      !options_.solver.compare(kHighsChooseString) && model_.isMip();
+  const bool solved_as_mip = !options_.solver.compare(kHighsChooseString) &&
+                             model_.isMip() && !options_.solve_relaxation;
   if (!solved_as_mip) reportSolvedLpQpStats();
 
   return returnFromHighs(return_status);
