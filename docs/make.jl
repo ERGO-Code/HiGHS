@@ -68,4 +68,5 @@ Documenter.makedocs(
 Documenter.deploydocs(;
     repo = "github.com/ERGO-Code/HiGHS.git",
     push_preview = true,
+    devbranch = "latest",
 )
