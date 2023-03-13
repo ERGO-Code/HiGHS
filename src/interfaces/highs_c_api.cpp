@@ -168,14 +168,14 @@ HighsInt Highs_qpCall(
   return (HighsInt)status;
 }
 
-void* Highs_create() { return new Highs(); }
+void* Highs_create(void) { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 const char* Highs_version(void) { return highsVersion(); }
-HighsInt Highs_versionMajor() { return highsVersionMajor(); }
-HighsInt Highs_versionMinor() { return highsVersionMinor(); }
-HighsInt Highs_versionPatch() { return highsVersionPatch(); }
+HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
+HighsInt Highs_versionMinor(void) { return highsVersionMinor(); }
+HighsInt Highs_versionPatch(void) { return highsVersionPatch(); }
 const char* Highs_githash(void) { return highsGithash(); }
 const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 

@@ -227,21 +227,21 @@ const char* Highs_version(void);
  *
  * @returns the HiGHS major version number
  */
-HighsInt Highs_versionMajor();
+HighsInt Highs_versionMajor(void);
 
 /**
  * Return the HiGHS minor version number
  *
  * @returns the HiGHS minor version number
  */
-HighsInt Highs_versionMinor();
+HighsInt Highs_versionMinor(void);
 
 /**
  * Return the HiGHS patch version number
  *
  * @returns the HiGHS patch version number
  */
-HighsInt Highs_versionPatch();
+HighsInt Highs_versionPatch(void);
 
 /**
  * Return the HiGHS githash
