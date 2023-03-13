@@ -229,21 +229,21 @@ const char* Highs_version(void);
  *
  * @returns The HiGHS major version number.
  */
-HighsInt Highs_versionMajor(void);
+HighsInt Highs_versionMajor();
 
 /**
  * Return the HiGHS minor version number.
  *
  * @returns The HiGHS minor version number.
  */
-HighsInt Highs_versionMinor(void);
+HighsInt Highs_versionMinor();
 
 /**
  * Return the HiGHS patch version number.
  *
  * @returns The HiGHS patch version number.
  */
-HighsInt Highs_versionPatch(void);
+HighsInt Highs_versionPatch();
 
 /**
  * Return the HiGHS githash.
@@ -648,8 +648,8 @@ HighsInt Highs_getNumOptions(const void* highs);
  * Get the name of an option identified by index
  *
  * @param highs     A pointer to the Highs instance.
- * @param index     the index of the option
- * @param name      the name of the option
+ * @param index     The index of the option.
+ * @param name      The name of the option.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -660,8 +660,8 @@ HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
  * Get the current and default values of a bool option
  *
  * @param highs         A pointer to the Highs instance.
- * @param current_value a pointer to the current value of the option
- * @param default_value a pointer to the default value of the option
+ * @param current_value A pointer to the current value of the option.
+ * @param default_value A pointer to the default value of the option.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -672,10 +672,10 @@ HighsInt Highs_getBoolOptionValues(const void* highs, const char* option,
  * Get the current and default values of an int option
  *
  * @param highs         A pointer to the Highs instance.
- * @param current_value a pointer to the current value of the option
- * @param min_value     a pointer to the minimum value of the option
- * @param max_value     a pointer to the maximum value of the option
- * @param default_value a pointer to the default value of the option
+ * @param current_value A pointer to the current value of the option.
+ * @param min_value     A pointer to the minimum value of the option.
+ * @param max_value     A pointer to the maximum value of the option.
+ * @param default_value A pointer to the default value of the option.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -687,10 +687,10 @@ HighsInt Highs_getIntOptionValues(const void* highs, const char* option,
  * Get the current and default values of a double option
  *
  * @param highs         A pointer to the Highs instance.
- * @param current_value a pointer to the current value of the option
- * @param min_value     a pointer to the minimum value of the option
- * @param max_value     a pointer to the maximum value of the option
- * @param default_value a pointer to the default value of the option
+ * @param current_value A pointer to the current value of the option.
+ * @param min_value     A pointer to the minimum value of the option.
+ * @param max_value     A pointer to the maximum value of the option.
+ * @param default_value A pointer to the default value of the option.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -702,8 +702,8 @@ HighsInt Highs_getDoubleOptionValues(const void* highs, const char* option,
  * Get the current and default values of a string option
  *
  * @param highs         A pointer to the Highs instance.
- * @param current_value a pointer to the current value of the option
- * @param default_value a pointer to the default value of the option
+ * @param current_value A pointer to the current value of the option.
+ * @param default_value A pointer to the default value of the option.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -714,8 +714,8 @@ HighsInt Highs_getStringOptionValues(const void* highs, const char* option,
  * Get an int-valued info value.
  *
  * @param highs     A pointer to the Highs instance.
- * @param info      the name of the info item
- * @param value     a reference to an integer that the result will be stored in
+ * @param info      The name of the info item.
+ * @param value     A reference to an integer that the result will be stored in.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -726,8 +726,8 @@ HighsInt Highs_getIntInfoValue(const void* highs, const char* info,
  * Get a double-valued info value.
  *
  * @param highs     A pointer to the Highs instance.
- * @param info      the name of the info item
- * @param value     a reference to an double that the result will be stored in
+ * @param info      The name of the info item.
+ * @param value     A reference to a double that the result will be stored in.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -738,8 +738,8 @@ HighsInt Highs_getDoubleInfoValue(const void* highs, const char* info,
  * Get an int64-valued info value.
  *
  * @param highs     A pointer to the Highs instance.
- * @param info      the name of the info item
- * @param value     a reference to a int64 that the result will be stored in
+ * @param info      The name of the info item.
+ * @param value     A reference to an int64 that the result will be stored in.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -750,9 +750,9 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
  * Get the type expected by an info item.
  *
  * @param highs     A pointer to the Highs instance.
- * @param info      the name of the info item
- * @param type      int in which the corresponding `kHighsOptionType` constant
- *                  is stored
+ * @param info      The name of the info item.
+ * @param type      An int in which the corresponding `kHighsOptionType`
+ *                  constant is stored.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -762,10 +762,14 @@ HighsInt Highs_getInfoType(const void* highs, const char* info, HighsInt* type);
  * Get the primal and dual solution from an optimized model.
  *
  * @param highs      A pointer to the Highs instance.
- * @param col_value  array of length [num_col], filled with primal column values
- * @param col_dual   array of length [num_col], filled with dual column values
- * @param row_value  array of length [num_row], filled with primal row values
- * @param row_dual   array of length [num_row], filled with dual row values
+ * @param col_value  An array of length [num_col], to be filled with primal
+ *                   column values.
+ * @param col_dual   An array of length [num_col], to be filled with dual column
+ *                   values.
+ * @param row_value  An array of length [num_row], to be filled with primal row
+ *                   values.
+ * @param row_dual   An array of length [num_row], to be filled with dual row
+ *                   values.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -778,12 +782,12 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
  * basis statuses.
  *
  * @param highs       A pointer to the Highs instance.
- * @param col_status  array of length [num_col], to be filled with the column
+ * @param col_status  An array of length [num_col], to be filled with the column
  *                    basis statuses in the form of a `kHighsBasisStatus`
- *                    constant
- * @param row_status  array of length [num_row], to be filled with the row
+ *                    constant.
+ * @param row_status  An array of length [num_row], to be filled with the row
  *                    basis statuses in the form of a `kHighsBasisStatus`
- *                    constant
+ *                    constant.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -804,10 +808,10 @@ HighsInt Highs_getModelStatus(const void* highs);
  * Get an unbounded dual ray that is a certificate of primal infeasibility.
  *
  * @param highs             A pointer to the Highs instance.
- * @param has_dual_ray      a pointer to an int to store 1 if the dual ray
- *                          exists
- * @param dual_ray_value    an array of length [num_row] filled with the
- *                          unbounded ray
+ * @param has_dual_ray      A pointer to an int to store 1 if the dual ray
+ *                          exists.
+ * @param dual_ray_value    An array of length [num_row] filled with the
+ *                          unbounded ray.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -818,10 +822,10 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
  * Get an unbounded primal ray that is a certificate of dual infeasibility.
  *
  * @param highs             A pointer to the Highs instance.
- * @param has_primal_ray    a pointer to an int to store 1 if the primal ray
- *                          exists
- * @param primal_ray_value  an array of length [num_col] filled with the
- *                          unbounded ray
+ * @param has_primal_ray    A pointer to an int to store 1 if the primal ray
+ *                          exists.
+ * @param primal_ray_value  An array of length [num_col] filled with the
+ *                          unbounded ray.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -846,6 +850,7 @@ double Highs_getObjectiveValue(const void* highs);
  * row.
  *
  * The order of these rows and columns is important for calls to the functions:
+ *
  *  - `Highs_getBasisInverseRow`
  *  - `Highs_getBasisInverseCol`
  *  - `Highs_getBasisSolve`
@@ -854,8 +859,8 @@ double Highs_getObjectiveValue(const void* highs);
  *  - `Highs_getReducedColumn`
  *
  * @param highs             A pointer to the Highs instance.
- * @param basic_variables   array of size [num_rows], filled with the indices of
- *                          the basic variables
+ * @param basic_variables   An array of size [num_rows], filled with the indices
+ *                          of the basic variables.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -871,10 +876,12 @@ HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
  * actually stored.
  *
  * @param highs         A pointer to the Highs instance.
- * @param row           index of the row to compute
- * @param row_vector    values of the non-zero elements
- * @param row_num_nz    the number of non-zeros in the row
- * @param row_index     indices of the non-zero elements
+ * @param row           The index of the row to compute.
+ * @param row_vector    An array of length [num_row] in which to store the
+ *                      values of the non-zero elements.
+ * @param row_num_nz    The number of non-zeros in the row.
+ * @param row_index     An array of length [num_row] in which to store the
+ *                      indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -892,10 +899,12 @@ HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
  * actually stored.
  *
  * @param highs         A pointer to the Highs instance.
- * @param col           index of the column to compute
- * @param col_vector    values of the non-zero elements
- * @param col_num_nz    the number of non-zeros in the column
- * @param col_index     indices of the non-zero elements
+ * @param col           The index of the column to compute.
+ * @param col_vector    An array of length [num_row] in which to store the
+ *                      values of the non-zero elements.
+ * @param col_num_nz    The number of non-zeros in the column.
+ * @param col_index     An array of length [num_row] in which to store the
+ *                      indices of the non-zero elements.
 
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -914,10 +923,12 @@ HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
  * non-zero elements are actually stored.
  *
  * @param highs             A pointer to the Highs instance.
- * @param rhs               the right-hand side vector `b`
- * @param solution_vector   values of the non-zero elements
- * @param solution_num_nz   the number of non-zeros in the solution
- * @param solution_index    indices of the non-zero elements
+ * @param rhs               The right-hand side vector `b`.
+ * @param solution_vector   An array of length [num_row] in which to store the
+ *                          values of the non-zero elements.
+ * @param solution_num_nz   The number of non-zeros in the solution.
+ * @param solution_index    An array of length [num_row] in which to store the
+ *                          indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -936,10 +947,12 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  * non-zero elements are actually stored.
  *
  * @param highs             A pointer to the Highs instance.
- * @param rhs               the right-hand side vector `b`
- * @param solution_vector   values of the non-zero elements
- * @param solution_num_nz   the number of non-zeros in the solution
- * @param solution_index    indices of the non-zero elements
+ * @param rhs               The right-hand side vector `b`
+ * @param solution_vector   An array of length [num_row] in whcih to store the
+ *                          values of the non-zero elements.
+ * @param solution_num_nz   The number of non-zeros in the solution.
+ * @param solution_index    An array of length [num_row] in whcih to store the
+ *                          indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -958,10 +971,12 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
  * actually stored.
  *
  * @param highs         A pointer to the Highs instance.
- * @param row           index of the row to compute
- * @param row_vector    values of the non-zero elements
- * @param row_num_nz    the number of non-zeros in the row
- * @param row_index     indices of the non-zero elements
+ * @param row           The index of the row to compute.
+ * @param row_vector    An array of length [num_row] in which to store the
+ *                      values of the non-zero elements.
+ * @param row_num_nz    The number of non-zeros in the row.
+ * @param row_index     An array of length [num_row] in which to store the
+ *                      indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -979,10 +994,12 @@ HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
  * actually stored.
  *
  * @param highs         A pointer to the Highs instance.
- * @param col           index of the column to compute
- * @param col_vector    values of the non-zero elements
- * @param col_num_nz    the number of non-zeros in the column
- * @param col_index     indices of the non-zero elements
+ * @param col           The index of the column to compute.
+ * @param col_vector    An array of length [num_row] in which to store the
+*                       values of the non-zero elements.
+ * @param col_num_nz    The number of non-zeros in the column.
+ * @param col_index     An array of length [num_row] in which to store the
+*                       indices of the non-zero elements.
 
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1015,16 +1032,17 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* col_status,
 HighsInt Highs_setLogicalBasis(void* highs);
 
 /**
- * Set a solution by passing the column and row primal and dual
- * solution values. For any values that are unavailable pass NULL.
+ * Set a solution by passing the column and row primal and dual solution values.
+ *
+ * For any values that are unavailable, pass NULL.
  *
  * @param highs       A pointer to the Highs instance.
- * @param col_value   an array of length [num_col] with the column solution
- *                    values
- * @param row_value   an array of length [num_row] with the row solution
- *                    values
- * @param col_dual    an array of length [num_col] with the column dual values
- * @param row_dual    an array of length [num_row] with the row dual values
+ * @param col_value   An array of length [num_col] with the column solution
+ *                    values.
+ * @param row_value   An array of length [num_row] with the row solution
+ *                    values.
+ * @param col_dual    An array of length [num_col] with the column dual values.
+ * @param row_dual    An array of length [num_row] with the row dual values.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1045,12 +1063,12 @@ double Highs_getRunTime(const void* highs);
  * Add a new column (variable) to the model.
  *
  * @param highs         A pointer to the Highs instance.
- * @param cost          objective coefficient of the column
- * @param lower         lower bound of the column
- * @param upper         upper bound of the column
- * @param num_new_nz    number of non-zeros in the column
- * @param index         array of size [num_new_nz] with the row indices
- * @param value         array of size [num_new_nz] with row values
+ * @param cost          The objective coefficient of the column.
+ * @param lower         The lower bound of the column.
+ * @param upper         The upper bound of the column.
+ * @param num_new_nz    The number of non-zeros in the column.
+ * @param index         An array of size [num_new_nz] with the row indices.
+ * @param value         An array of size [num_new_nz] with row values.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1062,18 +1080,19 @@ HighsInt Highs_addCol(void* highs, const double cost, const double lower,
  * Add multiple columns (variables) to the model.
  *
  * @param highs         A pointer to the Highs instance.
- * @param num_new_col   number of new columns to add
- * @param costs         array of size [num_new_col] with objective coefficients
- * @param lower         array of size [num_new_col] with lower bounds
- * @param upper         array of size [num_new_col] with upper bounds
- * @param num_new_nz    number of new nonzeros in the constraint matrix
- * @param starts        the constraint coefficients are given as a matrix in
+ * @param num_new_col   The number of new columns to add.
+ * @param costs         An array of size [num_new_col] with objective
+ *                      coefficients.
+ * @param lower         An array of size [num_new_col] with lower bounds.
+ * @param upper         An array of size [num_new_col] with upper bounds.
+ * @param num_new_nz    The number of new nonzeros in the constraint matrix.
+ * @param starts        The constraint coefficients are given as a matrix in
  *                      compressed sparse column form by the arrays `starts`,
  *                      `index`, and `value`. `starts` is an array of size
  *                      [num_new_cols] with the start index of each row in
  *                      indices and values.
- * @param index         array of size [num_new_nz] with row indices
- * @param value         array of size [num_new_nz] with row values
+ * @param index         An array of size [num_new_nz] with row indices.
+ * @param value         An array of size [num_new_nz] with row values.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1087,8 +1106,8 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
  * Add a new variable to the model.
  *
  * @param highs         A pointer to the Highs instance.
- * @param lower         lower bound of the column
- * @param upper         upper bound of the column
+ * @param lower         The lower bound of the column.
+ * @param upper         The upper bound of the column.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1098,9 +1117,9 @@ HighsInt Highs_addVar(void* highs, const double lower, const double upper);
  * Add multiple variables to the model.
  *
  * @param highs         A pointer to the Highs instance.
- * @param num_new_var   number of new variables to add
- * @param lower         array of size [num_new_var] with lower bounds
- * @param upper         array of size [num_new_var] with upper bounds
+ * @param num_new_var   The number of new variables to add.
+ * @param lower         An array of size [num_new_var] with lower bounds.
+ * @param upper         An array of size [num_new_var] with upper bounds.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1111,11 +1130,11 @@ HighsInt Highs_addVars(void* highs, const HighsInt num_new_var,
  * Add a new row (a linear constraint) to the model.
  *
  * @param highs         A pointer to the Highs instance.
- * @param lower         lower bound of the row
- * @param upper         upper bound of the row
- * @param num_new_nz    number of non-zeros in the row
- * @param index         array of size [num_new_nz] with column indices
- * @param value         array of size [num_new_nz] with column values
+ * @param lower         The lower bound of the row.
+ * @param upper         The upper bound of the row.
+ * @param num_new_nz    The number of non-zeros in the row
+ * @param index         An array of size [num_new_nz] with column indices.
+ * @param value         An array of size [num_new_nz] with column values.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1127,19 +1146,19 @@ HighsInt Highs_addRow(void* highs, const double lower, const double upper,
  * Add multiple rows (linear constraints) to the model.
  *
  * @param highs         A pointer to the Highs instance.
- * @param num_new_row   the number of new rows to add
- * @param lower         array of size [num_new_row] with the lower bounds of the
- *                      rows
- * @param upper         array of size [num_new_row] with the upper bounds of the
- *                      rows
- * @param num_new_nz    number of non-zeros in the rows
- * @param starts        the constraint coefficients are given as a matrix in
+ * @param num_new_row   The number of new rows to add
+ * @param lower         An array of size [num_new_row] with the lower bounds of
+ *                      the rows.
+ * @param upper         An array of size [num_new_row] with the upper bounds of
+ *                      the rows.
+ * @param num_new_nz    The number of non-zeros in the rows.
+ * @param starts        The constraint coefficients are given as a matrix in
  *                      compressed sparse row form by the arrays `starts`,
  *                      `index`, and `value`. `starts` is an array of size
  *                      [num_new_rows] with the start index of each row in
  *                      indices and values.
- * @param index         array of size [num_new_nz] with column indices
- * @param value         array of size [num_new_nz] with column values
+ * @param index         An array of size [num_new_nz] with column indices.
+ * @param value         An array of size [num_new_nz] with column values.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1152,8 +1171,8 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
  * Change the objective sense of the model.
  *
  * @param highs     A pointer to the Highs instance.
- * @param sense     the new optimization sense in the form of a `kHighsObjSense`
- *                  constant
+ * @param sense     The new optimization sense in the form of a `kHighsObjSense`
+ *                  constant.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1163,7 +1182,7 @@ HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense);
  * Change the objective offset of the model.
  *
  * @param highs     A pointer to the Highs instance.
- * @param offset    the new objective offset
+ * @param offset    The new objective offset.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1173,9 +1192,9 @@ HighsInt Highs_changeObjectiveOffset(void* highs, const double offset);
  * Change the integrality of a column.
  *
  * @param highs         A pointer to the Highs instance.
- * @param col           the column index to change
- * @param integrality   the new integrality of the column in the form of a
- *                      `kHighsVarType` constant
+ * @param col           The column index to change.
+ * @param integrality   The new integrality of the column in the form of a
+ *                      `kHighsVarType` constant.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1186,12 +1205,12 @@ HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
  * Change the integrality of multiple adjacent columns.
  *
  * @param highs         A pointer to the Highs instance.
- * @param from_col      the index of the first column whose integrality changes
- * @param to_col        the index of the last column whose integrality
- *                      changes
- * @param integrality   an array of length [to_col - from_col + 1] with the new
+ * @param from_col      The index of the first column whose integrality changes.
+ * @param to_col        The index of the last column whose integrality
+ *                      changes.
+ * @param integrality   An array of length [to_col - from_col + 1] with the new
  *                      integralities of the columns in the form of
- *                      `kHighsVarType` constants
+ *                      `kHighsVarType` constants.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1204,12 +1223,12 @@ HighsInt Highs_changeColsIntegralityByRange(void* highs,
  * Change the integrality of multiple columns given by an array of indices.
  *
  * @param highs             A pointer to the Highs instance.
- * @param num_set_entries   the number of columns to change
- * @param set               an array of size [num_set_entries] with the indices
- *                          of the columns to change
- * @param integrality       an array of length [num_set_entries] with the new
+ * @param num_set_entries   The number of columns to change.
+ * @param set               An array of size [num_set_entries] with the indices
+ *                          of the columns to change.
+ * @param integrality       An array of length [num_set_entries] with the new
  *                          integralities of the columns in the form of
- *                          `kHighsVarType` constants
+ *                          `kHighsVarType` constants.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1222,11 +1241,11 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
  * Change the integrality of multiple columns given by a mask.
  *
  * @param highs         A pointer to the Highs instance.
- * @param mask          an array of length [num_col] with 1 if the column
- *                      integrality should be changed and 0 otherwise
- * @param integrality   an array of length [num_col] with the new
+ * @param mask          An array of length [num_col] with 1 if the column
+ *                      integrality should be changed and 0 otherwise.
+ * @param integrality   An array of length [num_col] with the new
  *                      integralities of the columns in the form of
- *                      `kHighsVarType` constants
+ *                      `kHighsVarType` constants.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1237,8 +1256,8 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
  * Change the objective coefficient of a column.
  *
  * @param highs     A pointer to the Highs instance.
- * @param col       the index of the column fo change
- * @param cost      the new objective coefficient
+ * @param col       The index of the column fo change.
+ * @param cost      The new objective coefficient.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1249,10 +1268,10 @@ HighsInt Highs_changeColCost(void* highs, const HighsInt col,
  * Change the cost coefficients of multiple adjacent columns.
  *
  * @param highs     A pointer to the Highs instance.
- * @param from_col  the index of the first column whose cost changes
- * @param to_col    the index of the last column whose cost changes
- * @param cost      an array of length [to_col - from_col + 1] with the new
- *                  objective coefficients
+ * @param from_col  The index of the first column whose cost changes.
+ * @param to_col    The index of the last column whose cost changes.
+ * @param cost      An array of length [to_col - from_col + 1] with the new
+ *                  objective coefficients.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1263,10 +1282,10 @@ HighsInt Highs_changeColsCostByRange(void* highs, const HighsInt from_col,
  * Change the cost of multiple columns given by an array of indices.
  *
  * @param highs             A pointer to the Highs instance.
- * @param num_set_entries   the number of columns to change
- * @param set               an array of size [num_set_entries] with the indices
- *                          of the columns to change
- * @param cost              an array of length [num_set_entries] with the new
+ * @param num_set_entries   The number of columns to change.
+ * @param set               An array of size [num_set_entries] with the indices
+ *                          of the columns to change.
+ * @param cost              An array of length [num_set_entries] with the new
  *                          costs of the columns.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
@@ -1278,9 +1297,9 @@ HighsInt Highs_changeColsCostBySet(void* highs, const HighsInt num_set_entries,
  * Change the cost of multiple columns given by a mask.
  *
  * @param highs     A pointer to the Highs instance.
- * @param mask      an array of length [num_col] with 1 if the column
- *                  cost should be changed and 0 otherwise
- * @param cost      an array of length [num_col] with the new costs
+ * @param mask      An array of length [num_col] with 1 if the column
+ *                  cost should be changed and 0 otherwise.
+ * @param cost      An array of length [num_col] with the new costs.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1291,9 +1310,9 @@ HighsInt Highs_changeColsCostByMask(void* highs, const HighsInt* mask,
  * Change the variable bounds of a column.
  *
  * @param highs     A pointer to the Highs instance.
- * @param col       the index of the column whose bounds are to change
- * @param lower     the new lower bound
- * @param upper     the new upper bound
+ * @param col       The index of the column whose bounds are to change.
+ * @param lower     The new lower bound.
+ * @param upper     The new upper bound.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1304,12 +1323,12 @@ HighsInt Highs_changeColBounds(void* highs, const HighsInt col,
  * Change the variable bounds of multiple adjacent columns.
  *
  * @param highs     A pointer to the Highs instance.
- * @param from_col  the index of the first column whose bound changes
- * @param to_col    the index of the last column whose bound changes
- * @param lower     an array of length [to_col - from_col + 1] with the new
- *                  lower bounds
- * @param upper     an array of length [to_col - from_col + 1] with the new
- *                  upper bounds
+ * @param from_col  The index of the first column whose bound changes.
+ * @param to_col    The index of the last column whose bound changes.
+ * @param lower     An array of length [to_col - from_col + 1] with the new
+ *                  lower bounds.
+ * @param upper     An array of length [to_col - from_col + 1] with the new
+ *                  upper bounds.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1322,13 +1341,13 @@ HighsInt Highs_changeColsBoundsByRange(void* highs, const HighsInt from_col,
  * Change the bounds of multiple columns given by an array of indices.
  *
  * @param highs             A pointer to the Highs instance.
- * @param num_set_entries   the number of columns to change
- * @param set               an array of size [num_set_entries] with the indices
- *                          of the columns to change
- * @param lower             an array of length [num_set_entries] with the new
- *                          lower bounds
- * @param upper             an array of length [num_set_entries] with the new
- *                          upper bounds
+ * @param num_set_entries   The number of columns to change.
+ * @param set               An array of size [num_set_entries] with the indices
+ *                          of the columns to change.
+ * @param lower             An array of length [num_set_entries] with the new
+ *                          lower bounds.
+ * @param upper             An array of length [num_set_entries] with the new
+ *                          upper bounds.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1341,10 +1360,10 @@ HighsInt Highs_changeColsBoundsBySet(void* highs,
  * Change the variable bounds of multiple columns given by a mask.
  *
  * @param highs     A pointer to the Highs instance.
- * @param mask      an array of length [num_col] with 1 if the column
- *                  bounds should be changed and 0 otherwise
- * @param lower     an array of length [num_col] with the new lower bounds
- * @param upper     an array of length [num_col] with the new upper bounds
+ * @param mask      An array of length [num_col] with 1 if the column
+ *                  bounds should be changed and 0 otherwise.
+ * @param lower     An array of length [num_col] with the new lower bounds.
+ * @param upper     An array of length [num_col] with the new upper bounds.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1355,9 +1374,9 @@ HighsInt Highs_changeColsBoundsByMask(void* highs, const HighsInt* mask,
  * Change the bounds of a row.
  *
  * @param highs     A pointer to the Highs instance.
- * @param row       the index of the row whose bounds are to change
- * @param lower     the new lower bound
- * @param upper     the new upper bound
+ * @param row       The index of the row whose bounds are to change.
+ * @param lower     The new lower bound.
+ * @param upper     The new upper bound.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -1368,13 +1387,13 @@ HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
  * Change the bounds of multiple rows given by an array of indices.
  *
  * @param highs             A pointer to the Highs instance.
- * @param num_set_entries   the number of rows to change
- * @param set               an array of size [num_set_entries] with the indices
- *                          of the rows to change
- * @param lower             an array of length [num_set_entries] with the new
- *                          lower bounds
- * @param upper             an array of length [num_set_entries] with the new
- *                          upper bounds
+ * @param num_set_entries   The number of rows to change.
+ * @param set               An array of size [num_set_entries] with the indices
+ *                          of the rows to change.
+ * @param lower             An array of length [num_set_entries] with the new
+ *                          lower bounds.
+ * @param upper             An array of length [num_set_entries] with the new
+ *                          upper bounds.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
