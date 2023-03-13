@@ -14,6 +14,24 @@ Pkg.instantiate()
 
 import Documenter
 
+# ==============================================================================
+#  Parse and build docstrings from the C API
+# ==============================================================================
+
+include(joinpath(@__DIR__, "c_api_gen", "build.jl"))
+
+"""
+This module exists solely to collate the docstrings of libhighs.jl
+"""
+module HiGHS
+    const libhighs = ""
+    include(joinpath(@__DIR__, "c_api_gen", "libhighs.jl"))
+end
+
+# ==============================================================================
+#  Make the documentation
+# ==============================================================================
+
 Documenter.makedocs(
     sitename = "HiGHS Documentation",
     authors = "Julian Hall and Ivet Galabova",
@@ -49,6 +67,7 @@ Documenter.makedocs(
             "Linking" => "cpp/link.md",
             "Examples" => "cpp/examples.md",
         ],
+        "HiGHS in C" => Any["API" => "c/api.md"],
         "HiGHS in Julia" => "julia/index.md",
         "Binaries" => "binaries.md",
         "Executable" => "executable.md",
