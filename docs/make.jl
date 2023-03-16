@@ -49,6 +49,7 @@ Documenter.makedocs(
             "Linking" => "cpp/link.md",
             "Examples" => "cpp/examples.md",
         ],
+        "HiGHS in Julia" => "julia/index.md",
         "Binaries" => "binaries.md",
         "Executable" => "executable.md",
         "Options" => Any[
