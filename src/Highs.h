@@ -45,10 +45,10 @@ class Highs {
  public:
   Highs();
   virtual ~Highs() {
-    FILE* log_file_stream = options_.log_options.log_file_stream;
-    if (log_file_stream != nullptr) {
-      assert(log_file_stream != stdout);
-      fclose(log_file_stream);
+    FILE* log_stream = options_.log_options.log_stream;
+    if (log_stream != nullptr) {
+      assert(log_stream != stdout);
+      fclose(log_stream);
     }
   }
 

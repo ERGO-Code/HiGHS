@@ -42,7 +42,7 @@ enum LogDevLevel {
 };
 
 struct HighsLogOptions {
-  FILE* log_file_stream;
+  FILE* log_stream;
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;

@@ -363,7 +363,7 @@ void HEkkPrimal::initialiseInstance() {
                 num_free_col);
     nonbasic_free_col_set.setup(
         num_free_col, num_tot, ekk_instance_.options_->output_flag,
-        ekk_instance_.options_->log_options.log_file_stream, debug);
+        ekk_instance_.options_->log_options.log_stream, debug);
   }
   // Set up the hyper-sparse CHUZC data
   hyper_chuzc_candidate.resize(1 + max_num_hyper_chuzc_candidates);
@@ -371,7 +371,7 @@ void HEkkPrimal::initialiseInstance() {
   hyper_chuzc_candidate_set.setup(
       max_num_hyper_chuzc_candidates, num_tot,
       ekk_instance_.options_->output_flag,
-      ekk_instance_.options_->log_options.log_file_stream, debug);
+      ekk_instance_.options_->log_options.log_stream, debug);
 }
 
 void HEkkPrimal::initialiseSolve() {
