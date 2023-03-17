@@ -32,8 +32,9 @@ void highsOpenLogFile(HighsLogOptions& log_options,
     fclose(log_options.log_stream);
   }
   if (log_file.compare("")) {
-    // New log file name is not empty, so open it
-    log_options.log_stream = fopen(log_file.c_str(), "w");
+    // New log file name is not empty, so open it, appending if
+    // possible
+    log_options.log_stream = fopen(log_file.c_str(), "a");
   } else {
     // New log file name is empty, so set the stream to null
     log_options.log_stream = NULL;

@@ -111,15 +111,13 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
     // Write to log file stream unless it is NULL
     if (log_options_.log_stream) {
       if (prefix)
-        fprintf(log_options_.log_stream, "%-9s",
-                HighsLogTypeTag[(int)type]);
+        fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(log_options_.log_stream, format, argptr);
       if (flush_streams) fflush(log_options_.log_stream);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console &&
-        log_options_.log_stream != stdout) {
+    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
       if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
       if (flush_streams) fflush(stdout);
@@ -174,8 +172,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console &&
-        log_options_.log_stream != stdout) {
+    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
       vfprintf(stdout, format, argptr);
       if (flush_streams) fflush(stdout);
     }
