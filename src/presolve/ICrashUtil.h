@@ -8,16 +8,6 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*                                                                       */
-/*    This file is part of the HiGHS linear optimization suite           */
-/*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
-/*                                                                       */
-/*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/ICrashUtil.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
