@@ -100,6 +100,9 @@ value = np.array([1, 1, 2, 3, 2], dtype=np.double)
 h.addRows(3, lower, upper, num_nz, start, index, value)
 ```
 
+* __passColName__
+* __passRowName__
+
 ## Pass a model
 
 Pass a model from a HighsLp instance
@@ -142,3 +145,57 @@ print('Primal solution status = ', h.solutionStatusToString(info.primal_solution
 print('Dual solution status = ', h.solutionStatusToString(info.dual_solution_status))
 print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 ```
+
+## Extract results
+
+* __getModelStatus__
+* __getSolution__
+* __getBasis__
+
+## Report results
+
+* __writeSolution__
+
+## Option values
+
+* __setOptionValue__
+* __getOptionValue__
+
+## Get model data
+
+* __getNumCols__
+* __getNumRows__
+* __getNumEntries__
+* __getCol__
+* __getRow__
+* __getColEntries__
+* __getRowEntries__
+* __getCols__
+* __getRows__
+* __getColsEntries__
+* __getRowsEntries__
+* __getCoeff__
+
+## Modify model data
+
+* __changeObjectiveSense__
+* __changeColCost__
+* __changeColBounds__
+* __changeRowBounds__
+* __changeColsCosts__
+* __changeColsBounds__
+* __changeRowsBounds__
+* __changeCoeff__
+
+## Set solution
+
+* __setSolution__
+
+
+## Set basis
+
+* __setBasis__
+
+
+
+

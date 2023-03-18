@@ -61,39 +61,3 @@ status = h.readModel(filename)
 status = h.run()
 print('Model ', filename, ' has return status ', h.modelStatusToString(h.getModelStatus))
 ```
-
-### Examples
-
-WIP: to be documented by example
-
-* __getModelStatus__
-* __HighsModelStatus__
-* __getObjectiveValue__
-* __getIterationCount__
-* __getSolution__
-* __getBasis__
-* __writeSolution__
-* __setHighsOptionValue__
-* __getHighsOptionValue__
-* __getNumCols__
-* __getNumRows__
-* __getNumEntries__
-* __getCols__
-* __getRows__
-* __getCoeff__
-* __changeObjectiveSense__
-* __changeColCost__
-* __changeColBounds__
-* __changeRowBounds__
-* __changeColsCosts__
-* __changeColsBounds__
-* __changeRowsBounds__
-* __changeCoeff__
-* __addCols__
-* __addRows__
-* __deleteCols__
-* __deleteRows__
-* __setSolution__
-* __setBasis__
-* __passColName__
-* __passRowName__
