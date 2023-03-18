@@ -96,7 +96,7 @@ std::array<char, 32> highsDoubleToString(const double val,
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
   if (!*log_options_.output_flag ||
-      (log_options_.log_file_stream == NULL && !*log_options_.log_to_console))
+      (log_options_.log_stream == NULL && !*log_options_.log_to_console))
     return;
   // highsLogUser should not be passed HighsLogType::kDetailed or
   // HighsLogType::kVerbose
@@ -109,17 +109,15 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   const bool flush_streams = true;
   if (!log_options_.log_user_callback) {
     // Write to log file stream unless it is NULL
-    if (log_options_.log_file_stream) {
+    if (log_options_.log_stream) {
       if (prefix)
-        fprintf(log_options_.log_file_stream, "%-9s",
-                HighsLogTypeTag[(int)type]);
-      vfprintf(log_options_.log_file_stream, format, argptr);
-      if (flush_streams) fflush(log_options_.log_file_stream);
+        fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
+      vfprintf(log_options_.log_stream, format, argptr);
+      if (flush_streams) fflush(log_options_.log_stream);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console &&
-        log_options_.log_file_stream != stdout) {
+    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
       if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
       if (flush_streams) fflush(stdout);
@@ -145,7 +143,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
 void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...) {
   if (!*log_options_.output_flag ||
-      (log_options_.log_file_stream == NULL && !*log_options_.log_to_console) ||
+      (log_options_.log_stream == NULL && !*log_options_.log_to_console) ||
       !*log_options_.log_dev_level)
     return;
   // Always report HighsLogType::kInfo, HighsLogType::kWarning or
@@ -167,15 +165,14 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   const bool flush_streams = true;
   if (!log_options_.log_user_callback) {
     // Write to log file stream unless it is NULL
-    if (log_options_.log_file_stream) {
+    if (log_options_.log_stream) {
       // Write to log file stream
-      vfprintf(log_options_.log_file_stream, format, argptr);
-      if (flush_streams) fflush(log_options_.log_file_stream);
+      vfprintf(log_options_.log_stream, format, argptr);
+      if (flush_streams) fflush(log_options_.log_stream);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console &&
-        log_options_.log_file_stream != stdout) {
+    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
       vfprintf(stdout, format, argptr);
       if (flush_streams) fflush(stdout);
     }
@@ -207,10 +204,10 @@ void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
 
 void highsReportLogOptions(const HighsLogOptions& log_options_) {
   printf("\nHighs log options\n");
-  if (log_options_.log_file_stream == NULL) {
-    printf("   log_file_stream = NULL\n");
+  if (log_options_.log_stream == NULL) {
+    printf("   log_stream = NULL\n");
   } else {
-    printf("   log_file_stream = Not NULL\n");
+    printf("   log_stream = Not NULL\n");
   }
   printf("   output_flag = %s\n",
          highsBoolToString(*log_options_.output_flag).c_str());

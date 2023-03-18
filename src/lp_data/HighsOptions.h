@@ -421,7 +421,7 @@ class HighsOptions : public HighsOptionsStruct {
   HighsOptions(HighsOptions&& options) {
     records = std::move(options.records);
     HighsOptionsStruct::operator=(std::move(options));
-    this->log_options.log_file_stream = options.log_options.log_file_stream;
+    this->log_options.log_stream = options.log_options.log_stream;
     setLogOptions();
   }
 
@@ -429,7 +429,7 @@ class HighsOptions : public HighsOptionsStruct {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
-      this->log_options.log_file_stream = other.log_options.log_file_stream;
+      this->log_options.log_stream = other.log_options.log_stream;
       setLogOptions();
     }
     return *this;
@@ -439,7 +439,7 @@ class HighsOptions : public HighsOptionsStruct {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
-      this->log_options.log_file_stream = other.log_options.log_file_stream;
+      this->log_options.log_stream = other.log_options.log_stream;
       setLogOptions();
     }
     return *this;
@@ -1060,7 +1060,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     // Set up the log_options aliases
-    log_options.log_file_stream =
+    log_options.log_stream =
         log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;

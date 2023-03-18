@@ -26,17 +26,18 @@ void highsOpenLogFile(HighsLogOptions& log_options,
   OptionStatus status =
       getOptionIndex(log_options, "log_file", option_records, index);
   assert(status == OptionStatus::kOk);
-  if (log_options.log_file_stream != NULL) {
+  if (log_options.log_stream != NULL) {
     // Current log file stream is not null, so flush and close it
-    fflush(log_options.log_file_stream);
-    fclose(log_options.log_file_stream);
+    fflush(log_options.log_stream);
+    fclose(log_options.log_stream);
   }
   if (log_file.compare("")) {
-    // New log file name is not empty, so open it
-    log_options.log_file_stream = fopen(log_file.c_str(), "w");
+    // New log file name is not empty, so open it, appending if
+    // possible
+    log_options.log_stream = fopen(log_file.c_str(), "a");
   } else {
     // New log file name is empty, so set the stream to null
-    log_options.log_file_stream = NULL;
+    log_options.log_stream = NULL;
   }
   OptionRecordString& option = *(OptionRecordString*)option_records[index];
   option.assignvalue(log_file);
@@ -575,8 +576,8 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
   //  std::string empty_file = "";
   //  std::string from_log_file = from_options.log_file;
   //  std::string original_to_log_file = to_options.log_file;
-  //  FILE* original_to_log_file_stream =
-  //  to_options.log_options.log_file_stream;
+  //  FILE* original_to_log_stream =
+  //  to_options.log_options.log_stream;
   HighsInt num_options = to_options.records.size();
   // Check all the option values before setting any of them - in case
   // to_options are the main Highs options. Checks are only needed for
@@ -640,7 +641,7 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
   /*
   if (from_log_file.compare(original_to_log_file)) {
     // The log file name has changed
-    if (from_options.log_options.log_file_stream &&
+    if (from_options.log_options.log_stream &&
         !original_to_log_file.compare(empty_file)) {
       // The stream corresponding to from_log_file is non-null and the
       // original log file name was empty, so to_options inherits the
@@ -650,9 +651,9 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
       // This ensures that the stream to Highs.log opened in
       // RunHighs.cpp is retained unless the log file name is changed.
       assert(from_log_file.compare(empty_file));
-      assert(!original_to_log_file_stream);
-      to_options.log_options.log_file_stream =
-          from_options.log_options.log_file_stream;
+      assert(!original_to_log_stream);
+      to_options.log_options.log_stream =
+          from_options.log_options.log_stream;
     } else {
       highsOpenLogFile(to_options, to_options.log_file);
     }

@@ -40,7 +40,7 @@ class HSet {
   bool setup(const HighsInt size,  //!< Dimension of the set to be initialised
              const HighsInt max_entry,  //!< Maximum entry to be in the set.
              const bool output_flag = false,  //!< Option for output
-             FILE* log_file_stream = NULL,    //!< File stream for output
+             FILE* log_stream = NULL,         //!< File stream for output
              const bool debug = false,        //!< Debug mode
              const bool allow_assert = true   //!< Allow asserts in debug
   );
