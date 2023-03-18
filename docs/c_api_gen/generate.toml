@@ -1,5 +1,0 @@
-[general]
-library_name = "libhighs"
-output_file_path = "docs/c_api_gen/libhighs.jl"
-print_using_CEnum = false
-extract_c_comment_style = "doxygen"
