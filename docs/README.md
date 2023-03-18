@@ -1,17 +1,27 @@
-Documentation for [HiGHS](https://github.com/ERGO-Code/HiGHS)
+# Documentation
 
-## Editing the Docs
+This directory contains the source files for the [documentation](https://ergo-code.github.io/HiGHS).
 
-To edit the documentation, checkout a branch and edit the Markdown files in
-[docs/src].
+## Editing the documentation
 
-To build locally, call
+To edit the documentation, checkout a branch and edit the Markdown files in the
+`src` directory.
+
+## Building the documentation
+
+To build locally, [install Julia](https://julialang.org/downloads/), then run:
+
 ```
-julia --project=. make.jl
+$ julia docs/make.jl
 ```
 
-and the website is generated in the `build/` folder. To check it out, load `build/index.html` in your browser.
+The first time you run this command, Julia will download and install the
+necessary packages. This may take a couple of minutes.
 
-When you are happy with the changes, rename the `build/` folder to `docs/` and push to the highs-docs branch. Alternatively, if you have pending changes you wish to discuss with the team, please checkout a new branch and open a PR to branch highs-docs.
+The website is generated in the `build/` folder. To check it out, load
+`build/index.html` in your browser.
 
-The GH Page is generated from the `docs/` folder of the highs-docs branch.
+## Deploying the documentation
+
+The documentation is automatically built and deployed by a GitHub action. You
+should not check the `build/` directory into git.

@@ -8,17 +8,23 @@
 *                                                                       *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *=#
 
-using Clang.Generators
+import Clang: Generators
 
-root_dir = dirname(dirname(@__DIR__))
-highs = joinpath(root_dir, "src")
-c_api = joinpath(highs, "interfaces", "highs_c_api.h")
+highs_src = joinpath(dirname(dirname(@__DIR__)), "src")
+c_api = joinpath(highs_src, "interfaces", "highs_c_api.h")
 
-build!(
-    create_context(
-        [c_api, joinpath(highs, "util", "HighsInt.h")],
-        vcat(get_default_args(), "-I$highs"),
-        load_options(joinpath(@__DIR__, "generate.toml")),
+Generators.build!(
+    Generators.create_context(
+        [c_api, joinpath(highs_src, "util", "HighsInt.h")],
+        vcat(Generators.get_default_args(), "-I$highs_src"),
+        Dict{String,Any}(
+            "general" => Dict{String,Any}(
+                "output_file_path" => joinpath(@__DIR__, "libhighs.jl"),
+                "library_name" => "libhighs",
+                "print_using_CEnum" => false,
+                "extract_c_comment_style" => "doxygen",
+            )
+        ),
     ),
 )
 
