@@ -71,9 +71,9 @@ QPs by active set.
 
 If you use HiGHS in an academic context, please acknowledge this and cite the following article.
 
-Parallelizing the dual revised simplex method
-Q. Huangfu and J. A. J. Hall
-Mathematical Programming Computation, 10 (1), 119-142, 2018.
+Parallelizing the dual revised simplex method,
+Q. Huangfu and J. A. J. Hall,
+_Mathematical Programming Computation_, 10 (1), 119-142, 2018.
 DOI: [10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5)
 
 ### Performance
