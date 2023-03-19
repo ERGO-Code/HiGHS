@@ -43,6 +43,12 @@ Documenter.makedocs(
     ),
     strict = !("strict=false" in ARGS),
     doctest = ("doctest=only" in ARGS) ? :only : true,
+    linkcheck = true,
+    linkcheck_ignore = [
+        "https://crates.io/crates/highs",
+        "https://crates.io/crates/good_lp",
+        "https://link.springer.com/article/10.1007/s12532-017-0130-5",
+    ],
     pages = [
         "About" => "index.md",
         "Guide" => "guide.md",

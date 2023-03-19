@@ -1,3 +1,5 @@
+# HighsInfo
+
 Scalar information about a solved model is communicated via an instance of the HighsInfo class
 
 ## valid
@@ -21,15 +23,15 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: integer
 
 ## primal\_solution\_status
-- Comparison with [SolutionStatus](https://ergo-code.github.io/HiGHS/python/enums.html#SolutionStatus) gives the status of the [primal](https://ergo-code.github.io/HiGHS/terminology.html#Primal-values) solution
+- Comparison with [SolutionStatus](@ref) gives the status of the [primal](@ref Primal-values) solution
 - Type: integer
 
 ## dual\_solution\_status
-- Comparison with [SolutionStatus](https://ergo-code.github.io/HiGHS/python/enums.html#SolutionStatus) gives the status of the [dual](https://ergo-code.github.io/HiGHS/terminology.html#Dual-values) solution
+- Comparison with [SolutionStatus](@ref) gives the status of the [dual](@ref Dual-values) solution
 - Type: integer
 
 ## basis\_validity
-- Comparison with [BasisValidity](https://ergo-code.github.io/HiGHS/python/enums.html#BasisValidity) gives the status of any basis information
+- Comparison with [BasisValidity](@ref) gives the status of any basis information
 - Type: integer
 
 ## objective\_function\_value
@@ -41,7 +43,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: long integer
 
 ## mip\_dual\_bound
-- The [dual bound](https://ergo-code.github.io/HiGHS/terminology.html#MIP) for the MIP solver
+- The [dual bound](@ref terminology-mip) for the MIP solver
 - Type: double
 
 ## mip\_gap
@@ -53,7 +55,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_primal\_infeasibilities
-- The number of variables violating a bound by more than the [primal feasibility tolerance](https://ergo-code.github.io/HiGHS/options.html#PrimalFeasibilityTolerance).
+- The number of variables violating a bound by more than the [primal feasibility tolerance](@ref primal_feasibility_tolerance).
 - Type: integer
 
 ## max\_primal\_infeasibility
@@ -65,7 +67,7 @@ Scalar information about a solved model is communicated via an instance of the H
 - Type: double
 
 ## num\_dual\_infeasibilities
-- The number of variables violating dual feasibility by more than the [dual feasibility tolerance](https://ergo-code.github.io/HiGHS/options.html#DualFeasibilityTolerance).
+- The number of variables violating dual feasibility by more than the [dual feasibility tolerance](@ref dual_feasibility_tolerance).
 - Type: integer
 
 ## max\_dual\_infeasibility

@@ -1,3 +1,5 @@
+# Python API
+
 ### Install
 HiGHS is available as __highspy__ on [PyPi](https://pypi.org/project/highspy/).
 
@@ -32,16 +34,16 @@ h = highspy.Highs()
 
 ### Methods
 
-Detailed documentation of the methods and structures is given in the [examples section](http://ergo-code.github.io/HiGHS/dev/python/example-py/).
+Detailed documentation of the methods and structures is given in the [examples section]](@ref example-py).
 
 ### Return status
 
 Unless a method just returns data from HiGHS, so is guaranteed to run
 successfully, each method returns a status to indicate whether it has
 run successfully. This value is an instance of the enum
-[HighsStatus](http://ergo-code.github.io/HiGHS/dev/python/enums/#HighsStatus),
+[HighsStatus](@ref),
 and in the [examples
-section](http://ergo-code.github.io/HiGHS/dev/python/example-py/), it
+section]](@ref example-py), it
 is referred to as `status`.
 
 ### First example

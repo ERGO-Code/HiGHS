@@ -10,7 +10,7 @@ out below.
 By default, when running in parallel, HiGHS will use half the
 available threads on a machine. This number can be modified by setting
 the value of the
-[threads](https://ergo-code.github.io/HiGHS/dev/options/definitions/#threads)
+[threads](@ref)
 option.
 
 ## Dual simplex
@@ -18,14 +18,14 @@ option.
 By default, the HiGHS dual simplex solver runs in serial. However, it
 has a variant allowing concurrent processing. This variant is used
 when the
-[parallel](https://ergo-code.github.io/HiGHS/dev/options/definitions/#parallel)
+[parallel](@ref)
 option is set "on", by specifying `--parallel` when running the
-[executable](https://ergo-code.github.io/HiGHS/dev/executable/) via
+[executable](@ref Executable) via
 the command line, or by setting it via a library call in an
 application.
 
 The concurrency used will be the value of
-[simplex\_max\_concurrency](https://ergo-code.github.io/HiGHS/dev/options/definitions/#simplex_max_concurrency). If
+[simplex\_max\_concurrency](@ref). If
 this is fewer than the number of threads available, parallel
 performance may be less than anticipated.
 
@@ -45,8 +45,7 @@ The only parallel computation currently implemented in the MIP solver
 occurs when performing symmetry detection on the problem, and when
 querying clique tables. This parallelism is always advantageous, so is
 performed regardless of the value of the
-[parallel](https://ergo-code.github.io/HiGHS/dev/options/definitions/#parallel)
-option.
+[parallel](@ref) option.
 
 ## Future plans
 
