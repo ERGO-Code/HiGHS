@@ -32,16 +32,16 @@ h = highspy.Highs()
 
 ### Methods
 
-Detailed documentation of the methods and structures is given in the [examples section](http://ergo-code.github.io/HiGHS/python/example-py.html).
+Detailed documentation of the methods and structures is given in the [examples section](http://ergo-code.github.io/HiGHS/dev/python/example-py.html).
 
 ### Return status
 
 Unless a method just returns data from HiGHS, so is guaranteed to run
 successfully, each method returns a status to indicate whether it has
 run successfully. This value is an instance of the enum
-[HighsStatus](http://ergo-code.github.io/HiGHS/python/enums.html#HighsStatus),
+[HighsStatus](http://ergo-code.github.io/HiGHS/dev/python/enums.html#HighsStatus),
 and in the [examples
-section](http://ergo-code.github.io/HiGHS/python/example-py.html), it
+section](http://ergo-code.github.io/HiGHS/dev/python/example-py.html), it
 is referred to as `status`.
 
 ### First example
