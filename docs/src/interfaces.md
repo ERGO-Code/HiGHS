@@ -5,7 +5,7 @@ There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in [`HiGHS/inter
 
 ## Python
 
-Documentation for the Python interface is [here](https://ergo-code.github.io/HiGHS/dev/python/pip.html).
+Documentation for the Python interface is [here](https://ergo-code.github.io/HiGHS/dev/python/pip/).
 
 ## Fortran
 The interface is in [`highs_fortran_api.f90`](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_fortran_api.f90). To include in the build, switch the Fortran CMake parameter on:

@@ -25,7 +25,7 @@ cmake -DFAST_BUILD=ON ..
 cmake --build . 
 ```
 
-This creates the [executable](https://ergo-code.github.io/HiGHS/dev/executable.html) `build/bin/highs`.
+This creates the [executable](https://ergo-code.github.io/HiGHS/dev/executable/) `build/bin/highs`.
 
 ### Test build
 
