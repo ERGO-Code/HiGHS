@@ -390,6 +390,56 @@ std::tuple<HighsStatus, double> highs_getObjectiveOffset(Highs* h)
   return std::make_tuple(status, obj_offset);
 }
 
+std::tuple<HighsStatus, double, double, double, HighsInt> highs_getCol(Highs* h, int col)
+{
+  double cost, lower, upper;
+  HighsInt get_num_col;
+  HighsInt get_num_nz;
+  HighsStatus status = h->getCols(1, &col, get_num_col, &cost, &lower, &upper, get_num_nz, nullptr, nullptr, nullptr);
+  return std::make_tuple(status, cost, lower, upper, get_num_nz);
+}
+
+std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<double>> highs_getColEntries(Highs* h, int col)
+{
+  double cost, lower, upper;
+  HighsInt get_num_col;
+  HighsInt get_num_nz;
+  h->getCols(1, &col, get_num_col, nullptr, nullptr, nullptr, get_num_nz, nullptr, nullptr, nullptr);
+  get_num_nz = get_num_nz > 0 ? get_num_nz : 1;
+  HighsInt start;
+  std::vector<HighsInt> index(get_num_nz);
+  std::vector<double> value(get_num_nz);
+  HighsInt* index_ptr = static_cast<HighsInt*>(index.data());
+  double* value_ptr = static_cast<double*>(value.data());
+  HighsStatus status = h->getCols(1, &col, get_num_col, nullptr, nullptr, nullptr, get_num_nz, &start, index_ptr, value_ptr);
+  return std::make_tuple(status, py::cast(index), py::cast(value));
+}
+
+std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h, int row)
+{
+  double cost, lower, upper;
+  HighsInt get_num_row;
+  HighsInt get_num_nz;
+  HighsStatus status = h->getRows(1, &row, get_num_row, &lower, &upper, get_num_nz, nullptr, nullptr, nullptr);
+  return std::make_tuple(status, lower, upper, get_num_nz);
+}
+
+std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<double>> highs_getRowEntries(Highs* h, int row)
+{
+  double cost, lower, upper;
+  HighsInt get_num_row;
+  HighsInt get_num_nz;
+  h->getRows(1, &row, get_num_row, nullptr, nullptr, get_num_nz, nullptr, nullptr, nullptr);
+  get_num_nz = get_num_nz > 0 ? get_num_nz : 1;
+  HighsInt start;
+  std::vector<HighsInt> index(get_num_nz);
+  std::vector<double> value(get_num_nz);
+  HighsInt* index_ptr = static_cast<HighsInt*>(index.data());
+  double* value_ptr = static_cast<double*>(value.data());
+  HighsStatus status = h->getRows(1, &row, get_num_row, nullptr, nullptr, get_num_nz, &start, index_ptr, value_ptr);
+  return std::make_tuple(status, py::cast(index), py::cast(value));
+}
+
 std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, py::array_t<double>, HighsInt> highs_getCols(Highs* h, int num_set_entries, py::array_t<int> indices)
 {
   py::buffer_info indices_info = indices.request();
@@ -730,6 +780,11 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getHessianNumNz", &Highs::getHessianNumNz)
     .def("getObjectiveSense", &highs_getObjectiveSense)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
+
+    .def("getCol", &highs_getCol)
+    .def("getColEntries", &highs_getColEntries)
+    .def("getRow", &highs_getRow)
+    .def("getRowEntries", &highs_getRowEntries)
 
     .def("getCols", &highs_getCols)
     .def("getColsEntries", &highs_getColsEntries)

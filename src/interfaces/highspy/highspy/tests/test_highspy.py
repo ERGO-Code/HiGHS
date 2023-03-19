@@ -197,6 +197,19 @@ class TestHighsPy(unittest.TestCase):
         h = self.get_example_model()
         lp = h.getLp()
         #
+        # Extract column 0
+        iCol = 0
+        [status, cost, lower, upper, get_num_nz] = h.getCol(iCol)
+        self.assertEqual(cost, lp.col_cost_[iCol])
+        self.assertEqual(lower, lp.col_lower_[iCol])
+        self.assertEqual(upper, lp.col_upper_[iCol])
+        index = np.empty(get_num_nz)
+        value = np.empty(get_num_nz, dtype=np.double)
+        [status, index, value] = h.getColEntries(iCol)
+        for iEl in range(get_num_nz):
+            self.assertEqual(index[iEl], lp.a_matrix_.index_[iEl])
+            self.assertEqual(value[iEl], lp.a_matrix_.value_[iEl])
+        #
         # Extract columns 0 and 1
         indices = np.array([0, 1])
         [status, get_num_col, cost, lower, upper, get_num_nz] = h.getCols(2, indices)
@@ -214,6 +227,15 @@ class TestHighsPy(unittest.TestCase):
         for iEl in range(get_num_nz):
             self.assertEqual(index[iEl], lp.a_matrix_.index_[iEl])
             self.assertEqual(value[iEl], lp.a_matrix_.value_[iEl])
+        #
+        # Extract row 1
+        iRow = 1
+        [status, lower, upper, get_num_nz] = h.getRow(iRow)
+        self.assertEqual(lower, lp.row_lower_[iRow])
+        self.assertEqual(upper, lp.row_upper_[iRow])
+        index = np.empty(get_num_nz)
+        value = np.empty(get_num_nz, dtype=np.double)
+        [status, index, value] = h.getRowEntries(iRow)
         #
         # Extract rows 0 and 2
         indices = np.array([0, 2])
