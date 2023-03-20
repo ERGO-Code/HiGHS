@@ -9,10 +9,10 @@ To edit the documentation, checkout a branch and edit the Markdown files in the
 
 ## Building the documentation
 
-To build locally, [install Julia](https://julialang.org/downloads/), then run:
+To build locally, [install Julia](https://julialang.org/downloads/), then (from the `docs` directory) run:
 
 ```
-$ julia docs/make.jl
+$ julia make.jl
 ```
 
 The first time you run this command, Julia will download and install the

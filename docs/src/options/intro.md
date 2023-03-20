@@ -1,4 +1,4 @@
-# Options
+## Introduction
 
 The options that control HiGHS are of four types: `boolean`, `integer`, `double`
 and `string`. Their values can be specified:

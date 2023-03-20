@@ -47,10 +47,13 @@ Documenter.makedocs(
         "About" => "index.md",
         "installation.md",
         "Executable" => "executable.md",
+        "Guide" => Any[
+            "guide/basic.md",
+            "guide/advanced.md"
+        ],
         "Interfaces" => Any[
             "Python" => Any[
                 "interfaces/python/index.md",
-                "interfaces/python/guide.md",
                 "interfaces/python/enums.md",
                 "interfaces/python/example-py.md",
                 "Classes" => Any[

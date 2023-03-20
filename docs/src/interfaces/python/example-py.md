@@ -150,6 +150,7 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 ## Extract results
 
  * `getModelStatus`
+ * `getInfo`
  * `getSolution`
  * `getBasis`
 
