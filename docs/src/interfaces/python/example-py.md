@@ -13,10 +13,16 @@ h = highspy.Highs()
 
 ## Load a model
 
+To load a model into HiGHS from a MPS files and (CPLEX) LP files pass the file name to `readModel`. 
+
 ```python
 # Load a model from MPS file model.mps
 filename = 'model.mps'
-h.readModel(filename)
+status = h.readModel(filename)
+print('Reading model file ', filename, ' returns a status of ', status)
+filename = 'model.dat'
+status = h.readModel(filename)
+print('Reading model file ', filename, ' returns a status of ', status)
 ```
 
 ## Build a model

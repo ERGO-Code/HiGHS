@@ -52,11 +52,10 @@ solves it.
 
 ```python
 import highspy
-import numpy as np
 
 h = highspy.Highs()
-sfilename = 'model.mps'
+filename = 'model.mps'
 status = h.readModel(filename)
 status = h.run()
-print('Model ', filename, ' has return status ', h.modelStatusToString(h.getModelStatus))
+print('Model ', filename, ' has return status ', h.modelStatusToString(h.getModelStatus()))
 ```

@@ -33,7 +33,9 @@ that you don't have to write the PInvoke declarations yourself.
 
 ## Fortran
 
-The interface is in [`highs_fortran_api.f90`](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_fortran_api.f90).
+The interface is in
+[`highs_fortran_api.f90`](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_fortran_api.f90). Its
+methods are simply bindings to the [`C` API](@ref HiGHS-in-C)
 
 To include in the build, switch the Fortran CMake parameter on:
 ```
