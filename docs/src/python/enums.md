@@ -15,14 +15,14 @@ This is (part of) the return value of most HiGHS methods
 
 ## MatrixFormat
 
-This defines the format of a [HighsSparseMatrix](https://ergo-code.github.io/HiGHS/dev/python/classes/#HighsSparseMatrix)
+This defines the format of a [HighsSparseMatrix](@ref)
 
 - kColwise: The matrix is stored column-wise
 - kRowwise: The matrix is stored row-wise
 
 ## ObjSense
 
-This defines optimization sense of a [HighsLp](https://ergo-code.github.io/HiGHS/dev/python/classes/#HighsLp)
+This defines optimization sense of a [HighsLp](@ref)
 
 - kMinimize: The objective is to be minimized
 - kMaximize: The objective is to be maximized
@@ -85,15 +85,15 @@ This defines the status of a variable (or slack variable for a constraint) in a 
 This defines the types of option values that control HiGHS
 
 - kBool: The option type is boolean
-- kInt: The option type is integer 
-- kDouble: The option type is double 
+- kInt: The option type is integer
+- kDouble: The option type is double
 - kString: The option type is string
 
 ## HighsInfoType
 
 This defines the types of (scalar) information available after a call to `run()`
 
-- kInt64: The information type is 64-bit integer 
-- kInt: The information type is integer 
-- kDouble: The information type is double 
+- kInt64: The information type is 64-bit integer
+- kInt: The information type is integer
+- kDouble: The information type is double
 

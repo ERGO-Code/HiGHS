@@ -2,13 +2,12 @@
 
 The options that control HiGHS are of four types: boolean, integer, double and string. Their values can be specified
 
-- via the command line when running the [executable](https://ergo-code.github.io/HiGHS/dev/executable/);
+- via the command line when running the [executable](@ref Executable);
 - via method calls when running HiGHS in an application.
 
 ## Options file
 
-When running the
-[executable](https://ergo-code.github.io/HiGHS/dev/executable/) via
+When running the [Executable](@ref) via
 the command line, some options values can be set explicitly in the
 command, and all options can be set by means of an options file.
 
@@ -42,5 +41,5 @@ To get the type of option `name`, call
 ```
 
 Examples of calls to options methods are given in the [examples
-section](https://ergo-code.github.io/HiGHS/dev/python/example-py/).
+section](@ref example-py).
 

@@ -1,3 +1,5 @@
+# List of options
+
 ## presolve
 - Presolve option: "off", "choose" or "on"
 - Type: string

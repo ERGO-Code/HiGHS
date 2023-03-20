@@ -1,3 +1,5 @@
+# Executable
+
 For convenience, the executable is assumed to be `bin/highs`
 
 ### Running the executable
@@ -41,5 +43,5 @@ Usage:
   -h, --help                    Print help.
 ```
 
-The [Options](https://ergo-code.github.io/HiGHS/dev/options/definitions/) section gives a full list of options, and the format in which they are specified.
+The [List of options](@ref) section gives a full list of options, and the format in which they are specified.
 

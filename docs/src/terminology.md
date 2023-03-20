@@ -113,7 +113,7 @@ the variable or constraint can take, the objective values at the
 limits of the range, and the index of a variable or constraint with a
 bound that will become in active at both limits.
 
-## MIP
+## [MIP](@id terminology-mip)
 
 When solving a MIP, some or all the variables must take discrete values. In HiGHS there are three types of discrete variables.
 

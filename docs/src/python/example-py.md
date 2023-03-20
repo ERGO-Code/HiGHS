@@ -1,3 +1,5 @@
+# [Example](@id example-py)
+
 ## Initialize HiGHS
 
 HiGHS must be initialized before making calls to the HiGHS Python
@@ -70,7 +72,7 @@ num_nz = 2
 value = np.array([3, 2])
 h.addRow(6, inf, num_nz, index, value)
 
-# Access LP 
+# Access LP
 lp = h.getLp()
 num_nz = h.getNumNz()
 print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
@@ -131,7 +133,7 @@ The incumbent model in HiGHS is solved by calling
 h.run()
 ```
 
-## Print solution information 
+## Print solution information
 ```
 solution = h.getSolution()
 basis = h.getBasis()
@@ -156,7 +158,7 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 
 * __writeSolution__
 
-## Option values
+## [Option values](@id example-py-option-values)
 
 * __setOptionValue__
 * __getOptionValue__

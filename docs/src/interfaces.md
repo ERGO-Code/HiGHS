@@ -2,11 +2,6 @@
 
 There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in [`HiGHS/interfaces`](https://github.com/ERGO-Code/HiGHS/tree/master/src/interfaces), with example driver files in [`HiGHS/examples`](https://github.com/ERGO-Code/HiGHS/tree/master/examples).
 
-
-## Python
-
-Documentation for the Python interface is [here](https://ergo-code.github.io/HiGHS/dev/python/pip/).
-
 ## Fortran
 The interface is in [`highs_fortran_api.f90`](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_fortran_api.f90). To include in the build, switch the Fortran CMake parameter on:
 ```
@@ -33,7 +28,7 @@ There are interfaces to several popular modelling languages:
 + **GAMS**
   + The interface is available at [GAMSlinks](https://github.com/coin-or/GAMSlinks/), including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
 + **JuMP**
-  + HiGHS is the default solver in JuMP, see the [JuMP Documentation](https://jump.dev/JuMP.jl/stable).
+  + HiGHS is the default solver in JuMP, see the [JuMP Documentation](https://jump.dev/JuMP.jl/stable/).
 
 ## Other
 
@@ -43,7 +38,7 @@ There are interfaces to several popular modelling languages:
   + Alternatively, HiGHS also has a [native Node.js](https://www.npmjs.com/package/highs-solver) interface.
 
 + **R**
-  + An R interface is available through the [`highs` R package](https://cran.r-project.org/package=highs).
+  + An R interface is available through the [`highs` R package](https://cran.r-project.org/web/packages/highs/index.html).
 
 + **Rust**
   + HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS.

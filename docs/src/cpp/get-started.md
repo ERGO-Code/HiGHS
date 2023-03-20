@@ -1,4 +1,6 @@
-HiGHS can be cloned from [GitHub](https://www.github.com/ERGO-Code/HiGHS) with the command
+# Getting started
+
+HiGHS can be cloned from [GitHub](https://github.com/ERGO-Code/HiGHS) with the command
 
 ``` bash
 git clone https://github.com/ERGO-Code/HiGHS.git
@@ -9,7 +11,7 @@ git clone https://github.com/ERGO-Code/HiGHS.git
 HiGHS uses CMake (minimum version 3.15) as a build system, and can use the following compilers
 
 - Clang ` clang `
-- GNU ` g++ ` 
+- GNU ` g++ `
 - Intel ` icc `
 
 The simplest setup is to create a build folder (within the folder into
@@ -22,26 +24,26 @@ cd HiGHS
 mkdir build
 cd build
 cmake -DFAST_BUILD=ON ..
-cmake --build . 
+cmake --build .
 ```
 
-This creates the [executable](https://ergo-code.github.io/HiGHS/dev/executable/) `build/bin/highs`.
+This creates the [executable](@ref Executable) `build/bin/highs`.
 
 ### Test build
 
 To perform a quick test to see whether the compilation was successful, run `ctest` from within the build folder.
 
 ``` bash
-ctest 
+ctest
 ```
 
-### Install 
+### Install
 
 The default installation location may need administrative
 permissions. To install, after building and testing, run
 
 ``` bash
-cmake --install . 
+cmake --install .
 ```
 
 To install in a specified installation directory run CMake with the
@@ -50,5 +52,5 @@ To install in a specified installation directory run CMake with the
 ``` bash
 cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=/path/to/highs_install ..
 cmake --build .
-cmake --install . 
+cmake --install .
 ```
