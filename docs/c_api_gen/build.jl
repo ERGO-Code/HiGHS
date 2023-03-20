@@ -16,7 +16,7 @@ c_api = joinpath(highs_src, "interfaces", "highs_c_api.h")
 Generators.build!(
     Generators.create_context(
         [c_api, joinpath(highs_src, "util", "HighsInt.h")],
-        vcat(Generators.get_default_args(), "-I$highs_src"),
+        [Generators.get_default_args(); "-I$highs_src"; "-I$(@__DIR__)"],
         Dict{String,Any}(
             "general" => Dict{String,Any}(
                 "output_file_path" => joinpath(@__DIR__, "libhighs.jl"),
