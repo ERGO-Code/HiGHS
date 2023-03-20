@@ -1,23 +1,26 @@
 # Executable
 
-For convenience, the executable is assumed to be `bin/highs`
+For convenience, the executable is assumed to be `bin/highs`.
 
 ### Running the executable
 
-The model given by the MPS file `model.mps` is solved by the command
+The model given by the MPS file `model.mps` is solved by the command:
 
 ```bash
-  bin/highs model.mps
+$ bin/highs model.mps
 ```
 
-If the model file is not in the folder from which the command was issued, then a path name can be given
+If the model file is not in the folder from which the command was issued, then a
+path name can be given.
 
 ### Command line options
 
-When HiGHS is run from the command line, some fundamental option values may be specified directly. Many more may be specified via a file. Formally, the usage is
+When HiGHS is run from the command line, some fundamental option values may be
+specified directly. Many more may be specified via a file. Formally, the usage
+is:
 
 ```bash
-  bin/highs --help
+$ bin/highs --help
 HiGHS options
 Usage:
   bin/highs [OPTION...] [file]
@@ -43,5 +46,6 @@ Usage:
   -h, --help                    Print help.
 ```
 
-The [List of options](@ref) section gives a full list of options, and the format in which they are specified.
+The [List of options](@ref) section gives a full list of options, and the format
+in which they are specified.
 

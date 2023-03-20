@@ -18,15 +18,9 @@ import Documenter
 #  Parse and build docstrings from the C API
 # ==============================================================================
 
+const libhighs = ""
 include(joinpath(@__DIR__, "c_api_gen", "build.jl"))
-
-"""
-This module exists solely to collate the docstrings of libhighs.jl
-"""
-module HiGHS
-    const libhighs = ""
-    include(joinpath(@__DIR__, "c_api_gen", "libhighs.jl"))
-end
+include(joinpath(@__DIR__, "c_api_gen", "libhighs.jl"))
 
 # ==============================================================================
 #  Make the documentation
@@ -51,38 +45,38 @@ Documenter.makedocs(
     ],
     pages = [
         "About" => "index.md",
-        "Guide" => "guide.md",
-        "HiGHS in Python" => Any[
-            "Get started in Python" => "python/pip.md",
-            "Enums" => "python/enums.md",
-            "Classes" => Any[
-                "Introduction" => "python/classes/Index.md",
-                "HighsSparseMatrix" => "python/classes/HighsSparseMatrix.md",
-                "HighsLp" => "python/classes/HighsLp.md",
-                "HighsSolution" => "python/classes/HighsSolution.md",
-                "HighsBasis" => "python/classes/HighsBasis.md",
-                "HighsInfo" => "python/classes/HighsInfo.md",
-                "Other" => "python/classes/Other.md",
-            ],
-            "Examples" => "python/example-py.md",
-            "Notebooks" => "python/notebooks.md",
-        ],
-        "HiGHS in C++" => Any[
-            "Get started in C++" => "cpp/get-started.md",
-            "The HiGHS library" => "cpp/library.md",
-            "Linking" => "cpp/link.md",
-            "Examples" => "cpp/examples.md",
-        ],
-        "HiGHS in C" => Any["API" => "c/api.md"],
-        "HiGHS in Julia" => "julia/index.md",
-        "Binaries" => "binaries.md",
+        "installation.md",
         "Executable" => "executable.md",
+        "Interfaces" => Any[
+            "Python" => Any[
+                "interfaces/python/index.md",
+                "interfaces/python/guide.md",
+                "interfaces/python/enums.md",
+                "interfaces/python/example-py.md",
+                "Classes" => Any[
+                    "interfaces/python/classes/Index.md",
+                    "interfaces/python/classes/HighsSparseMatrix.md",
+                    "interfaces/python/classes/HighsLp.md",
+                    "interfaces/python/classes/HighsSolution.md",
+                    "interfaces/python/classes/HighsBasis.md",
+                    "interfaces/python/classes/HighsInfo.md",
+                ],
+            ],
+            "C++" => Any[
+                "Get started in C++" => "interfaces/cpp/get-started.md",
+                "The HiGHS library" => "interfaces/cpp/library.md",
+                "Linking" => "interfaces/cpp/link.md",
+                "Examples" => "interfaces/cpp/examples.md",
+            ],
+            "C" => "interfaces/c/index.md",
+            "Julia" => "interfaces/julia/index.md",
+            "Other" => "interfaces/other.md",
+        ],
         "Options" => Any[
-            "Introduction" => "options/intro.md",
-            "Definitions" => "options/definitions.md"
+            "options/intro.md",
+            "options/definitions.md"
         ],
         "Parallel" => "parallel.md",
-        "Interfaces" => "interfaces.md",
         "Terminology" => "terminology.md",
     ],
 )

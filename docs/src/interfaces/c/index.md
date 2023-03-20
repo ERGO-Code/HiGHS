@@ -1,4 +1,6 @@
+# HiGHS in C
+
 ```@autodocs
-Modules = [HiGHS]
+Modules = [Main]
 Filter = t -> startswith("$t", "Highs")
 ```
