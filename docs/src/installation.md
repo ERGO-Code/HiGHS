@@ -2,9 +2,9 @@
 
 ## Install via a package manager
 
-In most programming languages supported by HiGHS, such as `Julia`, `Python`, and
-`Rust`, you can install HiGHS using the languages package manager. Conssult the
-corresponding interface documentation for details.
+HiGHS can be installed using a package manager in the cases of
+[`Julia`](@ref HiGHS.jl), [`Python`](@ref Get-started-in-Python), and
+[`Rust`](@ref Rust).
 
 ## Precompiled Binaries
 
