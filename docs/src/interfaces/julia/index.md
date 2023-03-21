@@ -57,21 +57,20 @@ and provide a link to the gist in the GitHub issue.
 
 ## C API
 
-HiGHS.jl is a thin wrapper around the complete C API. For details, see
-[HiGHS in C](@ref).
+HiGHS.jl is a thin wrapper around the complete [HiGHS C API](@ref c-api).
 
 As a basic example, we solve the problem:
 
 ```math
-\begin{array}
-\min          \quad & x + y \\
-\mathrm{s.t.} \quad & 5 \le x + 2y \le 15   \\
-                    & 6 \le 3x + 2y         \\
-                    & 0 \le x \le 4         \\
-                    & 1 \le y               \\
-                    & y \in \mathbb{Z}.
+\begin{aligned}
+\min                \quad & x + y \\
+\textrm{subject to} \quad & 5 \le x + 2y \le 15   \\
+                          & 6 \le 3x + 2y         \\
+                          & 0 \le x \le 4         \\
+                          & 1 \le y               \\
+                          & y \in \mathbb{Z}.
 
-\end{array}
+\end{aligned}
 ```
 
 Here is the corresponding Julia code:

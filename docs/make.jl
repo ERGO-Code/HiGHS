@@ -53,9 +53,10 @@ Documenter.makedocs(
             "guide/advanced.md"
         ],
 	"Data structures" => Any[
+	    "structures/index.md",
 	    "structures/enums.md",
 	    "Classes" => Any[
-                "structures/classes/classes.md",
+                "structures/classes/index.md",
                 "structures/classes/HighsSparseMatrix.md",
                 "structures/classes/HighsLp.md",
                 "structures/classes/HighsSolution.md",
@@ -69,7 +70,7 @@ Documenter.makedocs(
                 "interfaces/python/example-py.md",
             ],
             "C++" => Any[
-                "Get started in C++" => "interfaces/cpp/get-started.md",
+                "interfaces/cpp/index.md",
                 "The HiGHS library" => "interfaces/cpp/library.md",
                 "Linking" => "interfaces/cpp/link.md",
                 "Examples" => "interfaces/cpp/examples.md",

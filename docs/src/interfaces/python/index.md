@@ -1,4 +1,4 @@
-# Get started in Python
+# [Getting started](@id python-getting-started)
 
 ## Install
 

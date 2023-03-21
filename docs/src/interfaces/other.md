@@ -31,11 +31,11 @@ Here are observations on calling HiGHS from C#:
 This is the normal way to call plain old C from C# with the great simplification
 that you don't have to write the PInvoke declarations yourself.
 
-## Fortran
+## [Fortran](@id fortran-api)
 
 The interface is in
 [`highs_fortran_api.f90`](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces/highs_fortran_api.f90). Its
-methods are simply bindings to the [`C` API](@ref HiGHS-in-C)
+methods are simply bindings to the [`C` API](@ref c-api)
 
 To include in the build, switch the Fortran CMake parameter on:
 ```

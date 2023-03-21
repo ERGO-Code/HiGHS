@@ -3,7 +3,7 @@
 ## Install via a package manager
 
 HiGHS can be installed using a package manager in the cases of
-[`Julia`](@ref HiGHS.jl), [`Python`](@ref Get-started-in-Python), and
+[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), and
 [`Rust`](@ref Rust).
 
 ## Precompiled Binaries

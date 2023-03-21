@@ -54,7 +54,7 @@ with links to examples of its use in the `Python` interface `highspy`. This make
 structures and enums, and is as close as possible to the native C++ library
 calls. These can be studied via the [C++ header file](https://github.com/ERGO-Code/HiGHS/blob/master/src/Highs.h).
 
-The C interface cannot make use of the C++ structures and enums, and its methods are documented [explicitly](@ref HiGHS-in-C).
+The C interface cannot make use of the C++ structures and enums, and its methods are documented [explicitly](@ref c-api).
 
 ## Solution algorithms
 

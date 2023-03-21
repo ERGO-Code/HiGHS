@@ -1,4 +1,4 @@
-# HiGHS in C
+# [C](@id c-api)
 
 ```@autodocs
 Modules = [Main]
