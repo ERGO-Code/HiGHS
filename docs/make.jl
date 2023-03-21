@@ -53,14 +53,14 @@ Documenter.makedocs(
             "guide/advanced.md"
         ],
 	"Data structures" => Any[
-	    "interfaces/python/enums.md",
+	    "structures/enums.md",
 	    "Classes" => Any[
-                "interfaces/python/classes/Index.md",
-                "interfaces/python/classes/HighsSparseMatrix.md",
-                "interfaces/python/classes/HighsLp.md",
-                "interfaces/python/classes/HighsSolution.md",
-                "interfaces/python/classes/HighsBasis.md",
-                "interfaces/python/classes/HighsInfo.md",
+                "structures/classes/classes.md",
+                "structures/classes/HighsSparseMatrix.md",
+                "structures/classes/HighsLp.md",
+                "structures/classes/HighsSolution.md",
+                "structures/classes/HighsBasis.md",
+                "structures/classes/HighsInfo.md",
             ],
 	],
         "Interfaces" => Any[
