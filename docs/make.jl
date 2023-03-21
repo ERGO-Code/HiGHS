@@ -52,19 +52,21 @@ Documenter.makedocs(
             "guide/basic.md",
             "guide/advanced.md"
         ],
+	"Data structures" => Any[
+	    "interfaces/python/enums.md",
+	    "Classes" => Any[
+                "interfaces/python/classes/Index.md",
+                "interfaces/python/classes/HighsSparseMatrix.md",
+                "interfaces/python/classes/HighsLp.md",
+                "interfaces/python/classes/HighsSolution.md",
+                "interfaces/python/classes/HighsBasis.md",
+                "interfaces/python/classes/HighsInfo.md",
+            ],
+	],
         "Interfaces" => Any[
             "Python" => Any[
                 "interfaces/python/index.md",
-                "interfaces/python/enums.md",
                 "interfaces/python/example-py.md",
-                "Classes" => Any[
-                    "interfaces/python/classes/Index.md",
-                    "interfaces/python/classes/HighsSparseMatrix.md",
-                    "interfaces/python/classes/HighsLp.md",
-                    "interfaces/python/classes/HighsSolution.md",
-                    "interfaces/python/classes/HighsBasis.md",
-                    "interfaces/python/classes/HighsInfo.md",
-                ],
             ],
             "C++" => Any[
                 "Get started in C++" => "interfaces/cpp/get-started.md",

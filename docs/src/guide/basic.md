@@ -3,7 +3,7 @@
 This guide describes the basic features of HiGHS that are available
 when it is called from [`Python`](@ref Get-started-in-Python),
 [`C++`](@ref Getting-started), [`C`](@ref HiGHS-in-C) and
-[`Fortran`](@ref Fortran). Although references to method names link to
+[`Fortran`](@ref Fortran). Although references to methods link to
 `Python` examples, the method names and functionality for other
 interfaces are as close as possible.
 
@@ -24,7 +24,13 @@ _Intro to other basic features_
 
 ## HiGHS data structures
 
-
+There are several specialist data structures that can be used to
+interact with HiGHS when using [`C++`](@ref Getting-started) and
+`highspy`. These are defined in the sections on [enums](@ref Enums)
+and [classes](@ref Classes), and are referred to below. However, the
+use of classes is not necessary for the basic use of `highspy`. As
+with the `C` and `Fortran` interfaces, there are equivalent methods
+that use simple scalars and vectors of data.
 
 ## Defining a model
 
