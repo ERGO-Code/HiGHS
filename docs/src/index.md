@@ -16,7 +16,7 @@ under the MIT licence and has no third-party dependencies.
 HiGHS can solve linear programming (LP) models of the form:
 ```math
 \begin{aligned}
-\min                \quad & c^T x        \\
+\min                \quad & c^T\! x        \\
 \textrm{subject to} \quad & L \le Ax \le U  \\
                           & l \le x \le u,
 \end{aligned}
@@ -25,7 +25,7 @@ as well as mixed integer linear programming (MILP) models of the same form, for
 which some of the variables must take integer values.
 
 HiGHS also solves quadratic programming (QP) models, which contain an additional
-objective term ``\frac{1}{2}x^T Q x``, where the Hessian matrix ``Q`` is
+objective term ``\frac{1}{2}x^T\! Q x``, where the Hessian matrix ``Q`` is
 positive semi-definite. HiGHS cannot solve QP models where some of the variables
 must take integer values.
 

@@ -14,7 +14,7 @@ or create and populate an instance of the `HighsLp` class, and call
 Highs::passModel(const HighsLp& lp)
 ```
 
-For loading models from a file, use
+For reading models from a file, use
 ```
 Highs::readModel(const std::string& filename)
 ```
