@@ -70,7 +70,7 @@ Q. Huangfu and J. A. J. Hall,
 _Mathematical Programming Computation_, 10 (1), 119-142, 2018.
 DOI: [10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5)
 
-## Performance bennchmarks
+## Performance benchmarks
 
 The performance of HiGHS relative to some commercial and open-source simplex
 solvers may be assessed via the Mittlemann benchmarks:

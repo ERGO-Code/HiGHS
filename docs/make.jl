@@ -37,6 +37,7 @@ Documenter.makedocs(
     ),
     strict = !("strict=false" in ARGS),
     doctest = ("doctest=only" in ARGS) ? :only : true,
+    repo = "https://github.com/ERGO-Code/HiGHS/tree/latest{path}",
     linkcheck = true,
     linkcheck_ignore = [
         "https://crates.io/crates/highs",
