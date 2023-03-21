@@ -842,7 +842,7 @@ HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
 double Highs_getObjectiveValue(const void* highs);
 
 /**
- * Get the indices of the rows and columns that make up the basis matrix of a
+ * Get the indices of the rows and columns that make up the basis matrix ``B`` of a
  * basic feasible solution.
  *
  * Non-negative entries are indices of columns, and negative entries are
@@ -867,9 +867,9 @@ double Highs_getObjectiveValue(const void* highs);
 HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables);
 
 /**
- * Get a row of the inverse basis matrix \f$B^{-1}\f$.
+ * Get a row of the inverse basis matrix ``B^{-1}``.
  *
- * See `Highs_getBasicVariables` for a description of the `B` matrix.
+ * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `row_vector` and `row_index` must have an allocated length of
  * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
@@ -890,9 +890,9 @@ HighsInt Highs_getBasisInverseRow(const void* highs, const HighsInt row,
                                   HighsInt* row_index);
 
 /**
- * Get a column of the inverse basis matrix \f$B^{-1}\f$.
+ * Get a column of the inverse basis matrix ``B^{-1}``.
  *
- * See `Highs_getBasicVariables` for a description of the `B` matrix.
+ * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `col_vector` and `col_index` must have an allocated length of
  * [num_row]. However, check `col_num_nz` to see how many non-zero elements are
@@ -913,17 +913,17 @@ HighsInt Highs_getBasisInverseCol(const void* highs, const HighsInt col,
                                   HighsInt* col_index);
 
 /**
- * Compute \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
- * \f$\mathbf{b}\f$.
+ * Compute ``\mathbf{x}=B^{-1}\mathbf{b}`` for a given vector
+ * ``\mathbf{b}``.
  *
- * See `Highs_getBasicVariables` for a description of the `B` matrix.
+ * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `solution_vector` and `solution_index` must have an allocated
  * length of [num_row]. However, check `solution_num_nz` to see how many
  * non-zero elements are actually stored.
  *
  * @param highs             A pointer to the Highs instance.
- * @param rhs               The right-hand side vector `b`.
+ * @param rhs               The right-hand side vector ``b``.
  * @param solution_vector   An array of length [num_row] in which to store the
  *                          values of the non-zero elements.
  * @param solution_num_nz   The number of non-zeros in the solution.
@@ -937,17 +937,17 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
                              HighsInt* solution_index);
 
 /**
- * Compute \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
- * \f$\mathbf{b}\f$.
+ * Compute ``\mathbf{x}=B^{-T}\mathbf{b}`` for a given vector
+ * ``\mathbf{b}``.
  *
- * See `Highs_getBasicVariables` for a description of the `B` matrix.
+ * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `solution_vector` and `solution_index` must have an allocated
  * length of [num_row]. However, check `solution_num_nz` to see how many
  * non-zero elements are actually stored.
  *
  * @param highs             A pointer to the Highs instance.
- * @param rhs               The right-hand side vector `b`
+ * @param rhs               The right-hand side vector ``b``
  * @param solution_vector   An array of length [num_row] in whcih to store the
  *                          values of the non-zero elements.
  * @param solution_num_nz   The number of non-zeros in the solution.
@@ -962,9 +962,9 @@ HighsInt Highs_getBasisTransposeSolve(const void* highs, const double* rhs,
                                       HighsInt* solution_index);
 
 /**
- * Compute a row of \f$B^{-1}A\f$.
+ * Compute a row of ``B^{-1}A``.
  *
- * See `Highs_getBasicVariables` for a description of the `B` matrix.
+ * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `row_vector` and `row_index` must have an allocated length of
  * [num_row]. However, check `row_num_nz` to see how many non-zero elements are
@@ -985,9 +985,9 @@ HighsInt Highs_getReducedRow(const void* highs, const HighsInt row,
                              HighsInt* row_index);
 
 /**
- * Compute a column of \f$B^{-1}A\f$.
+ * Compute a column of ``B^{-1}A``.
  *
- * See `Highs_getBasicVariables` for a description of the `B` matrix.
+ * See `Highs_getBasicVariables` for a description of the ``B`` matrix.
  *
  * The arrays `col_vector` and `col_index` must have an allocated length of
  * [num_row]. However, check `col_num_nz` to see how many non-zero elements are
