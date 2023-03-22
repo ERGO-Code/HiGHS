@@ -41,6 +41,15 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
                  filename.c_str());
     reader = NULL;
 #endif
+  } else if (extension == "zip") {
+#ifdef ZLIB_FOUND
+    extension = getFilenameExt(filename.substr(0, filename.size() - 4));
+#else
+    highsLogUser(log_options, HighsLogType::kError,
+                 "HiGHS build without zlib support. Cannot read .zip file.\n",
+                 filename.c_str());
+    reader = NULL;
+#endif
   }
   if (extension.compare("mps") == 0) {
     reader = new FilereaderMps();
@@ -85,7 +94,7 @@ std::string extractModelName(const std::string filename) {
   std::size_t found = name.find_last_of("/\\");
   if (found < name.size()) name = name.substr(found + 1);
   found = name.find_last_of(".");
-  if (name.substr(found + 1) == "gz") {
+  if (name.substr(found + 1) == "gz" || name.substr(found + 1) == "zip") {
     name.erase(found, name.size() - found);
     found = name.find_last_of(".");
   }

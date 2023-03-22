@@ -55,7 +55,7 @@ import highspy
 
 h = highspy.Highs()
 filename = 'model.mps'
-status = h.readModel(filename)
-status = h.run()
-print('Model ', filename, ' has return status ', h.modelStatusToString(h.getModelStatus()))
+h.readModel(filename)
+h.run()
+print('Model ', filename, ' has status ', h.getModelStatus())
 ```
