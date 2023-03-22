@@ -32,10 +32,8 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    HighsBasis basis;
-    solution = highs.getSolution();
-    basis = highs.getBasis();
+    const HighsSolution& solution = highs.getSolution();
+    const HighsBasis& basis = highs.getBasis();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
@@ -87,8 +85,7 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    solution = highs.getSolution();
+    const HighsSolution& solution = highs.getSolution();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
     const bool copy_col_value =
@@ -132,10 +129,8 @@ HighsInt Highs_qpCall(
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    HighsBasis basis;
-    solution = highs.getSolution();
-    basis = highs.getBasis();
+    const HighsSolution& solution = highs.getSolution();
+    const HighsBasis& basis = highs.getBasis();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
@@ -430,7 +425,7 @@ HighsInt Highs_getInfoType(const void* highs, const char* info,
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
-  HighsSolution solution = ((Highs*)highs)->getSolution();
+  const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
@@ -460,7 +455,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
-  HighsBasis basis = ((Highs*)highs)->getBasis();
+  const HighsBasis& basis = ((Highs*)highs)->getBasis();
   for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
     col_status[i] = (HighsInt)basis.col_status[i];
   }

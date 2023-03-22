@@ -842,8 +842,8 @@ HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
 double Highs_getObjectiveValue(const void* highs);
 
 /**
- * Get the indices of the rows and columns that make up the basis matrix ``B`` of a
- * basic feasible solution.
+ * Get the indices of the rows and columns that make up the basis matrix ``B``
+ * of a basic feasible solution.
  *
  * Non-negative entries are indices of columns, and negative entries are
  * `-row_index - 1`. For example, `{1, -1}` would be the second column and first
