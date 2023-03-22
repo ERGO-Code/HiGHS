@@ -1,4 +1,4 @@
-# [Example](@id example-py)
+# [Examples](@id example-py)
 
 ## Initialize HiGHS
 
