@@ -49,7 +49,9 @@ Documenter.makedocs(
         "installation.md",
         "Executable" => "executable.md",
         "Guide" => Any[
+            "guide/index.md",
             "guide/basic.md",
+            "guide/further.md",
             "guide/advanced.md"
         ],
 	"Data structures" => Any[

@@ -42,7 +42,7 @@ parallel dual simplex solver is unlikely to be worth using.
 ## MIP
 
 The only parallel computation currently implemented in the MIP solver
-occurs when performing symmetry detection on the problem, and when
+occurs when performing symmetry detection on the model, and when
 querying clique tables. This parallelism is always advantageous, so is
 performed regardless of the value of the
 [parallel](@ref) option.
