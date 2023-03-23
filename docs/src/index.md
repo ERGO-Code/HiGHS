@@ -49,7 +49,7 @@ and computer-readable formats.
 
 The HiGHS shared library allows models to be loaded, built and modified. It can
 also be used to extract solution data and perform other operations relating to
-the incumbent model. The basic functionality is introduced via a [`Guide`](@ref Basic-features),
+the incumbent model. The basic functionality is introduced via a [`Guide`](@ref guide-basic),
 with links to examples of its use in the `Python` interface `highspy`. This makes use of the C++
 structures and enums, and is as close as possible to the native C++ library
 calls. These can be studied via the [C++ header file](https://github.com/ERGO-Code/HiGHS/blob/master/src/Highs.h).

@@ -47,7 +47,7 @@ the [examples section](@ref example-py), it is referred to as `status`.
 
 ## First example
 
-The following Python code reads a problem from the file `model.mps`, and then
+The following Python code reads a model from the file `model.mps`, and then
 solves it.
 
 ```python

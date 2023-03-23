@@ -1,4 +1,4 @@
-# Advanced features
+# [Advanced features](@id guide-advanced)
 
 
 ## Simplex tableau data

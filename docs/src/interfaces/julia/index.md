@@ -59,7 +59,7 @@ and provide a link to the gist in the GitHub issue.
 
 HiGHS.jl is a thin wrapper around the complete [HiGHS C API](@ref c-api).
 
-As a basic example, we solve the problem:
+As a basic example, we solve the model:
 
 ```math
 \begin{aligned}

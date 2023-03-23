@@ -1,16 +1,4 @@
-# Basic features
-
-This guide describes the basic features of HiGHS that are available
-when it is called from [`Python`](@ref python-getting-started),
-[`C++`](@ref cpp-getting-started), [`C`](@ref c-api) and
-[`Fortran`](@ref fortran-api). Although references to methods link to
-`Python` examples, the method names and functionality for other
-interfaces are as close as possible.
-
-This basic guide will be sufficient for most users, and covers all the
-methods in the `Python` interface `highspy`. A guide to more advanced
-methods available via other interfaces is [available](@ref
-Advanced-features).
+# [Basic features](@id guide-basic)
 
 The minimal use of HiGHS has the following three stages.
 
@@ -18,7 +6,8 @@ The minimal use of HiGHS has the following three stages.
 * [Solve the model](@ref Solving-the-model)
 * [Extract results](@ref Extracting-results)
 
-Although its default actions will be sufficient for most users, HiGHS can be controlled by setting [Option values](@ref Option-values).
+Although its default actions will be sufficient for most users, HiGHS
+can be controlled by setting [Option values](@ref Option-values).
 
 _Intro to other basic features_
 
@@ -47,19 +36,21 @@ the method [`readModel`](@ref Read-a-model). HiGHS infers the file type by the e
  * `.mps`: for an MPS file
  * `.lp`: for a CPLEX LP file
  
-HiGHS can read compressed files that end in the `.gz` extension.
+HiGHS can read compressed files that end in the `.gz` extension, but
+not (yet) files that end in the `.zip` extension.
 
 ### Building a model
 
 The model in HiGHS can be built using a sequence of calls to add
 variables and constraints. This is most easily done one-by-one using
-the methods [`addCol` and `addRow`](@ref Build-a-model). Alterntively,
-[`addVar` and `addRow`](@ref Build-a-model) can be used, with
-[`changeColCost`](@ref Build-a-model) used to define each objective
-coefficient.
+the methods [`addCol` and `addRow`](@ref
+Build-a-model). Alternatively, calls to [`addVar`](@ref Build-a-model)
+can be used to add variables, with calls to [`changeColCost`](@ref
+Build-a-model) used to define each objective coefficient.
 
 Addition of multiple variables and constraints can be achieved using
-[`addVars` and `addRows`](@ref Build-a-model), with
+[`addCols` and `addRows`](@ref Build-a-model). Alternatively,
+[`addVars`](@ref Build-a-model) can be used to add variables, with
 [`changeColsCost`](@ref Build-a-model) used to define objective
 coefficients. Note that defining the model in this way requires
 vectors of data and the specification of constraint coefficients as
@@ -71,17 +62,21 @@ matrices.
 
 ### Passing a model
 
-If the entire definition of a model is known, then is can be passed to
+If the entire definition of a model is known, then it can be passed to
 HiGHS via individual data arrays using the method [`passModel`](@ref
 Pass-a-model). In languages where HiGHS data structures can be used,
-an instance of the [`HighsLp`](@ref HighsLp) class can be passed.
+an instance of the [`HighsLp`](@ref HighsLp) class can be populated
+with data and then passed.
 
 ## Solving the model
 
-The incumbent model in HiGHS is solved by a call to the method [run](@ref Solve-the-model).
-By default, HiGHS minimizes the model's objective function. Where possible,
-HiGHS will hot start the solver using solution information obtained on previous
-runs, or supplied by the user.
+The incumbent model in HiGHS is solved by a call to the method
+[run](@ref Solve-the-model). By default, HiGHS minimizes the model's
+objective function, although this can be [changed](@ref
+Modifying-model-data). Where possible, HiGHS will reduce the solution
+time by using data obtained on previous runs, or supplied by the
+user. More information on this process of hot starting solvers is
+given [below](@ref hot-start).
 
 ## Extracting results
 
@@ -133,7 +128,7 @@ data can be extracted using the methods [getCols](@ref Get-model-data),
 
 Specific matrix coefficients obtained using the method [getCoeff](@ref Get-model-data).
 
-### Modifying model data
+## Modifying model data
 
 The most immediate model modification is to change the sense of the objective.
 By default, HiGHS minimizes the model's objective function. The objective sense
@@ -150,8 +145,3 @@ using the methods [changeColsCost](@ref Modify-model-data),
 is [changeRowsBounds](@ref Modify-model-data). An individual matrix coefficient
 is changed by passing its row index, column index and new value to
 [changeCoeff](@ref Modify-model-data).
-
-### Other operations
-
-To run HiGHS from a user-defined solution or basis, this is passed to HiGHS
-using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis).

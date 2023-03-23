@@ -128,10 +128,10 @@ Any point for which the discrete variables satisfy their requirements,
 is said to be __integer feasible__. The objective value at such a
 point is an upper bound on the optimal objective value. The least such
 bound is known as the __primal bound__. The MIP solver generates a
-sequence of LP problems, each of which has bounds on the variables
-that are tighter than those of the original problem. When unsolved,
-there is a bound on the optimal objective value for each such LP and,
-the greatest such bound is known as the __dual bound__. The optimal
+sequence of LPs, each of which has bounds on the variables that are
+tighter than those of the original model. When unsolved, there is a
+bound on the optimal objective value for each such LP and, the
+greatest such bound is known as the __dual bound__. The optimal
 objective value of the MIP cannot be less than the dual bound. Hence
 the gap between the primal and dual bounds is a measure of progress of
 the MIP solver. Although the absolute gap is of some interest, the gap
