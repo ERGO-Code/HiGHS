@@ -22,9 +22,9 @@ before-all = [
   "cp -r /host/home/ivet/HiGHS  .",
   "cd HiGHS",
   "rm -rf build && mkdir build",
-  "rm -rf src/interfaces/highspy/build",
-  "rm -rf src/interfaces/highspy/highspy.egg-info",
-  "rm -rf src/interfaces/highspy/highspy/*.so",
+  "rm -rf /highspy/build",
+  "rm -rf highspy/highspy.egg-info",
+  "rm -rf highspy/highspy/*.so",
 ]
 
 before-build = [

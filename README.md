@@ -118,7 +118,7 @@ library as described above, ensure the shared library is in the
 
     pip install ./
 
-from `src/interfaces/highspy` (there should be a `setup.py` file there).
+from the HiGHS directory.
 
 You may also require
 
