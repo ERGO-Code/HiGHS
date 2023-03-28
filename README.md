@@ -33,7 +33,7 @@ The project has an entry on Wikipedia: https://en.wikipedia.org/wiki/HiGHS_optim
 Documentation
 -------------
 
-The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available via https://www.highs.dev.
+The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is [ergo-code.github.io](available from https://ergo-code.github.io/HiGHS/dev/).
 
 Download
 --------
