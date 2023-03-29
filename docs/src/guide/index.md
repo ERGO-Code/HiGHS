@@ -15,4 +15,4 @@ interfaces are as close as possible.
 
 The [advanced](@ref guide-advanced) section covers features in the
 [`C++`](@ref cpp-getting-started), [`C`](@ref c-api) and
-[`Fortran`](@ref fortran-api) that are not in highspy`.
+[`Fortran`](@ref fortran-api) that are not in `highspy`.

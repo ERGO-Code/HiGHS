@@ -1,4 +1,4 @@
-# List of options
+# [List of options](@id option-definitions)
 
 ## presolve
 - Presolve option: "off", "choose" or "on"

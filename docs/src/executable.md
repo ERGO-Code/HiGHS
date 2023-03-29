@@ -46,6 +46,6 @@ Usage:
   -h, --help                    Print help.
 ```
 
-The [List of options](@ref) section gives a full list of options, and the format
-in which they are specified.
+The [list of options](@ref option-definitions) section gives a full
+list of options, and the format in which they are specified.
 

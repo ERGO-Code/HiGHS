@@ -75,11 +75,12 @@ DOI: [10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s1253
 The performance of HiGHS relative to some commercial and open-source simplex
 solvers may be assessed via the Mittlemann benchmarks:
 
- * [LP benchmarks](http://plato.asu.edu/ftp/lpopt.html)
+ * [LP (find primal-dual feasible point)](http://plato.asu.edu/ftp/lpfeas.html)
+ * [LP (find optimal basic solution)](http://plato.asu.edu/ftp/lpopt.html)
  * [MILP benchmarks](http://plato.asu.edu/ftp/milp.html).
 
 ## Feedback
 
 Your comments or specific questions on HiGHS would be greatly appreciated, so
 please send an email to `highsopt@gmail.com` to get in touch with the
-sdevelopment team.
+development team.
