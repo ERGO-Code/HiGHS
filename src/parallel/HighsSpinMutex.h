@@ -32,6 +32,7 @@ class HighsSpinMutex {
 #ifdef HIGHS_HAVE_MM_PAUSE
     _mm_pause();
 #else
+    // ToDo: See if this is OK on Mac M1
     std::this_thread::yield();
 #endif
   }

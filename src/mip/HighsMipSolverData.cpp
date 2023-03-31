@@ -1583,6 +1583,9 @@ restart:
 }
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
+  // ToDo Add user termination callback here -
+  // if (!mipsolver.submip) Callbackfor termination
+
   const HighsOptions& options = *mipsolver.options_mip_;
 
   if (options.mip_max_nodes != kHighsIInf &&
