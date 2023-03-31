@@ -1583,7 +1583,6 @@ restart:
 }
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
-
   // ToDo Add user termination callback here -
   // if (!mipsolver.submip) Callbackfor termination
 
