@@ -1228,6 +1228,7 @@ void test_ranging() {
   double* row_bound_dn_objective = (double*)malloc(sizeof(double) * num_row);
   int* row_bound_dn_in_var = (int*)malloc(sizeof(int) * num_row);
   int* row_bound_dn_ou_var = (int*)malloc(sizeof(int) * num_row);
+  int status = 
   Highs_getRanging(highs,
 		   col_cost_up_value, col_cost_up_objective, col_cost_up_in_var, col_cost_up_ou_var, 
 		   col_cost_dn_value, col_cost_dn_objective, col_cost_dn_in_var, col_cost_dn_ou_var, 
@@ -1235,6 +1236,7 @@ void test_ranging() {
 		   col_bound_dn_value, col_bound_dn_objective, col_bound_dn_in_var, col_bound_dn_ou_var, 
 		   row_bound_up_value, row_bound_up_objective, row_bound_up_in_var, row_bound_up_ou_var, 
 		   row_bound_dn_value, row_bound_dn_objective, row_bound_dn_in_var, row_bound_dn_ou_var);
+  printf("Status = %d, col_cost_dn_objective[0] = %g\n", status, col_cost_dn_objective[0]);
   assertDoubleValuesEqual("col_cost_dn_objective[0]", col_cost_dn_objective[0], 2);
   assertDoubleValuesEqual("col_cost_dn_value[0]", col_cost_dn_value[0], -1);
   assertDoubleValuesEqual("col_cost_up_value[0]", col_cost_up_value[0], 1);
