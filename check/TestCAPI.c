@@ -1178,7 +1178,7 @@ void test_passHessian() {
 void test_ranging() {
 
   void* highs = Highs_create();
-  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  //  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
 
   double inf = Highs_getInfinity(highs);
   Highs_addVar(highs, -inf, inf);
@@ -1235,32 +1235,58 @@ void test_ranging() {
 		   col_bound_dn_value, col_bound_dn_objective, col_bound_dn_in_var, col_bound_dn_ou_var, 
 		   row_bound_up_value, row_bound_up_objective, row_bound_up_in_var, row_bound_up_ou_var, 
 		   row_bound_dn_value, row_bound_dn_objective, row_bound_dn_in_var, row_bound_dn_ou_var);
-  assertDoubleValuesEqual("", col_cost_dn_objective[0], 2);
-  assertDoubleValuesEqual("", col_cost_dn_value[0], -1);
-  assertDoubleValuesEqual("", col_cost_up_value[0], 1);
-  assertDoubleValuesEqual("", col_cost_up_objective[0], 0);
-  assertDoubleValuesEqual("", col_cost_dn_objective[1], 0);
-  assertDoubleValuesEqual("", col_cost_dn_value[1], 0);
-  assertDoubleValuesEqual("", col_cost_up_value[1], inf);
-  assertDoubleValuesEqual("", col_cost_up_objective[1], inf);
+  assertDoubleValuesEqual("col_cost_dn_objective[0]", col_cost_dn_objective[0], 2);
+  assertDoubleValuesEqual("col_cost_dn_value[0]", col_cost_dn_value[0], -1);
+  assertDoubleValuesEqual("col_cost_up_value[0]", col_cost_up_value[0], 1);
+  assertDoubleValuesEqual("col_cost_up_objective[0]", col_cost_up_objective[0], 0);
+  assertDoubleValuesEqual("col_cost_dn_objective[1]", col_cost_dn_objective[1], 0);
+  assertDoubleValuesEqual("col_cost_dn_value[1]", col_cost_dn_value[1], 0);
+  assertDoubleValuesEqual("col_cost_up_value[1]", col_cost_up_value[1], inf);
+  assertDoubleValuesEqual("col_cost_up_objective[1]", col_cost_up_objective[1], inf);
 
-  assertDoubleValuesEqual("", col_bound_dn_objective[0], 1);
-  assertDoubleValuesEqual("", col_bound_dn_value[0], -inf);
-  assertDoubleValuesEqual("", col_bound_up_value[0], inf);
-  assertDoubleValuesEqual("", col_bound_up_objective[0], 1);
-  assertDoubleValuesEqual("", col_bound_dn_objective[1], 1);
-  assertDoubleValuesEqual("", col_bound_dn_value[1], 1);
-  assertDoubleValuesEqual("", col_bound_up_value[1], inf);
-  assertDoubleValuesEqual("", col_bound_up_objective[1], 1);
+  assertDoubleValuesEqual("col_bound_dn_objective[0]", col_bound_dn_objective[0], 1);
+  assertDoubleValuesEqual("col_bound_dn_value[0]", col_bound_dn_value[0], -inf);
+  assertDoubleValuesEqual("col_bound_up_value[0]", col_bound_up_value[0], inf);
+  assertDoubleValuesEqual("col_bound_up_objective[0]", col_bound_up_objective[0], 1);
+  assertDoubleValuesEqual("col_bound_dn_objective[1]", col_bound_dn_objective[1], 1);
+  assertDoubleValuesEqual("col_bound_dn_value[1]", col_bound_dn_value[1], 1);
+  assertDoubleValuesEqual("col_bound_up_value[1]", col_bound_up_value[1], inf);
+  assertDoubleValuesEqual("col_bound_up_objective[1]", col_bound_up_objective[1], 1);
 
-  assertDoubleValuesEqual("", row_bound_dn_objective[0], -inf);
-  assertDoubleValuesEqual("", row_bound_dn_value[0], -inf);
-  assertDoubleValuesEqual("", row_bound_up_value[0], inf);
-  assertDoubleValuesEqual("", row_bound_up_objective[0], inf);
-  assertDoubleValuesEqual("", row_bound_dn_objective[1], -inf);
-  assertDoubleValuesEqual("", row_bound_dn_value[1], -inf);
-  assertDoubleValuesEqual("", row_bound_up_value[1], inf);
-  assertDoubleValuesEqual("", row_bound_up_objective[1], inf);
+  assertDoubleValuesEqual("row_bound_dn_objective[0]", row_bound_dn_objective[0], -inf);
+  assertDoubleValuesEqual("row_bound_dn_value[0]", row_bound_dn_value[0], -inf);
+  assertDoubleValuesEqual("row_bound_up_value[0]", row_bound_up_value[0], inf);
+  assertDoubleValuesEqual("row_bound_up_objective[0]", row_bound_up_objective[0], inf);
+  assertDoubleValuesEqual("row_bound_dn_objective[1]", row_bound_dn_objective[1], -inf);
+  assertDoubleValuesEqual("row_bound_dn_value[1]", row_bound_dn_value[1], -inf);
+  assertDoubleValuesEqual("row_bound_up_value[1]", row_bound_up_value[1], inf);
+  assertDoubleValuesEqual("row_bound_up_objective[1]", row_bound_up_objective[1], inf);
+
+  free(col_cost_up_value);
+  free(col_cost_up_objective);
+  free(col_cost_up_in_var);
+  free(col_cost_up_ou_var);
+  free(col_cost_dn_value);
+  free(col_cost_dn_objective);
+  free(col_cost_dn_in_var);
+  free(col_cost_dn_ou_var);
+  free(col_bound_up_value);
+  free(col_bound_up_objective);
+  free(col_bound_up_in_var);
+  free(col_bound_up_ou_var);
+  free(col_bound_dn_value);
+  free(col_bound_dn_objective);
+  free(col_bound_dn_in_var);
+  free(col_bound_dn_ou_var);
+  free(row_bound_up_value);
+  free(row_bound_up_objective);
+  free(row_bound_up_in_var);
+  free(row_bound_up_ou_var);
+  free(row_bound_dn_value);
+  free(row_bound_dn_objective);
+  free(row_bound_dn_in_var);
+  free(row_bound_dn_ou_var);
+
 }
 
 /*
