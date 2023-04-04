@@ -1876,18 +1876,20 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getRanging(
-    void* highs, double* col_cost_up_value, double* col_cost_up_objective,
-    int* col_cost_up_in_var, int* col_cost_up_ou_var, double* col_cost_dn_value,
-    double* col_cost_dn_objective, int* col_cost_dn_in_var,
-    int* col_cost_dn_ou_var, double* col_bound_up_value,
-    double* col_bound_up_objective, int* col_bound_up_in_var,
-    int* col_bound_up_ou_var, double* col_bound_dn_value,
-    double* col_bound_dn_objective, int* col_bound_dn_in_var,
-    int* col_bound_dn_ou_var, double* row_bound_up_value,
-    double* row_bound_up_objective, int* row_bound_up_in_var,
-    int* row_bound_up_ou_var, double* row_bound_dn_value,
-    double* row_bound_dn_objective, int* row_bound_dn_in_var,
-    int* row_bound_dn_ou_var);
+    void* highs,
+    //
+    double* col_cost_up_value, double* col_cost_up_objective,
+    HighsInt* col_cost_up_in_var, HighsInt* col_cost_up_ou_var,
+    double* col_cost_dn_value, double* col_cost_dn_objective,
+    HighsInt* col_cost_dn_in_var, HighsInt* col_cost_dn_ou_var,
+    double* col_bound_up_value, double* col_bound_up_objective,
+    HighsInt* col_bound_up_in_var, HighsInt* col_bound_up_ou_var,
+    double* col_bound_dn_value, double* col_bound_dn_objective,
+    HighsInt* col_bound_dn_in_var, HighsInt* col_bound_dn_ou_var,
+    double* row_bound_up_value, double* row_bound_up_objective,
+    HighsInt* row_bound_up_in_var, HighsInt* row_bound_up_ou_var,
+    double* row_bound_dn_value, double* row_bound_dn_objective,
+    HighsInt* row_bound_dn_in_var, HighsInt* row_bound_dn_ou_var);
 
 /**
  * Releases all resources held by the global scheduler instance.
