@@ -1179,14 +1179,18 @@ void test_ranging() {
 
   void* highs = Highs_create();
   //  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
-
+  //
+  // Set up
+  //        min y
+  //        s.t.
+  //        -x + y >= 2
+  //        x + y >= 0
+  //
   double inf = Highs_getInfinity(highs);
   Highs_addVar(highs, -inf, inf);
   Highs_addVar(highs, -inf, inf);
   Highs_changeColCost(highs, 0, 0);
   Highs_changeColCost(highs, 1, 1);
-  HighsInt num_col = Highs_getNumCol(highs);
-  HighsInt num_row = Highs_getNumRow(highs);
   HighsInt index[2] = {0.0, 1.0};
   double value[2] = {-1, 1};
   Highs_addRow(highs, 2, inf, 2, index, value);
@@ -1204,6 +1208,10 @@ void test_ranging() {
   // r0 -inf -inf inf inf
   // r1 -inf -inf inf inf
   Highs_run(highs);
+  HighsInt num_col = Highs_getNumCol(highs);
+  HighsInt num_row = Highs_getNumRow(highs);
+  assert(num_col == 2);
+  assert(num_row == 2);
   double* col_cost_up_value = (double*)malloc(sizeof(double) * num_col);
   double* col_cost_up_objective = (double*)malloc(sizeof(double) * num_col);
   HighsInt* col_cost_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
@@ -1237,7 +1245,9 @@ void test_ranging() {
 		   col_bound_dn_value, col_bound_dn_objective, col_bound_dn_in_var, col_bound_dn_ou_var, 
 		   row_bound_up_value, row_bound_up_objective, row_bound_up_in_var, row_bound_up_ou_var, 
 		   row_bound_dn_value, row_bound_dn_objective, row_bound_dn_in_var, row_bound_dn_ou_var);
+  assert(status == kHighsStatusOk);
   printf("Status = %d, col_cost_dn_objective[0] = %g\n", (int)status, col_cost_dn_objective[0]);
+
   assertDoubleValuesEqual("col_cost_dn_objective[0]", col_cost_dn_objective[0], 2);
   assertDoubleValuesEqual("col_cost_dn_value[0]", col_cost_dn_value[0], -1);
   assertDoubleValuesEqual("col_cost_up_value[0]", col_cost_up_value[0], 1);
