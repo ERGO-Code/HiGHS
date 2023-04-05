@@ -1830,6 +1830,68 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
                          const double* row_dual);
 
 /**
+ * Compute the ranging information for all costs and bounds. For
+ * nonbasic variables the ranging informaiton is relative to the
+ * active bound. For basic variables the ranging information relates
+ * to...
+ *
+ * @param highs                  A pointer to the Highs instance.
+ * @param col_cost_up_value      The upper range of the cost value
+ * @param col_cost_up_objective  The objective at the upper cost range
+ * @param col_cost_up_in_var     The variable entering the basis at the upper
+ *                               cost range
+ * @param col_cost_up_ou_var     The variable leaving the basis at the upper
+ *                               cost range
+ * @param col_cost_dn_value      The lower range of the cost value
+ * @param col_cost_dn_objective  The objective at the lower cost range
+ * @param col_cost_dn_in_var     The variable entering the basis at the lower
+ *                               cost range
+ * @param col_cost_dn_ou_var     The variable leaving the basis at the lower
+ *                               cost range
+ * @param col_bound_up_value     The upper range of the column bound value
+ * @param col_bound_up_objective The objective at the upper column bound range
+ * @param col_bound_up_in_var    The variable entering the basis at the upper
+ *                               column bound range
+ * @param col_bound_up_ou_var    The variable leaving the basis at the upper
+ *                               column bound range
+ * @param col_bound_dn_value     The lower range of the column bound value
+ * @param col_bound_dn_objective The objective at the lower column bound range
+ * @param col_bound_dn_in_var    The variable entering the basis at the lower
+ *                               column bound range
+ * @param col_bound_dn_ou_var    The variable leaving the basis at the lower
+ *                               column bound range
+ * @param row_bound_up_value     The upper range of the row bound value
+ * @param row_bound_up_objective The objective at the upper row bound range
+ * @param row_bound_up_in_var    The variable entering the basis at the upper
+ *                               row bound range
+ * @param row_bound_up_ou_var    The variable leaving the basis at the upper row
+ *                               bound range
+ * @param row_bound_dn_value     The lower range of the row bound value
+ * @param row_bound_dn_objective The objective at the lower row bound range
+ * @param row_bound_dn_in_var    The variable entering the basis at the lower
+ *                               row bound range
+ * @param row_bound_dn_ou_var    The variable leaving the basis at the lower row
+ *                               bound range
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getRanging(
+    void* highs,
+    //
+    double* col_cost_up_value, double* col_cost_up_objective,
+    HighsInt* col_cost_up_in_var, HighsInt* col_cost_up_ou_var,
+    double* col_cost_dn_value, double* col_cost_dn_objective,
+    HighsInt* col_cost_dn_in_var, HighsInt* col_cost_dn_ou_var,
+    double* col_bound_up_value, double* col_bound_up_objective,
+    HighsInt* col_bound_up_in_var, HighsInt* col_bound_up_ou_var,
+    double* col_bound_dn_value, double* col_bound_dn_objective,
+    HighsInt* col_bound_dn_in_var, HighsInt* col_bound_dn_ou_var,
+    double* row_bound_up_value, double* row_bound_up_objective,
+    HighsInt* row_bound_up_in_var, HighsInt* row_bound_up_ou_var,
+    double* row_bound_dn_value, double* row_bound_dn_objective,
+    HighsInt* row_bound_dn_in_var, HighsInt* row_bound_dn_ou_var);
+
+/**
  * Releases all resources held by the global scheduler instance.
  *
  * It is not thread-safe to call this function while calling `Highs_run` or one

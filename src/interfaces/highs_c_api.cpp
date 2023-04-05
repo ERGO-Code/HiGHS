@@ -1068,6 +1068,62 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
   return (HighsInt)((Highs*)highs)->crossover(solution);
 }
 
+HighsInt Highs_getRanging(
+    void* highs,
+    //
+    double* col_cost_up_value, double* col_cost_up_objective,
+    HighsInt* col_cost_up_in_var, HighsInt* col_cost_up_ou_var,
+    double* col_cost_dn_value, double* col_cost_dn_objective,
+    HighsInt* col_cost_dn_in_var, HighsInt* col_cost_dn_ou_var,
+    double* col_bound_up_value, double* col_bound_up_objective,
+    HighsInt* col_bound_up_in_var, HighsInt* col_bound_up_ou_var,
+    double* col_bound_dn_value, double* col_bound_dn_objective,
+    HighsInt* col_bound_dn_in_var, HighsInt* col_bound_dn_ou_var,
+    double* row_bound_up_value, double* row_bound_up_objective,
+    HighsInt* row_bound_up_in_var, HighsInt* row_bound_up_ou_var,
+    double* row_bound_dn_value, double* row_bound_dn_objective,
+    HighsInt* row_bound_dn_in_var, HighsInt* row_bound_dn_ou_var) {
+  HighsRanging ranging;
+  HighsInt status = (HighsInt)((Highs*)highs)->getRanging(ranging);
+  if (status == (HighsInt)HighsStatus::kError) return status;
+  HighsInt num_col = ((Highs*)highs)->getNumCol();
+  HighsInt num_row = ((Highs*)highs)->getNumRow();
+  for (HighsInt i = 0; i < num_col; i++) {
+    col_cost_up_value[i] = ranging.col_cost_up.value_[i];
+    col_cost_up_objective[i] = ranging.col_cost_up.objective_[i];
+    col_cost_up_in_var[i] = ranging.col_cost_up.in_var_[i];
+    col_cost_up_ou_var[i] = ranging.col_cost_up.ou_var_[i];
+
+    col_cost_dn_value[i] = ranging.col_cost_dn.value_[i];
+    col_cost_dn_objective[i] = ranging.col_cost_dn.objective_[i];
+    col_cost_dn_in_var[i] = ranging.col_cost_dn.in_var_[i];
+    col_cost_dn_ou_var[i] = ranging.col_cost_dn.ou_var_[i];
+
+    col_bound_up_value[i] = ranging.col_bound_up.value_[i];
+    col_bound_up_objective[i] = ranging.col_bound_up.objective_[i];
+    col_bound_up_in_var[i] = ranging.col_bound_up.in_var_[i];
+    col_bound_up_ou_var[i] = ranging.col_bound_up.ou_var_[i];
+
+    col_bound_dn_value[i] = ranging.col_bound_dn.value_[i];
+    col_bound_dn_objective[i] = ranging.col_bound_dn.objective_[i];
+    col_bound_dn_in_var[i] = ranging.col_bound_dn.in_var_[i];
+    col_bound_dn_ou_var[i] = ranging.col_bound_dn.ou_var_[i];
+  }
+  for (HighsInt i = 0; i < num_row; i++) {
+    row_bound_up_value[i] = ranging.row_bound_up.value_[i];
+    row_bound_up_objective[i] = ranging.row_bound_up.objective_[i];
+    row_bound_up_in_var[i] = ranging.row_bound_up.in_var_[i];
+    row_bound_up_ou_var[i] = ranging.row_bound_up.ou_var_[i];
+
+    row_bound_dn_value[i] = ranging.row_bound_dn.value_[i];
+    row_bound_dn_objective[i] = ranging.row_bound_dn.objective_[i];
+    row_bound_dn_in_var[i] = ranging.row_bound_dn.in_var_[i];
+    row_bound_dn_ou_var[i] = ranging.row_bound_dn.ou_var_[i];
+  }
+
+  return status;
+}
+
 void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking);
 }
