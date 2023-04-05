@@ -1,4 +1,4 @@
-# Enums
+# [Enums](@id structures-enums)
 
 The members of the fundamental HiGHS enums are defined below. If `Enum` refers
 to a particular enum, and `Member` to a particular member, the members are

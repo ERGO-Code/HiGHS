@@ -42,14 +42,14 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
     reader = NULL;
 #endif
     //  } else if (extension == "zip") {
-    //#ifdef ZLIB_FOUND
+    // #ifdef ZLIB_FOUND
     //    extension = getFilenameExt(filename.substr(0, filename.size() - 4));
-    //#else
+    // #else
     //    highsLogUser(log_options, HighsLogType::kError,
     //                 "HiGHS build without zlib support. Cannot read .zip
     //                 file.\n", filename.c_str());
     //    reader = NULL;
-    //#endif
+    // #endif
   }
   if (extension.compare("mps") == 0) {
     reader = new FilereaderMps();
