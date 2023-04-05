@@ -1,4 +1,4 @@
-name: test-python-api
+name: test-python-api-mac
 
 on: [push, pull_request]
 
@@ -26,8 +26,8 @@ jobs:
         shell: bash
         # Execute the build.  You can specify a specific target with "--target <NAME>"
         run: |
-          cmake --build . --parallel --config Release
-          cmake --install . --config Release
+          cmake --build . --parallel 
+          cmake --install .
 
         # HIGHS_LIB_DIR=${{runner.workspace}}/binstalls/highs/lib
         # echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
