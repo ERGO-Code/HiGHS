@@ -69,7 +69,7 @@ cc_library(
 
 cc_binary(
     name = "call-highs-example",
-    srcs= ["call_highs_from_cpp.cpp"],
+    srcs= ["examples/call_highs_from_cpp.cpp"],
     deps = [
         "//:highs",
     ],
