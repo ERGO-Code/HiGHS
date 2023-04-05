@@ -28,10 +28,9 @@ jobs:
         run: |
           cmake --build . --parallel 
           cmake --install .
-
-        # HIGHS_LIB_DIR=${{runner.workspace}}/binstalls/highs/lib
-        # echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
-        # echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
+          HIGHS_LIB_DIR=${{runner.workspace}}/build/lib
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
 
       - name: Install correct python version
         uses: actions/setup-python@v3
