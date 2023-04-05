@@ -1,0 +1,3 @@
+include LICENSE
+include highspy/highs_bindings.cpp
+include src/Highs.h
