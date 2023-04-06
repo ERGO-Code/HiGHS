@@ -113,6 +113,9 @@ if(PYTHON OR FORTRAN OR CSHARP)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
+# For Python interface
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
 # Basic type
 include(CMakePushCheckState)
 cmake_push_check_state(RESET)
