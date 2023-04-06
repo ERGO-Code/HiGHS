@@ -1835,6 +1835,8 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
  * active bound. For basic variables the ranging information relates
  * to...
  *
+ * For any values that are not required, pass NULL.
+ *
  * @param highs                  A pointer to the Highs instance.
  * @param col_cost_up_value      The upper range of the cost value
  * @param col_cost_up_objective  The objective at the upper cost range
