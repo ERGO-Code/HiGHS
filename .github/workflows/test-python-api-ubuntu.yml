@@ -16,10 +16,13 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
 
+      - name: Create Install dir
+        run: cmake -E make_directory ${{runner.workspace}}/installs
+
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=.
+        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/installs/highs
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -28,10 +31,9 @@ jobs:
         run: |
           cmake --build . --parallel 
           cmake --install .
-
-        # HIGHS_LIB_DIR=${{runner.workspace}}/binstalls/highs/lib
-        # echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
-        # echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
+          HIGHS_LIB_DIR=${{runner.workspace}}/installs/highs/lib
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
 
       - name: Install correct python version
         uses: actions/setup-python@v3
