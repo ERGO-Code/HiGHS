@@ -28,8 +28,22 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
 
     // Make an automatic decision for dualization if not specified by user.
     Int dualize = control.dualize();
-    if (dualize < 0)
-        dualize = num_constr > 2*num_var;
+    // dualize = -2 => Possibly dualize - Filippo style
+    // dualize = -1 => Possibly dualize - Lukas style
+    // dualize = 0 => No dualization
+    // dualize = 1 => Perform dualization
+    assert(dualize == -1);
+    const bool dualize_lukas = num_constr > 2*num_var;
+    const bool dualize_filippo = filippoDualizationTest();
+    if (dualize_lukas != dualize_filippo) {
+      printf("IPX Dualization: lukas = %d != %d = filippo\n", dualize_lukas, dualize_filippo);
+    }
+    printf("grepIpxDualization: %d,%d\n", dualize_lukas, dualize_filippo);
+    if (dualize == -1) {
+      dualize = dualize_lukas;
+    } else if (dualize == -2) {
+      dualize = dualize_filippo;
+    }
     if (dualize)
         LoadDual();
     else
@@ -49,6 +63,10 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
             norm_bounds_ = std::max(norm_bounds_, std::abs(x));
     PrintPreprocessingLog(control);
     return 0;
+}
+
+bool Model::filippoDualizationTest() const {
+  return false;
 }
 
 void Model::GetInfo(Info *info) const {

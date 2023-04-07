@@ -339,6 +339,7 @@ struct HighsOptionsStruct {
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
   HighsInt allowed_cost_scale_factor;
+  HighsInt ipx_dualize_strategy;
   HighsInt simplex_dualize_strategy;
   HighsInt simplex_permute_strategy;
   HighsInt max_dual_simplex_cleanup_level;
@@ -902,6 +903,12 @@ class HighsOptions : public HighsOptionsStruct {
         "allowed_cost_scale_factor",
         "Largest power-of-two factor permitted when scaling the costs",
         advanced, &allowed_cost_scale_factor, 0, 0, 20);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "ipx_dualize_strategy", "Strategy for dualizing before IPX", advanced,
+        &ipx_dualize_strategy, kIpxDualizeStrategyMin, kIpxDualizeStrategyLukas,
+        kIpxDualizeStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
