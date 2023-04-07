@@ -145,17 +145,17 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         return returnFromSolveLpSimplex(solver_object, call_status);
       }
     } else {
-      // Starting from a logical basis, so consider dualising and/or
+      // Starting from a logical basis, so consider dualizing and/or
       // permuting the LP
-      if (options.simplex_dualise_strategy == kHighsOptionChoose ||
-          options.simplex_dualise_strategy == kHighsOptionOn) {
-        // Dualise unless we choose not to
-        bool dualise_lp = true;
-        if (options.simplex_dualise_strategy == kHighsOptionChoose) {
+      if (options.simplex_dualize_strategy == kHighsOptionChoose ||
+          options.simplex_dualize_strategy == kHighsOptionOn) {
+        // Dualize unless we choose not to
+        bool dualize_lp = true;
+        if (options.simplex_dualize_strategy == kHighsOptionChoose) {
           if (incumbent_lp.num_row_ < 10 * incumbent_lp.num_col_)
-            dualise_lp = false;
+            dualize_lp = false;
         }
-        if (dualise_lp) ekk_instance.dualise();
+        if (dualize_lp) ekk_instance.dualize();
       }
       if (options.simplex_permute_strategy == kHighsOptionChoose ||
           options.simplex_permute_strategy == kHighsOptionOn) {
@@ -184,9 +184,9 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     return_status = ekk_instance.solve();
     solved_unscaled_lp = true;
     ekk_instance.unpermute();
-    ekk_instance.undualise();
+    ekk_instance.undualize();
     assert(!ekk_instance.status_.is_permuted &&
-           !ekk_instance.status_.is_dualised);
+           !ekk_instance.status_.is_dualized);
     if (options.cost_scale_factor) {
       double cost_scale_factor = pow(2.0, -options.cost_scale_factor);
       highsLogDev(options.log_options, HighsLogType::kInfo,
@@ -209,9 +209,9 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       //
       return_status = ekk_instance.solve();
       ekk_instance.unpermute();
-      ekk_instance.undualise();
+      ekk_instance.undualize();
       assert(!ekk_instance.status_.is_permuted &&
-             !ekk_instance.status_.is_dualised);
+             !ekk_instance.status_.is_dualized);
       //
       if (options.cost_scale_factor) {
         double cost_scale_factor = pow(2.0, -options.cost_scale_factor);

@@ -42,7 +42,7 @@ struct SimplexBasis {
 struct HighsSimplexStatus {
   // Status of LP solved by the simplex method and its data
   bool initialised_for_new_lp = false;
-  bool is_dualised = false;
+  bool is_dualized = false;
   bool is_permuted = false;
   bool initialised_for_solve = false;
   bool has_basis = false;      // The simplex LP has a valid simplex basis

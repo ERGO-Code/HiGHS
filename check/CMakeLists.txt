@@ -14,7 +14,7 @@ mip_abs_gap=0.0")
 set(TEST_SOURCES
     TestHighsVersion.cpp
     TestAlienBasis.cpp
-    TestDualise.cpp
+    TestDualize.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
     TestFactor.cpp
