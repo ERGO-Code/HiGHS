@@ -19,7 +19,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=.
+        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON 
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -28,10 +28,11 @@ jobs:
         run: |
           cmake --build . --parallel --config Release
           cmake --install .
-          $Env:HIGHS_LIB_DIR=${{runner.workspace}}/build/highs/lib
-          $Env:Path=$Env:Path+";"+ $Env:HIGHS_LIB_DIR
-          $Env:LIBPATH=$Env:LIBPATH+";"+ $Env:HIGHS_LIB_DIR
-          $Env:PYTHONPATH=$Env:PYTHONPATH+";"+ $Env:HIGHS_LIB_DIR
+
+        # $Env:HIGHS_LIB_DIR=${{runner.workspace}}/build/highs/lib
+        # $Env:Path=$Env:Path+";"+ $Env:HIGHS_LIB_DIR
+        # $Env:LIBPATH=$Env:LIBPATH+";"+ $Env:HIGHS_LIB_DIR
+        # $Env:PYTHONPATH=$Env:PYTHONPATH+";"+ $Env:HIGHS_LIB_DIR
         # echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
         # echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
 
