@@ -1,6 +1,6 @@
 name: test-python-api-win
 
-on: [push, pull_request]
+on: []
 
 jobs:
   build:
