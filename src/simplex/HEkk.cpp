@@ -35,7 +35,7 @@ void HEkk::clear() {
   // Clears Ekk entirely. Clears all associated pointers, data scalars
   // and vectors, and the status values.
   this->clearEkkLp();
-  this->clearEkkDualise();
+  this->clearEkkDualize();
   this->clearEkkData();
   this->clearEkkDualEdgeWeightData();
   this->clearEkkPointers();
@@ -93,7 +93,7 @@ void HEkk::clearEkkLp() {
   lp_name_ = "";
 }
 
-void HEkk::clearEkkDualise() {
+void HEkk::clearEkkDualize() {
   this->original_col_cost_.clear();
   this->original_col_lower_.clear();
   this->original_col_upper_.clear();
@@ -286,7 +286,7 @@ void HEkk::clearHotStart() {
 
 void HEkk::invalidate() {
   this->status_.initialised_for_new_lp = false;
-  assert(!this->status_.is_dualised);
+  assert(!this->status_.is_dualized);
   assert(!this->status_.is_permuted);
   this->status_.initialised_for_solve = false;
   this->invalidateBasisMatrix();
@@ -321,7 +321,7 @@ void HEkk::invalidateBasisArtifacts() {
 }
 
 void HEkk::updateStatus(LpAction action) {
-  assert(!this->status_.is_dualised);
+  assert(!this->status_.is_dualized);
   assert(!this->status_.is_permuted);
   switch (action) {
     case LpAction::kScale:
@@ -470,7 +470,7 @@ HighsSparseMatrix* HEkk::getScaledAMatrixPointer() {
   return local_scaled_a_matrix;
 }
 
-HighsStatus HEkk::dualise() {
+HighsStatus HEkk::dualize() {
   assert(lp_.a_matrix_.isColwise());
   original_num_col_ = lp_.num_col_;
   original_num_row_ = lp_.num_row_;
@@ -753,7 +753,7 @@ HighsStatus HEkk::dualise() {
   // Flip LP dimensions
   lp_.num_col_ = dual_num_col;
   lp_.num_row_ = dual_num_row;
-  status_.is_dualised = true;
+  status_.is_dualized = true;
   status_.has_basis = false;
   status_.has_ar_matrix = false;
   status_.has_nla = false;
@@ -778,8 +778,8 @@ HighsStatus HEkk::dualise() {
   return HighsStatus::kOk;
 }
 
-HighsStatus HEkk::undualise() {
-  if (!this->status_.is_dualised) return HighsStatus::kOk;
+HighsStatus HEkk::undualize() {
+  if (!this->status_.is_dualized) return HighsStatus::kOk;
   HighsInt dual_num_col = lp_.num_col_;
   HighsInt primal_num_tot = original_num_col_ + original_num_row_;
   // These two aren't used (yet)
@@ -989,13 +989,13 @@ HighsStatus HEkk::undualise() {
   HighsInt num_basic_variables = primal_basic_index.size();
   bool num_basic_variables_ok = num_basic_variables == original_num_row_;
   if (!num_basic_variables_ok)
-    printf("HEkk::undualise: Have %d basic variables, not %d\n",
+    printf("HEkk::undualize: Have %d basic variables, not %d\n",
            (int)num_basic_variables, (int)original_num_row_);
   assert(num_basic_variables_ok);
 
   // Clear the data retained when solving dual LP
-  clearEkkDualise();
-  status_.is_dualised = false;
+  clearEkkDualize();
+  status_.is_dualized = false;
   // Now solve with this basis. Should just be a case of reinverting
   // and re-solving for optimal primal and dual values, but
   // numerically marginal LPs will need clean-up

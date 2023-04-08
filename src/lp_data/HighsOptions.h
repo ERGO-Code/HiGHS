@@ -339,7 +339,8 @@ struct HighsOptionsStruct {
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
   HighsInt allowed_cost_scale_factor;
-  HighsInt simplex_dualise_strategy;
+  HighsInt ipx_dualize_strategy;
+  HighsInt simplex_dualize_strategy;
   HighsInt simplex_permute_strategy;
   HighsInt max_dual_simplex_cleanup_level;
   HighsInt max_dual_simplex_phase1_cleanup_level;
@@ -687,7 +688,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_bool =
-        new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
+        new OptionRecordBool("icrash_dualize", "Dualize strategy for iCrash",
                              now_advanced, &icrash_dualize, false);
     records.push_back(record_bool);
 
@@ -905,8 +906,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "simplex_dualise_strategy", "Strategy for dualising before simplex",
-        advanced, &simplex_dualise_strategy, kHighsOptionOff, kHighsOptionOff,
+        "ipx_dualize_strategy", "Strategy for dualizing before IPX", advanced,
+        &ipx_dualize_strategy, kIpxDualizeStrategyMin, kIpxDualizeStrategyLukas,
+        kIpxDualizeStrategyMax);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "simplex_dualize_strategy", "Strategy for dualizing before simplex",
+        advanced, &simplex_dualize_strategy, kHighsOptionOff, kHighsOptionOff,
         kHighsOptionOn);
     records.push_back(record_int);
 

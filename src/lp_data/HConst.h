@@ -102,6 +102,16 @@ enum OptionOffChooseOn {
   kHighsOptionOn
 };
 
+enum IpxDualizeStrategy {
+  kIpxDualizeStrategyOff = kHighsOptionOff,
+  kIpxDualizeStrategyChoose = kHighsOptionChoose,
+  kIpxDualizeStrategyOn = kHighsOptionOn,
+  kIpxDualizeStrategyLukas,
+  kIpxDualizeStrategyFilippo,
+  kIpxDualizeStrategyMin = kIpxDualizeStrategyOff,
+  kIpxDualizeStrategyMax = kIpxDualizeStrategyFilippo,
+};
+
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 

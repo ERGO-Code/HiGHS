@@ -90,6 +90,25 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   }
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
+  //
+  // Translate dualization option
+  //
+  // parameters.dualize = -2 => Possibly dualize - Filippo style
+  // parameters.dualize = -1 => Possibly dualize - Lukas style
+  // parameters.dualize = 0 => No dualization
+  // parameters.dualize = 1 => Perform dualization
+  if (options.ipx_dualize_strategy == kIpxDualizeStrategyOn) {
+    parameters.dualize = 1;
+  } else if (options.ipx_dualize_strategy == kIpxDualizeStrategyOff) {
+    parameters.dualize = 0;
+  } else if (options.ipx_dualize_strategy == kIpxDualizeStrategyLukas) {
+    parameters.dualize = -1;
+  } else if (options.ipx_dualize_strategy == kIpxDualizeStrategyFilippo) {
+    parameters.dualize = -2;
+  } else {
+    assert(111==222);
+  }
+  
   parameters.ipm_feasibility_tol = min(options.primal_feasibility_tolerance,
                                        options.dual_feasibility_tolerance);
 
