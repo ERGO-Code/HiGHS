@@ -65,7 +65,34 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
 }
 
 bool Model::filippoDualizationTest() const {
-  return false;
+    // Estimates the number of nonzeros in AAt (AtA) using the formula
+    //   \sum wj^2
+    // where wj is the number of nonzeros in column (row) j of A.
+    // This is only an upper bound, but for sparse matrices it is a
+    // good estimate.
+
+    double nnzAAt = 0;
+    double nnzAtA = 0;
+
+    Int colcount = 0;
+    for (size_t j = 0; j < num_var_; ++j){
+        colcount = A_.end(j) - A_.begin(j);
+        nnzAAt  += (double)colcount * colcount;
+    }
+
+    SparseMatrix temp_At = Transpose(A_);
+    
+    Int rowcount = 0;
+    for (size_t j = 0; j < num_constr_; ++j){
+        rowcount = temp_At.end(j) - temp_At.begin(j);
+        nnzAtA  += (double)rowcount * rowcount;
+    }
+
+    printf("    Expected nonzeros in AAt: %8.3e ( density %% %6.2f)\n", nnzAAt, 100 * nnzAAt/( (double)num_constr_ * num_constr_ ) );
+    printf("    Expected nonzeros in AtA: %8.3e ( density %% %6.2f)\n", nnzAtA, 100 * nnzAtA/( (double)num_var_    * num_var_    ) );
+
+    return ( nnzAAt > nnzAtA );
+  
 }
 
 void Model::GetInfo(Info *info) const {
