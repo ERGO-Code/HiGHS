@@ -32,7 +32,6 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
     // dualize = -1 => Possibly dualize - Lukas style
     // dualize = 0 => No dualization
     // dualize = 1 => Perform dualization
-    assert(dualize == -1);
     const bool dualize_lukas = num_constr > 2*num_var;
     const bool dualize_filippo = filippoDualizationTest();
     if (dualize_lukas != dualize_filippo) {
