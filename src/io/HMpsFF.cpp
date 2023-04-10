@@ -580,9 +580,11 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
         isFreeRow = true;
       }
     } else {
+      std::string unidentified = strline.substr(start);
+      trim(unidentified);
       highsLogUser(log_options, HighsLogType::kError,
-                   "Entry in ROWS section of MPS file is of type \"%s\"\n",
-                   strline[start]);
+                   "Entry \"%s\" in ROWS section of MPS file is unidentifed\n",
+                   unidentified.c_str());
       return HMpsFF::Parsekey::kFail;
     }
 
@@ -817,6 +819,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
+      trim(marker);
       highsLogUser(log_options, HighsLogType::kError,
                    "No coefficient given for column \"%s\"\n", marker.c_str());
       return HMpsFF::Parsekey::kFail;
@@ -860,6 +863,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       // parse second coefficient
       marker = first_word(strline, end);
       if (word == "") {
+        trim(marker);
         highsLogUser(log_options, HighsLogType::kError,
                      "No coefficient given for column \"%s\"\n",
                      marker.c_str());
@@ -1008,6 +1012,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
+      trim(marker);
       highsLogUser(log_options, HighsLogType::kError,
                    "No bound given for row \"%s\"\n", marker.c_str());
       return HMpsFF::Parsekey::kFail;
@@ -1027,6 +1032,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
         word = first_word(strline, end_marker);
         end = first_word_end(strline, end_marker);
         if (word == "") {
+          trim(marker);
           highsLogUser(log_options, HighsLogType::kError,
                        "No bound given for SIF row \"%s\"\n", marker.c_str());
           return HMpsFF::Parsekey::kFail;
@@ -1056,6 +1062,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       // parse second coefficient
       marker = first_word(strline, end);
       if (word == "") {
+        trim(marker);
         highsLogUser(log_options, HighsLogType::kError,
                      "No coefficient given for rhs of row \"%s\"\n",
                      marker.c_str());
@@ -1233,6 +1240,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       is_semi = true;
       num_sc++;
     } else {
+      trim(word);
       highsLogUser(log_options, HighsLogType::kError,
                    "Entry in BOUNDS section of MPS file is of type \"%s\"\n",
                    word.c_str());
@@ -1282,6 +1290,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       // binary: BV
       {
         if (!is_lb || !is_ub) {
+          trim(marker);
           highsLogUser(log_options, HighsLogType::kError,
                        "BV row %s but [is_lb, is_ub] = [%1" HIGHSINT_FORMAT
                        ", %1" HIGHSINT_FORMAT "]\n",
@@ -1312,6 +1321,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
+      trim(marker);
       highsLogUser(log_options, HighsLogType::kError,
                    "No bound given for %s row \"%s\"\n", bound_type.c_str(),
                    marker.c_str());
@@ -1420,6 +1430,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
+      trim(marker);
       highsLogUser(log_options, HighsLogType::kError,
                    "No range given for row \"%s\"\n", marker.c_str());
       return HMpsFF::Parsekey::kFail;
@@ -1459,6 +1470,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       end = first_word_end(strline, end_marker);
 
       if (word == "") {
+        trim(marker);
         highsLogUser(log_options, HighsLogType::kError,
                      "No range given for row \"%s\"\n", marker.c_str());
         return HMpsFF::Parsekey::kFail;
@@ -1489,6 +1501,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       }
 
       if (!is_end(strline, end)) {
+        trim(marker);
         highsLogUser(log_options, HighsLogType::kError,
                      "Unknown specifiers in RANGES section for row \"%s\"\n",
                      marker.c_str());
@@ -1565,6 +1578,8 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       end_coeff_name = first_word_end(strline, end_row_name);
 
       if (coeff_name == "") {
+        trim(row_name);
+        trim(col_name);
         highsLogUser(
             log_options, HighsLogType::kError,
             "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
@@ -1705,6 +1720,8 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
       end_coeff_name = first_word_end(strline, end_row_name);
 
       if (coeff_name == "") {
+        trim(row_name);
+        trim(col_name);
         highsLogUser(
             log_options, HighsLogType::kError,
             "%s has no coefficient for entry \"%s\" in column \"%s\"\n",
@@ -1768,6 +1785,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   }
 
   if (conetypestr.empty()) {
+    trim(section_args);
     highsLogUser(log_options, HighsLogType::kError,
                  "Cone type missing in CSECTION %s\n", section_args.c_str());
     return HMpsFF::Parsekey::kFail;
@@ -1789,6 +1807,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   else if (conetypestr == "DPOW")
     conetype = ConeType::kDPow;
   else {
+    trim(conetypestr);
     highsLogUser(log_options, HighsLogType::kError,
                  "Unrecognized cone type %s\n", conetypestr.c_str());
     return HMpsFF::Parsekey::kFail;
@@ -1891,6 +1910,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
      * word is currently the column name and there may be a weight following
      */
     if (sos_entries.empty()) {
+      trim(strline);
       highsLogUser(log_options, HighsLogType::kError,
                    "SOS type specification missing before %s.\n",
                    strline.c_str());
@@ -1906,6 +1926,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
       // first word is SOS name, second word is colname, third word is weight
       // we expect SOS definitions to be contiguous for now
       if (word != sos_name.back()) {
+        trim(word);
         highsLogUser(log_options, HighsLogType::kError,
                      "SOS specification for SOS %s mixed with SOS %s. This is "
                      "currently not supported.\n",
@@ -1913,6 +1934,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
         return HMpsFF::Parsekey::kFail;
       }
       if (is_end(strline, end)) {
+        trim(strline);
         highsLogUser(log_options, HighsLogType::kError,
                      "Missing variable in SOS specification line %s.\n",
                      strline.c_str());

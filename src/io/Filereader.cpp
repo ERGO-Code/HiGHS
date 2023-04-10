@@ -17,10 +17,9 @@
 #include "io/HighsIO.h"
 
 // convert string to lower-case, modifies string
-static inline
-void tolower(std::string& s) {
-   std::transform(s.begin(), s.end(), s.begin(),
-      [](unsigned char c) { return std::tolower(c); });
+static inline void tolower(std::string& s) {
+  std::transform(s.begin(), s.end(), s.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 }
 
 static const std::string getFilenameExt(const std::string filename) {
