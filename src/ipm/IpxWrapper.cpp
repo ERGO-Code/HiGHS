@@ -149,7 +149,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
                num_row, num_col, Ap[num_col]);
 
   ipx::Int load_status =
-    lps.LoadModel(num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
+    lps.LoadModel(lp.model_name_, num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
 		  Ap.data(), Ai.data(), Av.data(), rhs.data(), constraint_type.data());
 
   if (load_status) {

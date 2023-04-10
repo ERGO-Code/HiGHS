@@ -7,7 +7,8 @@
 
 namespace ipx {
 
-Int Model::Load(const Control& control, Int num_constr, Int num_var,
+Int Model::Load(const Control& control, const std::string model_name,
+		Int num_constr, Int num_var,
                 const Int* Ap, const Int* Ai, const double* Ax,
                 const double* rhs, const char* constr_type, const double* obj,
                 const double* lbuser, const double* ubuser) {
@@ -32,12 +33,13 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
     // dualize = -1 => Possibly dualize - Lukas style
     // dualize = 0 => No dualization
     // dualize = 1 => Perform dualization
+    printf("grepIpxDualization: %s,%d,%d", model_name.c_str(), int(num_var), int(num_constr));
     const bool dualize_lukas = num_constr > 2*num_var;
     const bool dualize_filippo = filippoDualizationTest();
+    printf(",%d,%d\n", dualize_lukas, dualize_filippo);
     if (dualize_lukas != dualize_filippo) {
       printf("IPX Dualization: lukas = %d != %d = filippo\n", dualize_lukas, dualize_filippo);
     }
-    printf("grepIpxDualization: %d,%d\n", dualize_lukas, dualize_filippo);
     if (dualize == -1) {
       dualize = dualize_lukas;
     } else if (dualize == -2) {
@@ -75,7 +77,7 @@ bool Model::filippoDualizationTest() const {
     double nnzAtA = 0;
 
     Int colcount = 0;
-    for (size_t j = 0; j < num_var_; ++j){
+    for (size_t j = 0; j < (size_t)num_var_; ++j){
         colcount = A_.end(j) - A_.begin(j);
         nnzAAt  += (double)colcount * colcount;
     }
@@ -83,13 +85,16 @@ bool Model::filippoDualizationTest() const {
     SparseMatrix temp_At = Transpose(A_);
     
     Int rowcount = 0;
-    for (size_t j = 0; j < num_constr_; ++j){
+    for (size_t j = 0; j < (size_t)num_constr_; ++j){
         rowcount = temp_At.end(j) - temp_At.begin(j);
         nnzAtA  += (double)rowcount * rowcount;
     }
 
-    printf("    Expected nonzeros in AAt: %8.3e ( density %% %6.2f)\n", nnzAAt, 100 * nnzAAt/( (double)num_constr_ * num_constr_ ) );
-    printf("    Expected nonzeros in AtA: %8.3e ( density %% %6.2f)\n", nnzAtA, 100 * nnzAtA/( (double)num_var_    * num_var_    ) );
+    const double nnzAAt_density = 100 * nnzAAt/( (double)num_constr_ * num_constr_ );
+    const double nnzAtA_density = 100 * nnzAtA/( (double)num_var_    * num_var_    );
+    printf(",%g,%g,%g,%g", nnzAAt, nnzAtA, nnzAAt_density, nnzAtA_density);
+    //    printf("    Expected nonzeros in AAt: %8.3e ( density %% %6.2f)\n", nnzAAt, 100 * nnzAAt/( (double)num_constr_ * num_constr_ ) );
+    //    printf("    Expected nonzeros in AtA: %8.3e ( density %% %6.2f)\n", nnzAtA, 100 * nnzAtA/( (double)num_var_    * num_var_    ) );
 
     return ( nnzAAt > nnzAtA );
   

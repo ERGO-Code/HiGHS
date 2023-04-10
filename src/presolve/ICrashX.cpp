@@ -51,9 +51,10 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   ipx::LpSolver lps;
   lps.SetParameters(parameters);
 
-  ipx::Int load_status = lps.LoadModel(
-      num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
-      Ap.data(), Ai.data(), Av.data(), rhs.data(), constraint_type.data());
+  ipx::Int load_status =
+      lps.LoadModel(lp.model_name_, num_col, objective.data(), col_lb.data(),
+                    col_ub.data(), num_row, Ap.data(), Ai.data(), Av.data(),
+                    rhs.data(), constraint_type.data());
   if (load_status != 0) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Error loading ipx model\n");

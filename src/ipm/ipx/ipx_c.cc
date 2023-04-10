@@ -58,6 +58,7 @@ void ipx_free(void** p_self) {
     }
 }
 
+/*
 ipxint ipx_load_model(void* self, ipxint num_var, const double* obj,
                       const double* lb, const double* ub, ipxint num_constr,
                       const ipxint* Ap, const ipxint* Ai, const double* Ax,
@@ -66,7 +67,6 @@ ipxint ipx_load_model(void* self, ipxint num_var, const double* obj,
     return solver->LoadModel(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax, rhs,
                              constr_type);
 }
-
 ipxint ipx_load_ipm_starting_point(void* self, const double* x,
                                    const double* xl, const double* xu,
                                    const double* slack, const double* y,
@@ -74,6 +74,7 @@ ipxint ipx_load_ipm_starting_point(void* self, const double* x,
     LpSolver* solver = static_cast<LpSolver*>(self);
     return solver->LoadIPMStartingPoint(x, xl, xu, slack, y, zl, zu);
 }
+*/
 
 ipxint ipx_solve(void* self) {
     LpSolver* solver = static_cast<LpSolver*>(self);

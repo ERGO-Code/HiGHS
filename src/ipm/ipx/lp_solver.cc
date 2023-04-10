@@ -12,12 +12,13 @@
 
 namespace ipx {
 
-Int LpSolver::LoadModel(Int num_var, const double* obj, const double* lb,
+Int LpSolver::LoadModel(const std::string model_name, Int num_var, const double* obj, const double* lb,
                         const double* ub, Int num_constr, const Int* Ap,
                         const Int* Ai, const double* Ax, const double* rhs,
                         const char* constr_type) {
     ClearModel();
-    Int errflag = model_.Load(control_, num_constr, num_var, Ap, Ai, Ax, rhs,
+    Int errflag = model_.Load(control_, model_name,
+			      num_constr, num_var, Ap, Ai, Ax, rhs,
                               constr_type, obj, lb, ub);
     model_.GetInfo(&info_);
     return errflag;

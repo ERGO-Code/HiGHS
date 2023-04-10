@@ -27,10 +27,11 @@ public:
     //  IPX_ERROR_invalid_dimension
     //  IPX_ERROR_invalid_matrix
     //  IPX_ERROR_invalid_vector
-    Int LoadModel(Int num_var, const double* obj, const double* lb,
-                  const double* ub, Int num_constr, const Int* Ap,
-                  const Int* Ai, const double* Ax, const double* rhs,
-                  const char* constr_type);
+  Int LoadModel(const std::string model_name,
+		Int num_var, const double* obj, const double* lb,
+		const double* ub, Int num_constr, const Int* Ap,
+		const Int* Ai, const double* Ax, const double* rhs,
+		const char* constr_type);
 
     // Loads a primal-dual point as starting point for the IPM.
     // @x: size num_var array

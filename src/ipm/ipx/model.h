@@ -56,7 +56,8 @@ public:
     //  IPX_ERROR_invalid_dimension
     //  IPX_ERROR_invalid_matrix
     //  IPX_ERROR_invalid_vector
-    Int Load(const Control& control, Int num_constr, Int num_var,
+    Int Load(const Control& control, const std::string model_name,
+	     Int num_constr, Int num_var,
              const Int* Ap, const Int* Ai, const double* Ax,
              const double* rhs, const char* constr_type, const double* obj,
              const double* lbuser, const double* ubuser);
@@ -351,6 +352,7 @@ private:
 
     // Computational form model.
     bool dualized_{false};        // model was dualized in preprocessing?
+    std::string model_name_{""};  // name of model
     Int num_rows_{0};             // # rows of AI
     Int num_cols_{0};             // # structural columns of AI
     Int num_dense_cols_{0};       // # columns classified as dense
