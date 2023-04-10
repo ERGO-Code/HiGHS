@@ -16,6 +16,12 @@
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 
+// convert string to lower-case, modifies string
+static inline void tolower(std::string& s) {
+  std::transform(s.begin(), s.end(), s.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+}
+
 static const std::string getFilenameExt(const std::string filename) {
   // Extract file name extension
   std::string name = filename;
@@ -51,11 +57,13 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
     //    reader = NULL;
     // #endif
   }
-  if (extension.compare("mps") == 0) {
+  std::string lower_case_extension = extension;
+  tolower(lower_case_extension);
+  if (lower_case_extension.compare("mps") == 0) {
     reader = new FilereaderMps();
-  } else if (extension.compare("lp") == 0) {
+  } else if (lower_case_extension.compare("lp") == 0) {
     reader = new FilereaderLp();
-  } else if (extension.compare("ems") == 0) {
+  } else if (lower_case_extension.compare("ems") == 0) {
     reader = new FilereaderEms();
   } else {
     reader = NULL;
