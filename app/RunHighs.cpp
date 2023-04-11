@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
   // highs.writeInfo("Info.md");
 
   // Possibly write the solution to a file
-  if (options.write_solution_to_file)
+  if (options.write_solution_to_file || options.solution_file != "")
     highs.writeSolution(options.solution_file, options.write_solution_style);
 
   // Possibly write the model to a file
