@@ -189,9 +189,10 @@ void writeModelBoundSolution(
   }
 }
 
-void writeModelSolution(FILE* file, const HighsLp& lp,
+void writeModelSolution(FILE* file, const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,
                         const bool sparse) {
+  const HighsLp& lp = model.lp_;
   const bool have_col_names = lp.col_names_.size() > 0;
   const bool have_row_names = lp.row_names_.size() > 0;
   const bool have_primal = solution.value_valid;
@@ -225,9 +226,10 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
       assert(info.primal_solution_status == kSolutionStatusInfeasible);
       fprintf(file, "Infeasible\n");
     }
-    HighsCDouble objective_function_value = lp.offset_;
-    for (HighsInt i = 0; i < lp.num_col_; ++i)
-      objective_function_value += lp.col_cost_[i] * solution.col_value[i];
+    HighsCDouble objective_function_value =
+        lp.objectiveCDoubleValue(solution.col_value);
+    objective_function_value +=
+        model.hessian_.objectiveCDoubleValue(solution.col_value);
     std::array<char, 32> objStr = highsDoubleToString(
         (double)objective_function_value, kHighsSolutionValueToStringTolerance);
     fprintf(file, "Objective %s\n", objStr.data());
@@ -401,7 +403,7 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     assert(style == kSolutionStyleRaw || sparse);
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
-    writeModelSolution(file, lp, solution, info, sparse);
+    writeModelSolution(file, model, solution, info, sparse);
   }
 }
 

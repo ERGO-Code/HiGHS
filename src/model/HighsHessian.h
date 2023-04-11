@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "util/HighsCDouble.h"
 
 // class HighsHessian;
 
@@ -34,6 +35,7 @@ class HighsHessian {
   void product(const std::vector<double>& solution,
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
+  HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void exactResize();
   void clear();
   bool formatOk() const {

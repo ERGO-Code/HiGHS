@@ -38,7 +38,7 @@ void writeModelBoundSolution(
     const std::vector<double>& dual, const bool have_basis,
     const std::vector<HighsBasisStatus>& status,
     const HighsVarType* integrality = NULL);
-void writeModelSolution(FILE* file, const HighsLp& lp,
+void writeModelSolution(FILE* file, const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,
                         const bool sparse);
 
