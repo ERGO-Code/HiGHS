@@ -86,7 +86,8 @@ double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   return objective_function_value;
 }
 
-HighsCDouble HighsLp::objectiveValueCDouble(const std::vector<double>& solution) const {
+HighsCDouble HighsLp::objectiveCDoubleValue(
+    const std::vector<double>& solution) const {
   assert((int)solution.size() >= this->num_col_);
   HighsCDouble objective_function_value = this->offset_;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)

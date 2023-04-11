@@ -109,7 +109,8 @@ double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   return objective_function_value;
 }
 
-HighsCDouble HighsHessian::objectiveValue(const std::vector<double>& solution) const {
+HighsCDouble HighsHessian::objectiveCDoubleValue(
+    const std::vector<double>& solution) const {
   HighsCDouble objective_function_value = HighsCDouble(0);
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
     HighsInt iEl = this->start_[iCol];

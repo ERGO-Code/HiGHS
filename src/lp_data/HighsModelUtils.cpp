@@ -226,8 +226,10 @@ void writeModelSolution(FILE* file, const HighsModel& model,
       assert(info.primal_solution_status == kSolutionStatusInfeasible);
       fprintf(file, "Infeasible\n");
     }
-    HighsCDouble objective_function_value = lp.objectiveValue(solution.col_value);
-    objective_function_value += model.hessian_.objectiveValue(solution.col_value);
+    HighsCDouble objective_function_value =
+        lp.objectiveCDoubleValue(solution.col_value);
+    objective_function_value +=
+        model.hessian_.objectiveCDoubleValue(solution.col_value);
     std::array<char, 32> objStr = highsDoubleToString(
         (double)objective_function_value, kHighsSolutionValueToStringTolerance);
     fprintf(file, "Objective %s\n", objStr.data());

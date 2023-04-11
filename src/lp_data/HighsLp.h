@@ -58,7 +58,7 @@ class HighsLp {
   bool isMip() const;
   bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
-  HighsCDouble objectiveValueCDouble(const std::vector<double>& solution) const;
+  HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
