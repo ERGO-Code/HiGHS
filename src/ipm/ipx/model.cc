@@ -33,7 +33,7 @@ Int Model::Load(const Control& control, const std::string model_name,
     // dualize = -1 => Possibly dualize - Lukas style
     // dualize = 0 => No dualization
     // dualize = 1 => Perform dualization
-    printf("grepIpxDualization: %s,%d,%d", model_name.c_str(), int(num_var), int(num_constr));
+    printf("grepIpxDualization: ,%s,%d,%d", model_name.c_str(), int(num_var), int(num_constr));
     const bool dualize_lukas = num_constr > 2*num_var;
     const bool dualize_filippo = filippoDualizationTest();
     printf(",%d,%d\n", dualize_lukas, dualize_filippo);
