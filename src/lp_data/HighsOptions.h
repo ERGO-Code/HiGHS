@@ -395,6 +395,9 @@ struct HighsOptionsStruct {
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
+  bool mip_save_improving_solution;
+  bool mip_report_improving_solution;
+  std::string mip_improving_solution_file;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -754,6 +757,24 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_debug_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 #endif
+
+    record_bool =
+        new OptionRecordBool("mip_save_improving_solution",
+                             "Whether improving MIP solutions should be saved",
+                             advanced, &mip_save_improving_solution, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_report_improving_solution",
+        "Whether improving MIP solutions should be reported", advanced,
+        &mip_report_improving_solution, false);
+    records.push_back(record_bool);
+
+    record_string = new OptionRecordString(
+        "mip_improving_solution_file",
+        "Solution file for improving solutions in the MIP solver", advanced,
+        &mip_improving_solution_file, kHighsFilenameDefault);
+    records.push_back(record_string);
 
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,

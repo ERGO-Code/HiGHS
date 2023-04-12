@@ -444,7 +444,7 @@ void HighsMipSolverData::runSetup() {
       upper_bound = solobj;
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
       if (!mipsolver.submip) {
-	saveReportMipSolution(new_upper_limit);
+        saveReportMipSolution(new_upper_limit);
       }
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
@@ -1672,8 +1672,16 @@ void HighsMipSolverData::setupDomainPropagation() {
 
 void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   const bool non_improving = new_upper_limit >= upper_limit;
-  printf("MIP %4simproving solution: numImprovingSols = %4d; Limits (%11.4g, %11.4g)\n",
-	 non_improving ? "non-" : "",
-	 int(numImprovingSols),
-	 new_upper_limit, upper_limit);
+  printf(
+      "MIP %4simproving solution: numImprovingSols = %4d; Limits (%11.4g, "
+      "%11.4g)\n",
+      non_improving ? "non-" : "", int(numImprovingSols), new_upper_limit,
+      upper_limit);
+  if (mipsolver.options_mip_->mip_save_improving_solution) {
+    HighsObjectivePrimalSolution record;
+    record.objective = mipsolver.solution_objective_;
+    record.primal_solution = mipsolver.solution_;
+    mipsolver.saved_objective_and_solution_.push_back(record);
+  }
+  //  if (mipsolver.options_mip_->mip_report_improving_solution) {
 }

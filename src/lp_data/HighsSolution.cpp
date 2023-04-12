@@ -1385,6 +1385,8 @@ void HighsSolution::clear() {
   this->row_dual.clear();
 }
 
+void HighsObjectivePrimalSolution::clear() { this->primal_solution.clear(); }
+
 void HighsBasis::invalidate() {
   this->valid = false;
   this->alien = true;
