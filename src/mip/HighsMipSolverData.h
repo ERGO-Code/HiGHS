@@ -157,6 +157,7 @@ struct HighsMipSolverData {
   void checkObjIntegrality();
   void runPresolve();
   void setupDomainPropagation();
+  void saveReportMipSolution(const double new_upper_limit);
   void runSetup();
   double transformNewIncumbent(const std::vector<double>& sol);
   double percentageInactiveIntegers() const;

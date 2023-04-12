@@ -443,6 +443,9 @@ void HighsMipSolverData::runSetup() {
     if (feasible && solobj < upper_bound) {
       upper_bound = solobj;
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+      if (!mipsolver.submip) {
+	saveReportMipSolution(new_upper_limit);
+      }
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
         optimality_limit =
@@ -934,6 +937,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
+    if (!mipsolver.submip) {
+      saveReportMipSolution(new_upper_limit);
+    }
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
       upper_limit = new_upper_limit;
@@ -1662,4 +1668,12 @@ void HighsMipSolverData::setupDomainPropagation() {
 
   domain = HighsDomain(mipsolver);
   domain.computeRowActivities();
+}
+
+void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
+  const bool non_improving = new_upper_limit >= upper_limit;
+  printf("MIP %4simproving solution: numImprovingSols = %4d; Limits (%11.4g, %11.4g)\n",
+	 non_improving ? "non-" : "",
+	 int(numImprovingSols),
+	 new_upper_limit, upper_limit);
 }
