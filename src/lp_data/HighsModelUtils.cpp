@@ -189,6 +189,51 @@ void writeModelBoundSolution(
   }
 }
 
+void writeModelObjective(FILE* file, const HighsModel& model,
+                         const HighsSolution& solution) {
+  const bool have_primal = solution.value_valid;
+  assert(have_primal);
+  HighsCDouble objective_function_value =
+      model.lp_.objectiveCDoubleValue(solution.col_value);
+  objective_function_value +=
+      model.hessian_.objectiveCDoubleValue(solution.col_value);
+  std::array<char, 32> objStr = highsDoubleToString(
+      (double)objective_function_value, kHighsSolutionValueToStringTolerance);
+  fprintf(file, "Objective %s\n", objStr.data());
+}
+
+void writeModelPrimalSolution(FILE* file, const HighsModel& model,
+                              const HighsSolution& solution,
+                              const bool sparse) {
+  std::stringstream ss;
+  const HighsLp& lp = model.lp_;
+  HighsInt num_nonzero_primal_value = 0;
+  const bool have_col_names = lp.col_names_.size() > 0;
+  const bool have_primal = solution.value_valid;
+  assert(have_primal);
+  if (sparse) {
+    // Determine the number of nonzero primal solution values
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      if (solution.col_value[iCol]) num_nonzero_primal_value++;
+  }
+  // Indicate the number of column values to be written out, depending
+  // on whether format is sparse: either lp.num_col_ if not sparse, or
+  // the negation of the number of nonzero values, if sparse
+  fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n",
+          sparse ? -num_nonzero_primal_value : lp.num_col_);
+  for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+    if (sparse && !solution.col_value[ix]) continue;
+    std::array<char, 32> valStr = highsDoubleToString(
+        solution.col_value[ix], kHighsSolutionValueToStringTolerance);
+    // Create a column name
+    ss.str(std::string());
+    ss << "C" << ix;
+    const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+    fprintf(file, "%-s %s", name.c_str(), valStr.data());
+    if (sparse) fprintf(file, " %d", int(ix));
+    fprintf(file, "\n");
+  }
+}
 void writeModelSolution(FILE* file, const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,
                         const bool sparse) {
@@ -210,12 +255,6 @@ void writeModelSolution(FILE* file, const HighsModel& model,
     assert((int)solution.row_dual.size() >= lp.num_row_);
     assert(info.dual_solution_status != kSolutionStatusNone);
   }
-  HighsInt num_nonzero_primal_value = 0;
-  if (sparse && have_primal) {
-    // Determine the number of nonzero primal solution values
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      if (solution.col_value[iCol]) num_nonzero_primal_value++;
-  }
   fprintf(file, "\n# Primal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
@@ -226,31 +265,8 @@ void writeModelSolution(FILE* file, const HighsModel& model,
       assert(info.primal_solution_status == kSolutionStatusInfeasible);
       fprintf(file, "Infeasible\n");
     }
-    HighsCDouble objective_function_value =
-        lp.objectiveCDoubleValue(solution.col_value);
-    objective_function_value +=
-        model.hessian_.objectiveCDoubleValue(solution.col_value);
-    std::array<char, 32> objStr = highsDoubleToString(
-        (double)objective_function_value, kHighsSolutionValueToStringTolerance);
-    fprintf(file, "Objective %s\n", objStr.data());
-    // Indicate the number of column values to be written out,
-    // depending on whether format is sparse: either lp.num_col_ if
-    // not sparse, or the negation of the number of nonzero values, if
-    // sparse
-    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n",
-            sparse ? -num_nonzero_primal_value : lp.num_col_);
-    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
-      if (sparse && !solution.col_value[ix]) continue;
-      std::array<char, 32> valStr = highsDoubleToString(
-          solution.col_value[ix], kHighsSolutionValueToStringTolerance);
-      // Create a column name
-      ss.str(std::string());
-      ss << "C" << ix;
-      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
-      fprintf(file, "%-s %s", name.c_str(), valStr.data());
-      if (sparse) fprintf(file, " %d", int(ix));
-      fprintf(file, "\n");
-    }
+    writeModelObjective(file, model, solution);
+    writeModelPrimalSolution(file, model, solution, sparse);
     if (sparse) return;
     fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
