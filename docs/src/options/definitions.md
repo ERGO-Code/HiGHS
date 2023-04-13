@@ -122,7 +122,7 @@
 - Default: -1
 
 ## simplex\_iteration\_limit
-- Iteration limit for simplex solver
+- Iteration limit for simplex solver when solving LPs, but not subproblems in the MIP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
@@ -187,7 +187,7 @@
 - Default: "false"
 
 ## mip\_detect\_symmetry
-- Whether symmetry should be detected
+- Whether MIP symmetry should be detected
 - Type: boolean
 - Default: "true"
 
@@ -203,6 +203,21 @@
 - Range: {0, 2147483647}
 - Default: 2147483647
 
+## mip\_improving\_solution\_save
+- Whether improving MIP solutions should be saved
+- Type: boolean
+- Default: "false"
+
+## mip\_improving\_solution\_report\_sparse
+- Whether improving MIP solutions should be reported in sparse format
+- Type: boolean
+- Default: "false"
+
+## mip\_improving\_solution\_file
+- File for reporting improving MIP solutions: not reported if ""
+- Type: string
+- Default: ""
+
 ## mip\_max\_leaves
 - MIP solver max number of leave nodes
 - Type: integer
@@ -216,31 +231,31 @@
 - Default: 2147483647
 
 ## mip\_lp\_age\_limit
-- Maximal age of dynamic LP rows before they are removed from the LP relaxation
+- Maximal age of dynamic LP rows before they are removed from the LP relaxation in the MIP solver
 - Type: integer
 - Range: {0, 32767}
 - Default: 10
 
 ## mip\_pool\_age\_limit
-- Maximal age of rows in the cutpool before they are deleted
+- Maximal age of rows in the MIP solver cutpool before they are deleted
 - Type: integer
 - Range: {0, 1000}
 - Default: 30
 
 ## mip\_pool\_soft\_limit
-- Soft limit on the number of rows in the cutpool for dynamic age adjustment
+- Soft limit on the number of rows in the MIP solver cutpool for dynamic age adjustment
 - Type: integer
 - Range: {1, 2147483647}
 - Default: 10000
 
 ## mip\_pscost\_minreliable
-- Minimal number of observations before pseudo costs are considered reliable
+- Minimal number of observations before MIP solver pseudo costs are considered reliable
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 8
 
 ## mip\_min\_cliquetable\_entries\_for\_parallelism
-- Minimal number of entries in the cliquetable before neighborhood queries of the conflict graph use parallel processing
+- Minimal number of entries in the MIP solver cliquetable before neighbourhood queries of the conflict graph use parallel processing
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 100000
