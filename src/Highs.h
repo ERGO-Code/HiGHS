@@ -418,6 +418,17 @@ class Highs {
    */
   const HighsSolution& getSolution() const { return solution_; }
 
+  /**
+   * @brief Return a const reference to the internal HighsSolution instance
+   */
+  const std::vector<HighsObjectivePrimalSolution>& getSavedMipSolutions()
+      const {
+    return saved_objective_and_solution_;
+  }
+
+  /**
+   * @brief Return a const reference to the internal ICrash info instance
+   */
   const ICrashInfo& getICrashInfo() const { return icrash_info_; };
 
   /**
@@ -1227,6 +1238,8 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
+
+  std::vector<HighsObjectivePrimalSolution> saved_objective_and_solution_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;

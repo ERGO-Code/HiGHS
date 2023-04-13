@@ -489,6 +489,25 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
 
+TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
+  const std::string model = "flugpl";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("mip_save_improving_solution", true);
+  highs.setOptionValue("mip_report_improving_solution", true);
+  highs.setOptionValue("mip_improving_solution_file", "MipImproving.sol");
+  highs.readModel(model_file);
+  highs.run();
+  const std::vector<HighsObjectivePrimalSolution> saved_objective_and_solution =
+      highs.getSavedMipSolutions();
+  HighsInt num_saved_solution = saved_objective_and_solution.size();
+  printf("num_saved_solution = %d\n", int(num_saved_solution));
+  REQUIRE(num_saved_solution == 3);
+}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
                  const bool dev_run = false) {

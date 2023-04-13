@@ -3146,6 +3146,7 @@ HighsStatus Highs::callSolveMip() {
     // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
+    saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
