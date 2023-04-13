@@ -14,10 +14,10 @@
 #ifndef LP_DATA_HIGHSMODELUTILS_H_
 #define LP_DATA_HIGHSMODELUTILS_H_
 
-// #include "Highs.h"
-// #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsInfo.h"
 #include "model/HighsModel.h"
+// #include "Highs.h"
+// #include "lp_data/HighsStatus.h"
 // #include "lp_data/HStruct.h"
 // #include "lp_data/HighsInfo.h"
 // #include "lp_data/HighsLp.h"
@@ -38,9 +38,22 @@ void writeModelBoundSolution(
     const std::vector<double>& dual, const bool have_basis,
     const std::vector<HighsBasisStatus>& status,
     const HighsVarType* integrality = NULL);
+
+void writeModelObjective(FILE* file, const HighsModel& model,
+                         const std::vector<double>& primal_solution);
+
+void writeLpObjective(FILE* file, const HighsLp& lp,
+                      const std::vector<double>& primal_solution);
+
+void writeObjectiveValue(FILE* file, const double objective_value);
+
+void writePrimalSolution(FILE* file, const HighsLp& lp,
+                         const std::vector<double>& primal_solution,
+                         const bool sparse = false);
+
 void writeModelSolution(FILE* file, const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,
-                        const bool sparse);
+                        const bool sparse = false);
 
 HighsInt maxNameLength(const HighsInt num_name,
                        const std::vector<std::string>& names);

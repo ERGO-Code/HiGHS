@@ -36,6 +36,12 @@ struct HighsSolution {
   void clear();
 };
 
+struct HighsObjectiveSolution {
+  double objective;
+  std::vector<double> col_value;
+  void clear();
+};
+
 struct RefactorInfo {
   bool use = false;
   std::vector<HighsInt> pivot_row;

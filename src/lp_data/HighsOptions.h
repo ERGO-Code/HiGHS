@@ -395,6 +395,9 @@ struct HighsOptionsStruct {
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
+  bool mip_improving_solution_save;
+  bool mip_improving_solution_report_sparse;
+  std::string mip_improving_solution_file;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -614,7 +617,9 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "simplex_iteration_limit", "Iteration limit for simplex solver",
+        "simplex_iteration_limit",
+        "Iteration limit for simplex solver when solving LPs, but not "
+        "subproblems in the MIP solver",
         advanced, &simplex_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
@@ -626,7 +631,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_min_concurrency",
-        "Minimum level of concurrency in parallel simplex", advanced,
+        "Minimum level of concurrency in parallel simplex", now_advanced,
         &simplex_min_concurrency, 1, 1, kSimplexConcurrencyLimit);
     records.push_back(record_int);
 
@@ -732,9 +737,9 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_model_to_file, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_detect_symmetry",
-                                       "Whether symmetry should be detected",
-                                       advanced, &mip_detect_symmetry, true);
+    record_bool = new OptionRecordBool(
+        "mip_detect_symmetry", "Whether MIP symmetry should be detected",
+        advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",
@@ -755,6 +760,24 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 #endif
 
+    record_bool =
+        new OptionRecordBool("mip_improving_solution_save",
+                             "Whether improving MIP solutions should be saved",
+                             advanced, &mip_improving_solution_save, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_improving_solution_report_sparse",
+        "Whether improving MIP solutions should be reported in sparse format",
+        advanced, &mip_improving_solution_report_sparse, false);
+    records.push_back(record_bool);
+
+    record_string = new OptionRecordString(
+        "mip_improving_solution_file",
+        "File for reporting improving MIP solutions: not reported if \"\"",
+        advanced, &mip_improving_solution_file, kHighsFilenameDefault);
+    records.push_back(record_string);
+
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
         &mip_max_leaves, 0, kHighsIInf, kHighsIInf);
@@ -767,36 +790,38 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_max_improving_sols, 1, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("mip_lp_age_limit",
-                                     "Maximal age of dynamic LP rows before "
-                                     "they are removed from the LP relaxation",
-                                     advanced, &mip_lp_age_limit, 0, 10,
-                                     std::numeric_limits<int16_t>::max());
+    record_int = new OptionRecordInt(
+        "mip_lp_age_limit",
+        "Maximal age of dynamic LP rows before "
+        "they are removed from the LP relaxation in the MIP solver",
+        advanced, &mip_lp_age_limit, 0, 10,
+        std::numeric_limits<int16_t>::max());
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "mip_pool_age_limit",
-        "Maximal age of rows in the cutpool before they are deleted", advanced,
-        &mip_pool_age_limit, 0, 30, 1000);
+        "Maximal age of rows in the MIP solver cutpool before they are deleted",
+        advanced, &mip_pool_age_limit, 0, 30, 1000);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("mip_pool_soft_limit",
-                                     "Soft limit on the number of rows in the "
-                                     "cutpool for dynamic age adjustment",
-                                     advanced, &mip_pool_soft_limit, 1, 10000,
-                                     kHighsIInf);
+    record_int = new OptionRecordInt(
+        "mip_pool_soft_limit",
+        "Soft limit on the number of rows in the "
+        "MIP solver cutpool for dynamic age adjustment",
+        advanced, &mip_pool_soft_limit, 1, 10000, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("mip_pscost_minreliable",
-                                     "Minimal number of observations before "
-                                     "pseudo costs are considered reliable",
-                                     advanced, &mip_pscost_minreliable, 0, 8,
-                                     kHighsIInf);
+    record_int = new OptionRecordInt(
+        "mip_pscost_minreliable",
+        "Minimal number of observations before "
+        "MIP solver pseudo costs are considered reliable",
+        advanced, &mip_pscost_minreliable, 0, 8, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "mip_min_cliquetable_entries_for_parallelism",
-        "Minimal number of entries in the cliquetable before neighborhood "
+        "Minimal number of entries in the MIP solver cliquetable before "
+        "neighbourhood "
         "queries of the conflict graph use parallel processing",
         advanced, &mip_min_cliquetable_entries_for_parallelism, 0, 100000,
         kHighsIInf);

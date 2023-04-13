@@ -1385,6 +1385,8 @@ void HighsSolution::clear() {
   this->row_dual.clear();
 }
 
+void HighsObjectiveSolution::clear() { this->col_value.clear(); }
+
 void HighsBasis::invalidate() {
   this->valid = false;
   this->alien = true;
