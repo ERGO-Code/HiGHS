@@ -310,7 +310,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
   analysis->simplexTimerStop(ChuzrDualClock);
 }
 
-void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
+bool HEkkDualRHS::updatePrimal(HVector* column, double theta) {
   analysis->simplexTimerStart(UpdatePrimalClock);
 
   const HighsInt numRow = ekk_instance_.lp_.num_row_;
@@ -323,6 +323,7 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
   const double Tp = ekk_instance_.options_->primal_feasibility_tolerance;
   double* baseValue = ekk_instance_.info_.baseValue_.data();
 
+  HighsInt num_excessive_primal = 0;
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
 
   const HighsInt to_entry = updatePrimal_inDense ? numRow : columnCount;
@@ -344,8 +345,14 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
       work_infeasibility[iRow] = primal_infeasibility * primal_infeasibility;
     else
       work_infeasibility[iRow] = fabs(primal_infeasibility);
+    if (baseValue[iRow] <= -kExcessivePrimalValue ||
+        baseValue[iRow] >= kExcessivePrimalValue)
+      num_excessive_primal++;
   }
   analysis->simplexTimerStop(UpdatePrimalClock);
+  // Flag detection of excessive values in return
+  if (num_excessive_primal) return false;
+  return true;
 }
 
 void HEkkDualRHS::updatePivots(const HighsInt iRow, const double value) {

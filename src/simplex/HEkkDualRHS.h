@@ -76,9 +76,10 @@ class HEkkDualRHS {
   );
 
   /**
-   * @brief Update the primal values by adding a multiple of a given std::vector
+   * @brief Update the primal values by adding a multiple of a given
+   * std::vector, returning false if infinite values are created
    */
-  void updatePrimal(
+  bool updatePrimal(
       HVector* column,  //!< Column to add into primal values
       double theta      //!< Multiple of column to add into primal values
   );
