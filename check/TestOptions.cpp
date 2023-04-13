@@ -349,8 +349,6 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.setOptionValue("time_limit", "hi");
   REQUIRE(return_status == HighsStatus::kError);
 
-  printf("\nEnd of experiments\n");
-
   // Check setting boolean options
   std::string setting_string = "fixed";
   return_status = highs.setOptionValue("mps_parser_type_free", setting_string);
