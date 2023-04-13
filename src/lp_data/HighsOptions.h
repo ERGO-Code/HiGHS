@@ -544,7 +544,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_target", "Objective target for termination", advanced,
+        "objective_target", "Objective target for termination", now_advanced,
         &objective_target, -kHighsInf, -kHighsInf, kHighsInf);
     records.push_back(record_double);
 
@@ -804,7 +804,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt("mip_report_level", "MIP solver reporting level",
-                            advanced, &mip_report_level, 0, 1, 2);
+                            now_advanced, &mip_report_level, 0, 1, 2);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(

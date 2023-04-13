@@ -79,12 +79,6 @@
 - Range: [-inf, inf]
 - Default: inf
 
-## objective\_target
-- Objective target for termination
-- Type: double
-- Range: [-inf, inf]
-- Default: -inf
-
 ## random\_seed
 - Random seed used in HiGHS
 - Type: integer
@@ -122,7 +116,7 @@
 - Default: -1
 
 ## simplex\_iteration\_limit
-- Iteration limit for simplex solver
+- Iteration limit for simplex solver when solving LPs, but not subproblems in the MIP solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
@@ -244,12 +238,6 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 100000
-
-## mip\_report\_level
-- MIP solver reporting level
-- Type: integer
-- Range: {0, 2}
-- Default: 1
 
 ## mip\_feasibility\_tolerance
 - MIP feasibility tolerance
