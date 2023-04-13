@@ -37,7 +37,8 @@ class HighsMipSolver {
   int64_t node_count_;
   int64_t total_lp_iterations_;
 
-  std::vector<HighsObjectivePrimalSolution> saved_objective_and_solution_;
+  FILE* improving_solution_file_;
+  std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
   const HighsBasis* rootbasis;

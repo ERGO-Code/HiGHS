@@ -395,8 +395,8 @@ struct HighsOptionsStruct {
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
-  bool mip_save_improving_solution;
-  bool mip_report_improving_solution;
+  bool mip_improving_solution_save;
+  bool mip_improving_solution_report_sparse;
   std::string mip_improving_solution_file;
 
   // Logging callback identifiers
@@ -759,15 +759,15 @@ class HighsOptions : public HighsOptionsStruct {
 #endif
 
     record_bool =
-        new OptionRecordBool("mip_save_improving_solution",
+        new OptionRecordBool("mip_improving_solution_save",
                              "Whether improving MIP solutions should be saved",
-                             advanced, &mip_save_improving_solution, false);
+                             advanced, &mip_improving_solution_save, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
-        "mip_report_improving_solution",
-        "Whether improving MIP solutions should be reported", advanced,
-        &mip_report_improving_solution, false);
+        "mip_improving_solution_report_sparse",
+        "Whether improving MIP solutions should be reported in sparse format",
+        advanced, &mip_improving_solution_report_sparse, false);
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(

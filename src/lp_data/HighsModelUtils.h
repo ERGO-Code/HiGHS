@@ -40,11 +40,16 @@ void writeModelBoundSolution(
     const HighsVarType* integrality = NULL);
 
 void writeModelObjective(FILE* file, const HighsModel& model,
-                         const HighsSolution& solution);
+                         const std::vector<double>& primal_solution);
 
-void writeModelPrimalSolution(FILE* file, const HighsModel& model,
-                              const HighsSolution& solution,
-                              const bool sparse = false);
+void writeLpObjective(FILE* file, const HighsLp& lp,
+                      const std::vector<double>& primal_solution);
+
+void writeObjectiveValue(FILE* file, const double objective_value);
+
+void writePrimalSolution(FILE* file, const HighsLp& lp,
+                         const std::vector<double>& primal_solution,
+                         const bool sparse = false);
 
 void writeModelSolution(FILE* file, const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,

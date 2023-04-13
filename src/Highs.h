@@ -421,8 +421,7 @@ class Highs {
   /**
    * @brief Return a const reference to the internal HighsSolution instance
    */
-  const std::vector<HighsObjectivePrimalSolution>& getSavedMipSolutions()
-      const {
+  const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
     return saved_objective_and_solution_;
   }
 
@@ -1239,7 +1238,7 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
 
-  std::vector<HighsObjectivePrimalSolution> saved_objective_and_solution_;
+  std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;

@@ -36,9 +36,9 @@ struct HighsSolution {
   void clear();
 };
 
-struct HighsObjectivePrimalSolution {
+struct HighsObjectiveSolution {
   double objective;
-  std::vector<double> primal_solution;
+  std::vector<double> col_value;
   void clear();
 };
 

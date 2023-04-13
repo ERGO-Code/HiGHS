@@ -104,6 +104,10 @@ void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
+  improving_solution_file_ = nullptr;
+  if (!submip && options_mip_->mip_improving_solution_file != "")
+    improving_solution_file_ =
+        fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
