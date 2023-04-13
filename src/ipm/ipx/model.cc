@@ -41,7 +41,7 @@ Int Model::Load(const Control& control, const std::string model_name,
       printf("IPX Dualization: lukas = %d != %d = filippo\n", dualize_lukas, dualize_filippo);
     }
     if (dualize == -1) {
-      dualize = dualize_lukas;
+      dualize = !dualize_lukas;
     } else if (dualize == -2) {
       dualize = dualize_filippo;
     }
