@@ -1334,7 +1334,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                       implications.substitutions.size() +
                       cliquetable.getSubstitutions().size();
     int64_t splayContingent =
-        cliquetable.numNeighborhoodQueries +
+        cliquetable.numNeighbourhoodQueries +
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
@@ -1366,11 +1366,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         // if (numProbed % 10 == 0)
         //   printf(
         //       "numprobed=%d  numDel=%d  newcliques=%d "
-        //       "numNeighborhoodQueries=%ld  "
+        //       "numNeighbourhoodQueries=%ld  "
         //       "splayContingent=%ld\n",
         //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
-        //       cliquetable.numNeighborhoodQueries, splayContingent);
-        if (cliquetable.numNeighborhoodQueries > splayContingent) break;
+        //       cliquetable.numNeighbourhoodQueries, splayContingent);
+        if (cliquetable.numNeighbourhoodQueries > splayContingent) break;
 
         if (probingContingent - numProbed < 0) break;
 
