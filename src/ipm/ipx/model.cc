@@ -35,10 +35,6 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
     assert(dualize == -1);
     const bool dualize_lukas = num_constr > 2*num_var;
     const bool dualize_filippo = filippoDualizationTest();
-    if (dualize_lukas != dualize_filippo) {
-      printf("IPX Dualization: lukas = %d != %d = filippo\n", dualize_lukas, dualize_filippo);
-    }
-    printf("grepIpxDualization: %d,%d\n", dualize_lukas, dualize_filippo);
     if (dualize == -1) {
       dualize = dualize_lukas;
     } else if (dualize == -2) {

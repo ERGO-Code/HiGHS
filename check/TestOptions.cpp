@@ -264,6 +264,91 @@ TEST_CASE("highs-options", "[highs_options]") {
   HighsStatus return_status = highs.writeOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::kOk);
 
+  // Check mixed-string value
+  //
+  // For bool, values from a precise set can be expected
+  return_status = highs.setOptionValue("mps_parser_type_free", "10true");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  // For int, the number of digits scanned in the (trimmed) string to
+  // get an integer must match the number of characters in the
+  // (trimmed) string
+  const HighsInt set_int_option_value = 10;
+  HighsInt get_int_option_value;
+  return_status = highs.setOptionValue("simplex_iteration_limit", " 10");
+  REQUIRE(return_status == HighsStatus::kOk);
+  highs.getOptionValue("simplex_iteration_limit", get_int_option_value);
+  REQUIRE(get_int_option_value == set_int_option_value);
+
+  return_status = highs.setOptionValue("simplex_iteration_limit", "10 ");
+  REQUIRE(return_status == HighsStatus::kOk);
+  highs.getOptionValue("simplex_iteration_limit", get_int_option_value);
+  REQUIRE(get_int_option_value == set_int_option_value);
+
+  return_status = highs.setOptionValue("simplex_iteration_limit", "1 0");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  return_status = highs.setOptionValue("simplex_iteration_limit", "10.");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  return_status = highs.setOptionValue("simplex_iteration_limit", "10hi");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  return_status = highs.setOptionValue("simplex_iteration_limit", "10.2hi");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  // For double, make sure that the string contains a numerical
+  // character, otherwise anything goes!
+  return_status = highs.setOptionValue("objective_bound", "1E2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1.1E2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1E+2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1.1E+2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1E-2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1.1E-2");
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.setOptionValue("objective_bound", "-1E2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "-1.1E2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "-1E+2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "-1.1E+2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "-1E-2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "-1.1E-2");
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.setOptionValue("objective_bound", "e12");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1e2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "12e");
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.setOptionValue("objective_bound", "1.1e2");
+  REQUIRE(return_status == HighsStatus::kOk);
+  // Illegal
+  return_status = highs.setOptionValue("objective_bound", "10hi");
+  REQUIRE(return_status == HighsStatus::kError);
+  return_status = highs.setOptionValue("objective_bound", "1d2");
+  REQUIRE(return_status == HighsStatus::kError);
+  return_status = highs.setOptionValue("objective_bound", "1.1d2");
+  REQUIRE(return_status == HighsStatus::kError);
+  return_status = highs.setOptionValue("objective_bound", "1D2");
+  REQUIRE(return_status == HighsStatus::kError);
+  return_status = highs.setOptionValue("objective_bound", "1.1D2");
+  REQUIRE(return_status == HighsStatus::kError);
+
+  // And the original motivation in #1250!
+  return_status = highs.setOptionValue("time_limit", "hi");
+  REQUIRE(return_status == HighsStatus::kError);
+
   // Check setting boolean options
   std::string setting_string = "fixed";
   return_status = highs.setOptionValue("mps_parser_type_free", setting_string);
