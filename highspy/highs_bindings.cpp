@@ -768,6 +768,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getLp", &Highs::getLp)
     .def("getModel", &Highs::getModel)
     .def("getSolution", &Highs::getSolution)
+    .def("getSavedMipSolutions", &Highs::getSavedMipSolutions)
     .def("getBasis", &Highs::getBasis)
 // &highs_getModelStatus not needed once getModelStatus(const bool
 // scaled_model) disappears from, Highs.h
@@ -828,6 +829,10 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("col_dual", &HighsSolution::col_dual)
     .def_readwrite("row_value", &HighsSolution::row_value)
     .def_readwrite("row_dual", &HighsSolution::row_dual);
+  py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution")
+    .def(py::init<>())
+    .def_readwrite("objective", &HighsObjectiveSolution::objective)
+    .def_readwrite("col_value", &HighsObjectiveSolution::col_value);
   py::class_<HighsBasis>(m, "HighsBasis")
     .def(py::init<>())
     .def_readwrite("valid", &HighsBasis::valid)

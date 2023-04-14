@@ -23,6 +23,7 @@ from .highs import (
     Highs,
     # structs
     HighsSolution,
+    HighsObjectiveSolution,
     HighsBasis,
     HighsRangingRecord,
     HighsRanging,
