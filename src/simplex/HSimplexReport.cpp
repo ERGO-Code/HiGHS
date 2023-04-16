@@ -54,13 +54,15 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
       delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
       delta_primal_phase1_iteration_count + delta_primal_phase2_iteration_count;
   if (check_delta_iteration_count != delta_iteration_count) {
-    printf("Iteration total error %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT
-           " + %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
-           " != %" HIGHSINT_FORMAT "\n",
-           delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
-           delta_primal_phase1_iteration_count,
-           delta_primal_phase2_iteration_count, check_delta_iteration_count,
-           delta_iteration_count);
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Iteration total error %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT
+        " + %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
+        " != %" HIGHSINT_FORMAT "\n",
+        delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
+        delta_primal_phase1_iteration_count,
+        delta_primal_phase2_iteration_count, check_delta_iteration_count,
+        delta_iteration_count);
   }
   std::stringstream iteration_report;
   if (delta_dual_phase1_iteration_count) {
