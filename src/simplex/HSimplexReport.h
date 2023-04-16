@@ -19,6 +19,6 @@
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
                                   const HighsInt iteration_count,
-                                  const HighsSimplexInfo& info,
+                                  HighsSimplexInfo& info,
                                   const bool initialise = false);
 #endif  // SIMPLEX_HSIMPLEXREPORT_H_
