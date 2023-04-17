@@ -488,17 +488,18 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
   const double kLowerBoundMu = 10.0;
-  std::vector<HighsInt>& upper_bound_index =
-      lp.mods_.save_semi_variable_upper_bound_index;
-  std::vector<double>& upper_bound_value =
-      lp.mods_.save_semi_variable_upper_bound_value;
+  std::vector<HighsInt>& tightened_semi_variable_upper_bound_index =
+      lp.mods_.save_tightened_semi_variable_upper_bound_index;
+  std::vector<double>& tightened_semi_variable_upper_bound_value =
+      lp.mods_.save_tightened_semi_variable_upper_bound_value;
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-      // Semi-variables with zero lower bound aren't semi
+      // Semi-variables with zero lower bound are not semi
       if (lp.col_lower_[iCol] == 0) {
         num_non_semi++;
+	lp.mods_.save_non_semi_variable_index.push_back(iCol);
         if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
           // Semi-continuous become continuous
           lp.integrality_[iCol] = HighsVarType::kContinuous;
@@ -519,9 +520,9 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
         if (kLowerBoundMu * lp.col_lower_[iCol] > kMaxSemiVariableUpper) {
           num_illegal_upper++;
         } else {
-          // Record the upper bound change
-          upper_bound_index.push_back(iCol);
-          upper_bound_value.push_back(kMaxSemiVariableUpper);
+          // Record the upper bound change to be made later
+          tightened_semi_variable_upper_bound_index.push_back(iCol);
+          tightened_semi_variable_upper_bound_value.push_back(kMaxSemiVariableUpper);
           num_modified_upper++;
         }
       }
@@ -564,15 +565,15 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
     if (has_illegal_bounds) {
       // Don't apply upper bound modifications if there are illegal bounds
       assert(num_illegal_lower || num_illegal_upper);
-      upper_bound_index.clear();
-      upper_bound_value.clear();
+      tightened_semi_variable_upper_bound_index.clear();
+      tightened_semi_variable_upper_bound_value.clear();
     } else {
       // Apply the upper bound modifications, saving the over-written
       // values
       for (HighsInt k = 0; k < num_modified_upper; k++) {
-        const double use_upper_bound = upper_bound_value[k];
-        const HighsInt iCol = upper_bound_index[k];
-        upper_bound_value[k] = lp.col_upper_[iCol];
+        const double use_upper_bound = tightened_semi_variable_upper_bound_value[k];
+        const HighsInt iCol = tightened_semi_variable_upper_bound_index[k];
+        tightened_semi_variable_upper_bound_value[k] = lp.col_upper_[iCol];
         lp.col_upper_[iCol] = use_upper_bound;
       }
     }
@@ -604,16 +605,16 @@ void relaxSemiVariables(HighsLp& lp) {
   if (!lp.integrality_.size()) return;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
   HighsInt num_modified_lower = 0;
-  std::vector<HighsInt>& lower_bound_index =
-      lp.mods_.save_semi_variable_lower_bound_index;
-  std::vector<double>& lower_bound_value =
-      lp.mods_.save_semi_variable_lower_bound_value;
-  assert(lower_bound_index.size() == 0);
+  std::vector<HighsInt>& relaxed_semi_variable_lower_index =
+      lp.mods_.save_relaxed_semi_variable_lower_bound_index;
+  std::vector<double>& relaxed_semi_variable_lower_value =
+      lp.mods_.save_relaxed_semi_variable_lower_bound_value;
+  assert(relaxed_semi_variable_lower_index.size() == 0);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
-      lower_bound_index.push_back(iCol);
-      lower_bound_value.push_back(lp.col_lower_[iCol]);
+      relaxed_semi_variable_lower_index.push_back(iCol);
+      relaxed_semi_variable_lower_value.push_back(lp.col_lower_[iCol]);
       lp.col_lower_[iCol] = 0;
     }
   }
@@ -621,14 +622,14 @@ void relaxSemiVariables(HighsLp& lp) {
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value) {
-  const std::vector<HighsInt>& upper_bound_index =
-      lp.mods_.save_semi_variable_upper_bound_index;
-  const HighsInt num_modified_upper = upper_bound_index.size();
+  const std::vector<HighsInt>& tightened_semi_variable_upper_bound_index =
+      lp.mods_.save_tightened_semi_variable_upper_bound_index;
+  const HighsInt num_modified_upper = tightened_semi_variable_upper_bound_index.size();
   HighsInt num_active_modified_upper = 0;
   double min_semi_variable_margin = kHighsInf;
   for (HighsInt k = 0; k < num_modified_upper; k++) {
-    const double value = col_value[upper_bound_index[k]];
-    const double upper = lp.col_upper_[upper_bound_index[k]];
+    const double value = col_value[tightened_semi_variable_upper_bound_index[k]];
+    const double upper = lp.col_upper_[tightened_semi_variable_upper_bound_index[k]];
     double semi_variable_margin = upper - value;
     if (value > upper - options.primal_feasibility_tolerance) {
       min_semi_variable_margin = 0;
