@@ -234,7 +234,6 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
                optimal_objective_function_value) < double_equal_tolerance);
 }
 
-/*
 TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   HighsLp lp;
   lp.num_col_ = 1;
@@ -265,7 +264,6 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
-*/
 
 void semiModel0(HighsLp& lp) {
   lp.num_col_ = 4;

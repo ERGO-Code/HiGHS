@@ -86,6 +86,7 @@ struct HighsLpMods {
   std::vector<HighsInt> save_inconsistent_semi_variable_index;
   std::vector<double> save_inconsistent_semi_variable_lower_bound_value;
   std::vector<double> save_inconsistent_semi_variable_upper_bound_value;
+  std::vector<HighsVarType> save_inconsistent_semi_variable_type;
 
   std::vector<HighsInt> save_relaxed_semi_variable_lower_bound_index;
   std::vector<double> save_relaxed_semi_variable_lower_bound_value;
