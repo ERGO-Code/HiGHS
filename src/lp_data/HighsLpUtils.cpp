@@ -64,7 +64,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the LP column bounds
   call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
-                             lp.col_upper_, options.infinite_bound);
+                             lp.col_upper_, options.infinite_bound,
+			     lp.integrality_.data());
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
@@ -348,7 +349,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
-                         const double infinite_bound) {
+                         const double infinite_bound,
+			 const HighsVarType* integrality) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -419,6 +421,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     }
     // Check that the lower bound does not exceed the upper bound
     bool legalLowerUpperBound = lower[usr_ix] <= upper[usr_ix];
+    if (integrality) {
+      // Legal for semi-variables to have inconsistent bounds
+      if (integrality[usr_ix] == HighsVarType::kSemiContinuous ||
+	  integrality[usr_ix] == HighsVarType::kSemiInteger)
+	legalLowerUpperBound = true;
+    }
     if (!legalLowerUpperBound) {
       // Leave inconsistent bounds to be used to deduce infeasibility
       highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -476,6 +484,7 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
   HighsInt num_illegal_lower = 0;
   HighsInt num_illegal_upper = 0;
   HighsInt num_modified_upper = 0;
+  HighsInt num_inconsistent_semi = 0;
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
   const double kLowerBoundMu = 10.0;
@@ -520,6 +529,14 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
     } else if (lp.integrality_[iCol] == HighsVarType::kInteger) {
       num_non_continuous_variables++;
     }
+  }
+  if (num_inconsistent_semi) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "%" HIGHSINT_FORMAT
+                 " semi-continuous/integer variable(s) have inconsistent bounds "
+                 "so are fixed at zero\n",
+                 num_inconsistent_semi);
+    return_status = HighsStatus::kWarning;
   }
   if (num_non_semi) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -2546,8 +2563,15 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
 
 bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
   HighsInt num_bound_infeasible = 0;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+  const bool has_integrality = lp.integrality_.size() > 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (has_integrality) {
+      // Semi-variables can have inconsistent bounds      
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+	  lp.integrality_[iCol] == HighsVarType::kSemiInteger) continue;
+    }
     if (lp.col_upper_[iCol] < lp.col_lower_[iCol]) num_bound_infeasible++;
+  }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
     if (lp.row_upper_[iRow] < lp.row_lower_[iRow]) num_bound_infeasible++;
   if (num_bound_infeasible > 0)
