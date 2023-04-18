@@ -182,6 +182,10 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `getRows`
  * `getColsEntries`
  * `getRowsEntries`
+ * `getColName`
+ * `getColByName`
+ * `getRowName`
+ * `getRowByName`
  * `getCoeff`
 
 ## Modify model data
