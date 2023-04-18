@@ -1613,6 +1613,16 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
 HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
 
 /**
+ * Get the row for a name
+ *
+ * @param name A pointer of the name of the row to query.
+ * @param row  A pointer in which to store the index of the row
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+  HighsInt Highs_getRowByName(const void* highs, const char* name, HighsInt* row);
+
+/**
  * Get the name of a column.
  *
  * @param col   The index of the column to query.
@@ -1622,6 +1632,16 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
+
+/**
+ * Get the column for a name
+ *
+ * @param name A pointer of the name of the column to query.
+ * @param col  A pointer in which to store the index of the column
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+  HighsInt Highs_getColByName(const void* highs, const char* name, HighsInt* col);
 
 /**
  * Get the integrality of a column.
