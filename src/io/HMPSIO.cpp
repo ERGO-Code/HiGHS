@@ -612,9 +612,8 @@ HighsStatus writeMps(
     const vector<HighsVarType>& integrality, const std::string objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
-  const bool write_zero_no_cost_columns = true;
-  HighsInt num_zero_no_cost_columns = 0;
-  HighsInt num_zero_no_cost_columns_in_bounds_section = 0;
+  HighsInt num_no_cost_zero_columns = 0;
+  HighsInt num_no_cost_zero_columns_in_bounds_section = 0;
   highsLogDev(log_options, HighsLogType::kInfo,
               "writeMPS: Trying to open file %s\n", filename.c_str());
   FILE* file = fopen(filename.c_str(), "w");
@@ -771,15 +770,17 @@ HighsStatus writeMps(
   bool integerFg = false;
   HighsInt nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
+  const bool write_no_cost_zero_columns = true;
   for (HighsInt c_n = 0; c_n < num_col; c_n++) {
-    if (a_start[c_n] == a_start[c_n + 1] && col_cost[c_n] == 0) {
+    const bool no_cost_zero_column =
+        !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1];
+    if (no_cost_zero_column) {
       // Possibly skip this column as it's zero and has no cost
-      num_zero_no_cost_columns++;
-      if (write_zero_no_cost_columns) {
+      num_no_cost_zero_columns++;
+      if (write_no_cost_zero_columns) {
         // Give the column a presence by writing out a zero cost
-        double v = 0;
         fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
-                objective_name.c_str(), v);
+                objective_name.c_str(), 0.0);
       }
       continue;
     }
@@ -852,13 +853,15 @@ HighsStatus writeMps(
         discrete = integrality[c_n] == HighsVarType::kInteger ||
                    integrality[c_n] == HighsVarType::kSemiContinuous ||
                    integrality[c_n] == HighsVarType::kSemiInteger;
-      if (a_start[c_n] == a_start[c_n + 1] && col_cost[c_n] == 0) {
+      const bool no_cost_zero_column =
+          !col_cost[c_n] && a_start[c_n] == a_start[c_n + 1];
+      if (no_cost_zero_column) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
           // Column would have a bound to report
-          num_zero_no_cost_columns_in_bounds_section++;
+          num_no_cost_zero_columns_in_bounds_section++;
         }
-        if (!write_zero_no_cost_columns) continue;
+        if (!write_no_cost_zero_columns) continue;
       }
       if (lb == ub) {
         // Equal lower and upper bounds: Fixed
@@ -874,16 +877,18 @@ HighsStatus writeMps(
               // Binary
               fprintf(file, " BV BOUND     %-8s\n", col_names[c_n].c_str());
             } else {
-              if (!highs_isInfinity(-lb)) {
-                // Finite lower bound. No need to state this if LB is
-                // zero unless UB is infinte
-                if (lb || highs_isInfinity(ub))
-                  fprintf(file, " LI BOUND     %-8s  %.15g\n",
-                          col_names[c_n].c_str(), lb);
+              assert(write_no_cost_zero_columns);
+              // No cost zero columns have a presence in the COLUMNS
+              // section, so no need to indicate integrality using LI
+              // or UI bounds. Avoids need for integer-valued bounds
+              if (!highs_isInfinity(-lb) && lb) {
+                // Finite, nonzero lower bound.
+                fprintf(file, " LO BOUND     %-8s  %.15g\n",
+                        col_names[c_n].c_str(), lb);
               }
               if (!highs_isInfinity(ub)) {
                 // Finite upper bound
-                fprintf(file, " UI BOUND     %-8s  %.15g\n",
+                fprintf(file, " UP BOUND     %-8s  %.15g\n",
                         col_names[c_n].c_str(), ub);
               }
             }
@@ -938,15 +943,15 @@ HighsStatus writeMps(
     }
   }
   fprintf(file, "ENDATA\n");
-  if (num_zero_no_cost_columns)
+  if (num_no_cost_zero_columns)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Model has %" HIGHSINT_FORMAT
                  " zero columns with no costs: %" HIGHSINT_FORMAT
                  " have finite upper bounds "
                  "or nonzero lower bounds and are %swritten in MPS file\n",
-                 num_zero_no_cost_columns,
-                 num_zero_no_cost_columns_in_bounds_section,
-                 write_zero_no_cost_columns ? "" : "not ");
+                 num_no_cost_zero_columns,
+                 num_no_cost_zero_columns_in_bounds_section,
+                 write_no_cost_zero_columns ? "" : "not ");
   fclose(file);
   return HighsStatus::kOk;
 }

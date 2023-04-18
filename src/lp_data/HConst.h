@@ -249,6 +249,9 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
 
+// Limit on primal values being realistic
+const double kExcessivePrimalValue = 1e25;
+
 // Tolerance values for highsDoubleToString
 const double kModelValueToStringTolerance = 1e-15;
 const double kRangingValueToStringTolerance = 1e-13;

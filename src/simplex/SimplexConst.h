@@ -164,8 +164,6 @@ const double kAcceptDseWeightThreshold = 0.25;
 
 const double kMinDualSteepestEdgeWeight = 1e-4;
 
-const double kExcessivePrimalValue = 1e25;
-
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 

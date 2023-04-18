@@ -51,7 +51,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
-                         const double infinite_bound);
+                         const double infinite_bound,
+                         const HighsVarType* integrality = nullptr);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 

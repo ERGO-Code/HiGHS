@@ -728,6 +728,7 @@ HighsStatus ipxSolutionToHighsSolution(
     // of machine precision
     const double primal_margin = 0;  // primal_feasibility_tolerance;
     const double dual_margin = 0;    // dual_feasibility_tolerance;
+    double max_abs_primal_value = 0;
     for (HighsInt var = 0; var < lp.num_col_ + lp.num_row_; var++) {
       if (var == lp.num_col_) {
         col_primal_truncation_norm = primal_truncation_norm;
@@ -780,28 +781,31 @@ HighsStatus ipxSolutionToHighsSolution(
       }
       // Continue if no dual infeasibility
       if (dual_infeasibility <= dual_feasibility_tolerance) continue;
+
       if (residual < dual_infeasibility && !force_dual_feasibility) {
-        // Residual is less than dual infeasibility, or not forcing
-        // dual feasibility, so truncate value
-        if (at_lower) {
-          assert(10 == 50);
-        } else if (at_upper) {
-          assert(11 == 50);
-        } else {
-          // Off bound
-          if (lower <= -kHighsInf) {
-            if (upper >= kHighsInf) {
-              // Free shouldn't be possible, as residual would be inf
-              assert(12 == 50);
-            } else {
-              // Upper bounded, so assume dual is negative
-              if (dual > 0) assert(13 == 50);
+        /*
+          // Residual is less than dual infeasibility, or not forcing
+          // dual feasibility, so truncate value
+          if (at_lower) {
+            assert(10 == 50);
+          } else if (at_upper) {
+            assert(11 == 50);
+          } else {
+            // Off bound
+            if (lower <= -kHighsInf) {
+              if (upper >= kHighsInf) {
+                // Free shouldn't be possible, as residual would be inf
+                assert(12 == 50);
+              } else {
+                // Upper bounded, so assume dual is negative
+                if (dual > 0) assert(13 == 50);
+              }
+            } else if (upper >= kHighsInf) {
+              // Lower bounded, so assume dual is positive
+              if (dual < 0) assert(14 == 50);
             }
-          } else if (upper >= kHighsInf) {
-            // Lower bounded, so assume dual is positive
-            if (dual < 0) assert(14 == 50);
           }
-        }
+        */
         num_primal_truncations++;
         if (dual > 0) {
           // Put closest to lower
@@ -851,6 +855,8 @@ HighsStatus ipxSolutionToHighsSolution(
             upper, residual, new_value, primal_truncation, dual, new_dual,
             dual_truncation);
       */
+      max_abs_primal_value =
+          std::max(std::abs(new_value), max_abs_primal_value);
       if (is_col) {
         highs_solution.col_value[col] = new_value;
         highs_solution.col_dual[col] = new_dual;
@@ -909,8 +915,14 @@ HighsStatus ipxSolutionToHighsSolution(
                 "ipxSolutionToHighsSolution: Final norm of dual   residual "
                 "values is %10.4g\n",
                 dual_residual_norm);
+    if (max_abs_primal_value > kExcessivePrimalValue) {
+      //    highsLogUser(options.log_options, HighsLogType::kInfo,
+      printf(
+          "ipxSolutionToHighsSolution: "
+          "Excessive corrected |primal value| is %10.4g\n",
+          max_abs_primal_value);
+    }
   }
-
   assert(ipx_row == ipx_num_row);
   assert(ipx_slack == ipx_num_col);
   // Indicate that the primal and dual solution are known
