@@ -906,7 +906,8 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
   return retcode;
 }
 
-HighsInt Highs_getRowByName(const void* highs, const char* name, HighsInt* row) {
+HighsInt Highs_getRowByName(const void* highs, const char* name,
+                            HighsInt* row) {
   HighsInt local_row;
   HighsInt retcode = (HighsInt)((Highs*)highs)->getRowByName(name, local_row);
   *row = local_row;
@@ -920,7 +921,8 @@ HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name) {
   return retcode;
 }
 
-HighsInt Highs_getColByName(const void* highs, const char* name, HighsInt* col) {
+HighsInt Highs_getColByName(const void* highs, const char* name,
+                            HighsInt* col) {
   HighsInt local_col;
   HighsInt retcode = (HighsInt)((Highs*)highs)->getColByName(name, local_col);
   *col = local_col;

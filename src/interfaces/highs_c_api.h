@@ -1620,7 +1620,7 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-  HighsInt Highs_getRowByName(const void* highs, const char* name, HighsInt* row);
+HighsInt Highs_getRowByName(const void* highs, const char* name, HighsInt* row);
 
 /**
  * Get the name of a column.
@@ -1641,7 +1641,7 @@ HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-  HighsInt Highs_getColByName(const void* highs, const char* name, HighsInt* col);
+HighsInt Highs_getColByName(const void* highs, const char* name, HighsInt* col);
 
 /**
  * Get the integrality of a column.
