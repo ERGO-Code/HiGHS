@@ -96,7 +96,7 @@ bool Model::filippoDualizationTest() const {
     bool dualize_L = num_constr_ > 2*num_var_;
     bool dualize_F = nnzAAt > nnzAtA;
 
-    double ratio_1 = num_constr_/(2*num_var_);
+    double ratio_1 = (double)num_constr_/(2*num_var_);
     double ratio_2 = nnzAAt/nnzAtA;
 
     double thr_1 = 4.0; //threshold for ratio_1
