@@ -146,6 +146,9 @@ void HighsLp::clear() {
   this->col_names_.clear();
   this->row_names_.clear();
 
+  this->name2col_.clear();
+  this->name2row_.clear();
+
   this->integrality_.clear();
 
   this->clearScale();

@@ -554,6 +554,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   }
   this->model_.lp_.col_names_.resize(num_col);
   this->model_.lp_.col_names_[col] = name;
+  this->model_.lp_.name2col_.clear();
   return HighsStatus::kOk;
 }
 
@@ -573,6 +574,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   }
   this->model_.lp_.row_names_.resize(num_row);
   this->model_.lp_.row_names_[row] = name;
+  this->model_.lp_.name2row_.clear();
   return HighsStatus::kOk;
 }
 
@@ -2431,6 +2433,11 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
+  if (!this->model_.lp_.col_names_.size()) return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getColIntegrality(const HighsInt col,
                                      HighsVarType& integrality) const {
   const HighsInt num_col = this->model_.lp_.num_col_;
@@ -2510,6 +2517,11 @@ HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
     return HighsStatus::kError;
   }
   name = this->model_.lp_.row_names_[row];
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
+  if (!this->model_.lp_.row_names_.size()) return HighsStatus::kError;
   return HighsStatus::kOk;
 }
 

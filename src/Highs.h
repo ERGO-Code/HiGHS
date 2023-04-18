@@ -644,6 +644,11 @@ class Highs {
   HighsStatus getColName(const HighsInt col, std::string& name) const;
 
   /**
+   * @brief Get column index corresponding to name
+   */
+  HighsStatus getColByName(const std::string& name, HighsInt& col);
+
+  /**
    * @brief Get a column integrality from the incumbent model
    */
   HighsStatus getColIntegrality(const HighsInt col,
@@ -707,6 +712,11 @@ class Highs {
    * @brief Get a row name from the incumbent model
    */
   HighsStatus getRowName(const HighsInt row, std::string& name) const;
+
+  /**
+   * @brief Get row index corresponding to name
+   */
+  HighsStatus getRowByName(const std::string& name, HighsInt& row);
 
   /**
    * @brief Get a matrix coefficient
