@@ -2434,7 +2434,16 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
 }
 
 HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
-  if (!this->model_.lp_.col_names_.size()) return HighsStatus::kError;
+  HighsLp& lp = model_.lp_;
+  if (!lp.col_names_.size()) return HighsStatus::kError;
+  if (!lp.name2col_.size()) {
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      lp.name2col_.emplace(lp.col_names_[iCol], iCol);
+  }
+  auto mit = lp.name2col_.find(name);
+  if (mit == lp.name2col_.end()) return HighsStatus::kError;
+  col = mit->second;
+  assert(lp.col_names_[col] == name);
   return HighsStatus::kOk;
 }
 
@@ -2521,7 +2530,16 @@ HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
 }
 
 HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
-  if (!this->model_.lp_.row_names_.size()) return HighsStatus::kError;
+  HighsLp& lp = model_.lp_;
+  if (!lp.row_names_.size()) return HighsStatus::kError;
+  if (!lp.name2row_.size()) {
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      lp.name2row_.emplace(lp.row_names_[iRow], iRow);
+  }
+  auto mit = lp.name2row_.find(name);
+  if (mit == lp.name2row_.end()) return HighsStatus::kError;
+  row = mit->second;
+  assert(lp.row_names_[row] == name);
   return HighsStatus::kOk;
 }
 
