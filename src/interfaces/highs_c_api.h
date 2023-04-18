@@ -1636,7 +1636,9 @@ HighsInt Highs_getRowByName(const void* highs, const char* name, HighsInt* row);
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
 
 /**
- * Get the column for a name
+ * Get the index of a column from its name.
+ *
+ * If multiple columns have the same name, one is chosen arbitrarily.
  *
  * @param name A pointer of the name of the column to query.
  * @param col  A pointer in which to store the index of the column
