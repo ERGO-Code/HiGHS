@@ -554,7 +554,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   }
   this->model_.lp_.col_names_.resize(num_col);
   this->model_.lp_.col_names_[col] = name;
-  this->model_.lp_.name2col_.clear();
+  this->model_.lp_.col_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -574,7 +574,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   }
   this->model_.lp_.row_names_.resize(num_row);
   this->model_.lp_.row_names_[row] = name;
-  this->model_.lp_.name2row_.clear();
+  this->model_.lp_.row_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -2436,10 +2436,8 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
 HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
   HighsLp& lp = model_.lp_;
   if (!lp.col_names_.size()) return HighsStatus::kError;
-  if (!lp.name2col_.size()) {
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      lp.name2col_.emplace(lp.col_names_[iCol], iCol);
-  }
+  if (!lp.col_hash_.name2index.size())
+    lp.col_hash_.form(lp.col_names_);
   auto mit = lp.name2col_.find(name);
   if (mit == lp.name2col_.end()) return HighsStatus::kError;
   col = mit->second;

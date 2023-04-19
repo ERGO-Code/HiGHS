@@ -324,3 +324,24 @@ bool HighsLpMods::isClear() {
   if (this->save_tightened_semi_variable_upper_bound_value.size()) return false;
   return true;
 }
+
+void HighsNameHash::form(const std::vector<std::string>& name) {
+  HighsInt num_name = name.size();
+  this->clear();
+  for (HighsInt index = 0; index < num_name; index++) {
+    auto ret = this->name2index.emplace(name[index], index);
+    if (!ret.second) {
+      // Duplicate name
+      this->has_duplicate[
+    
+  }
+}
+
+bool HighsNameHash::duplicate() {
+  return true;
+}
+
+void HighsNameHash::clear() {
+  this->name2index.clear();
+  this->has_duplicate.clear();
+}

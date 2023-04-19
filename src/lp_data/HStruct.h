@@ -14,6 +14,7 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -94,6 +95,14 @@ struct HighsLpMods {
   std::vector<double> save_tightened_semi_variable_upper_bound_value;
   void clear();
   bool isClear();
+};
+
+struct HighsNameHash {
+  std::unordered_map<std::string, int> name2index;
+  std::vector<bool> has_duplicate;
+  void form(const std::vector<std::string>& name);
+  bool duplicate();
+  void clear();
 };
 
 struct HighsPresolveRuleLog {

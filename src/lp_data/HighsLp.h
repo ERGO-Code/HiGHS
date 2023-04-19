@@ -15,8 +15,6 @@
 #define LP_DATA_HIGHS_LP_H_
 
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 #include "lp_data/HStruct.h"
 #include "util/HighsSparseMatrix.h"
@@ -49,6 +47,9 @@ class HighsLp {
 
   std::unordered_map<std::string, int> name2col_;
   std::unordered_map<std::string, int> name2row_;
+
+  HighsNameHash col_hash_;
+  HighsNameHash row_hash_;
 
   HighsScale scale_;
   bool is_scaled_;
