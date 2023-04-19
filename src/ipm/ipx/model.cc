@@ -96,7 +96,22 @@ bool Model::filippoDualizationTest() const {
     //    printf("    Expected nonzeros in AAt: %8.3e ( density %% %6.2f)\n", nnzAAt, 100 * nnzAAt/( (double)num_constr_ * num_constr_ ) );
     //    printf("    Expected nonzeros in AtA: %8.3e ( density %% %6.2f)\n", nnzAtA, 100 * nnzAtA/( (double)num_var_    * num_var_    ) );
 
-    return ( nnzAAt > nnzAtA );
+    //hybrid dualization test
+
+    bool dualize_L = num_constr_ > 2*num_var_;
+    bool dualize_F = nnzAAt > nnzAtA;
+
+    double ratio_1 = (double)num_constr_/(2*num_var_);
+    double ratio_2 = nnzAAt/nnzAtA;
+
+    double thr_1 = 4.0; //threshold for ratio_1
+    double thr_2 = 5.0; //threshold for ratio_2
+    
+    if (ratio_1 > thr_1 || ratio_2 < thr_2){
+        return dualize_L;
+    }else{
+        return dualize_F;
+    }
   
 }
 
