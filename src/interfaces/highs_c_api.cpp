@@ -258,6 +258,10 @@ HighsInt Highs_passColName(const void* highs, const HighsInt col,
   return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
 }
 
+HighsInt Highs_readOptions(const void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->readOptions(filename);
+}
+
 HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
 
 HighsInt Highs_clearModel(void* highs) {

@@ -492,6 +492,16 @@ HighsInt Highs_passColName(const void* highs, const HighsInt col,
                            const char* name);
 
 /**
+ * Read the option values from file.
+ *
+ * @param highs     A pointer to the Highs instance.
+ * @param filename  The filename from which to read the option values.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_readOptions(const void* highs, const char* filename);
+
+/**
  * Set a boolean-valued option.
  *
  * @param highs     A pointer to the Highs instance.
