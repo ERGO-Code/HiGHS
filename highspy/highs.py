@@ -49,47 +49,47 @@ class Highs(_Highs):
         self._cons = []
 
     # reset the objective and sense, then solve
-    def minimize(self, obj):
-        # if we have a single variable, wrap it in a linear expression
-        if isinstance(obj, highs_var) == True:
-            obj = highs_linear_expression(obj)
+    def minimize(self, obj=None):
+        if obj != None:
+            # if we have a single variable, wrap it in a linear expression
+            if isinstance(obj, highs_var) == True:
+                obj = highs_linear_expression(obj)
 
-        if isinstance(obj, highs_linear_expression) == False or obj.LHS != -self.inf or obj.RHS != self.inf:
-            raise Exception('Objective cannot be an inequality') 
+            if isinstance(obj, highs_linear_expression) == False or obj.LHS != -self.inf or obj.RHS != self.inf:
+                raise Exception('Objective cannot be an inequality') 
 
-        self.update()
+            # reset objective
+            self.update()
+            super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
+
+            # if we have duplicate variables, add the vals
+            vars,vals = zip(*[(var, sum(v[1] for v in Vals)) for var, Vals in groupby(sorted(zip(obj.vars, obj.vals)), key=itemgetter(0))])
+            super().changeColsCost(len(vars), vars, vals)
+            super().changeObjectiveOffset(obj.constant)
+
         super().changeObjectiveSense(ObjSense.kMinimize)
-        
-        # reset objective
-        super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
-
-        # if we have duplicate variables, add the vals
-        vars,vals = zip(*[(var, sum(v[1] for v in Vals)) for var, Vals in groupby(sorted(zip(obj.vars, obj.vals)), key=itemgetter(0))])
-        super().changeColsCost(len(vars), vars, vals)
-        super().changeObjectiveOffset(obj.constant)
-
         return super().run()
 
     # reset the objective and sense, then solve
-    def maximize(self, obj):
-        # if we have a single variable, wrap it in a linear expression
-        if isinstance(obj, highs_var) == True:
-            obj = highs_linear_expression(obj)
+    def maximize(self, obj=None):
+        if obj != None:
+            # if we have a single variable, wrap it in a linear expression
+            if isinstance(obj, highs_var) == True:
+                obj = highs_linear_expression(obj)
 
-        if isinstance(obj, highs_linear_expression) == False or obj.LHS != -self.inf or obj.RHS != self.inf:
-            raise Exception('Objective cannot be an inequality') 
+            if isinstance(obj, highs_linear_expression) == False or obj.LHS != -self.inf or obj.RHS != self.inf:
+                raise Exception('Objective cannot be an inequality') 
 
-        self.update()
+            # reset objective
+            self.update()
+            super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
+
+            # if we have duplicate variables, add the vals
+            vars,vals = zip(*[(var, sum(v[1] for v in Vals)) for var, Vals in groupby(sorted(zip(obj.vars, obj.vals)), key=itemgetter(0))])
+            super().changeColsCost(len(vars), vars, vals)
+            super().changeObjectiveOffset(obj.constant)
+
         super().changeObjectiveSense(ObjSense.kMaximize)
-        
-        # reset objective
-        super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
-
-        # if we have duplicate variables, add the vals
-        vars,vals = zip(*[(var, sum(v[1] for v in Vals)) for var, Vals in groupby(sorted(zip(obj.vars, obj.vals)), key=itemgetter(0))])
-        super().changeColsCost(len(vars), vars, vals)
-        super().changeObjectiveOffset(obj.constant)
-
         return super().run()
 
     
@@ -102,7 +102,10 @@ class Highs(_Highs):
 
             super().addVars(int(current_batch_size), self._batch.lb, self._batch.ub)
             super().changeColsCost(current_batch_size, self._batch.idx, self._batch.obj)
-            super().changeColsIntegrality(current_batch_size, self._batch.idx, self._batch.type)
+
+            # only set integrality if we have non-continuous variables
+            if any([t != HighsVarType.kContinuous for t in self._batch.type]):
+                super().changeColsIntegrality(current_batch_size, self._batch.idx, self._batch.type)
 
             for i in range(current_batch_size):
                 super().passColName(int(self._batch.idx[i]), str(names[i]))
@@ -136,7 +139,10 @@ class Highs(_Highs):
             i.index -= 1
 
         del self._vars[var.index]
-        super().deleteVars(1, [var.index])
+    
+        # only delete from model if it exists
+        if var.index < self.numVars:
+            super().deleteVars(1, [var.index])
 
     def getVars(self):
         return self._vars
