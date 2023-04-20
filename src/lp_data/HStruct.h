@@ -99,9 +99,8 @@ struct HighsLpMods {
 
 struct HighsNameHash {
   std::unordered_map<std::string, int> name2index;
-  std::vector<bool> has_duplicate;
   void form(const std::vector<std::string>& name);
-  bool duplicate();
+  bool hasDuplicate(const std::vector<std::string>& name);
   void clear();
 };
 

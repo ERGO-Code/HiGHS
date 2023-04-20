@@ -12,7 +12,7 @@
 
 #include <random>
 
-//#include "lp_data/HighsLpUtils.h"
+// #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"

@@ -83,6 +83,9 @@ TEST_CASE("highs-names", "[highs_names]") {
   status = highs.getColByName(iCol_name, iCol);
   REQUIRE(status == HighsStatus::kError);
 
+  status = highs.getColByName(col0_name, iCol);
+  REQUIRE(status == HighsStatus::kError);
+
   // Model can't be written
   REQUIRE(highs.writeModel("") == HighsStatus::kError);
   if (dev_run) highs.writeSolution("", 1);

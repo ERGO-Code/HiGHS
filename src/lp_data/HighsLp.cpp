@@ -146,10 +146,10 @@ void HighsLp::clear() {
   this->col_names_.clear();
   this->row_names_.clear();
 
-  this->name2col_.clear();
-  this->name2row_.clear();
-
   this->integrality_.clear();
+
+  this->col_hash_.clear();
+  this->row_hash_.clear();
 
   this->clearScale();
   this->is_scaled_ = false;
@@ -329,19 +329,28 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
   HighsInt num_name = name.size();
   this->clear();
   for (HighsInt index = 0; index < num_name; index++) {
-    auto ret = this->name2index.emplace(name[index], index);
-    if (!ret.second) {
-      // Duplicate name
-      this->has_duplicate[
-    
+    const bool duplicate = !this->name2index.emplace(name[index], index).second;
+    if (duplicate) {
+      // Find the original and mark it as duplicate
+      auto search = this->name2index.find(name[index]);
+      assert(search != this->name2index.end());
+      assert(int(search->second) < int(this->name2index.size()));
+      this->name2index.erase(search);
+      this->name2index.insert({name[index], kHashIsDuplicate});
+    }
   }
 }
 
-bool HighsNameHash::duplicate() {
-  return true;
+bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
+  HighsInt num_name = name.size();
+  this->clear();
+  bool has_duplicate = false;
+  for (HighsInt index = 0; index < num_name; index++) {
+    has_duplicate = !this->name2index.emplace(name[index], index).second;
+    if (has_duplicate) break;
+  }
+  this->clear();
+  return has_duplicate;
 }
 
-void HighsNameHash::clear() {
-  this->name2index.clear();
-  this->has_duplicate.clear();
-}
+void HighsNameHash::clear() { this->name2index.clear(); }

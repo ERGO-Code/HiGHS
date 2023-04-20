@@ -45,9 +45,6 @@ class HighsLp {
 
   std::vector<HighsVarType> integrality_;
 
-  std::unordered_map<std::string, int> name2col_;
-  std::unordered_map<std::string, int> name2row_;
-
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
 
