@@ -28,4 +28,4 @@ jobs:
           bazel build //...
       
       - name: test
-        run: ./bazel-bin/examples/call-highs-example
+        run: ./bazel-bin/call-highs-example

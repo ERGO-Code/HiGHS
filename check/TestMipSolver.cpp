@@ -489,6 +489,32 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
 
+TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
+  const std::string model = "flugpl";
+  const std::string solution_file = "MipImproving.sol";
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("mip_improving_solution_save", true);
+  highs.setOptionValue("mip_improving_solution_report_sparse", true);
+  highs.setOptionValue("mip_improving_solution_file", solution_file);
+  highs.readModel(model_file);
+  highs.run();
+  const std::vector<HighsObjectiveSolution> saved_objective_and_solution =
+      highs.getSavedMipSolutions();
+  const HighsInt num_saved_solution = saved_objective_and_solution.size();
+  REQUIRE(num_saved_solution == 3);
+  const HighsInt last_saved_solution = num_saved_solution - 1;
+  REQUIRE(saved_objective_and_solution[last_saved_solution].objective ==
+          highs.getInfo().objective_function_value);
+  for (HighsInt iCol = 0; iCol < highs.getLp().num_col_; iCol++)
+    REQUIRE(saved_objective_and_solution[last_saved_solution].col_value[iCol] ==
+            highs.getSolution().col_value[iCol]);
+  std::remove(solution_file.c_str());
+}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
                  const bool dev_run = false) {

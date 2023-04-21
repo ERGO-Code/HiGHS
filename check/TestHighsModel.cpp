@@ -97,6 +97,7 @@ TEST_CASE("highs-integrality", "[highs_model]") {
   require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = 31.2;
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
 
   HighsVarType integrality;

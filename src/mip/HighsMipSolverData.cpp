@@ -12,7 +12,8 @@
 
 #include <random>
 
-#include "lp_data/HighsLpUtils.h"
+// #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
 #include "parallel/HighsParallel.h"
@@ -443,6 +444,7 @@ void HighsMipSolverData::runSetup() {
     if (feasible && solobj < upper_bound) {
       upper_bound = solobj;
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
+      if (!mipsolver.submip) saveReportMipSolution(new_upper_limit);
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
         optimality_limit =
@@ -934,6 +936,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
+    if (!mipsolver.submip) saveReportMipSolution(new_upper_limit);
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
       upper_limit = new_upper_limit;
@@ -1583,6 +1586,9 @@ restart:
 }
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
+  // ToDo Add user termination callback here -
+  // if (!mipsolver.submip) Callbackfor termination
+
   const HighsOptions& options = *mipsolver.options_mip_;
 
   if (options.mip_max_nodes != kHighsIInf &&
@@ -1659,4 +1665,29 @@ void HighsMipSolverData::setupDomainPropagation() {
 
   domain = HighsDomain(mipsolver);
   domain.computeRowActivities();
+}
+
+void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
+  const bool non_improving = new_upper_limit >= upper_limit;
+  /*
+  printf(
+      "MIP %4simproving solution: numImprovingSols = %4d; Limits (%11.4g, "
+      "%11.4g)\n",
+      non_improving ? "non-" : "", int(numImprovingSols), new_upper_limit,
+      upper_limit);
+  */
+  if (non_improving) return;
+  if (mipsolver.options_mip_->mip_improving_solution_save) {
+    HighsObjectiveSolution record;
+    record.objective = mipsolver.solution_objective_;
+    record.col_value = mipsolver.solution_;
+    mipsolver.saved_objective_and_solution_.push_back(record);
+  }
+  FILE* file = mipsolver.improving_solution_file_;
+  if (file) {
+    writeLpObjective(file, *(mipsolver.orig_model_), mipsolver.solution_);
+    writePrimalSolution(
+        file, *(mipsolver.orig_model_), mipsolver.solution_,
+        mipsolver.options_mip_->mip_improving_solution_report_sparse);
+  }
 }

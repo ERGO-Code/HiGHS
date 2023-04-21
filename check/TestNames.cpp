@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 TEST_CASE("highs-names", "[highs_names]") {
   const std::string model = "avgas";
   const std::string model_file =
@@ -25,7 +25,7 @@ TEST_CASE("highs-names", "[highs_names]") {
     ss << model << "_col_" << iCol << "\0";
     const std::string name = ss.str();
     if (iCol == 0) col0_name = name;
-    printf("Col %d name is to be %s\n", int(iCol), name.c_str());
+    if (dev_run) printf("Col %d name is to be %s\n", int(iCol), name.c_str());
     REQUIRE(highs.passColName(iCol, name) == HighsStatus::kOk);
   }
   REQUIRE(highs.passRowName(-1, "FRED") == HighsStatus::kError);
@@ -38,12 +38,12 @@ TEST_CASE("highs-names", "[highs_names]") {
     ss << model << "_row_" << iRow << "\0";
     const std::string name = ss.str();
     if (iRow == 0) row0_name = name;
-    printf("Row %d name is to be %s\n", int(iRow), name.c_str());
+    if (dev_run) printf("Row %d name is to be %s\n", int(iRow), name.c_str());
     REQUIRE(highs.passRowName(iRow, name) == HighsStatus::kOk);
   }
   highs.run();
   REQUIRE(highs.writeModel("") == HighsStatus::kOk);
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
 
   // Change name of column num_col/2 to be the same as column 0
   std::string name;
@@ -55,7 +55,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(highs.passColName(iCol, col0_name) == HighsStatus::kOk);
   // Model can't be written
   REQUIRE(highs.writeModel("") == HighsStatus::kError);
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
 
   // Reinstate name and model writes OK
   REQUIRE(highs.passColName(iCol, iCol_name) == HighsStatus::kOk);
@@ -68,16 +68,19 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kOk);
   // Model can't be written
   REQUIRE(highs.writeModel("") == HighsStatus::kError);
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
 
   // Now work with a name-less model
   HighsLp local_lp = lp;
   local_lp.col_names_.clear();
   local_lp.row_names_.clear();
   highs.passModel(local_lp);
-  REQUIRE(highs.writeSolution("", 1) == HighsStatus::kOk);
+  const std::string solution_file = "temp.sol";
+  REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kOk);
 
   // Cannot get name of column or row 0
   REQUIRE(highs.getColName(0, name) == HighsStatus::kError);
   REQUIRE(highs.getRowName(0, name) == HighsStatus::kError);
+
+  std::remove(solution_file.c_str());
 }

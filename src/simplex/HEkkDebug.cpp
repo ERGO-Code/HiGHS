@@ -178,7 +178,7 @@ void HEkk::timeReporting(const HighsInt save_mod_recover) {
       bool output_flag = true;
       bool log_to_console = false;
       HighsInt log_dev_level = kHighsLogDevLevelVerbose;
-      log_options.log_file_stream = stdout;
+      log_options.log_stream = stdout;
       log_options.output_flag = &output_flag;
       log_options.log_to_console = &log_to_console;
       log_options.log_dev_level = &log_dev_level;

@@ -32,10 +32,8 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    HighsBasis basis;
-    solution = highs.getSolution();
-    basis = highs.getBasis();
+    const HighsSolution& solution = highs.getSolution();
+    const HighsBasis& basis = highs.getBasis();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
@@ -87,8 +85,7 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    solution = highs.getSolution();
+    const HighsSolution& solution = highs.getSolution();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
     const bool copy_col_value =
@@ -132,10 +129,8 @@ HighsInt Highs_qpCall(
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    HighsBasis basis;
-    solution = highs.getSolution();
-    basis = highs.getBasis();
+    const HighsSolution& solution = highs.getSolution();
+    const HighsBasis& basis = highs.getBasis();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
@@ -168,14 +163,14 @@ HighsInt Highs_qpCall(
   return (HighsInt)status;
 }
 
-void* Highs_create() { return new Highs(); }
+void* Highs_create(void) { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 const char* Highs_version(void) { return highsVersion(); }
-HighsInt Highs_versionMajor() { return highsVersionMajor(); }
-HighsInt Highs_versionMinor() { return highsVersionMinor(); }
-HighsInt Highs_versionPatch() { return highsVersionPatch(); }
+HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
+HighsInt Highs_versionMinor(void) { return highsVersionMinor(); }
+HighsInt Highs_versionPatch(void) { return highsVersionPatch(); }
 const char* Highs_githash(void) { return highsGithash(); }
 const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 
@@ -261,6 +256,10 @@ HighsInt Highs_passRowName(const void* highs, const HighsInt row,
 HighsInt Highs_passColName(const void* highs, const HighsInt col,
                            const char* name) {
   return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
+}
+
+HighsInt Highs_readOptions(const void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->readOptions(filename);
 }
 
 HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
@@ -430,7 +429,7 @@ HighsInt Highs_getInfoType(const void* highs, const char* info,
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
-  HighsSolution solution = ((Highs*)highs)->getSolution();
+  const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
@@ -460,7 +459,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
-  HighsBasis basis = ((Highs*)highs)->getBasis();
+  const HighsBasis& basis = ((Highs*)highs)->getBasis();
   for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
     col_status[i] = (HighsInt)basis.col_status[i];
   }
@@ -1071,6 +1070,107 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
   }
 
   return (HighsInt)((Highs*)highs)->crossover(solution);
+}
+
+HighsInt Highs_getRanging(
+    void* highs,
+    //
+    double* col_cost_up_value, double* col_cost_up_objective,
+    HighsInt* col_cost_up_in_var, HighsInt* col_cost_up_ou_var,
+    double* col_cost_dn_value, double* col_cost_dn_objective,
+    HighsInt* col_cost_dn_in_var, HighsInt* col_cost_dn_ou_var,
+    double* col_bound_up_value, double* col_bound_up_objective,
+    HighsInt* col_bound_up_in_var, HighsInt* col_bound_up_ou_var,
+    double* col_bound_dn_value, double* col_bound_dn_objective,
+    HighsInt* col_bound_dn_in_var, HighsInt* col_bound_dn_ou_var,
+    double* row_bound_up_value, double* row_bound_up_objective,
+    HighsInt* row_bound_up_in_var, HighsInt* row_bound_up_ou_var,
+    double* row_bound_dn_value, double* row_bound_dn_objective,
+    HighsInt* row_bound_dn_in_var, HighsInt* row_bound_dn_ou_var) {
+  HighsRanging ranging;
+  HighsInt status = (HighsInt)((Highs*)highs)->getRanging(ranging);
+  if (status == (HighsInt)HighsStatus::kError) return status;
+  HighsInt num_col = ((Highs*)highs)->getNumCol();
+  HighsInt num_row = ((Highs*)highs)->getNumRow();
+  if (col_cost_up_value)
+    memcpy(col_cost_up_value, ranging.col_cost_up.value_.data(),
+           num_col * sizeof(double));
+  if (col_cost_up_objective)
+    memcpy(col_cost_up_objective, ranging.col_cost_up.objective_.data(),
+           num_col * sizeof(double));
+  if (col_cost_up_in_var)
+    memcpy(col_cost_up_in_var, ranging.col_cost_up.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_cost_up_ou_var)
+    memcpy(col_cost_up_ou_var, ranging.col_cost_up.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (col_cost_dn_value)
+    memcpy(col_cost_dn_value, ranging.col_cost_dn.value_.data(),
+           num_col * sizeof(double));
+  if (col_cost_dn_objective)
+    memcpy(col_cost_dn_objective, ranging.col_cost_dn.objective_.data(),
+           num_col * sizeof(double));
+  if (col_cost_dn_in_var)
+    memcpy(col_cost_dn_in_var, ranging.col_cost_dn.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_cost_dn_ou_var)
+    memcpy(col_cost_dn_ou_var, ranging.col_cost_dn.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (col_bound_up_value)
+    memcpy(col_bound_up_value, ranging.col_bound_up.value_.data(),
+           num_col * sizeof(double));
+  if (col_bound_up_objective)
+    memcpy(col_bound_up_objective, ranging.col_bound_up.objective_.data(),
+           num_col * sizeof(double));
+  if (col_bound_up_in_var)
+    memcpy(col_bound_up_in_var, ranging.col_bound_up.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_bound_up_ou_var)
+    memcpy(col_bound_up_ou_var, ranging.col_bound_up.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (col_bound_dn_value)
+    memcpy(col_bound_dn_value, ranging.col_bound_dn.value_.data(),
+           num_col * sizeof(double));
+  if (col_bound_dn_objective)
+    memcpy(col_bound_dn_objective, ranging.col_bound_dn.objective_.data(),
+           num_col * sizeof(double));
+  if (col_bound_dn_in_var)
+    memcpy(col_bound_dn_in_var, ranging.col_bound_dn.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_bound_dn_ou_var)
+    memcpy(col_bound_dn_ou_var, ranging.col_bound_dn.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (row_bound_up_value)
+    memcpy(row_bound_up_value, ranging.row_bound_up.value_.data(),
+           num_row * sizeof(double));
+  if (row_bound_up_objective)
+    memcpy(row_bound_up_objective, ranging.row_bound_up.objective_.data(),
+           num_row * sizeof(double));
+  if (row_bound_up_in_var)
+    memcpy(row_bound_up_in_var, ranging.row_bound_up.in_var_.data(),
+           num_row * sizeof(HighsInt));
+  if (row_bound_up_ou_var)
+    memcpy(row_bound_up_ou_var, ranging.row_bound_up.ou_var_.data(),
+           num_row * sizeof(HighsInt));
+
+  if (row_bound_dn_value)
+    memcpy(row_bound_dn_value, ranging.row_bound_dn.value_.data(),
+           num_row * sizeof(double));
+  if (row_bound_dn_objective)
+    memcpy(row_bound_dn_objective, ranging.row_bound_dn.objective_.data(),
+           num_row * sizeof(double));
+  if (row_bound_dn_in_var)
+    memcpy(row_bound_dn_in_var, ranging.row_bound_dn.in_var_.data(),
+           num_row * sizeof(HighsInt));
+  if (row_bound_dn_ou_var)
+    memcpy(row_bound_dn_ou_var, ranging.row_bound_dn.ou_var_.data(),
+           num_row * sizeof(HighsInt));
+
+  return status;
 }
 
 void Highs_resetGlobalScheduler(HighsInt blocking) {

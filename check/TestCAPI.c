@@ -1175,6 +1175,130 @@ void test_passHessian() {
   Highs_destroy(highs);
 }
 
+void test_ranging() {
+
+  void* highs = Highs_create();
+  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  //
+  // Set up
+  //        min y
+  //        s.t.
+  //        -x + y >= 2
+  //        x + y >= 0
+  //
+  double inf = Highs_getInfinity(highs);
+  Highs_addVar(highs, -inf, inf);
+  Highs_addVar(highs, -inf, inf);
+  Highs_changeColCost(highs, 0, 0);
+  Highs_changeColCost(highs, 1, 1);
+  HighsInt index[2] = {0.0, 1.0};
+  double value[2] = {-1, 1};
+  Highs_addRow(highs, 2, inf, 2, index, value);
+  value[0] = 1.0;
+  Highs_addRow(highs, 0, inf, 2, index, value);
+  // Cost ranging
+  // c0 2 -1 1 0
+  // c1 0 0 inf inf
+  // 
+  // Bound ranging
+  // Columns
+  // c0 1 -inf inf 1
+  // c1 1 1 inf 1
+  // Rows
+  // r0 -inf -inf inf inf
+  // r1 -inf -inf inf inf
+  Highs_run(highs);
+  HighsInt num_col = Highs_getNumCol(highs);
+  HighsInt num_row = Highs_getNumRow(highs);
+  double* col_cost_up_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_cost_up_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_cost_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_cost_up_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* col_cost_dn_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_cost_dn_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_cost_dn_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_cost_dn_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* col_bound_up_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_bound_up_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_bound_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_bound_up_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* col_bound_dn_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_bound_dn_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_bound_dn_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_bound_dn_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* row_bound_up_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_bound_up_objective = (double*)malloc(sizeof(double) * num_row);
+  HighsInt* row_bound_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  HighsInt* row_bound_up_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  double* row_bound_dn_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_bound_dn_objective = (double*)malloc(sizeof(double) * num_row);
+  HighsInt* row_bound_dn_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  HighsInt* row_bound_dn_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  HighsInt status = 
+  Highs_getRanging(highs,
+		   //
+		   col_cost_up_value, col_cost_up_objective, col_cost_up_in_var, col_cost_up_ou_var, 
+		   col_cost_dn_value, col_cost_dn_objective, col_cost_dn_in_var, col_cost_dn_ou_var, 
+		   col_bound_up_value, col_bound_up_objective, col_bound_up_in_var, col_bound_up_ou_var, 
+		   col_bound_dn_value, col_bound_dn_objective, col_bound_dn_in_var, col_bound_dn_ou_var, 
+		   row_bound_up_value, row_bound_up_objective, row_bound_up_in_var, row_bound_up_ou_var, 
+		   row_bound_dn_value, row_bound_dn_objective, row_bound_dn_in_var, row_bound_dn_ou_var);
+  assert(status == kHighsStatusOk);
+
+  assertDoubleValuesEqual("col_cost_dn_objective[0]", col_cost_dn_objective[0], 2);
+  assertDoubleValuesEqual("col_cost_dn_value[0]", col_cost_dn_value[0], -1);
+  assertDoubleValuesEqual("col_cost_up_value[0]", col_cost_up_value[0], 1);
+  assertDoubleValuesEqual("col_cost_up_objective[0]", col_cost_up_objective[0], 0);
+  assertDoubleValuesEqual("col_cost_dn_objective[1]", col_cost_dn_objective[1], 0);
+  assertDoubleValuesEqual("col_cost_dn_value[1]", col_cost_dn_value[1], 0);
+  assertDoubleValuesEqual("col_cost_up_value[1]", col_cost_up_value[1], inf);
+  assertDoubleValuesEqual("col_cost_up_objective[1]", col_cost_up_objective[1], inf);
+
+  assertDoubleValuesEqual("col_bound_dn_objective[0]", col_bound_dn_objective[0], 1);
+  assertDoubleValuesEqual("col_bound_dn_value[0]", col_bound_dn_value[0], -inf);
+  assertDoubleValuesEqual("col_bound_up_value[0]", col_bound_up_value[0], inf);
+  assertDoubleValuesEqual("col_bound_up_objective[0]", col_bound_up_objective[0], 1);
+  assertDoubleValuesEqual("col_bound_dn_objective[1]", col_bound_dn_objective[1], 1);
+  assertDoubleValuesEqual("col_bound_dn_value[1]", col_bound_dn_value[1], 1);
+  assertDoubleValuesEqual("col_bound_up_value[1]", col_bound_up_value[1], inf);
+  assertDoubleValuesEqual("col_bound_up_objective[1]", col_bound_up_objective[1], 1);
+
+  assertDoubleValuesEqual("row_bound_dn_objective[0]", row_bound_dn_objective[0], -inf);
+  assertDoubleValuesEqual("row_bound_dn_value[0]", row_bound_dn_value[0], -inf);
+  assertDoubleValuesEqual("row_bound_up_value[0]", row_bound_up_value[0], inf);
+  assertDoubleValuesEqual("row_bound_up_objective[0]", row_bound_up_objective[0], inf);
+  assertDoubleValuesEqual("row_bound_dn_objective[1]", row_bound_dn_objective[1], -inf);
+  assertDoubleValuesEqual("row_bound_dn_value[1]", row_bound_dn_value[1], -inf);
+  assertDoubleValuesEqual("row_bound_up_value[1]", row_bound_up_value[1], inf);
+  assertDoubleValuesEqual("row_bound_up_objective[1]", row_bound_up_objective[1], inf);
+
+  free(col_cost_up_value);
+  free(col_cost_up_objective);
+  free(col_cost_up_in_var);
+  free(col_cost_up_ou_var);
+  free(col_cost_dn_value);
+  free(col_cost_dn_objective);
+  free(col_cost_dn_in_var);
+  free(col_cost_dn_ou_var);
+  free(col_bound_up_value);
+  free(col_bound_up_objective);
+  free(col_bound_up_in_var);
+  free(col_bound_up_ou_var);
+  free(col_bound_dn_value);
+  free(col_bound_dn_objective);
+  free(col_bound_dn_in_var);
+  free(col_bound_dn_ou_var);
+  free(row_bound_up_value);
+  free(row_bound_up_objective);
+  free(row_bound_up_in_var);
+  free(row_bound_up_ou_var);
+  free(row_bound_dn_value);
+  free(row_bound_dn_objective);
+  free(row_bound_dn_in_var);
+  free(row_bound_dn_ou_var);
+
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -1234,6 +1358,7 @@ int main() {
   options();
   test_getColsByRange();
   test_passHessian();
+  test_ranging();
   //  test_setSolution();
   return 0;
 }

@@ -115,16 +115,17 @@ InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
                             const std::vector<InfoRecord*>& info_records,
                             HighsInfoType& type);
 
-HighsStatus writeInfoToFile(FILE* file, const bool valid,
-                            const std::vector<InfoRecord*>& info_records,
-                            const bool html = false);
+HighsStatus writeInfoToFile(
+    FILE* file, const bool valid, const std::vector<InfoRecord*>& info_records,
+    const HighsFileType file_type = HighsFileType::kOther);
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
-                const bool html = false);
+                const HighsFileType file_type = HighsFileType::kOther);
 void reportInfo(FILE* file, const InfoRecordInt64& info,
-                const bool html = false);
-void reportInfo(FILE* file, const InfoRecordInt& info, const bool html = false);
+                const HighsFileType file_type = HighsFileType::kOther);
+void reportInfo(FILE* file, const InfoRecordInt& info,
+                const HighsFileType file_type = HighsFileType::kOther);
 void reportInfo(FILE* file, const InfoRecordDouble& info,
-                const bool html = false);
+                const HighsFileType file_type = HighsFileType::kOther);
 
 // For now, but later change so HiGHS properties are string based so that new
 // info (for debug and testing too) can be added easily. The info below
@@ -198,8 +199,7 @@ class HighsInfo : public HighsInfoStruct {
     InfoRecordInt64* record_int64;
     InfoRecordInt* record_int;
     InfoRecordDouble* record_double;
-    bool advanced;
-    advanced = false;
+    const bool advanced = false;  // Not used
 
     record_int = new InfoRecordInt("simplex_iteration_count",
                                    "Iteration count for simplex solver",

@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
   // call this first so that printHighsVersionCopyright uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
+  //  highs.writeOptions("Options.md");
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
@@ -65,11 +66,10 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return (int)run_status;
 
-  // Possibly compute the ranging information
-  if (options.ranging == kHighsOnString) highs.getRanging();
+  // highs.writeInfo("Info.md");
 
   // Possibly write the solution to a file
-  if (options.write_solution_to_file)
+  if (options.write_solution_to_file || options.solution_file != "")
     highs.writeSolution(options.solution_file, options.write_solution_style);
 
   // Possibly write the model to a file

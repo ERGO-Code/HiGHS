@@ -1786,7 +1786,7 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   log_to_console = true;
   log_dev_level = kHighsLogDevLevelVerbose;
   log_options.output_flag = &output_flag;
-  log_options.log_file_stream = NULL;
+  log_options.log_stream = NULL;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
   highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting LP: %s\n",
@@ -1801,7 +1801,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
   bool output_flag = true;
   bool log_to_console = false;
   HighsInt log_dev_level = kHighsLogDevLevelInfo;
-  log_options.log_file_stream = stdout;
+  log_options.log_stream = stdout;
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;

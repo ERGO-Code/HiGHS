@@ -1,2 +1,0 @@
-include highs_bindings.cpp
-include ../../Highs.h

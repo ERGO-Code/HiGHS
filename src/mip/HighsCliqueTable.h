@@ -107,7 +107,7 @@ class HighsCliqueTable {
                               CliqueVar v2) const;
 
   HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
-    return findCommonCliqueId(numNeighborhoodQueries, v1, v2);
+    return findCommonCliqueId(numNeighbourhoodQueries, v1, v2);
   }
 
   HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
@@ -118,7 +118,7 @@ class HighsCliqueTable {
     std::vector<CliqueVar> R;
     std::vector<CliqueVar> Z;
     std::vector<std::vector<CliqueVar>> cliques;
-    std::vector<HighsInt> neighborhoodInds;
+    std::vector<HighsInt> neighbourhoodInds;
 
     double wR = 0.0;
     double minW = 1.05;
@@ -126,12 +126,12 @@ class HighsCliqueTable {
     HighsInt ncalls = 0;
     HighsInt maxcalls = 10000;
     HighsInt maxcliques = 100;
-    int64_t maxNeighborhoodQueries = std::numeric_limits<int64_t>::max();
-    int64_t numNeighborhoodQueries = 0;
+    int64_t maxNeighbourhoodQueries = std::numeric_limits<int64_t>::max();
+    int64_t numNeighbourhoodQueries = 0;
 
     bool stop() const {
       return maxcalls == ncalls || int(cliques.size()) == maxcliques ||
-             numNeighborhoodQueries > maxNeighborhoodQueries;
+             numNeighbourhoodQueries > maxNeighbourhoodQueries;
     }
 
     BronKerboschData(const std::vector<double>& sol) : sol(sol) {}
@@ -150,12 +150,12 @@ class HighsCliqueTable {
 
   void propagateAndCleanup(HighsDomain& globaldom);
 
-  void queryNeighborhood(std::vector<HighsInt>& neighborhoodInds,
-                         int64_t& numNeighborhoodqueries, CliqueVar v,
-                         CliqueVar* q, HighsInt N) const;
+  void queryNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
+                          int64_t& numNeighbourhoodqueries, CliqueVar v,
+                          CliqueVar* q, HighsInt N) const;
 
  public:
-  int64_t numNeighborhoodQueries;
+  int64_t numNeighbourhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
     invertedHashList.resize(2 * ncols);
@@ -164,7 +164,7 @@ class HighsCliqueTable {
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;
-    numNeighborhoodQueries = 0;
+    numNeighbourhoodQueries = 0;
     numEntries = 0;
     maxEntries = kHighsIInf;
     minEntriesForParallelism = kHighsIInf;
@@ -177,13 +177,13 @@ class HighsCliqueTable {
 
   HighsInt getNumEntries() const { return numEntries; }
 
-  HighsInt partitionNeighborhood(std::vector<HighsInt>& neighborhoodInds,
-                                 int64_t& numNeighborhoodqueries, CliqueVar v,
-                                 CliqueVar* q, HighsInt N) const;
+  HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
+                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
+                                  CliqueVar* q, HighsInt N) const;
 
-  HighsInt shrinkToNeighborhood(std::vector<HighsInt>& neighborhoodInds,
-                                int64_t& numNeighborhoodqueries, CliqueVar v,
-                                CliqueVar* q, HighsInt N);
+  HighsInt shrinkToNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
+                                 int64_t& numNeighbourhoodqueries, CliqueVar v,
+                                 CliqueVar* q, HighsInt N);
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 

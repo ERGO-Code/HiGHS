@@ -18,47 +18,44 @@
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
                                   const HighsInt iteration_count,
-                                  const HighsSimplexInfo& info,
+                                  HighsSimplexInfo& info,
                                   const bool initialise) {
   if (info.run_quiet) return;
-  static HighsInt iteration_count0 = 0;
-  static HighsInt dual_phase1_iteration_count0 = 0;
-  static HighsInt dual_phase2_iteration_count0 = 0;
-  static HighsInt primal_phase1_iteration_count0 = 0;
-  static HighsInt primal_phase2_iteration_count0 = 0;
-  static HighsInt primal_bound_swap0 = 0;
   if (initialise) {
-    iteration_count0 = iteration_count;
-    dual_phase1_iteration_count0 = info.dual_phase1_iteration_count;
-    dual_phase2_iteration_count0 = info.dual_phase2_iteration_count;
-    primal_phase1_iteration_count0 = info.primal_phase1_iteration_count;
-    primal_phase2_iteration_count0 = info.primal_phase2_iteration_count;
-    primal_bound_swap0 = info.primal_bound_swap;
+    info.iteration_count0 = iteration_count;
+    info.dual_phase1_iteration_count0 = info.dual_phase1_iteration_count;
+    info.dual_phase2_iteration_count0 = info.dual_phase2_iteration_count;
+    info.primal_phase1_iteration_count0 = info.primal_phase1_iteration_count;
+    info.primal_phase2_iteration_count0 = info.primal_phase2_iteration_count;
+    info.primal_bound_swap0 = info.primal_bound_swap;
     return;
   }
-  const HighsInt delta_iteration_count = iteration_count - iteration_count0;
+  const HighsInt delta_iteration_count =
+      iteration_count - info.iteration_count0;
   const HighsInt delta_dual_phase1_iteration_count =
-      info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
+      info.dual_phase1_iteration_count - info.dual_phase1_iteration_count0;
   const HighsInt delta_dual_phase2_iteration_count =
-      info.dual_phase2_iteration_count - dual_phase2_iteration_count0;
+      info.dual_phase2_iteration_count - info.dual_phase2_iteration_count0;
   const HighsInt delta_primal_phase1_iteration_count =
-      info.primal_phase1_iteration_count - primal_phase1_iteration_count0;
+      info.primal_phase1_iteration_count - info.primal_phase1_iteration_count0;
   const HighsInt delta_primal_phase2_iteration_count =
-      info.primal_phase2_iteration_count - primal_phase2_iteration_count0;
+      info.primal_phase2_iteration_count - info.primal_phase2_iteration_count0;
   const HighsInt delta_primal_bound_swap =
-      info.primal_bound_swap - primal_bound_swap0;
+      info.primal_bound_swap - info.primal_bound_swap0;
 
   HighsInt check_delta_iteration_count =
       delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
       delta_primal_phase1_iteration_count + delta_primal_phase2_iteration_count;
   if (check_delta_iteration_count != delta_iteration_count) {
-    printf("Iteration total error %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT
-           " + %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
-           " != %" HIGHSINT_FORMAT "\n",
-           delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
-           delta_primal_phase1_iteration_count,
-           delta_primal_phase2_iteration_count, check_delta_iteration_count,
-           delta_iteration_count);
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Iteration total error %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT
+        " + %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
+        " != %" HIGHSINT_FORMAT "\n",
+        delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
+        delta_primal_phase1_iteration_count,
+        delta_primal_phase2_iteration_count, check_delta_iteration_count,
+        delta_iteration_count);
   }
   std::stringstream iteration_report;
   if (delta_dual_phase1_iteration_count) {

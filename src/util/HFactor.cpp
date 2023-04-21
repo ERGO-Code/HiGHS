@@ -231,12 +231,12 @@ void HFactor::setupGeneral(
     log_data->output_flag = false;
     log_data->log_to_console = true;
     log_data->log_dev_level = 0;
-    log_options.log_file_stream = nullptr;
+    log_options.log_stream = nullptr;
   } else {
     log_data->output_flag = *(log_options_->output_flag);
     log_data->log_to_console = *(log_options_->log_to_console);
     log_data->log_dev_level = *(log_options_->log_dev_level);
-    log_options.log_file_stream = log_options_->log_file_stream;
+    log_options.log_stream = log_options_->log_stream;
   }
 
   use_original_HFactor_logic = use_original_HFactor_logic_;

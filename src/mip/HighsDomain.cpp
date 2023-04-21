@@ -1106,7 +1106,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
   debugCheckObjectiveLower();
 
   const double upperLimit = domain->mipsolver->mipdata_->upper_limit;
-  if (objectiveLower > upperLimit) {
+  if (numInfObjLower == 0 && objectiveLower > upperLimit) {
     domain->infeasible_ = true;
     domain->infeasible_pos = domain->domchgstack_.size();
     domain->infeasible_reason = Reason::objective();

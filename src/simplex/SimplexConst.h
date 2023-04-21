@@ -119,6 +119,7 @@ enum RebuildReason {
   kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 8
   kRebuildReasonChooseColumnFail,                 // 9
   kRebuildReasonForceRefactor,                    // 10
+  kRebuildReasonExcessivePrimalValue,             // 11
   kRebuildReasonCount
 };
 

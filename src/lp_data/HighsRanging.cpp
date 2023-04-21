@@ -295,7 +295,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   vector<HighsInt> c_up_l(numTotal), c_dn_l(numTotal);
 
   //
-  // Ranging 2.1. non-basic cost ranging
+  // Ranging 2.1. nonbasic cost ranging
   //
   //  const HighsInt check_col = 2951;
   for (HighsInt j = 0; j < numCol; j++) {
@@ -388,7 +388,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   vector<HighsInt> b_up_l(numTotal), b_dn_l(numTotal);
 
   //
-  // Ranging 3.1. non-basic bounds ranging
+  // Ranging 3.1. nonbasic bounds ranging
   //
   for (HighsInt j = 0; j < numTotal; j++) {
     if (Nflag_[j]) {

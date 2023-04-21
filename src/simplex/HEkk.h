@@ -31,7 +31,7 @@ class HEkk {
   void clear();
   void clearEkkLp();
   void clearEkkData();
-  void clearEkkDualise();
+  void clearEkkDualize();
   void clearEkkDualEdgeWeightData();
   void clearEkkPointers();
   void clearEkkDataInfo();
@@ -61,8 +61,8 @@ class HEkk {
   HighsScale* getScalePointer();
 
   void initialiseEkk();
-  HighsStatus dualise();
-  HighsStatus undualise();
+  HighsStatus dualize();
+  HighsStatus undualize();
   HighsStatus permute();
   HighsStatus unpermute();
   HighsStatus solve(const bool force_phase2 = false);
@@ -171,7 +171,7 @@ class HEkk {
   vector<HighsInt> proof_index_;
   vector<double> proof_value_;
 
-  // Data to be retained when dualising
+  // Data to be retained when dualizing
   HighsInt original_num_col_;
   HighsInt original_num_row_;
   HighsInt original_num_nz_;

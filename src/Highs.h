@@ -45,10 +45,10 @@ class Highs {
  public:
   Highs();
   virtual ~Highs() {
-    FILE* log_file_stream = options_.log_options.log_file_stream;
-    if (log_file_stream != nullptr) {
-      assert(log_file_stream != stdout);
-      fclose(log_file_stream);
+    FILE* log_stream = options_.log_options.log_stream;
+    if (log_stream != nullptr) {
+      assert(log_stream != stdout);
+      fclose(log_stream);
     }
   }
 
@@ -418,6 +418,16 @@ class Highs {
    */
   const HighsSolution& getSolution() const { return solution_; }
 
+  /**
+   * @brief Return a const reference to the internal HighsSolution instance
+   */
+  const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
+    return saved_objective_and_solution_;
+  }
+
+  /**
+   * @brief Return a const reference to the internal ICrash info instance
+   */
   const ICrashInfo& getICrashInfo() const { return icrash_info_; };
 
   /**
@@ -457,10 +467,8 @@ class Highs {
                            double* primal_ray_value = nullptr);
 
   /**
-   * @brief Get the ranging information for the current LP, possibly
-   * returning it, as well as holding it internally
+   * @brief Get the ranging information for the current LP
    */
-  HighsStatus getRanging();
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
@@ -480,15 +488,6 @@ class Highs {
   bool hasInvert() const;
 
   /**
-   * @brief Gets the internal basic variable index array in the order
-   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
-   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
-   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
-   * num_col+num_row) are (num_col+row_index).
-   */
-  const HighsInt* getBasicVariablesArray() const;
-
-  /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
    * getBasisTransposeSolve, getReducedRow and
@@ -496,15 +495,6 @@ class Highs {
    * and negative entries are -(row_index+1).
    */
   HighsStatus getBasicVariables(HighsInt* basic_variables);
-
-  /**
-   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
-   * returning the result in the given HVector buffer which is
-   * expected to be setup with dimension num_row. The buffers
-   * previous contents will be overwritten.
-   */
-  HighsStatus getBasisInverseRowSparse(const HighsInt row,
-                                       HVector& row_ep_buffer);
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -1008,9 +998,10 @@ class Highs {
   /**
    * @brief Set the callback method and user data to use for logging
    */
-  HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
-                                                  void*),
-                             void* log_callback_data = nullptr);
+  HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
+                                                       const char*, void*),
+                             void* deprecated = nullptr  // V2.0 remove
+  );
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1118,6 +1109,24 @@ class Highs {
                ? ekk_instance_.dual_edge_weight_.data()
                : nullptr;
   }
+
+  /**
+   * @brief Gets the internal basic variable index array in the order
+   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
+   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
+   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
+   * num_col+num_row) are (num_col+row_index).
+   */
+  const HighsInt* getBasicVariablesArray() const;
+
+  /**
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the result in the given HVector buffer which is
+   * expected to be setup with dimension num_row. The buffers
+   * previous contents will be overwritten.
+   */
+  HighsStatus getBasisInverseRowSparse(const HighsInt row,
+                                       HVector& row_ep_buffer);
 
   // Start of deprecated methods
 
@@ -1229,6 +1238,8 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
 
+  std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
+
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
@@ -1265,7 +1276,7 @@ class Highs {
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
-                            FILE*& file, bool& html) const;
+                            FILE*& file, HighsFileType& file_type) const;
 
   void reportModel();
   void newHighsBasis();
@@ -1393,6 +1404,7 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
+  HighsStatus getRangingInterface();
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();

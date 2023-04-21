@@ -113,8 +113,13 @@ HighsStatus Highs::readOptions(const std::string& filename) {
     return HighsStatus::kWarning;
   }
   HighsLogOptions report_log_options = options_.log_options;
-  if (!loadOptionsFromFile(report_log_options, options_, filename))
-    return HighsStatus::kError;
+  switch (loadOptionsFromFile(report_log_options, options_, filename)) {
+    case HighsLoadOptionsStatus::kError:
+    case HighsLoadOptionsStatus::kEmpty:
+      return HighsStatus::kError;
+    default:
+      break;
+  }
   return HighsStatus::kOk;
 }
 
@@ -134,19 +139,21 @@ HighsStatus Highs::writeOptions(const std::string& filename,
                                 const bool report_only_deviations) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
-  bool html;
+  HighsFileType file_type;
   return_status = interpretCallStatus(
-      options_.log_options, openWriteFile(filename, "writeOptions", file, html),
-      return_status, "openWriteFile");
+      options_.log_options,
+      openWriteFile(filename, "writeOptions", file, file_type), return_status,
+      "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
   // Report to user that options are being written to a file
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the option values to %s\n", filename.c_str());
-  return_status = interpretCallStatus(
-      options_.log_options,
-      writeOptionsToFile(file, options_.records, report_only_deviations, html),
-      return_status, "writeOptionsToFile");
+  return_status =
+      interpretCallStatus(options_.log_options,
+                          writeOptionsToFile(file, options_.records,
+                                             report_only_deviations, file_type),
+                          return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -260,10 +267,11 @@ HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
 HighsStatus Highs::writeInfo(const std::string& filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
-  bool html;
-  return_status = interpretCallStatus(
-      options_.log_options, openWriteFile(filename, "writeInfo", file, html),
-      return_status, "openWriteFile");
+  HighsFileType file_type;
+  return_status =
+      interpretCallStatus(options_.log_options,
+                          openWriteFile(filename, "writeInfo", file, file_type),
+                          return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
   // Report to user that options are being written to a file
   if (filename != "")
@@ -271,8 +279,8 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
                  "Writing the info values to %s\n", filename.c_str());
   return_status = interpretCallStatus(
       options_.log_options,
-      writeInfoToFile(file, info_.valid, info_.records, html), return_status,
-      "writeInfoToFile");
+      writeInfoToFile(file, info_.valid, info_.records, file_type),
+      return_status, "writeInfoToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -284,6 +292,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
   // eventually call it
   this->logHeader();
+  // Possibly analyse the LP data
+  if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
+    analyseLp(options_.log_options, model.lp_);
   HighsStatus return_status = HighsStatus::kOk;
   // Clear the incumbent model and any associated data
   clearModel();
@@ -674,8 +685,8 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
-  bool html;
-  call_status = openWriteFile(filename, "writebasis", file, html);
+  HighsFileType file_type;
+  call_status = openWriteFile(filename, "writebasis", file, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
@@ -900,14 +911,17 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
 
-  // Check validity of any integrality, keeping a record of any upper
-  // bound modifications for semi-variables
-  call_status = assessIntegrality(model_.lp_, options_);
-  if (call_status == HighsStatus::kError) {
-    setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kSolveError);
-    return returnFromRun(HighsStatus::kError);
+  if (!options_.solve_relaxation) {
+    // Not solving the relaxation, so check validity of any
+    // integrality, keeping a record of any bound and type
+    // modifications for semi-variables
+    call_status = assessIntegrality(model_.lp_, options_);
+    if (call_status == HighsStatus::kError) {
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kSolveError);
+      return returnFromRun(HighsStatus::kError);
+    }
   }
-
   if (!options_.solver.compare(kHighsChooseString)) {
     // Leaving HiGHS to choose method according to model class
     if (model_.isQp()) {
@@ -1130,8 +1144,26 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
-        // Validate the reduced LP
-        assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        if (kAllowDeveloperAssert) {
+          // Validate the reduced LP
+          //
+          // Although preseolve can yield small values in the matrix,
+          // they are only stripped out (by assessLp) in debug. This
+          // suggests that they are no real danger to the simplex
+          // solver. The only danger is pivoting on them, but that
+          // implies that values of roughly that size have been chosen
+          // in the ratio test. Even with the filter, values of 1e-9
+          // could be in the matrix, and these would be bad
+          // pivots. Hence, since the small values may play a
+          // meaningful role in postsolve, then it's better to keep
+          // them.
+          //
+          // ToDo. Analyse the extent of small value creation. See #1187
+          assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        } else {
+          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
+                                                 options_.small_matrix_value);
+        }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve
@@ -1523,17 +1555,8 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
-HighsStatus Highs::getRanging() {
-  // Create a HighsLpSolverObject of references to data in the Highs
-  // class, and the scaled/unscaled model status
-  HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
-                                    ekk_instance_, options_, timer_);
-  solver_object.model_status_ = model_status_;
-  return getRangingData(this->ranging_, solver_object);
-}
-
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
-  HighsStatus return_status = getRanging();
+  HighsStatus return_status = getRangingInterface();
   ranging = this->ranging_;
   return return_status;
 }
@@ -1813,11 +1836,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setLogCallback(void (*log_callback)(HighsLogType,
-                                                       const char*, void*),
-                                  void* log_callback_data) {
-  options_.log_options.log_callback = log_callback;
-  options_.log_options.log_callback_data = log_callback_data;
+HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
+                                                            const char*, void*),
+                                  void* deprecated  // V2.0 remove
+) {
+  options_.log_options.log_user_callback = log_user_callback;
   return HighsStatus::kOk;
 }
 
@@ -2631,8 +2654,8 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
-  bool html;
-  call_status = openWriteFile(filename, "writeSolution", file, html);
+  HighsFileType file_type;
+  call_status = openWriteFile(filename, "writeSolution", file, file_type);
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
@@ -2655,8 +2678,9 @@ HighsStatus Highs::writeSolution(const std::string& filename,
       return_status = HighsStatus::kError;
       return returnFromWriteSolution(file, return_status);
     }
-    return_status = interpretCallStatus(
-        options_.log_options, this->getRanging(), return_status, "getRanging");
+    return_status =
+        interpretCallStatus(options_.log_options, this->getRangingInterface(),
+                            return_status, "getRangingInterface");
     if (return_status == HighsStatus::kError)
       returnFromWriteSolution(file, return_status);
     fprintf(file, "\n# Ranging\n");
@@ -2937,8 +2961,6 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
-  // Create a HighsLpSolverObject of references to data in the Highs
-  // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     options_, timer_);
 
@@ -3127,6 +3149,7 @@ HighsStatus Highs::callSolveMip() {
     // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
+    saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
@@ -3343,8 +3366,8 @@ void Highs::setBasisValidity() {
 
 HighsStatus Highs::openWriteFile(const string filename,
                                  const string method_name, FILE*& file,
-                                 bool& html) const {
-  html = false;
+                                 HighsFileType& file_type) const {
+  file_type = HighsFileType::kNone;
   if (filename == "") {
     // Empty file name: use stdout
     file = stdout;
@@ -3357,7 +3380,17 @@ HighsStatus Highs::openWriteFile(const string filename,
       return HighsStatus::kError;
     }
     const char* dot = strrchr(filename.c_str(), '.');
-    if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
+    if (dot && dot != filename) {
+      if (strcmp(dot + 1, "mps") == 0) {
+        file_type = HighsFileType::kMps;
+      } else if (strcmp(dot + 1, "lp") == 0) {
+        file_type = HighsFileType::kLp;
+      } else if (strcmp(dot + 1, "md") == 0) {
+        file_type = HighsFileType::kMd;
+      } else if (strcmp(dot + 1, "html") == 0) {
+        file_type = HighsFileType::kHtml;
+      }
+    }
   }
   return HighsStatus::kOk;
 }
