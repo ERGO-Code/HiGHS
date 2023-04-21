@@ -1615,7 +1615,8 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
 /**
  * Get the index of a row from its name.
  *
- * If multiple rows have the same name, one is chosen arbitrarily.
+ * If multiple rows have the same name, or if no row exists with `name`, this 
+ * function returns `kHighsStatusError`.
  *
  * @param name A pointer of the name of the row to query.
  * @param row  A pointer in which to store the index of the row
