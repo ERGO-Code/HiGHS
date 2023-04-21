@@ -244,7 +244,7 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   lp.a_matrix_.start_ = {0, 0};
   lp.integrality_ = {semi_continuous};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);

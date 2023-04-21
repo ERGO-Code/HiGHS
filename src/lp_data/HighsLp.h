@@ -15,7 +15,6 @@
 #define LP_DATA_HIGHS_LP_H_
 
 #include <string>
-#include <vector>
 
 #include "lp_data/HStruct.h"
 #include "util/HighsSparseMatrix.h"
@@ -45,6 +44,9 @@ class HighsLp {
   std::vector<std::string> row_names_;
 
   std::vector<HighsVarType> integrality_;
+
+  HighsNameHash col_hash_;
+  HighsNameHash row_hash_;
 
   HighsScale scale_;
   bool is_scaled_;

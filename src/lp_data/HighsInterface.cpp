@@ -177,6 +177,7 @@ HighsStatus Highs::addColsInterface(
 
   // Determine any implications for simplex data
   ekk_instance_.addCols(lp, local_a_matrix);
+  lp.col_hash_.name2index.clear();
   return return_status;
 }
 
@@ -295,6 +296,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
+  lp.row_hash_.name2index.clear();
   return return_status;
 }
 
@@ -341,6 +343,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     assert(new_col == lp.num_col_);
   }
   assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
+  lp.col_hash_.name2index.clear();
 }
 
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
@@ -382,6 +385,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     assert(new_row == lp.num_row_);
   }
   assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
+  lp.row_hash_.name2index.clear();
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,

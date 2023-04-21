@@ -910,10 +910,26 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
   return retcode;
 }
 
+HighsInt Highs_getRowByName(const void* highs, const char* name,
+                            HighsInt* row) {
+  HighsInt local_row;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getRowByName(name, local_row);
+  *row = local_row;
+  return retcode;
+}
+
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name) {
   std::string name_v;
   HighsInt retcode = (HighsInt)((Highs*)highs)->getColName(col, name_v);
   strcpy(name, name_v.c_str());
+  return retcode;
+}
+
+HighsInt Highs_getColByName(const void* highs, const char* name,
+                            HighsInt* col) {
+  HighsInt local_col;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getColByName(name, local_col);
+  *col = local_col;
   return retcode;
 }
 

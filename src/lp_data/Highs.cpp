@@ -554,6 +554,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   }
   this->model_.lp_.col_names_.resize(num_col);
   this->model_.lp_.col_names_[col] = name;
+  this->model_.lp_.col_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -573,6 +574,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   }
   this->model_.lp_.row_names_.resize(num_row);
   this->model_.lp_.row_names_[row] = name;
+  this->model_.lp_.row_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -647,12 +649,12 @@ HighsStatus Highs::writeModel(const std::string& filename) {
   // Ensure that the LP is column-wise
   model_.lp_.ensureColwise();
   // Check for repeated column or row names that would corrupt the file
-  if (repeatedNames(model_.lp_.col_names_)) {
+  if (model_.lp_.col_hash_.hasDuplicate(model_.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated column names\n");
     return returnFromHighs(HighsStatus::kError);
   }
-  if (repeatedNames(model_.lp_.row_names_)) {
+  if (model_.lp_.row_hash_.hasDuplicate(model_.lp_.row_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated row names\n");
     return returnFromHighs(HighsStatus::kError);
@@ -2431,6 +2433,26 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
+  HighsLp& lp = model_.lp_;
+  if (!lp.col_names_.size()) return HighsStatus::kError;
+  if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+  auto search = lp.col_hash_.name2index.find(name);
+  if (search == lp.col_hash_.name2index.end()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getColByName: name %s is not found\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  if (search->second == kHashIsDuplicate) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getColByName: name %s is duplicated\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  col = search->second;
+  assert(lp.col_names_[col] == name);
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getColIntegrality(const HighsInt col,
                                      HighsVarType& integrality) const {
   const HighsInt num_col = this->model_.lp_.num_col_;
@@ -2510,6 +2532,26 @@ HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
     return HighsStatus::kError;
   }
   name = this->model_.lp_.row_names_[row];
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
+  HighsLp& lp = model_.lp_;
+  if (!lp.row_names_.size()) return HighsStatus::kError;
+  if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+  auto search = lp.row_hash_.name2index.find(name);
+  if (search == lp.row_hash_.name2index.end()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getRowByName: name %s is not found\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  if (search->second == kHashIsDuplicate) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getRowByName: name %s is duplicated\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  row = search->second;
+  assert(lp.row_names_[row] == name);
   return HighsStatus::kOk;
 }
 

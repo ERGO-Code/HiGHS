@@ -438,9 +438,6 @@ void full_api() {
   assert( return_status == kHighsStatusError );
 
   // Define all column names to be different
-  //
-  // Executing this loop leads to CI failures - capi_unit_tests
-  // times out???
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     const char suffix = iCol + '0';
     const char* suffix_p = &suffix;
@@ -452,6 +449,19 @@ void full_api() {
   }
   return_status = Highs_writeModel(highs, "");
   assert( return_status == kHighsStatusOk );
+
+  // Check that the columns can be found by name
+  HighsInt ck_iCol;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    char name[5];
+    return_status = Highs_getColName(highs, iCol, name);
+    assert( return_status == kHighsStatusOk );
+    return_status = Highs_getColByName(highs, name, &ck_iCol);
+    assert( return_status == kHighsStatusOk );
+    assert( ck_iCol == iCol );
+  }
+  return_status = Highs_getColByName(highs, "FRED", &ck_iCol);
+  assert( return_status == kHighsStatusError );
   
   // Define all row names to be the same
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -473,6 +483,19 @@ void full_api() {
   }
   return_status = Highs_writeModel(highs, "");
   assert( return_status == kHighsStatusOk );
+  
+  // Check that the rows can be found by name
+  HighsInt ck_iRow;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    char name[5];
+    return_status = Highs_getRowName(highs, iRow, name);
+    assert( return_status == kHighsStatusOk );
+    return_status = Highs_getRowByName(highs, name, &ck_iRow);
+    assert( return_status == kHighsStatusOk );
+    assert( ck_iRow == iRow );
+  }
+  return_status = Highs_getRowByName(highs, "FRED", &ck_iRow);
+  assert( return_status == kHighsStatusError );
   
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     char name[5];

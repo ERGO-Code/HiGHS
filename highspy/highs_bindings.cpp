@@ -514,6 +514,35 @@ std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>, py::array_
   return std::make_tuple(status, py::cast(start), py::cast(index), py::cast(value));
 }
 
+std::tuple<HighsStatus, std::string> highs_getColName(Highs* h, const int col)
+{
+  std::string name;
+  HighsStatus status = h->getColName(col, name);
+  return std::make_tuple(status, name);
+}
+
+std::tuple<HighsStatus, int> highs_getColByName(Highs* h, const std::string name)
+{
+  HighsInt col;
+  HighsStatus status = h->getColByName(name, col);
+  return std::make_tuple(status, col);
+}
+
+std::tuple<HighsStatus, std::string> highs_getRowName(Highs* h, const int row)
+{
+  std::string name;
+  HighsStatus status = h->getRowName(row, name);
+  return std::make_tuple(status, name);
+}
+
+std::tuple<HighsStatus, int> highs_getRowByName(Highs* h, const std::string name)
+{
+  HighsInt row;
+  HighsStatus status = h->getRowByName(name, row);
+  return std::make_tuple(status, row);
+}
+
+
 PYBIND11_MODULE(highs_bindings, m)
 {
   // enum classes
@@ -793,6 +822,11 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getColsEntries", &highs_getColsEntries)
     .def("getRows", &highs_getRows)
     .def("getRowsEntries", &highs_getRowsEntries)
+
+    .def("getColName", &highs_getColName)
+    .def("getColByName", &highs_getColByName)
+    .def("getRowName", &highs_getRowName)
+    .def("getRowByName", &highs_getRowByName)
 
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
