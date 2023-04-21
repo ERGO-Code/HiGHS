@@ -1639,7 +1639,8 @@ HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
 /**
  * Get the index of a column from its name.
  *
- * If multiple columns have the same name, one is chosen arbitrarily.
+ * If multiple columns have the same name, or if no column exists with `name`, this 
+ * function returns `kHighsStatusError`.
  *
  * @param name A pointer of the name of the column to query.
  * @param col  A pointer in which to store the index of the column
