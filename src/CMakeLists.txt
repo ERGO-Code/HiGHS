@@ -765,7 +765,12 @@ if(FORTRAN_FOUND)
     set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
     add_library(FortranHighs interfaces/highs_fortran_api.f90)
-    target_link_libraries(FortranHighs PUBLIC libhighs)
+    if (NOT FAST_BUILD)
+        target_link_libraries(FortranHighs PUBLIC libhighs)
+    else()
+        target_link_libraries(FortranHighs PUBLIC highs)
+    endif()
+
     install(TARGETS FortranHighs
         LIBRARY
         ARCHIVE
