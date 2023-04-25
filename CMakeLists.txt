@@ -92,6 +92,16 @@ endif()
 
 include(CTest)
 
+if(MSVC)
+	# This option is only available when building with MSVC. By default, highs
+	# is build using the cdecl calling convention, which is useful if you're
+	# writing C. However, the CLR and Win32 API both expect stdcall.
+	#
+	# If you are writing a CLR program and want to link to highs, you'll want
+	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+	option( STDCALL			"Build highs with the __stdcall convention"   OFF  )
+endif()
+
 option(FAST_BUILD "Fast build: " ON)
 
 # By default only build the C++ library.
@@ -259,6 +269,11 @@ if(MSVC)
     add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
     add_definitions(/MP)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    if (STDCALL)
+	# /Gz - stdcall calling convention
+        add_definitions(/Gz)
+    endif()
+
 #
 # This fouls up building HiGHS as part of a larger CMake project: see #1129.
 # Setting it will speed up run-time in debug (and compile-time?)
