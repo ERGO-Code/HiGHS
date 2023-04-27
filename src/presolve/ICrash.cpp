@@ -101,7 +101,7 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
       // if (status == HighsStatus::kOk) {
       //   ilp = local_lp;
       // } else {
-      //   printf("Cannot dualise equality problem\n");
+      //   printf("Cannot dualize equality problem\n");
       // }
     }
   } else {
@@ -122,7 +122,7 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
     //   // if (status == HighsStatus::kOk) {
     //   //   ilp = local_lp;
     //   // } else {
-    //   //   printf("Cannot dualise equality problem\n");
+    //   //   printf("Cannot dualize equality problem\n");
     //   // }
     // }
   }

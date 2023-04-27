@@ -1,4 +1,4 @@
-from .highs_bindings import (
+from .highs import (
     # enum classes
     ObjSense,
     MatrixFormat,
@@ -20,9 +20,10 @@ from .highs_bindings import (
     HighsModel,
     HighsInfo,
     HighsOptions,
-    _Highs,
+    Highs,
     # structs
     HighsSolution,
+    HighsObjectiveSolution,
     HighsBasis,
     HighsRangingRecord,
     HighsRanging,
@@ -30,8 +31,3 @@ from .highs_bindings import (
     kHighsInf,
     kHighsIInf,
 )
-
-
-class Highs(_Highs):
-    def __init__(self):
-        super().__init__()

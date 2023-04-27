@@ -15,7 +15,6 @@
 #define LP_DATA_HIGHS_LP_H_
 
 #include <string>
-#include <vector>
 
 #include "lp_data/HStruct.h"
 #include "util/HighsSparseMatrix.h"
@@ -46,6 +45,9 @@ class HighsLp {
 
   std::vector<HighsVarType> integrality_;
 
+  HighsNameHash col_hash_;
+  HighsNameHash row_hash_;
+
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
@@ -58,6 +60,7 @@ class HighsLp {
   bool isMip() const;
   bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
+  HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
   void ensureColwise() { this->a_matrix_.ensureColwise(); };

@@ -45,10 +45,10 @@ class Highs {
  public:
   Highs();
   virtual ~Highs() {
-    FILE* log_file_stream = options_.log_options.log_file_stream;
-    if (log_file_stream != nullptr) {
-      assert(log_file_stream != stdout);
-      fclose(log_file_stream);
+    FILE* log_stream = options_.log_options.log_stream;
+    if (log_stream != nullptr) {
+      assert(log_stream != stdout);
+      fclose(log_stream);
     }
   }
 
@@ -418,6 +418,16 @@ class Highs {
    */
   const HighsSolution& getSolution() const { return solution_; }
 
+  /**
+   * @brief Return a const reference to the internal HighsSolution instance
+   */
+  const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
+    return saved_objective_and_solution_;
+  }
+
+  /**
+   * @brief Return a const reference to the internal ICrash info instance
+   */
   const ICrashInfo& getICrashInfo() const { return icrash_info_; };
 
   /**
@@ -634,6 +644,11 @@ class Highs {
   HighsStatus getColName(const HighsInt col, std::string& name) const;
 
   /**
+   * @brief Get column index corresponding to name
+   */
+  HighsStatus getColByName(const std::string& name, HighsInt& col);
+
+  /**
    * @brief Get a column integrality from the incumbent model
    */
   HighsStatus getColIntegrality(const HighsInt col,
@@ -697,6 +712,11 @@ class Highs {
    * @brief Get a row name from the incumbent model
    */
   HighsStatus getRowName(const HighsInt row, std::string& name) const;
+
+  /**
+   * @brief Get row index corresponding to name
+   */
+  HighsStatus getRowByName(const std::string& name, HighsInt& row);
 
   /**
    * @brief Get a matrix coefficient
@@ -1227,6 +1247,8 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
+
+  std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;

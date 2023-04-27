@@ -92,7 +92,7 @@ endif()
 
 include(CTest)
 
-option(FAST_BUILD "Fast build: " OFF)
+option(FAST_BUILD "Fast build: " ON)
 
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
@@ -112,6 +112,9 @@ option(ZLIB "Fast build: " ON)
 if(PYTHON OR FORTRAN OR CSHARP)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
+
+# For Python interface
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # Basic type
 include(CMakePushCheckState)

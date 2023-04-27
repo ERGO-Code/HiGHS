@@ -17,6 +17,8 @@
 #include <cassert>
 #include <cctype>
 
+#include "util/stringutil.h"
+
 // void setLogOptions();
 
 void highsOpenLogFile(HighsLogOptions& log_options,
@@ -26,17 +28,18 @@ void highsOpenLogFile(HighsLogOptions& log_options,
   OptionStatus status =
       getOptionIndex(log_options, "log_file", option_records, index);
   assert(status == OptionStatus::kOk);
-  if (log_options.log_file_stream != NULL) {
+  if (log_options.log_stream != NULL) {
     // Current log file stream is not null, so flush and close it
-    fflush(log_options.log_file_stream);
-    fclose(log_options.log_file_stream);
+    fflush(log_options.log_stream);
+    fclose(log_options.log_stream);
   }
   if (log_file.compare("")) {
-    // New log file name is not empty, so open it
-    log_options.log_file_stream = fopen(log_file.c_str(), "w");
+    // New log file name is not empty, so open it, appending if
+    // possible
+    log_options.log_stream = fopen(log_file.c_str(), "a");
   } else {
     // New log file name is empty, so set the stream to null
-    log_options.log_file_stream = NULL;
+    log_options.log_stream = NULL;
   }
   OptionRecordString& option = *(OptionRecordString*)option_records[index];
   option.assignvalue(log_file);
@@ -444,7 +447,10 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
                                  std::vector<OptionRecord*>& option_records,
-                                 const std::string value) {
+                                 const std::string value_passed) {
+  // Trim any leading and trailing spaces
+  std::string value_trim = value_passed;
+  trim(value_trim, " ");
   HighsInt index;
   OptionStatus status =
       getOptionIndex(report_log_options, name, option_records, index);
@@ -452,22 +458,28 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
   HighsOptionType type = option_records[index]->type;
   if (type == HighsOptionType::kBool) {
     bool value_bool;
-    bool return_status = boolFromString(value, value_bool);
+    bool return_status = boolFromString(value_trim, value_bool);
     if (!return_status) {
       highsLogUser(
           report_log_options, HighsLogType::kError,
           "setLocalOptionValue: Value \"%s\" cannot be interpreted as a bool\n",
-          value.c_str());
+          value_trim.c_str());
       return OptionStatus::kIllegalValue;
     }
     return setLocalOptionValue(((OptionRecordBool*)option_records[index])[0],
                                value_bool);
   } else if (type == HighsOptionType::kInt) {
+    // Check that the string only contains legitimate characters
+    HighsInt illegal = value_trim.find_first_not_of("+-0123456789eE");
+    if (int(illegal) >= 0) return OptionStatus::kIllegalValue;
+    // Check that the string contains a numerical character
+    HighsInt found_digit = value_trim.find_first_of("0123456789");
     HighsInt value_int;
     int scanned_num_char;
-    const char* value_char = value.c_str();
+    const char* value_char = value_trim.c_str();
     sscanf(value_char, "%" HIGHSINT_FORMAT "%n", &value_int, &scanned_num_char);
     const int value_num_char = strlen(value_char);
+    // Check that all characters in value_char are scanned by the format
     const bool converted_ok = scanned_num_char == value_num_char;
     if (!converted_ok) {
       highsLogDev(report_log_options, HighsLogType::kError,
@@ -476,15 +488,21 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                   " "
                   "by scanning %" HIGHSINT_FORMAT " of %" HIGHSINT_FORMAT
                   " characters\n",
-                  value.c_str(), value_int, scanned_num_char, value_num_char);
+                  value_trim.c_str(), value_int, scanned_num_char,
+                  value_num_char);
       return OptionStatus::kIllegalValue;
     }
     return setLocalOptionValue(report_log_options,
                                ((OptionRecordInt*)option_records[index])[0],
                                value_int);
   } else if (type == HighsOptionType::kDouble) {
-    HighsInt value_int = atoi(value.c_str());
-    double value_double = atof(value.c_str());
+    // Check that the string only contains legitimate characters
+    HighsInt illegal = value_trim.find_first_not_of("+-.0123456789eE");
+    if (int(illegal) >= 0) return OptionStatus::kIllegalValue;
+    // Check that the string contains a numerical character
+    HighsInt found_digit = value_trim.find_first_of("0123456789");
+    HighsInt value_int = atoi(value_trim.c_str());
+    double value_double = atof(value_trim.c_str());
     double value_int_double = value_int;
     if (value_double == value_int_double) {
       highsLogDev(report_log_options, HighsLogType::kInfo,
@@ -492,19 +510,20 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                   "%" HIGHSINT_FORMAT
                   " "
                   "so is %g as double, and %g via atof\n",
-                  value.c_str(), value_int, value_int_double, value_double);
+                  value_trim.c_str(), value_int, value_int_double,
+                  value_double);
     }
     return setLocalOptionValue(report_log_options,
                                ((OptionRecordDouble*)option_records[index])[0],
-                               atof(value.c_str()));
+                               value_double);
   } else {
     // Setting a string option value
     if (!name.compare(kLogFileString)) {
       OptionRecordString& option = *(OptionRecordString*)option_records[index];
       std::string original_log_file = *(option.value);
-      if (value.compare(original_log_file)) {
+      if (value_passed.compare(original_log_file)) {
         // Changing the name of the log file
-        highsOpenLogFile(log_options, option_records, value);
+        highsOpenLogFile(log_options, option_records, value_passed);
       }
     }
     if (!name.compare(kModelFileString)) {
@@ -516,7 +535,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     } else {
       return setLocalOptionValue(
           report_log_options, ((OptionRecordString*)option_records[index])[0],
-          value);
+          value_passed);
     }
   }
 }
@@ -575,8 +594,8 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
   //  std::string empty_file = "";
   //  std::string from_log_file = from_options.log_file;
   //  std::string original_to_log_file = to_options.log_file;
-  //  FILE* original_to_log_file_stream =
-  //  to_options.log_options.log_file_stream;
+  //  FILE* original_to_log_stream =
+  //  to_options.log_options.log_stream;
   HighsInt num_options = to_options.records.size();
   // Check all the option values before setting any of them - in case
   // to_options are the main Highs options. Checks are only needed for
@@ -640,7 +659,7 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
   /*
   if (from_log_file.compare(original_to_log_file)) {
     // The log file name has changed
-    if (from_options.log_options.log_file_stream &&
+    if (from_options.log_options.log_stream &&
         !original_to_log_file.compare(empty_file)) {
       // The stream corresponding to from_log_file is non-null and the
       // original log file name was empty, so to_options inherits the
@@ -650,9 +669,9 @@ OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
       // This ensures that the stream to Highs.log opened in
       // RunHighs.cpp is retained unless the log file name is changed.
       assert(from_log_file.compare(empty_file));
-      assert(!original_to_log_file_stream);
-      to_options.log_options.log_file_stream =
-          from_options.log_options.log_file_stream;
+      assert(!original_to_log_stream);
+      to_options.log_options.log_stream =
+          from_options.log_options.log_stream;
     } else {
       highsOpenLogFile(to_options, to_options.log_file);
     }

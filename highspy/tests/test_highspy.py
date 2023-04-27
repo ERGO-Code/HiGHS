@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 import highspy
 import numpy as np
@@ -197,6 +198,19 @@ class TestHighsPy(unittest.TestCase):
         h = self.get_example_model()
         lp = h.getLp()
         #
+        # Extract column 0
+        iCol = 0
+        [status, cost, lower, upper, get_num_nz] = h.getCol(iCol)
+        self.assertEqual(cost, lp.col_cost_[iCol])
+        self.assertEqual(lower, lp.col_lower_[iCol])
+        self.assertEqual(upper, lp.col_upper_[iCol])
+        index = np.empty(get_num_nz)
+        value = np.empty(get_num_nz, dtype=np.double)
+        [status, index, value] = h.getColEntries(iCol)
+        for iEl in range(get_num_nz):
+            self.assertEqual(index[iEl], lp.a_matrix_.index_[iEl])
+            self.assertEqual(value[iEl], lp.a_matrix_.value_[iEl])
+        #
         # Extract columns 0 and 1
         indices = np.array([0, 1])
         [status, get_num_col, cost, lower, upper, get_num_nz] = h.getCols(2, indices)
@@ -214,6 +228,15 @@ class TestHighsPy(unittest.TestCase):
         for iEl in range(get_num_nz):
             self.assertEqual(index[iEl], lp.a_matrix_.index_[iEl])
             self.assertEqual(value[iEl], lp.a_matrix_.value_[iEl])
+        #
+        # Extract row 1
+        iRow = 1
+        [status, lower, upper, get_num_nz] = h.getRow(iRow)
+        self.assertEqual(lower, lp.row_lower_[iRow])
+        self.assertEqual(upper, lp.row_upper_[iRow])
+        index = np.empty(get_num_nz)
+        value = np.empty(get_num_nz, dtype=np.double)
+        [status, index, value] = h.getRowEntries(iRow)
         #
         # Extract rows 0 and 2
         indices = np.array([0, 2])
@@ -382,3 +405,37 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.row_bound_up.value_[1], inf);
         self.assertEqual(ranging.row_bound_up.objective_[1], inf);
         
+    def test_write_basis_before_running(self):
+        h = self.get_basic_model()
+        with tempfile.NamedTemporaryFile() as f:
+            h.writeBasis(f.name)
+            contents = f.read()
+            self.assertEqual(contents, b'HiGHS v1\nNone\n')
+        
+    def test_write_basis_after_running(self):
+        h = self.get_basic_model()
+        h.run()
+        with tempfile.NamedTemporaryFile() as f:
+            h.writeBasis(f.name)
+            contents = f.read()
+            self.assertEqual(
+                contents, b'HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n'
+            )
+
+    def test_read_basis(self):
+        # Read basis from one run model into an unrun model
+        expected_status_before = highspy.HighsBasisStatus.kLower
+        expected_status_after = highspy.HighsBasisStatus.kBasic
+
+        h1 = self.get_basic_model()
+        self.assertEqual(h1.getBasis().col_status[0], expected_status_before)
+        h1.run()
+        self.assertEqual(h1.getBasis().col_status[0], expected_status_after)
+
+        h2 = self.get_basic_model()
+        self.assertEqual(h2.getBasis().col_status[0], expected_status_before)
+
+        with tempfile.NamedTemporaryFile() as f:
+            h1.writeBasis(f.name)
+            h2.readBasis(f.name)
+            self.assertEqual(h2.getBasis().col_status[0], expected_status_after)

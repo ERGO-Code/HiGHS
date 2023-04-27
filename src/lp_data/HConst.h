@@ -102,6 +102,16 @@ enum OptionOffChooseOn {
   kHighsOptionOn
 };
 
+enum IpxDualizeStrategy {
+  kIpxDualizeStrategyOff = kHighsOptionOff,
+  kIpxDualizeStrategyChoose = kHighsOptionChoose,
+  kIpxDualizeStrategyOn = kHighsOptionOn,
+  kIpxDualizeStrategyLukas,
+  kIpxDualizeStrategyFilippo,
+  kIpxDualizeStrategyMin = kIpxDualizeStrategyOff,
+  kIpxDualizeStrategyMax = kIpxDualizeStrategyFilippo,
+};
+
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 
@@ -238,6 +248,12 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
+
+// Limit on primal values being realistic
+const double kExcessivePrimalValue = 1e25;
+
+// Hash marker for duplicates
+const HighsInt kHashIsDuplicate = -1;
 
 // Tolerance values for highsDoubleToString
 const double kModelValueToStringTolerance = 1e-15;

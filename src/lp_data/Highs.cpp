@@ -292,6 +292,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
   // eventually call it
   this->logHeader();
+  // Possibly analyse the LP data
+  if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
+    analyseLp(options_.log_options, model.lp_);
   HighsStatus return_status = HighsStatus::kOk;
   // Clear the incumbent model and any associated data
   clearModel();
@@ -551,6 +554,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   }
   this->model_.lp_.col_names_.resize(num_col);
   this->model_.lp_.col_names_[col] = name;
+  this->model_.lp_.col_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -570,6 +574,7 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   }
   this->model_.lp_.row_names_.resize(num_row);
   this->model_.lp_.row_names_[row] = name;
+  this->model_.lp_.row_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -644,12 +649,12 @@ HighsStatus Highs::writeModel(const std::string& filename) {
   // Ensure that the LP is column-wise
   model_.lp_.ensureColwise();
   // Check for repeated column or row names that would corrupt the file
-  if (repeatedNames(model_.lp_.col_names_)) {
+  if (model_.lp_.col_hash_.hasDuplicate(model_.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated column names\n");
     return returnFromHighs(HighsStatus::kError);
   }
-  if (repeatedNames(model_.lp_.row_names_)) {
+  if (model_.lp_.row_hash_.hasDuplicate(model_.lp_.row_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated row names\n");
     return returnFromHighs(HighsStatus::kError);
@@ -908,14 +913,17 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
 
-  // Check validity of any integrality, keeping a record of any upper
-  // bound modifications for semi-variables
-  call_status = assessIntegrality(model_.lp_, options_);
-  if (call_status == HighsStatus::kError) {
-    setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kSolveError);
-    return returnFromRun(HighsStatus::kError);
+  if (!options_.solve_relaxation) {
+    // Not solving the relaxation, so check validity of any
+    // integrality, keeping a record of any bound and type
+    // modifications for semi-variables
+    call_status = assessIntegrality(model_.lp_, options_);
+    if (call_status == HighsStatus::kError) {
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kSolveError);
+      return returnFromRun(HighsStatus::kError);
+    }
   }
-
   const bool use_simplex_or_ipm = options_.solver.compare(kHighsChooseString);
   if (!use_simplex_or_ipm) {
     // Leaving HiGHS to choose method according to model class
@@ -1144,10 +1152,26 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
-        // Validate the reduced LP
-        //
-        // ToDo. Assess #1187
-        assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        if (kAllowDeveloperAssert) {
+          // Validate the reduced LP
+          //
+          // Although preseolve can yield small values in the matrix,
+          // they are only stripped out (by assessLp) in debug. This
+          // suggests that they are no real danger to the simplex
+          // solver. The only danger is pivoting on them, but that
+          // implies that values of roughly that size have been chosen
+          // in the ratio test. Even with the filter, values of 1e-9
+          // could be in the matrix, and these would be bad
+          // pivots. Hence, since the small values may play a
+          // meaningful role in postsolve, then it's better to keep
+          // them.
+          //
+          // ToDo. Analyse the extent of small value creation. See #1187
+          assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        } else {
+          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
+                                                 options_.small_matrix_value);
+        }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve
@@ -2415,6 +2439,26 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
+  HighsLp& lp = model_.lp_;
+  if (!lp.col_names_.size()) return HighsStatus::kError;
+  if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+  auto search = lp.col_hash_.name2index.find(name);
+  if (search == lp.col_hash_.name2index.end()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getColByName: name %s is not found\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  if (search->second == kHashIsDuplicate) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getColByName: name %s is duplicated\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  col = search->second;
+  assert(lp.col_names_[col] == name);
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getColIntegrality(const HighsInt col,
                                      HighsVarType& integrality) const {
   const HighsInt num_col = this->model_.lp_.num_col_;
@@ -2494,6 +2538,26 @@ HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
     return HighsStatus::kError;
   }
   name = this->model_.lp_.row_names_[row];
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
+  HighsLp& lp = model_.lp_;
+  if (!lp.row_names_.size()) return HighsStatus::kError;
+  if (!lp.row_hash_.name2index.size()) lp.row_hash_.form(lp.row_names_);
+  auto search = lp.row_hash_.name2index.find(name);
+  if (search == lp.row_hash_.name2index.end()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getRowByName: name %s is not found\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  if (search->second == kHashIsDuplicate) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::getRowByName: name %s is duplicated\n", name.c_str());
+    return HighsStatus::kError;
+  }
+  row = search->second;
+  assert(lp.row_names_[row] == name);
   return HighsStatus::kOk;
 }
 
@@ -3133,6 +3197,7 @@ HighsStatus Highs::callSolveMip() {
     // solution from the MIP solver
     solution_.col_value.resize(model_.lp_.num_col_);
     solution_.col_value = solver.solution_;
+    saved_objective_and_solution_ = solver.saved_objective_and_solution_;
     model_.lp_.a_matrix_.productQuad(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {

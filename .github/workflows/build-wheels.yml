@@ -50,7 +50,7 @@ jobs:
 
       - name: Build wheels
         run: |
-          cd  $GITHUB_WORKSPACE/src/interfaces/highspy
+          cd  $GITHUB_WORKSPACE
           export REPAIR_LIBRARY_PATH=${{runner.workspace}}/installs/highs/lib
           export LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
           export DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH

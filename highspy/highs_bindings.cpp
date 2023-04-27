@@ -390,6 +390,56 @@ std::tuple<HighsStatus, double> highs_getObjectiveOffset(Highs* h)
   return std::make_tuple(status, obj_offset);
 }
 
+std::tuple<HighsStatus, double, double, double, HighsInt> highs_getCol(Highs* h, int col)
+{
+  double cost, lower, upper;
+  HighsInt get_num_col;
+  HighsInt get_num_nz;
+  HighsStatus status = h->getCols(1, &col, get_num_col, &cost, &lower, &upper, get_num_nz, nullptr, nullptr, nullptr);
+  return std::make_tuple(status, cost, lower, upper, get_num_nz);
+}
+
+std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<double>> highs_getColEntries(Highs* h, int col)
+{
+  double cost, lower, upper;
+  HighsInt get_num_col;
+  HighsInt get_num_nz;
+  h->getCols(1, &col, get_num_col, nullptr, nullptr, nullptr, get_num_nz, nullptr, nullptr, nullptr);
+  get_num_nz = get_num_nz > 0 ? get_num_nz : 1;
+  HighsInt start;
+  std::vector<HighsInt> index(get_num_nz);
+  std::vector<double> value(get_num_nz);
+  HighsInt* index_ptr = static_cast<HighsInt*>(index.data());
+  double* value_ptr = static_cast<double*>(value.data());
+  HighsStatus status = h->getCols(1, &col, get_num_col, nullptr, nullptr, nullptr, get_num_nz, &start, index_ptr, value_ptr);
+  return std::make_tuple(status, py::cast(index), py::cast(value));
+}
+
+std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h, int row)
+{
+  double cost, lower, upper;
+  HighsInt get_num_row;
+  HighsInt get_num_nz;
+  HighsStatus status = h->getRows(1, &row, get_num_row, &lower, &upper, get_num_nz, nullptr, nullptr, nullptr);
+  return std::make_tuple(status, lower, upper, get_num_nz);
+}
+
+std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<double>> highs_getRowEntries(Highs* h, int row)
+{
+  double cost, lower, upper;
+  HighsInt get_num_row;
+  HighsInt get_num_nz;
+  h->getRows(1, &row, get_num_row, nullptr, nullptr, get_num_nz, nullptr, nullptr, nullptr);
+  get_num_nz = get_num_nz > 0 ? get_num_nz : 1;
+  HighsInt start;
+  std::vector<HighsInt> index(get_num_nz);
+  std::vector<double> value(get_num_nz);
+  HighsInt* index_ptr = static_cast<HighsInt*>(index.data());
+  double* value_ptr = static_cast<double*>(value.data());
+  HighsStatus status = h->getRows(1, &row, get_num_row, nullptr, nullptr, get_num_nz, &start, index_ptr, value_ptr);
+  return std::make_tuple(status, py::cast(index), py::cast(value));
+}
+
 std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>, py::array_t<double>, HighsInt> highs_getCols(Highs* h, int num_set_entries, py::array_t<int> indices)
 {
   py::buffer_info indices_info = indices.request();
@@ -463,6 +513,35 @@ std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>, py::array_
   HighsStatus status = h->getRows(num_set_entries, indices_ptr, get_num_row, nullptr, nullptr, get_num_nz, start_ptr, index_ptr, value_ptr);
   return std::make_tuple(status, py::cast(start), py::cast(index), py::cast(value));
 }
+
+std::tuple<HighsStatus, std::string> highs_getColName(Highs* h, const int col)
+{
+  std::string name;
+  HighsStatus status = h->getColName(col, name);
+  return std::make_tuple(status, name);
+}
+
+std::tuple<HighsStatus, int> highs_getColByName(Highs* h, const std::string name)
+{
+  HighsInt col;
+  HighsStatus status = h->getColByName(name, col);
+  return std::make_tuple(status, col);
+}
+
+std::tuple<HighsStatus, std::string> highs_getRowName(Highs* h, const int row)
+{
+  std::string name;
+  HighsStatus status = h->getRowName(row, name);
+  return std::make_tuple(status, name);
+}
+
+std::tuple<HighsStatus, int> highs_getRowByName(Highs* h, const std::string name)
+{
+  HighsInt row;
+  HighsStatus status = h->getRowByName(name, row);
+  return std::make_tuple(status, row);
+}
+
 
 PYBIND11_MODULE(highs_bindings, m)
 {
@@ -645,7 +724,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("log_dev_level", &HighsOptions::log_dev_level)
     .def_readwrite("allow_unbounded_or_infeasible", &HighsOptions::allow_unbounded_or_infeasible)
     .def_readwrite("allowed_matrix_scale_factor", &HighsOptions::allowed_matrix_scale_factor)
-    .def_readwrite("simplex_dualise_strategy", &HighsOptions::simplex_dualise_strategy)
+    .def_readwrite("ipx_dualize_strategy", &HighsOptions::ipx_dualize_strategy)
+    .def_readwrite("simplex_dualize_strategy", &HighsOptions::simplex_dualize_strategy)
     .def_readwrite("simplex_permute_strategy", &HighsOptions::simplex_permute_strategy)
     .def_readwrite("simplex_price_strategy", &HighsOptions::simplex_price_strategy)
     .def_readwrite("mip_detect_symmetry", &HighsOptions::mip_detect_symmetry)
@@ -684,6 +764,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("passRowName", &Highs::passRowName)
     .def("readModel", &Highs::readModel)
     .def("readBasis", &Highs::readBasis)
+    .def("writeBasis", &Highs::writeBasis)
     .def("presolve", &Highs::presolve)
     .def("run", &Highs::run)
     .def("postsolve", &Highs::postsolve)
@@ -717,6 +798,7 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getLp", &Highs::getLp)
     .def("getModel", &Highs::getModel)
     .def("getSolution", &Highs::getSolution)
+    .def("getSavedMipSolutions", &Highs::getSavedMipSolutions)
     .def("getBasis", &Highs::getBasis)
 // &highs_getModelStatus not needed once getModelStatus(const bool
 // scaled_model) disappears from, Highs.h
@@ -731,10 +813,20 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("getObjectiveSense", &highs_getObjectiveSense)
     .def("getObjectiveOffset", &highs_getObjectiveOffset)
 
+    .def("getCol", &highs_getCol)
+    .def("getColEntries", &highs_getColEntries)
+    .def("getRow", &highs_getRow)
+    .def("getRowEntries", &highs_getRowEntries)
+
     .def("getCols", &highs_getCols)
     .def("getColsEntries", &highs_getColsEntries)
     .def("getRows", &highs_getRows)
     .def("getRowsEntries", &highs_getRowsEntries)
+
+    .def("getColName", &highs_getColName)
+    .def("getColByName", &highs_getColByName)
+    .def("getRowName", &highs_getRowName)
+    .def("getRowByName", &highs_getRowByName)
 
     .def("writeModel", &Highs::writeModel)
     .def("crossover", &Highs::crossover)
@@ -772,6 +864,10 @@ PYBIND11_MODULE(highs_bindings, m)
     .def_readwrite("col_dual", &HighsSolution::col_dual)
     .def_readwrite("row_value", &HighsSolution::row_value)
     .def_readwrite("row_dual", &HighsSolution::row_dual);
+  py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution")
+    .def(py::init<>())
+    .def_readwrite("objective", &HighsObjectiveSolution::objective)
+    .def_readwrite("col_value", &HighsObjectiveSolution::col_value);
   py::class_<HighsBasis>(m, "HighsBasis")
     .def(py::init<>())
     .def_readwrite("valid", &HighsBasis::valid)

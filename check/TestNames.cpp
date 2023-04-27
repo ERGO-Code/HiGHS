@@ -5,6 +5,7 @@
 
 const bool dev_run = false;
 TEST_CASE("highs-names", "[highs_names]") {
+  std::string name;
   const std::string model = "avgas";
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -13,6 +14,24 @@ TEST_CASE("highs-names", "[highs_names]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   const HighsLp& lp = highs.getLp();
+
+  HighsInt iCol, iRow;
+  HighsStatus status;
+
+  HighsInt ck_iCol;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    status = highs.getColName(iCol, name);
+    REQUIRE(status == HighsStatus::kOk);
+    status = highs.getColByName(name, ck_iCol);
+    REQUIRE(ck_iCol == iCol);
+  }
+  HighsInt ck_iRow;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    status = highs.getRowName(iRow, name);
+    REQUIRE(status == HighsStatus::kOk);
+    status = highs.getRowByName(name, ck_iRow);
+    REQUIRE(ck_iRow == iRow);
+  }
 
   // Change all names to distinct new names
   REQUIRE(highs.passColName(-1, "FRED") == HighsStatus::kError);
@@ -45,14 +64,28 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(highs.writeModel("") == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", 1);
 
+  status = highs.getColByName(col0_name, iCol);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(iCol == 0);
+  status = highs.getRowByName(row0_name, iRow);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(iRow == 0);
+
   // Change name of column num_col/2 to be the same as column 0
-  std::string name;
   REQUIRE(highs.getColName(0, name) == HighsStatus::kOk);
   REQUIRE(name == col0_name);
-  HighsInt iCol = lp.num_col_ / 2;
+  iCol = lp.num_col_ / 2;
   std::string iCol_name;
   REQUIRE(highs.getColName(iCol, iCol_name) == HighsStatus::kOk);
   REQUIRE(highs.passColName(iCol, col0_name) == HighsStatus::kOk);
+
+  // column num_col/2 is no longer called iCol_name
+  status = highs.getColByName(iCol_name, iCol);
+  REQUIRE(status == HighsStatus::kError);
+
+  status = highs.getColByName(col0_name, iCol);
+  REQUIRE(status == HighsStatus::kError);
+
   // Model can't be written
   REQUIRE(highs.writeModel("") == HighsStatus::kError);
   if (dev_run) highs.writeSolution("", 1);
@@ -64,7 +97,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   // Change name of row num_row/2 to be the same as row 0
   REQUIRE(highs.getRowName(0, name) == HighsStatus::kOk);
   REQUIRE(name == row0_name);
-  HighsInt iRow = lp.num_row_ / 2;
+  iRow = lp.num_row_ / 2;
   REQUIRE(highs.passRowName(iRow, row0_name) == HighsStatus::kOk);
   // Model can't be written
   REQUIRE(highs.writeModel("") == HighsStatus::kError);

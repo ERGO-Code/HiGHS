@@ -234,6 +234,37 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
                optimal_objective_function_value) < double_equal_tolerance);
 }
 
+TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {1};
+  lp.col_upper_ = {-1};
+  lp.a_matrix_.start_ = {0, 0};
+  lp.integrality_ = {semi_continuous};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getSolution().col_value[0] == 0);
+  // Ensure that inconsistent bounds with negative lower are still
+  // accepted
+  lp.col_lower_[0] = -1;
+  lp.col_upper_[0] = -2;
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getSolution().col_value[0] == 0);
+  // Ensure that continuous variables with inconsistent bounds yield
+  // infeasibility
+  highs.setOptionValue("solve_relaxation", true);
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
 void semiModel0(HighsLp& lp) {
   lp.num_col_ = 4;
   lp.num_row_ = 4;

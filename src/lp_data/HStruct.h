@@ -14,6 +14,7 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <unordered_map>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -33,6 +34,12 @@ struct HighsSolution {
   std::vector<double> row_value;
   std::vector<double> row_dual;
   void invalidate();
+  void clear();
+};
+
+struct HighsObjectiveSolution {
+  double objective;
+  std::vector<double> col_value;
   void clear();
 };
 
@@ -76,12 +83,25 @@ struct HighsScale {
 };
 
 struct HighsLpMods {
-  std::vector<HighsInt> save_semi_variable_lower_bound_index;
-  std::vector<double> save_semi_variable_lower_bound_value;
-  std::vector<HighsInt> save_semi_variable_upper_bound_index;
-  std::vector<double> save_semi_variable_upper_bound_value;
+  std::vector<HighsInt> save_non_semi_variable_index;
+  std::vector<HighsInt> save_inconsistent_semi_variable_index;
+  std::vector<double> save_inconsistent_semi_variable_lower_bound_value;
+  std::vector<double> save_inconsistent_semi_variable_upper_bound_value;
+  std::vector<HighsVarType> save_inconsistent_semi_variable_type;
+
+  std::vector<HighsInt> save_relaxed_semi_variable_lower_bound_index;
+  std::vector<double> save_relaxed_semi_variable_lower_bound_value;
+  std::vector<HighsInt> save_tightened_semi_variable_upper_bound_index;
+  std::vector<double> save_tightened_semi_variable_upper_bound_value;
   void clear();
   bool isClear();
+};
+
+struct HighsNameHash {
+  std::unordered_map<std::string, int> name2index;
+  void form(const std::vector<std::string>& name);
+  bool hasDuplicate(const std::vector<std::string>& name);
+  void clear();
 };
 
 struct HighsPresolveRuleLog {

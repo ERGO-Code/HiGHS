@@ -724,9 +724,10 @@ void HEkkDual::solvePhase1() {
       // infeasibilities, it will set solve_phase = kSolvePhase2;
       assessPhase1Optimality();
     }
-  } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
-    // chooseColumn has failed
-    // Behave as "Report strange issues" below
+  } else if (rebuild_reason == kRebuildReasonChooseColumnFail ||
+             rebuild_reason == kRebuildReasonExcessivePrimalValue) {
+    // chooseColumn has failed or excessive primal values have been
+    // created Behave as "Report strange issues" below
     solve_phase = kSolvePhaseError;
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
@@ -972,9 +973,10 @@ void HEkkDual::solvePhase2() {
                   "problem-optimal\n");
       model_status = HighsModelStatus::kOptimal;
     }
-  } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
-    // chooseColumn has failed
-    // Behave as "Report strange issues" below
+  } else if (rebuild_reason == kRebuildReasonChooseColumnFail ||
+             rebuild_reason == kRebuildReasonExcessivePrimalValue) {
+    // chooseColumn has failed or excessive primal values have been
+    // created Behave as "Report strange issues" below
     solve_phase = kSolvePhaseError;
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-not-solved\n");
@@ -2131,7 +2133,11 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   double l_out = baseLower[row_out];
   double u_out = baseUpper[row_out];
   theta_primal = (x_out - (delta_primal < 0 ? l_out : u_out)) / alpha_col;
-  dualRHS.updatePrimal(&col_aq, theta_primal);
+  const bool ok_update_primal = dualRHS.updatePrimal(&col_aq, theta_primal);
+  if (!ok_update_primal) {
+    rebuild_reason = kRebuildReasonExcessivePrimalValue;
+    return;
+  }
   ekk_instance_.updateBadBasisChange(col_aq, theta_primal);
   if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
     const double pivot_in_scaled_space =
