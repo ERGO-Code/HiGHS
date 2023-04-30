@@ -2827,24 +2827,36 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   }
 
   // Presolve.
-  presolve_.init(original_lp, timer_);
-  presolve_.options_ = &options_;
-  if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
-    double current = timer_.readRunHighsClock();
-    double time_init = current - start_presolve;
-    double left = presolve_.options_->time_limit - time_init;
-    if (left <= 0) {
-      highsLogDev(options_.log_options, HighsLogType::kError,
-                  "Time limit reached while copying matrix into presolve.\n");
-      return HighsPresolveStatus::kTimeout;
+  HighsPresolveStatus presolve_return_status =
+      HighsPresolveStatus::kNotPresolved;
+  const bool use_mip_presolve = false;
+  if (use_mip_presolve && model_.isMip()) {
+    // Use presolve for MIP
+    HighsMipSolver solver(options_, original_lp, solution_);
+    solver.runPresolve();
+    presolved_model_.lp_ = solver.getPresolvedModel();
+    assert(111 == 999);
+  } else {
+    // Use presolve for LP
+    presolve_.init(original_lp, timer_);
+    presolve_.options_ = &options_;
+    if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
+      double current = timer_.readRunHighsClock();
+      double time_init = current - start_presolve;
+      double left = presolve_.options_->time_limit - time_init;
+      if (left <= 0) {
+        highsLogDev(options_.log_options, HighsLogType::kError,
+                    "Time limit reached while copying matrix into presolve.\n");
+        return HighsPresolveStatus::kTimeout;
+      }
+      highsLogDev(options_.log_options, HighsLogType::kVerbose,
+                  "Time limit set: copying matrix took %.2g, presolve "
+                  "time left: %.2g\n",
+                  time_init, left);
     }
-    highsLogDev(options_.log_options, HighsLogType::kVerbose,
-                "Time limit set: copying matrix took %.2g, presolve "
-                "time left: %.2g\n",
-                time_init, left);
-  }
 
-  HighsPresolveStatus presolve_return_status = presolve_.run();
+    presolve_return_status = presolve_.run();
+  }
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
               "presolve_.run() returns status: %s\n",

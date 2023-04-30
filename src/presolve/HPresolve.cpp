@@ -655,6 +655,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   HighsInt oldNumCol = model->num_col_;
   model->num_col_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
+  const bool have_col_names = model->col_names_.size() > 0;
+  assert(!have_col_names || HighsInt(model->col_names_.size()) == oldNumCol);
   for (HighsInt i = 0; i != oldNumCol; ++i) {
     if (colDeleted[i])
       newColIndex[i] = -1;
@@ -672,8 +674,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       colUpperSource[newColIndex[i]] = colUpperSource[i];
       colhead[newColIndex[i]] = colhead[i];
       colsize[newColIndex[i]] = colsize[i];
-      if ((HighsInt)model->col_names_.size() > 0)
-        model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
+      if (have_col_names)
+        model->col_names_[newColIndex[i]] = model->col_names_[i];
       changedColFlag[newColIndex[i]] = changedColFlag[i];
     }
   }
@@ -688,11 +690,12 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   colUpperSource.resize(model->num_col_);
   colhead.resize(model->num_col_);
   colsize.resize(model->num_col_);
-  if ((HighsInt)model->col_names_.size() > 0)
-    model->col_names_.resize(model->num_col_);
+  if (have_col_names) model->col_names_.resize(model->num_col_);
   changedColFlag.resize(model->num_col_);
   numDeletedCols = 0;
   HighsInt oldNumRow = model->num_row_;
+  const bool have_row_names = model->row_names_.size() > 0;
+  assert(!have_row_names || HighsInt(model->row_names_.size()) == oldNumRow);
   model->num_row_ = 0;
   std::vector<HighsInt> newRowIndex(oldNumRow);
   for (HighsInt i = 0; i != oldNumRow; ++i) {
@@ -714,8 +717,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       rowsize[newRowIndex[i]] = rowsize[i];
       rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
       rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
-      if ((HighsInt)model->row_names_.size() > 0)
-        model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
+      if (have_row_names)
+        model->row_names_[newRowIndex[i]] = model->row_names_[i];
       changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
     }
   }
@@ -747,8 +750,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsize.resize(model->num_row_);
   rowsizeInteger.resize(model->num_row_);
   rowsizeImplInt.resize(model->num_row_);
-  if ((HighsInt)model->row_names_.size() > 0)
-    model->row_names_.resize(model->num_row_);
+  if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
 
   numDeletedRows = 0;
