@@ -55,4 +55,4 @@ Consistent with the callable methods in HiGHS, there are three possible return c
 
  * -1: An error has occurred in HiGHS
  * 0: HiGHS has run successfully
- * 1: HiGHS has recovered from an unusual event, or has terminated due to reaching a time or iteration limits
+ * 1: HiGHS has recovered from an unusual event, or has terminated due to reaching a time or iteration limit

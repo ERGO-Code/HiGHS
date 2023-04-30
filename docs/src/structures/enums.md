@@ -16,7 +16,7 @@ This is (part of) the return value of most HiGHS methods:
  * `kError`: The method has exposed an error
  * `kOk`: The method has completed successfully
  * `kWarning`: The method has recovered from an unusual event, or has terminated
-  due to reaching a time or iteration limits
+  due to reaching a time or iteration limit
 
 ## MatrixFormat
 
