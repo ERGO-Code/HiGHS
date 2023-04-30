@@ -96,35 +96,4 @@ HighsPresolveStatus PresolveComponent::run() {
   return presolve_status;
 }
 
-void PresolveComponent::clear() {
-  //  has_run_ = false;
-  data_.clear();
-}
-namespace presolve {
-
-bool checkOptions(const PresolveComponentOptions& options) {
-  // todo: check options in a smart way
-  if (options.dev) std::cout << "Checking presolve options... ";
-
-  if (!(options.iteration_strategy == "smart" ||
-        options.iteration_strategy == "off" ||
-        options.iteration_strategy == "num_limit")) {
-    if (options.dev)
-      std::cout << "error: iteration strategy unknown: "
-                << options.iteration_strategy << "." << std::endl;
-    return false;
-  }
-
-  if (options.iteration_strategy == "num_limit" && options.max_iterations < 0) {
-    if (options.dev)
-      std::cout << "warning: negative iteration limit: "
-                << options.max_iterations
-                << ". Presolve will be run with no limit on iterations."
-                << std::endl;
-    return false;
-  }
-
-  return true;
-}
-
-}  // namespace presolve
+void PresolveComponent::clear() { data_.clear(); }

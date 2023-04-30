@@ -82,9 +82,6 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   bool is_valid = false;
   // presolve options later when needed.
 
-  std::string iteration_strategy = "smart";
-  HighsInt max_iterations = 0;
-
   double time_limit = -1;
   bool dev = false;
 
@@ -120,10 +117,4 @@ class PresolveComponent : public HighsComponent {
 
   virtual ~PresolveComponent() = default;
 };
-
-namespace presolve {
-
-bool checkOptions(const PresolveComponentOptions& options);
-}
-
 #endif
