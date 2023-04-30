@@ -33,13 +33,6 @@
 // The structure of component is general, of the presolve component - presolve
 // specific.
 
-enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
-  kNotPresolved = -1,
-  kNoPrimalSolutionError,
-  kSolutionRecovered,
-  kBasisError
-};
-
 struct PresolveComponentData : public HighsComponentData {
   HighsLp reduced_lp_;
   presolve::HighsPostsolveStack postSolveStack;

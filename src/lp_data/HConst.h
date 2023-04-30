@@ -169,6 +169,13 @@ enum class HighsPresolveStatus {
   kOptionsError,  // V2.0: Delete since it's not used!
 };
 
+enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
+  kNotPresolved = -1,
+  kNoPrimalSolutionError,
+  kSolutionRecovered,
+  kBasisError
+};
+
 enum class HighsModelStatus {
   // NB Add new status values to the end so that int cast of status
   // values is unchanged, since enums are not preserved in some
