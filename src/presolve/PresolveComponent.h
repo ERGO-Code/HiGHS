@@ -68,24 +68,10 @@ struct PresolveComponentInfo : public HighsComponentInfo {
   HighsInt n_cols_removed = 0;
   HighsInt n_nnz_removed = 0;
 
-  double init_time = 0;
   double presolve_time = 0;
-  double solve_time = 0;
   double postsolve_time = 0;
-  double cleanup_time = 0;
 
   virtual ~PresolveComponentInfo() = default;
-};
-
-// HighsComponentOptions is a placeholder for options specific to this component
-struct PresolveComponentOptions : public HighsComponentOptions {
-  bool is_valid = false;
-  // presolve options later when needed.
-
-  double time_limit = -1;
-  bool dev = false;
-
-  virtual ~PresolveComponentOptions() = default;
 };
 
 class PresolveComponent : public HighsComponent {
