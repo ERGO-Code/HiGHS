@@ -71,6 +71,7 @@ HighsPresolveStatus PresolveComponent::run() {
   presolve.setInput(data_.reduced_lp_, *options_, timer);
 
   HighsModelStatus status = presolve.run(data_.postSolveStack);
+  HighsPresolveStatus check_presolve_status = presolve.getPresolveStatus();
   data_.presolve_log_ = presolve.getPresolveLog();
 
   // Ensure that the presolve status is used to set
@@ -93,6 +94,7 @@ HighsPresolveStatus PresolveComponent::run() {
         presolve_status = HighsPresolveStatus::kReduced;
   }
   this->presolve_status_ = presolve_status;
+  assert(presolve_status == check_presolve_status);
   return presolve_status;
 }
 

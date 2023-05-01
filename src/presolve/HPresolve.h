@@ -135,7 +135,7 @@ class HPresolve {
     kDualInfeasible,
     kStopped,
   };
-
+  HighsPresolveStatus presolve_status_;
   HPresolveAnalysis analysis_;
 
   // private functions for different shared functionality and matrix
@@ -338,6 +338,8 @@ class HPresolve {
   const HighsPresolveLog& getPresolveLog() const {
     return analysis_.presolve_log_;
   }
+
+  HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);
