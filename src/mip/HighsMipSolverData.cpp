@@ -402,6 +402,7 @@ void HighsMipSolverData::runPresolve() {
   presolve::HPresolve presolve;
   presolve.setInput(mipsolver);
   mipsolver.modelstatus_ = presolve.run(postSolveStack);
+  presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
 #ifdef HIGHS_DEBUGSOL

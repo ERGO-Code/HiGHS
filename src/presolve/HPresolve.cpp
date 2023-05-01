@@ -4212,14 +4212,17 @@ double HPresolve::problemSizeReduction() {
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
+  presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
       break;
     case Result::kPrimalInfeasible:
+      presolve_status_ = HighsPresolveStatus::kInfeasible;
       return HighsModelStatus::kInfeasible;
     case Result::kDualInfeasible:
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return HighsModelStatus::kUnboundedOrInfeasible;
   }
 
@@ -4276,21 +4279,34 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
         model->a_matrix_.start_);
 
   if (model->num_col_ == 0) {
+    // Reduced to empty
     if (mipsolver) {
-      if (model->offset_ > mipsolver->mipdata_->upper_limit)
+      if (model->offset_ > mipsolver->mipdata_->upper_limit) {
+	presolve_status_ = HighsPresolveStatus::kInfeasible;
         return HighsModelStatus::kInfeasible;
-
+      }
       mipsolver->mipdata_->lower_bound = 0;
     } else {
       assert(model->num_row_ == 0);
-      if (model->num_row_ != 0) return HighsModelStatus::kNotset;
+      if (model->num_row_ != 0) {
+	presolve_status_ = HighsPresolveStatus::kNotPresolved;
+	return HighsModelStatus::kNotset;
+      }
     }
+    presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
     return HighsModelStatus::kOptimal;
+  } else if (postsolve_stack.numReductions() > 0) {
+    // Reductions performed
+    presolve_status_ = HighsPresolveStatus::kReduced;
+  } else {
+    // No reductions performed
+    presolve_status_ = HighsPresolveStatus::kNotReduced;
   }
 
   if (!mipsolver && options->use_implied_bounds_from_presolve)
     setRelaxedImpliedBounds();
 
+  assert(presolve_status_ != HighsPresolveStatus::kNotSet);
   return HighsModelStatus::kNotset;
 }
 

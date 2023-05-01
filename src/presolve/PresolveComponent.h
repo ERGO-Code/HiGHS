@@ -22,7 +22,7 @@
 #include <string>
 #include <utility>
 
-#include "HighsPostsolveStack.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "lp_data/HighsLp.h"
 #include "util/HighsComponent.h"
 #include "util/HighsTimer.h"
@@ -78,13 +78,7 @@ class PresolveComponent : public HighsComponent {
   HighsLp& getReducedProblem() { return data_.reduced_lp_; }
   HighsPresolveLog& getPresolveLog() { return data_.presolve_log_; }
 
-  HighsStatus setOptions(const HighsOptions& options);
-  std::string presolveStatusToString(const HighsPresolveStatus presolve_status);
-
-  void negateReducedLpColDuals(bool reduced);
-  void negateReducedLpCost();
-
-  //  bool has_run_ = false;
+  void negateReducedLpColDuals();
 
   PresolveComponentInfo info_;
   PresolveComponentData data_;

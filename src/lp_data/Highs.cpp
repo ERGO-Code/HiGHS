@@ -777,7 +777,7 @@ HighsStatus Highs::presolve() {
 
   highsLogUser(
       options_.log_options, HighsLogType::kInfo, "Presolve status: %s\n",
-      presolve_.presolveStatusToString(model_presolve_status_).c_str());
+      presolveStatusToString(model_presolve_status_).c_str());
   return returnFromHighs(return_status);
 }
 
@@ -2690,7 +2690,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
     highsLogUser(
         options_.log_options, HighsLogType::kWarning,
         "Cannot run postsolve with presolve status: %s\n",
-        presolve_.presolveStatusToString(model_presolve_status_).c_str());
+        presolveStatusToString(model_presolve_status_).c_str());
     return HighsStatus::kWarning;
   }
   HighsStatus return_status = callRunPostsolve(solution, basis);
@@ -2748,6 +2748,33 @@ HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                         bool& feasible) const {
   return assessLpPrimalSolution(options_, model_.lp_, solution_, valid,
                                 integral, feasible);
+}
+
+std::string Highs::presolveStatusToString(
+  const HighsPresolveStatus presolve_status) const {
+  switch (presolve_status) {
+  case HighsPresolveStatus::kNotPresolved:
+    return "Not presolved";
+  case HighsPresolveStatus::kNotReduced:
+    return "Not reduced";
+  case HighsPresolveStatus::kInfeasible:
+    return "Infeasible";
+  case HighsPresolveStatus::kUnboundedOrInfeasible:
+    return "Unbounded or infeasible";
+  case HighsPresolveStatus::kReduced:
+    return "Reduced";
+  case HighsPresolveStatus::kReducedToEmpty:
+    return "Reduced to empty";
+  case HighsPresolveStatus::kTimeout:
+    return "Timeout";
+  case HighsPresolveStatus::kNullError:
+    return "Null error";
+  case HighsPresolveStatus::kOptionsError:
+    return "Options error";
+  default:
+    assert(1 == 0);
+    return "Unrecognised presolve status";
+  }
 }
 
 std::string Highs::modelStatusToString(
@@ -2835,6 +2862,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
     HighsMipSolver solver(options_, original_lp, solution_);
     solver.runPresolve();
     presolved_model_.lp_ = solver.getPresolvedModel();
+    presolve_return_status = solver.getPresolveStatus();
     assert(111 == 999);
   } else {
     // Use presolve for LP
@@ -2860,7 +2888,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
               "presolve_.run() returns status: %s\n",
-              presolve_.presolveStatusToString(presolve_return_status).c_str());
+              presolveStatusToString(presolve_return_status).c_str());
 
   // Update reduction counts.
   assert(presolve_return_status == presolve_.presolve_status_);
@@ -2909,7 +2937,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
-    presolve_.negateReducedLpColDuals(true);
+    presolve_.negateReducedLpColDuals();
 
   // Ensure that the postsolve status is used to set
   // presolve_.postsolve_status_, as well as being returned

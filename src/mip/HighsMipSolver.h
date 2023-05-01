@@ -91,6 +91,7 @@ class HighsMipSolver {
 
   void runPresolve();
   const HighsLp& getPresolvedModel() const;
+  HighsPresolveStatus getPresolveStatus() const;
 };
 
 #endif
