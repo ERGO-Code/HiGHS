@@ -2856,14 +2856,20 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   // Presolve.
   HighsPresolveStatus presolve_return_status =
       HighsPresolveStatus::kNotPresolved;
-  const bool use_mip_presolve = false;
+  const bool use_mip_presolve = true;
   if (use_mip_presolve && model_.isMip()) {
     // Use presolve for MIP
+    //
+    // Presolved model is extracted now since it's part of solver,
+    // which is lost on return
     HighsMipSolver solver(options_, original_lp, solution_);
     solver.runPresolve();
-    presolved_model_.lp_ = solver.getPresolvedModel();
     presolve_return_status = solver.getPresolveStatus();
-    assert(111 == 999);
+    // Assign values to data members of presolve_
+    presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
+    //    presolved_model_.lp_ = solver.getPresolvedModel();
+    presolve_.presolve_status_ = presolve_return_status;
+    //    presolve_.data_.presolve_log_ = 
   } else {
     // Use presolve for LP
     presolve_.init(original_lp, timer_);
