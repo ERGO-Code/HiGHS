@@ -22,8 +22,8 @@
 #include <string>
 #include <utility>
 
-#include "presolve/HighsPostsolveStack.h"
 #include "lp_data/HighsLp.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "util/HighsComponent.h"
 #include "util/HighsTimer.h"
 

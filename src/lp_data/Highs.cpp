@@ -775,9 +775,9 @@ HighsStatus Highs::presolve() {
     presolved_model_.lp_.setMatrixDimensions();
   }
 
-  highsLogUser(
-      options_.log_options, HighsLogType::kInfo, "Presolve status: %s\n",
-      presolveStatusToString(model_presolve_status_).c_str());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Presolve status: %s\n",
+               presolveStatusToString(model_presolve_status_).c_str());
   return returnFromHighs(return_status);
 }
 
@@ -2687,10 +2687,9 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
       model_presolve_status_ == HighsPresolveStatus::kTimeout;
   if (!can_run_postsolve) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kWarning,
-        "Cannot run postsolve with presolve status: %s\n",
-        presolveStatusToString(model_presolve_status_).c_str());
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Cannot run postsolve with presolve status: %s\n",
+                 presolveStatusToString(model_presolve_status_).c_str());
     return HighsStatus::kWarning;
   }
   HighsStatus return_status = callRunPostsolve(solution, basis);
@@ -2751,29 +2750,29 @@ HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
 }
 
 std::string Highs::presolveStatusToString(
-  const HighsPresolveStatus presolve_status) const {
+    const HighsPresolveStatus presolve_status) const {
   switch (presolve_status) {
-  case HighsPresolveStatus::kNotPresolved:
-    return "Not presolved";
-  case HighsPresolveStatus::kNotReduced:
-    return "Not reduced";
-  case HighsPresolveStatus::kInfeasible:
-    return "Infeasible";
-  case HighsPresolveStatus::kUnboundedOrInfeasible:
-    return "Unbounded or infeasible";
-  case HighsPresolveStatus::kReduced:
-    return "Reduced";
-  case HighsPresolveStatus::kReducedToEmpty:
-    return "Reduced to empty";
-  case HighsPresolveStatus::kTimeout:
-    return "Timeout";
-  case HighsPresolveStatus::kNullError:
-    return "Null error";
-  case HighsPresolveStatus::kOptionsError:
-    return "Options error";
-  default:
-    assert(1 == 0);
-    return "Unrecognised presolve status";
+    case HighsPresolveStatus::kNotPresolved:
+      return "Not presolved";
+    case HighsPresolveStatus::kNotReduced:
+      return "Not reduced";
+    case HighsPresolveStatus::kInfeasible:
+      return "Infeasible";
+    case HighsPresolveStatus::kUnboundedOrInfeasible:
+      return "Unbounded or infeasible";
+    case HighsPresolveStatus::kReduced:
+      return "Reduced";
+    case HighsPresolveStatus::kReducedToEmpty:
+      return "Reduced to empty";
+    case HighsPresolveStatus::kTimeout:
+      return "Timeout";
+    case HighsPresolveStatus::kNullError:
+      return "Null error";
+    case HighsPresolveStatus::kOptionsError:
+      return "Options error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised presolve status";
   }
 }
 
@@ -2869,7 +2868,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
     presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
     //    presolved_model_.lp_ = solver.getPresolvedModel();
     presolve_.presolve_status_ = presolve_return_status;
-    //    presolve_.data_.presolve_log_ = 
+    //    presolve_.data_.presolve_log_ =
   } else {
     // Use presolve for LP
     presolve_.init(original_lp, timer_);
