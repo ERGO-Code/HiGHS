@@ -668,21 +668,22 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       newColIndex[i] = -1;
     else {
       newColIndex[i] = model->num_col_++;
-      model->col_cost_[newColIndex[i]] = model->col_cost_[i];
-      model->col_lower_[newColIndex[i]] = model->col_lower_[i];
-      model->col_upper_[newColIndex[i]] = model->col_upper_[i];
-      assert(!std::isnan(model->col_lower_[newColIndex[i]]));
-      assert(!std::isnan(model->col_upper_[newColIndex[i]]));
-      model->integrality_[newColIndex[i]] = model->integrality_[i];
-      implColLower[newColIndex[i]] = implColLower[i];
-      implColUpper[newColIndex[i]] = implColUpper[i];
-      colLowerSource[newColIndex[i]] = colLowerSource[i];
-      colUpperSource[newColIndex[i]] = colUpperSource[i];
-      colhead[newColIndex[i]] = colhead[i];
-      colsize[newColIndex[i]] = colsize[i];
-      if (have_col_names)
-        model->col_names_[newColIndex[i]] = model->col_names_[i];
-      changedColFlag[newColIndex[i]] = changedColFlag[i];
+      if (newColIndex[i] < i) {
+	model->col_cost_[newColIndex[i]] = model->col_cost_[i];
+	model->col_lower_[newColIndex[i]] = model->col_lower_[i];
+	model->col_upper_[newColIndex[i]] = model->col_upper_[i];
+	assert(!std::isnan(model->col_lower_[newColIndex[i]]));
+	assert(!std::isnan(model->col_upper_[newColIndex[i]]));
+	model->integrality_[newColIndex[i]] = model->integrality_[i];
+	implColLower[newColIndex[i]] = implColLower[i];
+	implColUpper[newColIndex[i]] = implColUpper[i];
+	colLowerSource[newColIndex[i]] = colLowerSource[i];
+	colUpperSource[newColIndex[i]] = colUpperSource[i];
+	colhead[newColIndex[i]] = colhead[i];
+	colsize[newColIndex[i]] = colsize[i];
+	if (have_col_names) model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
+	changedColFlag[newColIndex[i]] = changedColFlag[i];
+      }
     }
   }
   colDeleted.assign(model->num_col_, false);
@@ -709,23 +710,24 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       newRowIndex[i] = -1;
     else {
       newRowIndex[i] = model->num_row_++;
-      model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
-      model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
-      assert(!std::isnan(model->row_lower_[newRowIndex[i]]));
-      assert(!std::isnan(model->row_upper_[newRowIndex[i]]));
-      rowDualLower[newRowIndex[i]] = rowDualLower[i];
-      rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
-      implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
-      implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
-      rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
-      rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
-      rowroot[newRowIndex[i]] = rowroot[i];
-      rowsize[newRowIndex[i]] = rowsize[i];
-      rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
-      rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
-      if (have_row_names)
-        model->row_names_[newRowIndex[i]] = model->row_names_[i];
-      changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+      if (newRowIndex[i] < i) {
+	model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+	model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+	assert(!std::isnan(model->row_lower_[newRowIndex[i]]));
+	assert(!std::isnan(model->row_upper_[newRowIndex[i]]));
+	rowDualLower[newRowIndex[i]] = rowDualLower[i];
+	rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
+	implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
+	implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
+	rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
+	rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
+	rowroot[newRowIndex[i]] = rowroot[i];
+	rowsize[newRowIndex[i]] = rowsize[i];
+	rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
+	rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
+	if (have_row_names) model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
+	changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+      }
     }
   }
 
