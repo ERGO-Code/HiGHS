@@ -123,6 +123,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsSolution solution;
   solution.value_valid = false;
   solution.dual_valid = false;
+  printf("HighsPrimalHeuristics::solveSubMip Creating submip with mipsolver.submip = %d\n",
+	 mipsolver.submip);
   HighsMipSolver submipsolver(submipoptions, submip, solution, true);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);

@@ -847,6 +847,14 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   model->setMatrixDimensions();
   // Need to reset current number of deleted rows and columns in logging
   analysis_.resetNumDeleted();
+  std::string check_col_name = "c37";
+  for (HighsInt i = 0; i != model->num_col_; ++i) {
+    if (model->col_names_[i] == check_col_name) {
+      printf("Found column %d/%d to have name %s [%g,%g] reductions = %d\n", int(i), int(model->num_col_), check_col_name.c_str(),
+	     model->col_lower_[i], model->col_upper_[i], int(postsolve_stack.numReductions()));
+      break;
+    }
+  }
 }
 
 HPresolve::Result HPresolve::dominatedColumns(
