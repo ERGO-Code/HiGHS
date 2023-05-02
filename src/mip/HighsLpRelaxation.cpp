@@ -1008,9 +1008,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     if (resolve_on_error) {
       // still an error: now try to solve with presolve from scratch
       lpsolver.setOptionValue("simplex_strategy", kSimplexStrategyDual);
-      lpsolver.setOptionValue("presolve", "on");
+      lpsolver.setOptionValue("presolve", kHighsOnString);
       auto retval = run(false);
-      lpsolver.setOptionValue("presolve", "off");
+      lpsolver.setOptionValue("presolve", kHighsOffString);
 
       return retval;
     }

@@ -119,7 +119,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   reductionLimit = options->presolve_reduction_limit < 0
                        ? kHighsSize_tInf
                        : options->presolve_reduction_limit;
-  if (reductionLimit < kHighsSize_tInf)
+  if (options->presolve != kHighsOffString && reductionLimit < kHighsSize_tInf)
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "HPresolve::setInput reductionLimit = %d\n",
                  int(reductionLimit));
@@ -669,20 +669,21 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
     else {
       newColIndex[i] = model->num_col_++;
       if (newColIndex[i] < i) {
-	model->col_cost_[newColIndex[i]] = model->col_cost_[i];
-	model->col_lower_[newColIndex[i]] = model->col_lower_[i];
-	model->col_upper_[newColIndex[i]] = model->col_upper_[i];
-	assert(!std::isnan(model->col_lower_[newColIndex[i]]));
-	assert(!std::isnan(model->col_upper_[newColIndex[i]]));
-	model->integrality_[newColIndex[i]] = model->integrality_[i];
-	implColLower[newColIndex[i]] = implColLower[i];
-	implColUpper[newColIndex[i]] = implColUpper[i];
-	colLowerSource[newColIndex[i]] = colLowerSource[i];
-	colUpperSource[newColIndex[i]] = colUpperSource[i];
-	colhead[newColIndex[i]] = colhead[i];
-	colsize[newColIndex[i]] = colsize[i];
-	if (have_col_names) model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
-	changedColFlag[newColIndex[i]] = changedColFlag[i];
+        model->col_cost_[newColIndex[i]] = model->col_cost_[i];
+        model->col_lower_[newColIndex[i]] = model->col_lower_[i];
+        model->col_upper_[newColIndex[i]] = model->col_upper_[i];
+        assert(!std::isnan(model->col_lower_[newColIndex[i]]));
+        assert(!std::isnan(model->col_upper_[newColIndex[i]]));
+        model->integrality_[newColIndex[i]] = model->integrality_[i];
+        implColLower[newColIndex[i]] = implColLower[i];
+        implColUpper[newColIndex[i]] = implColUpper[i];
+        colLowerSource[newColIndex[i]] = colLowerSource[i];
+        colUpperSource[newColIndex[i]] = colUpperSource[i];
+        colhead[newColIndex[i]] = colhead[i];
+        colsize[newColIndex[i]] = colsize[i];
+        if (have_col_names)
+          model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
+        changedColFlag[newColIndex[i]] = changedColFlag[i];
       }
     }
   }
@@ -711,22 +712,23 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
     else {
       newRowIndex[i] = model->num_row_++;
       if (newRowIndex[i] < i) {
-	model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
-	model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
-	assert(!std::isnan(model->row_lower_[newRowIndex[i]]));
-	assert(!std::isnan(model->row_upper_[newRowIndex[i]]));
-	rowDualLower[newRowIndex[i]] = rowDualLower[i];
-	rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
-	implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
-	implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
-	rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
-	rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
-	rowroot[newRowIndex[i]] = rowroot[i];
-	rowsize[newRowIndex[i]] = rowsize[i];
-	rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
-	rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
-	if (have_row_names) model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
-	changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+        model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+        model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+        assert(!std::isnan(model->row_lower_[newRowIndex[i]]));
+        assert(!std::isnan(model->row_upper_[newRowIndex[i]]));
+        rowDualLower[newRowIndex[i]] = rowDualLower[i];
+        rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
+        implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
+        implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
+        rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
+        rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
+        rowroot[newRowIndex[i]] = rowroot[i];
+        rowsize[newRowIndex[i]] = rowsize[i];
+        rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
+        rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
+        if (have_row_names)
+          model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
+        changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
       }
     }
   }
@@ -4021,7 +4023,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   analysis_.setup(this->model, this->options, this->numDeletedRows,
                   this->numDeletedCols);
 
-  if (options->presolve != "off") {
+  if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -4234,6 +4236,12 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
       return HighsModelStatus::kUnboundedOrInfeasible;
   }
 
+  if (options->presolve != kHighsOffString &&
+      reductionLimit < kHighsSize_tInf) {
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Presolve performed %d of %d permitted reductions\n",
+                 int(postsolve_stack.numReductions()), int(reductionLimit));
+  }
   shrinkProblem(postsolve_stack);
 
   if (mipsolver != nullptr) {
@@ -6145,7 +6153,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     Highs highs;
     highs.passModel(model);
     highs.passOptions(options);
-    highs.setOptionValue("presolve", "off");
+    highs.setOptionValue("presolve", kHighsOffString);
     highs.run();
     if (highs.getModelStatus() != HighsModelStatus::kOptimal) return;
     reducedsol = highs.getSolution();

@@ -2855,8 +2855,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   // Presolve.
   HighsPresolveStatus presolve_return_status =
       HighsPresolveStatus::kNotPresolved;
-  const bool use_mip_presolve = true;
-  if (use_mip_presolve && model_.isMip()) {
+  if (model_.isMip()) {
     // Use presolve for MIP
     //
     // Presolved model is extracted now since it's part of solver,
