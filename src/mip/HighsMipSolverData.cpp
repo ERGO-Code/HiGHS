@@ -699,7 +699,11 @@ try_again:
       primal_infeasibility = value - upper;
     } else
       continue;
-
+    if (primal_infeasibility > mipsolver.options_mip_->mip_feasibility_tolerance) {
+      printf("HighsMipSolverData::transformNewIncumbent col %2d (%s) [%.5g; %.5g; %.5g] infeasibility = %g\n",
+	     int(i), mipsolver.orig_model_->col_names_[i].c_str(),
+	     lower, value, upper, primal_infeasibility);
+    }
     bound_violation_ = std::max(bound_violation_, primal_infeasibility);
   }
 
@@ -748,7 +752,7 @@ try_again:
     tmpSolver.passModel(std::move(fixedModel));
     tmpSolver.run();
 
-    if (tmpSolver.getInfo().primal_solution_status == 2) {
+    if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       solution = tmpSolver.getSolution();
       allow_try_again = false;
       goto try_again;
@@ -774,7 +778,8 @@ try_again:
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance;
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+    //    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+		 printf(
                  "Solution with objective %g has untransformed violations: "
                  "bound = %.4g; integrality = %.4g; row = %.4g\n",
                  double(obj), bound_violation_, integrality_violation_,
