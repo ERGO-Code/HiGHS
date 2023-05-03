@@ -847,14 +847,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   model->setMatrixDimensions();
   // Need to reset current number of deleted rows and columns in logging
   analysis_.resetNumDeleted();
-  std::string check_col_name = "c37";
-  for (HighsInt i = 0; i != model->num_col_; ++i) {
-    if (model->col_names_[i] == check_col_name) {
-      printf("Found column %d/%d to have name %s [%g,%g] reductions = %d\n", int(i), int(model->num_col_), check_col_name.c_str(),
-	     model->col_lower_[i], model->col_upper_[i], int(postsolve_stack.numReductions()));
-      break;
-    }
-  }
 }
 
 HPresolve::Result HPresolve::dominatedColumns(
@@ -5376,6 +5368,18 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     while (it != buckets.end() && it->first == colHashes[i]) {
       parallelColCandidate = it->second;
       last = it++;
+
+      HighsInt debug_colsize0 = 0;
+      for (HighsInt iEl = model->a_matrix_.start_[i];
+           iEl < model->a_matrix_.start_[i + 1]; iEl++) {
+        if (!rowDeleted[model->a_matrix_.index_[iEl]]) debug_colsize0++;
+      }
+      HighsInt debug_colsize1 = 0;
+      for (HighsInt iEl = model->a_matrix_.start_[parallelColCandidate];
+           iEl < model->a_matrix_.start_[parallelColCandidate + 1]; iEl++) {
+        if (!rowDeleted[model->a_matrix_.index_[iEl]]) debug_colsize1++;
+      }
+      if (debug_colsize0 != debug_colsize1) continue;
 
       // we want to check if the columns are parallel, first rule out
       // hash collisions with different size columns
