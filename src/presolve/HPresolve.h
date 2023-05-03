@@ -341,7 +341,8 @@ class HPresolve {
 
   HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
 
-  HighsInt debugReturnColSize(const std::string message, const HighsInt col, const bool recur = true);
+  HighsInt debugReturnColSize(const std::string message, const HighsInt col,
+                              const bool recur = true);
   void debugGetColSize(const std::string message);
   bool debugOkColSize(const std::string message);
   bool debugOkColSize(const std::string message, const HighsInt col);
