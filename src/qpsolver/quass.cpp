@@ -289,7 +289,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
-      if (!zero_curvature_direction) {
+      if (!zero_curvature_direction || true) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
         if (status != QpSolverStatus::OK) {
           runtime.status = ProblemStatus::INDETERMINED;
@@ -304,7 +304,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
 
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
-        maxsteplength == 0.0) {
+        maxsteplength == 0.0 || fabs(gradient.getGradient().dot(p)) < 10E-5) {
       atfsep = true;
     } else {
       RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);
