@@ -2368,7 +2368,6 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   assert(rowsize[row] == 2);
   assert(model->row_lower_[row] == model->row_upper_[row]);
 
-  std::string message = "doubletonEq(" + std::to_string(row) + ")";
   // printf("doubleton equation: ");
   // debugPrintRow(row);
   HighsInt nzPos1 = rowroot[row];
@@ -2869,8 +2868,6 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt row) {
   assert(!rowDeleted[row]);
-
-  std::string message = "rowPresolve(" + std::to_string(row) + ")";
 
   const bool logging_on = analysis_.logging_on_;
   // handle special cases directly via a call to the specialized procedure
