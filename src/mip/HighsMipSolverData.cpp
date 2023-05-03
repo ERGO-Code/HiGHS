@@ -699,7 +699,10 @@ try_again:
       primal_infeasibility = value - upper;
     } else
       continue;
-
+    if (primal_infeasibility >
+        mipsolver.options_mip_->primal_feasibility_tolerance)
+      printf("Col %d [%g, %g, %g] has infeasibility %g\n", int(i), lower, value,
+             upper, primal_infeasibility);
     bound_violation_ = std::max(bound_violation_, primal_infeasibility);
   }
 
@@ -774,11 +777,12 @@ try_again:
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance;
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                 "Solution with objective %g has untransformed violations: "
-                 "bound = %.4g; integrality = %.4g; row = %.4g\n",
-                 double(obj), bound_violation_, integrality_violation_,
-                 row_violation_);
+    //    highsLogUser(mipsolver.options_mip_->log_options,
+    //    HighsLogType::kWarning,
+    printf(
+        "Solution with objective %g has untransformed violations: "
+        "bound = %.4g; integrality = %.4g; row = %.4g\n",
+        double(obj), bound_violation_, integrality_violation_, row_violation_);
     if (!currentFeasible) {
       // if the current incumbent is non existent or also not feasible we still
       // store the new one
