@@ -273,7 +273,7 @@ class HPresolve {
 
   void shrinkProblem(HighsPostsolveStack& postsolve_stack);
 
-  void addToMatrix(HighsInt row, HighsInt col, double val);
+  void addToMatrix(const HighsInt row, const HighsInt col, const double val);
 
   Result runProbing(HighsPostsolveStack& postsolve_stack);
 
@@ -340,6 +340,14 @@ class HPresolve {
   }
 
   HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
+
+  HighsInt debugReturnColSize(const std::string message, const HighsInt col, const bool recur = true);
+  void debugGetColSize(const std::string message);
+  bool debugOkColSize(const std::string message);
+  bool debugOkColSize(const std::string message, const HighsInt col);
+  HighsInt debugReturnRowSize(const std::string message, const HighsInt row);
+  void debugGetRowSize(const std::string message);
+  bool debugOkRowSize(const std::string message);
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);

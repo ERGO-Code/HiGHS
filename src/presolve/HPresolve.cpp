@@ -1492,7 +1492,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   return checkLimits(postsolve_stack);
 }
 
-void HPresolve::addToMatrix(HighsInt row, HighsInt col, double val) {
+void HPresolve::addToMatrix(const HighsInt row, const HighsInt col, const double val) {
+  assert(debugOkColSize("addToMatrix0 " + std::to_string(row), col));
   HighsInt pos = findNonzero(row, col);
 
   markChangedRow(row);
@@ -1518,10 +1519,12 @@ void HPresolve::addToMatrix(HighsInt row, HighsInt col, double val) {
     }
 
     link(pos);
+    assert(debugOkColSize("addToMatrix - link " + std::to_string(row), col));
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
+      assert(debugOkColSize("addToMatrix - unlink " + std::to_string(row), col));
     } else {
       // remove implied bounds on the row dual that where implied by this
       // columns dual constraint
@@ -1546,6 +1549,7 @@ void HPresolve::addToMatrix(HighsInt row, HighsInt col, double val) {
       impliedDualRowBounds.add(col, row, Avalue[pos]);
     }
   }
+  assert(debugOkColSize("addToMatrix9 " + std::to_string(row), col));
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
@@ -2366,6 +2370,10 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   assert(!rowDeleted[row]);
   assert(rowsize[row] == 2);
   assert(model->row_lower_[row] == model->row_upper_[row]);
+
+
+  std::string message = "doubletonEq(" + std::to_string(row) + ")";
+  assert(debugOkColSize(message));
   // printf("doubleton equation: ");
   // debugPrintRow(row);
   HighsInt nzPos1 = rowroot[row];
@@ -2380,6 +2388,8 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
     if (model->integrality_[Acol[nzPos2]] == HighsVarType::kInteger) {
       // both columns integer. For substitution choose smaller absolute
       // coefficient value, or sparser column if values are equal
+      assert(debugOkColSize("doubletonEq0" + std::to_string(Acol[nzPos1]), Acol[nzPos1]));
+      assert(debugOkColSize("doubletonEq0" + std::to_string(Acol[nzPos2]), Acol[nzPos2]));
       if (std::abs(Avalue[nzPos1]) <
           std::abs(Avalue[nzPos2]) - options->small_matrix_value) {
         substcol = Acol[nzPos1];
@@ -2439,10 +2449,12 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
       // with fewer nonzeros if those are equal
       bool colAtPos1Better;
       HighsInt col1Size = colsize[Acol[nzPos1]];
+      assert(debugOkColSize("doubletonEq1" + std::to_string(Acol[nzPos1]), Acol[nzPos1]));
       if (col1Size == 1)
         colAtPos1Better = true;
       else {
         HighsInt col2Size = colsize[Acol[nzPos2]];
+	assert(debugOkColSize("doubletonEq1" + std::to_string(Acol[nzPos2]), Acol[nzPos2]));
         if (col2Size == 1)
           colAtPos1Better = false;
         else {
@@ -2529,13 +2541,16 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
                                     upperTightened, getColumnVector(substcol));
 
   // finally modify matrix
+  assert(debugOkColSize(message + ": before modify matrix"));
   markColDeleted(substcol);
   removeRow(row);
+  assert(debugOkColSize(message + ": before substitute"));
   substitute(substcol, staycol, rhs / substcoef, -staycoef / substcoef);
 
   analysis_.logging_on_ = logging_on;
   if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDoubletonEquation);
 
+  assert(debugOkColSize(message + ": after modify matrix"));
   // since a column was deleted we might have new row singletons which we
   // immediately remove
   HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
@@ -2866,6 +2881,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt row) {
   assert(!rowDeleted[row]);
+
+  std::string message = "rowPresolve(" + std::to_string(row) + ")";
+  assert(debugOkColSize(message));
 
   const bool logging_on = analysis_.logging_on_;
   // handle special cases directly via a call to the specialized procedure
@@ -3967,14 +3985,19 @@ HPresolve::Result HPresolve::fastPresolveLoop(
   do {
     storeCurrentProblemSize();
 
+    assert(debugOkColSize("fastPresolveLoop: removeRowSingletons"));
     HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
 
+    assert(debugOkColSize("fastPresolveLoop: presolveChangedRows"));
     HPRESOLVE_CHECKED_CALL(presolveChangedRows(postsolve_stack));
 
+    assert(debugOkColSize("fastPresolveLoop: removeDoubletonEquations"));
     HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolve_stack));
 
+    assert(debugOkColSize("fastPresolveLoop: presolveColSingletons"));
     HPRESOLVE_CHECKED_CALL(presolveColSingletons(postsolve_stack));
 
+    assert(debugOkColSize("fastPresolveLoop: presolveChangedCols"));
     HPRESOLVE_CHECKED_CALL(presolveChangedCols(postsolve_stack));
 
   } while (problemSizeReduction() > 0.01);
@@ -4041,7 +4064,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
+    //    assert(debugOkColSize("Before initialRowAndColPresolve"));
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
+    //    assert(debugOkColSize("After initialRowAndColPresolve"));
 
     HighsInt numParallelRowColCalls = 0;
 #if ENABLE_SPARSIFY_FOR_LP
@@ -4063,20 +4088,24 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         report();
       }
 
+      assert(debugOkColSize("Before fastPresolveLoop0"));
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
+      assert(debugOkColSize("After fastPresolveLoop0"));
 
       storeCurrentProblemSize();
 
       // when presolving after a restart the clique table and implication
       // structure may contain substitutions which we apply directly before
-      // running the aggregator as they might loose validity otherwise
+      // running the aggregator as they might lose validity otherwise
       if (mipsolver != nullptr) {
         HPRESOLVE_CHECKED_CALL(
             applyConflictGraphSubstitutions(postsolve_stack));
       }
 
+      assert(debugOkColSize("Before aggregator"));
       if (analysis_.allow_rule_[kPresolveRuleAggregator])
         HPRESOLVE_CHECKED_CALL(aggregator(postsolve_stack));
+      assert(debugOkColSize("After aggregator"));
 
       if (problemSizeReduction() > 0.05) continue;
 
@@ -4111,7 +4140,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.05) continue;
       }
 
+      //      assert(debugOkColSize("Before fastPresolveLoop1"));
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
+      //      assert(debugOkColSize("After fastPresolveLoop1"));
 
       if (mipsolver != nullptr) {
         HighsInt numStrenghtened = strengthenInequalities();
@@ -4121,7 +4152,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                       numStrenghtened);
       }
 
+      //      assert(debugOkColSize("Before fastPresolveLoop2"));
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
+      //      assert(debugOkColSize("After fastPresolveLoop2"));
 
       if (mipsolver != nullptr && numCliquesBeforeProbing == -1) {
         numCliquesBeforeProbing = mipsolver->mipdata_->cliquetable.numCliques();
@@ -4713,6 +4746,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
   // substitute the column in each row where it occurs
   for (HighsInt coliter = colhead[substcol]; coliter != -1;) {
     HighsInt colrow = Arow[coliter];
+    assert(debugOkColSize("substitute0 " + std::to_string(colrow), staycol));
     double colval = Avalue[coliter];
     // walk to the next position before doing any modifications, because
     // the current position will be deleted in the loop below
@@ -4721,6 +4755,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
     coliter = Anext[coliter];
     assert(!rowDeleted[colrow]);
     unlink(colpos);
+    assert(debugOkColSize("substitute1 " + std::to_string(colrow), staycol));
 
     // adjust the sides
     if (model->row_lower_[colrow] != -kHighsInf)
@@ -4730,6 +4765,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
       model->row_upper_[colrow] -= colval * offset;
 
     addToMatrix(colrow, staycol, scale * colval);
+    assert(debugOkColSize("substitute2 " + std::to_string(colrow), staycol));
     // printf("after substitution: ");
     // debugPrintRow(colrow);
 
@@ -4742,6 +4778,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
       equations.erase(eqiters[colrow]);
       eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
     }
+    assert(debugOkColSize("substitute9 " + std::to_string(colrow), staycol));
   }
 
   // substitute column in the objective function
@@ -4977,7 +5014,13 @@ HPresolve::Result HPresolve::presolveChangedRows(
   changedRows.swap(changedRowIndices);
   for (HighsInt row : changedRows) {
     if (rowDeleted[row]) continue;
+    if (row == 66) {
+      printf("presolveChangedRows: row %d\n", int(row));
+    }
+    std::string message = "presolveChangedRows(" + std::to_string(row) + ")";
+    assert(debugOkColSize(message));
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
+    assert(debugOkColSize(message));
     changedRowFlag[row] = rowDeleted[row];
   }
 
@@ -5283,6 +5326,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   HighsHashTable<HighsInt, HighsInt> numRowSingletons;
 
+  assert(debugOkColSize("Entering detectParallelRowsAndCols"));
+
   HighsInt nnz = Avalue.size();
   rowHashes.assign(rowsize.begin(), rowsize.end());
   colHashes.assign(colsize.begin(), colsize.end());
@@ -5369,16 +5414,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       parallelColCandidate = it->second;
       last = it++;
 
-      HighsInt debug_colsize0 = 0;
-      for (HighsInt iEl = model->a_matrix_.start_[i];
-           iEl < model->a_matrix_.start_[i + 1]; iEl++) {
-        if (!rowDeleted[model->a_matrix_.index_[iEl]]) debug_colsize0++;
-      }
-      HighsInt debug_colsize1 = 0;
-      for (HighsInt iEl = model->a_matrix_.start_[parallelColCandidate];
-           iEl < model->a_matrix_.start_[parallelColCandidate + 1]; iEl++) {
-        if (!rowDeleted[model->a_matrix_.index_[iEl]]) debug_colsize1++;
-      }
+      HighsInt debug_colsize0 = debugReturnColSize("In parallel col search", i);
+      HighsInt debug_colsize1 = debugReturnColSize("In parallel col search", parallelColCandidate);
       if (debug_colsize0 != debug_colsize1) continue;
 
       // we want to check if the columns are parallel, first rule out
@@ -6553,5 +6590,70 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
 
   return Result::kOk;
 }
+
+HighsInt HPresolve::debugReturnColSize(const std::string message, const HighsInt col, const bool recur) {
+  HighsInt debug_colsize = 0;
+  for (HighsInt iEl = model->a_matrix_.start_[col];
+       iEl < model->a_matrix_.start_[col + 1]; iEl++) {
+    if (!rowDeleted[model->a_matrix_.index_[iEl]]) debug_colsize++;
+  }
+  HighsInt check_colsize = 0;
+  HighsInt pos = colhead[col];
+  for (;;) {
+    if (pos == -1) break;
+    HighsInt row = Arow[pos];
+    assert(Acol[pos] == col);
+    assert(!rowDeleted[row]);
+    check_colsize++;
+    pos = Anext[pos];
+  }
+  const bool check_colsize_ok = check_colsize == debug_colsize;
+  if (!check_colsize_ok) {
+    if (recur) {
+      printf("debugReturnColSize(%s): col %d check_colsize = %d != %d = debug_colsize\n",
+	     message.c_str(), int(col), int(check_colsize), int(debug_colsize));
+      debugReturnColSize(message, col, false);
+    }
+    assert(check_colsize_ok);
+  }
+  return debug_colsize;
+}
+
+void HPresolve::debugGetColSize(const std::string message) {
+  
+}
+
+bool HPresolve::debugOkColSize(const std::string message, const HighsInt col) {
+  HighsInt debug_colsize = debugReturnColSize(message, col);
+  return debug_colsize == colsize[col]; 
+}
+
+bool HPresolve::debugOkColSize(const std::string message) {
+  for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
+    if (colDeleted[iCol]) continue;
+    HighsInt debug_colsize = debugReturnColSize(message, iCol);
+    const bool colsize_ok = debug_colsize == colsize[iCol];
+    assert(colsize_ok == debugOkColSize(message, iCol));
+    if (!colsize_ok) {
+      printf("debugOkColSize(%s): colsize[%d] = %d != %d = debug_colsize\n",
+	     message.c_str(), int(iCol), int(colsize[iCol]), int(debug_colsize));
+      assert(colsize_ok);
+      return false;
+    }
+  }
+  return true;
+}
+
+HighsInt HPresolve::debugReturnRowSize(const std::string message, const HighsInt row) {
+  return 0;
+}
+
+void HPresolve::debugGetRowSize(const std::string message) {
+}
+
+bool HPresolve::debugOkRowSize(const std::string message) {
+  return false;
+}
+
 
 }  // namespace presolve
