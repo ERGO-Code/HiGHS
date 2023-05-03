@@ -49,3 +49,10 @@ Usage:
 The [list of options](@ref option-definitions) section gives a full
 list of options, and the format in which they are specified.
 
+### Return code values
+
+Consistent with the callable methods in HiGHS, there are three possible return codes
+
+ * -1: An error has occurred in HiGHS
+ * 0: HiGHS has run successfully
+ * 1: HiGHS has recovered from an unusual event, or has terminated due to reaching a time or iteration limit

@@ -3002,8 +3002,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             break;
           }
         }
-
-        if (binCol != -1) {
+        // Reduction uses substitution involving range of all columns
+        // other than the binary. This is not well defined when any of
+        // the columns is not boxed, so look for non-boxed columns
+        // Exposed as #1280
+        bool all_boxed_column = true;
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          if (model->col_lower_[nonz.index()] <= -kHighsInf ||
+              model->col_upper_[nonz.index()] >= kHighsInf) {
+            all_boxed_column = false;
+            break;
+          }
+        }
+        if (binCol != -1 && all_boxed_column) {
           // found binary column for substituting all other columns
           // printf("simple probing case on row of size %" HIGHSINT_FORMAT "\n",
           // rowsize[row]);
