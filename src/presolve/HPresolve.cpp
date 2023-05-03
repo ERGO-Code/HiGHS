@@ -4982,7 +4982,6 @@ HPresolve::Result HPresolve::presolveChangedRows(
   changedRows.swap(changedRowIndices);
   for (HighsInt row : changedRows) {
     if (rowDeleted[row]) continue;
-    std::string message = "presolveChangedRows(" + std::to_string(row) + ")";
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
     changedRowFlag[row] = rowDeleted[row];
   }
@@ -5374,6 +5373,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     while (it != buckets.end() && it->first == colHashes[i]) {
       parallelColCandidate = it->second;
       last = it++;
+
       // we want to check if the columns are parallel, first rule out
       // hash collisions with different size columns
       if (colsize[i] != colsize[parallelColCandidate]) continue;
