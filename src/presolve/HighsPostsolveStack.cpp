@@ -671,6 +671,10 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       basis.col_status[col] = HighsBasisStatus::kLower;
     }
   }
+  assert(solution.col_value[duplicateCol] >= duplicateColLower);
+  assert(solution.col_value[duplicateCol] <= duplicateColUpper);
+  assert(solution.col_value[col] >= colLower);
+  assert(solution.col_value[col] <= colUpper);
 }
 
 void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
