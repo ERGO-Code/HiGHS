@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HEkkDebug.cpp
@@ -180,7 +178,7 @@ void HEkk::timeReporting(const HighsInt save_mod_recover) {
       bool output_flag = true;
       bool log_to_console = false;
       HighsInt log_dev_level = kHighsLogDevLevelVerbose;
-      log_options.log_file_stream = stdout;
+      log_options.log_stream = stdout;
       log_options.output_flag = &output_flag;
       log_options.log_to_console = &log_to_console;
       log_options.log_dev_level = &log_dev_level;

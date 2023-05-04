@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualRow.cpp
@@ -31,10 +29,10 @@ using std::set;
 
 void HEkkDualRow::setupSlice(HighsInt size) {
   workSize = size;
-  workMove = &ekk_instance_.basis_.nonbasicMove_[0];
-  workDual = &ekk_instance_.info_.workDual_[0];
-  workRange = &ekk_instance_.info_.workRange_[0];
-  work_devex_index = &ekk_instance_.info_.devex_index_[0];
+  workMove = ekk_instance_.basis_.nonbasicMove_.data();
+  workDual = ekk_instance_.info_.workDual_.data();
+  workRange = ekk_instance_.info_.workRange_.data();
+  work_devex_index = ekk_instance_.info_.devex_index_.data();
 
   // Allocate spaces
   packCount = 0;
@@ -51,7 +49,7 @@ void HEkkDualRow::setup() {
   const HighsInt numTot =
       ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
   setupSlice(numTot);
-  workNumTotPermutation = &ekk_instance_.info_.numTotPermutation_[0];
+  workNumTotPermutation = ekk_instance_.info_.numTotPermutation_.data();
 
   // deleteFreelist() is being called in Phase 1 and Phase 2 since
   // it's in updatePivots(), but create_Freelist() is only called in
@@ -72,8 +70,8 @@ void HEkkDualRow::chooseMakepack(const HVector* row, const HighsInt offset) {
    * Offset of numCol is used when packing row_ep
    */
   const HighsInt rowCount = row->count;
-  const HighsInt* rowIndex = &row->index[0];
-  const double* rowArray = &row->array[0];
+  const HighsInt* rowIndex = row->index.data();
+  const double* rowArray = row->array.data();
   for (HighsInt i = 0; i < rowCount; i++) {
     const HighsInt index = rowIndex[i];
     const double value = rowArray[index];
@@ -113,7 +111,7 @@ void HEkkDualRow::chooseJoinpack(const HEkkDualRow* otherRow) {
    * candidates in otherRow
    */
   const HighsInt otherCount = otherRow->workCount;
-  const pair<HighsInt, double>* otherData = &otherRow->workData[0];
+  const pair<HighsInt, double>* otherData = otherRow->workData.data();
   copy(otherData, otherData + otherCount, &workData[workCount]);
   workCount = workCount + otherCount;
   workTheta = min(workTheta, otherRow->workTheta);
@@ -465,7 +463,7 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
       heap_v[heap_num_en] = ratio;
     }
   }
-  maxheapsort(&heap_v[0], &heap_i[0], heap_num_en);
+  maxheapsort(heap_v.data(), heap_i.data(), heap_num_en);
 
   alt_workCount = 0;
   alt_workGroup.clear();
@@ -543,7 +541,7 @@ void HEkkDualRow::chooseFinalLargeAlpha(
 }
 
 void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
-  double* workDual = &ekk_instance_.info_.workDual_[0];
+  double* workDual = ekk_instance_.info_.workDual_.data();
   double dual_objective_value_change = 0;
   bfrtColumn->clear();
   for (HighsInt i = 0; i < workCount; i++) {
@@ -561,7 +559,7 @@ void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
 
 void HEkkDualRow::updateDual(double theta) {
   analysis->simplexTimerStart(UpdateDualClock);
-  double* workDual = &ekk_instance_.info_.workDual_[0];
+  double* workDual = ekk_instance_.info_.workDual_.data();
   double dual_objective_value_change = 0;
   for (HighsInt i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
@@ -600,14 +598,14 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
     HighsInt move_out = workDelta < 0 ? -1 : 1;
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
-      HighsInt iCol = *sit;
-      assert(iCol < ekk_instance_.lp_.num_col_);
-      double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, iCol);
+      HighsInt iVar = *sit;
+      assert(iVar < ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_);
+      double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, iVar);
       if (fabs(alpha) > Ta) {
         if (alpha * move_out > 0)
-          ekk_instance_.basis_.nonbasicMove_[iCol] = 1;
+          ekk_instance_.basis_.nonbasicMove_[iVar] = 1;
         else
-          ekk_instance_.basis_.nonbasicMove_[iCol] = -1;
+          ekk_instance_.basis_.nonbasicMove_[iVar] = -1;
       }
     }
   }
@@ -616,16 +614,16 @@ void HEkkDualRow::deleteFreemove() {
   if (!freeList.empty()) {
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
-      HighsInt iCol = *sit;
-      assert(iCol < ekk_instance_.lp_.num_col_);
-      ekk_instance_.basis_.nonbasicMove_[iCol] = 0;
+      HighsInt iVar = *sit;
+      assert(iVar < ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_);
+      ekk_instance_.basis_.nonbasicMove_[iVar] = 0;
     }
   }
 }
 
-void HEkkDualRow::deleteFreelist(HighsInt iColumn) {
+void HEkkDualRow::deleteFreelist(HighsInt iVar) {
   if (!freeList.empty()) {
-    if (freeList.count(iColumn)) freeList.erase(iColumn);
+    if (freeList.count(iVar)) freeList.erase(iVar);
   }
 }
 

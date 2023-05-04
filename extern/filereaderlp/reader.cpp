@@ -2,6 +2,7 @@
 
 #include "builder.hpp"
 
+#include <cctype>
 #include <cstring>
 #include <cassert>
 #include <iostream>
@@ -115,6 +116,8 @@ std::unordered_map<std::string, LpSectionKeyword> sectionkeywordmap {
    { "general", LpSectionKeyword::GEN },
    { "generals", LpSectionKeyword::GEN },
    { "gen", LpSectionKeyword::GEN },
+   { "integer", LpSectionKeyword::GEN },
+   { "integers", LpSectionKeyword::GEN },
    { "semi-continuous", LpSectionKeyword::SEMI },
    { "semi", LpSectionKeyword::SEMI },
    { "semis", LpSectionKeyword::SEMI },

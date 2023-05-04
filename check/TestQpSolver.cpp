@@ -120,7 +120,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   HighsInt num_col = highs.getNumCol();
   std::vector<HighsVarType> integrality;
   integrality.assign(num_col, HighsVarType::kInteger);
-  REQUIRE(highs.changeColsIntegrality(0, num_col - 1, &integrality[0]) ==
+  REQUIRE(highs.changeColsIntegrality(0, num_col - 1, integrality.data()) ==
           HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kError);
@@ -249,7 +249,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   // Add the constraint 0.5 <= x0 + x1
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 1};
-  highs.addRow(0.5, inf, 2, &lp.a_matrix_.index_[0], &lp.a_matrix_.value_[0]);
+  highs.addRow(0.5, inf, 2, lp.a_matrix_.index_.data(),
+               lp.a_matrix_.value_.data());
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);

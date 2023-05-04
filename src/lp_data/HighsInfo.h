@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsInfo.h
@@ -89,38 +87,45 @@ class InfoRecordDouble : public InfoRecord {
   virtual ~InfoRecordDouble() {}
 };
 
-InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
+InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
+                        const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         HighsInt& index);
 
-InfoStatus checkInfo(const HighsOptions& options,
+InfoStatus checkInfo(const HighsLogOptions& report_log_options,
                      const std::vector<InfoRecord*>& info_records);
 InfoStatus checkInfo(const InfoRecordInt& info);
 InfoStatus checkInfo(const InfoRecordDouble& info);
 
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              int64_t& value);
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value);
-InfoStatus getLocalInfoValue(const HighsOptions& options,
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
                              const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value);
 
-HighsStatus writeInfoToFile(FILE* file, const bool valid,
+InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
+                            const std::string& name,
                             const std::vector<InfoRecord*>& info_records,
-                            const bool html = false);
+                            HighsInfoType& type);
+
+HighsStatus writeInfoToFile(
+    FILE* file, const bool valid, const std::vector<InfoRecord*>& info_records,
+    const HighsFileType file_type = HighsFileType::kOther);
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
-                const bool html = false);
+                const HighsFileType file_type = HighsFileType::kOther);
 void reportInfo(FILE* file, const InfoRecordInt64& info,
-                const bool html = false);
-void reportInfo(FILE* file, const InfoRecordInt& info, const bool html = false);
+                const HighsFileType file_type = HighsFileType::kOther);
+void reportInfo(FILE* file, const InfoRecordInt& info,
+                const HighsFileType file_type = HighsFileType::kOther);
 void reportInfo(FILE* file, const InfoRecordDouble& info,
-                const bool html = false);
+                const HighsFileType file_type = HighsFileType::kOther);
 
 // For now, but later change so HiGHS properties are string based so that new
 // info (for debug and testing too) can be added easily. The info below
@@ -132,8 +137,8 @@ struct HighsInfoStruct {
   int64_t mip_node_count;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
-  HighsInt qp_iteration_count;
   HighsInt crossover_iteration_count;
+  HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
   HighsInt basis_validity;
@@ -194,8 +199,7 @@ class HighsInfo : public HighsInfoStruct {
     InfoRecordInt64* record_int64;
     InfoRecordInt* record_int;
     InfoRecordDouble* record_double;
-    bool advanced;
-    advanced = false;
+    const bool advanced = false;  // Not used
 
     record_int = new InfoRecordInt("simplex_iteration_count",
                                    "Iteration count for simplex solver",
@@ -205,11 +209,6 @@ class HighsInfo : public HighsInfoStruct {
     record_int = new InfoRecordInt("ipm_iteration_count",
                                    "Iteration count for IPM solver", advanced,
                                    &ipm_iteration_count, 0);
-    records.push_back(record_int);
-
-    record_int =
-        new InfoRecordInt("qp_iteration_count", "Iteration count for QP solver",
-                          advanced, &qp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt("crossover_iteration_count",

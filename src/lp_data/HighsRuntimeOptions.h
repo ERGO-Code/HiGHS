@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -143,7 +141,15 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         std::cout << "Multiple options files not implemented.\n";
         return false;
       }
-      if (!loadOptionsFromFile(report_log_options, options, v[0])) return false;
+      switch (loadOptionsFromFile(report_log_options, options, v[0])) {
+        case HighsLoadOptionsStatus::kError:
+          return false;
+        case HighsLoadOptionsStatus::kEmpty:
+          writeOptionsToFile(stdout, options.records);
+          return false;
+        default:
+          break;
+      }
     }
 
     // Handle command line option specifications

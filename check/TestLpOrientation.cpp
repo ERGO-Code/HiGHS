@@ -88,18 +88,19 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
 
   // Clear the internal LP
   highs.clearModel();
-  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
-                        NULL, NULL, NULL) == HighsStatus::kOk);
-  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                        &ARstart[0], &ARindex[0],
-                        &ARvalue[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
+                        colUpper.data(), 0, NULL, NULL,
+                        NULL) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(num_row, rowLower.data(), rowUpper.data(), num_row_nz,
+                        ARstart.data(), ARindex.data(),
+                        ARvalue.data()) == HighsStatus::kOk);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Clear the internal LP
   highs.clearModel();
-  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL,
-                NULL);
+  highs.addCols(num_col, colCost.data(), colLower.data(), colUpper.data(), 0,
+                NULL, NULL, NULL);
   vector<double> one_row_Lower;
   vector<double> one_row_Upper;
   vector<HighsInt> one_row_start;
@@ -110,9 +111,10 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
     HighsInt one_row_numrow = 0;
     avgas.row(row, one_row_numrow, one_row_numnz, one_row_Lower, one_row_Upper,
               one_row_start, one_row_index, one_row_value);
-    REQUIRE(highs.addRows(1, &one_row_Lower[0], &one_row_Upper[0],
-                          one_row_numnz, &one_row_start[0], &one_row_index[0],
-                          &one_row_value[0]) == HighsStatus::kOk);
+    REQUIRE(highs.addRows(1, one_row_Lower.data(), one_row_Upper.data(),
+                          one_row_numnz, one_row_start.data(),
+                          one_row_index.data(),
+                          one_row_value.data()) == HighsStatus::kOk);
   }
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);

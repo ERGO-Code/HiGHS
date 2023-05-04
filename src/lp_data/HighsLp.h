@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.h
@@ -17,7 +15,6 @@
 #define LP_DATA_HIGHS_LP_H_
 
 #include <string>
-#include <vector>
 
 #include "lp_data/HStruct.h"
 #include "util/HighsSparseMatrix.h"
@@ -48,17 +45,22 @@ class HighsLp {
 
   std::vector<HighsVarType> integrality_;
 
+  HighsNameHash col_hash_;
+  HighsNameHash row_hash_;
+
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
   HighsInt cost_row_location_;
   HighsLpMods mods_;
 
-  bool operator==(const HighsLp& lp);
+  bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
+  bool equalNames(const HighsLp& lp) const;
   bool isMip() const;
   bool hasSemiVariables() const;
   double objectiveValue(const std::vector<double>& solution) const;
+  HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
   void ensureColwise() { this->a_matrix_.ensureColwise(); };

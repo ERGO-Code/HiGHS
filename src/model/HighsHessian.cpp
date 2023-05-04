@@ -72,7 +72,7 @@ void HighsHessian::print() const {
       col[this->index_[iEl]] = 0;
   }
 }
-bool HighsHessian::operator==(const HighsHessian& hessian) {
+bool HighsHessian::operator==(const HighsHessian& hessian) const {
   bool equal = true;
   equal = this->dim_ == hessian.dim_ && equal;
   equal = this->start_ == hessian.start_ && equal;
@@ -96,6 +96,22 @@ void HighsHessian::product(const std::vector<double>& solution,
 
 double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
   double objective_function_value = 0;
+  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+    HighsInt iEl = this->start_[iCol];
+    assert(this->index_[iEl] == iCol);
+    objective_function_value +=
+        0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
+    for (HighsInt iEl = this->start_[iCol] + 1; iEl < this->start_[iCol + 1];
+         iEl++)
+      objective_function_value +=
+          solution[iCol] * this->value_[iEl] * solution[this->index_[iEl]];
+  }
+  return objective_function_value;
+}
+
+HighsCDouble HighsHessian::objectiveCDoubleValue(
+    const std::vector<double>& solution) const {
+  HighsCDouble objective_function_value = HighsCDouble(0);
   for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
     HighsInt iEl = this->start_[iCol];
     assert(this->index_[iEl] == iCol);

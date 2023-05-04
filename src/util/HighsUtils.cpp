@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsUtils.cpp
@@ -397,7 +395,10 @@ void analyseVectorValues(const HighsLogOptions* log_options,
         }
       }
     }
-  }
+  }  // for (HighsInt ix = 0; ix < vecDim; ix++)
+  // If there are no nonzeros, min_abs_value retains its starting
+  // value of inf
+  if (!nNz) min_abs_value = 0;
   highsReportDevInfo(
       log_options,
       highsFormatToString(
@@ -457,6 +458,7 @@ void analyseVectorValues(const HighsLogOptions* log_options,
     highsReportDevInfo(
         log_options, highsFormatToString("\n            Value        Count\n"));
     for (HighsInt ix = 0; ix < VLsZ; ix++) {
+      if (!VLsK[ix]) continue;
       HighsInt pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
       highsReportDevInfo(log_options,
                          highsFormatToString("     %12g %12" HIGHSINT_FORMAT

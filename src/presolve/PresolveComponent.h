@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file PresolveComponent.h
@@ -35,7 +33,7 @@
 // The structure of component is general, of the presolve component - presolve
 // specific.
 
-enum class HighsPostsolveStatus {
+enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
   kNotPresolved = -1,
   kNoPrimalSolutionError,
   kSolutionRecovered,

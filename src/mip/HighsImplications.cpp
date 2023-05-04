@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsImplications.h"
@@ -521,7 +519,8 @@ void HighsImplications::separateImpliedBounds(
 
   // first do probing on all candidates that have not been probed yet
   if (!mipsolver.mipdata_->cliquetable.isFull()) {
-    auto oldNumQueries = mipsolver.mipdata_->cliquetable.numNeighborhoodQueries;
+    auto oldNumQueries =
+        mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries;
     HighsInt oldNumEntries = mipsolver.mipdata_->cliquetable.getNumEntries();
 
     for (std::pair<HighsInt, double> fracint :
@@ -558,7 +557,7 @@ void HighsImplications::separateImpliedBounds(
       // printf("nextCleanupCall: %d\n", nextCleanupCall);
     }
 
-    mipsolver.mipdata_->cliquetable.numNeighborhoodQueries = oldNumQueries;
+    mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries = oldNumQueries;
   }
 
   for (std::pair<HighsInt, double> fracint :

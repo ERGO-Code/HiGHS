@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HighsIO.cpp
@@ -98,7 +96,7 @@ std::array<char, 32> highsDoubleToString(const double val,
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
   if (!*log_options_.output_flag ||
-      (log_options_.log_file_stream == NULL && !*log_options_.log_to_console))
+      (log_options_.log_stream == NULL && !*log_options_.log_to_console))
     return;
   // highsLogUser should not be passed HighsLogType::kDetailed or
   // HighsLogType::kVerbose
@@ -109,19 +107,17 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.log_callback) {
+  if (!log_options_.log_user_callback) {
     // Write to log file stream unless it is NULL
-    if (log_options_.log_file_stream) {
+    if (log_options_.log_stream) {
       if (prefix)
-        fprintf(log_options_.log_file_stream, "%-9s",
-                HighsLogTypeTag[(int)type]);
-      vfprintf(log_options_.log_file_stream, format, argptr);
-      if (flush_streams) fflush(log_options_.log_file_stream);
+        fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
+      vfprintf(log_options_.log_stream, format, argptr);
+      if (flush_streams) fflush(log_options_.log_stream);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console &&
-        log_options_.log_file_stream != stdout) {
+    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
       if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
       if (flush_streams) fflush(stdout);
@@ -139,7 +135,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
+    log_options_.log_user_callback(type, msgbuffer, nullptr);
   }
   va_end(argptr);
 }
@@ -147,7 +143,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
 void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...) {
   if (!*log_options_.output_flag ||
-      (log_options_.log_file_stream == NULL && !*log_options_.log_to_console) ||
+      (log_options_.log_stream == NULL && !*log_options_.log_to_console) ||
       !*log_options_.log_dev_level)
     return;
   // Always report HighsLogType::kInfo, HighsLogType::kWarning or
@@ -167,17 +163,16 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.log_callback) {
+  if (!log_options_.log_user_callback) {
     // Write to log file stream unless it is NULL
-    if (log_options_.log_file_stream) {
+    if (log_options_.log_stream) {
       // Write to log file stream
-      vfprintf(log_options_.log_file_stream, format, argptr);
-      if (flush_streams) fflush(log_options_.log_file_stream);
+      vfprintf(log_options_.log_stream, format, argptr);
+      if (flush_streams) fflush(log_options_.log_stream);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
-    if (*log_options_.log_to_console &&
-        log_options_.log_file_stream != stdout) {
+    if (*log_options_.log_to_console && log_options_.log_stream != stdout) {
       vfprintf(stdout, format, argptr);
       if (flush_streams) fflush(stdout);
     }
@@ -189,7 +184,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_callback(type, msgbuffer, log_options_.log_callback_data);
+    log_options_.log_user_callback(type, msgbuffer, nullptr);
   }
   va_end(argptr);
 }
@@ -209,10 +204,10 @@ void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
 
 void highsReportLogOptions(const HighsLogOptions& log_options_) {
   printf("\nHighs log options\n");
-  if (log_options_.log_file_stream == NULL) {
-    printf("   log_file_stream = NULL\n");
+  if (log_options_.log_stream == NULL) {
+    printf("   log_stream = NULL\n");
   } else {
-    printf("   log_file_stream = Not NULL\n");
+    printf("   log_stream = Not NULL\n");
   }
   printf("   output_flag = %s\n",
          highsBoolToString(*log_options_.output_flag).c_str());
@@ -239,4 +234,19 @@ std::string highsFormatToString(const char* format, ...) {
 
 const std::string highsBoolToString(const bool b) {
   return b ? "true" : "false";
+}
+
+const std::string highsInsertMdEscapes(const std::string from_string) {
+  std::string to_string = "";
+  const char* underscore = "_";
+  const char* backslash = "\\";
+  HighsInt from_string_length = from_string.length();
+  for (HighsInt p = 0; p < from_string_length; p++) {
+    const char string_ch = from_string[p];
+    if (string_ch == *underscore) {
+      to_string += backslash;
+    }
+    to_string += from_string[p];
+  }
+  return to_string;
 }

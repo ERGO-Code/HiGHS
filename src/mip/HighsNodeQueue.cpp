@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsNodeQueue.h"
@@ -421,4 +419,28 @@ HighsInt HighsNodeQueue::getBestBoundDomchgStackSize() const {
 
   return std::min(HighsInt(nodes[suboptimalMin].domchgstack.size()),
                   domchgStackSize);
+}
+
+void HighsNodeQueue::clear() {
+  const bool original = false;
+  HighsNodeQueue nodequeue;
+  nodequeue.setNumCol(numCol);
+  if (original) {
+    *this = std::move(nodequeue);
+  } else {
+    (*this).nodes = std::move(nodequeue.nodes);
+    (*this).colLowerNodesPtr = std::move(nodequeue.colLowerNodesPtr);
+    (*this).colUpperNodesPtr = std::move(nodequeue.colUpperNodesPtr);
+    (*this).freeslots = std::move(nodequeue.freeslots);
+    (*this).allocatorState = std::move(nodequeue.allocatorState);
+    (*this).lowerRoot = nodequeue.lowerRoot;
+    (*this).lowerMin = nodequeue.lowerMin;
+    (*this).hybridEstimRoot = nodequeue.hybridEstimRoot;
+    (*this).hybridEstimMin = nodequeue.hybridEstimMin;
+    (*this).suboptimalRoot = nodequeue.suboptimalRoot;
+    (*this).suboptimalMin = nodequeue.suboptimalMin;
+    (*this).numSuboptimal = nodequeue.numSuboptimal;
+    (*this).optimality_limit = nodequeue.optimality_limit;
+    (*this).numCol = nodequeue.numCol;
+  }
 }

@@ -33,7 +33,7 @@ program fortrantest
   ! * The position in aindex/avalue of the index/value of the first
   ! nonzero in each column is stored in astart
   !
-  ! Note that astart[0] must be zero
+  ! Note that astart(1) must be zero
   !
   ! After a successful call to Highs_lpCall, the primal and dual
   ! solution, and the simplex basis are returned as follows
@@ -83,7 +83,7 @@ program fortrantest
   integer ( c_int ), parameter :: modelstatus_optimal = 7
   integer ( c_int ), parameter :: runstatus_error = -1
   integer ( c_int ), parameter :: runstatus_ok = 0
-  integer ( c_int ), parameter :: runstatus_warning = -1
+  integer ( c_int ), parameter :: runstatus_warning = 1
   ! For the full API test
   type ( c_ptr ) :: highs
   
@@ -170,6 +170,25 @@ program fortrantest
   rowupper(1) = 6.0
   rowupper(2) = 14.0
   rowupper(3) = inf
+
+  ! The definition of sparse matrices to be passed into the FORTRAN
+  ! interface is non-trivial, since the FORTRAN interface is a direct
+  ! bind to the C API: no execution (esp. conversion of data) at any
+  ! point. Hence FORTRAN users have to supply vectors that, when
+  ! indexed from 0, are standard for the C API.
+
+  ! Although the FORTRAN arrays in the example are indexed from 1 (of
+  ! course) note that the row indices in aindex are in the interval
+  ! [0, numrow-1]
+
+  ! For this example, aindex is indexed from 1 to 5, and contains [1 2
+  ! 0 1 2], referring to column 0 having entries in rows 1 and 2;
+  ! column 1 having entries in rows 0, 1 and 2
+
+  ! FORTRAN-wise, astart would naturally be [1 3], but it must
+  ! indicate the starts when aindex is indexed from 0 to 4 in C, so
+  ! the starts must have 1 subtracted from them from the values that
+  ! would be used in FORTRAN. Hence astart is [0 2]
   
   astart(1) = 0
   astart(2) = 2
@@ -185,25 +204,6 @@ program fortrantest
   avalue(3) = 1
   avalue(4) = 2
   avalue(5) = 1
-
-  ! Define the constraint matrix row-wise, as it is added to the LP with the rows
-  arstart(1) = 0
-  arstart(2) = 1
-  arstart(3) = 3
-  arindex(1) = 1
-  arindex(2) = 0
-  arindex(3) = 1
-  arindex(4) = 0
-  arindex(5) = 1
-  arvalue(1) = 1
-  arvalue(2) = 1
-  arvalue(3) = 2
-  arvalue(4) = 2
-  arvalue(5) = 1
-
-  qp_sol(1) = 0.5
-  qp_sol(2) = 5.0
-  qp_sol(3) = 1.5
 
   !================================================================================
   ! Illustrate use of Highs_lpCall to solve a given LP
@@ -282,7 +282,23 @@ program fortrantest
   ! Add two columns to the empty LP, but no matrix. After numnz=0, can
   ! just pass arrays rather than NULL
   runstatus = Highs_addCols(highs, numcol, colcost, collower, colupper, 0, integer_null, integer_null, double_null);
-  ! Add three rows to the 2-column LP
+  ! Define the constraint matrix by adding it as three rows to the
+  ! 2-column LP - requiring the matrix row-wise
+
+  arstart(1) = 0
+  arstart(2) = 1
+  arstart(3) = 3
+  arindex(1) = 1
+  arindex(2) = 0
+  arindex(3) = 1
+  arindex(4) = 0
+  arindex(5) = 1
+  arvalue(1) = 1
+  arvalue(2) = 1
+  arvalue(3) = 2
+  arvalue(4) = 2
+  arvalue(5) = 1
+
   runstatus = Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue)
 
   runstatus = Highs_getObjectiveSense(highs, alt_sense);
@@ -362,8 +378,8 @@ program fortrantest
 
   ! Write out model as MPS for use later
   runstatus = Highs_writeModel(highs, "F90.mps"//C_NULL_CHAR)
-  print*, "runstatus = ", runstatus
-  call assert(runstatus .ne. runstatus_warning, "Highs_writeModel runstatus")
+  ! runstatus is runstatus_warning since there are no names
+  call assert(runstatus .eq. runstatus_warning, "Highs_writeModel runstatus")
   
   call Highs_destroy(highs)
   !================================================================================
@@ -493,6 +509,10 @@ program fortrantest
   qp_qvalue(2) = -1.0
   qp_qvalue(3) = 0.2
   qp_qvalue(4) = 2.0
+
+  qp_sol(1) = 0.5
+  qp_sol(2) = 5.0
+  qp_sol(3) = 1.5
 
   runstatus = Highs_qpCall( qp_numcol, qp_numrow, qp_numnz, qp_hessian_numnz,&
        aformat_colwise, qformat_triangular, sense, offset,&

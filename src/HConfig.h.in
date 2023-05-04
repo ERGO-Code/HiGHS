@@ -2,12 +2,9 @@
 #define HCONFIG_H_
 
 #cmakedefine FAST_BUILD
-#cmakedefine SCIP_DEV
-#cmakedefine HiGHSDEV
-#cmakedefine OSI_FOUND
 #cmakedefine ZLIB_FOUND
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
-#cmakedefine HiGHSRELEASE
+#cmakedefine CMAKE_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
 #cmakedefine HIGHSINT64
 #cmakedefine HIGHS_HAVE_MM_PAUSE
 #cmakedefine HIGHS_HAVE_BUILTIN_CLZ

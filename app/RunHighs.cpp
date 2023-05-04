@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ../app/RunHighs.cpp
@@ -48,6 +46,7 @@ int main(int argc, char** argv) {
   // call this first so that printHighsVersionCopyright uses reporting
   // settings defined in any options file.
   highs.passOptions(loaded_options);
+  //  highs.writeOptions("Options.md");
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
@@ -67,11 +66,10 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return (int)run_status;
 
-  // Possibly compute the ranging information
-  if (options.ranging == kHighsOnString) highs.getRanging();
+  // highs.writeInfo("Info.md");
 
   // Possibly write the solution to a file
-  if (options.write_solution_to_file)
+  if (options.write_solution_to_file || options.solution_file != "")
     highs.writeSolution(options.solution_file, options.write_solution_style);
 
   // Possibly write the model to a file
@@ -145,13 +143,13 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
       }
       if (num_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "Integer  : %" HIGHSINT_FORMAT "\n", num_integer);
+                    "Integer   : %" HIGHSINT_FORMAT "\n", num_integer);
       if (num_semi_continuous)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiConts: %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+                    "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
       if (num_semi_integer)
         highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiInt  : %" HIGHSINT_FORMAT "\n", num_semi_integer);
+                    "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
     } else {
       highsLogUser(log_options, HighsLogType::kInfo, "%s",
                    problem_type.c_str());

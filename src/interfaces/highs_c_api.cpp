@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "highs_c_api.h"
@@ -34,10 +32,8 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    HighsBasis basis;
-    solution = highs.getSolution();
-    basis = highs.getBasis();
+    const HighsSolution& solution = highs.getSolution();
+    const HighsBasis& basis = highs.getBasis();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
@@ -89,8 +85,7 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    solution = highs.getSolution();
+    const HighsSolution& solution = highs.getSolution();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
     const bool copy_col_value =
@@ -134,10 +129,8 @@ HighsInt Highs_qpCall(
   status = highs.run();
 
   if (status == HighsStatus::kOk) {
-    HighsSolution solution;
-    HighsBasis basis;
-    solution = highs.getSolution();
-    basis = highs.getBasis();
+    const HighsSolution& solution = highs.getSolution();
+    const HighsBasis& basis = highs.getBasis();
     *model_status = (HighsInt)highs.getModelStatus();
     const HighsInfo& info = highs.getInfo();
 
@@ -170,16 +163,16 @@ HighsInt Highs_qpCall(
   return (HighsInt)status;
 }
 
-void* Highs_create() { return new Highs(); }
+void* Highs_create(void) { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
-const char* Highs_version(void) { return highsVersion().c_str(); }
-HighsInt Highs_version_major() { return highsVersionMajor(); }
-HighsInt Highs_version_minor() { return highsVersionMinor(); }
-HighsInt Highs_version_patch() { return highsVersionPatch(); }
-const char* Highs_githash() { return highsGithash().c_str(); }
-const char* Highs_compilation_date() { return highsCompilationDate().c_str(); }
+const char* Highs_version(void) { return highsVersion(); }
+HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
+HighsInt Highs_versionMinor(void) { return highsVersionMinor(); }
+HighsInt Highs_versionPatch(void) { return highsVersionPatch(); }
+const char* Highs_githash(void) { return highsGithash(); }
+const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 
 HighsInt Highs_run(void* highs) { return (HighsInt)((Highs*)highs)->run(); }
 
@@ -255,6 +248,20 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passRowName(const void* highs, const HighsInt row,
+                           const char* name) {
+  return (HighsInt)((Highs*)highs)->passRowName(row, std::string(name));
+}
+
+HighsInt Highs_passColName(const void* highs, const HighsInt col,
+                           const char* name) {
+  return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
+}
+
+HighsInt Highs_readOptions(const void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->readOptions(filename);
+}
+
 HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
 
 HighsInt Highs_clearModel(void* highs) {
@@ -287,33 +294,42 @@ HighsInt Highs_setStringOptionValue(void* highs, const char* option,
       ->setOptionValue(std::string(option), std::string(value));
 }
 
+HighsInt Highs_getNumOptions(const void* highs) {
+  return ((Highs*)highs)->getNumOptions();
+}
+
+HighsInt Highs_getOptionName(const void* highs, const HighsInt index,
+                             char** name) {
+  std::string name_v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getOptionName(index, &name_v);
+  // Guess we have to add one (for Windows, lol!) because char* is
+  // null-terminated
+  const HighsInt malloc_size = sizeof(char) * (name_v.length() + 1);
+  *name = (char*)malloc(malloc_size);
+  strcpy(*name, name_v.c_str());
+  return retcode;
+}
+
 HighsInt Highs_getBoolOptionValue(const void* highs, const char* option,
                                   HighsInt* value) {
-  bool v;
-  HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
-  *value = (HighsInt)v;
-  return retcode;
+  return Highs_getBoolOptionValues(highs, option, value, nullptr);
 }
 
 HighsInt Highs_getIntOptionValue(const void* highs, const char* option,
                                  HighsInt* value) {
-  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
+  return Highs_getIntOptionValues(highs, option, value, nullptr, nullptr,
+                                  nullptr);
 }
 
 HighsInt Highs_getDoubleOptionValue(const void* highs, const char* option,
                                     double* value) {
-  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
+  return Highs_getDoubleOptionValues(highs, option, value, nullptr, nullptr,
+                                     nullptr);
 }
 
 HighsInt Highs_getStringOptionValue(const void* highs, const char* option,
                                     char* value) {
-  std::string v;
-  memset(value, 0, 7);
-  HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
-  strcpy(value, v.c_str());
-  return retcode;
+  return Highs_getStringOptionValues(highs, option, value, nullptr);
 }
 
 HighsInt Highs_getOptionType(const void* highs, const char* option,
@@ -322,6 +338,55 @@ HighsInt Highs_getOptionType(const void* highs, const char* option,
   HighsInt retcode =
       (HighsInt)((Highs*)highs)->getOptionType(std::string(option), t);
   *type = (HighsInt)t;
+  return retcode;
+}
+
+HighsInt Highs_getBoolOptionValues(const void* highs, const char* option,
+                                   HighsInt* current_value,
+                                   HighsInt* default_value) {
+  bool current_v;
+  bool default_v;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)
+          ->getBoolOptionValues(std::string(option), &current_v, &default_v);
+  if (current_value) *current_value = current_v;
+  if (default_value) *default_value = default_v;
+  return retcode;
+}
+
+HighsInt Highs_getIntOptionValues(const void* highs, const char* option,
+                                  HighsInt* current_value, HighsInt* min_value,
+                                  HighsInt* max_value,
+                                  HighsInt* default_value) {
+  return (HighsInt)((Highs*)highs)
+      ->getIntOptionValues(std::string(option), current_value, min_value,
+                           max_value, default_value);
+}
+
+HighsInt Highs_getDoubleOptionValues(const void* highs, const char* option,
+                                     double* current_value, double* min_value,
+                                     double* max_value, double* default_value) {
+  return (HighsInt)((Highs*)highs)
+      ->getDoubleOptionValues(std::string(option), current_value, min_value,
+                              max_value, default_value);
+}
+
+HighsInt Highs_getStringOptionValues(const void* highs, const char* option,
+                                     char* current_value, char* default_value) {
+  std::string current_v;
+  std::string default_v;
+  // Inherited from Highs_getStringOptionValue: cannot see why this
+  // was ever useful. Must assume that current_value is of length at
+  // least 7, which isn't necessarily true
+  //
+  //  if (current_value) memset(current_value, 0, 7);
+  //  if (default_value) memset(default_value, 0, 7);
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)
+          ->getStringOptionValues(std::string(option), &current_v, &default_v);
+  // current_value and default_value are nullptr by default
+  if (current_value) strcpy(current_value, current_v.c_str());
+  if (default_value) strcpy(default_value, default_v.c_str());
   return retcode;
 }
 
@@ -352,10 +417,19 @@ HighsInt Highs_getInt64InfoValue(const void* highs, const char* info,
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
+HighsInt Highs_getInfoType(const void* highs, const char* info,
+                           HighsInt* type) {
+  HighsInfoType t;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)->getInfoType(std::string(info), t);
+  *type = (HighsInt)t;
+  return retcode;
+}
+
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
-  HighsSolution solution = ((Highs*)highs)->getSolution();
+  const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
     for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
@@ -385,7 +459,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
-  HighsBasis basis = ((Highs*)highs)->getBasis();
+  const HighsBasis& basis = ((Highs*)highs)->getBasis();
   for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
     col_status[i] = (HighsInt)basis.col_status[i];
   }
@@ -625,7 +699,7 @@ HighsInt Highs_changeColsIntegralityByRange(void* highs,
     }
   }
   return (HighsInt)((Highs*)highs)
-      ->changeColsIntegrality(from_col, to_col, &pass_integrality[0]);
+      ->changeColsIntegrality(from_col, to_col, pass_integrality.data());
 }
 
 HighsInt Highs_changeColsIntegralityBySet(void* highs,
@@ -640,7 +714,7 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
     }
   }
   return (HighsInt)((Highs*)highs)
-      ->changeColsIntegrality(num_set_entries, set, &pass_integrality[0]);
+      ->changeColsIntegrality(num_set_entries, set, pass_integrality.data());
 }
 
 HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
@@ -654,7 +728,7 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
     }
   }
   return (HighsInt)((Highs*)highs)
-      ->changeColsIntegrality(mask, &pass_integrality[0]);
+      ->changeColsIntegrality(mask, pass_integrality.data());
 }
 
 HighsInt Highs_changeColCost(void* highs, const HighsInt col,
@@ -829,6 +903,45 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
   return (HighsInt)status;
 }
 
+HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
+  std::string name_v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getRowName(row, name_v);
+  strcpy(name, name_v.c_str());
+  return retcode;
+}
+
+HighsInt Highs_getRowByName(const void* highs, const char* name,
+                            HighsInt* row) {
+  HighsInt local_row;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getRowByName(name, local_row);
+  *row = local_row;
+  return retcode;
+}
+
+HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name) {
+  std::string name_v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getColName(col, name_v);
+  strcpy(name, name_v.c_str());
+  return retcode;
+}
+
+HighsInt Highs_getColByName(const void* highs, const char* name,
+                            HighsInt* col) {
+  HighsInt local_col;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getColByName(name, local_col);
+  *col = local_col;
+  return retcode;
+}
+
+HighsInt Highs_getColIntegrality(const void* highs, const HighsInt col,
+                                 HighsInt* integrality) {
+  HighsVarType integrality_v;
+  HighsInt retcode =
+      (HighsInt)((Highs*)highs)->getColIntegrality(col, integrality_v);
+  *integrality = HighsInt(integrality_v);
+  return retcode;
+}
+
 HighsInt Highs_deleteColsByRange(void* highs, const HighsInt from_col,
                                  const HighsInt to_col) {
   return (HighsInt)((Highs*)highs)->deleteCols(from_col, to_col);
@@ -904,13 +1017,13 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   *num_col = lp.num_col_;
   *num_row = lp.num_row_;
   if (*num_col > 0) {
-    memcpy(col_cost, &lp.col_cost_[0], *num_col * sizeof(double));
-    memcpy(col_lower, &lp.col_lower_[0], *num_col * sizeof(double));
-    memcpy(col_upper, &lp.col_upper_[0], *num_col * sizeof(double));
+    memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
+    memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
+    memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
   }
   if (*num_row > 0) {
-    memcpy(row_lower, &lp.row_lower_[0], *num_row * sizeof(double));
-    memcpy(row_upper, &lp.row_upper_[0], *num_row * sizeof(double));
+    memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
+    memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
   }
 
   // Save the original orientation so that it is recovered
@@ -930,16 +1043,16 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
 
   if (*num_col > 0 && *num_row > 0) {
     *num_nz = lp.a_matrix_.numNz();
-    memcpy(a_start, &lp.a_matrix_.start_[0],
+    memcpy(a_start, lp.a_matrix_.start_.data(),
            num_start_entries * sizeof(HighsInt));
-    memcpy(a_index, &lp.a_matrix_.index_[0], *num_nz * sizeof(HighsInt));
-    memcpy(a_value, &lp.a_matrix_.value_[0], *num_nz * sizeof(double));
+    memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
+    memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
     *q_num_nz = hessian.start_[*num_col];
-    memcpy(q_start, &hessian.start_[0], *num_col * sizeof(HighsInt));
-    memcpy(q_index, &hessian.index_[0], *q_num_nz * sizeof(HighsInt));
-    memcpy(q_value, &hessian.value_[0], *q_num_nz * sizeof(double));
+    memcpy(q_start, hessian.start_.data(), *num_col * sizeof(HighsInt));
+    memcpy(q_index, hessian.index_.data(), *q_num_nz * sizeof(HighsInt));
+    memcpy(q_value, hessian.value_.data(), *q_num_nz * sizeof(double));
   }
   if ((HighsInt)lp.integrality_.size()) {
     for (int iCol = 0; iCol < *num_col; iCol++)
@@ -973,6 +1086,107 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
   }
 
   return (HighsInt)((Highs*)highs)->crossover(solution);
+}
+
+HighsInt Highs_getRanging(
+    void* highs,
+    //
+    double* col_cost_up_value, double* col_cost_up_objective,
+    HighsInt* col_cost_up_in_var, HighsInt* col_cost_up_ou_var,
+    double* col_cost_dn_value, double* col_cost_dn_objective,
+    HighsInt* col_cost_dn_in_var, HighsInt* col_cost_dn_ou_var,
+    double* col_bound_up_value, double* col_bound_up_objective,
+    HighsInt* col_bound_up_in_var, HighsInt* col_bound_up_ou_var,
+    double* col_bound_dn_value, double* col_bound_dn_objective,
+    HighsInt* col_bound_dn_in_var, HighsInt* col_bound_dn_ou_var,
+    double* row_bound_up_value, double* row_bound_up_objective,
+    HighsInt* row_bound_up_in_var, HighsInt* row_bound_up_ou_var,
+    double* row_bound_dn_value, double* row_bound_dn_objective,
+    HighsInt* row_bound_dn_in_var, HighsInt* row_bound_dn_ou_var) {
+  HighsRanging ranging;
+  HighsInt status = (HighsInt)((Highs*)highs)->getRanging(ranging);
+  if (status == (HighsInt)HighsStatus::kError) return status;
+  HighsInt num_col = ((Highs*)highs)->getNumCol();
+  HighsInt num_row = ((Highs*)highs)->getNumRow();
+  if (col_cost_up_value)
+    memcpy(col_cost_up_value, ranging.col_cost_up.value_.data(),
+           num_col * sizeof(double));
+  if (col_cost_up_objective)
+    memcpy(col_cost_up_objective, ranging.col_cost_up.objective_.data(),
+           num_col * sizeof(double));
+  if (col_cost_up_in_var)
+    memcpy(col_cost_up_in_var, ranging.col_cost_up.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_cost_up_ou_var)
+    memcpy(col_cost_up_ou_var, ranging.col_cost_up.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (col_cost_dn_value)
+    memcpy(col_cost_dn_value, ranging.col_cost_dn.value_.data(),
+           num_col * sizeof(double));
+  if (col_cost_dn_objective)
+    memcpy(col_cost_dn_objective, ranging.col_cost_dn.objective_.data(),
+           num_col * sizeof(double));
+  if (col_cost_dn_in_var)
+    memcpy(col_cost_dn_in_var, ranging.col_cost_dn.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_cost_dn_ou_var)
+    memcpy(col_cost_dn_ou_var, ranging.col_cost_dn.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (col_bound_up_value)
+    memcpy(col_bound_up_value, ranging.col_bound_up.value_.data(),
+           num_col * sizeof(double));
+  if (col_bound_up_objective)
+    memcpy(col_bound_up_objective, ranging.col_bound_up.objective_.data(),
+           num_col * sizeof(double));
+  if (col_bound_up_in_var)
+    memcpy(col_bound_up_in_var, ranging.col_bound_up.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_bound_up_ou_var)
+    memcpy(col_bound_up_ou_var, ranging.col_bound_up.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (col_bound_dn_value)
+    memcpy(col_bound_dn_value, ranging.col_bound_dn.value_.data(),
+           num_col * sizeof(double));
+  if (col_bound_dn_objective)
+    memcpy(col_bound_dn_objective, ranging.col_bound_dn.objective_.data(),
+           num_col * sizeof(double));
+  if (col_bound_dn_in_var)
+    memcpy(col_bound_dn_in_var, ranging.col_bound_dn.in_var_.data(),
+           num_col * sizeof(HighsInt));
+  if (col_bound_dn_ou_var)
+    memcpy(col_bound_dn_ou_var, ranging.col_bound_dn.ou_var_.data(),
+           num_col * sizeof(HighsInt));
+
+  if (row_bound_up_value)
+    memcpy(row_bound_up_value, ranging.row_bound_up.value_.data(),
+           num_row * sizeof(double));
+  if (row_bound_up_objective)
+    memcpy(row_bound_up_objective, ranging.row_bound_up.objective_.data(),
+           num_row * sizeof(double));
+  if (row_bound_up_in_var)
+    memcpy(row_bound_up_in_var, ranging.row_bound_up.in_var_.data(),
+           num_row * sizeof(HighsInt));
+  if (row_bound_up_ou_var)
+    memcpy(row_bound_up_ou_var, ranging.row_bound_up.ou_var_.data(),
+           num_row * sizeof(HighsInt));
+
+  if (row_bound_dn_value)
+    memcpy(row_bound_dn_value, ranging.row_bound_dn.value_.data(),
+           num_row * sizeof(double));
+  if (row_bound_dn_objective)
+    memcpy(row_bound_dn_objective, ranging.row_bound_dn.objective_.data(),
+           num_row * sizeof(double));
+  if (row_bound_dn_in_var)
+    memcpy(row_bound_dn_in_var, ranging.row_bound_dn.in_var_.data(),
+           num_row * sizeof(HighsInt));
+  if (row_bound_dn_ou_var)
+    memcpy(row_bound_dn_ou_var, ranging.row_bound_dn.ou_var_.data(),
+           num_row * sizeof(HighsInt));
+
+  return status;
 }
 
 void Highs_resetGlobalScheduler(HighsInt blocking) {

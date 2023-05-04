@@ -2,7 +2,8 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2021 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -14,6 +15,7 @@
 #include "presolve/ICrash.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -99,7 +101,7 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
       // if (status == HighsStatus::kOk) {
       //   ilp = local_lp;
       // } else {
-      //   printf("Cannot dualise equality problem\n");
+      //   printf("Cannot dualize equality problem\n");
       // }
     }
   } else {
@@ -120,7 +122,7 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
     //   // if (status == HighsStatus::kOk) {
     //   //   ilp = local_lp;
     //   // } else {
-    //   //   printf("Cannot dualise equality problem\n");
+    //   //   printf("Cannot dualize equality problem\n");
     //   // }
     // }
   }
