@@ -4215,8 +4215,8 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
     debug_report = numreductions > postsolve_stack.debug_prev_numreductions;
   }
   if (debug_report) {
-    printf("After %2d reductions, col = %d[%s] has bounds [%g, %g]\n",
-           int(numreductions), int(check_col),
+    printf("After reduction %2d: col = %2d[%3s] has bounds [%.2g, %.2g]\n",
+           int(numreductions - 1), int(check_col),
            model->col_names_[check_col].c_str(), model->col_lower_[check_col],
            model->col_upper_[check_col]);
     postsolve_stack.debug_prev_numreductions = numreductions;
@@ -5691,7 +5691,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         debug_report = col == check_col;
       }
       if (debug_report) {
-        printf("ParallelColumns (col = %d[%s]; duplicate = %d[%s]) case %d\n",
+        printf("ParallelColumns: col = %d[%s]; duplicate = %d[%s] - case %d\n",
                int(col), model->col_names_[col].c_str(), int(duplicateCol),
                model->col_names_[duplicateCol].c_str(), int(reductionCase));
       }
