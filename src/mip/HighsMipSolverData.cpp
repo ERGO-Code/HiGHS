@@ -679,6 +679,7 @@ try_again:
   HighsCDouble obj = mipsolver.orig_model_->offset_;
   assert((HighsInt)solution.col_value.size() ==
          mipsolver.orig_model_->num_col_);
+  HighsInt check_col = -1;
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
     const double value = solution.col_value[i];
     obj += mipsolver.orig_model_->col_cost_[i] * value;
@@ -700,9 +701,11 @@ try_again:
     } else
       continue;
     if (primal_infeasibility >
-        mipsolver.options_mip_->primal_feasibility_tolerance)
+        mipsolver.options_mip_->primal_feasibility_tolerance) {
       printf("Col %d [%g, %g, %g] has infeasibility %g\n", int(i), lower, value,
              upper, primal_infeasibility);
+      check_col = i;
+    }
     bound_violation_ = std::max(bound_violation_, primal_infeasibility);
   }
 
@@ -781,8 +784,17 @@ try_again:
     //    HighsLogType::kWarning,
     printf(
         "Solution with objective %g has untransformed violations: "
-        "bound = %.4g; integrality = %.4g; row = %.4g\n",
-        double(obj), bound_violation_, integrality_violation_, row_violation_);
+        "bound = %.4g (col %d[%s]); integrality = %.4g; row = %.4g\n",
+        double(obj), bound_violation_, int(check_col),
+        mipsolver.orig_model_->col_names_[check_col].c_str(),
+        integrality_violation_, row_violation_);
+
+    HighsSolution check_solution;
+    check_solution.col_value = sol;
+    check_solution.value_valid = true;
+    postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
+                              check_col);
+
     if (!currentFeasible) {
       // if the current incumbent is non existent or also not feasible we still
       // store the new one

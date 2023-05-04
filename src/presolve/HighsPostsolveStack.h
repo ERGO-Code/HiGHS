@@ -60,6 +60,8 @@ class HighsPostsolveStack {
     Nonzero() = default;
   };
 
+  size_t debug_prev_numreductions = 0;
+
  private:
   /// transform a column x by a linear mapping with a new column x'.
   /// I.e. substitute x = a * x' + b
@@ -528,7 +530,7 @@ class HighsPostsolveStack {
 
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
-            HighsBasis& basis) {
+            HighsBasis& basis, const HighsInt report_col = -1) {
     reductionValues.resetPosition();
 
     // Verify that undo can be performed
@@ -574,6 +576,9 @@ class HighsPostsolveStack {
 
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
+      if (report_col >= 0)
+        printf("Before  reduction %2d: primal_value[%2d] = %g\n", int(i),
+               int(report_col), solution.col_value[report_col]);
       switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
@@ -661,18 +666,26 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
+          break;
         }
+        default:
+          printf("Reduction case %d not handled\n", int(reductions[i].first));
+          assert(1 == 0);
       }
     }
+    if (report_col >= 0)
+      printf("After last reduction: primal_value[%2d] = %g\n", int(report_col),
+             solution.col_value[report_col]);
   }
 
   /// undo presolve steps for primal solution
-  void undoPrimal(const HighsOptions& options, HighsSolution& solution) {
+  void undoPrimal(const HighsOptions& options, HighsSolution& solution,
+                  const HighsInt report_col = -1) {
     reductionValues.resetPosition();
     HighsBasis basis;
     basis.valid = false;
     solution.dual_valid = false;
-    undo(options, solution, basis);
+    undo(options, solution, basis, report_col);
   }
 
   /// undo presolve steps for primal and dual solution

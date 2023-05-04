@@ -732,7 +732,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       }
     }
   }
-
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (colLowerSource[i] != -1)
       colLowerSource[i] = newRowIndex[colLowerSource[i]];
@@ -4210,6 +4209,19 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   // todo: check timelimit
   size_t numreductions = postsolve_stack.numReductions();
 
+  bool debug_report = false;
+  HighsInt check_col = debugGetCheckCol();
+  if (check_col >= 0) {
+    debug_report = numreductions > postsolve_stack.debug_prev_numreductions;
+  }
+  if (debug_report) {
+    printf("After %2d reductions, col = %d[%s] has bounds [%g, %g]\n",
+           int(numreductions), int(check_col),
+           model->col_names_[check_col].c_str(), model->col_lower_[check_col],
+           model->col_upper_[check_col]);
+    postsolve_stack.debug_prev_numreductions = numreductions;
+  }
+
   if (timer != nullptr && (numreductions & 1023u) == 0) {
     if (timer->readRunHighsClock() >= options->time_limit)
       return Result::kStopped;
@@ -4237,6 +4249,7 @@ double HPresolve::problemSizeReduction() {
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
+  postsolve_stack.debug_prev_numreductions = 0;
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
@@ -5672,6 +5685,16 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       if (!parallel) continue;
 
+      const int check_col = debugGetCheckCol();
+      bool debug_report = false;
+      if (check_col >= 0) {
+        debug_report = col == check_col;
+      }
+      if (debug_report) {
+        printf("ParallelColumns (col = %d[%s]; duplicate = %d[%s]) case %d\n",
+               int(col), model->col_names_[col].c_str(), int(duplicateCol),
+               model->col_names_[duplicateCol].c_str(), int(reductionCase));
+      }
       switch (reductionCase) {
         case kDominanceDuplicateColToLower:
           delCol = duplicateCol;
@@ -5764,6 +5787,14 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               model->col_upper_[duplicateCol] = 0;
           }
 
+          if (debug_report) {
+            printf(
+                "ParallelColumns: col = %d[%s]; bounds change from [%g, %g] to "
+                "[%g, %g]\n",
+                int(check_col), model->col_names_[check_col].c_str(),
+                model->col_lower_[check_col], model->col_upper_[check_col],
+                mergeLower, mergeUpper);
+          }
           model->col_lower_[col] = mergeLower;
           model->col_upper_[col] = mergeUpper;
 
@@ -6604,5 +6635,20 @@ bool HPresolve::debugOkRowSize(const std::string message) {
 return false;
 }
 */
+HighsInt HPresolve::debugGetCheckCol() const {
+  const std::string check_col_name = "c37";
+  HighsInt check_col = -1;
+  if (check_col_name == "") return check_col;
+  if (model->col_names_.size()) {
+    if (HighsInt(model->col_hash_.name2index.size()) != model->num_col_)
+      model->col_hash_.form(model->col_names_);
+    auto search = model->col_hash_.name2index.find(check_col_name);
+    if (search != model->col_hash_.name2index.end()) {
+      check_col = search->second;
+      assert(model->col_names_[check_col] == check_col_name);
+    }
+  }
+  return check_col;
+}
 
 }  // namespace presolve
