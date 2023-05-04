@@ -16,9 +16,10 @@ struct Settings {
 
   PricingStrategy pricing = PricingStrategy::Devex;
 
-  double pnorm_zero_threshold = 10E-12;
-  double d_zero_threshold = 10E-13;
-  double lambda_zero_threshold = 10E-10;
+  double pnorm_zero_threshold = 10E-12; // if ||p|| < this threshold, p is determined to not be an improving search direction
+  double improvement_zero_threshold = 10E-5; // if p^t gradient < this threshold, p is determined to not be an improving search direction
+  double d_zero_threshold = 10E-13; // minimal value for pivot, will declare degeneracy if no larger pivot is found
+  double lambda_zero_threshold = 10E-10; // used for pricing / optimality checking
 
   double semidefiniteregularization = 1E-7;
 
