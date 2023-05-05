@@ -671,34 +671,14 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       basis.col_status[col] = HighsBasisStatus::kLower;
     }
   }
-  if (solution.col_value[duplicateCol] < duplicateColLower) {
-    double residual = duplicateColLower - solution.col_value[duplicateCol];
-    assert(residual <= options.mip_feasibility_tolerance);
-    assert(residual <= options.mip_feasibility_tolerance / 1e2);
-    assert(residual <= options.mip_feasibility_tolerance / 1e4);
-    assert(residual <= 0);
-  }
-  if (solution.col_value[duplicateCol] > duplicateColUpper) {
-    double residual = solution.col_value[duplicateCol] - duplicateColUpper;
-    assert(residual <= options.mip_feasibility_tolerance);
-    assert(residual <= options.mip_feasibility_tolerance / 1e2);
-    assert(residual <= options.mip_feasibility_tolerance / 1e4);
-    assert(residual <= 0);
-  }
-  if (solution.col_value[col] < colLower) {
-    double residual = colLower - solution.col_value[col];
-    assert(residual <= options.mip_feasibility_tolerance);
-    assert(residual <= options.mip_feasibility_tolerance / 1e2);
-    assert(residual <= options.mip_feasibility_tolerance / 1e4);
-    assert(residual <= 0);
-  }
-  if (solution.col_value[col] > colUpper) {
-    double residual = solution.col_value[col] - colUpper;
-    assert(residual <= options.mip_feasibility_tolerance);
-    assert(residual <= options.mip_feasibility_tolerance / 1e2);
-    assert(residual <= options.mip_feasibility_tolerance / 1e4);
-    assert(residual <= 0);
-  }
+  assert(solution.col_value[duplicateCol] >=
+         duplicateColLower - options.mip_feasibility_tolerance);
+  assert(solution.col_value[duplicateCol] <=
+         duplicateColUpper + options.mip_feasibility_tolerance);
+  assert(solution.col_value[col] >=
+         colLower - options.mip_feasibility_tolerance);
+  assert(solution.col_value[col] <=
+         colUpper + options.mip_feasibility_tolerance);
 }
 
 void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
