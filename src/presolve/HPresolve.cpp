@@ -5686,12 +5686,17 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       if (!parallel) continue;
 
       const int check_col = debugGetCheckCol();
+      //      if (model->col_names_[col] == "c38") {
+      if (check_col >= 0) printf("ParallelColumns: reduction %2d: col %d[%s]\n", 
+	       int(postsolve_stack.numReductions())+1, int(col), model->col_names_[col].c_str());
+	//      }
       bool debug_report = false;
       if (check_col >= 0) {
         debug_report = col == check_col;
       }
       if (debug_report) {
-        printf("ParallelColumns: col = %d[%s]; duplicate = %d[%s] - case %d\n",
+        printf("ParallelColumns: reduction %2d: col = %d[%s]; duplicate = %d[%s] - case %d\n",
+	       int(postsolve_stack.numReductions()),
                int(col), model->col_names_[col].c_str(), int(duplicateCol),
                model->col_names_[duplicateCol].c_str(), int(reductionCase));
       }
@@ -6636,7 +6641,7 @@ return false;
 }
 */
 HighsInt HPresolve::debugGetCheckCol() const {
-  const std::string check_col_name = "c37";
+  const std::string check_col_name = "";//c37";
   HighsInt check_col = -1;
   if (check_col_name == "") return check_col;
   if (model->col_names_.size()) {

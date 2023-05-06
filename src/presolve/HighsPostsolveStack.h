@@ -207,7 +207,8 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
-
+    bool okMerge(const HighsOptions& options) const;
+    void undoFix(const HighsOptions& options, HighsSolution& solution) const;
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
@@ -480,9 +481,18 @@ class HighsPostsolveStack {
                        bool duplicateColIntegral) {
     const HighsInt origCol = origColIndex[col];
     const HighsInt origDuplicateCol = origColIndex[duplicateCol];
-    reductionValues.push(DuplicateColumn{
+    DuplicateColumn debug_values = {
         colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
-        origCol, origDuplicateCol, colIntegral, duplicateColIntegral});
+        origCol, origDuplicateCol, colIntegral, duplicateColIntegral};
+    //    debug_values.
+
+    // CAN okMerge be called from here!
+
+    reductionValues.push(debug_values);
+    //    reductionValues.push(DuplicateColumn{
+    //        colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
+    //        origCol, origDuplicateCol, colIntegral, duplicateColIntegral});
+    
     reductionAdded(ReductionType::kDuplicateColumn);
 
     // mark columns as not linearly transformable
@@ -577,8 +587,8 @@ class HighsPostsolveStack {
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
       if (report_col >= 0)
-        printf("Before  reduction %2d: primal_value[%2d] = %g\n", int(i),
-               int(report_col), solution.col_value[report_col]);
+        printf("Before  reduction %2d (type %2d): primal_value[%2d] = %g\n", int(i),
+               int(reductions[i].first), int(report_col), solution.col_value[report_col]);
       switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
