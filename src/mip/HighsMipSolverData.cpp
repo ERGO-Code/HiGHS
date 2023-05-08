@@ -702,7 +702,8 @@ try_again:
       continue;
     if (primal_infeasibility >
         mipsolver.options_mip_->primal_feasibility_tolerance) {
-      printf("Col %d[%s] [%g, %g, %g] has infeasibility %g\n",
+      const bool allow_report = false;
+  if (allow_report) printf("Col %d[%s] [%g, %g, %g] has infeasibility %g\n",
 	     int(i), mipsolver.orig_model_->col_names_[i].c_str(),
 	     lower, value, upper, primal_infeasibility);
       check_col = i;

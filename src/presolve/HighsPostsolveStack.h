@@ -207,7 +207,7 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
-    bool okMerge(const HighsOptions& options) const;
+    bool okMerge(const double tolerance) const;
     void undoFix(const HighsOptions& options, HighsSolution& solution) const;
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
@@ -484,10 +484,10 @@ class HighsPostsolveStack {
     DuplicateColumn debug_values = {
         colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
         origCol, origDuplicateCol, colIntegral, duplicateColIntegral};
-    //    debug_values.
-
-    // CAN okMerge be called from here!
-
+    const bool ok_merge = debug_values.okMerge(1e-6);
+    if (!ok_merge) {
+      printf("duplicateColumn: Illegal merge\n");
+    }
     reductionValues.push(debug_values);
     //    reductionValues.push(DuplicateColumn{
     //        colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
