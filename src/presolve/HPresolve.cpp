@@ -5734,12 +5734,27 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           fixColToUpper(postsolve_stack, col);
           break;
         case kMergeParallelCols:
-          postsolve_stack.duplicateColumn(
+	  const bool ok_merge = postsolve_stack.duplicateColumn(
               colScale, model->col_lower_[col], model->col_upper_[col],
               model->col_lower_[duplicateCol], model->col_upper_[duplicateCol],
               col, duplicateCol,
               model->integrality_[col] == HighsVarType::kInteger,
-              model->integrality_[duplicateCol] == HighsVarType::kInteger);
+              model->integrality_[duplicateCol] == HighsVarType::kInteger,
+					  options->mip_feasibility_tolerance);
+	  if (!ok_merge) {
+	    printf("HPresolve::detectParallelRowsAndCols Illegal merge\n");
+	    break;
+	  }
+	  // When merging a continuous variable into an integer
+	  // variable, the integer will become continuous - since any
+	  // value in its range can be mapped back to an integer and a
+	  // continuous variable. Hence the number of integer
+	  // variables in the rows corresponding to the former integer
+	  // variable reduces.
+	  //
+	  // With the opposite - merging an integer variable into a
+	  // continuous variable - the retained variable is
+	  // continuous, so no action is required
           HighsInt rowsizeIntReduction = 0;
           if (model->integrality_[duplicateCol] != HighsVarType::kInteger &&
               model->integrality_[col] == HighsVarType::kInteger) {
@@ -5813,8 +5828,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             HighsInt colrow = Arow[coliter];
             // if an an integer column was merged into a continuous one make
             // sure to update the integral rowsize
-            if (rowsizeIntReduction)
+            if (rowsizeIntReduction) {
+	      assert(rowsizeIntReduction == 1);
               rowsizeInteger[colrow] -= rowsizeIntReduction;
+	    }
             coliter = Anext[coliter];
 
             unlink(colpos);

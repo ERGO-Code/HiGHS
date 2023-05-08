@@ -553,7 +553,26 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
 void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
                                                 HighsSolution& solution,
                                                 HighsBasis& basis) const {
-  const bool allow_report = false;
+  const bool allow_report = true;
+  const double mergeVal = solution.col_value[col];
+
+  auto okResidual = [&](const double x, const double y, const double z) {
+    const double check_z = x + colScale*y;
+    const double residual = std::fabs(check_z - z);
+    const bool ok_residual = residual <= options.primal_feasibility_tolerance;
+    if (!ok_residual) {
+      printf("HighsPostsolveStack::DuplicateColumn::undo %g + %g.%g = %g != %g: residual = %g\n",
+	     x, colScale, y, check_z, z, residual);
+    }
+    return ok_residual;
+  };
+
+  auto isAtBound = [&](const double value, const double bound) {
+    if (value < bound - options.primal_feasibility_tolerance) return false;
+    if (value <= bound + options.primal_feasibility_tolerance) return true;
+    return false;
+  };
+
   //  const bool ok_merge = okMerge(options.mip_feasibility_tolerance);
   //  assert(ok_merge);
   //
@@ -564,9 +583,25 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     solution.col_dual[duplicateCol] = solution.col_dual[col] * colScale;
 
   if (basis.valid) {
-    // do postsolve using basis status if a basis is available:
-    // if the merged column is nonbasic, we can just set both columns
-    // to the corresponding basis status and value
+    // do postsolve using basis status if a basis is available: if the
+    // merged column is nonbasic, we can just set both columns to
+    // appropriate nonbasic status and value
+    //
+    // Undoing z = x + a.y
+    //
+    // Since x became z, its basis status is unchanged
+    //
+    // For a > 0, z\in [x_l + a.y_l, x_u + a.y_u]
+    //
+    // If z is nonbasic at its lower (upper) bound, set y to be
+    // nonbasic at its lower (upper) bound
+    //
+    // For a < 0, z\in [x_l + a.y_u, x_u + a.y_l]
+    //
+    // If z is nonbasic at lower (upper) bound, set y to be nonbasic
+    // at its upper (lower) bounds
+    //
+    // Check for perturbations
     switch (basis.col_status[col]) {
       case HighsBasisStatus::kLower: {
         solution.col_value[col] = colLower;
@@ -578,6 +613,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
           solution.col_value[duplicateCol] = duplicateColUpper;
         }
         // nothing else to do
+	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
         return;
       }
       case HighsBasisStatus::kUpper: {
@@ -590,6 +626,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
           solution.col_value[duplicateCol] = duplicateColLower;
         }
         // nothing else to do
+	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
         return;
       }
       case HighsBasisStatus::kZero: {
@@ -597,37 +634,37 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
         basis.col_status[duplicateCol] = HighsBasisStatus::kZero;
         solution.col_value[duplicateCol] = 0.0;
         // nothing else to do
+	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
         return;
       }
       case HighsBasisStatus::kBasic:
       case HighsBasisStatus::kNonbasic:;
     }
-
+    // Nonbasic cases should have been considered; basic case
+    // considered later
     assert(basis.col_status[col] == HighsBasisStatus::kBasic);
   }
 
   // either no basis for postsolve, or column status is basic. One of
   // the two columns must become nonbasic. In case of integrality it is
-  // simpler to choose col, since it has a coefficient of +1 in the equation y
-  // = col + colScale * duplicateCol where the merged column is y and is
+  // simpler to choose col, since it has a coefficient of +1 in the equation z
+  // = col + colScale * duplicateCol where the merged column is z and is
   // currently using the index of col. The duplicateCol can have a positive or
   // negative coefficient. So for postsolve, we first start out with col
   // sitting at the lower bound and compute the corresponding value for the
-  // duplicate column as (y - colLower)/colScale. Then the following things
+  // duplicate column as (z - colLower)/colScale. Then the following things
   // might happen:
   // - case 1: the value computed for duplicateCol is within the bounds
   // - case 1.1: duplicateCol is continuous -> accept value, make col nonbasic
   // at lower and duplicateCol basic
   // - case 1.2: duplicateCol is integer -> accept value if integer feasible,
   // otherwise round down and compute value of col as
-  // col = y - colScale * duplicateCol
+  // col = z - colScale * duplicateCol
   // - case 2: the value for duplicateCol violates the column bounds: make it
   // sit at the bound that is violated
-  //           and compute the value of col as col = y - colScale *
+  //           and compute the value of col as col = z - colScale *
   //           duplicateCol for basis postsolve col is basic and duplicateCol
   //           nonbasic at lower/upper depending on which bound is violated.
-
-  double mergeVal = solution.col_value[col];
 
   if (colLower != -kHighsInf)
     solution.col_value[col] = colLower;
@@ -638,6 +675,10 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
 
   bool recomputeCol = false;
 
+  // Set any basis status for duplicateCol to kNonbasic to check that
+  // it is set
+  if (basis.valid) basis.col_status[duplicateCol] = HighsBasisStatus::kNonbasic;
+    
   if (solution.col_value[duplicateCol] > duplicateColUpper) {
     solution.col_value[duplicateCol] = duplicateColUpper;
     recomputeCol = true;
@@ -647,6 +688,8 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     recomputeCol = true;
     if (basis.valid) basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
   } else if (duplicateColIntegral) {
+    // Doesn't set basis.col_status[duplicateCol], so assume no basis
+    assert(!basis.valid);
     double roundVal = std::round(solution.col_value[duplicateCol]);
     if (std::abs(roundVal - solution.col_value[duplicateCol]) >
         options.mip_feasibility_tolerance) {
@@ -662,6 +705,9 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     if (!duplicateColIntegral && colIntegral) {
       // if column is integral and duplicateCol is not we need to make sure
       // we split the values into an integral one for col
+      //
+      // Doesn't set basis.col_status[duplicateCol], so assume no basis
+      assert(!basis.valid);
       solution.col_value[col] = std::ceil(solution.col_value[col] -
                                           options.mip_feasibility_tolerance);
       solution.col_value[duplicateCol] =
@@ -669,13 +715,18 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     }
   } else {
     // setting col to its lower bound yielded a feasible value for
-    // duplicateCol
+    // duplicateCol - not necessarily!
     if (basis.valid) {
+      // This makes duplicateCol basic
       basis.col_status[duplicateCol] = basis.col_status[col];
       basis.col_status[col] = HighsBasisStatus::kLower;
+      assert(basis.col_status[duplicateCol] == HighsBasisStatus::kBasic);
     }
   }
-  
+  // Check that any basis status for duplicateCol has been set
+  if (basis.valid) assert(basis.col_status[duplicateCol] != HighsBasisStatus::kNonbasic);
+
+
   bool illegal_duplicateCol_lower = solution.col_value[duplicateCol] <
     duplicateColLower - options.mip_feasibility_tolerance;
   bool illegal_duplicateCol_upper = solution.col_value[duplicateCol] >
@@ -693,7 +744,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
 	   mergeVal, colScale,
 	   colLower, colUpper, colIntegral,
 	   duplicateColLower, duplicateColUpper, duplicateColIntegral);
-    fflush(stdout);
+    // Fix error due to undo
     undoFix(options, solution);
     illegal_duplicateCol_lower = solution.col_value[duplicateCol] <
       duplicateColLower - options.mip_feasibility_tolerance;
@@ -703,12 +754,51 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       colLower - options.mip_feasibility_tolerance;
     illegal_col_upper = solution.col_value[col] >
       colUpper + options.mip_feasibility_tolerance;
+    
   }
   const bool allow_assert = false;
   if (allow_assert) assert(!illegal_duplicateCol_lower);
   if (allow_assert) assert(!illegal_duplicateCol_upper);
   if (allow_assert) assert(!illegal_col_lower);
   if (allow_assert) assert(!illegal_col_upper);
+
+  // Set any basis status, ideally keeping col basic
+  if (basis.valid) {
+    bool duplicateCol_basic = false;
+    if (duplicateColLower <= -kHighsInf && duplicateColUpper >= kHighsInf) {
+      // duplicateCol is free, so may be zero
+      if (solution.col_value[duplicateCol] == 0) {
+	basis.col_status[col] = HighsBasisStatus::kBasic;
+	basis.col_status[duplicateCol] = HighsBasisStatus::kZero;
+      } else {
+	duplicateCol_basic = true;
+      }
+    } else if (isAtBound(solution.col_value[duplicateCol], duplicateColLower)) {
+      basis.col_status[col] = HighsBasisStatus::kBasic;
+      basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
+    } else if (isAtBound(solution.col_value[duplicateCol], duplicateColUpper)) {
+      basis.col_status[col] = HighsBasisStatus::kBasic;
+      basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
+    } else {
+      // duplicateCol is not free or at a bound, so must be basic
+      duplicateCol_basic = true;
+    }
+    if (duplicateCol_basic) {
+      // duplicateCol must be basic
+      basis.col_status[duplicateCol] = HighsBasisStatus::kBasic;
+      // Hopefully col can be nonbasic
+      if (isAtBound(solution.col_value[col], colLower)) {
+	basis.col_status[col] = HighsBasisStatus::kLower;
+      } else if (isAtBound(solution.col_value[col], colUpper)) {
+	basis.col_status[col] = HighsBasisStatus::kUpper;
+      } else {
+	basis.col_status[col] = HighsBasisStatus::kNonbasic;
+	printf("When demerging, neither col nor duplicateCol can be nonbasic\n");
+	assert(666==999);
+      }
+    }
+  }
+  assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
 }
 
 bool HighsPostsolveStack::DuplicateColumn::okMerge(const double tolerance) const {
@@ -823,7 +913,7 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(const double tolerance) const
       }
     } else {
       // x and y are continuous
-	printf("DuplicateColumn::checkMerge: x-continuous ; y-continuous\n");
+      //	printf("DuplicateColumn::checkMerge: x-continuous ; y-continuous\n");
     }
   }
   return ok_merge;  
@@ -835,7 +925,7 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(const HighsOptions& options,
   const double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   std::vector<double>& col_value = solution.col_value;
   const bool allow_assert = false;
-  const bool allow_report = false;
+  const bool allow_report = true;
   //=============================================================================================
 
   auto isInteger = [&](const double v) {

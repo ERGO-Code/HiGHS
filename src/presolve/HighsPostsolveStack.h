@@ -475,18 +475,21 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kDuplicateRow);
   }
 
-  void duplicateColumn(double colScale, double colLower, double colUpper,
+  bool duplicateColumn(double colScale, double colLower, double colUpper,
                        double duplicateColLower, double duplicateColUpper,
                        HighsInt col, HighsInt duplicateCol, bool colIntegral,
-                       bool duplicateColIntegral) {
+                       bool duplicateColIntegral,
+		       const double ok_merge_tolerance) {
     const HighsInt origCol = origColIndex[col];
     const HighsInt origDuplicateCol = origColIndex[duplicateCol];
     DuplicateColumn debug_values = {
         colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
         origCol, origDuplicateCol, colIntegral, duplicateColIntegral};
-    const bool ok_merge = debug_values.okMerge(1e-6);
-    if (!ok_merge) {
-      printf("duplicateColumn: Illegal merge\n");
+    const bool ok_merge = debug_values.okMerge(ok_merge_tolerance);
+    const bool prevent_illegal_merge = true;
+    if (!ok_merge && prevent_illegal_merge) {
+      printf("duplicateColumn: Illegal merge prevented\n");
+      return false;
     }
     reductionValues.push(debug_values);
     //    reductionValues.push(DuplicateColumn{
@@ -498,6 +501,7 @@ class HighsPostsolveStack {
     // mark columns as not linearly transformable
     linearlyTransformable[origCol] = false;
     linearlyTransformable[origDuplicateCol] = false;
+    return true;
   }
 
   std::vector<double> getReducedPrimalSolution(
