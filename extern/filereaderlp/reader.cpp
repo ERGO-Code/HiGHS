@@ -906,6 +906,10 @@ void Reader::processtokens() {
          }
 
          // +/- (possibly twice) followed by something that isn't a constant, opening bracket, or string (variable name)
+         if (rawtokens[0].istype(RawTokenType::GREATER)) {
+	   // ">" suggests that the file contains indicator constraints
+	   printf("File appears to contain indicator constraints: cannot currently be handled by HiGHS\n");
+	 }
          lpassert(false);
       }
 
