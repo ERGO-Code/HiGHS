@@ -5612,7 +5612,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           mergeUpper = model->col_upper_[col] +
                        colScale * model->col_lower_[duplicateCol];
         }
-	printf("kMergeParallelCols: Possible merge with scale = %g\n", colScale);
+	printf("kMergeParallelCols: Possible merge [%s; %s] with scale = %g\n", 
+	       highsBoolToString(model->integrality_[col] == HighsVarType::kInteger, 1).c_str(),
+	       highsBoolToString(model->integrality_[duplicateCol] == HighsVarType::kInteger, 1).c_str(),
+	       colScale);
         if (model->integrality_[col] == HighsVarType::kInteger) {
           // the only possible reduction if the column parallelism check
           // succeeds is to merge the two columns into one. If one column is
