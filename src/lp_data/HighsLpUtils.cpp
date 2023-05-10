@@ -2155,17 +2155,27 @@ HighsStatus readSolutionFile(const std::string filename,
                                   read_solution, read_basis, in_file);
   }
   assert(keyword == "Rows");
-  if (num_row != lp_num_row) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                 " rows, not %" HIGHSINT_FORMAT "\n",
-                 num_row, lp_num_row);
-    return readSolutionFileErrorReturn(in_file);
-  }
+  // OK to read from a file with different number of rows, since the
+  // primal solution is all that's important. For example, see #1284,
+  // where the user is solving a sequence of MIPs with the same number
+  // of variables, but incresing numbers of constraints, and wants to
+  // used the solution from one MIP as the starting solution for the
+  // next.
+  const bool num_row_ok = num_row == lp_num_row;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (!readSolutionFileIdDoubleLineOk(value, in_file))
       return readSolutionFileErrorReturn(in_file);
-    read_solution.row_value[iRow] = value;
+    if (num_row_ok) read_solution.row_value[iRow] = value;
+  }
+  if (!num_row_ok) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                 " rows, not %" HIGHSINT_FORMAT ": row values ignored\n",
+                 num_row, lp_num_row);
+    // Calculate the row values
+    if (calculateRowValues(lp, read_solution.col_value,
+                           read_solution.row_value) != HighsStatus::kOk)
+      return readSolutionFileErrorReturn(in_file);
   }
   // OK to have no EOL
   if (!readSolutionFileIgnoreLineOk(in_file))
