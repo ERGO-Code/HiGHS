@@ -487,10 +487,7 @@ class HighsPostsolveStack {
         origCol, origDuplicateCol, colIntegral, duplicateColIntegral};
     const bool ok_merge = debug_values.okMerge(ok_merge_tolerance);
     const bool prevent_illegal_merge = true;
-    if (!ok_merge && prevent_illegal_merge) {
-      printf("duplicateColumn: Illegal merge prevented\n");
-      return false;
-    }
+    if (!ok_merge && prevent_illegal_merge) return false;
     reductionValues.push(debug_values);
     //    reductionValues.push(DuplicateColumn{
     //        colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,

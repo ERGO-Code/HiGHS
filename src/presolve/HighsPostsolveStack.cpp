@@ -556,13 +556,13 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   const bool allow_report = true;
   const double mergeVal = solution.col_value[col];
 
-  auto okResidual = [&](const double x, const double y, const double z) {
-    const double check_z = x + colScale*y;
-    const double residual = std::fabs(check_z - z);
+  auto okResidual = [&](const double x, const double y) {
+    const double check_mergeVal = x + colScale*y;
+    const double residual = std::fabs(check_mergeVal - mergeVal);
     const bool ok_residual = residual <= options.primal_feasibility_tolerance;
     if (!ok_residual) {
       printf("HighsPostsolveStack::DuplicateColumn::undo %g + %g.%g = %g != %g: residual = %g\n",
-	     x, colScale, y, check_z, z, residual);
+	     x, colScale, y, check_mergeVal, mergeVal, residual);
     }
     return ok_residual;
   };
@@ -613,7 +613,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
           solution.col_value[duplicateCol] = duplicateColUpper;
         }
         // nothing else to do
-	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
+	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol]));
         return;
       }
       case HighsBasisStatus::kUpper: {
@@ -626,7 +626,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
           solution.col_value[duplicateCol] = duplicateColLower;
         }
         // nothing else to do
-	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
+	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol]));
         return;
       }
       case HighsBasisStatus::kZero: {
@@ -634,7 +634,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
         basis.col_status[duplicateCol] = HighsBasisStatus::kZero;
         solution.col_value[duplicateCol] = 0.0;
         // nothing else to do
-	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
+	assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol]));
         return;
       }
       case HighsBasisStatus::kBasic:
@@ -735,7 +735,8 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     colLower - options.mip_feasibility_tolerance;
   bool illegal_col_upper = solution.col_value[col] >
     colUpper + options.mip_feasibility_tolerance;
-  bool error = illegal_duplicateCol_lower || illegal_duplicateCol_upper || illegal_col_lower || illegal_col_upper;
+  bool illegal_residual = !okResidual(solution.col_value[col], solution.col_value[duplicateCol]);
+  bool error = illegal_duplicateCol_lower || illegal_duplicateCol_upper || illegal_col_lower || illegal_col_upper || illegal_residual;
   if (error) {
     if (allow_report) printf("DuplicateColumn::undo error: col = %d(%g), duplicateCol = %d(%g)\n"
 	   "%g\n%g\n%g %g %d\n%g %g %d\n",
@@ -754,15 +755,19 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       colLower - options.mip_feasibility_tolerance;
     illegal_col_upper = solution.col_value[col] >
       colUpper + options.mip_feasibility_tolerance;
-    
+    illegal_residual = !okResidual(solution.col_value[col], solution.col_value[duplicateCol]);
+  } else {
+    return;
   }
   const bool allow_assert = false;
-  if (allow_assert) assert(!illegal_duplicateCol_lower);
-  if (allow_assert) assert(!illegal_duplicateCol_upper);
-  if (allow_assert) assert(!illegal_col_lower);
-  if (allow_assert) assert(!illegal_col_upper);
-
-  // Set any basis status, ideally keeping col basic
+  if (allow_assert) {
+    assert(!illegal_duplicateCol_lower);
+    assert(!illegal_duplicateCol_upper);
+    assert(!illegal_col_lower);
+    assert(!illegal_col_upper);
+    assert(!illegal_residual);
+  }
+  // Following undoFix, set any basis status, ideally keeping col basic
   if (basis.valid) {
     bool duplicateCol_basic = false;
     if (duplicateColLower <= -kHighsInf && duplicateColUpper >= kHighsInf) {
@@ -798,7 +803,6 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       }
     }
   }
-  assert(okResidual(solution.col_value[col], solution.col_value[duplicateCol], mergeVal));
 }
 
 bool HighsPostsolveStack::DuplicateColumn::okMerge(const double tolerance) const {
@@ -871,14 +875,14 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(const double tolerance) const
       double int_scale = std::floor(scale + 0.5);
       bool scale_is_int = std::fabs(int_scale - scale) <= tolerance;
       if (!scale_is_int) {
-	printf("%sDuplicateColumn::checkMerge: Scale must be integer, but is %g\n", newline.c_str(), scale);
+	printf("%sDuplicateColumn::checkMerge: scale must be integer, but is %g\n", newline.c_str(), scale);
     newline = "";
 	ok_merge = false;
       }
       double scale_limit = x_len + 1 + tolerance;
       if (abs_scale > scale_limit) {
-	printf("%sDuplicateColumn::checkMerge: |Scale| = %g, but cannot exceed %g since x is [%g, %g]\n", newline.c_str(),
-	       abs_scale, scale_limit, x_lo, x_up);
+	printf("%sDuplicateColumn::checkMerge: scale = %g, but |scale| cannot exceed %g since x is [%g, %g]\n", newline.c_str(),
+	       scale, scale_limit, x_lo, x_up);
     newline = "";
 	ok_merge = false;
       }
@@ -886,15 +890,15 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(const double tolerance) const
       printf("DuplicateColumn::checkMerge: x-integer; y-continuous\n");
       // Scale must be at least 1/(y_u-y_l) in magnitude
       if (y_len == 0) {
-	printf("%sDuplicateColumn::checkMerge: |Scale| = %g is too small, as y is [%g, %g]\n", newline.c_str(),
-	       abs_scale, y_lo, y_up);
+	printf("%sDuplicateColumn::checkMerge: scale = %g is too small in magnitude, as y is [%g, %g]\n", newline.c_str(),
+	       scale, y_lo, y_up);
     newline = "";
 	ok_merge = false;
       } else {
 	double scale_limit = 1/y_len;
 	if (abs_scale < scale_limit) {
-	  printf("%sDuplicateColumn::checkMerge: |Scale| = %g, but must be at least %g since y is [%g, %g]\n", newline.c_str(),
-		 abs_scale, scale_limit, y_lo, y_up);
+	  printf("%sDuplicateColumn::checkMerge: scale = %g, but |scale| must be at least %g since y is [%g, %g]\n", newline.c_str(),
+		 scale, scale_limit, y_lo, y_up);
     newline = "";
 	  ok_merge = false;
 	}
@@ -906,8 +910,8 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(const double tolerance) const
       // Scale must be at most (x_u-x_l) in magnitude
       double scale_limit = x_len;
       if (abs_scale > scale_limit) {
-	printf("%sDuplicateColumn::checkMerge: |Scale| = %g, but must be at most %g since x is [%g, %g]\n", newline.c_str(),
-	       abs_scale, scale_limit, x_lo, x_up);
+	printf("%sDuplicateColumn::checkMerge: scale = %g, but |scale| must be at most %g since x is [%g, %g]\n", newline.c_str(),
+	       scale, scale_limit, x_lo, x_up);
 	newline = "";
 	ok_merge = false;
       }

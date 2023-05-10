@@ -5524,13 +5524,15 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // if the scale is larger than 1, duplicate column cannot compensate for
         // all values of scaled col due to integrality as the scaled column
         // moves on a grid of 1/scale.
+	//
+	// ToDo: Check whether this is too restrictive
         if (colScale != 1.0) checkDuplicateColImplBounds = false;
       } else if (model->integrality_[i] == HighsVarType::kInteger) {
         col = i;
         duplicateCol = parallelColCandidate;
         colScale = colMax[duplicateCol].first / colMax[col].first;
 
-        // as col is integral and dulicateCol is not col cannot compensate for
+        // as col is integral and duplicateCol is not col cannot compensate for
         // duplicate col
         checkColImplBounds = false;
       } else {
@@ -5538,7 +5540,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         duplicateCol = i;
         colScale = colMax[duplicateCol].first / colMax[col].first;
 
-        // as col might be integral and dulicateCol is not integral. In that
+        // as col might be integral and duplicateCol is not integral. In that
         // case col cannot compensate for duplicate col
         checkColImplBounds =
             model->integrality_[parallelColCandidate] != HighsVarType::kInteger;
@@ -5610,6 +5612,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           mergeUpper = model->col_upper_[col] +
                        colScale * model->col_lower_[duplicateCol];
         }
+	printf("kMergeParallelCols: Possible merge with scale = %g\n", colScale);
         if (model->integrality_[col] == HighsVarType::kInteger) {
           // the only possible reduction if the column parallelism check
           // succeeds is to merge the two columns into one. If one column is
@@ -5623,46 +5626,53 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                                      model->col_lower_[duplicateCol])) <
                 1.0 - primal_feastol)
               continue;
-          } else if (colScale > 1.0) {
-            // round bounds to exact integer values to make sure they are not
-            // wrongly truncated in conversions happening below
-            mergeLower = std::round(mergeLower);
-            mergeUpper = std::round(mergeUpper);
+          } else {
+	    // Both columns integer
+	    //
+	    // round bounds to exact integer values to make sure they are not
+	    // wrongly truncated in conversions happening below
+	    mergeLower = std::round(mergeLower);
+	    mergeUpper = std::round(mergeUpper);
 
-            // this should not happen, since this would allow domination and
-            // would have been caught by the cases above
-            assert(mergeLower != -kHighsInf);
-            assert(mergeUpper != kHighsInf);
+	    // this should not happen, since this would allow domination and
+	    // would have been caught by the cases above
+	    assert(mergeLower != -kHighsInf);
+	    assert(mergeUpper != kHighsInf);
 
-            HighsInt kMax = mergeUpper;
-            bool representable = true;
-            for (HighsInt k = mergeLower; k <= kMax; ++k) {
-              // we loop over the domain of the merged variable to check whether
-              // there exists a value for col and duplicateCol so that both are
-              // within their bounds. since the merged column y is defined as y
-              // = col + colScale * duplicateCol, we know that the value of col
-              // can be computed as col = y - colScale * duplicateCol. Hence we
-              // loop over the domain of col2 until we verify that a suitable
-              // value of column 1 exists to yield the desired value for y.
-              double mergeVal = mergeLower + k;
-              HighsInt k2Max = model->col_upper_[duplicateCol];
-              assert(k2Max == model->col_upper_[duplicateCol]);
-              representable = false;
-              for (HighsInt k2 = model->col_lower_[duplicateCol]; k2 <= k2Max;
-                   ++k2) {
-                double colVal = mergeVal - colScale * k2;
-                if (colVal >= model->col_lower_[col] - primal_feastol &&
-                    colVal <= model->col_upper_[col] + primal_feastol) {
-                  representable = true;
-                  break;
-                }
-              }
-
-              if (!representable) break;
-            }
-
-            if (!representable) continue;
-          }
+	    HighsInt kMax = mergeUpper;
+	    bool representable = true;
+	    if (colScale > 1.0) {
+	      for (HighsInt k = mergeLower; k <= kMax; ++k) {
+		// we loop over the domain of the merged variable to check whether
+		// there exists a value for col and duplicateCol so that both are
+		// within their bounds. since the merged column y is defined as y
+		// = col + colScale * duplicateCol, we know that the value of col
+		// can be computed as col = y - colScale * duplicateCol. Hence we
+		// loop over the domain of col2 until we verify that a suitable
+		// value of column 1 exists to yield the desired value for y.
+		double mergeVal = mergeLower + k;
+		HighsInt k2Max = model->col_upper_[duplicateCol];
+		assert(k2Max == model->col_upper_[duplicateCol]);
+		representable = false;
+		for (HighsInt k2 = model->col_lower_[duplicateCol]; k2 <= k2Max;
+		     ++k2) {
+		  double colVal = mergeVal - colScale * k2;
+		  if (colVal >= model->col_lower_[col] - primal_feastol &&
+		      colVal <= model->col_upper_[col] + primal_feastol) {
+		    representable = true;
+		    break;
+		  }
+		}
+		
+		if (!representable) break;
+	      }
+	      
+	      if (!representable) continue;
+	    } else if (colScale < -1.0) {
+	      printf("kMergeParallelCols: Possible merge with -1 > scale = %g\n", colScale);
+	      assert(444==999);
+	    }
+	  }
         }
       }
 
@@ -5742,7 +5752,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               model->integrality_[duplicateCol] == HighsVarType::kInteger,
 					  options->mip_feasibility_tolerance);
 	  if (!ok_merge) {
-	    printf("HPresolve::detectParallelRowsAndCols Illegal merge\n");
+	    printf("HPresolve::detectParallelRowsAndCols Illegal merge prevented\n");
 	    break;
 	  }
 	  // When merging a continuous variable into an integer
