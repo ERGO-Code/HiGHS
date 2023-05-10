@@ -285,7 +285,7 @@ TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
   std::vector<double> value = {1, 1};
   highs.addRow(1, kHighsInf, 2, index.data(), value.data());
   highs.run();
-  if (dev_run) highs.writeSolution(solution_file_name);
+  highs.writeSolution(solution_file_name);
   if (dev_run) highs.writeSolution("", 1);
   highs.clearSolver();
   // Add a constraint that cuts off the optimal solution, but leaves
