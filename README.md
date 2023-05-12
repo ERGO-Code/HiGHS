@@ -158,7 +158,7 @@ HiGHS is compiled in a shared library. Running
 
 `make install`
 
-from the build folder installs the library in `lib/`, as well as all header files in `include/`. For a custom
+from the build folder installs the library in `lib/`, as well as all header files in `include/highs/`. For a custom
 installation in `install_folder` run
 
 `cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
