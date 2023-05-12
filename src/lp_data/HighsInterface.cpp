@@ -288,6 +288,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
+  // Possibly add row names
+  lp.addRowNames("", ext_num_new_row);
+  //  lp.row_hash_.name2index.clear();
+
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
   assert(lpDimensionsOk("addRows", lp, options.log_options));
@@ -296,7 +300,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
-  lp.row_hash_.name2index.clear();
+
   return return_status;
 }
 

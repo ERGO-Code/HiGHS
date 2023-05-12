@@ -40,6 +40,8 @@ class HighsLp {
   std::string model_name_;
   std::string objective_name_;
 
+  HighsInt new_col_name_ix_ = 0;
+  HighsInt new_row_name_ix_ = 0;
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
 
@@ -72,6 +74,8 @@ class HighsLp {
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
   void exactResize();
+  void addColNames(const std::string name, const HighsInt num_new_col = 1);
+  void addRowNames(const std::string name, const HighsInt num_new_row = 1);
   void unapplyMods();
   void clear();
 };
