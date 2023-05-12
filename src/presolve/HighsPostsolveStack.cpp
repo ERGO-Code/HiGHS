@@ -944,7 +944,7 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
     } else {
       // x and y are continuous
       //	printf("DuplicateColumn::checkMerge: x-continuous ;
-      //y-continuous\n");
+      // y-continuous\n");
     }
   }
   return ok_merge;
