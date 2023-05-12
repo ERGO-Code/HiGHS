@@ -5524,8 +5524,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // if the scale is larger than 1, duplicate column cannot compensate for
         // all values of scaled col due to integrality as the scaled column
         // moves on a grid of 1/scale.
-	//
-	// ToDo: Check whether this is too restrictive
+        //
+        // ToDo: Check whether this is too restrictive
         if (colScale != 1.0) checkDuplicateColImplBounds = false;
       } else if (model->integrality_[i] == HighsVarType::kInteger) {
         col = i;
@@ -5599,42 +5599,53 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               colScale > 0 ? kDominanceColToUpper : kDominanceColToLower;
       }
       if (reductionCase == kMergeParallelCols) {
-	const bool x_int = model->integrality_[col] == HighsVarType::kInteger;
-	const bool y_int = model->integrality_[duplicateCol] == HighsVarType::kInteger;
+        const bool x_int = model->integrality_[col] == HighsVarType::kInteger;
+        const bool y_int =
+            model->integrality_[duplicateCol] == HighsVarType::kInteger;
         bool illegal_scale = true;
-	if (x_int) {
+        if (x_int) {
           // The only possible reduction if the column parallelism check
           // succeeds is to merge the two columns into one. If one column is
           // integral this means we have restrictions on integers and need to
           // check additional conditions to allow the merging of two integer
           // columns, or a continuous column and an integer.
           if (model->integrality_[duplicateCol] != HighsVarType::kInteger) {
-	    assert(!y_int);
+            assert(!y_int);
             // only one column is integral which cannot be duplicateCol due to
             // the way we assign the columns above
-	    //
-	    // Scale must not exceed 1/(y_u-y_l) in magnitude
-	    illegal_scale = std::abs(colScale * (model->col_upper_[duplicateCol] -
-						 model->col_lower_[duplicateCol])) <
-	      1.0 - primal_feastol;
-	    printf("kMergeParallelCols: T-F is %s legal with scale %.4g and duplicateCol = [%.4g, %.4g]\n", 
-		   illegal_scale ? "not" : "   ", colScale, model->col_lower_[duplicateCol], model->col_upper_[duplicateCol]);
+            //
+            // Scale must not exceed 1/(y_u-y_l) in magnitude
+            illegal_scale =
+                std::abs(colScale * (model->col_upper_[duplicateCol] -
+                                     model->col_lower_[duplicateCol])) <
+                1.0 - primal_feastol;
+            printf(
+                "kMergeParallelCols: T-F is %s legal with scale %.4g and "
+                "duplicateCol = [%.4g, %.4g]\n",
+                illegal_scale ? "not" : "   ", colScale,
+                model->col_lower_[duplicateCol],
+                model->col_upper_[duplicateCol]);
           } else {
-	    // Both columns integer
-	    assert(x_int && y_int);
-	    // Scale must be integer and not exceed (x_u-x_l)+1 in magnitude
-	    const double scale_limit = model->col_upper_[col] - model->col_lower_[col] + 1 + primal_feastol;
-	    illegal_scale = std::fabs(colScale) > scale_limit;
-	    printf("kMergeParallelCols: T-T is %s legal with scale %.4g and col = [%.4g, %.4g]\n", 
-		   illegal_scale ? "not" : "   ", colScale, model->col_lower_[col], model->col_upper_[col]);		   
-	  }
-	  if (illegal_scale) continue;
+            // Both columns integer
+            assert(x_int && y_int);
+            // Scale must be integer and not exceed (x_u-x_l)+1 in magnitude
+            const double scale_limit = model->col_upper_[col] -
+                                       model->col_lower_[col] + 1 +
+                                       primal_feastol;
+            illegal_scale = std::fabs(colScale) > scale_limit;
+            printf(
+                "kMergeParallelCols: T-T is %s legal with scale %.4g and col = "
+                "[%.4g, %.4g]\n",
+                illegal_scale ? "not" : "   ", colScale, model->col_lower_[col],
+                model->col_upper_[col]);
+          }
+          if (illegal_scale) continue;
         } else {
-	  // Neither column integer: no problem with 
-	  assert(!x_int && !y_int);
-	}
+          // Neither column integer: no problem with
+          assert(!x_int && !y_int);
+        }
       }
-      
+
       bool parallel = true;
       // now check whether the coefficients are actually parallel
       for (const HighsSliceNonzero& colNz : getColumnVector(col)) {
@@ -5645,29 +5656,33 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         }
 
         double difference = std::abs(
-				     double(Avalue[duplicateColRowPos] - colScale * colNz.value()));
+            double(Avalue[duplicateColRowPos] - colScale * colNz.value()));
         if (difference > options->small_matrix_value) {
           parallel = false;
           break;
         }
       }
-      
+
       if (!parallel) continue;
-      
+
       const int check_col = debugGetCheckCol();
       //      if (model->col_names_[col] == "c38") {
-      if (check_col >= 0) printf("ParallelColumns: reduction %2d: col %d[%s]\n", 
-	       int(postsolve_stack.numReductions())+1, int(col), model->col_names_[col].c_str());
-	//      }
+      if (check_col >= 0)
+        printf("ParallelColumns: reduction %2d: col %d[%s]\n",
+               int(postsolve_stack.numReductions()) + 1, int(col),
+               model->col_names_[col].c_str());
+      //      }
       bool debug_report = false;
       if (check_col >= 0) {
         debug_report = col == check_col;
       }
       if (debug_report) {
-        printf("ParallelColumns: reduction %2d: col = %d[%s]; duplicate = %d[%s] - case %d\n",
-	       int(postsolve_stack.numReductions()),
-               int(col), model->col_names_[col].c_str(), int(duplicateCol),
-               model->col_names_[duplicateCol].c_str(), int(reductionCase));
+        printf(
+            "ParallelColumns: reduction %2d: col = %d[%s]; duplicate = %d[%s] "
+            "- case %d\n",
+            int(postsolve_stack.numReductions()), int(col),
+            model->col_names_[col].c_str(), int(duplicateCol),
+            model->col_names_[duplicateCol].c_str(), int(reductionCase));
       }
       switch (reductionCase) {
         case kDominanceDuplicateColToLower:
@@ -5703,27 +5718,29 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           fixColToUpper(postsolve_stack, col);
           break;
         case kMergeParallelCols:
-	  const bool ok_merge = postsolve_stack.duplicateColumn(
+          const bool ok_merge = postsolve_stack.duplicateColumn(
               colScale, model->col_lower_[col], model->col_upper_[col],
               model->col_lower_[duplicateCol], model->col_upper_[duplicateCol],
               col, duplicateCol,
               model->integrality_[col] == HighsVarType::kInteger,
               model->integrality_[duplicateCol] == HighsVarType::kInteger,
-					  options->mip_feasibility_tolerance);
-	  if (!ok_merge) {
-	    printf("HPresolve::detectParallelRowsAndCols Illegal merge prevented\n");
-	    break;
-	  }
-	  // When merging a continuous variable into an integer
-	  // variable, the integer will become continuous - since any
-	  // value in its range can be mapped back to an integer and a
-	  // continuous variable. Hence the number of integer
-	  // variables in the rows corresponding to the former integer
-	  // variable reduces.
-	  //
-	  // With the opposite - merging an integer variable into a
-	  // continuous variable - the retained variable is
-	  // continuous, so no action is required
+              options->mip_feasibility_tolerance);
+          if (!ok_merge) {
+            printf(
+                "HPresolve::detectParallelRowsAndCols Illegal merge "
+                "prevented\n");
+            break;
+          }
+          // When merging a continuous variable into an integer
+          // variable, the integer will become continuous - since any
+          // value in its range can be mapped back to an integer and a
+          // continuous variable. Hence the number of integer
+          // variables in the rows corresponding to the former integer
+          // variable reduces.
+          //
+          // With the opposite - merging an integer variable into a
+          // continuous variable - the retained variable is
+          // continuous, so no action is required
           HighsInt rowsizeIntReduction = 0;
           if (model->integrality_[duplicateCol] != HighsVarType::kInteger &&
               model->integrality_[col] == HighsVarType::kInteger) {
@@ -5743,13 +5760,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           // infinite bounds that contribute to the implied row bounds are
           // updated correctly and that all finite contributions are removed.
 
-	  double mergeLower = 0;
-	  double mergeUpper = 0;
+          double mergeLower = 0;
+          double mergeUpper = 0;
           if (colScale > 0) {
-	    mergeLower = model->col_lower_[col] +
-	      colScale * model->col_lower_[duplicateCol];
-	    mergeUpper = model->col_upper_[col] +
-	      colScale * model->col_upper_[duplicateCol];
+            mergeLower = model->col_lower_[col] +
+                         colScale * model->col_lower_[duplicateCol];
+            mergeUpper = model->col_upper_[col] +
+                         colScale * model->col_upper_[duplicateCol];
             if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
               model->col_upper_[duplicateCol] =
                   model->col_upper_[col] / colScale;
@@ -5766,10 +5783,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             else
               model->col_lower_[duplicateCol] = 0;
           } else {
-	    mergeLower = model->col_lower_[col] +
-	      colScale * model->col_upper_[duplicateCol];
-	    mergeUpper = model->col_upper_[col] +
-	      colScale * model->col_lower_[duplicateCol];
+            mergeLower = model->col_lower_[col] +
+                         colScale * model->col_upper_[duplicateCol];
+            mergeUpper = model->col_upper_[col] +
+                         colScale * model->col_lower_[duplicateCol];
             if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
               model->col_lower_[duplicateCol] =
                   model->col_upper_[col] / colScale;
@@ -5789,7 +5806,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (debug_report) {
             printf(
-                "ParallelColumns: col = %d[%s]; bounds change from [%.4g, %.4g] to "
+                "ParallelColumns: col = %d[%s]; bounds change from [%.4g, "
+                "%.4g] to "
                 "[%.4g, %.4g]\n",
                 int(check_col), model->col_names_[check_col].c_str(),
                 model->col_lower_[check_col], model->col_upper_[check_col],
@@ -5809,9 +5827,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             // if an an integer column was merged into a continuous one make
             // sure to update the integral rowsize
             if (rowsizeIntReduction) {
-	      assert(rowsizeIntReduction == 1);
+              assert(rowsizeIntReduction == 1);
               rowsizeInteger[colrow] -= rowsizeIntReduction;
-	    }
+            }
             coliter = Anext[coliter];
 
             unlink(colpos);
@@ -6638,7 +6656,7 @@ return false;
 }
 */
 HighsInt HPresolve::debugGetCheckCol() const {
-  const std::string check_col_name = "";//c37";
+  const std::string check_col_name = "";  // c37";
   HighsInt check_col = -1;
   if (check_col_name == "") return check_col;
   if (model->col_names_.size()) {

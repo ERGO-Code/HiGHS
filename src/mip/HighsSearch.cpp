@@ -272,8 +272,39 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     HighsInt col = fracints[k].first;
     double fracval = fracints[k].second;
 
-    assert(fracval > localdom.col_lower_[col] + mipsolver.mipdata_->feastol);
-    assert(fracval < localdom.col_upper_[col] - mipsolver.mipdata_->feastol);
+    const double lower_residual =
+        (fracval - localdom.col_lower_[col]) - mipsolver.mipdata_->feastol;
+    const bool lower_ok = lower_residual > 0;
+    if (!lower_ok)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
+                   "HighsSearch::selectBranchingCandidate Error fracval = %g "
+                   "<= %g = %g + %g = "
+                   "localdom.col_lower_[col] + mipsolver.mipdata_->feastol: "
+                   "Residual %g\n",
+                   fracval,
+                   localdom.col_lower_[col] + mipsolver.mipdata_->feastol,
+                   localdom.col_lower_[col], mipsolver.mipdata_->feastol,
+                   lower_residual);
+
+    const double upper_residual =
+        (localdom.col_upper_[col] - fracval) - mipsolver.mipdata_->feastol;
+    const bool upper_ok = upper_residual > 0;
+    if (!upper_ok)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
+                   "HighsSearch::selectBranchingCandidate Error fracval = %g "
+                   ">= %g = %g - %g = "
+                   "localdom.col_upper_[col] - mipsolver.mipdata_->feastol: "
+                   "Residual %g\n",
+                   fracval,
+                   localdom.col_upper_[col] - mipsolver.mipdata_->feastol,
+                   localdom.col_upper_[col], mipsolver.mipdata_->feastol,
+                   upper_residual);
+
+    assert(lower_residual > -1e-12 && upper_residual > -1e-12);
+
+    //    assert(fracval > localdom.col_lower_[col] +
+    //    mipsolver.mipdata_->feastol); assert(fracval <
+    //    localdom.col_upper_[col] - mipsolver.mipdata_->feastol);
 
     if (pseudocost.isReliable(col)) {
       upscore[k] = pseudocost.getPseudocostUp(col, fracval);

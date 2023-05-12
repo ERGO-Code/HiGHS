@@ -690,15 +690,16 @@ try_again:
       double intval = std::floor(value + 0.5);
       double integrality_infeasibility = std::fabs(intval - value);
       if (integrality_infeasibility >
-	  mipsolver.options_mip_->mip_feasibility_tolerance) {
-	const bool allow_report = false;
-	if (allow_report) printf("Col %d[%s] value %g has integrality infeasibility %g\n",
-				 int(i), mipsolver.orig_model_->col_names_[i].c_str(),
-				 value, integrality_infeasibility);
-	check_int = i;
+          mipsolver.options_mip_->mip_feasibility_tolerance) {
+        const bool allow_report = false;
+        if (allow_report)
+          printf("Col %d[%s] value %g has integrality infeasibility %g\n",
+                 int(i), mipsolver.orig_model_->col_names_[i].c_str(), value,
+                 integrality_infeasibility);
+        check_int = i;
       }
-      integrality_violation_ = 
-	std::max(integrality_infeasibility, integrality_violation_);
+      integrality_violation_ =
+          std::max(integrality_infeasibility, integrality_violation_);
     }
 
     const double lower = mipsolver.orig_model_->col_lower_[i];
@@ -714,9 +715,10 @@ try_again:
     if (primal_infeasibility >
         mipsolver.options_mip_->primal_feasibility_tolerance) {
       const bool allow_report = false;
-      if (allow_report) printf("Col %d[%s] [%g, %g, %g] has infeasibility %g\n",
-			       int(i), mipsolver.orig_model_->col_names_[i].c_str(),
-			       lower, value, upper, primal_infeasibility);
+      if (allow_report)
+        printf("Col %d[%s] [%g, %g, %g] has infeasibility %g\n", int(i),
+               mipsolver.orig_model_->col_names_[i].c_str(), lower, value,
+               upper, primal_infeasibility);
       check_col = i;
     }
     bound_violation_ = std::max(bound_violation_, primal_infeasibility);
@@ -737,9 +739,10 @@ try_again:
     if (primal_infeasibility >
         mipsolver.options_mip_->primal_feasibility_tolerance) {
       const bool allow_report = false;
-      if (allow_report) printf("Row %d[%s] [%g, %g, %g] has infeasibility %g\n",
-			       int(i), mipsolver.orig_model_->row_names_[i].c_str(),
-			       lower, value, upper, primal_infeasibility);
+      if (allow_report)
+        printf("Row %d[%s] [%g, %g, %g] has infeasibility %g\n", int(i),
+               mipsolver.orig_model_->row_names_[i].c_str(), lower, value,
+               upper, primal_infeasibility);
       check_row = i;
     }
     row_violation_ = std::max(row_violation_, primal_infeasibility);
@@ -805,39 +808,42 @@ try_again:
     if (check_col >= 0) {
       check_col_data = " (col " + std::to_string(check_col);
       if (mipsolver.orig_model_->col_names_.size())
-	check_col_data += "[" + mipsolver.orig_model_->col_names_[check_col] + "]";
+        check_col_data +=
+            "[" + mipsolver.orig_model_->col_names_[check_col] + "]";
       check_col_data += ")";
     }
     std::string check_int_data = "";
     if (check_int >= 0) {
       check_int_data = " (col " + std::to_string(check_int);
       if (mipsolver.orig_model_->col_names_.size())
-	check_int_data += "[" + mipsolver.orig_model_->col_names_[check_int] + "]";
+        check_int_data +=
+            "[" + mipsolver.orig_model_->col_names_[check_int] + "]";
       check_int_data += ")";
     }
     std::string check_row_data = "";
     if (check_row >= 0) {
       check_row_data = " (row " + std::to_string(check_row);
       if (mipsolver.orig_model_->row_names_.size())
-	check_row_data += "[" + mipsolver.orig_model_->row_names_[check_row] + "]";
+        check_row_data +=
+            "[" + mipsolver.orig_model_->row_names_[check_row] + "]";
       check_row_data += ")";
     }
-    //    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+    //    highsLogUser(mipsolver.options_mip_->log_options,
+    //    HighsLogType::kWarning,
     printf(
         "Solution with objective %g has untransformed violations: "
         "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
-        double(obj),
-	bound_violation_, check_col_data.c_str(),
-        integrality_violation_, check_int_data.c_str(),
-	row_violation_, check_row_data.c_str());
+        double(obj), bound_violation_, check_col_data.c_str(),
+        integrality_violation_, check_int_data.c_str(), row_violation_,
+        check_row_data.c_str());
 
-    const bool debug_repeat = false;//true;
+    const bool debug_repeat = false;  // true;
     if (debug_repeat) {
       HighsSolution check_solution;
       check_solution.col_value = sol;
       check_solution.value_valid = true;
       postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
-				check_col);
+                                check_col);
     }
 
     if (!currentFeasible) {
