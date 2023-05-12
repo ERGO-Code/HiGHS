@@ -5598,20 +5598,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           reductionCase =
               colScale > 0 ? kDominanceColToUpper : kDominanceColToLower;
       }
-      double mergeLower = 0;
-      double mergeUpper = 0;
       if (reductionCase == kMergeParallelCols) {
-        if (colScale > 0) {
-          mergeLower = model->col_lower_[col] +
-	    colScale * model->col_lower_[duplicateCol];
-          mergeUpper = model->col_upper_[col] +
-	    colScale * model->col_upper_[duplicateCol];
-        } else {
-          mergeLower = model->col_lower_[col] +
-	    colScale * model->col_upper_[duplicateCol];
-          mergeUpper = model->col_upper_[col] +
-	    colScale * model->col_lower_[duplicateCol];
-        }
 	const bool x_int = model->integrality_[col] == HighsVarType::kInteger;
 	const bool y_int = model->integrality_[duplicateCol] == HighsVarType::kInteger;
         bool illegal_scale = true;
@@ -5630,7 +5617,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 	    illegal_scale = std::abs(colScale * (model->col_upper_[duplicateCol] -
 						 model->col_lower_[duplicateCol])) <
 	      1.0 - primal_feastol;
-	    printf("kMergeParallelCols: T-F is %s legal with scale %g and duplicateCol = [%g, %g]\n", 
+	    printf("kMergeParallelCols: T-F is %s legal with scale %.4g and duplicateCol = [%.4g, %.4g]\n", 
 		   illegal_scale ? "not" : "   ", colScale, model->col_lower_[duplicateCol], model->col_upper_[duplicateCol]);
           } else {
 	    // Both columns integer
@@ -5638,7 +5625,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 	    // Scale must be integer and not exceed (x_u-x_l)+1 in magnitude
 	    const double scale_limit = model->col_upper_[col] - model->col_lower_[col] + 1 + primal_feastol;
 	    illegal_scale = std::fabs(colScale) > scale_limit;
-	    printf("kMergeParallelCols: T-T is %s legal with scale %g and col = [%g, %g]\n", 
+	    printf("kMergeParallelCols: T-T is %s legal with scale %.4g and col = [%.4g, %.4g]\n", 
 		   illegal_scale ? "not" : "   ", colScale, model->col_lower_[col], model->col_upper_[col]);		   
 	  }
 	  if (illegal_scale) continue;
@@ -5755,7 +5742,14 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           // infinite bounds we need to make sure the counters for the number of
           // infinite bounds that contribute to the implied row bounds are
           // updated correctly and that all finite contributions are removed.
+
+	  double mergeLower = 0;
+	  double mergeUpper = 0;
           if (colScale > 0) {
+	    mergeLower = model->col_lower_[col] +
+	      colScale * model->col_lower_[duplicateCol];
+	    mergeUpper = model->col_upper_[col] +
+	      colScale * model->col_upper_[duplicateCol];
             if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
               model->col_upper_[duplicateCol] =
                   model->col_upper_[col] / colScale;
@@ -5772,6 +5766,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             else
               model->col_lower_[duplicateCol] = 0;
           } else {
+	    mergeLower = model->col_lower_[col] +
+	      colScale * model->col_upper_[duplicateCol];
+	    mergeUpper = model->col_upper_[col] +
+	      colScale * model->col_lower_[duplicateCol];
             if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
               model->col_lower_[duplicateCol] =
                   model->col_upper_[col] / colScale;
@@ -5791,8 +5789,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (debug_report) {
             printf(
-                "ParallelColumns: col = %d[%s]; bounds change from [%g, %g] to "
-                "[%g, %g]\n",
+                "ParallelColumns: col = %d[%s]; bounds change from [%.4g, %.4g] to "
+                "[%.4g, %.4g]\n",
                 int(check_col), model->col_names_[check_col].c_str(),
                 model->col_lower_[check_col], model->col_upper_[check_col],
                 mergeLower, mergeUpper);
