@@ -2537,11 +2537,11 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
 }
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
-  //  assert(solution.row_dual.size() > 0);
-  if (int(solution.row_dual.size()) < lp.num_row_) return HighsStatus::kError;
+  const bool correct_size = int(solution.row_dual.size()) == lp.num_row_;
   const bool is_colwise = lp.a_matrix_.isColwise();
-  assert(is_colwise);
-  if (!is_colwise) return HighsStatus::kError;
+  const bool data_error = !correct_size || !is_colwise;
+  assert(!data_error);
+  if (data_error) return HighsStatus::kError;
 
   solution.col_dual.assign(lp.num_col_, 0);
 
@@ -2563,11 +2563,11 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 HighsStatus calculateRowValues(const HighsLp& lp,
                                const std::vector<double>& col_value,
                                std::vector<double>& row_value) {
-  // assert(col_value.size() > 0);
-  if (int(col_value.size()) < lp.num_col_) return HighsStatus::kError;
+  const bool correct_size = int(col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
-  assert(is_colwise);
-  if (!is_colwise) return HighsStatus::kError;
+  const bool data_error = !correct_size || !is_colwise;
+  assert(!data_error);
+  if (data_error) return HighsStatus::kError;
 
   row_value.clear();
   row_value.assign(lp.num_row_, 0);
@@ -2591,11 +2591,11 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
 }
 
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
-  // assert(solution.col_value.size() > 0);
-  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+  const bool correct_size = int(solution.col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
-  assert(is_colwise);
-  if (!is_colwise) return HighsStatus::kError;
+  const bool data_error = !correct_size || !is_colwise;
+  assert(!data_error);
+  if (data_error) return HighsStatus::kError;
 
   std::vector<HighsCDouble> row_value;
   row_value.assign(lp.num_row_, HighsCDouble{0.0});

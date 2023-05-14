@@ -87,6 +87,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   }
 
   assert(colCoef != 0);
+  // Row values aren't fully postsolved, so why do this?
   solution.row_value[row] =
       double(rowValue + colCoef * solution.col_value[col]);
   solution.col_value[col] = double((rhs - rowValue) / colCoef);
@@ -251,6 +252,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
   if (atInfiniteUpper) {
     // choose largest value as then all rows are feasible
     for (const auto& colVal : colValues) {
+      // Row values aren't fully postsolved, so how can this work?
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
       if (colValFromRow > colValFromNonbasicRow) {
         nonbasicRow = colVal.index;
@@ -262,6 +264,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
   } else {
     // choose smallest value, as then all rows are feasible
     for (const auto& colVal : colValues) {
+      // Row values aren't fully postsolved, so how can this work?
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
       if (colValFromRow < colValFromNonbasicRow) {
         nonbasicRow = colVal.index;
@@ -297,6 +300,7 @@ void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
   for (const auto& rowVal : rowValues)
     val -= rowVal.value * solution.col_value[rowVal.index];
 
+  // Row values aren't fully postsolved, so why do this?
   solution.row_value[row] = double(val);
 
   if (solution.dual_valid) solution.row_dual[row] = 0.0;

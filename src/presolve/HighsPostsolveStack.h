@@ -544,8 +544,7 @@ class HighsPostsolveStack {
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
             HighsBasis& basis,
-	    const HighsInt report_col = -1,
-	    const HighsInt report_row = -1) {
+	    const HighsInt report_col = -1) {
     reductionValues.resetPosition();
 
     // Verify that undo can be performed
@@ -595,10 +594,6 @@ class HighsPostsolveStack {
         printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
                int(i), int(reductions[i].first), int(report_col),
                solution.col_value[report_col]);
-      if (report_row >= 0)
-        printf("Before  reduction %2d (type %2d): row_value[%2d] = %g\n",
-               int(i), int(reductions[i].first), int(report_row),
-               solution.row_value[report_row]);
       switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
@@ -696,22 +691,22 @@ class HighsPostsolveStack {
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n",
 	     int(report_col), solution.col_value[report_col]);
-    if (report_row >= 0)
-      printf("After last reduction: row_value[%2d] = %g\n",
-	     int(report_row), solution.row_value[report_row]);
   }
 
   /// undo presolve steps for primal solution
   void undoPrimal(const HighsOptions& options, HighsSolution& solution,
-                  const HighsInt report_col = -1,
-                  const HighsInt report_row = -1) {
+                  const HighsInt report_col = -1) {
+    // Call to reductionValues.resetPosition(); seems unnecessary as
+    // it's the first thing done in undo
     reductionValues.resetPosition();
     HighsBasis basis;
     basis.valid = false;
     solution.dual_valid = false;
-    undo(options, solution, basis, report_col, report_row);
+    undo(options, solution, basis, report_col);
   }
 
+  /*
+    // Not used
   /// undo presolve steps for primal and dual solution
   void undoPrimalDual(const HighsOptions& options, HighsSolution& solution) {
     reductionValues.resetPosition();
@@ -721,7 +716,9 @@ class HighsPostsolveStack {
     assert(solution.dual_valid);
     undo(options, solution, basis);
   }
-
+  */
+  
+  // Only used for debugging
   void undoUntil(const HighsOptions& options,
                  const std::vector<HighsInt>& flagRow,
                  const std::vector<HighsInt>& flagCol, HighsSolution& solution,

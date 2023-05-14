@@ -663,11 +663,13 @@ double HighsMipSolverData::transformNewIncumbent(
     const std::vector<double>& sol) {
   HighsSolution solution;
   solution.col_value = sol;
-  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
   solution.value_valid = true;
-
+  // Perform primal postsolve to get the original column values
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
-  calculateRowValuesQuad(*mipsolver.orig_model_, solution);
+  // Determine the row values, as they aren't computed in primal
+  // postsolve
+  HighsStatus return_status = calculateRowValuesQuad(*mipsolver.orig_model_, solution);
+  assert(return_status == HighsStatus::kOk);
   bool allow_try_again = true;
 try_again:
 
@@ -842,10 +844,9 @@ try_again:
     if (debug_repeat) {
       HighsSolution check_solution;
       check_solution.col_value = sol;
-      calculateRowValuesQuad(*mipsolver.orig_model_, check_solution);
       check_solution.value_valid = true;
       postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
-                                check_col, check_row);
+                                check_col);
       fflush(stdout);
       assert(111==999);
     }
