@@ -253,6 +253,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
     // choose largest value as then all rows are feasible
     for (const auto& colVal : colValues) {
       // Row values aren't fully postsolved, so how can this work?
+      printf("HighsPostsolveStack::ForcingColumn::undo Unsing unknown activity for row %d\n", int(colVal.index));
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
       if (colValFromRow > colValFromNonbasicRow) {
         nonbasicRow = colVal.index;
@@ -265,6 +266,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
     // choose smallest value, as then all rows are feasible
     for (const auto& colVal : colValues) {
       // Row values aren't fully postsolved, so how can this work?
+      printf("HighsPostsolveStack::ForcingColumn::undo Unsing unknown activity for row %d\n", int(colVal.index));
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
       if (colValFromRow < colValFromNonbasicRow) {
         nonbasicRow = colVal.index;

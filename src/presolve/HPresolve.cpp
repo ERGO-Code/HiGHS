@@ -4212,18 +4212,34 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   bool debug_report = false;
   HighsInt check_col = debugGetCheckCol();
   HighsInt check_row = debugGetCheckRow();
+  bool col_bound_change = false;
+  bool row_bound_change = false;
   if (check_col >= 0 || check_row >= 0) {
+    if (check_col >= 0) {
+      col_bound_change = numreductions == 1 ||
+	postsolve_stack.debug_prev_col_lower != model->col_lower_[check_col] ||
+	postsolve_stack.debug_prev_col_upper != model->col_upper_[check_col];
+      postsolve_stack.debug_prev_col_lower = model->col_lower_[check_col];
+      postsolve_stack.debug_prev_col_upper = model->col_upper_[check_col];
+    }
+    if (check_row >= 0) {
+      row_bound_change = numreductions == 1 ||
+	postsolve_stack.debug_prev_row_lower != model->row_lower_[check_row] ||
+	postsolve_stack.debug_prev_row_upper != model->row_upper_[check_row];
+      postsolve_stack.debug_prev_row_lower = model->row_lower_[check_row];
+      postsolve_stack.debug_prev_row_upper = model->row_upper_[check_row];
+    }
     debug_report = numreductions > postsolve_stack.debug_prev_numreductions;
   }
-  if (check_col >=0 && debug_report) {
-    printf("After reduction %2d: col = %2d[%3s] has bounds [%.2g, %.2g]\n",
+  if (check_col >=0 && col_bound_change && debug_report) {
+    printf("After reduction %4d: col = %4d[%s] has bounds [%11.4g, %11.4g]\n",
            int(numreductions - 1), int(check_col),
            model->col_names_[check_col].c_str(), model->col_lower_[check_col],
            model->col_upper_[check_col]);
     postsolve_stack.debug_prev_numreductions = numreductions;
   }
-  if (check_row >=0 && debug_report) {
-    printf("After reduction %2d: row = %2d[%3s] has bounds [%.2g, %.2g]\n",
+  if (check_row >=0 && row_bound_change && debug_report) {
+    printf("After reduction %4d: row = %4d[%s] has bounds [%11.4g, %11.4g]\n",
            int(numreductions - 1), int(check_row),
            model->row_names_[check_row].c_str(), model->row_lower_[check_row],
            model->row_upper_[check_row]);
@@ -4258,6 +4274,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
   postsolve_stack.debug_prev_numreductions = 0;
+  postsolve_stack.debug_prev_col_lower = 0;
+  postsolve_stack.debug_prev_col_upper = 0;
+  postsolve_stack.debug_prev_row_lower = 0;
+  postsolve_stack.debug_prev_row_upper = 0;
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:

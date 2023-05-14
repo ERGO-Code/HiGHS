@@ -61,6 +61,10 @@ class HighsPostsolveStack {
   };
 
   size_t debug_prev_numreductions = 0;
+  double debug_prev_col_lower = 0;
+  double debug_prev_col_upper = 0;
+  double debug_prev_row_lower = 0;
+  double debug_prev_row_upper = 0;
 
  private:
   /// transform a column x by a linear mapping with a new column x'.
