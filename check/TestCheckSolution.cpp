@@ -272,6 +272,35 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
   REQUIRE(fabs(objective1 - objective2) / max(1.0, objective1) < 1e-5);
 }
 
+TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
+  Highs highs;
+  const std::string solution_file_name = "temp.sol";
+  highs.setOptionValue("output_flag", dev_run);
+  highs.addVar(0, 2);
+  highs.addVar(0, 2);
+  highs.changeColCost(0, 1);
+  highs.changeColCost(1, 10);
+  highs.changeColIntegrality(0, HighsVarType::kInteger);
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {1, 1};
+  highs.addRow(1, kHighsInf, 2, index.data(), value.data());
+  highs.run();
+  highs.writeSolution(solution_file_name);
+  if (dev_run) highs.writeSolution("", 1);
+  highs.clearSolver();
+  // Add a constraint that cuts off the optimal solution, but leaves
+  // the integer assignment feasible
+  value[0] = 1;
+  value[1] = 4;
+  highs.addRow(4, kHighsInf, 2, index.data(), value.data());
+  // Read the original solution - testing that the row section is not
+  // used
+  REQUIRE(highs.readSolution(solution_file_name) == HighsStatus::kOk);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  std::remove(solution_file_name.c_str());
+}
+
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status,
                                const HighsInt write_solution_style) {

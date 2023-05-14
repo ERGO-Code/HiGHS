@@ -28,8 +28,10 @@ extract the executable located at `/bin/highs`.
 
 ## Compile from source
 
-HiGHS uses CMake as build system, and requires at least version 3.15. First
-setup a build folder and call CMake as follows:
+HiGHS uses CMake as build system, and requires at least version
+3.15. After extracting HiGHS from
+[GitHub](https://github.com/ERGO-Code/HiGHS), setup a build folder and
+call CMake as follows:
 
 ```bash
 $ mkdir build
@@ -54,3 +56,22 @@ HiGHS is installed using the command
 ```bash
 $ cmake --install .
 ```
+
+This installs the library in `lib/`, as well as all header files in `include/highs/`. For a custom
+installation in `install_folder` run
+
+```bash
+$ cmake -DCMAKE_INSTALL_PREFIX=install_folder .
+```
+
+and then
+
+```bash
+$ cmake --install .
+```
+
+To use the library from a CMake project use
+
+`find_package(HiGHS)`
+
+and add the correct path to HIGHS_DIR.
