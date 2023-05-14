@@ -342,14 +342,7 @@ class HPresolve {
   HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
 
   HighsInt debugGetCheckCol() const;
-  HighsInt debugReturnColSize(const std::string message, const HighsInt col,
-                              const bool recur = true);
-  void debugGetColSize(const std::string message);
-  bool debugOkColSize(const std::string message);
-  bool debugOkColSize(const std::string message, const HighsInt col);
-  HighsInt debugReturnRowSize(const std::string message, const HighsInt row);
-  void debugGetRowSize(const std::string message);
-  bool debugOkRowSize(const std::string message);
+  HighsInt debugGetCheckRow() const;
 
   // Not currently called
   static void debug(const HighsLp& lp, const HighsOptions& options);

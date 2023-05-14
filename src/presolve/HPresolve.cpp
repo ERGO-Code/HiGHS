@@ -4211,14 +4211,22 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   bool debug_report = false;
   HighsInt check_col = debugGetCheckCol();
-  if (check_col >= 0) {
+  HighsInt check_row = debugGetCheckRow();
+  if (check_col >= 0 || check_row >= 0) {
     debug_report = numreductions > postsolve_stack.debug_prev_numreductions;
   }
-  if (debug_report) {
+  if (check_col >=0 && debug_report) {
     printf("After reduction %2d: col = %2d[%3s] has bounds [%.2g, %.2g]\n",
            int(numreductions - 1), int(check_col),
            model->col_names_[check_col].c_str(), model->col_lower_[check_col],
            model->col_upper_[check_col]);
+    postsolve_stack.debug_prev_numreductions = numreductions;
+  }
+  if (check_row >=0 && debug_report) {
+    printf("After reduction %2d: row = %2d[%3s] has bounds [%.2g, %.2g]\n",
+           int(numreductions - 1), int(check_row),
+           model->row_names_[check_row].c_str(), model->row_lower_[check_row],
+           model->row_upper_[check_row]);
     postsolve_stack.debug_prev_numreductions = numreductions;
   }
 
@@ -5665,25 +5673,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       if (!parallel) continue;
 
-      const int check_col = debugGetCheckCol();
-      //      if (model->col_names_[col] == "c38") {
-      if (check_col >= 0)
-        printf("ParallelColumns: reduction %2d: col %d[%s]\n",
-               int(postsolve_stack.numReductions()) + 1, int(col),
-               model->col_names_[col].c_str());
-      //      }
-      bool debug_report = false;
-      if (check_col >= 0) {
-        debug_report = col == check_col;
-      }
-      if (debug_report) {
-        printf(
-            "ParallelColumns: reduction %2d: col = %d[%s]; duplicate = %d[%s] "
-            "- case %d\n",
-            int(postsolve_stack.numReductions()), int(col),
-            model->col_names_[col].c_str(), int(duplicateCol),
-            model->col_names_[duplicateCol].c_str(), int(reductionCase));
-      }
       switch (reductionCase) {
         case kDominanceDuplicateColToLower:
           delCol = duplicateCol;
@@ -5804,15 +5793,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               model->col_upper_[duplicateCol] = 0;
           }
 
-          if (debug_report) {
-            printf(
-                "ParallelColumns: col = %d[%s]; bounds change from [%.4g, "
-                "%.4g] to "
-                "[%.4g, %.4g]\n",
-                int(check_col), model->col_names_[check_col].c_str(),
-                model->col_lower_[check_col], model->col_upper_[check_col],
-                mergeLower, mergeUpper);
-          }
           model->col_lower_[col] = mergeLower;
           model->col_upper_[col] = mergeUpper;
 
@@ -6606,55 +6586,6 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
 }
 
-/*
-HighsInt HPresolve::debugReturnColSize(const std::string message, const HighsInt
-col, const bool recur) { HighsInt check_colsize = 0; HighsInt pos =
-colhead[col]; for (;;) { if (pos == -1) break; HighsInt row = Arow[pos];
-  assert(Acol[pos] == col);
-  assert(!rowDeleted[row]);
-  check_colsize++;
-  pos = Anext[pos];
-}
-const bool check_colsize_ok = colsize[col] == check_colsize;
-if (!check_colsize_ok) {
-  if (recur) {
-    printf("debugReturnColSize(%s): colsize[%d] = %d != %d = check_colsize\n",
-           message.c_str(), int(col), int(colsize[col]), int(check_colsize));
-    debugReturnColSize(message, col, false);
-  }
-  assert(check_colsize_ok);
-}
-return check_colsize;
-}
-
-void HPresolve::debugGetColSize(const std::string message) {
-
-}
-
-bool HPresolve::debugOkColSize(const std::string message, const HighsInt col) {
-HighsInt debug_colsize = debugReturnColSize(message, col);
-return debug_colsize == colsize[col];
-}
-
-bool HPresolve::debugOkColSize(const std::string message) {
-for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
-  if (colDeleted[iCol]) continue;
-  if (!debugOkColSize(message, iCol)) return false;
-}
-return true;
-}
-
-HighsInt HPresolve::debugReturnRowSize(const std::string message, const HighsInt
-row) { return 0;
-}
-
-void HPresolve::debugGetRowSize(const std::string message) {
-}
-
-bool HPresolve::debugOkRowSize(const std::string message) {
-return false;
-}
-*/
 HighsInt HPresolve::debugGetCheckCol() const {
   const std::string check_col_name = "";  // c37";
   HighsInt check_col = -1;
@@ -6669,6 +6600,22 @@ HighsInt HPresolve::debugGetCheckCol() const {
     }
   }
   return check_col;
+}
+
+HighsInt HPresolve::debugGetCheckRow() const {
+  const std::string check_row_name = "row_ekk_119";
+  HighsInt check_row = -1;
+  if (check_row_name == "") return check_row;
+  if (model->row_names_.size()) {
+    if (HighsInt(model->row_hash_.name2index.size()) != model->num_row_)
+      model->row_hash_.form(model->row_names_);
+    auto search = model->row_hash_.name2index.find(check_row_name);
+    if (search != model->row_hash_.name2index.end()) {
+      check_row = search->second;
+      assert(model->row_names_[check_row] == check_row_name);
+    }
+  }
+  return check_row;
 }
 
 }  // namespace presolve

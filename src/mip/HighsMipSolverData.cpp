@@ -804,6 +804,7 @@ try_again:
         mipsolver.row_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance;
     //    check_col = 37;//mipsolver.mipdata_->presolve.debugGetCheckCol();
+    //    check_row = 37;//mipsolver.mipdata_->presolve.debugGetCheckRow();
     std::string check_col_data = "";
     if (check_col >= 0) {
       check_col_data = " (col " + std::to_string(check_col);
@@ -837,13 +838,16 @@ try_again:
         integrality_violation_, check_int_data.c_str(), row_violation_,
         check_row_data.c_str());
 
-    const bool debug_repeat = false;  // true;
+    const bool debug_repeat = true;//false;  // true;
     if (debug_repeat) {
       HighsSolution check_solution;
       check_solution.col_value = sol;
+      calculateRowValuesQuad(*mipsolver.orig_model_, check_solution);
       check_solution.value_valid = true;
       postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
-                                check_col);
+                                check_col, check_row);
+      fflush(stdout);
+      assert(111==999);
     }
 
     if (!currentFeasible) {
