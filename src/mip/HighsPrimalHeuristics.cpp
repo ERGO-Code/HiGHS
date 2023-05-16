@@ -96,7 +96,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.output_flag = false;
 
   const bool allow_submip_log = true;
-  if (allow_submip_log && lp.num_col_ == 54 && lp.num_row_ == 172) {
+  if (allow_submip_log && lp.num_col_ == -54 && lp.num_row_ == -172) {
     submipoptions.output_flag = true;
     printf(
         "HighsPrimalHeuristics::solveSubMip (%d, %d) with output_flag = %s\n",

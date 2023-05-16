@@ -249,11 +249,12 @@ void HighsPostsolveStack::ForcingColumn::undo(
   HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::kNonbasic;
   double colValFromNonbasicRow = colBound;
 
+  HighsInt debug_num_use_row_value = 0;
   if (atInfiniteUpper) {
     // choose largest value as then all rows are feasible
     for (const auto& colVal : colValues) {
       // Row values aren't fully postsolved, so how can this work?
-      printf("HighsPostsolveStack::ForcingColumn::undo Unsing unknown activity for row %d\n", int(colVal.index));
+      debug_num_use_row_value++;
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
       if (colValFromRow > colValFromNonbasicRow) {
         nonbasicRow = colVal.index;
@@ -266,7 +267,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
     // choose smallest value, as then all rows are feasible
     for (const auto& colVal : colValues) {
       // Row values aren't fully postsolved, so how can this work?
-      printf("HighsPostsolveStack::ForcingColumn::undo Unsing unknown activity for row %d\n", int(colVal.index));
+      debug_num_use_row_value++;
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
       if (colValFromRow < colValFromNonbasicRow) {
         nonbasicRow = colVal.index;
@@ -275,6 +276,10 @@ void HighsPostsolveStack::ForcingColumn::undo(
                                              : HighsBasisStatus::kLower;
       }
     }
+  }
+  if (debug_num_use_row_value) {
+    printf("HighsPostsolveStack::ForcingColumn::undo Using %d unknown row activit%s\n", int(debug_num_use_row_value),
+	   debug_num_use_row_value > 1 ? "ies" : "y");
   }
 
   solution.col_value[col] = colValFromNonbasicRow;

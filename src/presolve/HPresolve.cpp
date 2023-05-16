@@ -5647,12 +5647,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                 std::abs(colScale * (model->col_upper_[duplicateCol] -
                                      model->col_lower_[duplicateCol])) <
                 1.0 - primal_feastol;
-            printf(
-                "kMergeParallelCols: T-F is %s legal with scale %.4g and "
-                "duplicateCol = [%.4g, %.4g]\n",
-                illegal_scale ? "not" : "   ", colScale,
-                model->col_lower_[duplicateCol],
-                model->col_upper_[duplicateCol]);
+	    if (!illegal_scale) 
+	      printf("kMergeParallelCols: T-F is %s legal with scale %.4g and "
+		     "duplicateCol = [%.4g, %.4g]\n",
+		     illegal_scale ? "not" : "   ", colScale,
+		     model->col_lower_[duplicateCol],
+		     model->col_upper_[duplicateCol]);
           } else {
             // Both columns integer
             assert(x_int && y_int);
@@ -5661,11 +5661,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                                        model->col_lower_[col] + 1 +
                                        primal_feastol;
             illegal_scale = std::fabs(colScale) > scale_limit;
-            printf(
-                "kMergeParallelCols: T-T is %s legal with scale %.4g and col = "
-                "[%.4g, %.4g]\n",
-                illegal_scale ? "not" : "   ", colScale, model->col_lower_[col],
-                model->col_upper_[col]);
           }
           if (illegal_scale) continue;
         } else {
@@ -6623,7 +6618,7 @@ HighsInt HPresolve::debugGetCheckCol() const {
 }
 
 HighsInt HPresolve::debugGetCheckRow() const {
-  const std::string check_row_name = "row_ekk_119";
+  const std::string check_row_name = "";//"row_ekk_119";
   HighsInt check_row = -1;
   if (check_row_name == "") return check_row;
   if (model->row_names_.size()) {

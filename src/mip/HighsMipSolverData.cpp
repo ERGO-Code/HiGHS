@@ -668,7 +668,7 @@ double HighsMipSolverData::transformNewIncumbent(
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
   // Determine the row values, as they aren't computed in primal
   // postsolve
-  HighsInt first_check_row = mipsolver.mipdata_->presolve.debugGetCheckRow();
+  HighsInt first_check_row = -1;//mipsolver.mipdata_->presolve.debugGetCheckRow();
   HighsStatus return_status = calculateRowValuesQuad(*mipsolver.orig_model_, solution, first_check_row);
   assert(return_status == HighsStatus::kOk);
   bool allow_try_again = true;
@@ -685,7 +685,7 @@ try_again:
   HighsInt check_col = -1;
   HighsInt check_int = -1;
   HighsInt check_row = -1;
-  const bool allow_violation_report = true;
+  const bool allow_violation_report = false;
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
     const double value = solution.col_value[i];
     obj += mipsolver.orig_model_->col_cost_[i] * value;
@@ -839,7 +839,7 @@ try_again:
         integrality_violation_, check_int_data.c_str(), row_violation_,
         check_row_data.c_str());
 
-    const bool debug_repeat = true;//false;  // true;
+    const bool debug_repeat = false; //true;//
     if (debug_repeat) {
       HighsSolution check_solution;
       check_solution.col_value = sol;
