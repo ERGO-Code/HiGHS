@@ -28,13 +28,12 @@ try:
                                         libraries=['highs']))
     
     setup(name='highspy',
-          version='1.5.1.dev2',
+          version='1.5.1.dev3',
           packages=find_packages(),
           description='Python interface to HiGHS',
           maintainer_email='highsopt@gmail.com',
           license='MIT',
           url='https://github.com/ergo-code/highs',
-          install_requires=['pybind11', 'numpy', 'pyomo'],
           include_package_data=True,
           package_data={'highspy': ['highspy/*.so']},
           ext_modules=extensions,
