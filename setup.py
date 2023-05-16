@@ -28,7 +28,7 @@ try:
                                         libraries=['highs']))
     
     setup(name='highspy',
-          version='1.5.1',
+          version='1.5.1.dev2',
           packages=find_packages(),
           description='Python interface to HiGHS',
           maintainer_email='highsopt@gmail.com',
