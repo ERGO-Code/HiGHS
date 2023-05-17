@@ -246,7 +246,7 @@ endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)" AND NOT APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
 else()
   message("FLAG_MPOPCNT_SUPPORTED is not available on this architecture")
