@@ -3085,18 +3085,19 @@ HighsStatus Highs::callSolveQp() {
     int rep = rt.statistics.iteration.size() - 1;
 
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT
-                 ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n",
-                 rt.statistics.iteration[rep], rt.statistics.objval[rep],
-                 rt.statistics.nullspacedimension[rep], rt.statistics.time[rep],
-                 rt.statistics.sum_primal_infeasibilities[rep],
-                 rt.statistics.num_primal_infeasibilities[rep],
-                 rt.statistics.density_nullspace[rep],
-                 rt.statistics.density_factor[rep]);
+                 "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT
+                 "\n",
+                 rt.statistics.iteration[rep], rt.statistics.time[rep],
+                 rt.statistics.objval[rep], rt.statistics.nullspacedimension[rep]);
   });
 
   runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
+
+  // print header for QP solver output
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Iteration, Runtime, ObjVal, NullspaceDim\n");
+
   Quass qpsolver(runtime);
   qpsolver.solve();
 
