@@ -3090,13 +3090,13 @@ HighsStatus Highs::callSolveQp() {
                  rt.statistics.objval[rep],
                  rt.statistics.nullspacedimension[rep]);
   });
-  
+
   runtime.settings.timelimit = options_.time_limit;
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
 
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Iteration, Runtime, ObjVal, NullspaceDim\n");
+               "Iteration, Runtime, ObjVal, NullspaceDim\n");
 
   Quass qpsolver(runtime);
   qpsolver.solve();
