@@ -196,13 +196,16 @@ static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
 }
 
 static void regularize(Runtime& rt) {
+  if (!rt.settings.hessianregularization) {
+   return;
+  }
   // add small diagonal to hessian
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
     for (HighsInt index = rt.instance.Q.mat.start[i];
          index < rt.instance.Q.mat.start[i + 1]; index++) {
       if (rt.instance.Q.mat.index[index] == i) {
         rt.instance.Q.mat.value[index] +=
-            rt.settings.semidefiniteregularization;
+            rt.settings.hessianregularizationfactor;
       }
     }
   }
@@ -244,7 +247,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iterationlimit) {
       runtime.status = ProblemStatus::ITERATIONLIMIT;
-      break;
+      break; 
     }
 
     // check time limit
@@ -289,7 +292,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
-      if (!zero_curvature_direction || true) {
+      if (!zero_curvature_direction) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
         if (status != QpSolverStatus::OK) {
           runtime.status = ProblemStatus::INDETERMINED;
