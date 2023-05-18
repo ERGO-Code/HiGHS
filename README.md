@@ -15,7 +15,7 @@
 *   [Example](#google-colab-example)
 *   [Reference](#reference)
 
-About HiGHS 
+About HiGHS
 -----------
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
@@ -57,9 +57,43 @@ HiGHS uses CMake as build system, and requires at least version 3.15. First setu
 
 Then compile the code using
 
-    cmake --build . 
+    cmake --build .
 
 This installs the executable `bin/highs`.
+
+As an alternative it is also possible to let cmake create the build folder and thus build everything from the HiGHS directory and this as follows
+
+    cmake -S . -B build
+    cmake --build build
+
+When build under Windows, some extra options are possible.
+A first one is building a 32 bit version or a 64 bit version. 64 bit is default these days. So above commands will build 64 bit.
+To build 32 bit the following commands can be used
+
+    cmake -A Win32 -S . -DFAST_BUILD=OFF -B buildWin32
+    cmake --build buildWin32
+
+By default, cmake builds the debug version of the binaries. These are put in a directory Debug
+To build a release version, add the option --config Release
+
+    cmake -S . -DFAST_BUILD=OFF -B build
+    cmake --build build --config Release
+
+It is also possible to specify a specific Visual studio version to build with
+
+    cmake -G "Visual Studio 17 2022" -S . -DFAST_BUILD=OFF -B build
+    cmake --build build
+
+Another thing specific for windows is the calling convention which is specifically important for the HiGHS dynamic library (dll)
+The default calling convention in windows is cdecl calling convention however dlls are most often compiled with stdcall calling convention
+And most applications that expect stdcall calling convention can't access dlls with cdecl calling convention and vice versa.
+To change the default calling convention from cdecl to stdcall the following option can be added
+
+    cmake -DSTDCALL=ON -S . -DFAST_BUILD=OFF -B build
+    cmake --build build
+
+An extra note. Under windows the build dll is called highs.dll however the exe expects libhighs.dll so a manual copy of highs.dll to libhighs.dll is needed.
+Of course all above options can be combined with each other.
 
 To test whether the compilation was successful, run
 
@@ -69,14 +103,14 @@ HiGHS can read MPS files and (CPLEX) LP files, and the following command
 solves the model in `ml.mps`
 
     highs ml.mps
-    
+
 HiGHS is installed using the command
 
     cmake --install .
 
 with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
-Interfaces 
+Interfaces
 ----------
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/interfaces.html.
@@ -86,11 +120,11 @@ We are happy to give a reasonable level of support via email sent to highsopt@gm
 Python
 ------
 
-There are two ways to build the Python interface to HiGHS. 
+There are two ways to build the Python interface to HiGHS.
 
 __From PyPi__
 
-HiGHS has been added to PyPi, so should be installable using the command 
+HiGHS has been added to PyPi, so should be installable using the command
 
     pip install highspy
 
@@ -108,7 +142,7 @@ The installation can be tested using the example [minimal.py](https://github.com
     Objective value     :  1.0000000000e+00
     HiGHS run time      :          0.00
 
-or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py). 
+or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py).
 
 __Directly__
 
