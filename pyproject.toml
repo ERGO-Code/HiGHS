@@ -1,17 +1,17 @@
 [build-system]
 # Minimum requirements for the build system to execute.
 requires = [
-  "setuptools",
-  "pybind11",
-  "pyomo",
-  "wheel",
+  "setuptools>=45",
+  "pybind11>=2.4",
+  "pyomo>=6.0",
+  "wheel>=0.2",
 ] 
 
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 build = "*"
-skip = ""
+skip = "cp36-*"
 test-skip = ""
 
 [tool.cibuildwheel.linux]
@@ -25,7 +25,7 @@ before-build = [
   "rm -rf build",
   "mkdir -p build && cd build",
   "cmake -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
-  "make -j3 && make install",
+  "make -j && make install",
 ]
 
 [tool.cibuildwheel.linux.environment]

@@ -498,6 +498,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 
+option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 
 # static build for windows
 if (NOT UNIX)

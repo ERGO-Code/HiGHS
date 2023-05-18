@@ -95,6 +95,11 @@ int main() {
   // Pass the model to HiGHS
   return_status = highs.passModel(model);
   assert(return_status==HighsStatus::kOk);
+  // If a user passes a model with entries in
+  // model.lp_.a_matrix_.value_ less than (the option)
+  // small_matrix_value in magnitude, they will be ignored. A logging
+  // message will indicate this, and passModel will return
+  // HighsStatus::kWarning
   //
   // Get a const reference to the LP data in HiGHS
   const HighsLp& lp = highs.getLp();
