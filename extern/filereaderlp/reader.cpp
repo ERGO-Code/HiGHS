@@ -654,11 +654,17 @@ void Reader::processboundssec() {
 }
 
 void Reader::processbinsec() {
-   if(!sectiontokens.count(LpSectionKeyword::BIN))
+  const LpSectionKeyword this_section_keyword = LpSectionKeyword::BIN;
+   if(!sectiontokens.count(this_section_keyword))
       return;
-   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::BIN].first);
-   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::BIN].second);
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[this_section_keyword].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[this_section_keyword].second);
    for (; begin != end; ++begin) {
+     if (begin->type == ProcessedTokenType::SECID) {
+       // Possible to have repeat of keyword for this section type
+       lpassert(begin->keyword == this_section_keyword);
+       continue;
+     }
       lpassert(begin->type == ProcessedTokenType::VARID);
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
@@ -669,11 +675,17 @@ void Reader::processbinsec() {
 }
 
 void Reader::processgensec() {
-   if(!sectiontokens.count(LpSectionKeyword::GEN))
+  const LpSectionKeyword this_section_keyword = LpSectionKeyword::GEN;
+   if(!sectiontokens.count(this_section_keyword))
       return;
-   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::GEN].first);
-   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::GEN].second);
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[this_section_keyword].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[this_section_keyword].second);
    for (; begin != end; ++begin) {
+     if (begin->type == ProcessedTokenType::SECID) {
+       // Possible to have repeat of keyword for this section type
+       lpassert(begin->keyword == this_section_keyword);
+       continue;
+     }
       lpassert(begin->type == ProcessedTokenType::VARID);
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
@@ -686,11 +698,17 @@ void Reader::processgensec() {
 }
 
 void Reader::processsemisec() {
-   if(!sectiontokens.count(LpSectionKeyword::SEMI))
+  const LpSectionKeyword this_section_keyword = LpSectionKeyword::SEMI;
+   if(!sectiontokens.count(this_section_keyword))
       return;
-   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::SEMI].first);
-   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::SEMI].second);
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[this_section_keyword].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[this_section_keyword].second);
    for (; begin != end; ++begin) {
+     if (begin->type == ProcessedTokenType::SECID) {
+       // Possible to have repeat of keyword for this section type
+       lpassert(begin->keyword == this_section_keyword);
+       continue;
+     }
       lpassert(begin->type == ProcessedTokenType::VARID);
       std::string name = begin->name;
       std::shared_ptr<Variable> var = builder.getvarbyname(name);
@@ -703,10 +721,11 @@ void Reader::processsemisec() {
 }
 
 void Reader::processsossec() {
-   if(!sectiontokens.count(LpSectionKeyword::SOS))
+  const LpSectionKeyword this_section_keyword = LpSectionKeyword::SOS;
+   if(!sectiontokens.count(this_section_keyword))
       return;
-   std::vector<ProcessedToken>::iterator& begin(sectiontokens[LpSectionKeyword::SOS].first);
-   std::vector<ProcessedToken>::iterator& end(sectiontokens[LpSectionKeyword::SOS].second);
+   std::vector<ProcessedToken>::iterator& begin(sectiontokens[this_section_keyword].first);
+   std::vector<ProcessedToken>::iterator& end(sectiontokens[this_section_keyword].second);
    while (begin != end) {
       std::shared_ptr<SOS> sos = std::shared_ptr<SOS>(new SOS);
 
@@ -768,28 +787,65 @@ void Reader::processsections() {
 void Reader::splittokens() {
    LpSectionKeyword currentsection = LpSectionKeyword::NONE;
    
-   for (std::vector<ProcessedToken>::iterator it(processedtokens.begin()); it != processedtokens.end(); ++it)
-      if (it->type == ProcessedTokenType::SECID) {
-         if(currentsection != LpSectionKeyword::NONE)
-            sectiontokens[currentsection].second = it;  // mark end of previous section
-         currentsection = it->keyword;
-
-         // make sure this section did not yet occur
-         lpassert(sectiontokens.count(currentsection) == 0);
-
-         std::vector<ProcessedToken>::iterator next = it;
-         ++next;
-         // skip empty section
-         if( next == processedtokens.end() || next->type == ProcessedTokenType::SECID ) {
-            currentsection = LpSectionKeyword::NONE;
-            continue;
-         }
-         // remember begin of new section: its the token following the current one
-         sectiontokens[currentsection].first = next;
-      }
-
-   if(currentsection != LpSectionKeyword::NONE)
-      sectiontokens[currentsection].second = processedtokens.end();  // mark end of last section
+   bool debug_open_section = false;
+   for (std::vector<ProcessedToken>::iterator it(processedtokens.begin()); it != processedtokens.end(); ++it) {
+     // Look for section keywords
+     if (it->type != ProcessedTokenType::SECID) continue;
+     // currentsection is initially LpSectionKeyword::NONE, so the
+     // first section ID will be a new section type
+     //
+     // Only record change of section and check for repeated
+     // section if the keyword is for a different section. Allows
+     // repetition of Integers and General (cf #1299) for example
+     const bool new_section_type = currentsection != it->keyword;
+     if (new_section_type) {
+       if (currentsection != LpSectionKeyword::NONE) {
+	 // Current section is non-trivial, so mark its end, using the
+	 // value of currentsection to indicate that there is no open
+	 // section
+	 assert(debug_open_section);
+	 sectiontokens[currentsection].second = it;
+	 debug_open_section = false;
+	 currentsection = LpSectionKeyword::NONE;
+       }
+     }
+     std::vector<ProcessedToken>::iterator next = it;
+     ++next;
+     if( next == processedtokens.end() || next->type == ProcessedTokenType::SECID ) {
+       // Reached the end of the tokens or the new section is empty
+       //
+       // currentsection will be LpSectionKeyword::NONE unless the
+       // second of two sections of the same type is empty and the
+       // next section is of a new type, in which case mark the end of
+       // the current section
+       if (currentsection != LpSectionKeyword::NONE &&
+	   currentsection != next->keyword) {
+	 assert(debug_open_section);
+	 sectiontokens[currentsection].second = it;
+	 debug_open_section = false;
+       }
+       currentsection = LpSectionKeyword::NONE;
+       assert(!debug_open_section);
+       continue;
+     }
+     // Next section is non-empty
+     if (new_section_type) {
+       // Section type change
+       currentsection = it->keyword;
+       // Make sure the new section type has not occured previously
+       lpassert(sectiontokens.count(currentsection) == 0);
+       // Remember the beginning of the new section: its the token
+       // following the current one
+       assert(!debug_open_section);
+       sectiontokens[currentsection].first = next;
+       debug_open_section = true;
+     }
+     // Always ends with either an open section or a section type of
+     // LpSectionKeyword::NONE
+     assert(debug_open_section != (currentsection == LpSectionKeyword::NONE));
+   }
+   // Check that the last section has been closed
+   assert(currentsection == LpSectionKeyword::NONE);
 }
 
 void Reader::processtokens() {
