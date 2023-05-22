@@ -53,7 +53,7 @@ HiGHS uses CMake as build system, and requires at least version 3.15. First setu
 
     mkdir build
     cd build
-    cmake -DFAST_BUILD=ON ..
+    cmake ..
 
 Then compile the code using
 
@@ -61,39 +61,11 @@ Then compile the code using
 
 This installs the executable `bin/highs`.
 
-As an alternative it is also possible to let cmake create the build folder and thus build everything from the HiGHS directory and this as follows
+As an alternative it is also possible to let cmake create the build folder and thus build everything from the HiGHS directory, as follows
 
     cmake -S . -B build
     cmake --build build
 
-When build under Windows, some extra options are possible.
-A first one is building a 32 bit version or a 64 bit version. 64 bit is default these days. So above commands will build 64 bit.
-To build 32 bit the following commands can be used
-
-    cmake -A Win32 -S . -DFAST_BUILD=OFF -B buildWin32
-    cmake --build buildWin32
-
-By default, cmake builds the debug version of the binaries. These are put in a directory Debug
-To build a release version, add the option --config Release
-
-    cmake -S . -DFAST_BUILD=OFF -B build
-    cmake --build build --config Release
-
-It is also possible to specify a specific Visual studio version to build with
-
-    cmake -G "Visual Studio 17 2022" -S . -DFAST_BUILD=OFF -B build
-    cmake --build build
-
-Another thing specific for windows is the calling convention which is specifically important for the HiGHS dynamic library (dll)
-The default calling convention in windows is cdecl calling convention however dlls are most often compiled with stdcall calling convention
-And most applications that expect stdcall calling convention can't access dlls with cdecl calling convention and vice versa.
-To change the default calling convention from cdecl to stdcall the following option can be added
-
-    cmake -DSTDCALL=ON -S . -DFAST_BUILD=OFF -B build
-    cmake --build build
-
-An extra note. Under windows the build dll is called highs.dll however the exe expects libhighs.dll so a manual copy of highs.dll to libhighs.dll is needed.
-Of course all above options can be combined with each other.
 
 To test whether the compilation was successful, run
 
