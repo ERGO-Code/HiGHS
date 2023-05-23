@@ -88,6 +88,10 @@ class HighsMipSolver {
 
   mutable HighsTimer timer_;
   void cleanupSolve();
+
+  void runPresolve();
+  const HighsLp& getPresolvedModel() const;
+  HighsPresolveStatus getPresolveStatus() const;
 };
 
 #endif

@@ -232,8 +232,12 @@ std::string highsFormatToString(const char* format, ...) {
   return std::string(msgbuffer);
 }
 
-const std::string highsBoolToString(const bool b) {
-  return b ? "true" : "false";
+const std::string highsBoolToString(const bool b, const HighsInt field_width) {
+  const HighsInt abs_field_width = std::abs(field_width);
+  if (abs_field_width <= 1) return b ? "T" : "F";
+  if (abs_field_width <= 2) return b ? "true" : "false";
+  if (field_width < 0) return b ? "true " : "false";
+  return b ? " true" : "false";
 }
 
 const std::string highsInsertMdEscapes(const std::string from_string) {

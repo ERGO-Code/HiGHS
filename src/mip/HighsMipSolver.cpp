@@ -611,3 +611,17 @@ void HighsMipSolver::cleanupSolve() {
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }
+
+void HighsMipSolver::runPresolve() {
+  mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  mipdata_->init();
+  mipdata_->runPresolve();
+}
+
+const HighsLp& HighsMipSolver::getPresolvedModel() const {
+  return mipdata_->presolvedModel;
+}
+
+HighsPresolveStatus HighsMipSolver::getPresolveStatus() const {
+  return mipdata_->presolve_status;
+}

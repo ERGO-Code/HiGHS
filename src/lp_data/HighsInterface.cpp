@@ -168,6 +168,10 @@ HighsStatus Highs::addColsInterface(
   }
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
+
+  // Possibly add column names
+  lp.addColNames("", ext_num_new_col);
+
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
   assert(lpDimensionsOk("addCols", lp, options.log_options));
@@ -177,7 +181,6 @@ HighsStatus Highs::addColsInterface(
 
   // Determine any implications for simplex data
   ekk_instance_.addCols(lp, local_a_matrix);
-  lp.col_hash_.name2index.clear();
   return return_status;
 }
 
@@ -288,6 +291,9 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
+  // Possibly add row names
+  lp.addRowNames("", ext_num_new_row);
+
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
   assert(lpDimensionsOk("addRows", lp, options.log_options));
@@ -296,7 +302,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
-  lp.row_hash_.name2index.clear();
+
   return return_status;
 }
 

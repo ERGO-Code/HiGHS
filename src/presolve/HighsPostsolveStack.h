@@ -60,6 +60,12 @@ class HighsPostsolveStack {
     Nonzero() = default;
   };
 
+  size_t debug_prev_numreductions = 0;
+  double debug_prev_col_lower = 0;
+  double debug_prev_col_upper = 0;
+  double debug_prev_row_lower = 0;
+  double debug_prev_row_upper = 0;
+
  private:
   /// transform a column x by a linear mapping with a new column x'.
   /// I.e. substitute x = a * x' + b
@@ -205,7 +211,8 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
-
+    bool okMerge(const double tolerance) const;
+    void undoFix(const HighsOptions& options, HighsSolution& solution) const;
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
@@ -472,20 +479,32 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kDuplicateRow);
   }
 
-  void duplicateColumn(double colScale, double colLower, double colUpper,
+  bool duplicateColumn(double colScale, double colLower, double colUpper,
                        double duplicateColLower, double duplicateColUpper,
                        HighsInt col, HighsInt duplicateCol, bool colIntegral,
-                       bool duplicateColIntegral) {
+                       bool duplicateColIntegral,
+                       const double ok_merge_tolerance) {
     const HighsInt origCol = origColIndex[col];
     const HighsInt origDuplicateCol = origColIndex[duplicateCol];
-    reductionValues.push(DuplicateColumn{
-        colScale, colLower, colUpper, duplicateColLower, duplicateColUpper,
-        origCol, origDuplicateCol, colIntegral, duplicateColIntegral});
+    DuplicateColumn debug_values = {
+        colScale,          colLower,          colUpper,
+        duplicateColLower, duplicateColUpper, origCol,
+        origDuplicateCol,  colIntegral,       duplicateColIntegral};
+    const bool ok_merge = debug_values.okMerge(ok_merge_tolerance);
+    const bool prevent_illegal_merge = true;
+    if (!ok_merge && prevent_illegal_merge) return false;
+    reductionValues.push(debug_values);
+    //    reductionValues.push(DuplicateColumn{
+    //        colScale, colLower, colUpper, duplicateColLower,
+    //        duplicateColUpper, origCol, origDuplicateCol, colIntegral,
+    //        duplicateColIntegral});
+
     reductionAdded(ReductionType::kDuplicateColumn);
 
     // mark columns as not linearly transformable
     linearlyTransformable[origCol] = false;
     linearlyTransformable[origDuplicateCol] = false;
+    return true;
   }
 
   std::vector<double> getReducedPrimalSolution(
@@ -528,7 +547,7 @@ class HighsPostsolveStack {
 
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
-            HighsBasis& basis) {
+            HighsBasis& basis, const HighsInt report_col = -1) {
     reductionValues.resetPosition();
 
     // Verify that undo can be performed
@@ -574,6 +593,10 @@ class HighsPostsolveStack {
 
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
+      if (report_col >= 0)
+        printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
+               int(i), int(reductions[i].first), int(report_col),
+               solution.col_value[report_col]);
       switch (reductions[i].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
@@ -661,20 +684,32 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
+          break;
         }
+        default:
+          printf("Reduction case %d not handled\n", int(reductions[i].first));
+          if (kAllowDeveloperAssert) assert(1 == 0);
       }
     }
+    if (report_col >= 0)
+      printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
+             solution.col_value[report_col]);
   }
 
   /// undo presolve steps for primal solution
-  void undoPrimal(const HighsOptions& options, HighsSolution& solution) {
+  void undoPrimal(const HighsOptions& options, HighsSolution& solution,
+                  const HighsInt report_col = -1) {
+    // Call to reductionValues.resetPosition(); seems unnecessary as
+    // it's the first thing done in undo
     reductionValues.resetPosition();
     HighsBasis basis;
     basis.valid = false;
     solution.dual_valid = false;
-    undo(options, solution, basis);
+    undo(options, solution, basis, report_col);
   }
 
+  /*
+    // Not used
   /// undo presolve steps for primal and dual solution
   void undoPrimalDual(const HighsOptions& options, HighsSolution& solution) {
     reductionValues.resetPosition();
@@ -684,7 +719,9 @@ class HighsPostsolveStack {
     assert(solution.dual_valid);
     undo(options, solution, basis);
   }
+  */
 
+  // Only used for debugging
   void undoUntil(const HighsOptions& options,
                  const std::vector<HighsInt>& flagRow,
                  const std::vector<HighsInt>& flagCol, HighsSolution& solution,

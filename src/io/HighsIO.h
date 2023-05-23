@@ -88,7 +88,8 @@ void highsReportLogOptions(const HighsLogOptions& log_options_);
 
 std::string highsFormatToString(const char* format, ...);
 
-const std::string highsBoolToString(const bool b);
+const std::string highsBoolToString(const bool b,
+                                    const HighsInt field_width = 2);
 
 const std::string highsInsertMdEscapes(const std::string from_string);
 

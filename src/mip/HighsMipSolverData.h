@@ -46,6 +46,7 @@ struct HighsMipSolverData {
   HighsRedcostFixing redcostfixing;
   HighsObjectiveFunction objectiveFunction;
   presolve::HighsPostsolveStack postSolveStack;
+  HighsPresolveStatus presolve_status;
   HighsLp presolvedModel;
   bool cliquesExtracted;
   bool rowMatrixSet;

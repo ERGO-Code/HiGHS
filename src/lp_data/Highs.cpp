@@ -775,9 +775,9 @@ HighsStatus Highs::presolve() {
     presolved_model_.lp_.setMatrixDimensions();
   }
 
-  highsLogUser(
-      options_.log_options, HighsLogType::kInfo, "Presolve status: %s\n",
-      presolve_.presolveStatusToString(model_presolve_status_).c_str());
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Presolve status: %s\n",
+               presolveStatusToString(model_presolve_status_).c_str());
   return returnFromHighs(return_status);
 }
 
@@ -2687,10 +2687,9 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
       model_presolve_status_ == HighsPresolveStatus::kTimeout;
   if (!can_run_postsolve) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kWarning,
-        "Cannot run postsolve with presolve status: %s\n",
-        presolve_.presolveStatusToString(model_presolve_status_).c_str());
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Cannot run postsolve with presolve status: %s\n",
+                 presolveStatusToString(model_presolve_status_).c_str());
     return HighsStatus::kWarning;
   }
   HighsStatus return_status = callRunPostsolve(solution, basis);
@@ -2748,6 +2747,33 @@ HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                         bool& feasible) const {
   return assessLpPrimalSolution(options_, model_.lp_, solution_, valid,
                                 integral, feasible);
+}
+
+std::string Highs::presolveStatusToString(
+    const HighsPresolveStatus presolve_status) const {
+  switch (presolve_status) {
+    case HighsPresolveStatus::kNotPresolved:
+      return "Not presolved";
+    case HighsPresolveStatus::kNotReduced:
+      return "Not reduced";
+    case HighsPresolveStatus::kInfeasible:
+      return "Infeasible";
+    case HighsPresolveStatus::kUnboundedOrInfeasible:
+      return "Unbounded or infeasible";
+    case HighsPresolveStatus::kReduced:
+      return "Reduced";
+    case HighsPresolveStatus::kReducedToEmpty:
+      return "Reduced to empty";
+    case HighsPresolveStatus::kTimeout:
+      return "Timeout";
+    case HighsPresolveStatus::kNullError:
+      return "Null error";
+    case HighsPresolveStatus::kOptionsError:
+      return "Options error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised presolve status";
+  }
 }
 
 std::string Highs::modelStatusToString(
@@ -2827,28 +2853,46 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   }
 
   // Presolve.
-  presolve_.init(original_lp, timer_);
-  presolve_.options_ = &options_;
-  if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
-    double current = timer_.readRunHighsClock();
-    double time_init = current - start_presolve;
-    double left = presolve_.options_->time_limit - time_init;
-    if (left <= 0) {
-      highsLogDev(options_.log_options, HighsLogType::kError,
-                  "Time limit reached while copying matrix into presolve.\n");
-      return HighsPresolveStatus::kTimeout;
+  HighsPresolveStatus presolve_return_status =
+      HighsPresolveStatus::kNotPresolved;
+  if (model_.isMip()) {
+    // Use presolve for MIP
+    //
+    // Presolved model is extracted now since it's part of solver,
+    // which is lost on return
+    HighsMipSolver solver(options_, original_lp, solution_);
+    solver.runPresolve();
+    presolve_return_status = solver.getPresolveStatus();
+    // Assign values to data members of presolve_
+    presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
+    //    presolved_model_.lp_ = solver.getPresolvedModel();
+    presolve_.presolve_status_ = presolve_return_status;
+    //    presolve_.data_.presolve_log_ =
+  } else {
+    // Use presolve for LP
+    presolve_.init(original_lp, timer_);
+    presolve_.options_ = &options_;
+    if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
+      double current = timer_.readRunHighsClock();
+      double time_init = current - start_presolve;
+      double left = presolve_.options_->time_limit - time_init;
+      if (left <= 0) {
+        highsLogDev(options_.log_options, HighsLogType::kError,
+                    "Time limit reached while copying matrix into presolve.\n");
+        return HighsPresolveStatus::kTimeout;
+      }
+      highsLogDev(options_.log_options, HighsLogType::kVerbose,
+                  "Time limit set: copying matrix took %.2g, presolve "
+                  "time left: %.2g\n",
+                  time_init, left);
     }
-    highsLogDev(options_.log_options, HighsLogType::kVerbose,
-                "Time limit set: copying matrix took %.2g, presolve "
-                "time left: %.2g\n",
-                time_init, left);
-  }
 
-  HighsPresolveStatus presolve_return_status = presolve_.run();
+    presolve_return_status = presolve_.run();
+  }
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
               "presolve_.run() returns status: %s\n",
-              presolve_.presolveStatusToString(presolve_return_status).c_str());
+              presolveStatusToString(presolve_return_status).c_str());
 
   // Update reduction counts.
   assert(presolve_return_status == presolve_.presolve_status_);
@@ -2897,7 +2941,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
   calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
 
   if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize)
-    presolve_.negateReducedLpColDuals(true);
+    presolve_.negateReducedLpColDuals();
 
   // Ensure that the postsolve status is used to set
   // presolve_.postsolve_status_, as well as being returned

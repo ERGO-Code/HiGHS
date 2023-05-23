@@ -1040,6 +1040,8 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string presolveStatusToString(
+      const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;
   std::string solutionStatusToString(const HighsInt solution_status) const;
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
