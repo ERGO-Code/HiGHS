@@ -547,8 +547,7 @@ class HighsPostsolveStack {
 
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
-            HighsBasis& basis,
-	    const HighsInt report_col = -1) {
+            HighsBasis& basis, const HighsInt report_col = -1) {
     reductionValues.resetPosition();
 
     // Verify that undo can be performed
@@ -689,12 +688,12 @@ class HighsPostsolveStack {
         }
         default:
           printf("Reduction case %d not handled\n", int(reductions[i].first));
-          assert(1 == 0);
+          if (kAllowDeveloperAssert) assert(1 == 0);
       }
     }
     if (report_col >= 0)
-      printf("After last reduction: col_value[%2d] = %g\n",
-	     int(report_col), solution.col_value[report_col]);
+      printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
+             solution.col_value[report_col]);
   }
 
   /// undo presolve steps for primal solution
@@ -721,7 +720,7 @@ class HighsPostsolveStack {
     undo(options, solution, basis);
   }
   */
-  
+
   // Only used for debugging
   void undoUntil(const HighsOptions& options,
                  const std::vector<HighsInt>& flagRow,

@@ -668,9 +668,11 @@ double HighsMipSolverData::transformNewIncumbent(
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
   // Determine the row values, as they aren't computed in primal
   // postsolve
-  HighsInt first_check_row = -1;//mipsolver.mipdata_->presolve.debugGetCheckRow();
-  HighsStatus return_status = calculateRowValuesQuad(*mipsolver.orig_model_, solution, first_check_row);
-  assert(return_status == HighsStatus::kOk);
+  HighsInt first_check_row =
+      -1;  // mipsolver.mipdata_->presolve.debugGetCheckRow();
+  HighsStatus return_status =
+      calculateRowValuesQuad(*mipsolver.orig_model_, solution, first_check_row);
+  if (kAllowDeveloperAssert) assert(return_status == HighsStatus::kOk);
   bool allow_try_again = true;
 try_again:
 
@@ -680,12 +682,13 @@ try_again:
   double integrality_violation_ = 0;
 
   HighsCDouble obj = mipsolver.orig_model_->offset_;
-  assert((HighsInt)solution.col_value.size() ==
-         mipsolver.orig_model_->num_col_);
+  if (kAllowDeveloperAssert)
+    assert((HighsInt)solution.col_value.size() ==
+           mipsolver.orig_model_->num_col_);
   HighsInt check_col = -1;
   HighsInt check_int = -1;
   HighsInt check_row = -1;
-  const bool allow_violation_report = false;
+  const bool debug_report = false;
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
     const double value = solution.col_value[i];
     obj += mipsolver.orig_model_->col_cost_[i] * value;
@@ -695,7 +698,7 @@ try_again:
       double integrality_infeasibility = std::fabs(intval - value);
       if (integrality_infeasibility >
           mipsolver.options_mip_->mip_feasibility_tolerance) {
-        if (allow_violation_report)
+        if (debug_report)
           printf("Col %d[%s] value %g has integrality infeasibility %g\n",
                  int(i), mipsolver.orig_model_->col_names_[i].c_str(), value,
                  integrality_infeasibility);
@@ -717,7 +720,7 @@ try_again:
       continue;
     if (primal_infeasibility >
         mipsolver.options_mip_->primal_feasibility_tolerance) {
-      if (allow_violation_report)
+      if (debug_report)
         printf("Col %d[%s] [%g, %g, %g] has infeasibility %g\n", int(i),
                mipsolver.orig_model_->col_names_[i].c_str(), lower, value,
                upper, primal_infeasibility);
@@ -740,7 +743,7 @@ try_again:
       continue;
     if (primal_infeasibility >
         mipsolver.options_mip_->primal_feasibility_tolerance) {
-      if (allow_violation_report)
+      if (debug_report)
         printf("Row %d[%s] [%g, %g, %g] has infeasibility %g\n", int(i),
                mipsolver.orig_model_->row_names_[i].c_str(), lower, value,
                upper, primal_infeasibility);
@@ -830,16 +833,15 @@ try_again:
             "[" + mipsolver.orig_model_->row_names_[check_row] + "]";
       check_row_data += ")";
     }
-    //    highsLogUser(mipsolver.options_mip_->log_options,
-    //    HighsLogType::kWarning,
-    printf(
-        "Solution with objective %g has untransformed violations: "
-        "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
-        double(obj), bound_violation_, check_col_data.c_str(),
-        integrality_violation_, check_int_data.c_str(), row_violation_,
-        check_row_data.c_str());
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+                 //    printf(
+                 "Solution with objective %g has untransformed violations: "
+                 "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
+                 double(obj), bound_violation_, check_col_data.c_str(),
+                 integrality_violation_, check_int_data.c_str(), row_violation_,
+                 check_row_data.c_str());
 
-    const bool debug_repeat = false; //true;//
+    const bool debug_repeat = false;  // true;//
     if (debug_repeat) {
       HighsSolution check_solution;
       check_solution.col_value = sol;
@@ -847,7 +849,7 @@ try_again:
       postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
                                 check_col);
       fflush(stdout);
-      assert(111==999);
+      if (kAllowDeveloperAssert) assert(111 == 999);
     }
 
     if (!currentFeasible) {

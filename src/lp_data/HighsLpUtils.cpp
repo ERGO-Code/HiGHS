@@ -2590,7 +2590,8 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   return calculateRowValues(lp, solution.col_value, solution.row_value);
 }
 
-HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution, const HighsInt report_row) {
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
+                                   const HighsInt report_row) {
   const bool correct_size = int(solution.col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
   const bool data_error = !correct_size || !is_colwise;
@@ -2610,8 +2611,11 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution, c
       assert(row < lp.num_row_);
       row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
       if (row == report_row) {
-	printf("calculateRowValuesQuad: Row %d becomes %g due to contribution of .col_value[%d] = %g\n",
-	       int(row), double(row_value[row]), int(col), solution.col_value[col]);
+        printf(
+            "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
+            ".col_value[%d] = %g\n",
+            int(row), double(row_value[row]), int(col),
+            solution.col_value[col]);
       }
     }
   }

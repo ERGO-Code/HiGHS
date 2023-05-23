@@ -4216,29 +4216,33 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   bool row_bound_change = false;
   if (check_col >= 0 || check_row >= 0) {
     if (check_col >= 0) {
-      col_bound_change = numreductions == 1 ||
-	postsolve_stack.debug_prev_col_lower != model->col_lower_[check_col] ||
-	postsolve_stack.debug_prev_col_upper != model->col_upper_[check_col];
+      col_bound_change =
+          numreductions == 1 ||
+          postsolve_stack.debug_prev_col_lower !=
+              model->col_lower_[check_col] ||
+          postsolve_stack.debug_prev_col_upper != model->col_upper_[check_col];
       postsolve_stack.debug_prev_col_lower = model->col_lower_[check_col];
       postsolve_stack.debug_prev_col_upper = model->col_upper_[check_col];
     }
     if (check_row >= 0) {
-      row_bound_change = numreductions == 1 ||
-	postsolve_stack.debug_prev_row_lower != model->row_lower_[check_row] ||
-	postsolve_stack.debug_prev_row_upper != model->row_upper_[check_row];
+      row_bound_change =
+          numreductions == 1 ||
+          postsolve_stack.debug_prev_row_lower !=
+              model->row_lower_[check_row] ||
+          postsolve_stack.debug_prev_row_upper != model->row_upper_[check_row];
       postsolve_stack.debug_prev_row_lower = model->row_lower_[check_row];
       postsolve_stack.debug_prev_row_upper = model->row_upper_[check_row];
     }
     debug_report = numreductions > postsolve_stack.debug_prev_numreductions;
   }
-  if (check_col >=0 && col_bound_change && debug_report) {
+  if (check_col >= 0 && col_bound_change && debug_report) {
     printf("After reduction %4d: col = %4d[%s] has bounds [%11.4g, %11.4g]\n",
            int(numreductions - 1), int(check_col),
            model->col_names_[check_col].c_str(), model->col_lower_[check_col],
            model->col_upper_[check_col]);
     postsolve_stack.debug_prev_numreductions = numreductions;
   }
-  if (check_row >=0 && row_bound_change && debug_report) {
+  if (check_row >= 0 && row_bound_change && debug_report) {
     printf("After reduction %4d: row = %4d[%s] has bounds [%11.4g, %11.4g]\n",
            int(numreductions - 1), int(check_row),
            model->row_names_[check_row].c_str(), model->row_lower_[check_row],
@@ -5406,6 +5410,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   std::unordered_multimap<std::uint64_t, HighsInt> buckets;
 
+  const bool debug_report = false;
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (colDeleted[i]) continue;
     if (colsize[i] == 0) {
@@ -5647,12 +5652,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                 std::abs(colScale * (model->col_upper_[duplicateCol] -
                                      model->col_lower_[duplicateCol])) <
                 1.0 - primal_feastol;
-	    if (!illegal_scale) 
-	      printf("kMergeParallelCols: T-F is %s legal with scale %.4g and "
-		     "duplicateCol = [%.4g, %.4g]\n",
-		     illegal_scale ? "not" : "   ", colScale,
-		     model->col_lower_[duplicateCol],
-		     model->col_upper_[duplicateCol]);
+            if (!illegal_scale && debug_report)
+              printf(
+                  "kMergeParallelCols: T-F is %s legal with scale %.4g and "
+                  "duplicateCol = [%.4g, %.4g]\n",
+                  illegal_scale ? "not" : "   ", colScale,
+                  model->col_lower_[duplicateCol],
+                  model->col_upper_[duplicateCol]);
           } else {
             // Both columns integer
             assert(x_int && y_int);
@@ -5729,7 +5735,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               model->integrality_[col] == HighsVarType::kInteger,
               model->integrality_[duplicateCol] == HighsVarType::kInteger,
               options->mip_feasibility_tolerance);
-          if (!ok_merge) {
+          if (!ok_merge && debug_report) {
             printf(
                 "HPresolve::detectParallelRowsAndCols Illegal merge "
                 "prevented\n");
@@ -6618,7 +6624,7 @@ HighsInt HPresolve::debugGetCheckCol() const {
 }
 
 HighsInt HPresolve::debugGetCheckRow() const {
-  const std::string check_row_name = "";//"row_ekk_119";
+  const std::string check_row_name = "";  //"row_ekk_119";
   HighsInt check_row = -1;
   if (check_row_name == "") return check_row;
   if (model->row_names_.size()) {
